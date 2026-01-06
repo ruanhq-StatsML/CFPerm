@@ -1,0 +1,7 @@
+# Generated manually for this scaffold; you may regenerate via roxygen2
+export(LM_generation)
+export(Mars_generation)
+export(aggregate_power)
+export(cfperm)
+importFrom(MASS,mvrnorm)
+importFrom(grf,causal_forest,variable_importance)
