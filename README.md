@@ -1,10 +1,6 @@
 # CFPerm
 
-A lightweight R package scaffold implementing:
-
-- `LM_generation()` and `Mars_generation()` for simulation
-- `cfperm()` for the causal-forest permutation test using variable importance (via `grf`)
-- `aggregate_power()` to aggregate permutation evidence across features
+Implementation for the "Leveraging Causal Inference for Detecting Distribution Shift"
 
 ## Installation (local)
 
