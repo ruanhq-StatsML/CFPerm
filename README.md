@@ -1,8 +1,17 @@
 # CFPerm
 
-Implementation for the "Leveraging Causal Inference for Detecting Distribution Shift"
+Implementation for the "Leveraging Causal Inference for Detecting Distribution Shift": It provides implementation for leveraging causal inference methods to detect distribution shift via the varying types of the causal models including Causal Forests, DR-learner and Dragon-Net with permutation of the Variable Importance. The variable importance notions include PermuCATE(conditional permutation variable importance), LOCO(leave-one-covariate-out) and the Impurity Gain Variable Importance for the Causal Forest.
 
-## Installation (local)
+
+## Python version:
+```python
+!pip install cfperm
+import cfperm
+
+```
+
+## R version:
+#### Installation (local)
 
 ```r
 install.packages(c("devtools", "roxygen2", "testthat", "grf", "MASS"))
