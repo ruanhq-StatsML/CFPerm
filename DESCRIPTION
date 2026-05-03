@@ -1,20 +1,11 @@
 Package: CFPerm
 Type: Package
-Title: Causal Forest Permutation Test (CFPerm)
+Title: Causal Forest Permutation Test
 Version: 0.1.0
-Authors@R: c(
-    person("First", "Last", email = "you@example.com", role = c("aut", "cre"))
-)
-Description: Implements data generators and a causal-forest permutation test
-    for detecting distribution shift using variable importance from grf.
+Author: Author Name
+Maintainer: Author Name <you@example.com>
+Description: Implements causal-forest permutation test for detecting distribution shift using variable importance from grf.
 License: MIT + file LICENSE
 Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
-Imports:
-    grf,
-    MASS,
-    stats
-Suggests:
-    testthat (>= 3.0.0)
-Config/testthat/edition: 3
+Imports: grf, MASS, stats
+Suggests: testthat (>= 3.0.0)

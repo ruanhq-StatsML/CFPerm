@@ -1,6 +1,6 @@
 test_that("aggregate_power returns expected indicator on toy example", {
-  # 3 features, 4 perms + 1 original => 5 cols
-  # Construct so that feature 2 original is clearly above perm quantiles
+  # 3 input features, 4 permutations, 5 columns
+  # Feature 2 is above on top of the original quantiles.
   df <- rbind(
     c(0.1, 0.2, 0.15, 0.18, 0.05),   # feature1 original small
     c(0.05, 0.08, 0.07, 0.06, 1.00), # feature2 original large
@@ -22,3 +22,5 @@ test_that("aggregate_power returns expected indicator on toy example", {
 test_that("aggregate_power errors on invalid input", {
   expect_error(aggregate_power(matrix(1, nrow = 2, ncol = 1)))
 })
+
+

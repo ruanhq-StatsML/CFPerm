@@ -26,5 +26,6 @@ test_that("cfperm returns 0/1 and validates inputs", {
   expect_true(res %in% c(0L, 1L))
 
   # input validation
-  expect_error(cfperm(df_train[, 1:p, drop = FALSE], df_test)) # missing Y
+  expect_error(cfperm(df_train[, 1:(p-1), drop = FALSE], df_test)) # missing Y
 })
+
