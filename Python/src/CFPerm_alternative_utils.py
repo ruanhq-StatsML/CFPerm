@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+import numpy_compat  # noqa: F401 — NumPy≥1.25 removed np.bool8; shap+econml
+
 from dataclasses import dataclass
 from typing import Optional, Sequence, Tuple, Literal
 
@@ -12,12 +14,11 @@ from typing import Dict, Optional, Sequence, Literal, Tuple, Any
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from econml.dml import CausalForestDML
+
 
 # ============================================================
 # Utility
@@ -30,18 +31,6 @@ def _safe_normalize(v: np.ndarray) -> np.ndarray:
     v = np.asarray(v, dtype=float)
     s = float(np.sum(v))
     return v / s if np.isfinite(s) and s > 0 else np.zeros_like(v)
-
-def _fit_riesz_representer(
-    X_train: np.ndarray,
-    M_train: np.ndarray, seed: int = 0
-):
-    riesz_learner = Pipeline([
-        ('scaler', StandardScaler()),
-        ('ridge', Ridge(alpha = 10.0, random_state = seed))
-    ])
-    riesz_learner.fit(X_train, M_train)
-    return riesz_learner
-#Just need another value here.
 
 
 # ============================================================
@@ -77,8 +66,35 @@ def _fit_cf_importance(
         ) from e
     X = np.asarray(X)
     Y = _as_1d(Y)
-    W = _as_1d(W).astype(int)
+    W = _as_1d(W)
     p = X.shape[1]
+    uniq = np.unique(W)
+    binary01 = (
+        uniq.size <= 2
+        and np.all(np.isin(uniq, (0, 1)))
+        and np.issubdtype(W.dtype, np.integer)
+    )
+    # Residualized W is float and not {0,1}; use continuous-treatment path + KFold
+    # so econml never asks for propensity folds missing a treatment class.
+    discrete_treatment = bool(binary01)
+    if discrete_treatment:
+        W_fit = W.astype(int)
+        model_t = LogisticRegression(
+            solver="lbfgs",
+            max_iter=2000,
+            random_state=seed,
+        )
+        cv_t = StratifiedKFold(n_splits=3, shuffle=True, random_state=seed)
+    else:
+        W_fit = W.astype(float)
+        model_t = RandomForestRegressor(
+            n_estimators=120,
+            min_samples_leaf=5,
+            max_features=max(1, int(round(p / 3))),
+            random_state=seed,
+            n_jobs=-1,
+        )
+        cv_t = KFold(n_splits=3, shuffle=True, random_state=seed)
     model_y = RandomForestRegressor(
         n_estimators=200,
         min_samples_leaf=5,
@@ -86,22 +102,17 @@ def _fit_cf_importance(
         random_state=seed,
         n_jobs=-1,
     )
-    model_t = LogisticRegression(
-        solver="lbfgs",
-        max_iter=2000,
-        random_state=seed,
-    )
     cf = CausalForestDML(
         model_y=model_y,
         model_t=model_t,
         n_estimators=n_estimators,
         min_samples_leaf=min_samples_leaf,
         max_depth=max_depth,
-        discrete_treatment=True,
-        cv=3,
+        discrete_treatment=discrete_treatment,
+        cv=cv_t,
         random_state=seed,
     )
-    cf.fit(Y=Y, T=W, X=X)
+    cf.fit(Y=Y, T=W_fit, X=X)
     if not hasattr(cf, "feature_importances_"):
         raise AttributeError(
             "Your econml version does not expose `feature_importances_` on CausalForestDML."
@@ -155,9 +166,8 @@ def _crossfit_nuisances(
             random_state=seed, n_jobs=-1
         )
     model_e = LogisticRegression(solver="lbfgs", max_iter=2000, random_state=seed)
-    m_hat = np.zeros(n, dtype = float)
-    e_hat = np.zeros(n, dtype = float)
-    scores = np.zeros(n, dtype = float)
+    m_hat = np.zeros(n, dtype=float)
+    e_hat = np.zeros(n, dtype=float)
     for tr, te in cv.split(X, W):
         Xm_tr, Xm_te = X[tr], X[te]
         Y_tr, W_tr = Y[tr], W[tr]
@@ -172,37 +182,9 @@ def _crossfit_nuisances(
         model_e_fold = LogisticRegression(**model_e.get_params())
         model_e_fold.fit(Xm_tr, W_tr)
         e_hat[te] = model_e_fold.predict_proba(Xm_te)[:, 1]
-        e_hat_tr = np.clip(model_e_fold.predict(Xm_tr)[:, 1], clip_e, 1 - clip_e)
-        M_tr = W_tr - e_hat_tr
-        alpha_fit = _fit_riesz_representer(Xm_tr, M_tr, seed = seed)
-        alpha_fit_te = alpha_fit.predict(Xm_te)
-        scores[te] = alpha_fit_te * (Y_te - m_hat_te)
     e_hat = np.clip(e_hat, clip_e, 1.0 - clip_e)
-    return m_hat, e_hat, scores
-    #leveraging the score here to do the permutation test?
-#sounds like a plan here?
-#Sounds like a good way right?
-#The procedure here is 
-class riesz_Representer(nn.Module):
-    def __init__(self, dim_X = 24, n_layer = 1):
-        super().__init__()
-        self.dim_X = dim_X
-        self.nn_layer1 = nn.Dense(dim_X, 12)
-        self.nn_layer = 
-    def forward(self, X):
-        output = nn_layers(X)
-        return output
+    return m_hat, e_hat
 
-#Y(1) -> Y(1)D = YD
-#\gamma_{0}Z = 1/P(D=1|Z)
-#\alpha_{0} = argmin_{\alpha \in \Tau}E[-v_{\rho}(X)]
-
-#\alpha_{0} = argmin_{\alpha \in \Tau} E[-2m(W,\alpha) - v_{\rho}(X)\alpha(X)^{2}]
-#\alpha_{1} = argmin_{\alpha \in \Tau}E[-v_{\rho}(X)]
-#Y(1) -> Y(1)D = YD here
-#M_tr = W_tr - e_hat[tr]
-
-#alpha_fit = _fit_riesz_representer(Xm_tr, M_tr, seed = seed)
 
 def _fit_tau_rlearner_weighted(
     X: np.ndarray,
@@ -236,6 +218,7 @@ def _fit_tau_rlearner_weighted(
             def predict(self, X_):
                 return np.zeros(X_.shape[0], dtype=float)
         return _Zero()
+
     z = Y_tilde[mask] / W_tilde[mask]
     weights = (W_tilde[mask] ** 2)
     # Default tau-model: standardized Ridge (fast, stable, supports sample_weight)
@@ -264,12 +247,6 @@ def r_risk(
     return float(np.mean((Y_tilde - W_tilde * tau_hat) ** 2))
 
 
-#Compress them into a standardizd pipeline here.
-#objective(incremental ROI) -> action space
-#-> eligibility layer -> value estimation -> policy(pulldown + pacing + threshold)
-#-> feedback loop(logging, attribution + training)
-
-
 def importance_loco_r_risk(
     X: np.ndarray,
     Y: np.ndarray,
@@ -290,7 +267,6 @@ def importance_loco_r_risk(
       3) Fit tau_full(x) by weighted R-learner regression
       4) For each feature j, refit tau on X without feature j, compute risk_j
       5) importance_j = risk_j - risk_full
-    #You add a riesz learner here: importance_j = risk_j - risk_full
     """
     X = np.asarray(X)
     Y = _as_1d(Y)
@@ -300,6 +276,7 @@ def importance_loco_r_risk(
     )
     Y_tilde = Y - m_hat
     W_tilde = W - e_hat
+
     tau_full_model = _fit_tau_rlearner_weighted(
         X, Y_tilde, W_tilde, seed=seed, clip_wtilde=clip_wtilde
     )
@@ -436,37 +413,6 @@ def LMGeneration(n = 1000, p = 20, beta = [1,1,1,1,1,1,1], variances = 1, cor = 
     df_design = pd.DataFrame(np.concatenate((X_design, Y.reshape(-1, 1)), axis = 1))
     df_design.columns = ["X" + str(i) for i in range(p)] + ["Y"]
     return df_design
-
-
-
-#parallel running: dr_perm_parallel.py
-def parse_shards():
-    num = max(1, int(os.environ.get('DR_PERM_NUM_SHARDS', '1')))
-    sid = int(os.environ.get('DR_PERM_SHARD', '0'))
-    if sid < 0 or sid >= num:
-        raise SystemExit(f"DR_PERM_SHARD must satisfy 0 <= DR_Perm_SHARD < DR_PERM_NUM_SHARDS (got {sid}, {num})")
-    return num, sid
-
-def shard_slice(n, num_shards, shard_id):
-    if n <= 0:
-        return 0, 0
-    chunk = (n + num_shards - 1)// num_shards
-    start = shard_id * chunk
-    end = min(start + chunk, n)
-    return start, end
-
-#
-
-
-
-
-
-
-
-
-
-
-
 
 
 
