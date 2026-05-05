@@ -139,5 +139,5 @@ es_null_grf <- cfperm(
   seed = 2020,
   level_feature = 0.005,
   level_across_feature = 0.005
-)#You need a reasonable amount of number of permutations.
+)#A reasonable amount of the permutation is required.
 

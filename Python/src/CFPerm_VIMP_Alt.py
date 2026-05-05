@@ -37,26 +37,7 @@ class CFPerm_Models:
 Variable Importances for the Causal Forest with the impurity gain
 '''
 
-def _fit_cf_vimp(
-    X: np.ndarray,
-    Y: np.ndarray,
-    W: np.ndarray,
-    *,
-    seed: int = 0,
-    n_estimator = 300,
-    min_samples_leaf = 10,
-    max_depth = 5, 
-    normalize = True):
-    """
-    Estimate the variable importance from the causal forest:
-
-
-    """
-    X = np.asarray(X)
-    Y = _as_1d(Y)
-    W = _as_1d(W).astype(int)
-
-
+def _fit
 
 
 

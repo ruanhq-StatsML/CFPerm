@@ -363,6 +363,53 @@ make_ridge_classification <- function(lambda = 0.01){
 }
 
 
+validate_mdoel_spec <- function(model_spec, name = 'model_spec'){
+  if(!is.list(model_spec)){
+    stop(name, ' must be a list.', call. = FALSE)
+  }
+  if(is.null(model_spec$name) || 
+    !is.character(model_spec$name) || 
+    length(model_spec$name) != 1){
+    stop(name, ' must contain a character scalar `name`.', call. = FALSE)
+  }
+  if(is.null(model_spec$fit) || !is.function(model_spec$fit)){
+    stop(name, " must contain a function `fit`.", call. = FALSE)
+  }
+  if(is.null(model_spec$predict) || !is.function(model_spec$predict)){
+    stop(name, " must contain a function `predict`.", call. = FALSE)
+  }
+  fit_args <- names(formals(model_spec$fit))
+  predict_args <- names(formals(model_spec$predict))
+  required_fit_args <- c("X", 'y')
+  required_predict_args <- c("fit", "X_new")
+  missing_fit_args <- setdiff(required_fit_args, fit_args)
+  missing_predict_args <- setdiff(required_predict_args, predict_args)
+  if(length(missing_fit_args) > 0){
+    stop(
+      name, "$fit is missing required arguments(s): ",
+      paste(missing_fit_args, collapse = ', '),
+      call. = FALSE
+    )
+  }
+  if(length(missing_predict_args) > 0){
+    stop(
+      name, '$predict is missing required arguments(s): ',
+      paste(missing_predict_args, collapse = ', '),
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+
+
+
+
+
+
+
+
+
 
 
 
