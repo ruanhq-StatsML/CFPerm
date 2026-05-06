@@ -11,15 +11,15 @@ library(randomForest)
 #    Construct a named registry of individual model adapters used by the nuisance estimation layer.
 #
 #Inputs:
-# --ntree:          Number of trees in the Random Forest or XGBoost Model
-# --positive_class: Class label whose predicted probability is returned by classification adapters
-# --lambda:         L-2 penalty in the ridge regression
-# --nthread:        number of threads used by the xgboost package
-# --size:           The number of units in the hidden dimension
-# --maxit:          Maximum number of iterations for the NNet here.
-# --MaxNWts:        Maximum allowable amount of weights
+# -- ntree:          Number of trees in the Random Forest or XGBoost Model
+# -- positive_class: Class label whose predicted probability is returned by classification adapters
+# -- lambda:         L-2 penalty in the ridge regression
+# -- nthread:        number of threads used by the xgboost package
+# -- size:           The number of units in the hidden dimension
+# -- maxit:          Maximum number of iterations for the NNet here.
+# -- MaxNWts:        Maximum allowable amount of weights
 #
-#Output contract:
+#Output Contract:
 #    Returns a named list of model adapters, each adapter must contain:
 #      -- name:     character identifier
 #      -- fit:      function(X, y, seed = NULL) return the fitted model object
