@@ -16,7 +16,7 @@ Returns the cross-fitted value (m_hat, e_hat) evaluated on the whole data
 as well as the fitted outcome model and propensity score models.
 '''
 #Specify the model registry factory so that we can fetch the model with flexibility afterwards:
-model_registry = default_model_registry(
+model_registry = ModelRegistry(
   ntree = 150,
   ridge_alpha = 0.25,
   nthread = 1, maxit = 200, max_depth = 5,

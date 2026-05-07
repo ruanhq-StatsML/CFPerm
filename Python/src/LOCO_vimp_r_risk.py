@@ -2,20 +2,21 @@
 from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import Ridge
 
-model_registry = default_model_registry(
-  ntree = 150,
-  ridge_alpha = 0.25,
-  nthread = 1, maxit = 200, max_depth = 5,
-  gamma = 0.25, eta = 0.15, mlp_hidden_size = 4,
-  mlp_decay = 1e-5, mlp_max_iter = 500, mlp_trace = False,
-  mlp_max_coef_reg = 10000, mlp_max_coef_clf = 10000,
-  warn_xgb_labels = True, positive_class = 1
+model_factory = ModelRegistry(
+ntree = 150, ridge_alpha = 0.25,
+nthread = 1, maxit = 500,
+max_depth = 5, gamma = 0.25,
+eta = 0.15, mlp_hidden_size = 4,
+mlp_decay = 1e-4, mlp_max_iter = 500
 )
+model_registry = model_factory.as_r_style_dict()
 
 
-def _crossfit_nuisance(X, Y, W, seed, n_splits, clip_e, 
-model_e, model_m):
+def _crossfit_nuisance(X, Y, W, model_e, model_m, seed, n_splits, clip_e):
     X = np.asarray(X)
     Y = _as_1d(Y)
     W = _as_1d(W).astype(int)
@@ -29,13 +30,13 @@ model_e, model_m):
         Xm_tr, Xm_eval = X[tr], X[te]
         Y_tr, W_tr = Y[tr], W[tr]
         model_ps_fit = model_propensity_score['fit'](
-        	Xm_tr, W_tr, seed = seed
+            Xm_tr, W_tr, seed = seed
         )
         e_hat[te] = model_propensity_score['predict'](
             model_ps_fit, Xm_eval
         )
         model_outcome_fit = model_outcome['fit'](
-        	Xm_tr, Y_tr, seed = seed
+            Xm_tr, Y_tr, seed = seed
         )
         m_hat[te] = model_outcome['predict'](
             model_outcome_fit, Xm_eval
@@ -43,22 +44,28 @@ model_e, model_m):
     e_hat = np.clip(e_hat, clip_e, 1.0 - clip_e)
     return m_hat, e_hat
 
+
 #Return the np.ndarray here:
 def _fit_rlearner_tau(
     X: np.ndarray, Y_tilde: np.ndarray,
     W_tilde: np.ndarray, *,
     seed: int = 0, clip_wtilde: float = 1e-3):
     X = np.asarray(X)
-    Y_tilde = _as_1d(Y_tilde)
-    W_tilde = _as_1d(W_tilde)
+    Y_tilde = _as_1d(Y_tilde).astype(float)
+    W_tilde = _as_1d(W_tilde).astype(float)
     W_tilde = np.clip(W_tilde, clip_wtilde, 1 - clip_wtilde)
     #mask = np.abs(W_tilde) > clip_wtilde
-    z = Y_tilde/W_tilde
+    denom = np.where(
+        np.abs(W_tilde) < clip_wtilde,
+        clip_wtilde * np.where(W_tilde >= 0, 1.0, -1.0),
+        W_tilde
+    )
+    z = Y_tilde/denom
     weights = W_tilde ** 2
     tau_model = Pipeline(
         steps = [
-        ('scaler': StandardScaler(with_mean = True, with_std = True)),
-        ('ridge': Ridge(alpha = 1.0, random_state = seed))]
+        ('scaler', StandardScaler(with_mean = True, with_std = True)),
+        ('ridge', Ridge(alpha = 1.0, random_state = seed))]
     )
     tau_model.fit(X, z, ridge__sample_weight = weights)
     return tau_model
@@ -67,7 +74,7 @@ def r_risk(Y_tilde: np.ndarray,
            W_tilde: np.ndarray,
            tau_hat: np.ndarray) -> float:
     """
-    The R-risk: R_{n} = \frac{1}{n}\sum_{i=1}^{n}(Y_i - m(X_i) - \tau_hat*(T_i - e(X_i)))^2)
+    The R-risk: R_{n} = \frac{1}{n}sum_{i=1}^{n}(Y_i - m(X_i) - \tau_hat*(T_i - e(X_i)))^2)
     """
     Y_tilde = _as_1d(Y_tilde)
     W_tilde = _as_1d(W_tilde)
@@ -77,7 +84,7 @@ def r_risk(Y_tilde: np.ndarray,
 
 def vimp_loco_r_risk(
     X: np.ndarray, Y: np.ndarray, W: np.ndarray,
-    model_e, model_m, 
+    model_m, model_e,
     *, seed: int = 0, n_splits = 5, clip_e: float = 0.01,
     clip_wtilde: float = 1e-3, normalize: bool = False):
     '''
@@ -90,9 +97,9 @@ def vimp_loco_r_risk(
     X = np.asarray(X)
     Y = _as_1d(Y)
     W = _as_1d(W).astype(int)
-    p = X.shape[0]
-    m_hat, e_hat = _crossfit_nuisance(X, Y, W, seed = seed, n_splits = n_splits,
-        clip_e = clip_e, model_e, model_m)
+    p = X.shape[1]
+    m_hat, e_hat = _crossfit_nuisance(X, Y, W, model_e, model_m, seed = seed, n_splits = n_splits,
+        clip_e = clip_e)
     Y_tilde = Y - m_hat
     W_tilde = W - e_hat
     tau_unpermuted_model = _fit_rlearner_tau(X, Y_tilde, W_tilde)
@@ -113,9 +120,11 @@ def vimp_loco_r_risk(
 
     
 
-    
-
-
+#Test case:
+X = np.random.random((100, 20))
+Y = np.random.random((100, ))
+W = np.random.choice((0,1), 100)
+vimp_loco_r_risk(X, Y, W, model_m = 'rf_regression', model_e = 'rf_classification')
 
 
 

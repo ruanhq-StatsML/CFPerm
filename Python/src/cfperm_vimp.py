@@ -280,42 +280,6 @@ def RRPerm(
 
 
 
-def _crossfit_nuisnace(
-  X: np.ndarray, Y: np.ndarray, W: np.ndarray, *,
-  n_splits: int = 5, clip_e = 0.01, model_e, model_m
-):
-    X = np.asarray(X)
-    Y = _as_1d(Y)
-    W = _as_1d(W).astype(int)
-    n, p = X.shape
-    cv = StratifiedKFold(n_splits = n_splits, shuffle = True, random_state = seed)
-
-
-
-def vimp_loco_r_risk(
-  X: np.ndarray, Y: np.ndarray, W: np.ndarray, *,
-  seed: int = 2026, n_splits: int = 5, binary_outcome = False,
-  clip_e: float = 0.02, clip_wtilde: float = 1e-3, normalize = False
-):
-    X = np.asarray(X)
-    Y = np.asarray(Y).reshape(-1)
-    W = np.asarray(W).reshape(-1)
-
-
-
-
-
-def cfperm(
-  X: np.ndarray, Y: np.ndarray, W: np.ndarray, *,
-  seed: int = 2026, n_splits: int = 5, n_perm = 200,
-  model_m = 'regression'
-  )
-
-
-
-
-
-
 
 
 
