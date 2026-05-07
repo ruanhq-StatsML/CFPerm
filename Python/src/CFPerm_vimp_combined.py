@@ -57,6 +57,8 @@ def cfperm_feature_pvals(
     model_e: str = 'rf_classifier',
     model_tau: str = 'rf_regressor',
     model_nu: str = 'rf_regressor',
+    model_nu_binaryclassifier: str = 'logistic_classifier',
+    model_nu_multiclassifier: str = 'multinomial_classifier',
     n_estimators: int = 120
 ):
     rng = np.random.default_rng(seed)

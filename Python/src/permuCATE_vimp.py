@@ -81,20 +81,24 @@ def infer_feature_type(X):
 Fit the nuisance models: outcome model, propensity score model and the pseudo-outcome model
 Parameters:
 -----------
-X:               Array of Shape (n_exist + n_new, p)
-Y:               Array of Shape (n_exist + n_new, ) Response
-W:               Array of Shape (n_exist + n_new, ) Treatment, Currently only Support Binary
-model_m(str):    Outcome Model
-model_e(str):    Propensity Score Model
-model_tau(str):  Pseudo Outcome Model(pseudo_outcome ~ X)
-model_nu(str):   Conditional fitting model: one for each of the feature
-seed(int):       Random Seed
+X:                    Array of Shape (n_exist + n_new, p)
+Y:                    Array of Shape (n_exist + n_new, ) Response
+W:                    Array of Shape (n_exist + n_new, ) Treatment, Currently only Support Binary
+model_m(str):         Outcome Model
+model_e(str):         Propensity Score Model
+model_tau(str):       Pseudo Outcome Model(pseudo_outcome ~ X)
+model_nu(str):        Conditional fitting model: one for each of the feature
+model_nu_bi(str):     Conditional fitting model: binary classification model
+model_nu_multi(str):  Conditional fitting model: mutlinomial classifaiction model
+seed(int):            Random Seed
 '''
 def permuCATE_fit_nuisance(X, Y, W, 
-    model_m, 
-    model_e,
-    model_tau, 
-    model_nu,
+    model_m = 'rf_regressor', 
+    model_e = 'logistic_classifier',
+    model_tau = 'rf_regressor', 
+    model_nu = 'rf_regressor',
+    model_nu_bi = 'logistic_classifier', 
+    model_nu_multi = 'multinomial_classifier', 
     clip_e = 1e-2,
     seed = 2026):
     X = np.asarray(X)
@@ -106,7 +110,6 @@ def permuCATE_fit_nuisance(X, Y, W,
     model_outcome1 = model_registry[model_m]
     model_propensity_score = model_registry[model_e]
     model_tau_spec = model_registry[model_tau]
-    model_nu_spec = model_registry[model_nu]
     X_ctr = X[W == 0, ]
     X_trt = X[W == 1, ]
     Y_ctr = Y[W == 0]
@@ -140,9 +143,15 @@ def permuCATE_fit_nuisance(X, Y, W,
     tau_est = model_tau_spec['predict'](
         model_tau_fit, X
     )
-    #save all of the model_nu here:
+    feature_types = infer_feature_type(X_train)#continuous, binary, categorical.
     nu_model = {} 
     for j in range(p):
+        if feature_types[j] == 'continuous':
+            model_nu_spec = model_registry[model_nu]
+        else if feature_types[j] == 'binary':
+            model_nu_spec = model_registry[model_nu_bi]
+        else:
+            model_nu_spec = model_registry[model_nu_multi]
         X_minus_j = np.delete(X, j, axis = 1)
         X_j = X[:, j]
         model_nu_fit = model_nu_spec['fit'](
@@ -175,12 +184,32 @@ def permuCATE_fit_nuisance(X, Y, W,
     }
     return output
 
-#Input the model_nu_disc and model_nu_cont:
+
+'''
+Fit the nuisance models: outcome model, propensity score model and the pseudo-outcome model
+Parameters:
+-----------
+X:                    Array of Shape (n_exist + n_new, p)
+Y:                    Array of Shape (n_exist + n_new, ) Response
+W:                    Array of Shape (n_exist + n_new, ) Treatment, Currently only Support Binary
+model_m(str):         Outcome Model
+model_e(str):         Propensity Score Model
+model_tau(str):       Pseudo Outcome Model(pseudo_outcome ~ X)
+model_nu(str):        Conditional fitting model: one for each of the feature
+model_nu_bi(str):     Conditional fitting model: binary classification model
+model_nu_multi(str):  Conditional fitting model: mutlinomial classifaiction model
+n_perm:               Number of permutation for the residual of the conditional fitted model
+test_size:            Proportion of the number of observations in the test set
+seed(int):            Random Seed(by default 2026)
+clip_e:               Clipping value for the propensity score.
+normalize:            Whether to normalize the variable importance or not.
+'''
 def permuCATE_vimp(
     X: np.ndarray, Y: np.ndarray, W: np.ndarray,
-    model_m, model_e, model_tau, model_nu,
+    model_m = 'rf_regressor', model_e = 'logistic_classifier', model_tau = 'rf_regressor', 
+    model_nu = 'rf_regressor', model_nu_bi = 'logistic_classifier', model_nu_multi = 'multinomial_classifier',
     n_perm: int = 100, test_size = 0.5, *,
-    seed: int = 0, n_splits = 5, clip_e: float = 0.01, normalize: bool = False
+    seed: int = 0,  clip_e: float = 0.01, normalize: bool = False
 ):
     X = np.asarray(X)
     Y = _as_1d(Y)
@@ -191,7 +220,6 @@ def permuCATE_vimp(
     )
     n, p = X.shape
     #specify the feature types:
-    feature_types = ['continuous'] * p
     rng = np.random.default_rng(seed)
     outputs = permuCATE_fit_nuisance(X_train, Y_train, W_train, model_m, model_e, model_tau, model_nu, seed = seed)
     vimp_permucate = np.zeros(p, dtype = float)

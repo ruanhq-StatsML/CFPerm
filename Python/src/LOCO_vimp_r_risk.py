@@ -124,7 +124,7 @@ def vimp_loco_r_risk(
 X = np.random.random((100, 20))
 Y = np.random.random((100, ))
 W = np.random.choice((0,1), 100)
-vimp_loco_r_risk(X, Y, W, model_m = 'rf_regression', model_e = 'rf_classification')
+vimp_loco_r_risk(X, Y, W, model_m = 'rf_regressor', model_e = 'rf_classifier')
 
 
 

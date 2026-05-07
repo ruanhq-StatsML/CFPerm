@@ -28,7 +28,7 @@ def RRPerm(
     X: np.ndarray, Y: np.ndarray, W: np.ndarray, *,
     seed: int = 0, n_splits: int = 5, binary_outcome = False,
     clip_e = 0.01, n_perm = 150, alpha = 0.05, return_detail = True,
-    model_m = 'rf_regression', model_e = 'rf_classification'):
+    model_m = 'rf_regressor', model_e = 'rf_classifier'):
     X = np.asarray(X)
     Y = _as_1d(Y)
     W = _as_1d(W).astype(int)
@@ -104,7 +104,7 @@ def RRPerm(
     out = {
       'statistic': float(observed_r_risk),
       'p_value': float(p_value),
-      'reject': bool(p_value < alpha),
+      'reject': np.bool_(p_value < alpha),
       'alpha': float(alpha),
       'model_outcome': model_outcome['name'],
       'model_propensity_score': model_propensity_score['name']
@@ -117,3 +117,30 @@ def RRPerm(
           'permuted_r_risk': permuted_r_risk
         })
     return out
+
+
+
+#Test cases:
+rng = np.random.default_rng(2023)
+n = 400
+p = 16
+X = rng.normal(size = (n, p))
+Y = 10.0 * X[:, 0] + 2.0 * X[:, 1] + 1.0 * X[:, 2] + rng.normal(scale = 1.0, size = n)
+W = rng.binomial(1, 0.5, size = n)
+output = RRPerm(X, Y, W, n_splits = 5, model_m = 'rf_regressor', model_e = 'rf_classifier')
+output#Calculate the permutation p-value here.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
