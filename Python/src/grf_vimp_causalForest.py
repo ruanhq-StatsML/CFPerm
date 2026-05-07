@@ -1,4 +1,4 @@
-#LOCO r-risk variable importance:
+#Causal Forest based Variable Importance:
 from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -10,7 +10,21 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LogisticRegression
 
 
-#Still a Double ML fashioned version here!
+'''
+Fit the nuisance models: outcome model, propensity score model and the pseudo-outcome model
+Parameters:
+-----------
+X:                Array of Shape (n_exist + n_new, p)
+Y:                Array of Shape (n_exist + n_new, ) Response
+W:                Array of Shape (n_exist + n_new, ) Treatment, Currently only Support Binary
+model_psm:        Propensity Score Model
+model_outcome:    Outcome Model
+seed(int):        Random Seed
+n_estimators:     Number of Trees
+min_samples_leaf: Minimal number of samples in one leaf 
+max_depth:        Maximal depth of causal tree
+normalize:        Whether to normalize the variable importance to make them sum up to 1
+'''
 def cf_variable_importance(
     X: np.ndarray,
     Y: np.ndarray,

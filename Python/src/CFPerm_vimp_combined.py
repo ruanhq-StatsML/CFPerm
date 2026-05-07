@@ -21,8 +21,24 @@ mlp_decay = 1e-4, mlp_max_iter = 500
 model_registry = model_factory.as_r_style_dict()
 
 
-
-#Return another data class that satisfies this condition here:
+'''
+Hypothesis Testing for Distribution Shift via Variable Importance:
+- X:               Covariates array - (n_exist + n_new, p)
+- Y:               Responses - (n_exist + n_new, )
+- W:               Treatment(Batch) Assignment - (n_exist + n_new, )
+- seed:            Random State Seeds
+- n_perm:          Number of permutations in the variable importance
+- n_perm_cate:     Number of permutations for the conditional permutation variable importance
+- n_split:         Number of splits for the cross-fitting procedure
+- clip_e:          Clipping value for the propensity score
+- alpha:           Significance Level for the test
+- model_m(str):    Outcome Model
+- model_e(str):    Propensity Score Model
+- model_tau(str):  Model for treatment effect
+- model_nu(str):   Model for the fitting covariates in X
+Returns the cross-fitted value (m_hat, e_hat) evaluated on the whole data
+as well as the fitted outcome model and propensity score models.
+'''
 def cfperm_feature_pvals(
     X: np.ndarray,
     Y: np.ndarray,
@@ -31,6 +47,7 @@ def cfperm_feature_pvals(
     seed: int = 0,
     n_perm: int = 200,
     n_perm_cate: int = 50,
+    n_splits: int = 5,
     top_k: int = 1,
     level_feature: float = 0.99,
     level_across_feature: float = 0.99,
@@ -94,6 +111,7 @@ cfperm_feature_pvals(X, Y, W, n_perm = 30,
 cfperm_feature_pvals(X, Y, W, n_perm = 30, vimp = 'grf')
 cfperm_feature_pvals(X, Y, W, level_feature = 0.99, level_across_feature = 0.95, vimp = 'loco')
 cfperm_feature_pvals(X, Y, W, level_feature = 0.99, level_across_feature = 0.95, vimp = 'permucate', n_perm_cate = 25)
+cfperm_feature_pvals(X, Y, W, level_feature = 1.0, level_across_feature = 0.95, vimp = 'permucate', n_perm_cate = 25)
 
 
 
