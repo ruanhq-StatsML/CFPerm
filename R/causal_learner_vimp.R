@@ -93,9 +93,25 @@ po_risk <- function(tau_pred, Y, T, mu0, mu1, e, clip_eps = 1e-3){
   return(mean((tau_po - tau_pred)^2))
 }
 
-#The model_m here is the 
+########################################################################################################
+#' PermuCATE Variable Importance for the PO-risk, shuffle the residual for the covariate fitting model
+#' Then return the variable importances and the combined permutation score:
+#' @param X:             Covariate Space
+#' @param Y:             Response
+#' @param T:             Treatment Batch Label
+#' @param lambda:        L2 Penalty for the Regularized Logistic Regression
+#' @param model_mu:      Outcome Model
+#' @param model_nu:      Conditional Model(X_j ~ X_{-j}) for continuous covariates X_j
+#' @param model_nu_bina: Conditional Model(X_j ~ X_{-j}) for binary covariates X_j
+#' @param model_nu_disc: Conditional Model(X_j ~ X_{-j}) for discrete covariates X_j
+#' @param model_tau:     Pseudo-Outcome Model
+#' @param clip_e:        The clipping value for the propensity score
+########################################################################################################
 permucate_fit <- function(X, Y, T, lambda = 0.01,
-  model_mu, model_nu, model_tau, seed = 2026, clip_e = 1e-3) {
+  model_mu, model_nu, 
+  model_nu_bina, model_nu_disc,
+  model_tau, 
+  seed = 2026, clip_e = 1e-3) {
   X <- as.matrix(X)
   n <- nrow(X)
   d <- ncol(X)
@@ -104,8 +120,22 @@ permucate_fit <- function(X, Y, T, lambda = 0.01,
   if (length(idx0) == 0 || length(idx1) == 0) {
     stop("PermuCATE requires both A=0 and A=1 in combined data")
   }
+  infer_type <- function(X){
+    p <- ncol(X)
+    feature_type = rep("", p)
+    for(j in 1:p){
+      if(len(unique(X[,j])) <= 2){
+        feature_type[j] = "binary"
+      }
+      else if(len(unique(X[,j])) <= 5){
+        feature_type[j] = 'discrete'
+      }
+      else{
+        feature_type[j] = 'continuous'
+      }
+    }
+  }
   model_regis <- default_model_registry()
-  model_nu_estimator <- model_regis[[model_nu]]
   model_mu0 <- model_regis[[model_mu]]
   model_mu1 <- model_regis[[model_mu]]
   ########
@@ -126,10 +156,21 @@ permucate_fit <- function(X, Y, T, lambda = 0.01,
   tau_fit <- tau_model$fit(X, pseudo)
   tau_est <- tau_model$predict(fit = tau_fit, X_new = X)
   nu_estimators <- vector("list", d)
+  #Specify the list of the feature types:
+  feature_type_list <- infer_type(X)
   for (j in seq_len(d)) {
     cols <- setdiff(seq_len(d), j)
     X_minus_j <- X[, cols, drop = FALSE]
     y_j <- X[, j]
+    if(feature_type_list[j] == 'continuous'){
+      model_nu_estimator <- model_regis[[model_nu]]
+    } 
+    else if(feature_type_list[j] == 'binary'){
+      model_nu_estimator <- model_regis[[model_nu_bina]]
+    }
+    else{
+      model_nu_estimator <- model_regis[[model_nu_disc]]
+    }
     nu_j <- model_nu_estimator$fit(X_minus_j, y_j, seed = 2000 + j)
     nu_estimators[[j]] <- list(cols = cols, nu = nu_j, model_nu = model_nu_estimator)
   }
@@ -145,6 +186,7 @@ permucate_fit <- function(X, Y, T, lambda = 0.01,
   )
 }
 
+########################################################################################################
 #' PermuCATE Variable Importance for the PO-risk, shuffle the residual for the covariate fitting model
 #' Then return the variable importances and the combined permutation score:
 #' @param pc:            List of the cross-fitted nuisance components.
@@ -153,6 +195,7 @@ permucate_fit <- function(X, Y, T, lambda = 0.01,
 #' @param T:             Treatment Batch Label
 #' @param clip_e:        The clipping value for the propensity score
 #' @param n_permutation: Number of permutations
+########################################################################################################
 permucate_vimp <- function(
     pc,
     X, Y, T, clip_e,
@@ -191,7 +234,17 @@ permucate_vimp <- function(
   return(list(importance = importance, score_per_perm = score_per_perm))
 }
 
-#' GRF variable importance with the Bootstrap CI:
+########################################################################################################
+#' GRF variable importance with the Bootstrap CI(Impurity Gain)
+#' Then return the variable importances and the combined permutation score:
+#' @param X:             Covariate Space
+#' @param Y:             Response
+#' @param W:             Treatment Batch Label
+#' @param n_bootstrap:   The number of bootstraps for estimate the confidence interval.
+#' @param ci_level:      Confidence Interva Levels
+#' @param n_estimators:  Number of Trees in Causal Forest
+#' @param n_permutation: Number of permutations
+########################################################################################################
 grf_vimp_with_ci <- function(X, Y, W,
     n_bootstrap = 100, ci_level = 0.95, n_estimators = 100, 
     random_state = NULL){
@@ -264,12 +317,13 @@ grf_vimp_with_ci <- function(X, Y, W,
     return(imp)
   }
 }
-
+####################################################################################################
 #' Estimate the uncertainty & confidence for the VIMP scores:
 #'@param scores_per_perm:    Variable Importance for each of the variable and d times of permutations
 #'@param lower_q:            Lower quantile for each of the feature
 #'@param higher_q:           Higher quantile for each of the feature
 #'@return: list of importance, std_error, variance, ci_low and ci_high
+####################################################################################################
 permutation_importance_uncertainty <- function(scores_per_perm,
   lower_q = 0.025, higher_q = 0.975){
   importances <- rowMeans(scores_per_perm)

@@ -18,7 +18,7 @@ install.packages(c("devtools", "roxygen2", "testthat", "grf", "MASS", ""))
 devtools::install_local("path/to/CFPerm")
 ```
 
-## Quick example
+## Testing Example
 
 ```r
 library(CFPerm)

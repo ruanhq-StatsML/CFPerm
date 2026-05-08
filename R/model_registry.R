@@ -3,6 +3,7 @@ library(nnet)
 library(glmnet)
 library(xgboost)
 library(randomForest)
+librarynnet
 ##########################################################################################
 #----------------------------------------------------------------------------------------
 #Model Registry: Incorporate all the possible models here for the model configurations.
@@ -73,6 +74,11 @@ default_model_registry <- function(
     mlp_classification = make_mlp_classifier(
       size = size, decay = 1e-5, maxit = maxit,
       trace = TRUE, MaxNWts = 8000
+    ),
+    multinomial_classifier = make_multinomial_classification(),
+    mlp_multinomial = make_mlp_multinomial(
+      size = size, decay = 1e-5, maxit = maxit,
+      linout = TRUE, trace = TRUE, MaxNWts = 4000
     )
   )
 }
@@ -119,7 +125,47 @@ make_mlp_regression <- function(
   )
 }
 
-#making the mlp classifier: 
+make_mlp_multinomial <- function(
+  size = 5, decay = 1e-5,
+  maxit = 500, trace = FALSE,
+  MaxNWts = 80000
+){
+  list(
+    name = 'mlp_multinomial',
+    fit = function(X, y, seed = NULL){
+      if(!is.null(seed)) set.seed(seed)
+      y <- as.factor(y)
+      if(length(levels(y)) <= 2){
+        stop('Please refer back to make_mlp_classifier for binary classification', call. = FALSE)
+      }
+      X <- as.matrix(X)
+      X_center <- colMeans(X)
+      X_scale <- apply(X, 2, sd)
+      X_scaled = scale(X, center = X_center, scale = X_scale)
+      fit <- nnet::nnet(
+        x = X_scaled,
+        y = as.factor(y),
+        size = size, decay = decay,
+        maxit = maxit, linout = FALSE,
+        trace = trace, MaxNWts = MaxNWts
+      )
+      list(
+        model = fit,
+        X_center = X_center,
+        X_scaled = X_scaled
+      )
+    },
+    predict = function(fit, X_new){
+      X_new = as.matrix(X_new)
+      X_new_scaled <- scale(
+        X_new, center = fit$X_center, scale = fit$X_scaled
+        )
+      as.numeric(predict(fit$model, X_new_scaled, type = 'class'))
+    }
+  )
+}
+
+#making the mlp classifier - binary: 
 make_mlp_classifier <- function(
   size = 5,
   decay = 1e-5,
@@ -240,6 +286,24 @@ make_rf_classification <- function(ntree = 200,
   )
 }
 
+make_multinomial_classification <- function(){
+  list(
+    name = 'multinomial_regression',
+    fit = function(X, y, seed = NULL){
+      if(!is.null(seed))
+      df = data.frame(y = factor(y), as.data.frame(X))
+      nnet::multinom(y~., data = df, trace = FALSE) 
+    },
+    predict = function(fit, X_new){
+      probs = predict(fit, newdata = as.data.frame(X_new),
+        type = 'class'
+         )
+      as.numeric(as.character(probs))
+    }
+  )
+}
+
+
 make_lm_regression <- function(){
   list(
     name = 'linear_regression',
@@ -252,6 +316,7 @@ make_lm_regression <- function(){
     }
   )
 }
+
 
 make_logistic_classification <- function(){
   list(
