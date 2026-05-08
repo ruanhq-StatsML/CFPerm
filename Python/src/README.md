@@ -34,6 +34,7 @@ sim <- LM_generation(
   eps = 1
 )
 
+
 df <- sim$df_return
 df_train <- df[1:100, c(paste0("X", 1:3), paste0("X_nuis", 1:5), "Y")]
 df_test  <- df[101:200, c(paste0("X", 1:3), paste0("X_nuis", 1:5), "Y")]

@@ -24,22 +24,52 @@ devtools::install_local("path/to/CFPerm")
 library(CFPerm)
 
 set.seed(1)
-sim <- LM_generation(
-  n = 200,
-  beta_hat = c(1, -1, 0.5),
-  mean_shift = 0,
-  var_shift = 1,
-  cor = 0.3,
-  n_nuisance = 5,
-  eps = 1
+#Testing Case I, simulate with no distribution shift:
+set.seed(2026)
+n0 <- 200
+n1 <- 200
+n <- n0 + n1
+p <- 10
+X <- matrix(rnorm(n * p, 0, 1), nrow = n, ncol = p)
+colnames(X) <- paste0("X", seq_len(p))
+T <- c(rep(0, n0), rep(1, n1))
+Y <- 1 + 0.8 * X[, 1] - 0.5 * X[, 2] + rnorm(n, sd = 1)
+#The test result via the permuCATE variable importance
+es_null_permucate <- cfperm(
+  X = X,
+  Y = Y,
+  T = T,
+  n_perm = 30,
+  vimp = "permuCATE",
+  seed = 2026,
+  level_feature = 0.05,
+  level_across_feature = 0.05,
+  top_k = 1
 )
+#The test result via the LOCO variable importance
+es_null_loco <- cfperm(
+  X = X,
+  Y = Y,
+  T = T,
+  n_perm = 30,
+  vimp = "loco",
+  seed = 2026,
+  level_feature = 0.05,
+  level_across_feature = 0.05,
+  top_k = 1
+)
+#The test result via the GRF variable importance
+es_null_grf <- cfperm(
+  X = X,
+  Y = Y,
+  T = T,
+  n_perm = 200,
+  vimp = 'GRF',
+  seed = 2020,
+  level_feature = 0.005,
+  level_across_feature = 0.005
+)#A reasonable amount of the permutation is required.
 
-df <- sim$df_return
-df_train <- df[1:100, c(paste0("X", 1:3), paste0("X_nuis", 1:5), "Y")]
-df_test  <- df[101:200, c(paste0("X", 1:3), paste0("X_nuis", 1:5), "Y")]
-
-res <- cfperm(df_train, df_test, n_perm = 50, num.trees = 150, seed = 123)
-res
 ```
 
 ## Development

@@ -15,19 +15,22 @@ default_vimp_config <- function(vimp){
   }
 }
 ########################################################################################
-#' CFPerm main function to conduct the permutation testing for causal inference
-#' @param X 
-#' @param Y 
-#' @param T     
-#' @param n_perm
-#' @param vimp 
-#' @param level_feature 
-#' @param level_across_feature     
-#' @param top_k
-#' @param X 
-#' @param Y 
-#' @param T     
-#' @param n_perm
+#' CFPerm main function to conduct the permutation testing for causal inference,
+#' The propensity score model is the regularized logistic regression by default.
+#' @param X                         :Covariates, (n_exist + n_new, p)
+#' @param Y                         :Responses vector, (n_exist + n_new, )
+#' @param T                         :Treatment(Batch) Assignment Labels, (n_exist + n_new, ) 
+#' @param n_perm                    :Number of Permutations for the batch assignment in the test
+#' @param n_folds                   :The number of folds for cross-fitting
+#' @param model_mu                  :The types of the outcome model
+#' @param model_nu                  :The types of the conditional fitting model, by default random forest.
+#' @param model_tau                 :The pseudo-outcome model
+#' @param vimp                      :The notion of the variable importance
+#' @param level_feature             :The level for the featurewise confidence interval
+#' @param level_across_feature      :The level across the quantile for each of the feature
+#' @param top_k                     :top_k: the decision rule regarding how many features are significantly higher?
+#' @param n_permutation             :Number of Permutations for the conditional permutation variable importance(PermuCATE)
+########################################################################################
 cfperm <- function(X, Y, T, 
     n_perm = 200,
     vimp = 'permuCATE',
@@ -98,46 +101,4 @@ cfperm <- function(X, Y, T,
     return(rejected)
 }
 
-#Testing Case I:
-set.seed(2026)
-n0 <- 200
-n1 <- 200
-n <- n0 + n1
-p <- 10
-X <- matrix(rnorm(n * p, 0, 1), nrow = n, ncol = p)
-colnames(X) <- paste0("X", seq_len(p))
-T <- c(rep(0, n0), rep(1, n1))
-Y <- 1 + 0.8 * X[, 1] - 0.5 * X[, 2] + rnorm(n, sd = 1)
-es_null_permucate <- cfperm(
-  X = X,
-  Y = Y,
-  T = T,
-  n_perm = 30,
-  vimp = "permuCATE",
-  seed = 2026,
-  level_feature = 0.05,
-  level_across_feature = 0.05,
-  top_k = 1
-)
-es_null_loco <- cfperm(
-  X = X,
-  Y = Y,
-  T = T,
-  n_perm = 30,
-  vimp = "loco",
-  seed = 2026,
-  level_feature = 0.05,
-  level_across_feature = 0.05,
-  top_k = 1
-)
-es_null_grf <- cfperm(
-  X = X,
-  Y = Y,
-  T = T,
-  n_perm = 200,
-  vimp = 'GRF',
-  seed = 2020,
-  level_feature = 0.005,
-  level_across_feature = 0.005
-)#A reasonable amount of the permutation is required.
 
