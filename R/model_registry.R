@@ -3,7 +3,7 @@ library(nnet)
 library(glmnet)
 library(xgboost)
 library(randomForest)
-
+##########################################################################################
 #----------------------------------------------------------------------------------------
 #Model Registry: Incorporate all the possible models here for the model configurations.
 #----------------------------------------------------------------------------------------
@@ -11,13 +11,13 @@ library(randomForest)
 #    Construct a named registry of individual model adapters used by the nuisance estimation layer.
 #
 #Inputs:
-# -- ntree:          Number of trees in the Random Forest or XGBoost Model
-# -- positive_class: Class label whose predicted probability is returned by classification adapters
-# -- lambda:         L-2 penalty in the ridge regression
-# -- nthread:        number of threads used by the xgboost package
-# -- size:           The number of units in the hidden dimension
-# -- maxit:          Maximum number of iterations for the NNet here.
-# -- MaxNWts:        Maximum allowable amount of weights
+#'@param -- ntree:          Number of trees in the Random Forest or XGBoost Model
+#'@param -- positive_class: Class label whose predicted probability is returned by classification adapters
+#'@param -- lambda:         L-2 penalty in the ridge regression
+#'@param -- nthread:        number of threads used by the xgboost package
+#'@param -- size:           The number of units in the hidden dimension
+#'@param -- maxit:          Maximum number of iterations for the NNet here.
+#'@param -- MaxNWts:        Maximum allowable amount of weights
 #
 #Output Contract:
 #    Returns a named list of model adapters, each adapter must contain:
@@ -29,6 +29,7 @@ library(randomForest)
 #Call:              models <- default_model_registry()
 #                   m_model <- models$rf_regression
 #                   e_model <- models$logistic_classification
+##########################################################################################
 default_model_registry <- function(
     ntree = 200, positive_class = 1,
     lambda = 0.01, nthread = 1, maxit = 200,
