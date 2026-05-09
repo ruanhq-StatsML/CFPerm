@@ -30,6 +30,7 @@ default_vimp_config <- function(vimp){
 #' @param level_across_feature      :The level across the quantile for each of the feature
 #' @param top_k                     :top_k: the decision rule regarding how many features are significantly higher?
 #' @param n_permutation             :Number of Permutations for the conditional permutation variable importance(PermuCATE)
+#' @param return                    :Significance Results for the test
 ########################################################################################
 cfperm <- function(X, Y, T, 
     n_perm = 200,

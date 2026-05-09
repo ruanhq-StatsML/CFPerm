@@ -1,4 +1,5 @@
 #LOCO variable importance:
+source('model_registry.R')
 ########################################################################################
 #' Leave-one-Covariate-Out Variable Importance for the R-risk:
 #'@param X,Y,W:                  Numeric matrix/data.frame of dimension (n_exist + n_new) * (p + 2), p is the number of features, with the response column(the second last column) and the batch assignment column(the last column)

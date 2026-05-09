@@ -7,7 +7,7 @@ library(randomForest)
 library(grf)
 library(testthat)
 
-test_that('cfperm returns TRUE/FALSE and validates inputs', 
+test_that('cfperm returns TRUE/FALSE and validates inputs'
   {
   skip_if_not_installed(c('grf', 'nnet', 'randomForest', 'glmnet', 'xgboost'))
   set.seed(123)
