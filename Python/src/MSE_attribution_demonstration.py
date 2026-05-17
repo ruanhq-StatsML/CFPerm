@@ -21,6 +21,13 @@ model_registry = default_model_registry(
 )
 
 
+def block_corr(p, p_signal, rho):
+    Cov_Sigma = np.eye(p)
+    if p_signal > 1:
+        SigS = np.full((p_signal, p_signal), rho_signal, dtype = float)
+        np.fill_diagonal(SigS, 1.0)
+        Cov_Sigma[:p_signal, :p_signal] = SigS
+        #why not 
 
 def block_corr(p, p_signal, rho):
     Cov_Sigma = np.eye(p)
@@ -33,31 +40,60 @@ def block_corr(p, p_signal, rho):
     return Cov_Sigma
 
 
+def mvn_sample(n, mu, Sigma, rng):
+    L = np.linalg.cholesky(Sigma)
+    Z = rng.standard_normal((n, len(mu)))
+    return mu.reshape(1, -1) + Z @ L.T
+
+rng = np.random
+
+
 def conditional_gaussian_sampling(mu0, Sigma0, XS, S_idx, clip_val = 1e-5, rng):
-    p = Sigma0.shape[0]
-    S = np.array(S_idx, dtype = int)
-    C = np.setdiff1d(np.arange(p), S)
-    muS = mu0[S]
-    muC = mu0[C]
-    '''
-    Fetch the off-diagonal and diagonal component of the Covariance Matrix, conduct the conditional sampling on the multivariate normal distribution.
-    '''
-    SigSS = Sigma0[muS, muS]
-    SigCC = Sigma0[muC, muC]
-    SigSC = Sigma0[muC, muS]
-    SigCS = Sigma0[muS, muC]
-    #Conditional Sampling on the Multivariate Conditional Distribution:
-    invSigSS = np.linalg.inv(SigSS + clip_val * np.eye(SigSS.shape[0]))
-    A = SigCS @ invSigSS
-    #Conditional Mean and Conditional Variance for the Multivariate Normal Distribution:
-    cond_mean = (XS - muS.reshape(1, -1)) @ A.T + muC.reshape(1, -1)
-    cond_cov = SigCC - SigCS @ invSigSS @ SigSC
-    cond_cov = cond_cov + clip_val * np.eye(cond_cov.shape[0])
-    L = np.linalg.cholesky(cond_cov)
-    Z = rng.standard_normal((XS.shape[0], len(C)))
-    return cond_mean + Z @ L.T, C
 
+#Conditional gaussian sampling here:
+p = Sigma0.shape[0]
+S = np.array(S_idx, dtype = int)
+C = np.setdiff1d(np.arange(p), S)
+muS = mu0[S]
+muC = mu0[C]
+'''
+Fetch the off-diagonal and diagonal component of the Covariance Matrix, conduct the conditional sampling on the multivariate normal distribution.
+'''
+SigSS = Sigma0[S, S]
+SigCC = Sigma0[C, C]
+SigSC = Sigma0[S, C]#
+SigCS = Sigma0[C, S]
+#Conditional Sampling on the Multivariate Conditional Distribution:
+SigSS_inv = np.linalg.inv(SigSS + clip_val * np.eye(SigSS.shape[0])) #(n_s, n_s)
+A = SigmaCS @ SigSS_inv #(n_c, n_s)
+#Conditional Mean and Conditional Variance for the Multivariate Normal Distribution:
+cond_mean = (XS - muS.reshape(1, -1)) @ A.T + muC.reshape(1, -1) #(n_c, 1)
+cond_cov = SigCC - SigCS @ SigSS_inv @ SigSC
+cond_cov = cond_cov + clip_val * np.eye(cond_cov.shape[0]) #(n_c, n_c)
+L = np.linalg.cholesky(cond_cov)
+Z = rng.standard_normal((XS.shape[0], len(C)))
+return cond_mean + Z @ L.T, C
 
+import numpy as np
+rng = np.random.default_rng(seed = 2026)
+Sigma = np.random.random((25, 25)) + np.eye(25) * 12
+mu = np.zeros(25)
+L = np.linalg.cholesky(Sigma)
+Z = rng.standard_normal((200, 25))
+X = mu.reshape(1, -1) + Z @ L.T
+idx_S = np.random.choice(np.arange(25), 10)
+idx_nS = np.setdiff1d(np.arange(25), idx_S)
+next_ind = np.random.choice(idx_nS, 1).item()
+SigSS = Sigma[np.ix_(idx_S, idx_S)]
+SigSC = Sigma[np.ix_(idx_S, idx_nS)]
+SigCS = Sigma[np.ix_(idx_nS, idx_S)]
+muS = mu[idx_S]
+XS = np.array(np.arange(len(idx_S)))
+A = SigCS @ np.linalg.inv(SigSS + np.eye(SigSS.shape[0]) * clip_val) @ SigSC
+cond_mean = (XS.reshape(1,-1) - muS.reshape(1, -1))@A.T + muC.reshape(1, -1)#(n_c, 1)
+L = np.linalg.cholesky(cond_cov)
+Z = rng.standard_normal((XS.shape[0], len(idx_nS)))
+#Remember this! cond_mean + Z@L.T
 
 
 '''
@@ -110,7 +146,21 @@ def mse_order_rerank(model, df, B, order, n_banded = 3, seed = 2026):
 
 
 
+#Unsupervised Contrastive Learning here:
+#model0 = RandomForestRegressor().fit(X_train, df1)
 
+def load_llm2vec_model():
+    model_name = "McGill-NLP/LLM2Vec-Meta-Llama-3-8B-Instruct-mntp-unsup-simcse"
+    # specify the original foundational model, it's a LoRA adapter with 4-bit model.
+    base_model_name = "McGill-NLP/LLM2Vec-Meta-Llama-3-8B-Instruct-mntp"
+    l2v_model = LLM2Vec.from_pretrained(
+        base_model_name,
+        peft_model_name_or_path = model_name,
+        device_map = 'cuda' if torch.cuda.is_available() else 'cpu',
+        torch_dtype = torch.bfloat16
+    )
+    instruction = 'Represent the following Sentence for Similarity Checking:'
+    return l2v_model, instruction
 
 
 
@@ -144,6 +194,61 @@ Benchmark Methods: SGShift,
 
 
 
+def train_model(n_train):
+    Xtr, ytr
+
+
+
+
+
+#sample conditional on S and then generate the next variable:
+rng = np.random.default_rng(seed = 2026)
+order = rng.permutation(p)
+for m in range(n_orderings):
+    order = rng.permutation(p)
+    v = np.zeros(p + 1, dtype = float)
+    for k in range(p + 1):
+        S = order[:k]
+        Xh = conditional_gaussian_sampling(S, rng)
+
+
+
+
+def equicorr_block_cov(p_total = 25, p_signal = 10, rho_signal = 15):
+    Sigma = np.eye(p_total)
+    if p_signal > 1:
+        SigS = np.full((p_signal, p_signal), rho_signal, dtype = float)
+        np.fill_diagonal((SigS, 1.0))
+        Sigma[:p_signal, :p_signal] = SigS
+    return Sigma
+
+
+
+
+
+#RBFSampler procedures and cond_cov = SigCC - A @ SigSC
+import numba
+
+@njit(parallel = True, nopython = True)
+def gaussian_conditional_sampling(mu0, Sigma0, XS, S_idx, rng, jitter = 1e-5):
+    A = np.linalg.solve(SigSS + jitter * np.eye(len), SigCS.T).T
+    cond_cov = SigCC - A @ SigSC
+    cond_cov += np.eye(cond_cov.shape[0]) * jitter
+    n = Xs.shape[0]
+    rng_vals = rng.standard_normal((n, len(C)))
+    cond_mean = muC.reshape(1, -1) + (xS - muS.reshape(1,-1)) #(n, |C|)
+    noise = rng_vals @ L.T#(lower = True)
+    XC = cond_mean + noise
+    return XC, C
+
+
+
+invSigSS = np.linalg.inv(SigSS + jitter * np.eye(SigSS.shape[0]))
+A = SigCS @ invSigSS
+
+#develop the habit of taking initiative to own his own part.
+#A = SigCS @ invSigSS
+A = SigSC
 
 
 
@@ -152,14 +257,10 @@ Benchmark Methods: SGShift,
 
 
 
+from dataclass import dataclass
 
-
-
-
-
-
-
-
+def topk_jaccard(a: np.ndarray, b: np.ndarray, k):
+    
 
 
 
