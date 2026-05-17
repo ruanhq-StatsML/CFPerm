@@ -2,7 +2,7 @@
 source('model_registry.R')
 ########################################################################################
 #' Leave-one-Covariate-Out Variable Importance for the R-risk:
-#'@param X,Y,W:                  Numeric matrix/data.frame of dimension (n_exist + n_new) * (p + 2), p is the number of features, with the response column(the second last column) and the batch assignment column(the last column)
+#'@param X,Y,W:               Numeric matrix/data.frame of dimension (n_exist + n_new) * (p + 2), p is the number of features, with the response column(the second last column) and the batch assignment column(the last column)
 #'                            For the batch assignment column T, the first n_exist value represent batch 0 and the next n_new value represent batch 1        
 #'@param outcome_model:       Type of the outcome model
 #'@param n_folds:             Number of folds of cross-fitting
@@ -11,6 +11,7 @@ source('model_registry.R')
 #'@param clip_e:              The clip for the propensity score here.
 #'@param clip_wtilde:         The clip for the weights in the R-learner
 #'@return vimp:               Numeric vector-list of (p) for each of the feature
+########################################################################################
 importance_LOCO_r_risk <- function(
 X, Y, W, seed = 0, n_folds = 5, binary_outcome = FALSE, lambda = 0.1,
 clip_e = 0.01, clip_wtilde = 1e-3){
@@ -52,7 +53,10 @@ r_risk <- function(Y_tilde, W_tilde, tau){
 }
 
 
-#Only choose those observations with the covariate value larger than clip_value for the W_tilde
+########################################################################################
+#' R-learner fitting via ridge regression
+#'
+########################################################################################
 fit_tau_rlearner_weighted <- function(X, Y_tilde, W_tilde, ridge_lambda,
   clip_wtilde = 1e-4, seed = 2026){
   mask <- abs(W_tilde) > clip_wtilde
