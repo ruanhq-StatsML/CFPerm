@@ -396,6 +396,10 @@ def cfperm_feature_pvals(
 
 
 def LMGeneration(n = 1000, p = 20, beta = [1,1,1,1,1,1,1], variances = 1, cor = 0.3, eps_noi = 1, mean = 0):
+    '''
+    Generate a linear DGP(Data-Generating Process) with
+    Y = X\beta + \epsilon with AR(1) correation structure with Gaussian Noise.
+    '''
     n_signal = len(beta)
     mean_vector = [mean] * n_signal
     cov_mat = np.zeros((n_signal, n_signal))
