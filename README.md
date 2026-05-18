@@ -81,4 +81,4 @@ devtools::check()
 
 ## Demonstration for the Attribution Analysis: No Uniform Attribution for the MSE and the benchmark Comparisons:
 
-https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2#scrollTo=nEFzYA2EHZ0n
+https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
