@@ -1,6 +1,6 @@
 # CFPerm
 
-Implementation for the "Leveraging Causal Inference for Detecting Distribution Shift": It provides implementation for causal machine learning model to detect distribution shfit via permutation test on the variable importances.
+Implementation for the "Leveraging Causal Inference for Detecting Distribution Shift": It provides implementation for causal machine learning model to detect distribution shfit via permutation test on a variety of notions of the Variable Importances
 
 
 ## Python version:
