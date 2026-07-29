@@ -12,6 +12,7 @@ We leverage the meta-learner(causal forest, doubly-robust pseudo-outcome learner
 - For Concept Drift(the feature selection consistency in terms of kendall's tau correlation is leveraged for efficiency of the ranking of the feature importance in the concept drift).
 <img width="900" height="970" alt="uq_vimpood_cd_on_cs_allmethods_polished" src="https://github.com/user-attachments/assets/65925cae-d308-4651-8ba1-979d122e5dae" />
 
+Then we adapt the second-stage feature selection followed by the distribution shift localization procedure - where the test itself is built upon whether significant features can be selected from the hypothesis testing procedure.
 
 
 ## Python version:
