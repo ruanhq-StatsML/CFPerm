@@ -2,23 +2,9 @@
 
 Implementation for the "Leveraging Causal Inference for Detecting Distribution Shift": It provides implementation for leveraging causal inference methods to detect distribution shift via the varying types of the causal models including Causal Forests, DR-learner and Dragon-Net with permutation of the Variable Importance. The variable importance notions include PermuCATE(conditional permutation variable importance), LOCO(leave-one-covariate-out) and the Impurity Gain/Split Frequency Based Variable Importance for the Causal Forest.
 
-The hypothesis testing procedure is based on permuting the batch assignment among the existing group and new group, where the 
-$$
-\begin{algorithm}[tb]
-\caption{Testing Distribution Shift via Meta-Learner and variable importance - \textbf{CFPerm}}.\label{alg:alg_cfperm}
-\\
-\textbf{BEGIN}
-Start with existing batch of data $\mathscr{D}_{exist} =  \{ (\mathbf{X}_{1},Y_{1}),...,(\mathbf{X}_{n_{exist}},Y_{n_{exist}})\}$ where $(\mathbf{X}_{i},Y_{i})$ and new batch of data $\mathscr{D}_{new} = \{ (\mathbf{X}_{n_{exist}+1},Y_{n_{exist}+1}),...,(\mathbf{X}_{n_{exist}+n_{new}},Y_{n_{exist}+n_{new}})\}$ where $(\mathbf{X}_{i}, Y_{i}) $, with each $\mathbf{X}_{j} = (x_{1},...,x_{p})$. Assign (control) treatment $T=0$ to existing batch of data and $T=1$ (treatment) to new batch of data. Define hypotheses $H_{0}:P(\mathbf{X}_{new}) = P(\mathbf{X}_{exist}) \ and \ P(Y_{new}|\mathbf{X}_{new}) = P(Y_{exist}|\mathbf{X}_{exist}) $ v.s. $ H_{a}: P(\mathbf{X}_{new}) \neq P(\mathbf{X}_{exist}) \ or \ P(Y_{new}|\mathbf{X}_{new}) \neq P(Y_{exist}|\mathbf{X}_{exist})$.
-\begin{enumerate}
-\item[\textbf{S1}] Fit the causal forest on $(\mathbf{X},Y,T)$ and record the variable importance (VIMP) for each feature $v_{1},...,v_{p}$ The notion of variable importance include \textbf{PermuCATE}, \textbf{LOCO} and \textbf{CF-split}.
-\item[\textbf{S2}] Permute the treatment assignment T randomly across the data a total of $B$ times (by default $B$ = 500).  Each time, fit the causal forest on the resulting permuted batches and calculate the variable importance, recorded as $v_{b,1},...,v_{b,p}$ for $b=1,..,B$.
-\item[\textbf{S3}] Construct an interval for the variable importance of each of the feature with the lower bound as the smallest value and the higher bound as the largest value across the permutations $I_{i} = (v_{i,min},v_{i,max}), i = 1,2,...,p$
-\item[\textbf{S4-1}] \textbf{CFPerm0}: The maximal value of the permuted confidence interval of variable importance for each feature is recorded as $I_{max} = \{v_{max,1},...,v_{max,p} \}$.  Reject $H_{0}$ if there exists a feature whose original variable importance is larger than the maximal of upper bound among all of the features $max(I_{max})$ served as the decision threshold; otherwise, do not reject.
-\item[\textbf{S4-2}] \textbf{CFPerm1}: The 99\% upper quantile for the permuted confidence interval of variable importance in each of the feature is recorded: $I_{99\%} = \{v_{1,99\%},...,v_{p,99\%}\}$ Reject $H_{0}$ based on whether there exists a feature whose original variable importance is larger than the 95\% upper quantile $q_{0.95}(I_{99\%})$ of the recorded feature-wise 99\% quantile across the features served as the decision threshold. Otherwise the null hypothesis would not be rejected. 
-\end{enumerate}
-\textbf{END}
-\end{algorithm}\label{alg: algorithm1}
-$$
+The hypothesis testing procedure is based on permuting the batch assignment among the existing group and new group with the high empirical quantile on the variable as the decision threshold. The hypothesis testing procedure is conducted via looking at whether there exist features can be extracted.
+<img width="1142" height="944" alt="Screenshot 2026-07-30 at 15 11 15" src="https://github.com/user-attachments/assets/c0dc64dc-62f3-448f-9dd3-f5e028230ccf" />
+
 
 ### Motivation: Meta-Learner and Distribution Shift
 We leverage the meta-learner(causal forest, doubly-robust pseudo-outcome learner and the R-learner) to quantify the distance between the two batches of datasets, then the variable importance for this version of meta-learner is a proxy for the distribution shift - from another aspect, so called OOD Variable Importance. The illustration of the feature selection as the validity of this proposed framework in both Covariate Shift(P(X) shift) and Concept Drift(P(Y|X) shift).
