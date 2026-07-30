@@ -5,6 +5,8 @@ Implementation for the "Leveraging Causal Inference for Detecting Distribution S
 The hypothesis testing procedure is based on permuting the batch assignment among the existing group and new group with the high empirical quantile on the variable as the decision threshold. The hypothesis testing procedure is conducted via looking at whether there exist features can be extracted.
 <img width="900" height="780" alt="Screenshot 2026-07-30 at 15 11 15" src="https://github.com/user-attachments/assets/c0dc64dc-62f3-448f-9dd3-f5e028230ccf" />
 
+Thus the post-hoc subgroup analysis can be developed for the distribution shift localization - to calculate the mean difference between the two groups for discretization.
+
 
 ### Motivation: Meta-Learner and Distribution Shift
 We leverage the meta-learner(causal forest, doubly-robust pseudo-outcome learner and the R-learner) to quantify the distance between the two batches of datasets, then the variable importance for this version of meta-learner is a proxy for the distribution shift - from another aspect, so called OOD Variable Importance. The illustration of the feature selection as the validity of this proposed framework in both Covariate Shift(P(X) shift) and Concept Drift(P(Y|X) shift).
