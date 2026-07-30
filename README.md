@@ -1,3 +1,4 @@
+
 # Meta-Learner Based Hypothesis Testing Procedure for Distribution Shift via Variable Importance
 
 Implementation for the "Leveraging Causal Inference for Detecting Distribution Shift": It provides implementation for leveraging causal inference methods to detect distribution shift via the varying types of the causal models including Causal Forests, DR-learner and Dragon-Net with permutation of the Variable Importance. The variable importance notions include PermuCATE(conditional permutation variable importance), LOCO(leave-one-covariate-out) and the Impurity Gain/Split Frequency Based Variable Importance for the Causal Forest.
@@ -5,7 +6,8 @@ Implementation for the "Leveraging Causal Inference for Detecting Distribution S
 The hypothesis testing procedure is based on permuting the batch assignment among the existing group and new group with the high empirical quantile on the variable as the decision threshold. The hypothesis testing procedure is conducted via looking at whether there exist features can be extracted.
 <img width="900" height="780" alt="Screenshot 2026-07-30 at 15 11 15" src="https://github.com/user-attachments/assets/c0dc64dc-62f3-448f-9dd3-f5e028230ccf" />
 
-Thus the post-hoc subgroup analysis can be developed for the distribution shift localization - to calculate the mean difference between the two groups for discretization.
+Thus the post-hoc subgroup analysis can be developed for the distribution shift localization - to calculate the mean difference between the two groups for discretization - below is one of the illustration examples. 
+<img width="1630" height="1296" alt="SubsetAnalysis" src="https://github.com/user-attachments/assets/8fdd99f6-b3ef-4c06-af73-f31f17c2ff01" />
 
 
 ### Motivation: Meta-Learner and Distribution Shift
@@ -17,7 +19,8 @@ We leverage the meta-learner(causal forest, doubly-robust pseudo-outcome learner
 - For Concept Drift(the feature selection consistency in terms of kendall's tau correlation is leveraged for efficiency of the ranking of the feature importance in the concept drift).
 <img width="900" height="970" alt="uq_vimpood_cd_on_cs_allmethods_polished" src="https://github.com/user-attachments/assets/65925cae-d308-4651-8ba1-979d122e5dae" />
 
-Then we adapt the second-stage feature selection followed by the distribution shift localization procedure - where the test itself is built upon whether significant features can be selected from the hypothesis testing procedure.
+This framework possess high flexibility both in terms of the models as well as the notions of variable importances. 
+<img width="2140" height="1136" alt="metalearner_flexibility" src="https://github.com/user-attachments/assets/dd3f66ed-4d54-4f57-b5ba-58760b803d3a" />
 
 
 ## Python version:
