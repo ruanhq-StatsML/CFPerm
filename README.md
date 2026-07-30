@@ -20,7 +20,7 @@ We leverage the meta-learner(causal forest, doubly-robust pseudo-outcome learner
 <img width="900" height="970" alt="uq_vimpood_cd_on_cs_allmethods_polished" src="https://github.com/user-attachments/assets/65925cae-d308-4651-8ba1-979d122e5dae" />
 
 This framework possess high flexibility both in terms of the models as well as the notions of variable importances. 
-<img width="2140" height="1136" alt="metalearner_flexibility" src="https://github.com/user-attachments/assets/dd3f66ed-4d54-4f57-b5ba-58760b803d3a" />
+<img width="1700" height="900" alt="metalearner_flexibility" src="https://github.com/user-attachments/assets/dd3f66ed-4d54-4f57-b5ba-58760b803d3a" />
 
 
 ## Python version:
