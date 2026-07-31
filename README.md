@@ -22,6 +22,7 @@ We leverage the meta-learner(causal forest, doubly-robust pseudo-outcome learner
 This framework possess high flexibility both in terms of the models as well as the notions of variable importances. 
 <img width="1700" height="900" alt="metalearner_flexibility" src="https://github.com/user-attachments/assets/dd3f66ed-4d54-4f57-b5ba-58760b803d3a" />
 
+Thus the procedure is highly flexible with different notions of the variable importances and the meta-learners.
 
 ## Python version:
 ```python
