@@ -3,8 +3,9 @@
 
 Implementation for the "Leveraging Causal Inference for Detecting Distribution Shift": It provides implementation for leveraging causal inference methods to detect distribution shift via the varying types of the causal models including Causal Forests, DR-learner and Dragon-Net with permutation of the Variable Importance. The variable importance notions include PermuCATE(conditional permutation variable importance), LOCO(leave-one-covariate-out) and the Impurity Gain/Split Frequency Based Variable Importance for the Causal Forest.
 
-The hypothesis testing procedure is based on permuting the batch assignment among the existing group and new group with the high empirical quantile on the variable as the decision threshold. The hypothesis testing procedure is conducted via looking at whether there exist features can be extracted.
-<img width="900" height="780" alt="Screenshot 2026-07-30 at 15 11 15" src="https://github.com/user-attachments/assets/c0dc64dc-62f3-448f-9dd3-f5e028230ccf" />
+The hypothesis testing procedure is based on permuting the batch assignment among the existing group and new group with the high empirical quantile on the variable as the decision threshold. The hypothesis testing procedure is conducted via looking at whether there exist features can be extracted, the pseudo-code for the algorithm is presented as below:
+<img width="1326" height="1392" alt="CFPerm_MetaLearner" src="https://github.com/user-attachments/assets/07c9f1d7-e01d-4f33-b922-8e6f4b033424" />
+
 
 Thus the post-hoc subgroup analysis can be developed for the distribution shift localization - to calculate the mean difference between the two groups for discretization - below is one of the illustration examples. 
 <img width="1630" height="1296" alt="SubsetAnalysis" src="https://github.com/user-attachments/assets/8fdd99f6-b3ef-4c06-af73-f31f17c2ff01" />
