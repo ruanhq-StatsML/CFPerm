@@ -23,7 +23,7 @@ We leverage the meta-learner(causal forest, doubly-robust pseudo-outcome learner
 This framework possess high flexibility both in terms of the models as well as the notions of variable importances. 
 <img width="1700" height="900" alt="metalearner_flexibility" src="https://github.com/user-attachments/assets/dd3f66ed-4d54-4f57-b5ba-58760b803d3a" />
 
-Thus the procedure is highly flexible with different notions of the variable importances and the meta-learners(as long as a valid objective function exist for the meta-learner to estimate the discrepancy between the two batches of data). ***Emphasize: The meta-learner procedure here won't possess causal interpretation as under the alternative hypothesis, the strong ignorability condition won't be satisfied - the pseudo-outcome learner itself is primarily served as the distance estimator instead of the treatment effect estimator, the Causal Forest(CF-Split) procedure can serve as a parsimonious empirical tool for the hypothesis testing procedure.***
+Thus the procedure is highly flexible with different notions of the variable importances and the meta-learners(as long as a valid objective function exist for the meta-learner to estimate the discrepancy between the two batches of data). ***Emphasize: The meta-learner procedure here won't possess causal interpretation as under the alternative hypothesis, the strong ignorability condition won't be satisfied - the pseudo-outcome learner itself is primarily served as the distance estimator instead of the treatment effect estimator, the Causal Forest(CF-Split) procedure can serve as a parsimonious empirical tool for the hypothesis testing procedure as the validity of its variable importance requires causal interpretation.***
 
 ## Python version:
 ```python
