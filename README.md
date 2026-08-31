@@ -105,7 +105,12 @@ devtools::check()
 
 https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 
-### Identifiability issue in the Decomposition of Distribution Shift into Individual Feature or Separate Sources
+### Impossibility Issue issue in the Decomposition of Distribution Shift into Individual Feature or Separate Sources
+
+- **Upon detecting the change of the data, one crucial yet important aspect would be - is that possible to attribute the root-cause of the change of data into individual sources? Our answer is that, it's impossible! Thus The impossibility issue is proposed with the following three levels.**
+-  Level1: The drop of the model performance(increase of MSE), there are infinite number of the distribution shifts to characterize or achieve this degree of performance drop.
+-  Level2: Upon observing the distribution shift, there are infinite number of the Covariate Shift and Concept Drift to characterize or achieve this degree of distribution shift.
+-  Level3: Upon observing the change of the variable importance, there are infinite number of change of the feature and the dependence structure to characterize or achieve this degree of variable importance change. 
 
 - **For any observed distribution shift or performance drop, disentangle it into separate sources would be impossible, there are infinite number of ways to replicate this distribution shift or this degree of the performance degradation** The mean shift + epsilon shift(data quality degradation) can mimic(with 50 bootstrap resamples and the confidence interval is established) the degree of the performance degradation like that from the concept drift.
 <img width="1796" height="552" alt="Screenshot 2026-08-03 at 09 57 54" src="https://github.com/user-attachments/assets/bd74444f-992d-4928-ac54-df080e397cf7" />
