@@ -1,0 +1,32 @@
+\begin{table}[ht]
+\centering
+\caption{Multi-dataset dashboard (not a methodological claim). Null-adjusted $\Delta_t=s_t-\mu_{\mathrm{ref}}$ with online AR-bootstrap CI. cover0 / cover0 pre $=$ fraction of CIs containing $0$ (stationary / pre-CP). post det $=$ post-CP fraction with CI$_{\mathrm{lo}}>0$. delay $=$ batches from labeled CP to first significant CI.}
+\label{tab:multidataset-batchsize-boot-ci}
+\small
+\begin{tabular}{@{}l r ccccc@{}}
+\toprule
+dataset & $B$ & $\mu_{\mathrm{ref}}$ & TV$(\mathrm{lo})/1\mathrm{k}$ & cover0/pre & post det & delay \\
+\midrule
+Stationary & 1 & 0.940 & 1.773 & 1.000 & -- & -- \\
+Stationary & 10 & 0.940 & 0.492 & 1.000 & -- & -- \\
+Stationary & 20 & 0.940 & 0.249 & 1.000 & -- & -- \\
+Stationary & 50 & 0.887 & 0.128 & 1.000 & -- & -- \\
+\addlinespace
+Concept drift & 1 & 0.951 & 3.153 & 1.000 & 0.951 & 133 \\
+Concept drift & 10 & 0.951 & 2.042 & 1.000 & 0.809 & 67 \\
+Concept drift & 20 & 0.951 & 1.333 & 1.000 & 0.744 & 33 \\
+Concept drift & 50 & 0.898 & 1.848 & 1.000 & 0.563 & 31 \\
+\addlinespace
+Covariate shift & 1 & 0.989 & 1.454 & 1.000 & 0.000 & -- \\
+Covariate shift & 10 & 0.989 & 0.552 & 1.000 & 0.000 & -- \\
+Covariate shift & 20 & 0.989 & 0.479 & 1.000 & 0.000 & -- \\
+Covariate shift & 50 & 0.934 & 0.137 & 1.000 & 0.000 & -- \\
+\addlinespace
+Diabetes (src→tgt) & 1 & 0.215 & 0.267 & 0.937 & 1.000 & 0 \\
+Diabetes (src→tgt) & 10 & 0.215 & 0.134 & 1.000 & 0.982 & 6 \\
+Diabetes (src→tgt) & 20 & 0.215 & 0.032 & 1.000 & 0.956 & 6 \\
+Diabetes (src→tgt) & 50 & 0.203 & 0.018 & 1.000 & 0.967 & 3 \\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}
