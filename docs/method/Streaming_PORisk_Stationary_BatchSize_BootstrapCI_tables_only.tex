@@ -1,0 +1,16 @@
+\begin{table}[ht]
+\centering
+\caption{Stationary DGP with null adjustment. $\Delta_t=s_t-\mu_{\mathrm{ref}}$, where $\mu_{\mathrm{ref}}$ is the mean frozen PO-risk on $D_{\mathrm{ref}}$ mini-batches. Online AR-bootstrap CI ($n_{\mathrm{boot}}=200$) targets the running mean of $\Delta$. cover0 $=$ fraction of post-burn batches whose CI contains $0$. TV$(\mathrm{lo})/1\mathrm{k}$ is total variation of the lower endpoint per $1000$ observations.}
+\label{tab:stationary-batchsize-boot-ci}
+\small
+\begin{tabular}{@{}r ccccc@{}}
+\toprule
+$B$ & $\mu_{\mathrm{ref}}$ & mean width & std$(\Delta)$ & TV$(\mathrm{lo})/1\mathrm{k}$ & cover0 \\
+\midrule
+1 & 0.976 & 0.179 & 1.382 & 4.192 & 1.000 \\
+10 & 0.976 & 0.188 & 0.465 & 0.668 & 1.000 \\
+20 & 0.976 & 0.199 & 0.320 & 0.402 & 1.000 \\
+50 & 0.922 & 0.203 & 0.196 & 0.254 & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
