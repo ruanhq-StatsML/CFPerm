@@ -1,0 +1,46 @@
+% AFFEC FSDS board · RF Domain Classifier ranked feature indices
+% Compile as tables-only snippet or \input{} into a paper.
+\begin{table}[ht]
+\centering
+\caption{AFFEC multimodal FSDS board. Within each modality, indices are ordered by
+RF Domain Classifier VIMP (high$\to$low): $\texttt{np.argsort(-VIMP)[:$k$]}$ with $k{=}8$
+(cursor uses all $4$ channels). Batch definition: early runs $\{0,1\}$ vs late runs $\{2,3\}$.
+Holdout domain AUC $\approx 0.999$ (board sanity check).}
+\label{tab:affec-fsds-rf-rank}
+\small
+\begin{tabular}{@{}l l p{7.6cm}@{}}
+\toprule
+Modality & Ranked indices & Channel names (same order) \\
+\midrule
+\texttt{eye\_tracking}
+  & $[6,15,12,11,4,5,0,1]$
+  & fixation\_duration, validity, pupil\_y\_left, pupil\_x\_left,
+    gaze\_x\_right, gaze\_y\_right, fixation\_x, fixation\_y \\
+\texttt{pupil}
+  & $[5,4,13,11,12,15,17,10]$
+  & pupil\_latency, pupil\_peak, eye\_pos\_y\_raw, eye\_pos\_y,
+    eye\_pos\_x\_raw, eye\_pos\_velocity\_y, eye\_pos\_range\_x, eye\_pos\_x \\
+\texttt{cursor}
+  & $[1,0,2,3]$
+  & cursor\_y, cursor\_x, cursor\_velocity, cursor\_state \\
+\texttt{gsr\_eda}
+  & $[15,32,31,4,3,35,30,14]$
+  & acc\_y, gsr\_feat\_32, gsr\_feat\_31, gsr\_scr\_count,
+    gsr\_tonic, gsr\_feat\_35, gsr\_feat\_30, acc\_x \\
+\texttt{eeg}
+  & $[50,54,23,2,56,3,47,15]$
+  & EEG\_50, EEG\_54, EEG\_23, F3, EEG\_56, F4, EEG\_47, EEG\_15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Compact one-liner form (optional)
+\begin{verbatim}
+feature_indices = {
+  "eye_tracking": [6, 15, 12, 11, 4, 5, 0, 1],
+  "pupil":        [5, 4, 13, 11, 12, 15, 17, 10],
+  "cursor":       [1, 0, 2, 3],
+  "gsr_eda":      [15, 32, 31, 4, 3, 35, 30, 14],
+  "eeg":          [50, 54, 23, 2, 56, 3, 47, 15],
+}
+\end{verbatim}

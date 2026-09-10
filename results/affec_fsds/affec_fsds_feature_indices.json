@@ -1,0 +1,381 @@
+{
+  "method": "PO-risk learner + MMD-LOCO + RF Domain Classifier",
+  "board": "RF Domain Classifier VIMP rank \u00b7 np.argsort(-VIMP)[:k] per modality",
+  "top_k": 8,
+  "rf_domain_auc": 0.999017901790179,
+  "n": 10000,
+  "p": 144,
+  "alpha": 0.05,
+  "batch_def": "W=0: run\u2208{0,1}; W=1: run\u2208{2,3}",
+  "feature_indices": {
+    "eye_tracking": [
+      6,
+      15,
+      12,
+      11,
+      4,
+      5,
+      0,
+      1
+    ],
+    "pupil": [
+      5,
+      4,
+      13,
+      11,
+      12,
+      15,
+      17,
+      10
+    ],
+    "cursor": [
+      1,
+      0,
+      2,
+      3
+    ],
+    "gsr_eda": [
+      15,
+      32,
+      31,
+      4,
+      3,
+      35,
+      30,
+      14
+    ],
+    "eeg": [
+      50,
+      54,
+      23,
+      2,
+      56,
+      3,
+      47,
+      15
+    ]
+  },
+  "feature_indices_detail": {
+    "eye_tracking": [
+      {
+        "rank": 1,
+        "index": 6,
+        "global_index": 6,
+        "name": "fixation_duration",
+        "desc": "fixation duration",
+        "rf_vimp": 0.0016084264626656372
+      },
+      {
+        "rank": 2,
+        "index": 15,
+        "global_index": 15,
+        "name": "validity",
+        "desc": "eye-tracking validity flag",
+        "rf_vimp": 0.0009864731821665285
+      },
+      {
+        "rank": 3,
+        "index": 12,
+        "global_index": 12,
+        "name": "pupil_y_left",
+        "desc": "left pupil Y position",
+        "rf_vimp": 0.0008947131703773759
+      },
+      {
+        "rank": 4,
+        "index": 11,
+        "global_index": 11,
+        "name": "pupil_x_left",
+        "desc": "left pupil X position",
+        "rf_vimp": 0.0008643995791542605
+      },
+      {
+        "rank": 5,
+        "index": 4,
+        "global_index": 4,
+        "name": "gaze_x_right",
+        "desc": "right eye gaze direction X",
+        "rf_vimp": 0.0008415739563339185
+      },
+      {
+        "rank": 6,
+        "index": 5,
+        "global_index": 5,
+        "name": "gaze_y_right",
+        "desc": "right eye gaze direction Y",
+        "rf_vimp": 0.0007770385029398348
+      },
+      {
+        "rank": 7,
+        "index": 0,
+        "global_index": 0,
+        "name": "fixation_x",
+        "desc": "fixation point X coordinate",
+        "rf_vimp": 0.0007414518801128919
+      },
+      {
+        "rank": 8,
+        "index": 1,
+        "global_index": 1,
+        "name": "fixation_y",
+        "desc": "fixation point Y coordinate",
+        "rf_vimp": 0.0007179279572412338
+      }
+    ],
+    "pupil": [
+      {
+        "rank": 1,
+        "index": 5,
+        "global_index": 21,
+        "name": "pupil_latency",
+        "desc": "time to pupil peak",
+        "rf_vimp": 0.01424354515840205
+      },
+      {
+        "rank": 2,
+        "index": 4,
+        "global_index": 20,
+        "name": "pupil_peak",
+        "desc": "pupil peak diameter",
+        "rf_vimp": 0.013183346848623873
+      },
+      {
+        "rank": 3,
+        "index": 13,
+        "global_index": 29,
+        "name": "eye_pos_y_raw",
+        "desc": "raw eye position Y",
+        "rf_vimp": 0.009430472973410077
+      },
+      {
+        "rank": 4,
+        "index": 11,
+        "global_index": 27,
+        "name": "eye_pos_y",
+        "desc": "eye position Y",
+        "rf_vimp": 0.008014985972454538
+      },
+      {
+        "rank": 5,
+        "index": 12,
+        "global_index": 28,
+        "name": "eye_pos_x_raw",
+        "desc": "raw eye position X",
+        "rf_vimp": 0.007069175258503698
+      },
+      {
+        "rank": 6,
+        "index": 15,
+        "global_index": 31,
+        "name": "eye_pos_velocity_y",
+        "desc": "eye position velocity Y",
+        "rf_vimp": 0.00668154421529548
+      },
+      {
+        "rank": 7,
+        "index": 17,
+        "global_index": 33,
+        "name": "eye_pos_range_x",
+        "desc": "eye position range X",
+        "rf_vimp": 0.004878821775586874
+      },
+      {
+        "rank": 8,
+        "index": 10,
+        "global_index": 26,
+        "name": "eye_pos_x",
+        "desc": "eye position X",
+        "rf_vimp": 0.004576935448579465
+      }
+    ],
+    "cursor": [
+      {
+        "rank": 1,
+        "index": 1,
+        "global_index": 38,
+        "name": "cursor_y",
+        "desc": "cursor Y coordinate",
+        "rf_vimp": 0.007835255644532546
+      },
+      {
+        "rank": 2,
+        "index": 0,
+        "global_index": 37,
+        "name": "cursor_x",
+        "desc": "cursor X coordinate",
+        "rf_vimp": 0.006341869839940006
+      },
+      {
+        "rank": 3,
+        "index": 2,
+        "global_index": 39,
+        "name": "cursor_velocity",
+        "desc": "cursor movement velocity",
+        "rf_vimp": 0.0011981153013926717
+      },
+      {
+        "rank": 4,
+        "index": 3,
+        "global_index": 40,
+        "name": "cursor_state",
+        "desc": "cursor state (click/hover)",
+        "rf_vimp": 0.0003372524893569682
+      }
+    ],
+    "gsr_eda": [
+      {
+        "rank": 1,
+        "index": 15,
+        "global_index": 56,
+        "name": "acc_y",
+        "desc": "accelerometer Y",
+        "rf_vimp": 0.16463383767342973
+      },
+      {
+        "rank": 2,
+        "index": 32,
+        "global_index": 73,
+        "name": "gsr_feat_32",
+        "desc": "GSR feature 32",
+        "rf_vimp": 0.14410152550634134
+      },
+      {
+        "rank": 3,
+        "index": 31,
+        "global_index": 72,
+        "name": "gsr_feat_31",
+        "desc": "GSR feature 31",
+        "rf_vimp": 0.14222333806459103
+      },
+      {
+        "rank": 4,
+        "index": 4,
+        "global_index": 45,
+        "name": "gsr_scr_count",
+        "desc": "skin conductance response count",
+        "rf_vimp": 0.034024049381320386
+      },
+      {
+        "rank": 5,
+        "index": 3,
+        "global_index": 44,
+        "name": "gsr_tonic",
+        "desc": "tonic component (background stress)",
+        "rf_vimp": 0.03386140551657032
+      },
+      {
+        "rank": 6,
+        "index": 35,
+        "global_index": 76,
+        "name": "gsr_feat_35",
+        "desc": "GSR feature 35",
+        "rf_vimp": 0.02576224916631488
+      },
+      {
+        "rank": 7,
+        "index": 30,
+        "global_index": 71,
+        "name": "gsr_feat_30",
+        "desc": "GSR feature 30",
+        "rf_vimp": 0.016417972638392377
+      },
+      {
+        "rank": 8,
+        "index": 14,
+        "global_index": 55,
+        "name": "acc_x",
+        "desc": "accelerometer X",
+        "rf_vimp": 0.01603163150292181
+      }
+    ],
+    "eeg": [
+      {
+        "rank": 1,
+        "index": 50,
+        "global_index": 131,
+        "name": "EEG_50",
+        "desc": "EEG channel 50",
+        "rf_vimp": 0.001294206067575659
+      },
+      {
+        "rank": 2,
+        "index": 54,
+        "global_index": 135,
+        "name": "EEG_54",
+        "desc": "EEG channel 54",
+        "rf_vimp": 0.0011770711189622682
+      },
+      {
+        "rank": 3,
+        "index": 23,
+        "global_index": 104,
+        "name": "EEG_23",
+        "desc": "EEG channel 23",
+        "rf_vimp": 0.0011326923577527456
+      },
+      {
+        "rank": 4,
+        "index": 2,
+        "global_index": 83,
+        "name": "F3",
+        "desc": "left frontal (decision / planning)",
+        "rf_vimp": 0.00111451199252971
+      },
+      {
+        "rank": 5,
+        "index": 56,
+        "global_index": 137,
+        "name": "EEG_56",
+        "desc": "EEG channel 56",
+        "rf_vimp": 0.0011121753860063427
+      },
+      {
+        "rank": 6,
+        "index": 3,
+        "global_index": 84,
+        "name": "F4",
+        "desc": "right frontal (decision / planning)",
+        "rf_vimp": 0.0011121600015091915
+      },
+      {
+        "rank": 7,
+        "index": 47,
+        "global_index": 128,
+        "name": "EEG_47",
+        "desc": "EEG channel 47",
+        "rf_vimp": 0.0010485193549142184
+      },
+      {
+        "rank": 8,
+        "index": 15,
+        "global_index": 96,
+        "name": "EEG_15",
+        "desc": "EEG channel 15",
+        "rf_vimp": 0.0010112899424390422
+      }
+    ]
+  },
+  "block_slices": {
+    "eye_tracking": [
+      0,
+      16
+    ],
+    "pupil": [
+      16,
+      37
+    ],
+    "cursor": [
+      37,
+      41
+    ],
+    "gsr_eda": [
+      41,
+      81
+    ],
+    "eeg": [
+      81,
+      144
+    ]
+  },
+  "compact": "feature-indices (RF Domain Classifier rank): eye_tracking:[6, 15, 12, 11, 4, 5, 0, 1], pupil:[5, 4, 13, 11, 12, 15, 17, 10], cursor:[1, 0, 2, 3], gsr_eda:[15, 32, 31, 4, 3, 35, 30, 14], eeg:[50, 54, 23, 2, 56, 3, 47, 15]"
+}

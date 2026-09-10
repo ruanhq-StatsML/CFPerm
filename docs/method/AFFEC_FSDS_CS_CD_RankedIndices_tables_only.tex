@@ -1,0 +1,39 @@
+% AFFEC FSDS · covariate-shift vs concept-drift rankings (RF ordered)
+\begin{table}[ht]
+\centering
+\caption{Covariate-shift ranking on AFFEC. RF Domain Classifier VIMP for $W\sim X$,
+ordered by $\texttt{np.argsort(-VIMP)[:k]}$ with $k=8$. Batch: early runs $\{0,1\}$ vs late runs $\{2,3\}$.
+Domain AUC $0.999$.}
+\label{tab:affec-fsds-cs-rank}
+\small
+\begin{tabular}{@{}l l p{7.2cm}@{}}
+\toprule
+Modality & Ranked indices & Channel names (same order) \\
+\midrule
+\texttt{eye\_tracking} & $[6,15,12,11,4,5,0,1]$ & fixation\_duration, validity, pupil\_y\_left, pupil\_x\_left, gaze\_x\_right, gaze\_y\_right, fixation\_x, fixation\_y \\
+\texttt{pupil} & $[5,4,13,11,12,15,17,10]$ & pupil\_latency, pupil\_peak, eye\_pos\_y\_raw, eye\_pos\_y, eye\_pos\_x\_raw, eye\_pos\_velocity\_y, eye\_pos\_range\_x, eye\_pos\_x \\
+\texttt{cursor} & $[1,0,2,3]$ & cursor\_y, cursor\_x, cursor\_velocity, cursor\_state \\
+\texttt{gsr\_eda} & $[15,32,31,4,3,35,30,14]$ & acc\_y, gsr\_feat\_32, gsr\_feat\_31, gsr\_scr\_count, gsr\_tonic, gsr\_feat\_35, gsr\_feat\_30, acc\_x \\
+\texttt{eeg} & $[50,54,23,2,56,3,47,15]$ & EEG\_50, EEG\_54, EEG\_23, F3, EEG\_56, F4, EEG\_47, EEG\_15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Concept-drift ranking on AFFEC. PO-risk path RF VIMP on pseudo-outcome
+(blended with within-batch $Y\sim X$ importance gap), ordered by $\texttt{np.argsort(-VIMP)[:k]}$ with $k=8$. Observed PO-risk $0.0000$.}
+\label{tab:affec-fsds-cd-rank}
+\small
+\begin{tabular}{@{}l l p{7.2cm}@{}}
+\toprule
+Modality & Ranked indices & Channel names (same order) \\
+\midrule
+\texttt{eye\_tracking} & $[15,9,6,0,2,1,4,3]$ & validity, eye\_open\_left, fixation\_duration, fixation\_x, gaze\_x\_left, fixation\_y, gaze\_x\_right, gaze\_y\_left \\
+\texttt{pupil} & $[2,0,5,4,13,10,11,15]$ & pupil\_diameter\_filt, pupil\_diameter, pupil\_latency, pupil\_peak, eye\_pos\_y\_raw, eye\_pos\_x, eye\_pos\_y, eye\_pos\_velocity\_y \\
+\texttt{cursor} & $[0,1,2,3]$ & cursor\_x, cursor\_y, cursor\_velocity, cursor\_state \\
+\texttt{gsr\_eda} & $[0,29,2,31,1,34,14,33]$ & gsr\_raw, gsr\_feat\_29, gsr\_phasic, gsr\_feat\_31, gsr\_filtered, gsr\_feat\_34, acc\_x, gsr\_feat\_33 \\
+\texttt{eeg} & $[62,13,46,12,52,44,27,59]$ & EEG\_62, EEG\_13, EEG\_46, EEG\_12, EEG\_52, EEG\_44, EEG\_27, EEG\_59 \\
+\bottomrule
+\end{tabular}
+\end{table}

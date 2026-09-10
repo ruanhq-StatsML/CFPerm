@@ -1,0 +1,638 @@
+{
+  "batch_def": "W=0: run\u2208{0,1}; W=1: run\u2208{2,3}",
+  "top_k": 8,
+  "n": 10000,
+  "p": 144,
+  "covariate_shift": {
+    "method": "RF Domain Classifier \u00b7 W ~ X \u00b7 argsort(-VIMP)[:k]",
+    "rf_domain_auc": 0.999017901790179,
+    "feature_indices": {
+      "eye_tracking": [
+        6,
+        15,
+        12,
+        11,
+        4,
+        5,
+        0,
+        1
+      ],
+      "pupil": [
+        5,
+        4,
+        13,
+        11,
+        12,
+        15,
+        17,
+        10
+      ],
+      "cursor": [
+        1,
+        0,
+        2,
+        3
+      ],
+      "gsr_eda": [
+        15,
+        32,
+        31,
+        4,
+        3,
+        35,
+        30,
+        14
+      ],
+      "eeg": [
+        50,
+        54,
+        23,
+        2,
+        56,
+        3,
+        47,
+        15
+      ]
+    },
+    "feature_indices_detail": {
+      "eye_tracking": [
+        {
+          "rank": 1,
+          "index": 6,
+          "global_index": 6,
+          "name": "fixation_duration",
+          "vimp": 0.0016084264626656372
+        },
+        {
+          "rank": 2,
+          "index": 15,
+          "global_index": 15,
+          "name": "validity",
+          "vimp": 0.0009864731821665285
+        },
+        {
+          "rank": 3,
+          "index": 12,
+          "global_index": 12,
+          "name": "pupil_y_left",
+          "vimp": 0.0008947131703773759
+        },
+        {
+          "rank": 4,
+          "index": 11,
+          "global_index": 11,
+          "name": "pupil_x_left",
+          "vimp": 0.0008643995791542605
+        },
+        {
+          "rank": 5,
+          "index": 4,
+          "global_index": 4,
+          "name": "gaze_x_right",
+          "vimp": 0.0008415739563339185
+        },
+        {
+          "rank": 6,
+          "index": 5,
+          "global_index": 5,
+          "name": "gaze_y_right",
+          "vimp": 0.0007770385029398348
+        },
+        {
+          "rank": 7,
+          "index": 0,
+          "global_index": 0,
+          "name": "fixation_x",
+          "vimp": 0.0007414518801128919
+        },
+        {
+          "rank": 8,
+          "index": 1,
+          "global_index": 1,
+          "name": "fixation_y",
+          "vimp": 0.0007179279572412338
+        }
+      ],
+      "pupil": [
+        {
+          "rank": 1,
+          "index": 5,
+          "global_index": 21,
+          "name": "pupil_latency",
+          "vimp": 0.01424354515840205
+        },
+        {
+          "rank": 2,
+          "index": 4,
+          "global_index": 20,
+          "name": "pupil_peak",
+          "vimp": 0.013183346848623873
+        },
+        {
+          "rank": 3,
+          "index": 13,
+          "global_index": 29,
+          "name": "eye_pos_y_raw",
+          "vimp": 0.009430472973410077
+        },
+        {
+          "rank": 4,
+          "index": 11,
+          "global_index": 27,
+          "name": "eye_pos_y",
+          "vimp": 0.008014985972454538
+        },
+        {
+          "rank": 5,
+          "index": 12,
+          "global_index": 28,
+          "name": "eye_pos_x_raw",
+          "vimp": 0.007069175258503698
+        },
+        {
+          "rank": 6,
+          "index": 15,
+          "global_index": 31,
+          "name": "eye_pos_velocity_y",
+          "vimp": 0.00668154421529548
+        },
+        {
+          "rank": 7,
+          "index": 17,
+          "global_index": 33,
+          "name": "eye_pos_range_x",
+          "vimp": 0.004878821775586874
+        },
+        {
+          "rank": 8,
+          "index": 10,
+          "global_index": 26,
+          "name": "eye_pos_x",
+          "vimp": 0.004576935448579465
+        }
+      ],
+      "cursor": [
+        {
+          "rank": 1,
+          "index": 1,
+          "global_index": 38,
+          "name": "cursor_y",
+          "vimp": 0.007835255644532546
+        },
+        {
+          "rank": 2,
+          "index": 0,
+          "global_index": 37,
+          "name": "cursor_x",
+          "vimp": 0.006341869839940006
+        },
+        {
+          "rank": 3,
+          "index": 2,
+          "global_index": 39,
+          "name": "cursor_velocity",
+          "vimp": 0.0011981153013926717
+        },
+        {
+          "rank": 4,
+          "index": 3,
+          "global_index": 40,
+          "name": "cursor_state",
+          "vimp": 0.0003372524893569682
+        }
+      ],
+      "gsr_eda": [
+        {
+          "rank": 1,
+          "index": 15,
+          "global_index": 56,
+          "name": "acc_y",
+          "vimp": 0.16463383767342973
+        },
+        {
+          "rank": 2,
+          "index": 32,
+          "global_index": 73,
+          "name": "gsr_feat_32",
+          "vimp": 0.14410152550634134
+        },
+        {
+          "rank": 3,
+          "index": 31,
+          "global_index": 72,
+          "name": "gsr_feat_31",
+          "vimp": 0.14222333806459103
+        },
+        {
+          "rank": 4,
+          "index": 4,
+          "global_index": 45,
+          "name": "gsr_scr_count",
+          "vimp": 0.034024049381320386
+        },
+        {
+          "rank": 5,
+          "index": 3,
+          "global_index": 44,
+          "name": "gsr_tonic",
+          "vimp": 0.03386140551657032
+        },
+        {
+          "rank": 6,
+          "index": 35,
+          "global_index": 76,
+          "name": "gsr_feat_35",
+          "vimp": 0.02576224916631488
+        },
+        {
+          "rank": 7,
+          "index": 30,
+          "global_index": 71,
+          "name": "gsr_feat_30",
+          "vimp": 0.016417972638392377
+        },
+        {
+          "rank": 8,
+          "index": 14,
+          "global_index": 55,
+          "name": "acc_x",
+          "vimp": 0.01603163150292181
+        }
+      ],
+      "eeg": [
+        {
+          "rank": 1,
+          "index": 50,
+          "global_index": 131,
+          "name": "EEG_50",
+          "vimp": 0.001294206067575659
+        },
+        {
+          "rank": 2,
+          "index": 54,
+          "global_index": 135,
+          "name": "EEG_54",
+          "vimp": 0.0011770711189622682
+        },
+        {
+          "rank": 3,
+          "index": 23,
+          "global_index": 104,
+          "name": "EEG_23",
+          "vimp": 0.0011326923577527456
+        },
+        {
+          "rank": 4,
+          "index": 2,
+          "global_index": 83,
+          "name": "F3",
+          "vimp": 0.00111451199252971
+        },
+        {
+          "rank": 5,
+          "index": 56,
+          "global_index": 137,
+          "name": "EEG_56",
+          "vimp": 0.0011121753860063427
+        },
+        {
+          "rank": 6,
+          "index": 3,
+          "global_index": 84,
+          "name": "F4",
+          "vimp": 0.0011121600015091915
+        },
+        {
+          "rank": 7,
+          "index": 47,
+          "global_index": 128,
+          "name": "EEG_47",
+          "vimp": 0.0010485193549142184
+        },
+        {
+          "rank": 8,
+          "index": 15,
+          "global_index": 96,
+          "name": "EEG_15",
+          "vimp": 0.0010112899424390422
+        }
+      ]
+    }
+  },
+  "concept_drift": {
+    "method": "PO-risk RF VIMP on pseudo-outcome + |imp_Y|W=1 - imp_Y|W=0| \u00b7 argsort(-VIMP)[:k]",
+    "po_risk": 1.0333211805191728e-06,
+    "feature_indices": {
+      "eye_tracking": [
+        15,
+        9,
+        6,
+        0,
+        2,
+        1,
+        4,
+        3
+      ],
+      "pupil": [
+        2,
+        0,
+        5,
+        4,
+        13,
+        10,
+        11,
+        15
+      ],
+      "cursor": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "gsr_eda": [
+        0,
+        29,
+        2,
+        31,
+        1,
+        34,
+        14,
+        33
+      ],
+      "eeg": [
+        62,
+        13,
+        46,
+        12,
+        52,
+        44,
+        27,
+        59
+      ]
+    },
+    "feature_indices_detail": {
+      "eye_tracking": [
+        {
+          "rank": 1,
+          "index": 15,
+          "global_index": 15,
+          "name": "validity",
+          "vimp": 0.011597640832475555
+        },
+        {
+          "rank": 2,
+          "index": 9,
+          "global_index": 9,
+          "name": "eye_open_left",
+          "vimp": 0.010563047473026636
+        },
+        {
+          "rank": 3,
+          "index": 6,
+          "global_index": 6,
+          "name": "fixation_duration",
+          "vimp": 0.009658930862050785
+        },
+        {
+          "rank": 4,
+          "index": 0,
+          "global_index": 0,
+          "name": "fixation_x",
+          "vimp": 0.005758709344350832
+        },
+        {
+          "rank": 5,
+          "index": 2,
+          "global_index": 2,
+          "name": "gaze_x_left",
+          "vimp": 0.004439373632216955
+        },
+        {
+          "rank": 6,
+          "index": 1,
+          "global_index": 1,
+          "name": "fixation_y",
+          "vimp": 0.003943159373221166
+        },
+        {
+          "rank": 7,
+          "index": 4,
+          "global_index": 4,
+          "name": "gaze_x_right",
+          "vimp": 0.0033520246696760515
+        },
+        {
+          "rank": 8,
+          "index": 3,
+          "global_index": 3,
+          "name": "gaze_y_left",
+          "vimp": 0.002711660126928536
+        }
+      ],
+      "pupil": [
+        {
+          "rank": 1,
+          "index": 2,
+          "global_index": 18,
+          "name": "pupil_diameter_filt",
+          "vimp": 0.30767045278218225
+        },
+        {
+          "rank": 2,
+          "index": 0,
+          "global_index": 16,
+          "name": "pupil_diameter",
+          "vimp": 0.30368762714383357
+        },
+        {
+          "rank": 3,
+          "index": 5,
+          "global_index": 21,
+          "name": "pupil_latency",
+          "vimp": 0.036801496733356705
+        },
+        {
+          "rank": 4,
+          "index": 4,
+          "global_index": 20,
+          "name": "pupil_peak",
+          "vimp": 0.029677375651408225
+        },
+        {
+          "rank": 5,
+          "index": 13,
+          "global_index": 29,
+          "name": "eye_pos_y_raw",
+          "vimp": 0.009897914120665074
+        },
+        {
+          "rank": 6,
+          "index": 10,
+          "global_index": 26,
+          "name": "eye_pos_x",
+          "vimp": 0.009539799666559896
+        },
+        {
+          "rank": 7,
+          "index": 11,
+          "global_index": 27,
+          "name": "eye_pos_y",
+          "vimp": 0.0069442978768031564
+        },
+        {
+          "rank": 8,
+          "index": 15,
+          "global_index": 31,
+          "name": "eye_pos_velocity_y",
+          "vimp": 0.005582561432201312
+        }
+      ],
+      "cursor": [
+        {
+          "rank": 1,
+          "index": 0,
+          "global_index": 37,
+          "name": "cursor_x",
+          "vimp": 0.005782239247427814
+        },
+        {
+          "rank": 2,
+          "index": 1,
+          "global_index": 38,
+          "name": "cursor_y",
+          "vimp": 0.003045700252545237
+        },
+        {
+          "rank": 3,
+          "index": 2,
+          "global_index": 39,
+          "name": "cursor_velocity",
+          "vimp": 0.001775218752482811
+        },
+        {
+          "rank": 4,
+          "index": 3,
+          "global_index": 40,
+          "name": "cursor_state",
+          "vimp": 0.000808666441523803
+        }
+      ],
+      "gsr_eda": [
+        {
+          "rank": 1,
+          "index": 0,
+          "global_index": 41,
+          "name": "gsr_raw",
+          "vimp": 0.01038783558481849
+        },
+        {
+          "rank": 2,
+          "index": 29,
+          "global_index": 70,
+          "name": "gsr_feat_29",
+          "vimp": 0.00797217047033292
+        },
+        {
+          "rank": 3,
+          "index": 2,
+          "global_index": 43,
+          "name": "gsr_phasic",
+          "vimp": 0.006565142377647569
+        },
+        {
+          "rank": 4,
+          "index": 31,
+          "global_index": 72,
+          "name": "gsr_feat_31",
+          "vimp": 0.006556680532087107
+        },
+        {
+          "rank": 5,
+          "index": 1,
+          "global_index": 42,
+          "name": "gsr_filtered",
+          "vimp": 0.006549183471739304
+        },
+        {
+          "rank": 6,
+          "index": 34,
+          "global_index": 75,
+          "name": "gsr_feat_34",
+          "vimp": 0.005705067124240536
+        },
+        {
+          "rank": 7,
+          "index": 14,
+          "global_index": 55,
+          "name": "acc_x",
+          "vimp": 0.00567111604380226
+        },
+        {
+          "rank": 8,
+          "index": 33,
+          "global_index": 74,
+          "name": "gsr_feat_33",
+          "vimp": 0.005384464015339133
+        }
+      ],
+      "eeg": [
+        {
+          "rank": 1,
+          "index": 62,
+          "global_index": 143,
+          "name": "EEG_62",
+          "vimp": 0.009170902109291855
+        },
+        {
+          "rank": 2,
+          "index": 13,
+          "global_index": 94,
+          "name": "EEG_13",
+          "vimp": 0.006727193362250831
+        },
+        {
+          "rank": 3,
+          "index": 46,
+          "global_index": 127,
+          "name": "EEG_46",
+          "vimp": 0.006248194356764835
+        },
+        {
+          "rank": 4,
+          "index": 12,
+          "global_index": 93,
+          "name": "EEG_12",
+          "vimp": 0.00477833900744094
+        },
+        {
+          "rank": 5,
+          "index": 52,
+          "global_index": 133,
+          "name": "EEG_52",
+          "vimp": 0.004509613210660724
+        },
+        {
+          "rank": 6,
+          "index": 44,
+          "global_index": 125,
+          "name": "EEG_44",
+          "vimp": 0.004138923389634486
+        },
+        {
+          "rank": 7,
+          "index": 27,
+          "global_index": 108,
+          "name": "EEG_27",
+          "vimp": 0.004059296014432433
+        },
+        {
+          "rank": 8,
+          "index": 59,
+          "global_index": 140,
+          "name": "EEG_59",
+          "vimp": 0.003442051892462242
+        }
+      ]
+    }
+  }
+}

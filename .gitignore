@@ -1,0 +1,5 @@
+data/affec/
+data/raw/
+data/affec/
+*.edf
+*.tsv.gz
