@@ -1,0 +1,68 @@
+% Hierarchical attribution board with bounding-box module
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Hierarchical attribution board on COCO early/late (time-order) with an added bounding-box feature block. L1 reports modality VIMP mass on $\texttt{image}$/$\texttt{text}$/$\texttt{bbox}$.}
+\label{tab:bbox-attr-l1-mass}
+\small
+\begin{tabular}{@{}l ccc c@{}}
+\toprule
+Method & Image & Text & BBox & RF AUC \\
+\midrule
+RF Domain & $0.525$ & $0.442$ & $0.033$ & $0.570$ \\
+Coord-MMD & $0.472$ & $0.478$ & $0.050$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{BBox-block subgroup mass (L2b) under RF Domain on the same board. Subgroups: geometry summaries, COCO category histogram, top-$M$ box descriptors.}
+\label{tab:bbox-attr-l2b-subgroups}
+\small
+\begin{tabular}{@{}l ccc@{}}
+\toprule
+Method & Geo & Category hist & Top boxes \\
+\midrule
+RF Domain & $0.286$ & $0.066$ & $0.648$ \\
+Coord-MMD & $0.164$ & $0.137$ & $0.699$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{RF Domain named geo ranking inside the bbox block (high$\to$low VIMP).}
+\label{tab:bbox-attr-geo-rank}
+\small
+\begin{tabular}{@{}r l c@{}}
+\toprule
+Rank & Geo feature & VIMP \\
+\midrule
+1 & \texttt{std_cx} & $0.0047$ \\
+2 & \texttt{mean_area_frac} & $0.0010$ \\
+3 & \texttt{total_area_frac} & $0.0007$ \\
+4 & \texttt{n_boxes_log1p} & $0.0007$ \\
+5 & \texttt{mean_cy} & $0.0007$ \\
+6 & \texttt{std_cy} & $0.0006$ \\
+7 & \texttt{mean_cx} & $0.0005$ \\
+8 & \texttt{max_area_frac} & $0.0004$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{BBox inject recovery on COCO early/late (GT modality = bbox). Late batch only receives a mean-shift in the bbox block.}
+\label{tab:bbox-attr-inject-recovery}
+\small
+\begin{tabular}{@{}l ccc@{}}
+\toprule
+Method & Mass on bbox & Sel.\ AUC & P@20 \\
+\midrule
+RF Domain & $0.998$ & $0.866$ & $1.000$ \\
+Coord-MMD & $0.958$ & $0.933$ & $1.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}
