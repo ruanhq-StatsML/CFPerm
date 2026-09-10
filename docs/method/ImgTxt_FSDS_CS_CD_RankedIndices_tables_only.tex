@@ -1,0 +1,88 @@
+% Image/Text FSDS · CS vs CD ranked indices (RF ordered)
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Covariate-shift ranking on Indiana/OpenI CXR ($n{=}7426$, $d_{\mathrm{img}}{=}d_{\mathrm{txt}}{=}512$).
+RF Domain Classifier VIMP for $W\sim X$, ordered by $\texttt{np.argsort(-VIMP)[:k]}$ with $k{=}20$.
+Batch: \texttt{projection} Frontal vs Lateral. Domain AUC $1.000$; modality VIMP share image $0.996$ / text $0.004$.}
+\label{tab:imgtxt-indiana-cs-rank}
+\small
+\begin{tabular}{@{}l p{11.5cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[330,105,235,145,278,335,494,117,293,82,111,410,154,21,115,68,0,77,431,171]$ \\
+\texttt{text}  & $[138,187,447,38,246,423,436,476,34,426,288,115,171,444,55,310,427,364,375,210]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Concept-drift ranking on Indiana/OpenI CXR.
+PO-risk RF VIMP (blended with within-batch $Y\sim X$ importance gap), ordered by $\texttt{np.argsort(-VIMP)[:k]}$ with $k{=}20$.
+Observed PO-risk $0.054$; modality VIMP share image $0.591$ / text $0.409$.}
+\label{tab:imgtxt-indiana-cd-rank}
+\small
+\begin{tabular}{@{}l p{11.5cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[133,249,146,338,57,301,170,4,370,30,511,122,248,99,28,197,199,437,268,165]$ \\
+\texttt{text}  & $[302,241,461,489,506,196,3,257,304,256,60,72,423,428,420,268,127,361,249,0]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Covariate-shift ranking on multimodal train/test set ($n{=}4034$, $d_{\mathrm{img}}{=}d_{\mathrm{txt}}{=}512$).
+RF Domain Classifier VIMP for $W\sim X$, ordered by $\texttt{np.argsort(-VIMP)[:k]}$ with $k{=}20$.
+Batch: \texttt{split} train vs test. Domain AUC $0.727$; modality VIMP share image $0.606$ / text $0.394$.}
+\label{tab:imgtxt-mm-cs-rank}
+\small
+\begin{tabular}{@{}l p{11.5cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[265,377,147,124,317,108,84,316,496,459,218,348,47,18,227,38,11,114,379,479]$ \\
+\texttt{text}  & $[261,116,414,63,244,146,504,67,505,96,469,186,164,379,412,0,259,189,211,73]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Concept-drift ranking on multimodal train/test set.
+PO-risk RF VIMP (blended with within-batch $Y\sim X$ importance gap), ordered by $\texttt{np.argsort(-VIMP)[:k]}$ with $k{=}20$.
+Observed PO-risk $16.214$; modality VIMP share image $0.255$ / text $0.745$.}
+\label{tab:imgtxt-mm-cd-rank}
+\small
+\begin{tabular}{@{}l p{11.5cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[370,39,216,175,321,304,315,489,195,360,95,28,357,336,102,66,173,209,324,501]$ \\
+\texttt{text}  & $[115,300,501,442,113,100,23,179,96,57,348,137,453,25,1,111,419,206,67,335]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Modality-level VIMP mass share for image/text FSDS boards.
+Indices within each modality are ranked by $\texttt{np.argsort(-VIMP)}$; mass share is $\sum_{j\in\mathrm{mod}} \mathrm{VIMP}_j$.}
+\label{tab:imgtxt-modality-mass}
+\small
+\begin{tabular}{@{}l ll cc@{}}
+\toprule
+Dataset & Batch $W$ & Board & Image share & Text share \\
+\midrule
+Indiana/OpenI CXR & Frontal vs Lateral & CS (RF domain) & $0.996$ & $0.004$ \\
+Indiana/OpenI CXR & Frontal vs Lateral & CD (PO-risk) & $0.591$ & $0.409$ \\
+MM train/test & train vs test & CS (RF domain) & $0.606$ & $0.394$ \\
+MM train/test & train vs test & CD (PO-risk) & $0.255$ & $0.745$ \\
+\bottomrule
+\end{tabular}
+\end{table}
