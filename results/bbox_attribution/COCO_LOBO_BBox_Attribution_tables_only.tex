@@ -1,0 +1,89 @@
+% COCO post-hoc leave-one-bounding-box-out attribution
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Post-hoc LOBO bbox attribution on COCO early/late. Named mechanisms $f^{\star}$ selected by PO-risk VIMP; images located by $\widehat\tau^2$ and $f^{\star}$; each box is removed with its text, features recalculated, and $\Delta$ PO contribution ranked.}
+\label{tab:coco-lobo-pipeline}
+\small
+\begin{tabular}{@{}l l@{}}
+\toprule
+Step & Operation \\
+\midrule
+Form & $\{$caption, bbx\_text: box + text\_description$\}$ \\
+Select $f^{\star}$ & PO / RF named VIMP on image-level bbox features \\
+Locate images & high $\widehat\tau(X)^2$ and $|f^{\star}|$ \\
+LOBO & remain $=$ boxes$\setminus\{k\}$; recalculate\_bbox\_features \\
+Score & $\Delta_k^{\mathrm{rel}}=(\widehat\tau(X)^2-\widehat\tau(X^{(-k)})^2)/\widehat\tau(X)^2$ \\
+Y & rank-quantile mapped to $[0,1]$ \\
+PO-risk (fit) & $0.0018$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Selected mechanisms $f^{\star}$ and top PO named ranks.}
+\label{tab:coco-lobo-fstar}
+\small
+\begin{tabular}{@{}r l c@{}}
+\toprule
+Rank & Feature & PO VIMP \\
+\midrule
+1 & \texttt{nn\_center\_dist\_mean} $*$ & $0.06811$ \\
+2 & \texttt{cx\_std} $*$ & $0.05569$ \\
+3 & \texttt{cy\_mean} $*$ & $0.05416$ \\
+4 & \texttt{cx\_mean} & $0.05326$ \\
+5 & \texttt{aspect\_std} & $0.05113$ \\
+6 & \texttt{aspect\_mean} & $0.04726$ \\
+7 & \texttt{cy\_std} & $0.04579$ \\
+8 & \texttt{largest\_area\_frac} $*$ & $0.04425$ \\
+9 & \texttt{h\_mean} & $0.04362$ \\
+10 & \texttt{nn\_center\_dist\_min} & $0.04349$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Category counter of LOBO top boxes (n=40 located images).}
+\label{tab:coco-lobo-cat}
+\small
+\begin{tabular}{@{}l c c@{}}
+\toprule
+Category & \# as top box & mean $|\Delta$ PO rel$|$ \\
+\midrule
+person & 4 & $0.9696$ \\
+car & 3 & $0.9631$ \\
+traffic light & 3 & $0.9635$ \\
+bench & 2 & $0.6768$ \\
+bed & 2 & $0.9933$ \\
+toilet & 2 & $0.9903$ \\
+surfboard & 2 & $0.9963$ \\
+chair & 2 & $0.9708$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Example images: which bounding box has largest leave-one-out relative $\Delta$ PO contribution $(\widehat\tau^2-\widehat\tau_{(-k)}^2)/\widehat\tau^2$.}
+\label{tab:coco-lobo-examples}
+\small
+\begin{tabular}{@{}r c l l c@{}}
+\toprule
+Image & Batch & Box & Category & $\Delta$ PO rel \\
+\midrule
+500859 & 0 & \texttt{bbx\_1} & bench & $0.9694$ \\
+330531 & 0 & \texttt{bbx\_2} & pizza & $0.9069$ \\
+230976 & 0 & \texttt{bbx\_2} & car & $0.9334$ \\
+270918 & 0 & \texttt{bbx\_2} & person & $0.9207$ \\
+235788 & 0 & \texttt{bbx\_2} & bus & $0.9036$ \\
+391735 & 0 & \texttt{bbx\_2} & person & $0.9588$ \\
+234147 & 0 & \texttt{bbx\_1} & carrot & $1.0000$ \\
+109869 & 0 & \texttt{bbx\_1} & bench & $-0.3841$ \\
+558577 & 0 & \texttt{bbx\_1} & bed & $0.9912$ \\
+520437 & 0 & \texttt{bbx\_1} & suitcase & $0.9158$ \\
+\bottomrule
+\end{tabular}
+\end{table}

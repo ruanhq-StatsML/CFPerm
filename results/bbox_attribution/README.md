@@ -67,3 +67,17 @@ Beyond conventional mean/std — hierarchical board:
 | semantic | 0.033 |
 
 Emphasis tops: `pairwise_iou_mean`, `coverage_area` / `obj_density`, `area_gini` / `person_area_frac`.
+
+## Post-hoc LOBO bounding-box attribution
+
+Token-attribution analogue on COCO early/late:
+
+1. Form: `{caption, bbx_text: {bbx_k: {box, text_description, category}}}`
+2. Select named `f*` via RF / PO-risk VIMP (Y = rank-quantile → [0,1])
+3. Locate high-`τ̂²` / high-`f*` images
+4. Leave-one-box-out: `remain = boxes \ {k}` → `recalculate_bbox_features` → Δ PO rel
+
+- Script: `scripts/run_coco_lobo_bbox_attribution.py`
+- LaTeX: `docs/method/COCO_LOBO_BBox_Attribution_tables_only.tex`
+- Board: `coco_lobo_bbox_attribution_board.json`
+- Form sample: `coco_bbx_text_form_sample.jsonl` (full jsonl under `data/.../coco_bbx_text_form/`, gitignored)
