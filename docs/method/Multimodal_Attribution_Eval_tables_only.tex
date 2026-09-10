@@ -1,0 +1,43 @@
+% Multimodal attribution evaluation · recovery under known GT modality
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Multimodal attribution recovery. Ground-truth modality is fixed by the batch mechanism (observational control or synthetic late-batch inject). Metrics: modality VIMP mass on GT, selection AUC over GT coordinates, and precision of global top-20.}
+\label{tab:mm-attr-eval-recovery}
+\small
+\begin{tabular}{@{}l l l c c c@{}}
+\toprule
+Scenario & GT & Method & Mass on GT & Sel.\ AUC & P@20 \\
+\midrule
+indiana_view_control & image & RF Domain & $1.00$ & $0.81$ & $1.00$ \\
+indiana_view_control & image & Coord-MMD & $0.98$ & $0.95$ & $1.00$ \\
+indiana_view_control & image & PO-risk & $0.76$ & $0.61$ & $0.80$ \\
+coco_keyword_control & text & RF Domain & $0.68$ & $0.62$ & $0.65$ \\
+coco_keyword_control & text & Coord-MMD & $0.58$ & $0.57$ & $0.65$ \\
+coco_keyword_control & text & PO-risk & $0.62$ & $0.55$ & $0.70$ \\
+coco_time_inject_image & image & RF Domain & $1.00$ & $0.72$ & $1.00$ \\
+coco_time_inject_image & image & Coord-MMD & $0.98$ & $0.90$ & $1.00$ \\
+coco_time_inject_image & image & PO-risk & $0.52$ & $0.50$ & $0.45$ \\
+coco_time_inject_text & text & RF Domain & $1.00$ & $0.75$ & $1.00$ \\
+coco_time_inject_text & text & Coord-MMD & $0.98$ & $0.90$ & $1.00$ \\
+coco_time_inject_text & text & PO-risk & $0.69$ & $0.55$ & $0.80$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Time-order COCO baseline (early vs late image\_id): no strong modality GT. Report modality mass only.}
+\label{tab:mm-attr-eval-time-baseline}
+\small
+\begin{tabular}{@{}l cc c@{}}
+\toprule
+Method & Image share & Text share & RF AUC / PO \\
+\midrule
+RF Domain & $0.53$ & $0.47$ & $0.568$ \\
+Coord-MMD & $0.50$ & $0.50$ & $---$ \\
+PO-risk & $0.41$ & $0.59$ & $16.931$ \\
+\bottomrule
+\end{tabular}
+\end{table}
