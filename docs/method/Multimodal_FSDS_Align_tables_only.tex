@@ -14,7 +14,8 @@ Dataset & Batch $W$ & \multicolumn{2}{c}{RF Domain} & \multicolumn{2}{c}{Coord-M
 \midrule
 Fashion-IQ & train vs test & $0.70$ & $0.30$ & $0.55$ & $0.45$ & $0.28$ & $0.72$ \\
 Indiana CXR & Frontal vs Lateral & $1.00$ & $0.00$ & $0.98$ & $0.02$ & $0.72$ & $0.28$ \\
-COCO out/in & outdoor vs indoor caption keywords & $0.32$ & $0.68$ & $0.42$ & $0.58$ & $0.38$ & $0.62$ \\
+COCO out/in (kw) & outdoor vs indoor caption keywords & $0.32$ & $0.68$ & $0.42$ & $0.58$ & $0.38$ & $0.62$ \\
+COCO early/late & early vs late image_id (order) & $0.53$ & $0.47$ & $0.50$ & $0.50$ & $0.42$ & $0.58$ \\
 Microscopy & short vs long caption & $0.32$ & $0.68$ & $0.55$ & $0.45$ & $0.44$ & $0.56$ \\
 \bottomrule
 \end{tabular}
@@ -31,7 +32,8 @@ Dataset & $n_0$ & $n_1$ & RF AUC & PO-risk \\
 \midrule
 Fashion-IQ & 2823 & 1211 & $0.725$ & $10.864$ \\
 Indiana CXR & 3794 & 3632 & $1.000$ & $0.081$ \\
-COCO out/in & 3000 & 3000 & $1.000$ & $3.542$ \\
+COCO out/in (kw) & 3000 & 3000 & $1.000$ & $3.542$ \\
+COCO early/late & 3000 & 3000 & $0.568$ & $16.837$ \\
 Microscopy & 10480 & 10456 & $0.667$ & $0.706$ \\
 \bottomrule
 \end{tabular}
@@ -69,7 +71,7 @@ Modality & Ranked local indices (high$\to$low) \\
 
 \begin{table}[ht]
 \centering
-\caption{RF Domain ranked local indices on COCO out/in (outdoor vs indoor caption keywords). Domain AUC $1.000$.}
+\caption{RF Domain ranked local indices on COCO out/in (kw) (outdoor vs indoor caption keywords). Domain AUC $1.000$.}
 \label{tab:mm-fsds-coco_outdoor_indoor-rf}
 \small
 \begin{tabular}{@{}l p{11.2cm}@{}}
@@ -78,6 +80,21 @@ Modality & Ranked local indices (high$\to$low) \\
 \midrule
 \texttt{image} & $[149,325,484,272,447,264,24,8,90,185,401,82,326,130,53,101,75,207,510,108]$ \\
 \texttt{text} & $[149,305,325,79,24,272,462,438,484,90,99,158,491,458,413,429,53,233,218,320]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{RF Domain ranked local indices on COCO early/late (early vs late image_id (order)). Domain AUC $0.568$.}
+\label{tab:mm-fsds-coco_time_order-rf}
+\small
+\begin{tabular}{@{}l p{11.2cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[30,303,346,332,338,238,215,169,148,480,69,132,112,401,277,164,16,416,301,101]$ \\
+\texttt{text} & $[376,330,304,338,213,117,383,79,482,156,357,480,30,106,273,133,219,194,469,303]$ \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -4,7 +4,8 @@
 Datasets (X=[img|txt], last-col Y when built as clip_embedding):
   fashion_iq          — CLIP fashion; W = train vs test
   indiana_cxr         — OpenI CXR+report; W = Frontal vs Lateral
-  coco_outdoor_indoor — COCO CLIP subset; W = outdoor vs indoor captions
+  coco_outdoor_indoor — COCO CLIP; W = outdoor vs indoor caption keywords
+  coco_time_order     — COCO CLIP; W = early vs late image_id (order proxy)
   microscopy_clip     — microscopy image/text CLIP; W = long vs short caption
 
   python3 scripts/run_multimodal_fsds_align.py
@@ -67,7 +68,11 @@ def load_dataset(name: str):
     elif name == "coco_outdoor_indoor":
         w = meta["batch"].astype(int).to_numpy()
         batch = "outdoor vs indoor caption keywords"
-        source = "COCO CLIP (open-clip ViT-B/32) outdoor/indoor subset"
+        source = "COCO CLIP (open-clip ViT-B/32) outdoor/indoor keyword split"
+    elif name == "coco_time_order":
+        w = meta["batch"].astype(int).to_numpy()
+        batch = "early vs late image_id (order)"
+        source = "COCO CLIP (open-clip ViT-B/32) early/late image_id windows"
     elif name == "microscopy_clip":
         w = meta["batch"].astype(int).to_numpy()
         batch = "short vs long caption"
@@ -283,7 +288,8 @@ def write_artifacts(results: list[dict]):
     short = {
         "fashion_iq": "Fashion-IQ",
         "indiana_cxr": "Indiana CXR",
-        "coco_outdoor_indoor": "COCO out/in",
+        "coco_outdoor_indoor": "COCO out/in (kw)",
+        "coco_time_order": "COCO early/late",
         "microscopy_clip": "Microscopy",
     }
     for r in results:
@@ -359,6 +365,7 @@ def main():
         "fashion_iq",
         "indiana_cxr",
         "coco_outdoor_indoor",
+        "coco_time_order",
         "microscopy_clip",
     ]
     results = []

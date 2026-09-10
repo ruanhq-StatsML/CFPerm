@@ -24,6 +24,14 @@ modality_vimp_share_coco_outdoor_indoor_coord_mmd = {'image': 0.4209598107952401
 feature_indices_coco_outdoor_indoor_po_risk = {'image': [212, 179, 356, 20, 60, 66, 446, 248, 318, 141, 74, 467, 417, 445, 312, 437, 25, 335, 92, 497], 'text': [439, 8, 83, 128, 28, 260, 238, 293, 248, 504, 388, 243, 168, 124, 254, 24, 492, 441, 281, 236]}
 modality_vimp_share_coco_outdoor_indoor_po_risk = {'image': 0.3802457061188839, 'text': 0.619754293880116}
 
+# --- coco_time_order · early vs late image_id (order) ---
+feature_indices_coco_time_order_rf_domain = {'image': [30, 303, 346, 332, 338, 238, 215, 169, 148, 480, 69, 132, 112, 401, 277, 164, 16, 416, 301, 101], 'text': [376, 330, 304, 338, 213, 117, 383, 79, 482, 156, 357, 480, 30, 106, 273, 133, 219, 194, 469, 303]}
+modality_vimp_share_coco_time_order_rf_domain = {'image': 0.5337179169259694, 'text': 0.4662820830730305}
+feature_indices_coco_time_order_coord_mmd = {'image': [442, 83, 165, 122, 329, 181, 123, 247, 222, 55, 22, 483, 469, 143, 400, 437, 493, 245, 81, 5], 'text': [1, 346, 338, 331, 39, 116, 442, 502, 299, 25, 505, 406, 182, 356, 22, 474, 408, 506, 441, 251]}
+modality_vimp_share_coco_time_order_coord_mmd = {'image': 0.4972206229653164, 'text': 0.5027793770343063}
+feature_indices_coco_time_order_po_risk = {'image': [355, 189, 191, 417, 373, 61, 77, 262, 256, 138, 392, 53, 190, 348, 52, 511, 203, 469, 108, 3], 'text': [436, 42, 264, 448, 353, 17, 58, 116, 153, 210, 360, 194, 11, 325, 478, 506, 450, 287, 388, 226]}
+modality_vimp_share_coco_time_order_po_risk = {'image': 0.4210315412691836, 'text': 0.5789684587298164}
+
 # --- microscopy_clip · short vs long caption ---
 feature_indices_microscopy_clip_rf_domain = {'image': [454, 287, 298, 314, 284, 117, 426, 306, 28, 265, 249, 328, 141, 68, 76, 285, 329, 414, 442, 157], 'text': [287, 420, 292, 142, 342, 27, 349, 417, 52, 247, 190, 123, 106, 507, 14, 20, 492, 150, 235, 306]}
 modality_vimp_share_microscopy_clip_rf_domain = {'image': 0.3248889000106188, 'text': 0.6751110999883813}
