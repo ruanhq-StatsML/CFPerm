@@ -1,21 +1,50 @@
-# Named bbox concat VIMP · cross-dataset consensus
+# Cross-modality + named bbox feature selection
 
-S* = `['n_objects', 'n_people', 'area_frac_person', 'area_frac_vehicle', 'region_center_area_prop', 'region_periphery_area_prop', 'quad_TL_area_prop', 'quad_TR_area_prop', 'quad_BL_area_prop', 'quad_BR_area_prop']`
+Canonical LaTeX (paper-ready):
 
-## Inject recovery by dataset
+- `docs/method/CrossModality_BBox_SelectedFeatures_tables_only.tex`
+- mirror: `results/bbox_attribution/CrossModality_BBox_SelectedFeatures_tables_only.tex`
 
-| dataset | AUC | mass_bbox | recover | recovered features |
-|---|---:|---:|---:|---|
-| coco_time_order | 1.000 | 0.912 | 1.00 | n_objects, n_people, area_frac_person, area_frac_vehicle, region_center_area_prop, region_periphery_area_prop, quad_TL_area_prop, quad_TR_area_prop, quad_BL_area_prop, quad_BR_area_prop |
-| coco_outdoor_indoor | 1.000 | 0.616 | 1.00 | n_objects, n_people, area_frac_person, area_frac_vehicle, region_center_area_prop, region_periphery_area_prop, quad_TL_area_prop, quad_TR_area_prop, quad_BL_area_prop, quad_BR_area_prop |
-| coco_center_split | 1.000 | 0.927 | 1.00 | n_objects, n_people, area_frac_person, area_frac_vehicle, region_center_area_prop, region_periphery_area_prop, quad_TL_area_prop, quad_TR_area_prop, quad_BL_area_prop, quad_BR_area_prop |
+Board JSON: `bbox_business_schema_board.json` (COCO early/late concat).
 
-## Consensus (recovered on ≥2 datasets under inject)
+## Cross-modality mass (COCO early/late)
 
-**10/10**: n_objects, n_people, area_frac_person, area_frac_vehicle, region_center_area_prop, region_periphery_area_prop, quad_TL_area_prop, quad_TR_area_prop, quad_BL_area_prop, quad_BR_area_prop
+| Block | Mass share |
+|---|---:|
+| Image CLIP | 0.525 |
+| Text CLIP | 0.449 |
+| BBox named | 0.026 |
+| RF Domain AUC | 0.600 |
 
-## Baseline top-20 named ranks (for reference)
+CLIP blocks are modality-level only. BBox block is handcrafted named features (business-readable).
 
-- `coco_time_order` AUC=0.584 mass_bbox=0.030: std_cx, area_frac_vehicle, mean_cy, count_person, mean_area_frac, n_people, person_to_total_area_prop, max_area_frac
-- `coco_outdoor_indoor` AUC=1.000 mass_bbox=0.219: furniture_to_total_area_prop, count_furniture, area_frac_furniture, count_kitchen, largest_is_furniture, area_frac_kitchen, count_vehicle, area_frac_sports
-- `coco_center_split` AUC=1.000 mass_bbox=0.762: region_center_area_prop, region_periphery_area_prop, region_center_count_prop, region_periphery_count_prop, largest_to_total_area_prop, std_cx, mean_area_frac, max_area_frac
+## Selected bbox features (top-20 RF Domain VIMP)
+
+| Rank | Family | Feature | VIMP |
+|---:|---|---|---:|
+| 1 | position | `cx_std` | 0.00501 |
+| 2 | aspect | `aspect_std` | 0.00269 |
+| 3 | size | `h_mean` | 0.00240 |
+| 4 | aspect | `aspect_mean` | 0.00219 |
+| 5 | size | `w_mean` | 0.00163 |
+| 6 | size | `h_std` | 0.00152 |
+| 7 | area | `area_mean` | 0.00136 |
+| 8 | position | `cx_mean` | 0.00127 |
+| 9 | spatial rel. | `pairwise_iou_mean` | 0.00119 |
+| 10 | category | `cat_hist_1 (person)` | 0.00108 |
+| 11 | size | `w_std` | 0.00101 |
+| 12 | spatial dist. | `nn_center_dist_mean` | 0.00096 |
+| 13 | area | `area_std` | 0.00093 |
+| 14 | position | `cy_mean` | 0.00088 |
+| 15 | position | `cy_std` | 0.00076 |
+| 16 | category | `cat_hist_42 (surfboard)` | 0.00019 |
+| 17 | occlusion | `iscrowd_ratio` | 0.00012 |
+| 18 | category | `cat_hist_16 (bird)` | 0.00010 |
+| 19 | category | `cat_hist_15 (bench)` | 0.00008 |
+| 20 | category | `cat_hist_32 (tie)` | 0.00007 |
+
+## Inject consensus ($S^{\star}$, recovered on all 3 boards)
+
+`n_objects`, `n_people`, `area_frac_person`, `area_frac_vehicle`, `region_center_area_prop`, `region_periphery_area_prop`, `quad_TL/TR/BL/BR_area_prop` — **10/10** on time-order / outdoor-indoor / center-split.
+
+Details: `bbox_named_consensus_board.json`, `BBox_Named_Consensus_tables_only.tex`.
