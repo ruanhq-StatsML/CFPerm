@@ -48,3 +48,22 @@ CLIP blocks are modality-level only. BBox block is handcrafted named features (b
 `n_objects`, `n_people`, `area_frac_person`, `area_frac_vehicle`, `region_center_area_prop`, `region_periphery_area_prop`, `quad_TL/TR/BL/BR_area_prop` — **10/10** on time-order / outdoor-indoor / center-split.
 
 Details: `bbox_named_consensus_board.json`, `BBox_Named_Consensus_tables_only.tex`.
+
+## COCO multi-layer logic (IoU / crowding / area)
+
+Beyond conventional mean/std — hierarchical board:
+
+- L1 modality → L2 bbox family (geometry / iou / crowding / area / semantic) → L3 named ranks
+- LaTeX: `docs/method/COCO_Layered_BBox_tables_only.tex`
+- Board: `bbox_layered_coco_board.json`
+- Builder: `scripts/build_bbox_layered_coco.py`
+
+| L2 family | mass share |
+|---|---:|
+| geometry | 0.440 |
+| crowding | 0.253 |
+| area | 0.190 |
+| iou | 0.084 |
+| semantic | 0.033 |
+
+Emphasis tops: `pairwise_iou_mean`, `coverage_area` / `obj_density`, `area_gini` / `person_area_frac`.
