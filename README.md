@@ -116,3 +116,19 @@ https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 <img width="1796" height="552" alt="Screenshot 2026-08-03 at 09 57 54" src="https://github.com/user-attachments/assets/bd74444f-992d-4928-ac54-df080e397cf7" />
 - **Consequently, upon observing a notable drop in model performance, we prioritize post-hoc feature selection or localization of distribution-shift drivers over disentangling the shift into concept drift versus covariate shift, as such decomposition is not identifiable, Subset Localization is all you need!**
 - It gives people concise proxy for efficiently dealing with the model performance degradation in the deployed ML model - distribution shift driver localization is what you will need.
+
+## Hierarchical Multimodal Attribution
+
+The same FSDS / meta-learner variable-importance pipeline can be stacked into a **three-layer attribution procedure** for user-preference / mixture-shift settings. Because a unique CS vs. CD (or feature-wise) decomposition is not identifiable, we localize rather than disentangle:
+
+1. **Modality attribution** — score Image / Audio / Text with covariate-shift detectors (MMD, RF domain classifier) and concept-drift detectors (meta-learner as a distance estimator); rank features per modality.
+2. **Instance localization** — condition on the selected modality, score samples in Batch 0 vs. Batch 1 with an RF-domain classifier, pseudo-outcome risk, or MMD-LOCO, and keep the salient sentences / images.
+3. **Fine-grained post-hoc localization** — condition on sentiment or image category, then attribute **tokens** (text / transcript) or **bounding boxes** (image / spatial regions).
+
+<img width="1700" alt="Hierarchical Multimodal Attribution Procedure" src="./figures/multimodal_attribution_procedure.png" />
+
+Regenerate the figure with:
+
+```bash
+python figures/render_multimodal_attribution.py
+```
