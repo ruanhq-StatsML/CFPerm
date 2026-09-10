@@ -1,0 +1,10 @@
+
+# Fashion-IQ / img-txt embeddings (large)
+data/
+!data/img_txt/
+data/img_txt/*/
+!data/img_txt/*/README.md
+datasets/extracted/
+*.edf
+*.tsv.gz
+__pycache__/

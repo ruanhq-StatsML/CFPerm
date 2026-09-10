@@ -1,0 +1,79 @@
+% Fashion-IQ CLIP FSDS · RF / LOCO-MMD / PO-risk ranked indices
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{RF Domain Classifier on Fashion-IQ CLIP ($n_1=2823$, $n_2=1211$, $d_{\mathrm{img}}=d_{\mathrm{txt}}=512$). Batch: train vs test. Domain AUC $0.725$; modality share image $0.697$ / text $0.303$.}
+\label{tab:fashion-iq-rf-domain}
+\small
+\begin{tabular}{@{}l p{11.5cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[381,316,496,218,124,265,226,18,379,151,393,253,492,426,459,47,108,46,355,118]$ \\
+\texttt{text} & $[326,177,212,198,209,294,53,64,35,369,415,271,119,108,0,216,295,179,55,106]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Coordinate-wise 1-D MMD ranking on Fashion-IQ CLIP (max\_n$=100$; full leave-one-out MMD is numerically flat at $p=1024$). Modality share image $0.550$ / text $0.450$.}
+\label{tab:fashion-iq-coord-mmd}
+\small
+\begin{tabular}{@{}l p{11.5cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[190,496,426,84,493,331,338,133,95,490,313,47,264,362,224,507,363,176,151,20]$ \\
+\texttt{text} & $[233,186,104,211,175,378,359,201,50,10,368,271,364,90,219,375,406,60,75,471]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{PO-risk RF VIMP on Fashion-IQ CLIP. Observed PO-risk $10.845$; modality share image $0.280$ / text $0.720$.}
+\label{tab:fashion-iq-po-risk}
+\small
+\begin{tabular}{@{}l p{11.5cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[39,471,489,200,499,102,358,504,195,501,370,146,71,181,317,27,345,19,239,160]$ \\
+\texttt{text} & $[315,442,443,67,117,179,369,351,111,448,15,64,115,198,23,181,57,100,159,82]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Fashion-IQ CLIP modality VIMP mass share across RF Domain / LOCO-MMD / PO-risk.}
+\label{tab:fashion-iq-modality-mass}
+\small
+\begin{tabular}{@{}l cc@{}}
+\toprule
+Method & Image share & Text share \\
+\midrule
+RF Domain Classifier & $0.697$ & $0.303$ \\
+Coord-wise MMD & $0.550$ & $0.450$ \\
+PO-risk RF & $0.280$ & $0.720$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Fashion-IQ CLIP modality-block LOCO-MMD (drop image block vs drop text block; subsample max\_n).}
+\label{tab:fashion-iq-block-loco-mmd}
+\small
+\begin{tabular}{@{}l c@{}}
+\toprule
+Quantity & Value \\
+\midrule
+MMD full & $0.000585$ \\
+$\Delta$ drop image & $-0.000022$ \\
+$\Delta$ drop text & $-0.000054$ \\
+\bottomrule
+\end{tabular}
+\end{table}
