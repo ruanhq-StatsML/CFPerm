@@ -1,0 +1,10 @@
+# large local data
+data/
+!data/img_txt/
+data/img_txt/*/
+!data/img_txt/*/README.md
+datasets/extracted/
+*.edf
+*.tsv.gz
+__pycache__/
+*.pyc

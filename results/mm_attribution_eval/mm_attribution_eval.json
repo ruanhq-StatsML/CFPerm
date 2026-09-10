@@ -1,0 +1,222 @@
+[
+  {
+    "scenario": "indiana_view_control",
+    "batch": "Frontal vs Lateral",
+    "gt_modality": "image",
+    "n0": 3794,
+    "n1": 3632,
+    "methods": {
+      "rf_domain": {
+        "domain_auc": 1.0,
+        "time_s": 1.81,
+        "gt": "image",
+        "selection_AUC": 0.8076,
+        "topk_precision_fullblock": 0.7227,
+        "topk_precision_k20": 1.0,
+        "modality_vimp_share": {
+          "image": 0.9998551756367472,
+          "text": 0.00014482436225266647
+        },
+        "mass_on_gt": 0.9999
+      },
+      "coord_mmd": {
+        "time_s": 0.63,
+        "gt": "image",
+        "selection_AUC": 0.9522,
+        "topk_precision_fullblock": 0.8926,
+        "topk_precision_k20": 1.0,
+        "modality_vimp_share": {
+          "image": 0.9848043343542222,
+          "text": 0.015195665645767492
+        },
+        "mass_on_gt": 0.9848
+      },
+      "po_risk": {
+        "po_risk": 0.1331,
+        "time_s": 135.8,
+        "gt": "image",
+        "selection_AUC": 0.6101,
+        "topk_precision_fullblock": 0.5801,
+        "topk_precision_k20": 0.8,
+        "modality_vimp_share": {
+          "image": 0.7586864294852609,
+          "text": 0.24131357051373906
+        },
+        "mass_on_gt": 0.7587
+      }
+    }
+  },
+  {
+    "scenario": "coco_keyword_control",
+    "batch": "outdoor/indoor keywords",
+    "gt_modality": "text",
+    "n0": 3000,
+    "n1": 3000,
+    "methods": {
+      "rf_domain": {
+        "domain_auc": 0.9999,
+        "time_s": 2.27,
+        "gt": "text",
+        "selection_AUC": 0.6223,
+        "topk_precision_fullblock": 0.6016,
+        "topk_precision_k20": 0.65,
+        "modality_vimp_share": {
+          "image": 0.3235247474906695,
+          "text": 0.6764752525083304
+        },
+        "mass_on_gt": 0.6765
+      },
+      "coord_mmd": {
+        "time_s": 0.64,
+        "gt": "text",
+        "selection_AUC": 0.5683,
+        "topk_precision_fullblock": 0.5605,
+        "topk_precision_k20": 0.65,
+        "modality_vimp_share": {
+          "image": 0.4209598107952401,
+          "text": 0.5790401892047393
+        },
+        "mass_on_gt": 0.579
+      },
+      "po_risk": {
+        "po_risk": 3.3828,
+        "time_s": 166.2,
+        "gt": "text",
+        "selection_AUC": 0.5517,
+        "topk_precision_fullblock": 0.5078,
+        "topk_precision_k20": 0.7,
+        "modality_vimp_share": {
+          "image": 0.38223066009095275,
+          "text": 0.6177693399080472
+        },
+        "mass_on_gt": 0.6178
+      }
+    }
+  },
+  {
+    "scenario": "coco_time_order_baseline",
+    "batch": "early vs late image_id",
+    "gt_modality": null,
+    "n0": 3000,
+    "n1": 3000,
+    "methods": {
+      "rf_domain": {
+        "domain_auc": 0.5682,
+        "time_s": 2.55,
+        "modality_vimp_share": {
+          "image": 0.5337179169259694,
+          "text": 0.4662820830730305
+        }
+      },
+      "coord_mmd": {
+        "time_s": 0.65,
+        "modality_vimp_share": {
+          "image": 0.4972206229653164,
+          "text": 0.5027793770343063
+        }
+      },
+      "po_risk": {
+        "po_risk": 16.9315,
+        "time_s": 163.63,
+        "modality_vimp_share": {
+          "image": 0.4142995000737032,
+          "text": 0.5857004999252968
+        }
+      }
+    }
+  },
+  {
+    "scenario": "coco_time_inject_image",
+    "batch": "early vs late image_id + late image inject",
+    "gt_modality": "image",
+    "n0": 3000,
+    "n1": 3000,
+    "methods": {
+      "rf_domain": {
+        "domain_auc": 1.0,
+        "time_s": 1.75,
+        "gt": "image",
+        "selection_AUC": 0.7195,
+        "topk_precision_fullblock": 0.7676,
+        "topk_precision_k20": 1.0,
+        "modality_vimp_share": {
+          "image": 0.9998508364992149,
+          "text": 0.00014916349978504954
+        },
+        "mass_on_gt": 0.9999
+      },
+      "coord_mmd": {
+        "time_s": 0.65,
+        "gt": "image",
+        "selection_AUC": 0.8998,
+        "topk_precision_fullblock": 0.832,
+        "topk_precision_k20": 1.0,
+        "modality_vimp_share": {
+          "image": 0.9839220278956321,
+          "text": 0.01607797210435583
+        },
+        "mass_on_gt": 0.9839
+      },
+      "po_risk": {
+        "po_risk": 0.1975,
+        "time_s": 162.47,
+        "gt": "image",
+        "selection_AUC": 0.4991,
+        "topk_precision_fullblock": 0.4961,
+        "topk_precision_k20": 0.45,
+        "modality_vimp_share": {
+          "image": 0.5220461967494403,
+          "text": 0.47795380324955955
+        },
+        "mass_on_gt": 0.522
+      }
+    }
+  },
+  {
+    "scenario": "coco_time_inject_text",
+    "batch": "early vs late image_id + late text inject",
+    "gt_modality": "text",
+    "n0": 3000,
+    "n1": 3000,
+    "methods": {
+      "rf_domain": {
+        "domain_auc": 1.0,
+        "time_s": 1.87,
+        "gt": "text",
+        "selection_AUC": 0.7453,
+        "topk_precision_fullblock": 0.6328,
+        "topk_precision_k20": 1.0,
+        "modality_vimp_share": {
+          "image": 0.00025138843087286605,
+          "text": 0.999748611568127
+        },
+        "mass_on_gt": 0.9997
+      },
+      "coord_mmd": {
+        "time_s": 0.64,
+        "gt": "text",
+        "selection_AUC": 0.8991,
+        "topk_precision_fullblock": 0.8262,
+        "topk_precision_k20": 1.0,
+        "modality_vimp_share": {
+          "image": 0.016925664121750533,
+          "text": 0.9830743358782367
+        },
+        "mass_on_gt": 0.9831
+      },
+      "po_risk": {
+        "po_risk": 0.31,
+        "time_s": 165.23,
+        "gt": "text",
+        "selection_AUC": 0.5471,
+        "topk_precision_fullblock": 0.5469,
+        "topk_precision_k20": 0.8,
+        "modality_vimp_share": {
+          "image": 0.3114951843376502,
+          "text": 0.6885048156613498
+        },
+        "mass_on_gt": 0.6885
+      }
+    }
+  }
+]
