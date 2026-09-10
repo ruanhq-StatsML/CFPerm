@@ -1,0 +1,99 @@
+% Multimodal FSDS alignment · RF / coord-MMD / PO-risk
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Multimodal FSDS modality VIMP mass share across datasets. CS methods: RF Domain Classifier and coordinate-wise MMD; CD method: PO-risk RF. Ranking within modality uses $\texttt{np.argsort(-VIMP)[:20]}$.}
+\label{tab:mm-fsds-align-mass}
+\small
+\begin{tabular}{@{}l l cc cc cc@{}}
+\toprule
+Dataset & Batch $W$ & \multicolumn{2}{c}{RF Domain} & \multicolumn{2}{c}{Coord-MMD} & \multicolumn{2}{c}{PO-risk} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+ &  & Img & Txt & Img & Txt & Img & Txt \\
+\midrule
+Fashion-IQ & train vs test & $0.70$ & $0.30$ & $0.55$ & $0.45$ & $0.28$ & $0.72$ \\
+Indiana CXR & Frontal vs Lateral & $1.00$ & $0.00$ & $0.98$ & $0.02$ & $0.72$ & $0.28$ \\
+COCO out/in & outdoor vs indoor caption keywords & $0.32$ & $0.68$ & $0.42$ & $0.58$ & $0.38$ & $0.62$ \\
+Microscopy & short vs long caption & $0.32$ & $0.68$ & $0.55$ & $0.45$ & $0.44$ & $0.56$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Diagnostics for multimodal FSDS alignment (RF domain AUC; observed PO-risk).}
+\label{tab:mm-fsds-align-diag}
+\small
+\begin{tabular}{@{}l r r c c@{}}
+\toprule
+Dataset & $n_0$ & $n_1$ & RF AUC & PO-risk \\
+\midrule
+Fashion-IQ & 2823 & 1211 & $0.725$ & $10.864$ \\
+Indiana CXR & 3794 & 3632 & $1.000$ & $0.081$ \\
+COCO out/in & 3000 & 3000 & $1.000$ & $3.542$ \\
+Microscopy & 10480 & 10456 & $0.667$ & $0.706$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{RF Domain ranked local indices on Fashion-IQ (train vs test). Domain AUC $0.725$.}
+\label{tab:mm-fsds-fashion_iq-rf}
+\small
+\begin{tabular}{@{}l p{11.2cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[381,316,496,218,124,265,226,18,379,151,393,253,492,426,459,47,108,46,355,118]$ \\
+\texttt{text} & $[326,177,212,198,209,294,53,64,35,369,415,271,119,108,0,216,295,179,55,106]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{RF Domain ranked local indices on Indiana CXR (Frontal vs Lateral). Domain AUC $1.000$.}
+\label{tab:mm-fsds-indiana_cxr-rf}
+\small
+\begin{tabular}{@{}l p{11.2cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[330,235,111,335,145,117,82,293,494,154,105,278,115,281,410,298,68,77,233,0]$ \\
+\texttt{text} & $[70,49,182,285,468,77,1,395,325,250,188,322,295,90,336,138,230,449,317,301]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{RF Domain ranked local indices on COCO out/in (outdoor vs indoor caption keywords). Domain AUC $1.000$.}
+\label{tab:mm-fsds-coco_outdoor_indoor-rf}
+\small
+\begin{tabular}{@{}l p{11.2cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[149,325,484,272,447,264,24,8,90,185,401,82,326,130,53,101,75,207,510,108]$ \\
+\texttt{text} & $[149,305,325,79,24,272,462,438,484,90,99,158,491,458,413,429,53,233,218,320]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{RF Domain ranked local indices on Microscopy (short vs long caption). Domain AUC $0.667$.}
+\label{tab:mm-fsds-microscopy_clip-rf}
+\small
+\begin{tabular}{@{}l p{11.2cm}@{}}
+\toprule
+Modality & Ranked local indices (high$\to$low) \\
+\midrule
+\texttt{image} & $[454,287,298,314,284,117,426,306,28,265,249,328,141,68,76,285,329,414,442,157]$ \\
+\texttt{text} & $[287,420,292,142,342,27,349,417,52,247,190,123,106,507,14,20,492,150,235,306]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
