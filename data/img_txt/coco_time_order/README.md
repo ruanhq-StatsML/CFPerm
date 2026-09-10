@@ -1,13 +1,12 @@
-# COCO time-order + bounding-box block
+# COCO time-order + interpretable bbox features
 
-Same early/late `image_id` split as `coco_time_order`, with an added
-`bbox_feats.npy` block joined via caption → COCO `image_id` → instances.
+Batch W: early vs late `image_id` (order proxy).
 
-Feature layout (`bbox_feature_schema.json`):
-- geo summaries (8)
-- category histogram (80)
-- top-5 boxes × (cx, cy, w, h, area_frac, cat_norm)
+BBox board uses **handcrafted named features only**
+(`bbox_named_feats.npy` + `bbox_named_feature_names.json`):
+counts, geometry, supercategory area/count, key-class presence.
+Do not rank CLIP coordinate indices for business claims.
 
 ```bash
-python3 scripts/run_bbox_attribution_board.py
+python3 scripts/run_bbox_named_attribution.py
 ```
