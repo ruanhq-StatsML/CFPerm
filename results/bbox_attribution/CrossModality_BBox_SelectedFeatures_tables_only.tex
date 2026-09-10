@@ -1,0 +1,76 @@
+% Final cross-modality + interpretable bbox feature selection board
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Cross-modality partition on COCO early/late: VIMP mass share over concatenated $X=(\mathrm{image\_CLIP},\mathrm{text\_CLIP},\mathrm{bbox\_named})$. BBox block uses handcrafted interpretable features only.}
+\label{tab:cross-modality-mass-final}
+\small
+\begin{tabular}{@{}l c c@{}}
+\toprule
+Block & Mass share & Note \\
+\midrule
+Image CLIP & $0.525$ & modality-level only \\
+Text CLIP & $0.449$ & modality-level only \\
+BBox named & $0.026$ & interpretable features \\
+\midrule
+RF Domain AUC & \multicolumn{2}{c}{$0.600$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Selected interpretable bbox features (top-20 by RF Domain VIMP) on COCO early/late. Feature names are business-readable; category histogram entries show COCO class names.}
+\label{tab:bbox-selected-features-final}
+\small
+\begin{tabular}{@{}r l l c@{}}
+\toprule
+Rank & Family & Feature & VIMP \\
+\midrule
+1 & position & \texttt{cx\_std} & $0.00501$ \\
+2 & aspect & \texttt{aspect\_std} & $0.00269$ \\
+3 & size & \texttt{h\_mean} & $0.00240$ \\
+4 & aspect & \texttt{aspect\_mean} & $0.00219$ \\
+5 & size & \texttt{w\_mean} & $0.00163$ \\
+6 & size & \texttt{h\_std} & $0.00152$ \\
+7 & area & \texttt{area\_mean} & $0.00136$ \\
+8 & position & \texttt{cx\_mean} & $0.00127$ \\
+9 & spatial rel. & \texttt{pairwise\_iou\_mean} & $0.00119$ \\
+10 & category & \texttt{cat\_hist\_1 (person)} & $0.00108$ \\
+11 & size & \texttt{w\_std} & $0.00101$ \\
+12 & spatial dist. & \texttt{nn\_center\_dist\_mean} & $0.00096$ \\
+13 & area & \texttt{area\_std} & $0.00093$ \\
+14 & position & \texttt{cy\_mean} & $0.00088$ \\
+15 & position & \texttt{cy\_std} & $0.00076$ \\
+16 & category & \texttt{cat\_hist\_42 (surfboard)} & $0.00019$ \\
+17 & occlusion & \texttt{iscrowd\_ratio} & $0.00012$ \\
+18 & category & \texttt{cat\_hist\_16 (bird)} & $0.00010$ \\
+19 & category & \texttt{cat\_hist\_15 (bench)} & $0.00008$ \\
+20 & category & \texttt{cat\_hist\_32 (tie)} & $0.00007$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Cross-dataset consensus: named bbox features in $S^{\star}$ recovered in top-20 on all three boards (time-order / outdoor-indoor / center-split) after targeted inject.}
+\label{tab:bbox-consensus-selected-final}
+\small
+\begin{tabular}{@{}l l@{}}
+\toprule
+Selected feature & Recovered on \\
+\midrule
+\texttt{n\_objects} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{n\_people} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{area\_frac\_person} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{area\_frac\_vehicle} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{region\_center\_area\_prop} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{region\_periphery\_area\_prop} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{quad\_TL\_area\_prop} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{quad\_TR\_area\_prop} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{quad\_BL\_area\_prop} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{quad\_BR\_area\_prop} & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\bottomrule
+\end{tabular}
+\end{table}
