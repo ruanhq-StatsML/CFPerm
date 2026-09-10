@@ -3,3 +3,7 @@ data/raw/
 data/affec/
 *.edf
 *.tsv.gz
+
+data/drive_dl/
+data/img_txt/*/
+!data/img_txt/README.md
