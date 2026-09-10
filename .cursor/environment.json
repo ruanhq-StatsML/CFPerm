@@ -1,0 +1,4 @@
+{
+  "name": "CFPerm (R + Python)",
+  "install": "bash .cursor/install.sh"
+}
