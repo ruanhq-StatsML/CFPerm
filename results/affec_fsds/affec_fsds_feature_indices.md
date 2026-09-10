@@ -1,14 +1,16 @@
-# AFFEC FSDS · selected feature indices
+# AFFEC FSDS board · RF Domain Classifier rank
 
-feature-indices: eye_tracking:[6, 9, 10, 15], pupil:[0, 2, 4, 5, 10, 11, 12, 13, 16, 17, 20], cursor:[1, 3], gsr_eda:[0, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 28, 31, 32, 33, 34, 35], eeg:[11, 19, 37, 46, 47, 52]
+feature-indices (RF Domain Classifier rank): eye_tracking:[6, 15, 12, 11, 4, 5, 0, 1], pupil:[5, 4, 13, 11, 12, 15, 17, 10], cursor:[1, 0, 2, 3], gsr_eda:[15, 32, 31, 4, 3, 35, 30, 14], eeg:[50, 54, 23, 2, 56, 3, 47, 15]
 
-- n=10000, p=144, n_perm=40
+- board order: `np.argsort(-RF_VIMP)[:8]` within each modality
+- RF domain AUC: 0.999
+- n=10000, p=144
 - batch: W=0: run∈{0,1}; W=1: run∈{2,3}
 
-| modality | indices | names |
+| modality | ranked indices (high → low VIMP) | names |
 |---|---|---|
-| eye_tracking | [6, 9, 10, 15] | fixation_duration, eye_open_left, eye_open_right, validity |
-| pupil | [0, 2, 4, 5, 10, 11, 12, 13, 16, 17, 20] | pupil_diameter, pupil_diameter_filt, pupil_peak, pupil_latency, eye_pos_x, eye_pos_y, eye_pos_x_raw, eye_pos_y_raw, eye_pos_dispersion, eye_pos_range_x, pupil_validity |
-| cursor | [1, 3] | cursor_y, cursor_state |
-| gsr_eda | [0, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 28, 31, 32, 33, 34, 35] | gsr_raw, gsr_tonic, gsr_scr_count, gsr_peaks, gsr_slope, gsr_std, gsr_range, body_temp, temp_mean, temp_std, temp_slope, acc_x, acc_y, acc_z, acc_magnitude, acc_slope, gsr_feat_20, gsr_feat_21, gsr_feat_22, gsr_feat_23, gsr_feat_24, gsr_feat_25, gsr_feat_28, gsr_feat_31, gsr_feat_32, gsr_feat_33, gsr_feat_34, gsr_feat_35 |
-| eeg | [11, 19, 37, 46, 47, 52] | EEG_11, EEG_19, EEG_37, EEG_46, EEG_47, EEG_52 |
+| eye_tracking | [6, 15, 12, 11, 4, 5, 0, 1] | fixation_duration, validity, pupil_y_left, pupil_x_left, gaze_x_right, gaze_y_right, fixation_x, fixation_y |
+| pupil | [5, 4, 13, 11, 12, 15, 17, 10] | pupil_latency, pupil_peak, eye_pos_y_raw, eye_pos_y, eye_pos_x_raw, eye_pos_velocity_y, eye_pos_range_x, eye_pos_x |
+| cursor | [1, 0, 2, 3] | cursor_y, cursor_x, cursor_velocity, cursor_state |
+| gsr_eda | [15, 32, 31, 4, 3, 35, 30, 14] | acc_y, gsr_feat_32, gsr_feat_31, gsr_scr_count, gsr_tonic, gsr_feat_35, gsr_feat_30, acc_x |
+| eeg | [50, 54, 23, 2, 56, 3, 47, 15] | EEG_50, EEG_54, EEG_23, F3, EEG_56, F4, EEG_47, EEG_15 |

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
 import re
 from pathlib import Path
 
@@ -26,11 +27,15 @@ DOCS = ROOT / "docs" / "method"
 
 SEED = 2026
 N_SUBSAMPLE = 10_000
-N_PERM = 40
+N_PERM = 20  # permute-W null for MMD-LOCO (board; not a method paper)
 ALPHA = 0.05
 WIN_SEC = 1.0  # window length for EEG / physio aggregation
 MAX_WIN_PHYSIO = 24
 MAX_WIN_EEG = 16
+MMD_MAX_N = 400
+# RF Domain Classifier board: ranked indices per modality
+TOP_K = 8
+SKIP_MMD = os.environ.get("AFFEC_FSDS_SKIP_MMD", "0") == "1"
 
 
 # ---------------------------------------------------------------------------
@@ -434,15 +439,105 @@ def pivot_multimodal(records: list[dict], rng: np.random.Generator):
     return X[take], Y[take], W[take], [rows_meta[i] for i in take], block_slices, mods
 
 
-def fsds_cfperm_lite(X, Y, W, *, n_perm: int = N_PERM, seed: int = SEED):
-    """Feature selection for distribution shift (CFPerm-lite).
+def _rbf_mmd2(X0: np.ndarray, X1: np.ndarray, *, gamma: float | None = None, max_n: int = 800, rng: np.random.Generator | None = None) -> float:
+    """Unbiased squared MMD with RBF kernel (median heuristic)."""
+    rng = rng or np.random.default_rng(0)
+    X0 = np.asarray(X0, float)
+    X1 = np.asarray(X1, float)
+    if len(X0) > max_n:
+        X0 = X0[rng.choice(len(X0), max_n, replace=False)]
+    if len(X1) > max_n:
+        X1 = X1[rng.choice(len(X1), max_n, replace=False)]
+    Z = np.vstack([X0, X1])
+    # median heuristic on a subsample of pairwise distances
+    if gamma is None:
+        idx = rng.choice(len(Z), size=min(400, len(Z)), replace=False)
+        S = Z[idx]
+        d2 = np.sum((S[:, None, :] - S[None, :, :]) ** 2, axis=-1)
+        med = float(np.median(d2[d2 > 0])) if np.any(d2 > 0) else 1.0
+        gamma = 1.0 / max(med, 1e-8)
 
-    Observed importance: LOCO drop in R-risk / batch-discrimination hybrid.
-    Primary score used here = permutation importance of predicting batch W
-    (covariate-shift localization) + optional outcome residual coupling.
+    def k(A, B):
+        d2 = np.sum((A[:, None, :] - B[None, :, :]) ** 2, axis=-1)
+        return np.exp(-gamma * d2)
 
-    Null: permute W, recompute importance → feature p-values.
-    Reject if p < ALPHA and importance > median null threshold.
+    K00 = k(X0, X0)
+    K11 = k(X1, X1)
+    K01 = k(X0, X1)
+    n0, n1 = len(X0), len(X1)
+    # unbiased U-statistic diagonals removed
+    mmd2 = (
+        (K00.sum() - np.trace(K00)) / max(n0 * (n0 - 1), 1)
+        + (K11.sum() - np.trace(K11)) / max(n1 * (n1 - 1), 1)
+        - 2.0 * K01.mean()
+    )
+    return float(mmd2)
+
+
+def po_risk_learner(X, Y, W, *, seed: int = 0, n_splits: int = 5, clip_e: float = 0.01):
+    """Cross-fit PO-risk learner (DR-style): m(X), e(X), τ on pseudo-outcome.
+
+    Returns observed PO-risk, cross-fit nuisances, and per-sample PO scores.
+    """
+    from sklearn.model_selection import StratifiedKFold
+
+    X = np.asarray(X, float)
+    Y = np.asarray(Y, float)
+    W = np.asarray(W, int)
+    n, p = X.shape
+    m_hat = np.zeros(n)
+    e_hat = np.zeros(n)
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    for fold, (tr, te) in enumerate(cv.split(X, W)):
+        m = RandomForestRegressor(
+            n_estimators=60, max_depth=6, min_samples_leaf=5, random_state=seed + fold, n_jobs=-1
+        )
+        e = RandomForestClassifier(
+            n_estimators=60, max_depth=6, min_samples_leaf=5, random_state=seed + 100 + fold, n_jobs=-1
+        )
+        m.fit(X[tr], Y[tr])
+        e.fit(X[tr], W[tr])
+        m_hat[te] = m.predict(X[te])
+        e_hat[te] = e.predict_proba(X[te])[:, 1]
+    e_hat = np.clip(e_hat, clip_e, 1.0 - clip_e)
+    # Pseudo-outcome / PO score (DR residual product)
+    po_score = (Y - m_hat) * (W - e_hat)
+    # τ-learner on X → PO-risk = E[τ(X)^2]
+    tau = RandomForestRegressor(
+        n_estimators=80, max_depth=6, min_samples_leaf=5, random_state=seed + 7, n_jobs=-1
+    )
+    tau.fit(X, po_score)
+    tau_hat = tau.predict(X)
+    po_risk = float(np.mean(tau_hat ** 2))
+    return dict(po_risk=po_risk, m_hat=m_hat, e_hat=e_hat, po_score=po_score, tau_hat=tau_hat)
+
+
+def mmd_loco_importance(X, W, *, seed: int = 0, max_n: int = MMD_MAX_N) -> np.ndarray:
+    """MMD-LOCO: Δ_j = MMD²(P0,P1) - MMD²(P0^{-j}, P1^{-j}).
+
+    Large Δ_j ⇒ feature j drives the between-batch discrepancy.
+    """
+    rng = np.random.default_rng(seed)
+    X = np.asarray(X, float)
+    W = np.asarray(W, int)
+    X0, X1 = X[W == 0], X[W == 1]
+    mmd_full = _rbf_mmd2(X0, X1, max_n=max_n, rng=rng)
+    p = X.shape[1]
+    imps = np.zeros(p, float)
+    for j in range(p):
+        cols = [c for c in range(p) if c != j]
+        imps[j] = mmd_full - _rbf_mmd2(X0[:, cols], X1[:, cols], max_n=max_n, rng=rng)
+        if (j + 1) % 20 == 0:
+            print(f"  MMD-LOCO {j+1}/{p}", flush=True)
+    return imps
+
+
+def fsds_porisk_mmd_loco(X, Y, W, *, n_perm: int = N_PERM, seed: int = SEED):
+    """FSDS = PO-risk learner + MMD-LOCO (the locked attribution logic).
+
+    1) PO-risk learner: global discrepancy between batches via frozen-style DR PO-risk.
+    2) MMD-LOCO on X: which coordinates drive the P0 vs P1 shift.
+    3) Null: permute W, recompute MMD-LOCO → feature p-values (CFPerm-style).
     """
     rng = np.random.default_rng(seed)
     X = np.asarray(X, float)
@@ -450,39 +545,25 @@ def fsds_cfperm_lite(X, Y, W, *, n_perm: int = N_PERM, seed: int = SEED):
     W = np.asarray(W, int)
     n, p = X.shape
 
-    def importance(W_use: np.ndarray) -> np.ndarray:
-        # Domain classifier RF; feature importance via sklearn impurity +
-        # one-pass permutation drop for top signal (fast FSDS).
-        clf = RandomForestClassifier(
-            n_estimators=80,
-            max_depth=8,
-            min_samples_leaf=5,
-            random_state=int(rng.integers(1e9)),
-            n_jobs=-1,
-        )
-        clf.fit(X, W_use)
-        base = clf.feature_importances_.astype(float)
-        # couple with outcome shift: |corr(Xj, Y)| difference across batches
-        imp = base.copy()
-        for j in range(p):
-            xj = X[:, j]
-            y0 = Y[W_use == 0]
-            y1 = Y[W_use == 1]
-            x0 = xj[W_use == 0]
-            x1 = xj[W_use == 1]
-            # mean shift of feature + outcome coupling
-            ms = abs(np.nanmean(x1) - np.nanmean(x0))
-            # standardize lightly
-            s = np.nanstd(xj) + 1e-8
-            imp[j] = 0.7 * base[j] + 0.3 * (ms / s)
-        return imp
+    print("  PO-risk learner…", flush=True)
+    po = po_risk_learner(X, Y, W, seed=seed)
+    print(f"  observed PO-risk={po['po_risk']:.6f}", flush=True)
 
-    imp_obs = importance(W)
+    print("  MMD-LOCO importance…", flush=True)
+    imp_obs = mmd_loco_importance(X, W, seed=seed)
+    # mild coupling: upweight features that also move the PO score across batches
+    po_s = po["po_score"]
+    for j in range(p):
+        ms = abs(np.mean(X[W == 1, j]) - np.mean(X[W == 0, j]))
+        s = np.std(X[:, j]) + 1e-8
+        # keep MMD-LOCO primary; PO-risk path as light coupler
+        imp_obs[j] = float(imp_obs[j]) + 0.05 * (ms / s) * abs(po["po_risk"])
+
     perm = np.zeros((p, n_perm), float)
     for b in range(n_perm):
         Wb = rng.permutation(W)
-        perm[:, b] = importance(Wb)
-        if (b + 1) % 10 == 0:
+        perm[:, b] = mmd_loco_importance(X, Wb, seed=seed + 17 + b)
+        if (b + 1) % 5 == 0:
             print(f"  perm {b+1}/{n_perm}", flush=True)
 
     pvals = (1.0 + np.sum(perm >= imp_obs[:, None], axis=1)) / (1.0 + n_perm)
@@ -491,20 +572,82 @@ def fsds_cfperm_lite(X, Y, W, *, n_perm: int = N_PERM, seed: int = SEED):
     rejected = [int(j) for j in range(p) if imp_obs[j] > thr and pvals[j] <= ALPHA]
     if len(rejected) == 0:
         rejected = [int(j) for j in np.argsort(pvals) if pvals[j] <= ALPHA][:30]
-    return dict(imp=imp_obs, pvals=pvals, threshold=thr, rejected=rejected)
+    return dict(
+        imp=imp_obs,
+        pvals=pvals,
+        threshold=thr,
+        rejected=rejected,
+        po_risk=po["po_risk"],
+        method="PO-risk learner + MMD-LOCO",
+    )
+
+
+def rf_domain_classifier_vimp(X, W, *, seed: int = SEED) -> tuple[np.ndarray, float]:
+    """RF Domain Classifier: predict batch W from X → impurity VIMP.
+
+    Ranking for the business board: np.argsort(-VIMP)[:k] (within each modality).
+    """
+    X = np.asarray(X, float)
+    W = np.asarray(W, int)
+    clf = RandomForestClassifier(
+        n_estimators=200,
+        max_depth=10,
+        min_samples_leaf=5,
+        random_state=seed,
+        n_jobs=-1,
+    )
+    clf.fit(X, W)
+    vimp = clf.feature_importances_.astype(float)
+    # quick holdout AUC as board sanity
+    rng = np.random.default_rng(seed)
+    idx = np.arange(len(W))
+    rng.shuffle(idx)
+    cut = int(0.8 * len(W))
+    tr, te = idx[:cut], idx[cut:]
+    clf2 = RandomForestClassifier(
+        n_estimators=120, max_depth=10, min_samples_leaf=5, random_state=seed + 1, n_jobs=-1
+    )
+    clf2.fit(X[tr], W[tr])
+    proba = clf2.predict_proba(X[te])[:, 1]
+    auc = float(roc_auc_score(W[te], proba)) if len(np.unique(W[te])) > 1 else float("nan")
+    return vimp, auc
+
+
+def ranked_indices_by_modality(vimp: np.ndarray, block_slices: dict, mods: list[str], *, k: int = TOP_K):
+    """Business board dict: modality → indices ordered by RF Domain Classifier VIMP.
+
+    order = np.argsort(-VIMP_mod)[:k]
+    """
+    vimp = np.asarray(vimp, float)
+    out = {}
+    detail = {}
+    for m in mods:
+        a, b = block_slices[m]
+        vm = vimp[a:b]
+        order = np.argsort(-vm)[: min(k, len(vm))]
+        ranked = [int(i) for i in order]
+        out[m] = ranked  # ORDER MATTERS
+        detail[m] = [
+            {
+                "rank": r + 1,
+                "index": int(idx),
+                "global_index": int(a + idx),
+                "name": CHANNEL_NAMES[m].get(idx, (f"feat_{idx}", ""))[0],
+                "desc": CHANNEL_NAMES[m].get(idx, ("", ""))[1],
+                "rf_vimp": float(vm[idx]),
+            }
+            for r, idx in enumerate(ranked)
+        ]
+    return out, detail
 
 
 def map_rejected_to_modalities(rejected, block_slices, mods, pvals, imp):
-    """Map global rejected indices → per-modality lists; also keep top-k by pval per mod."""
+    """MMD-LOCO selected set (unordered support); RF ranking is the board order."""
     out = {}
     detail = {}
     for m in mods:
         a, b = block_slices[m]
         local = sorted(j - a for j in rejected if a <= j < b)
-        # ensure each modality surfaces its strongest shift drivers (interpretable board)
-        order = np.argsort(pvals[a:b])
-        top = [int(i) for i in order[:5] if pvals[a + i] <= max(ALPHA, 0.15)]
-        local = sorted(set(local) | set(top))
         out[m] = local
         detail[m] = [
             {
@@ -526,55 +669,105 @@ def main():
     if not DATA.exists():
         raise SystemExit(f"missing extracted AFFEC data at {DATA}")
 
+    cache = OUT / "affec_fsds_xyw_cache.npz"
     rng = np.random.default_rng(SEED)
-    print("collecting multimodal windows…", flush=True)
-    records = collect_windows(rng)
-    print(f"raw modality window records: {len(records)}", flush=True)
-    X, Y, W, meta, block_slices, mods = pivot_multimodal(records, rng)
+    if cache.exists():
+        print(f"loading cache {cache}", flush=True)
+        z = np.load(cache, allow_pickle=True)
+        X, Y, W = z["X"], z["Y"], z["W"]
+        block_slices = {k: tuple(v) for k, v in z["block_slices"].item().items()}
+        mods = list(z["mods"])
+    else:
+        print("collecting multimodal windows…", flush=True)
+        records = collect_windows(rng)
+        print(f"raw modality window records: {len(records)}", flush=True)
+        X, Y, W, meta, block_slices, mods = pivot_multimodal(records, rng)
+        np.savez_compressed(
+            cache,
+            X=X,
+            Y=Y,
+            W=W,
+            block_slices=block_slices,
+            mods=np.array(mods, dtype=object),
+        )
+        print(f"wrote cache {cache}", flush=True)
+
     print(
         f"aligned subsample: n={len(W)} p={X.shape[1]} "
         f"n0={(W==0).sum()} n1={(W==1).sum()}",
         flush=True,
     )
 
-    print("running FSDS (CFPerm-lite)…", flush=True)
-    res = fsds_cfperm_lite(X, Y, W, n_perm=N_PERM, seed=SEED)
-    feature_indices, detail = map_rejected_to_modalities(
-        res["rejected"], block_slices, mods, res["pvals"], res["imp"]
+    # --- RF Domain Classifier: ordered board (primary prototype dict) ---
+    print("RF Domain Classifier VIMP + argsort(-VIMP)[:k]…", flush=True)
+    rf_vimp, rf_auc = rf_domain_classifier_vimp(X, W, seed=SEED)
+    feature_indices, detail = ranked_indices_by_modality(
+        rf_vimp, block_slices, mods, k=TOP_K
     )
+    print(f"  RF domain AUC={rf_auc:.3f}", flush=True)
 
-    # compact print format requested
-    compact = "feature-indices: " + ", ".join(
+    compact = "feature-indices (RF Domain Classifier rank): " + ", ".join(
         f"{m}:{feature_indices[m]}" for m in mods
     )
     print(compact, flush=True)
 
     payload = {
+        "method": "PO-risk learner + MMD-LOCO + RF Domain Classifier",
+        "board": "RF Domain Classifier VIMP rank · np.argsort(-VIMP)[:k] per modality",
+        "top_k": TOP_K,
+        "rf_domain_auc": rf_auc,
         "n": int(len(W)),
         "p": int(X.shape[1]),
-        "n_perm": N_PERM,
         "alpha": ALPHA,
         "batch_def": "W=0: run∈{0,1}; W=1: run∈{2,3}",
-        "feature_indices": feature_indices,
+        "feature_indices": feature_indices,  # ORDERED by RF VIMP
         "feature_indices_detail": detail,
-        "threshold": res["threshold"],
         "block_slices": {m: list(block_slices[m]) for m in mods},
         "compact": compact,
     }
+
+    if not SKIP_MMD:
+        print("running FSDS (PO-risk learner + MMD-LOCO)…", flush=True)
+        if len(W) > 4000:
+            rng_s = np.random.default_rng(SEED + 3)
+            i0 = np.where(W == 0)[0]
+            i1 = np.where(W == 1)[0]
+            take = np.concatenate(
+                [rng_s.choice(i0, 2000, replace=False), rng_s.choice(i1, 2000, replace=False)]
+            )
+            rng_s.shuffle(take)
+            Xs, Ys, Ws = X[take], Y[take], W[take]
+            print(f"  MMD-LOCO compute subsample n={len(Ws)} (from {len(W)})", flush=True)
+        else:
+            Xs, Ys, Ws = X, Y, W
+        res = fsds_porisk_mmd_loco(Xs, Ys, Ws, n_perm=N_PERM, seed=SEED)
+        mmd_sel, mmd_detail = map_rejected_to_modalities(
+            res["rejected"], block_slices, mods, res["pvals"], res["imp"]
+        )
+        payload["po_risk"] = res["po_risk"]
+        payload["n_mmd"] = int(len(Ws))
+        payload["n_perm"] = N_PERM
+        payload["mmd_loco_selected"] = mmd_sel
+        payload["mmd_loco_detail"] = mmd_detail
+        payload["threshold"] = res["threshold"]
+    else:
+        print("SKIP_MMD=1 · board is RF Domain Classifier rank only", flush=True)
+
     dest = OUT / "affec_fsds_feature_indices.json"
     dest.write_text(json.dumps(payload, indent=2))
     print(f"wrote {dest}", flush=True)
 
-    # also a small markdown board
     lines = [
-        "# AFFEC FSDS · selected feature indices",
+        "# AFFEC FSDS board · RF Domain Classifier rank",
         "",
         compact,
         "",
-        f"- n={payload['n']}, p={payload['p']}, n_perm={N_PERM}",
+        f"- board order: `np.argsort(-RF_VIMP)[:{TOP_K}]` within each modality",
+        f"- RF domain AUC: {rf_auc:.3f}",
+        f"- n={payload['n']}, p={payload['p']}",
         f"- batch: {payload['batch_def']}",
         "",
-        "| modality | indices | names |",
+        "| modality | ranked indices (high → low VIMP) | names |",
         "|---|---|---|",
     ]
     for m in mods:
@@ -583,6 +776,16 @@ def main():
     md = OUT / "affec_fsds_feature_indices.md"
     md.write_text("\n".join(lines) + "\n")
     print(f"wrote {md}", flush=True)
+
+    # tiny prototype dump for copy-paste
+    proto = OUT / "affec_fsds_feature_indices_prototype.py"
+    proto.write_text(
+        "# RF Domain Classifier ranked feature-indices (order = importance)\n"
+        "feature_indices = "
+        + repr(feature_indices)
+        + "\n"
+    )
+    print(f"wrote {proto}", flush=True)
 
 
 if __name__ == "__main__":
