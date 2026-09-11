@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\small
+\caption{LLM inference boosting on a drifting prompt stream. Latency is relative forward-pass cost (student $=1$, teacher $=4$). AGOD-Boost calls the teacher when prompt novelty vs.\ the reference pool (MSG) is high, optionally OR-ed with residual student uncertainty, approaching teacher quality at lower mean latency.}
+\label{tab:llm-boost}
+\begin{tabular}{lccccc}
+\toprule
+Policy & ID Acc. & OOD Acc. & Acc. & Teacher frac. & Latency \\
+\midrule
+always-student & 0.833 & 1.000 & 0.944 & 0.00 & 1.00x \\
+confidence-cascade & 0.958 & 1.000 & 0.986 & 0.43 & 2.29x \\
+agod-boost & 0.958 & 1.000 & 0.986 & 0.69 & 3.08x \\
+always-teacher & 1.000 & 1.000 & 1.000 & 1.00 & 4.00x \\
+\bottomrule
+\end{tabular}
+\end{table}

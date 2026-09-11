@@ -1,0 +1,290 @@
+{
+  "chronoberg": {
+    "metrics": {
+      "B1": {
+        "drift_subgroup_recall": 0.39285714285714285,
+        "mean_recall": 0.6294642857142858,
+        "audio_alpha_on_drift": 0.3333333333333333,
+        "text_alpha_on_drift": 0.3333333333333333,
+        "audio_alignment_on_drift": 0.48817064169110874,
+        "image_forgetting": -0.019265388437935127,
+        "attribution_consistency": 0.8333333333333334,
+        "mean_loss": 1.1157086488889731,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B2": {
+        "drift_subgroup_recall": 0.44642857142857145,
+        "mean_recall": 0.6116071428571428,
+        "audio_alpha_on_drift": 0.3888663976939068,
+        "text_alpha_on_drift": 0.5494648065113923,
+        "audio_alignment_on_drift": 0.5045604329222844,
+        "image_forgetting": 0.011174182253996467,
+        "attribution_consistency": 0.8333333333333334,
+        "mean_loss": 1.1118365773927195,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B3": {
+        "drift_subgroup_recall": 0.46428571428571425,
+        "mean_recall": 0.6026785714285714,
+        "audio_alpha_on_drift": 0.7536643990634609,
+        "text_alpha_on_drift": 0.22452879385760058,
+        "audio_alignment_on_drift": 0.5146330295110001,
+        "image_forgetting": 0.014711575031881474,
+        "attribution_consistency": 0.8333333333333334,
+        "mean_loss": 1.2362621931862419,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B4": {
+        "drift_subgroup_recall": 0.44047619047619047,
+        "mean_recall": 0.5625,
+        "audio_alpha_on_drift": 0.7536643990634609,
+        "text_alpha_on_drift": 0.22452879385760058,
+        "audio_alignment_on_drift": 0.5122428103605281,
+        "image_forgetting": 0.0017459980569980438,
+        "attribution_consistency": 0.8333333333333334,
+        "mean_loss": 1.6809543423766595,
+        "steps": 4.0,
+        "distill_flops": 336000.0,
+        "skip_rate": 0.0,
+        "rel_flops": 0.4166666666666667
+      },
+      "B5": {
+        "drift_subgroup_recall": 0.5,
+        "mean_recall": 0.5535714285714286,
+        "audio_alpha_on_drift": 0.7536643990634609,
+        "text_alpha_on_drift": 0.22452879385760058,
+        "audio_alignment_on_drift": 0.5106439412134547,
+        "image_forgetting": 0.0017459980569980438,
+        "attribution_consistency": 0.8333333333333334,
+        "mean_loss": 1.7383952080577778,
+        "steps": 4.0,
+        "distill_flops": 268800.0,
+        "skip_rate": 0.0,
+        "rel_flops": 0.3333333333333333
+      },
+      "B6": {
+        "drift_subgroup_recall": 0.4583333333333333,
+        "mean_recall": 0.5714285714285714,
+        "audio_alpha_on_drift": 0.7536643990634609,
+        "text_alpha_on_drift": 0.22452879385760058,
+        "audio_alignment_on_drift": 0.50639485138188,
+        "image_forgetting": 0.029501796326630192,
+        "attribution_consistency": 0.8333333333333334,
+        "mean_loss": 1.3516395206063763,
+        "steps": 4.0,
+        "distill_flops": 604800.0,
+        "skip_rate": 0.25,
+        "rel_flops": 0.75
+      }
+    },
+    "ranking": [
+      "B5",
+      "B3",
+      "B6",
+      "B2",
+      "B4",
+      "B1"
+    ]
+  },
+  "newsgroups": {
+    "metrics": {
+      "B1": {
+        "drift_subgroup_recall": 0.125,
+        "mean_recall": 0.12053571428571429,
+        "audio_alpha_on_drift": 0.3333333333333333,
+        "text_alpha_on_drift": 0.3333333333333333,
+        "audio_alignment_on_drift": 0.9218018284315591,
+        "image_forgetting": -0.238655664429105,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.4179861579850228,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B2": {
+        "drift_subgroup_recall": 0.125,
+        "mean_recall": 0.12053571428571429,
+        "audio_alpha_on_drift": 0.327740858074204,
+        "text_alpha_on_drift": 0.336129570962898,
+        "audio_alignment_on_drift": 0.9213706385493285,
+        "image_forgetting": -0.23888491262937323,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.41779526861108535,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B3": {
+        "drift_subgroup_recall": 0.1488095238095238,
+        "mean_recall": 0.1294642857142857,
+        "audio_alpha_on_drift": 0.6199991377693027,
+        "text_alpha_on_drift": 0.33591258014925157,
+        "audio_alignment_on_drift": 0.9333437701927935,
+        "image_forgetting": -0.2617211132815271,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.4849559094764995,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B4": {
+        "drift_subgroup_recall": 0.26785714285714285,
+        "mean_recall": 0.16517857142857142,
+        "audio_alpha_on_drift": 0.6199991377693027,
+        "text_alpha_on_drift": 0.33591258014925157,
+        "audio_alignment_on_drift": 0.93386492993368,
+        "image_forgetting": -0.23421255849223974,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.6173494691317566,
+        "steps": 4.0,
+        "distill_flops": 336000.0,
+        "skip_rate": 0.0,
+        "rel_flops": 0.4166666666666667
+      },
+      "B5": {
+        "drift_subgroup_recall": 0.20238095238095236,
+        "mean_recall": 0.13392857142857142,
+        "audio_alpha_on_drift": 0.6199991377693027,
+        "text_alpha_on_drift": 0.33591258014925157,
+        "audio_alignment_on_drift": 0.9246980184524785,
+        "image_forgetting": -0.25313778842692264,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.6296800914102831,
+        "steps": 4.0,
+        "distill_flops": 268800.0,
+        "skip_rate": 0.0,
+        "rel_flops": 0.3333333333333333
+      },
+      "B6": {
+        "drift_subgroup_recall": 0.1488095238095238,
+        "mean_recall": 0.1294642857142857,
+        "audio_alpha_on_drift": 0.6199991377693027,
+        "text_alpha_on_drift": 0.33591258014925157,
+        "audio_alignment_on_drift": 0.9333437701927935,
+        "image_forgetting": -0.2617211132815271,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.4849559094764995,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      }
+    },
+    "ranking": [
+      "B4",
+      "B5",
+      "B3",
+      "B6",
+      "B1",
+      "B2"
+    ]
+  },
+  "amazon": {
+    "metrics": {
+      "B1": {
+        "drift_subgroup_recall": 0.16071428571428573,
+        "mean_recall": 0.13839285714285715,
+        "audio_alpha_on_drift": 0.3333333333333333,
+        "text_alpha_on_drift": 0.3333333333333333,
+        "audio_alignment_on_drift": 0.930028821936698,
+        "image_forgetting": -0.09221644013535854,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.5909616153950288,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B2": {
+        "drift_subgroup_recall": 0.16071428571428573,
+        "mean_recall": 0.13839285714285715,
+        "audio_alpha_on_drift": 0.3293289921843236,
+        "text_alpha_on_drift": 0.33505288362251023,
+        "audio_alignment_on_drift": 0.9299188408476353,
+        "image_forgetting": -0.08907160120449253,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.5907327050225203,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B3": {
+        "drift_subgroup_recall": 0.17857142857142858,
+        "mean_recall": 0.15625,
+        "audio_alpha_on_drift": 0.39554847329944437,
+        "text_alpha_on_drift": 0.5614878000135418,
+        "audio_alignment_on_drift": 0.9160759944783621,
+        "image_forgetting": -0.055385628066861634,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.7572363916549776,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      },
+      "B4": {
+        "drift_subgroup_recall": 0.18452380952380953,
+        "mean_recall": 0.19642857142857145,
+        "audio_alpha_on_drift": 0.39554847329944437,
+        "text_alpha_on_drift": 0.5614878000135418,
+        "audio_alignment_on_drift": 0.9208068849520122,
+        "image_forgetting": -0.11359195810004702,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.7880092778483905,
+        "steps": 4.0,
+        "distill_flops": 336000.0,
+        "skip_rate": 0.0,
+        "rel_flops": 0.4166666666666667
+      },
+      "B5": {
+        "drift_subgroup_recall": 0.18452380952380953,
+        "mean_recall": 0.20535714285714285,
+        "audio_alpha_on_drift": 0.39554847329944437,
+        "text_alpha_on_drift": 0.5614878000135418,
+        "audio_alignment_on_drift": 0.9212680606455522,
+        "image_forgetting": -0.11359195810004702,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.8078720963259254,
+        "steps": 4.0,
+        "distill_flops": 268800.0,
+        "skip_rate": 0.0,
+        "rel_flops": 0.3333333333333333
+      },
+      "B6": {
+        "drift_subgroup_recall": 0.17857142857142858,
+        "mean_recall": 0.15625,
+        "audio_alpha_on_drift": 0.39554847329944437,
+        "text_alpha_on_drift": 0.5614878000135418,
+        "audio_alignment_on_drift": 0.9160759944783621,
+        "image_forgetting": -0.055385628066861634,
+        "attribution_consistency": 0.6666666666666666,
+        "mean_loss": 0.7572363916549776,
+        "steps": 4.0,
+        "distill_flops": 806400.0,
+        "skip_rate": 0.0,
+        "rel_flops": 1.0
+      }
+    },
+    "ranking": [
+      "B5",
+      "B4",
+      "B3",
+      "B6",
+      "B1",
+      "B2"
+    ]
+  }
+}

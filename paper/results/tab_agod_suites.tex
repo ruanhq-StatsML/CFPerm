@@ -1,0 +1,32 @@
+\begin{table}[t]
+\centering
+\small
+\caption{AGOD vs static (B1), covariate-only (B2), sparse (B4), budgeted (B5) and cascade (B6) distillation on three shift suites. Rel.\ FLOPs is distill MAC-count vs.\ B1; Skip is the fraction of windows where cascade idles the student.}
+\label{tab:agod-suites}
+\begin{tabular}{llcccc}
+\toprule
+Suite & Method & Drift Rec@5 & Align & Rel. FLOPs & Skip \\
+\midrule
+chronoberg & B1 & 0.393 & 0.488 & 1.00 & 0.00 \\
+ & B2 & 0.446 & 0.505 & 1.00 & 0.00 \\
+ & B3 & 0.464 & 0.515 & 1.00 & 0.00 \\
+ & B4 & 0.440 & 0.512 & 0.42 & 0.00 \\
+ & B5 & 0.500 & 0.511 & 0.33 & 0.00 \\
+ & B6 & 0.458 & 0.506 & 0.75 & 0.25 \\
+\midrule
+newsgroups & B1 & 0.125 & 0.922 & 1.00 & 0.00 \\
+ & B2 & 0.125 & 0.921 & 1.00 & 0.00 \\
+ & B3 & 0.149 & 0.933 & 1.00 & 0.00 \\
+ & B4 & 0.268 & 0.934 & 0.42 & 0.00 \\
+ & B5 & 0.202 & 0.925 & 0.33 & 0.00 \\
+ & B6 & 0.149 & 0.933 & 1.00 & 0.00 \\
+\midrule
+amazon & B1 & 0.161 & 0.930 & 1.00 & 0.00 \\
+ & B2 & 0.161 & 0.930 & 1.00 & 0.00 \\
+ & B3 & 0.179 & 0.916 & 1.00 & 0.00 \\
+ & B4 & 0.185 & 0.921 & 0.42 & 0.00 \\
+ & B5 & 0.185 & 0.921 & 0.33 & 0.00 \\
+ & B6 & 0.179 & 0.916 & 1.00 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
