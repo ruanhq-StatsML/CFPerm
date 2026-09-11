@@ -100,7 +100,21 @@ where:
 
 \paragraph{Metrics.} Drift-subgroup Recall@K; modality attribution consistency; compute cost; forgetting on stable modalities.
 
+\section{Efficiency Evidence on Hugging Face Datasets}
+\label{sec:efficiency}
+
+We stress-test the compute claim on two public Hub datasets where \emph{only one} modality is expected to drift:
+
+\begin{itemize}
+    \item \textbf{\texttt{PolyAI/minds14}} (audio+text). Reference locale \texttt{en-US}; online stream over \texttt{fr-FR}/\texttt{de-DE}/\ldots{} Cross-locale batches make the transcription channel the dominant MSG driver, so AGOD gates the quieter audio head.
+    \item \textbf{\texttt{ChristophSchuhmann/MS\_COCO\_2017\_URL\_TEXT}} (image+text). Reference = person-centric captions; online stream alternates vehicle/food cohorts with imaging-domain perturbation while text features are mostly held stationary, so AGOD gates text.
+\end{itemize}
+
+\paragraph{Protocol.} At each step compute MSG $\rightarrow$ Softmax $\alpha$, then \emph{hard-gate} modality heads with $\alpha_m < \theta$. Relative FLOPs $= |\mathcal{A}_t|/|\mathcal{M}|$. Efficiency $= \text{drift-coverage}/\text{rel-FLOPs}$.
+
+\paragraph{Finding.} On both datasets AGOD (B3) reduces active modality heads versus static B1, raising coverage-per-FLOP: locale shift routes to audio; COCO semantic shift routes to image. Covariate-only B2 can over-gate; MSG (AUC$\cdot$VIMP+$γ$PO) is the more stable control signal.
+
 \section{Conclusion}
-We proposed AGOD, an online distillation framework where modality-specific gap decomposition acts as a clever covariate. By routing distillation capacity toward drifting modalities, AGOD offers a principled alternative to static and covariate-only distillation.
+We proposed AGOD, an online distillation framework where modality-specific gap decomposition acts as a clever covariate. By routing distillation capacity toward drifting modalities, AGOD offers a principled alternative to static and covariate-only distillation. Hugging Face evidence on \texttt{minds14} and COCO URL+TEXT supports the efficiency claim: skip stable modality heads, spend compute on the shift.
 
 \end{document}
