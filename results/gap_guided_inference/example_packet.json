@@ -1,0 +1,130 @@
+{
+  "row_index": 273,
+  "decision": {
+    "read_order": [
+      "valence",
+      "text",
+      "dominance",
+      "arousal"
+    ],
+    "tools_enabled": [
+      "vad_valence"
+    ],
+    "tools_disabled": [
+      "read_tokens",
+      "vad_arousal",
+      "vad_dominance"
+    ],
+    "abstain": false,
+    "ask_missing": [],
+    "critic_must_cite": "valence",
+    "blend": {
+      "text": 0.0575,
+      "valence": 0.8925,
+      "arousal": 0.0203,
+      "dominance": 0.0297
+    },
+    "pi": {
+      "text": 0.0934,
+      "valence": 0.8301,
+      "arousal": 0.0425,
+      "dominance": 0.034
+    },
+    "instance_share": {
+      "text": 0.0336,
+      "valence": 0.9342,
+      "arousal": 0.0055,
+      "dominance": 0.0268
+    },
+    "entropy": 0.4492,
+    "rationale": "Concentrated gap on 'valence' (r=0.89 \u2265 \u03c4_hi). Enable only that tool; CoT must cite valence.",
+    "packet": {
+      "population_shift_pi": {
+        "text": 0.0934,
+        "valence": 0.8301,
+        "arousal": 0.0425,
+        "dominance": 0.034
+      },
+      "this_example_s": {
+        "text": 0.0336,
+        "valence": 0.9342,
+        "arousal": 0.0055,
+        "dominance": 0.0268
+      },
+      "blend_r": {
+        "text": 0.0575,
+        "valence": 0.8925,
+        "arousal": 0.0203,
+        "dominance": 0.0297
+      },
+      "read_order": [
+        "valence",
+        "text",
+        "dominance",
+        "arousal"
+      ],
+      "tools_enabled": [
+        "vad_valence"
+      ],
+      "tools_disabled": [
+        "read_tokens",
+        "vad_arousal",
+        "vad_dominance"
+      ],
+      "abstain": false,
+      "ask_missing": [],
+      "critic_must_cite": "valence",
+      "e_hat": 0.9208,
+      "Z": {
+        "text": 0.071,
+        "valence": 2.1743,
+        "arousal": 0.019,
+        "dominance": 0.0232
+      },
+      "rationale": "Concentrated gap on 'valence' (r=0.89 \u2265 \u03c4_hi). Enable only that tool; CoT must cite valence."
+    }
+  },
+  "user_message": "[features omitted; sidecar carries Z and s]",
+  "openai_tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "vad_valence",
+        "description": "Look up valence lexicon statistics (mean/max/p90). Gap blend r_valence=0.89. call the valence lexicon tool before arguing from wording",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "note": {
+              "type": "string",
+              "description": "Optional focus inside this channel."
+            }
+          }
+        }
+      }
+    }
+  ],
+  "critic_on_wrong_cite": {
+    "ok": false,
+    "cited": [
+      "text"
+    ],
+    "must_cite": "valence",
+    "mismatch": true,
+    "reask_prompt": "Your cited channels ['text'] do not include 'valence', which has the highest gap blend r=0.8925. Re-read valence (tools ['vad_valence']) and answer again. Do not lead with ['text']."
+  },
+  "critic_on_correct_cite": {
+    "ok": true,
+    "cited": [
+      "valence"
+    ],
+    "must_cite": "valence",
+    "mismatch": false,
+    "reask_prompt": ""
+  },
+  "pi": {
+    "text": 0.0934,
+    "valence": 0.8301,
+    "arousal": 0.0425,
+    "dominance": 0.034
+  }
+}
