@@ -246,24 +246,28 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         if r.get("gt") and r.get("domain_auc_raw", 0) < 0.98
     ]
     if gt_rows:
-        fig, ax = plt.subplots(figsize=(8.4, 4.4))
+        fig, ax = plt.subplots(figsize=(9.2, 4.5))
         labs = [r["name"] for r in gt_rows]
         x = np.arange(len(labs))
         raw = [r["domain_auc_raw"] for r in gt_rows]
-        clever = [r["domain_auc_clever"] for r in gt_rows]
+        pool = [r.get("domain_auc_pool", r["domain_auc_clever"]) for r in gt_rows]
+        bawf = [r.get("domain_auc_bawf", r["domain_auc_raw"]) for r in gt_rows]
         stack = [r.get("domain_auc_stack_xz", r["domain_auc_clever"]) for r in gt_rows]
         e_raw = [r.get("domain_auc_raw_sd", 0.0) for r in gt_rows]
-        e_z = [r.get("domain_auc_clever_sd", 0.0) for r in gt_rows]
+        e_p = [0.0 for _ in gt_rows]  # OOF pool is a single score
+        e_b = [r.get("domain_auc_bawf_sd", 0.0) for r in gt_rows]
         e_s = [r.get("domain_auc_stack_sd", 0.0) for r in gt_rows]
-        ax.bar(x - 0.25, raw, 0.24, yerr=e_raw, capsize=3, label="raw X", color="#9aa0a6")
-        ax.bar(x, clever, 0.24, yerr=e_z, capsize=3, label="clever-Z = π·logit ê", color="#1f77b4")
-        ax.bar(x + 0.25, stack, 0.24, yerr=e_s, capsize=3, label="X + clever-Z", color="#2ca02c")
+        w = 0.18
+        ax.bar(x - 1.5 * w, raw, w, yerr=e_raw, capsize=3, label="raw RF on X", color="#9aa0a6")
+        ax.bar(x - 0.5 * w, pool, w, yerr=e_p, capsize=3, label="π-opinion pool Σ π_m ê_m", color="#1f77b4")
+        ax.bar(x + 0.5 * w, bawf, w, yerr=e_b, capsize=3, label="block-aware forest", color="#ff7f0e")
+        ax.bar(x + 1.5 * w, stack, w, yerr=e_s, capsize=3, label="X + clever-Z", color="#2ca02c")
         ax.set_xticks(x)
         ax.set_xticklabels(labs, rotation=12, ha="right")
         ax.set_ylabel("5-fold domain AUC")
         ax.set_ylim(0.45, 1.02)
         ax.axhline(0.5, ls="--", lw=0.8, color="0.5")
-        ax.set_title("Tuned GT board · concentrated shift recovery")
+        ax.set_title("π-guided Stage-2 · concentrated shift recovery")
         ax.legend(frameon=False, fontsize=8)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
@@ -278,15 +282,19 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         fig, ax = plt.subplots(figsize=(7.4, 4.3))
         ns = [r["n"] for r in se]
         ax.errorbar(ns, [r["auc_raw"] for r in se], yerr=[r.get("auc_raw_sd", 0) for r in se],
-                    fmt="o-", color="#9aa0a6", label="raw X", capsize=3)
-        ax.errorbar(ns, [r["auc_clever"] for r in se], yerr=[r.get("auc_clever_sd", 0) for r in se],
-                    fmt="s-", color="#1f77b4", label="clever-Z", capsize=3)
+                    fmt="o-", color="#9aa0a6", label="raw RF on X", capsize=3)
+        ax.errorbar(ns, [r.get("auc_pool", r["auc_clever"]) for r in se],
+                    yerr=[r.get("auc_pool_sd", 0) for r in se],
+                    fmt="s-", color="#1f77b4", label="π-opinion pool", capsize=3)
+        ax.errorbar(ns, [r.get("auc_bawf", r["auc_raw"]) for r in se],
+                    yerr=[r.get("auc_bawf_sd", 0) for r in se],
+                    fmt="D-", color="#ff7f0e", label="block-aware forest", capsize=3)
         ax.errorbar(ns, [r.get("auc_stack", r["auc_clever"]) for r in se],
                     yerr=[r.get("auc_stack_sd", 0) for r in se],
                     fmt="^-", color="#2ca02c", label="X + clever-Z", capsize=3)
         ax.set_xlabel("n (balanced 1750+1950)")
         ax.set_ylabel("5-fold domain AUC (mean ± sd)")
-        ax.set_title("Sample efficiency · multi-seed Chronoberg")
+        ax.set_title("Sample efficiency · π-guided Stage-2")
         ax.legend(frameon=False)
         ax.set_ylim(0.52, 0.85)
         ax.spines["top"].set_visible(False)
@@ -311,9 +319,9 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         ax.bar(x, [r.get("pi_consensus_on_gt", 0) for r in inj], 0.22,
                yerr=[r.get("pi_consensus_on_gt_sd", 0) for r in inj], capsize=3,
                label="consensus π on GT", color="#1f77b4")
-        ax.bar(x + 0.22, [r.get("z_logit_on_gt", 0) for r in inj], 0.22,
-               yerr=[r.get("z_logit_on_gt_sd", 0) for r in inj], capsize=3,
-               label="clever-Z VIMP on GT", color="#2ca02c")
+        ax.bar(x + 0.22, [r.get("bawf_on_gt", r.get("z_logit_on_gt", 0)) for r in inj], 0.22,
+               yerr=[r.get("bawf_on_gt_sd", 0) for r in inj], capsize=3,
+               label="BAWF impurity mass on GT", color="#ff7f0e")
         ax.set_xticks(x)
         ax.set_xticklabels(labs, rotation=12, ha="right")
         ax.set_ylabel("mass on ground-truth modality")
@@ -364,18 +372,22 @@ def write_latex(summary: dict, path: Path) -> None:
         r"\begin{table}[t]",
         r"\centering",
         r"\small",
-        r"\caption{Raw $X$ vs.\ clever covariates $Z_m=\pi_m\log\hat e_m$ (5-fold CV AUC).}",
-        r"\begin{tabular}{lcccc}",
+        r"\caption{Human blocks $\to$ Stage-1 $\pi$ $\to$ Stage-2 training. Opinion pool $\sum_m\pi_m\hat e_m$; BAWF samples $p_j\propto\pi_m/|B_m|$.}",
+        r"\begin{tabular}{lcccccc}",
         r"\toprule",
-        r"Setting & AUC raw $X$ & AUC clever-$Z$ & AUC $X{+}Z$ & $\Delta_{X+Z}$ \\",
+        r"Setting & raw RF & pool & BAWF & adapt-logit & $X{+}Z$ & $\Delta_{\mathrm{BAWF}}$ \\",
         r"\midrule",
     ]
     for row in summary["comparisons"]:
-        dstack = row.get("domain_auc_stack_xz", row["domain_auc_clever"]) - row["domain_auc_raw"]
+        bawf = row.get("domain_auc_bawf", row["domain_auc_raw"])
+        db = bawf - row["domain_auc_raw"]
         lines.append(
             f"{_tex_escape(row['name'])} & {row['domain_auc_raw']:.3f} & "
-            f"{row['domain_auc_clever']:.3f} & {row.get('domain_auc_stack_xz', row['domain_auc_clever']):.3f} & "
-            f"{dstack:+.3f} \\\\"
+            f"{row.get('domain_auc_pool', float('nan')):.3f} & "
+            f"{bawf:.3f} & "
+            f"{row.get('domain_auc_adapt', float('nan')):.3f} & "
+            f"{row.get('domain_auc_stack_xz', row['domain_auc_clever']):.3f} & "
+            f"{db:+.3f} \\\\"
         )
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -507,6 +519,7 @@ def run_prototype(
             "rf": "max_depth=8, min_samples_leaf=5, n_estimators=%d" % n_estimators,
             "auc": "5-fold stratified CV",
             "clever_Z": "Z_m = π_m * logit ê_m(X_m)",
+            "stage2": "π-opinion pool; BAWF p_j ∝ π_m/|B_m|; adaptive group-logit",
             "gt_seeds": n_gt_seeds,
             "efficiency_repeats": n_repeats,
         },
@@ -521,6 +534,12 @@ def run_prototype(
         "synthetic": synthetic,
         "notes": {
             "clever_Z": "Z_m = π_m · logit ê_m(X_m); OOF propensity, 5-fold CV AUC",
+            "stage2": (
+                "Analyst blocks → Stage-1 π → Stage-2: opinion pool Σ π_m ê_m; "
+                "block-aware forest samples p_j ∝ π_m/|B_m|; "
+                "adaptive group-logit scales X_j by √(π_m/|B_m|). "
+                "RF splits ignore column scaling, so π must change sampling not scale."
+            ),
             "clever_H": "TMLE H_m = π_m (W-ê_m)/(ê_m(1-ê_m)); PO targeting only",
             "vad_lexicon": "static pool of 1750+1950 Chronoberg VAD lexicons",
             "observational": "diffuse multi-modality shift; GT board is inject/synthetic",
@@ -560,27 +579,38 @@ def _write_readme(summary: dict, out_dir: Path) -> None:
         "",
         "## GT board (mean over seeds, 5-fold CV AUC)",
         "",
-        "| setting | AUC raw | AUC Z | AUC X+Z | Δ stack | π on GT |",
-        "|---|---:|---:|---:|---:|---:|",
+        "Human feature-blocks → Stage-1 consensus π → Stage-2 training guided by π "
+        "(opinion pool of block RFs; block-aware forest with p_j ∝ π_m/|B_m|; "
+        "X+Z stacking as the feature view of the same weights).",
+        "",
+        "| setting | AUC raw | pool | BAWF | adapt-logit | X+Z | π on GT | BAWF on GT |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in summary["comparisons"]:
         st = row.get("domain_auc_stack_xz", row["domain_auc_clever"])
         pi_gt = row.get("pi_consensus_on_gt", float("nan"))
+        bawf = row.get("domain_auc_bawf", float("nan"))
+        pool = row.get("domain_auc_pool", float("nan"))
+        adapt = row.get("domain_auc_adapt", float("nan"))
+        bawf_gt = row.get("bawf_on_gt", float("nan"))
         lines.append(
-            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {row['domain_auc_clever']:.3f} | "
-            f"{st:.3f} | {st - row['domain_auc_raw']:+.3f} | {pi_gt:.3f} |"
+            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {pool:.3f} | "
+            f"{bawf:.3f} | {adapt:.3f} | {st:.3f} | {pi_gt:.3f} | {bawf_gt:.3f} |"
         )
     obs = summary.get("observational_auc") or {}
     if obs:
         lines += [
             "",
             f"Observational 1750/1950 (no GT, diffuse shift): raw AUC "
-            f"{obs.get('domain_auc_raw', float('nan')):.3f} vs clever-Z "
-            f"{obs.get('domain_auc_clever', float('nan')):.3f}.",
+            f"{obs.get('domain_auc_raw', float('nan')):.3f} vs π-pool "
+            f"{obs.get('domain_auc_pool', float('nan')):.3f} vs BAWF "
+            f"{obs.get('domain_auc_bawf', float('nan')):.3f}.",
         ]
     lines += [
         "",
         "Clever-Z is `Z_m = π_m · logit ê_m(X_m)` (n_modalities columns), estimated OOF.",
+        "Stage-2 uses the same π to *train*: opinion pool (no extra fit), "
+        "block-aware forest (biased subspace), adaptive group-logit (column scaling).",
         "Detection uses 5-fold stratified CV. GT rows average 3 subsample seeds.",
         "",
         "```bash",

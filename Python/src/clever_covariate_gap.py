@@ -1,16 +1,30 @@
-"""Modality-specific gap decomposition as clever covariates.
+"""Modality-specific gap decomposition, then block-aware Stage-2 training.
 
-Stage 1 — decompose a batch shift W into per-modality contributions:
+Stage 0 — the analyst partitions coordinates into blocks B_1,...,B_M
+  (modalities / feature groups). This is the prior; it is not learned.
+
+Stage 1 — decompose a batch shift W into per-block contributions π:
   * block RF-domain AUC / VIMP mass / block MMD
   * leave-one-modality-out (LOMO) drop in domain AUC
   * instance-level gap  ê(X) − ê(X_{-m})
+  Consensus π is a simplex weight over blocks.
 
-Stage 2 — turn those contributions into features:
-  * z_share_m(x)  = instance relative contribution (X-only, no W leak)
-  * z_logit_e_m   = logit ê_m(X_m)  (stacking summary of modality m)
-  * H_m           = π_m · (W − ê_m) / (ê_m (1−ê_m))   TMLE clever covariate
+Stage 2 — freeze π and use it to *guide the next training step*, not only
+as extra columns. Trees are monotone-scale invariant, so “multiply column j
+by √π_m” does not change RF splits; the weights have to change the *procedure*:
 
-H_m is for outcome targeting / PO-risk, not for re-predicting W.
+  * π-opinion pool:  ê_π = Σ_m π_m ê_m(X_m)
+      linear opinion pool of block-wise OOF RFs (Genest–Zidek).
+  * block-aware forest (BAWF): each tree samples feature j with
+      p_j ∝ π_{m(j)} / |B_m|   (biased random subspace / informed bagging).
+  * adaptive group-logit: after standardizing, scale column j by
+      √(π_m / |B_m|) and fit L2 logistic (group-ridge / adaptive-lasso analogue).
+
+Feature view of the same weights (previous prototype):
+  * Z_m = π_m · logit ê_m(X_m)   then RF on Z or on [X, Z]
+  * H_m = π_m · (W − ê_m) / (ê_m (1−ê_m))   TMLE clever covariate for PO-risk
+
+H_m is for outcome targeting, not for re-predicting W.
 """
 from __future__ import annotations
 
@@ -405,6 +419,242 @@ def clever_design(X: np.ndarray, gap: GapDecomposition) -> np.ndarray:
     return np.hstack([X, clever_z(gap)])
 
 
+def smoothed_pi(pi: np.ndarray, floor: float = 0.05) -> np.ndarray:
+    """Dirichlet floor so a block with π=0 is not dropped from Stage-2."""
+    pi = relu_normalize(np.asarray(pi, dtype=float).reshape(-1))
+    m = len(pi)
+    if m == 0:
+        return pi
+    floor = float(np.clip(floor, 0.0, 1.0))
+    out = (1.0 - floor) * pi + floor / m
+    s = float(out.sum())
+    return out / s if s > EPS else np.full(m, 1.0 / m)
+
+
+def block_column_probs(
+    spec: ModalitySpec,
+    pi: np.ndarray,
+    *,
+    n_features: int | None = None,
+    floor: float = 0.05,
+) -> np.ndarray:
+    """Per-coordinate sampling / ridge weights: p_j ∝ π̃_{m(j)} / |B_{m(j)}|.
+
+    Splitting the block mass equally inside the block keeps a wide text
+    block from dominating a 5-d VAD block with the same π_m.
+    """
+    pi = smoothed_pi(pi, floor=floor)
+    pdim = int(n_features if n_features is not None else max(sl.stop for sl in spec.slices))
+    p = np.zeros(pdim, dtype=float)
+    for m, sl in enumerate(spec.slices):
+        width = int(sl.stop - sl.start)
+        if width <= 0:
+            continue
+        p[sl] = pi[m] / width
+    s = float(p.sum())
+    if s <= EPS:
+        p[:] = 1.0 / max(pdim, 1)
+        return p
+    p /= s
+    return p
+
+
+def opinion_pool_scores(gap: GapDecomposition, *, log_pool: bool = False) -> np.ndarray:
+    """Linear (or log) opinion pool of block-wise OOF propensities, weights = π."""
+    pi = np.asarray(gap.pi_consensus, dtype=float).reshape(1, -1)
+    if log_pool:
+        return (gap.z_logit_e * pi).sum(axis=1)
+    return (gap.e_block * pi).sum(axis=1)
+
+
+def _tree_pos_proba(tree, Xc: np.ndarray) -> np.ndarray:
+    proba = tree.predict_proba(Xc)
+    classes = list(tree.classes_)
+    if 1 not in classes:
+        return np.zeros(Xc.shape[0], dtype=float)
+    return proba[:, classes.index(1)].astype(float)
+
+
+def _fit_subspace_tree(
+    X: np.ndarray,
+    W: np.ndarray,
+    cols: np.ndarray,
+    boot: np.ndarray,
+    max_depth: int,
+    min_samples_leaf: int,
+    rs: int,
+):
+    from sklearn.tree import DecisionTreeClassifier
+
+    tree = DecisionTreeClassifier(
+        max_depth=max_depth,
+        min_samples_leaf=min_samples_leaf,
+        max_features=None,
+        random_state=rs,
+    )
+    tree.fit(X[boot][:, cols], W[boot])
+    return tree, np.asarray(cols, dtype=int)
+
+
+def fit_block_aware_forest(
+    X: np.ndarray,
+    W: np.ndarray,
+    spec: ModalitySpec,
+    pi: np.ndarray,
+    *,
+    n_estimators: int = 100,
+    max_depth: int = 8,
+    min_samples_leaf: int = 5,
+    seed: int = 0,
+    floor: float = 0.05,
+    n_jobs: int = -1,
+) -> dict:
+    """Bagged trees with π-biased random-subspace feature sampling.
+
+    sklearn RF uses *uniform* max_features at each split, which is invariant
+    to column scaling. Here each tree draws k=√d columns with
+    p_j ∝ π_m / |B_m|, then splits on that subset (Ho 1998, weighted).
+    """
+    from joblib import Parallel, delayed
+
+    X = np.asarray(X, dtype=float)
+    W = _as_1d(W).astype(int)
+    n, d = X.shape
+    k = max(1, min(d, int(np.sqrt(d))))
+    probs = block_column_probs(spec, pi, n_features=d, floor=floor)
+    rng = np.random.default_rng(seed)
+    jobs = []
+    for t in range(int(n_estimators)):
+        boot = rng.integers(0, n, n)
+        cols = rng.choice(d, size=k, replace=False, p=probs)
+        jobs.append((boot, cols, int(seed + t)))
+    fitted = Parallel(n_jobs=n_jobs, prefer="threads")(
+        delayed(_fit_subspace_tree)(X, W, cols, boot, max_depth, min_samples_leaf, rs)
+        for boot, cols, rs in jobs
+    )
+    return {
+        "trees": [t for t, _ in fitted],
+        "cols": [c for _, c in fitted],
+        "probs": probs,
+    }
+
+
+def predict_block_aware_forest(model: dict, X: np.ndarray) -> np.ndarray:
+    X = np.asarray(X, dtype=float)
+    trees, cols = model["trees"], model["cols"]
+    if not trees:
+        return np.full(X.shape[0], 0.5)
+    acc = np.zeros(X.shape[0], dtype=float)
+    for tree, c in zip(trees, cols):
+        acc += _tree_pos_proba(tree, X[:, c])
+    return acc / len(trees)
+
+
+def block_aware_importance(model: dict, spec: ModalitySpec) -> Dict[str, float]:
+    """Mean tree impurity mass mapped back to original columns, then blocks.
+
+    Not Horvitz–Thompson-corrected: this is 'what the guided forest used'.
+    """
+    d = int(len(model["probs"]))
+    imp = np.zeros(d, dtype=float)
+    n_t = len(model["trees"])
+    for tree, cols in zip(model["trees"], model["cols"]):
+        fi = np.asarray(tree.feature_importances_, dtype=float)
+        imp[cols] += fi
+    if n_t:
+        imp /= n_t
+    return vimp_mass_share(imp, spec)
+
+
+def cv_block_aware_auc(
+    X: np.ndarray,
+    W: np.ndarray,
+    spec: ModalitySpec,
+    pi: np.ndarray,
+    *,
+    seed: int = 0,
+    n_estimators: int = 100,
+    n_splits: int = 5,
+    floor: float = 0.05,
+) -> Tuple[float, float, Dict[str, float]]:
+    """K-fold AUC of the π-guided forest; importance from a full-sample fit."""
+    X = np.asarray(X, dtype=float)
+    W = _as_1d(W).astype(int)
+    n_splits = int(min(n_splits, int((W == 0).sum()), int((W == 1).sum())))
+    n_splits = max(n_splits, 2)
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    aucs = []
+    masses = []
+    for k, (tr, te) in enumerate(cv.split(X, W)):
+        model = fit_block_aware_forest(
+            X[tr], W[tr], spec, pi, n_estimators=n_estimators,
+            seed=seed + k, floor=floor,
+        )
+        pred = predict_block_aware_forest(model, X[te])
+        aucs.append(float(roc_auc_score(W[te], pred)))
+        masses.append(block_aware_importance(model, spec))
+    mass = {name: float(np.mean([m[name] for m in masses])) for name in spec.names}
+    return (
+        float(np.mean(aucs)),
+        float(np.std(aucs, ddof=1) if len(aucs) > 1 else 0.0),
+        mass,
+    )
+
+
+def adaptive_group_scale(
+    X: np.ndarray,
+    spec: ModalitySpec,
+    pi: np.ndarray,
+    *,
+    floor: float = 0.05,
+) -> np.ndarray:
+    """Column scales √(d · p_j) with p_j ∝ π_m / |B_m| (mean scale ≈ 1)."""
+    d = int(np.asarray(X).shape[1])
+    p = block_column_probs(spec, pi, n_features=d, floor=floor)
+    return np.sqrt(np.maximum(p * d, EPS))
+
+
+def cv_adaptive_group_logit_auc(
+    X: np.ndarray,
+    W: np.ndarray,
+    spec: ModalitySpec,
+    pi: np.ndarray,
+    *,
+    seed: int = 0,
+    n_splits: int = 5,
+    C: float = 1.0,
+    floor: float = 0.05,
+) -> Tuple[float, float]:
+    """K-fold AUC of L2 logistic with π-adaptive group scaling.
+
+    Scaling X_j by √π_m is a no-op for RF splits; it *is* the adaptive-ridge
+    reparameterization for a linear model (Zou 2006, group analogue).
+    """
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.preprocessing import StandardScaler
+
+    X = np.asarray(X, dtype=float)
+    W = _as_1d(W).astype(int)
+    scales = adaptive_group_scale(X, spec, pi, floor=floor)
+    n_splits = int(min(n_splits, int((W == 0).sum()), int((W == 1).sum())))
+    n_splits = max(n_splits, 2)
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    aucs = []
+    for k, (tr, te) in enumerate(cv.split(X, W)):
+        scaler = StandardScaler()
+        Xtr = scaler.fit_transform(X[tr]) * scales.reshape(1, -1)
+        Xte = scaler.transform(X[te]) * scales.reshape(1, -1)
+        clf = LogisticRegression(
+            C=C, solver="lbfgs", max_iter=500, random_state=seed + k,
+        )
+        clf.fit(Xtr, W[tr])
+        aucs.append(float(roc_auc_score(W[te], clf.predict_proba(Xte)[:, 1])))
+    return (
+        float(np.mean(aucs)),
+        float(np.std(aucs, ddof=1) if len(aucs) > 1 else 0.0),
+    )
+
+
 def compare_raw_vs_clever(
     X: np.ndarray,
     W: np.ndarray,
@@ -417,14 +667,19 @@ def compare_raw_vs_clever(
     with_po: bool = False,
     n_estimators: int = 100,
     n_splits: int = 5,
+    with_block_train: bool = True,
 ) -> dict:
     W = _as_1d(W).astype(int)
     Z = clever_z(gap)
     XZ = clever_design(X, gap)
+    pi = np.asarray(gap.pi_consensus, dtype=float)
     auc_raw, sd_raw, _ = cv_domain_auc(X, W, seed=seed, n_estimators=n_estimators, n_splits=n_splits)
     auc_z, sd_z, vimp_z = cv_domain_auc(Z, W, seed=seed + 1, n_estimators=n_estimators, n_splits=n_splits)
     auc_xz, sd_xz, _ = cv_domain_auc(XZ, W, seed=seed + 2, n_estimators=n_estimators, n_splits=n_splits)
     vimp_raw = fit_vimp(X, W, seed=seed, n_estimators=n_estimators)
+    pool = opinion_pool_scores(gap)
+    auc_pool = float(roc_auc_score(W, pool))
+    auc_logpool = float(roc_auc_score(W, opinion_pool_scores(gap, log_pool=True)))
     out = {
         "domain_auc_raw": round(float(auc_raw), 4),
         "domain_auc_raw_sd": round(float(sd_raw), 4),
@@ -432,12 +687,29 @@ def compare_raw_vs_clever(
         "domain_auc_clever_sd": round(float(sd_z), 4),
         "domain_auc_stack_xz": round(float(auc_xz), 4),
         "domain_auc_stack_sd": round(float(sd_xz), 4),
+        "domain_auc_pool": round(float(auc_pool), 4),
+        "domain_auc_logpool": round(float(auc_logpool), 4),
         "domain_auc_delta": round(float(auc_z - auc_raw), 4),
         "domain_auc_delta_stack": round(float(auc_xz - auc_raw), 4),
+        "domain_auc_delta_pool": round(float(auc_pool - auc_raw), 4),
         "vimp_share_raw": {k: round(v, 4) for k, v in vimp_mass_share(vimp_raw, spec).items()},
         "p_raw": int(X.shape[1]),
         "p_clever": int(Z.shape[1]),
     }
+    if with_block_train:
+        auc_bawf, sd_bawf, mass_bawf = cv_block_aware_auc(
+            X, W, spec, pi, seed=seed + 3, n_estimators=n_estimators, n_splits=n_splits,
+        )
+        auc_adapt, sd_adapt = cv_adaptive_group_logit_auc(
+            X, W, spec, pi, seed=seed + 4, n_splits=n_splits,
+        )
+        out["domain_auc_bawf"] = round(float(auc_bawf), 4)
+        out["domain_auc_bawf_sd"] = round(float(sd_bawf), 4)
+        out["domain_auc_adapt"] = round(float(auc_adapt), 4)
+        out["domain_auc_adapt_sd"] = round(float(sd_adapt), 4)
+        out["domain_auc_delta_bawf"] = round(float(auc_bawf - auc_raw), 4)
+        out["domain_auc_delta_adapt"] = round(float(auc_adapt - auc_raw), 4)
+        out["bawf_vimp"] = {k: round(v, 4) for k, v in mass_bawf.items()}
     tot_z = float(np.sum(np.maximum(vimp_z, 0.0))) + EPS
     out["z_vimp"] = {n: round(float(max(vimp_z[i], 0.0) / tot_z), 4) for i, n in enumerate(spec.names)}
     out["z_logit_vimp"] = out["z_vimp"]
@@ -458,6 +730,8 @@ def compare_raw_vs_clever(
         out["z_share_on_gt"] = out["z_vimp"][gt]
         out["z_logit_on_gt"] = out["z_vimp"][gt]
         out["pi_consensus_on_gt"] = round(float(gap.pi_consensus[spec.names.index(gt)]), 4)
+        if "bawf_vimp" in out:
+            out["bawf_on_gt"] = round(float(out["bawf_vimp"][gt]), 4)
     return out
 
 
@@ -482,7 +756,7 @@ def sample_efficiency_curve(
         n1 = min(len(i1), n // 2)
         if n0 < 50 or n1 < 50:
             continue
-        raws, zs, xzs = [], [], []
+        raws, zs, xzs, pools, bawfs, adapts = [], [], [], [], [], []
         for r in range(n_repeats):
             rng = np.random.default_rng(seed + 17 * n + r)
             sel = np.concatenate([
@@ -501,6 +775,9 @@ def sample_efficiency_curve(
             raws.append(row["domain_auc_raw"])
             zs.append(row["domain_auc_clever"])
             xzs.append(row["domain_auc_stack_xz"])
+            pools.append(row["domain_auc_pool"])
+            bawfs.append(row.get("domain_auc_bawf", row["domain_auc_raw"]))
+            adapts.append(row.get("domain_auc_adapt", row["domain_auc_raw"]))
         rows.append({
             "n": int(n0 + n1),
             "n_repeats": n_repeats,
@@ -510,8 +787,16 @@ def sample_efficiency_curve(
             "auc_clever_sd": round(float(np.std(zs, ddof=1)), 4),
             "auc_stack": round(float(np.mean(xzs)), 4),
             "auc_stack_sd": round(float(np.std(xzs, ddof=1)), 4),
+            "auc_pool": round(float(np.mean(pools)), 4),
+            "auc_pool_sd": round(float(np.std(pools, ddof=1)), 4),
+            "auc_bawf": round(float(np.mean(bawfs)), 4),
+            "auc_bawf_sd": round(float(np.std(bawfs, ddof=1)), 4),
+            "auc_adapt": round(float(np.mean(adapts)), 4),
+            "auc_adapt_sd": round(float(np.std(adapts, ddof=1)), 4),
             "delta": round(float(np.mean(zs) - np.mean(raws)), 4),
             "delta_stack": round(float(np.mean(xzs) - np.mean(raws)), 4),
+            "delta_pool": round(float(np.mean(pools) - np.mean(raws)), 4),
+            "delta_bawf": round(float(np.mean(bawfs) - np.mean(raws)), 4),
             "p_raw": int(X.shape[1]),
             "p_clever": spec.n_mod,
         })

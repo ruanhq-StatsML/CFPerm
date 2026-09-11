@@ -40,13 +40,17 @@ def main() -> None:
             {
                 "name": r["name"],
                 "auc_raw": r["domain_auc_raw"],
-                "auc_clever": r["domain_auc_clever"],
+                "auc_pool": r.get("domain_auc_pool"),
+                "auc_bawf": r.get("domain_auc_bawf"),
+                "auc_adapt": r.get("domain_auc_adapt"),
                 "auc_stack": r.get("domain_auc_stack_xz"),
-                "delta_stack": round(r.get("domain_auc_stack_xz", r["domain_auc_clever"]) - r["domain_auc_raw"], 4),
+                "delta_bawf": round(
+                    r.get("domain_auc_bawf", r["domain_auc_raw"]) - r["domain_auc_raw"], 4
+                ),
                 "gt": r.get("gt"),
                 "mass_on_gt_raw": r.get("mass_on_gt_raw"),
                 "pi_on_gt": r.get("pi_consensus_on_gt"),
-                "z_logit_on_gt": r.get("z_logit_on_gt"),
+                "bawf_on_gt": r.get("bawf_on_gt"),
             }
             for r in summary["comparisons"]
         ],

@@ -9,14 +9,23 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "Python" / "src"))
 
+from sklearn.metrics import roc_auc_score  # noqa: E402
+
 from clever_covariate_gap import (  # noqa: E402
+    adaptive_group_scale,
+    block_aware_importance,
+    block_column_probs,
     clever_design,
     clever_z,
     compare_raw_vs_clever,
+    cv_block_aware_auc,
     decompose_modality_gap,
+    fit_block_aware_forest,
     inject_block_shift,
     make_synthetic_shift,
+    opinion_pool_scores,
     relu_normalize,
+    smoothed_pi,
 )
 
 
@@ -48,7 +57,7 @@ def test_synthetic_valence_is_top_contributor():
 def test_clever_z_beats_raw_in_small_n_high_p():
     X, W, Y, spec = make_synthetic_shift(n=160, d_text=40, d_vad=3, gt="valence", mean_shift=1.0, seed=11)
     gap = decompose_modality_gap(X, W, spec, seed=11, n_splits=3, n_estimators=35)
-    row = compare_raw_vs_clever(X, W, Y, spec, gap, seed=11, gt="valence", with_po=False)
+    row = compare_raw_vs_clever(X, W, Y, spec, gap, seed=11, gt="valence", with_po=False, with_block_train=False)
     assert row["p_clever"] == 4
     assert row["p_raw"] > row["p_clever"]
     assert row["domain_auc_clever"] >= 0.75
@@ -69,3 +78,56 @@ def test_h_clever_shape_and_scale():
     gap = decompose_modality_gap(X, W, spec, seed=0, n_splits=2, n_estimators=25)
     assert gap.H_clever.shape == (200, 4)
     assert np.all(np.isfinite(gap.H_clever))
+
+
+def test_block_column_probs_puts_mass_on_high_pi_block():
+    X, W, Y, spec = make_synthetic_shift(n=80, d_text=20, d_vad=4, seed=0)
+    pi = np.array([0.05, 0.80, 0.10, 0.05])
+    p = block_column_probs(spec, pi, n_features=X.shape[1], floor=0.0)
+    assert np.isclose(p.sum(), 1.0)
+    val_mass = float(p[spec.slices[spec.names.index("valence")]].sum())
+    text_mass = float(p[spec.slices[spec.names.index("text")]].sum())
+    assert val_mass > 0.75
+    assert val_mass > text_mass
+    sm = smoothed_pi(np.array([1.0, 0.0, 0.0, 0.0]), floor=0.05)
+    assert sm.min() > 0
+    assert np.isclose(sm.sum(), 1.0)
+
+
+def test_opinion_pool_tracks_gt_block():
+    X, W, Y, spec = make_synthetic_shift(n=360, d_text=16, d_vad=4, gt="valence", mean_shift=1.3, seed=5)
+    gap = decompose_modality_gap(X, W, spec, seed=5, n_splits=3, n_estimators=40, light=True)
+    scores = opinion_pool_scores(gap)
+    auc = float(roc_auc_score(W, scores))
+    assert scores.shape == (len(W),)
+    assert auc >= 0.78
+    # pool is a π-mixture of already-fit block RFs — no second-stage RF
+    row = compare_raw_vs_clever(
+        X, W, Y, spec, gap, seed=5, gt="valence", with_po=False,
+        n_estimators=40, with_block_train=False,
+    )
+    assert row["domain_auc_pool"] >= 0.78
+
+
+def test_block_aware_forest_follows_pi_not_column_scale():
+    """π must change feature *sampling*; RF splits ignore monotone column scales."""
+    X, W, Y, spec = make_synthetic_shift(
+        n=320, d_text=28, d_vad=4, gt="valence", mean_shift=1.25, seed=9,
+    )
+    pi_gt = np.array([0.04, 0.88, 0.04, 0.04])
+    pi_unif = np.full(4, 0.25)
+    model_gt = fit_block_aware_forest(X, W, spec, pi_gt, n_estimators=50, seed=9, floor=0.0)
+    mass = block_aware_importance(model_gt, spec)
+    assert mass["valence"] >= mass["text"]
+    assert mass["valence"] >= 0.35
+    auc_pi, _, _ = cv_block_aware_auc(
+        X, W, spec, pi_gt, seed=9, n_estimators=40, n_splits=4, floor=0.0,
+    )
+    auc_unif, _, _ = cv_block_aware_auc(
+        X, W, spec, pi_unif, seed=9, n_estimators=40, n_splits=4, floor=0.0,
+    )
+    assert auc_pi >= auc_unif - 0.02
+    scales = adaptive_group_scale(X, spec, pi_gt, floor=0.0)
+    val = spec.slices[spec.names.index("valence")]
+    text = spec.slices[spec.names.index("text")]
+    assert float(scales[val].mean()) > float(scales[text].mean())
