@@ -1,5 +1,5 @@
 {
-  "n_videos": 28,
+  "n_videos": 39,
   "n_windows": 100,
   "video_ids": [
     "video158",
@@ -24,9 +24,20 @@
     "video1752",
     "video1754",
     "video1819",
+    "video1820",
     "video2026",
+    "video2029",
+    "video2146",
+    "video2177",
+    "video2466",
+    "video2588",
+    "video2612",
+    "video2625",
     "video2643",
+    "video2647",
+    "video2716",
     "video2803",
+    "video2808",
     "video3025",
     "video5712",
     "video6465"
@@ -35,6 +46,7 @@
   "stride": 2,
   "video_encoder": "vivit",
   "device": "cpu",
+  "concat_layout": "video[768] | audio[512] | text[768] = 2048",
   "dims": {
     "video": 768,
     "audio": 512,
@@ -43,12 +55,22 @@
   },
   "shapes": {
     "video_feat_3d": [
-      28,
+      39,
+      100,
+      768
+    ],
+    "audio_feat_3d": [
+      39,
+      100,
+      512
+    ],
+    "text_feat_3d": [
+      39,
       100,
       768
     ],
     "concat_feat": [
-      2800,
+      3900,
       2048
     ]
   },
@@ -230,12 +252,76 @@
       "window_span_sec": 2.56
     },
     {
+      "video_id": "video1820",
+      "n_windows": 100,
+      "n_frames": 275,
+      "fps": 25.0,
+      "window_span_frames": 64,
+      "window_span_sec": 2.56
+    },
+    {
       "video_id": "video2026",
       "n_windows": 100,
       "n_frames": 420,
       "fps": 29.97002997002997,
       "window_span_frames": 64,
       "window_span_sec": 2.135466666666667
+    },
+    {
+      "video_id": "video2029",
+      "n_windows": 100,
+      "n_frames": 288,
+      "fps": 24.0,
+      "window_span_frames": 64,
+      "window_span_sec": 2.6666666666666665
+    },
+    {
+      "video_id": "video2146",
+      "n_windows": 100,
+      "n_frames": 330,
+      "fps": 29.97002997002997,
+      "window_span_frames": 64,
+      "window_span_sec": 2.135466666666667
+    },
+    {
+      "video_id": "video2177",
+      "n_windows": 100,
+      "n_frames": 450,
+      "fps": 25.0,
+      "window_span_frames": 64,
+      "window_span_sec": 2.56
+    },
+    {
+      "video_id": "video2466",
+      "n_windows": 100,
+      "n_frames": 330,
+      "fps": 29.97002997002997,
+      "window_span_frames": 64,
+      "window_span_sec": 2.135466666666667
+    },
+    {
+      "video_id": "video2588",
+      "n_windows": 100,
+      "n_frames": 900,
+      "fps": 30.0,
+      "window_span_frames": 64,
+      "window_span_sec": 2.1333333333333333
+    },
+    {
+      "video_id": "video2612",
+      "n_windows": 100,
+      "n_frames": 288,
+      "fps": 23.976023976023978,
+      "window_span_frames": 64,
+      "window_span_sec": 2.6693333333333333
+    },
+    {
+      "video_id": "video2625",
+      "n_windows": 100,
+      "n_frames": 360,
+      "fps": 30.0,
+      "window_span_frames": 64,
+      "window_span_sec": 2.1333333333333333
     },
     {
       "video_id": "video2643",
@@ -246,12 +332,36 @@
       "window_span_sec": 2.1333333333333333
     },
     {
+      "video_id": "video2647",
+      "n_windows": 100,
+      "n_frames": 600,
+      "fps": 23.976023976023978,
+      "window_span_frames": 64,
+      "window_span_sec": 2.6693333333333333
+    },
+    {
+      "video_id": "video2716",
+      "n_windows": 100,
+      "n_frames": 330,
+      "fps": 29.97002997002997,
+      "window_span_frames": 64,
+      "window_span_sec": 2.135466666666667
+    },
+    {
       "video_id": "video2803",
       "n_windows": 100,
       "n_frames": 275,
       "fps": 25.0,
       "window_span_frames": 64,
       "window_span_sec": 2.56
+    },
+    {
+      "video_id": "video2808",
+      "n_windows": 100,
+      "n_frames": 288,
+      "fps": 23.976023976023978,
+      "window_span_frames": 64,
+      "window_span_sec": 2.6693333333333333
     },
     {
       "video_id": "video3025",
@@ -277,6 +387,5 @@
       "window_span_frames": 64,
       "window_span_sec": 2.56
     }
-  ],
-  "note": "assembled from per_video checkpoints mid-run"
+  ]
 }

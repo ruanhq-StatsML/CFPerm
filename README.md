@@ -142,14 +142,18 @@ python Python/src/extract_within_video.py \
   --repo-out experiments/msrvtt
 ```
 
-Use `--video-encoder vit_mean` on CPU if ViViT is too slow (same 768-d interface). Outputs include `concat_feat.npy` of shape `(N_videos * N_windows, 2048)` and `experiments/msrvtt/within_video_fsds.json`.
+Use `--video-encoder vit_mean` on CPU if ViViT is too slow (same 768-d interface).
 
-A CPU run on 8 TrainVal clips (`video1181, 1819, 2026, 2643, 2803, 3025, 5712, 6465`) produced `concat_feat` of shape **(800, 2048)** (8 × 100 windows). Layer-1 RF VIMP:
+Stopped once the three modalities were concatenated. A CPU snapshot of **39** TrainVal clips × 100 windows is in `experiments/msrvtt/concat_feat_f16.npz`:
 
-- within-video early vs late (average): video 0.85, audio 0.15, text 0.003
-- pooled temporal: video 0.80, audio 0.18, text 0.02
-- video-group mixture: video 0.52, audio 0.48, text 0.01
+- layout: `video [:, :768] | audio [:, 768:1280] | text [:, 1280:2048]`
+- shape: **(3900, 2048)** = 39 × 100 windows
 
-Text share is small because MSR-VTT captions have no timestamps (captions are cycled across windows). Audio share jumps on the mixture contrast, which is the user-preference / mixture-shift setting the three-layer procedure targets.
+Load:
 
-<img width="1200" alt="MSR-VTT Layer-1 multimodal attribution" src="./experiments/msrvtt/msrvtt_modality_attribution.png" />
+```python
+import numpy as np
+z = np.load("experiments/msrvtt/concat_feat_f16.npz")
+X = z["concat"]          # (3900, 2048)
+video, audio, text = X[:, :768], X[:, 768:1280], X[:, 1280:]
+```
