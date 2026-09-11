@@ -1,0 +1,111 @@
+{
+  "groups": [
+    "video",
+    "audio",
+    "text"
+  ],
+  "scores": {
+    "rf_vimp": {
+      "video": 0.8051187701041438,
+      "audio": 0.17717562523788866,
+      "text": 0.01770560465696741
+    },
+    "logo_auc": {
+      "video": 0.10824063116370808,
+      "audio": 0.000601183431952812,
+      "text": -0.0004820512820512546
+    },
+    "perm_auc": {
+      "video": 0.12553372781065097,
+      "audio": 5.1282051282020014e-05,
+      "text": -0.00045996055226815713
+    },
+    "logo_r": {
+      "video": 1.2085428105359637,
+      "audio": 0.30786907579411027,
+      "text": -0.13982647623362032
+    },
+    "po_inflate": {
+      "video": 0.06567565118959476,
+      "audio": 0.00584548129939446,
+      "text": -0.004358138512725283
+    },
+    "only_po": {
+      "video": 0.022906681670615783,
+      "audio": 0.06276795947398169,
+      "text": 0.024432710468767337
+    }
+  },
+  "ranks": {
+    "rf_vimp": {
+      "video": 1,
+      "audio": 2,
+      "text": 3
+    },
+    "logo_auc": {
+      "video": 1,
+      "audio": 2,
+      "text": 3
+    },
+    "perm_auc": {
+      "video": 1,
+      "audio": 2,
+      "text": 3
+    },
+    "logo_r": {
+      "video": 1,
+      "audio": 2,
+      "text": 3
+    },
+    "po_inflate": {
+      "video": 1,
+      "audio": 2,
+      "text": 3
+    },
+    "only_po": {
+      "audio": 1,
+      "text": 2,
+      "video": 3
+    }
+  },
+  "kendall": {
+    "rf_vimp__rf_vimp": 1.0,
+    "rf_vimp__logo_auc": 1.0,
+    "rf_vimp__perm_auc": 1.0,
+    "rf_vimp__logo_r": 1.0,
+    "rf_vimp__po_inflate": 1.0,
+    "rf_vimp__only_po": -0.33333333333333337,
+    "logo_auc__rf_vimp": 1.0,
+    "logo_auc__logo_auc": 1.0,
+    "logo_auc__perm_auc": 1.0,
+    "logo_auc__logo_r": 1.0,
+    "logo_auc__po_inflate": 1.0,
+    "logo_auc__only_po": -0.33333333333333337,
+    "perm_auc__rf_vimp": 1.0,
+    "perm_auc__logo_auc": 1.0,
+    "perm_auc__perm_auc": 1.0,
+    "perm_auc__logo_r": 1.0,
+    "perm_auc__po_inflate": 1.0,
+    "perm_auc__only_po": -0.33333333333333337,
+    "logo_r__rf_vimp": 1.0,
+    "logo_r__logo_auc": 1.0,
+    "logo_r__perm_auc": 1.0,
+    "logo_r__logo_r": 1.0,
+    "logo_r__po_inflate": 1.0,
+    "logo_r__only_po": -0.33333333333333337,
+    "po_inflate__rf_vimp": 1.0,
+    "po_inflate__logo_auc": 1.0,
+    "po_inflate__perm_auc": 1.0,
+    "po_inflate__logo_r": 1.0,
+    "po_inflate__po_inflate": 1.0,
+    "po_inflate__only_po": -0.33333333333333337,
+    "only_po__rf_vimp": -0.33333333333333337,
+    "only_po__logo_auc": -0.33333333333333337,
+    "only_po__perm_auc": -0.33333333333333337,
+    "only_po__logo_r": -0.33333333333333337,
+    "only_po__po_inflate": -0.33333333333333337,
+    "only_po__only_po": 1.0
+  },
+  "full_auc": 0.9955637080867851,
+  "top_group_logo_r": "video"
+}

@@ -159,3 +159,5 @@ video, audio, text = X[:, :768], X[:, 768:1280], X[:, 1280:]
 ```
 
 On that matrix, `Python/src/run_msrvtt_concat_attribution.py` reports block shares, leave-one-group-out AUC, and leave-one-group-out PO-risk (drop a modality, fit again). Then a subset of high-|τ| videos inside the named modality. Numbers: `experiments/msrvtt/concat_attribution.json`.
+
+Several group rankings (RF VIMP, LOGO AUC, permute-block AUC, LOGO R-risk, PO-risk inflate, only-group PO-risk) plus the same three-layer board on **Diabetes readmission** (source vs target, `datasets/datasets.zip`): `Python/src/run_hierarchical_board.py` → `experiments/hierarchical/`.
