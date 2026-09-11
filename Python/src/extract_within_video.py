@@ -43,12 +43,18 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--caption-json", default="/workspace/data/hf_ann/msrvtt_train_7k.json")
     p.add_argument("--output-dir", default="/workspace/data/msrvtt/features_window")
     p.add_argument("--repo-out", default="/workspace/experiments/msrvtt")
-    p.add_argument("--n-windows", type=int, default=500)
+    p.add_argument("--n-windows", type=int, default=100)
     p.add_argument(
         "--n-videos",
         type=int,
         default=8,
         help="Total videos to encode, keeping any per_video checkpoints and sampling the rest.",
+    )
+    p.add_argument(
+        "--flush-every",
+        type=int,
+        default=5,
+        help="Rewrite stacked npy + FSDS every N newly encoded videos (0 = only at the end).",
     )
     p.add_argument("--t-frames", type=int, default=32)
     p.add_argument("--stride", type=int, default=2)
@@ -512,6 +518,86 @@ def run_fsds(
     return payload
 
 
+def write_outputs(
+    all_video,
+    all_audio,
+    all_text,
+    all_mask,
+    video_ids: list[str],
+    meta_videos: list[dict],
+    args,
+    out_dir: Path,
+    repo_out: Path,
+    run_fsds_now: bool = True,
+) -> None:
+    if not all_video:
+        return
+    video_mat = torch.stack(all_video, dim=0).numpy()
+    audio_mat = torch.stack(all_audio, dim=0).numpy()
+    text_mat = torch.stack(all_text, dim=0).numpy()
+    mask_mat = torch.stack(all_mask, dim=0).numpy()
+    n_videos, n_windows = video_mat.shape[0], video_mat.shape[1]
+    video_flat = video_mat.reshape(n_videos * n_windows, -1)
+    audio_flat = audio_mat.reshape(n_videos * n_windows, -1)
+    text_flat = text_mat.reshape(n_videos * n_windows, -1)
+    concat_flat = np.concatenate([video_flat, audio_flat, text_flat], axis=1)
+    labels_flat = np.repeat(np.arange(n_videos), n_windows)
+    window_flat = np.tile(np.arange(n_windows), n_videos)
+
+    np.save(out_dir / "video_feat_3d.npy", video_mat)
+    np.save(out_dir / "audio_feat_3d.npy", audio_mat)
+    np.save(out_dir / "text_feat_3d.npy", text_mat)
+    np.save(out_dir / "audio_mask_3d.npy", mask_mat)
+    np.save(out_dir / "video_feat.npy", video_flat)
+    np.save(out_dir / "audio_feat.npy", audio_flat)
+    np.save(out_dir / "text_feat.npy", text_flat)
+    np.save(out_dir / "concat_feat.npy", concat_flat)
+    np.save(out_dir / "video_labels.npy", labels_flat)
+    np.save(out_dir / "window_index.npy", window_flat)
+
+    meta = {
+        "n_videos": n_videos,
+        "n_windows": n_windows,
+        "video_ids": list(video_ids),
+        "T": args.t_frames,
+        "stride": args.stride,
+        "video_encoder": args.video_encoder,
+        "device": args.device,
+        "dims": {"video": VIDEO_DIM, "audio": AUDIO_DIM, "text": TEXT_DIM, "concat": CONCAT_DIM},
+        "shapes": {
+            "video_feat_3d": list(video_mat.shape),
+            "audio_feat_3d": list(audio_mat.shape),
+            "text_feat_3d": list(text_mat.shape),
+            "concat_feat": list(concat_flat.shape),
+        },
+        "videos": meta_videos,
+    }
+    (out_dir / "meta.json").write_text(json.dumps(meta, indent=2))
+    print(
+        f"[flush] n={n_videos} concat={tuple(concat_flat.shape)} -> {out_dir}",
+        flush=True,
+    )
+    if not run_fsds_now:
+        return
+    print("\nLayer-1 FSDS modality attribution", flush=True)
+    payload = run_fsds(
+        video_mat, audio_mat, text_mat, list(video_ids), out_dir,
+        n_bootstrap=args.n_bootstrap, n_estimators=args.n_estimators, seed=args.seed,
+    )
+    plot_png = repo_out / "msrvtt_modality_attribution.png"
+    plot_shares(payload, plot_png)
+    (repo_out / "within_video_fsds.json").write_text(json.dumps(payload, indent=2))
+    (repo_out / "meta.json").write_text(json.dumps(meta, indent=2))
+    np.savez_compressed(
+        repo_out / "concat_feat_f16.npz",
+        concat=concat_flat.astype(np.float16),
+        labels=labels_flat,
+        windows=window_flat,
+        video_ids=np.array(video_ids),
+    )
+    print(f"wrote {plot_png}", flush=True)
+
+
 def plot_shares(payload: dict, out_png: Path) -> None:
     import matplotlib.pyplot as plt
 
@@ -638,187 +724,137 @@ def main() -> None:
     print(f"[dims] video={video_enc.out_dim} audio={audio_enc.out_dim} text={text_enc.out_dim}")
 
     all_video, all_audio, all_text, all_mask = [], [], [], []
-    meta_videos = []
+    meta_videos: list[dict] = []
+    done_ids: list[str] = []
+    n_new = 0
 
-    for vi, vid in enumerate(picked):
-        ckpt = ckpt_dir / f"{vid}.npz"
-        print(f"\n[{vi+1}/{len(picked)}] {vid}")
-        if ckpt.exists():
-            z = np.load(ckpt, allow_pickle=True)
-            vf = torch.from_numpy(z["video"])
-            af = torch.from_numpy(z["audio"])
-            tf = torch.from_numpy(z["text"])
-            am = torch.from_numpy(z["mask"])
-            raw_meta = z["meta"]
-            if isinstance(raw_meta, np.ndarray):
-                raw_meta = raw_meta.item()
-            rec = json.loads(raw_meta) if isinstance(raw_meta, str) else dict(raw_meta)
-            if int(vf.shape[0]) != int(args.n_windows):
-                print(
-                    f"  ignore stale ckpt windows={tuple(vf.shape)} want={args.n_windows}; re-encoding"
-                )
-            else:
-                audio_dead = bool(torch.as_tensor(af).abs().max() < 1e-8)
-                if audio_dead:
-                    print(f"  resume video/text {tuple(vf.shape)}; re-encoding audio")
-                    vpath = ensure_video(vid, video_root, zip_path)
-                    apath = ensure_audio(vid, vpath, audio_root, args.sample_rate)
-                    frames, fps = load_frames_pil(vpath)
-                    n_frames = len(frames)
-                    windows = compute_windows(n_frames, args.t_frames, args.stride, args.n_windows)
-                    wav = load_wav_mono(apath, args.sample_rate)
-                    segs, masks = [], []
-                    half_span = (args.t_frames * args.stride) / (2.0 * fps)
-                    for idx in windows:
-                        center_t = float(idx[args.t_frames // 2]) / fps
-                        t_start = max(0.0, center_t - half_span)
-                        t_end = t_start + 2 * half_span
-                        seg, mask = slice_audio(wav, args.sample_rate, t_start, t_end)
-                        segs.append(seg)
-                        masks.append(mask)
-                    af = audio_enc.encode_segments(segs)
-                    am = torch.stack(masks)
-                    rec["n_frames"] = n_frames
-                    rec["fps"] = fps
-                    np.savez_compressed(
-                        ckpt,
-                        video=vf.numpy(),
-                        audio=af.numpy(),
-                        text=tf.numpy(),
-                        mask=am.numpy(),
-                        meta=json.dumps(rec),
-                    )
+    def _flush(run_fsds_now: bool) -> None:
+        write_outputs(
+            all_video, all_audio, all_text, all_mask,
+            done_ids, meta_videos, args, out_dir, repo_out,
+            run_fsds_now=run_fsds_now,
+        )
+
+    try:
+        for vi, vid in enumerate(picked):
+            ckpt = ckpt_dir / f"{vid}.npz"
+            print(f"\n[{vi+1}/{len(picked)}] {vid}")
+            if ckpt.exists():
+                z = np.load(ckpt, allow_pickle=True)
+                vf = torch.from_numpy(z["video"])
+                af = torch.from_numpy(z["audio"])
+                tf = torch.from_numpy(z["text"])
+                am = torch.from_numpy(z["mask"])
+                raw_meta = z["meta"]
+                if isinstance(raw_meta, np.ndarray):
+                    raw_meta = raw_meta.item()
+                rec = json.loads(raw_meta) if isinstance(raw_meta, str) else dict(raw_meta)
+                if int(vf.shape[0]) != int(args.n_windows):
                     print(
-                        f"  audio_feat {tuple(af.shape)} mask_mean={float(am.mean()):.2f} "
-                        f"norm={float(af.norm(dim=1).mean()):.3f}"
+                        f"  ignore stale ckpt windows={tuple(vf.shape)} want={args.n_windows}; re-encoding"
                     )
                 else:
-                    print(f"  resume {tuple(vf.shape)}")
-                all_video.append(vf)
-                all_audio.append(af)
-                all_text.append(tf)
-                all_mask.append(am)
-                meta_videos.append(rec)
-                continue
+                    audio_dead = bool(torch.as_tensor(af).abs().max() < 1e-8)
+                    if audio_dead:
+                        print(f"  resume video/text {tuple(vf.shape)}; re-encoding audio")
+                        vpath = ensure_video(vid, video_root, zip_path)
+                        apath = ensure_audio(vid, vpath, audio_root, args.sample_rate)
+                        frames, fps = load_frames_pil(vpath)
+                        n_frames = len(frames)
+                        windows = compute_windows(n_frames, args.t_frames, args.stride, args.n_windows)
+                        wav = load_wav_mono(apath, args.sample_rate)
+                        segs, masks = [], []
+                        half_span = (args.t_frames * args.stride) / (2.0 * fps)
+                        for idx in windows:
+                            center_t = float(idx[args.t_frames // 2]) / fps
+                            t_start = max(0.0, center_t - half_span)
+                            t_end = t_start + 2 * half_span
+                            seg, mask = slice_audio(wav, args.sample_rate, t_start, t_end)
+                            segs.append(seg)
+                            masks.append(mask)
+                        af = audio_enc.encode_segments(segs)
+                        am = torch.stack(masks)
+                        rec["n_frames"] = n_frames
+                        rec["fps"] = fps
+                        np.savez_compressed(
+                            ckpt,
+                            video=vf.numpy(),
+                            audio=af.numpy(),
+                            text=tf.numpy(),
+                            mask=am.numpy(),
+                            meta=json.dumps(rec),
+                        )
+                        print(
+                            f"  audio_feat {tuple(af.shape)} mask_mean={float(am.mean()):.2f} "
+                            f"norm={float(af.norm(dim=1).mean()):.3f}"
+                        )
+                    else:
+                        print(f"  resume {tuple(vf.shape)}")
+                    all_video.append(vf)
+                    all_audio.append(af)
+                    all_text.append(tf)
+                    all_mask.append(am)
+                    meta_videos.append(rec)
+                    done_ids.append(vid)
+                    continue
 
-        vpath = ensure_video(vid, video_root, zip_path)
-        apath = ensure_audio(vid, vpath, audio_root, args.sample_rate)
-        frames, fps = load_frames_pil(vpath)
-        n_frames = len(frames)
-        windows = compute_windows(n_frames, args.t_frames, args.stride, args.n_windows)
-        print(f"  frames={n_frames} fps={fps:.2f} windows={len(windows)} span={args.t_frames * args.stride / fps:.2f}s")
+            vpath = ensure_video(vid, video_root, zip_path)
+            apath = ensure_audio(vid, vpath, audio_root, args.sample_rate)
+            frames, fps = load_frames_pil(vpath)
+            n_frames = len(frames)
+            windows = compute_windows(n_frames, args.t_frames, args.stride, args.n_windows)
+            print(f"  frames={n_frames} fps={fps:.2f} windows={len(windows)} span={args.t_frames * args.stride / fps:.2f}s")
 
-        vf = video_enc.encode_windows(frames, windows, batch_size=args.video_batch_size)
-        print(f"  video_feat {tuple(vf.shape)}")
+            vf = video_enc.encode_windows(frames, windows, batch_size=args.video_batch_size)
+            print(f"  video_feat {tuple(vf.shape)}")
 
-        wav = load_wav_mono(apath, args.sample_rate)
-        segs, masks = [], []
-        half_span = (args.t_frames * args.stride) / (2.0 * fps)
-        for idx in windows:
-            center_t = float(idx[args.t_frames // 2]) / fps
-            t_start = max(0.0, center_t - half_span)
-            t_end = t_start + 2 * half_span
-            seg, mask = slice_audio(wav, args.sample_rate, t_start, t_end)
-            segs.append(seg)
-            masks.append(mask)
-        af = audio_enc.encode_segments(segs)
-        am = torch.stack(masks)
-        print(f"  audio_feat {tuple(af.shape)} mask_mean={float(am.mean()):.2f}")
+            wav = load_wav_mono(apath, args.sample_rate)
+            segs, masks = [], []
+            half_span = (args.t_frames * args.stride) / (2.0 * fps)
+            for idx in windows:
+                center_t = float(idx[args.t_frames // 2]) / fps
+                t_start = max(0.0, center_t - half_span)
+                t_end = t_start + 2 * half_span
+                seg, mask = slice_audio(wav, args.sample_rate, t_start, t_end)
+                segs.append(seg)
+                masks.append(mask)
+            af = audio_enc.encode_segments(segs)
+            am = torch.stack(masks)
+            print(f"  audio_feat {tuple(af.shape)} mask_mean={float(am.mean()):.2f}")
 
-        caps = captions.get(vid, [""]) or [""]
-        texts = [caps[wi % len(caps)] for wi in range(args.n_windows)]
-        tf = text_enc.encode_texts(texts, batch_size=args.text_batch_size)
-        print(f"  text_feat {tuple(tf.shape)}")
+            caps = captions.get(vid, [""]) or [""]
+            texts = [caps[wi % len(caps)] for wi in range(args.n_windows)]
+            tf = text_enc.encode_texts(texts, batch_size=args.text_batch_size)
+            print(f"  text_feat {tuple(tf.shape)}")
 
-        rec = {
-            "video_id": vid,
-            "n_windows": args.n_windows,
-            "n_frames": n_frames,
-            "fps": fps,
-            "window_span_frames": args.t_frames * args.stride,
-            "window_span_sec": args.t_frames * args.stride / fps,
-        }
-        np.savez_compressed(
-            ckpt,
-            video=vf.numpy(),
-            audio=af.numpy(),
-            text=tf.numpy(),
-            mask=am.numpy(),
-            meta=json.dumps(rec),
-        )
-        all_video.append(vf)
-        all_audio.append(af)
-        all_text.append(tf)
-        all_mask.append(am)
-        meta_videos.append(rec)
+            rec = {
+                "video_id": vid,
+                "n_windows": args.n_windows,
+                "n_frames": n_frames,
+                "fps": fps,
+                "window_span_frames": args.t_frames * args.stride,
+                "window_span_sec": args.t_frames * args.stride / fps,
+            }
+            np.savez_compressed(
+                ckpt,
+                video=vf.numpy(),
+                audio=af.numpy(),
+                text=tf.numpy(),
+                mask=am.numpy(),
+                meta=json.dumps(rec),
+            )
+            all_video.append(vf)
+            all_audio.append(af)
+            all_text.append(tf)
+            all_mask.append(am)
+            meta_videos.append(rec)
 
-    video_mat = torch.stack(all_video, dim=0).numpy()
-    audio_mat = torch.stack(all_audio, dim=0).numpy()
-    text_mat = torch.stack(all_text, dim=0).numpy()
-    mask_mat = torch.stack(all_mask, dim=0).numpy()
-    n_videos, n_windows = video_mat.shape[0], video_mat.shape[1]
-    video_flat = video_mat.reshape(n_videos * n_windows, -1)
-    audio_flat = audio_mat.reshape(n_videos * n_windows, -1)
-    text_flat = text_mat.reshape(n_videos * n_windows, -1)
-    concat_flat = np.concatenate([video_flat, audio_flat, text_flat], axis=1)
-    labels_flat = np.repeat(np.arange(n_videos), n_windows)
-    window_flat = np.tile(np.arange(n_windows), n_videos)
-
-    np.save(out_dir / "video_feat_3d.npy", video_mat)
-    np.save(out_dir / "audio_feat_3d.npy", audio_mat)
-    np.save(out_dir / "text_feat_3d.npy", text_mat)
-    np.save(out_dir / "audio_mask_3d.npy", mask_mat)
-    np.save(out_dir / "video_feat.npy", video_flat)
-    np.save(out_dir / "audio_feat.npy", audio_flat)
-    np.save(out_dir / "text_feat.npy", text_flat)
-    np.save(out_dir / "concat_feat.npy", concat_flat)
-    np.save(out_dir / "video_labels.npy", labels_flat)
-    np.save(out_dir / "window_index.npy", window_flat)
-
-    meta = {
-        "n_videos": n_videos,
-        "n_windows": n_windows,
-        "video_ids": picked,
-        "T": args.t_frames,
-        "stride": args.stride,
-        "video_encoder": args.video_encoder,
-        "device": args.device,
-        "dims": {"video": VIDEO_DIM, "audio": AUDIO_DIM, "text": TEXT_DIM, "concat": CONCAT_DIM},
-        "shapes": {
-            "video_feat_3d": list(video_mat.shape),
-            "audio_feat_3d": list(audio_mat.shape),
-            "text_feat_3d": list(text_mat.shape),
-            "concat_feat": list(concat_flat.shape),
-        },
-        "videos": meta_videos,
-    }
-    (out_dir / "meta.json").write_text(json.dumps(meta, indent=2))
-    print("\n" + "=" * 60)
-    print(f"saved to {out_dir}")
-    print(f"  video_feat_3d {video_mat.shape}")
-    print(f"  audio_feat_3d {audio_mat.shape}")
-    print(f"  text_feat_3d  {text_mat.shape}")
-    print(f"  concat_feat   {concat_flat.shape}   (N_videos*N_windows, 2048)")
-    print("=" * 60)
-
-    print("\nLayer-1 FSDS modality attribution")
-    payload = run_fsds(
-        video_mat, audio_mat, text_mat, picked, out_dir,
-        n_bootstrap=args.n_bootstrap, n_estimators=args.n_estimators, seed=args.seed,
-    )
-    plot_png = repo_out / "msrvtt_modality_attribution.png"
-    plot_shares(payload, plot_png)
-    (repo_out / "within_video_fsds.json").write_text(json.dumps(payload, indent=2))
-    (repo_out / "meta.json").write_text(json.dumps(meta, indent=2))
-    # compact features for the repo (float16)
-    np.savez_compressed(
-        repo_out / "concat_feat_f16.npz",
-        concat=concat_flat.astype(np.float16),
-        labels=labels_flat,
-        windows=window_flat,
-        video_ids=np.array(picked),
-    )
-    print(f"wrote {plot_png}")
+            done_ids.append(vid)
+            n_new += 1
+            if args.flush_every and n_new % args.flush_every == 0:
+                _flush(run_fsds_now=False)
+    finally:
+        _flush(run_fsds_now=True)
 
 
 if __name__ == "__main__":
