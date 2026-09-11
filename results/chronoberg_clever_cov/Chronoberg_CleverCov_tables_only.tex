@@ -18,14 +18,14 @@ consensus $\pi$ & 0.311 & 0.307 & 0.131 & 0.250 \\
 \begin{table}[t]
 \centering
 \small
-\caption{Raw $X$ vs.\ clever covariates $Z_m=\pi_m\log\hat e_m$ (5-fold CV AUC).}
-\begin{tabular}{lcccc}
+\caption{Human blocks $\to$ Stage-1 $\pi$ $\to$ Stage-2. $\pi$-weighted RF replicates columns so sklearn $\mathtt{max\_features}$ samples $p_j\propto\pi_m/|B_m|$.}
+\begin{tabular}{lcccccc}
 \toprule
-Setting & AUC raw $X$ & AUC clever-$Z$ & AUC $X{+}Z$ & $\Delta_{X+Z}$ \\
+Setting & raw RF & $\pi$-RF & pool & $X{+}Z$ & $\Delta_{\pi\mathrm{-RF}}$ & $\pi$-RF on GT \\
 \midrule
-inject valence (α=0.70) & 0.826 & 0.864 & 0.892 & +0.066 \\
-text⊥ + inject valence & 0.855 & 0.880 & 0.911 & +0.055 \\
-synthetic GT=valence & 0.880 & 0.883 & 0.902 & +0.021 \\
+inject valence (α=0.70) & 0.826 & 0.916 & 0.837 & 0.892 & +0.091 & 0.482 \\
+text⊥ + inject valence & 0.855 & 0.941 & 0.865 & 0.911 & +0.085 & 0.572 \\
+synthetic GT=valence & 0.880 & 0.897 & 0.901 & 0.902 & +0.016 & 0.828 \\
 \bottomrule
 \end{tabular}
 \end{table}

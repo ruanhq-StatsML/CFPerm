@@ -583,7 +583,7 @@ def _write_readme(summary: dict, out_dir: Path) -> None:
         "## GT board (mean over seeds, 5-fold CV AUC)",
         "",
         "Human feature-blocks → Stage-1 consensus π → Stage-2 training guided by π "
-        "(opinion pool of block RFs; block-aware forest with p_j ∝ π_m/|B_m|; "
+        "(π-weighted RF via column replicates; opinion pool of block RFs; "
         "X+Z stacking as the feature view of the same weights).",
         "",
         "| setting | AUC raw | π-RF | pool | X+Z | Δ π-RF | π on GT | π-RF on GT |",
