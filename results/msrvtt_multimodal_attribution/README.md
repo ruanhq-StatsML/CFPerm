@@ -26,6 +26,10 @@ Across RF-Domain, coordinate-MMD, and PO-risk VIMP the **video block dominates**
 
 See `msrvtt_batch_region_heatmap_board.png` (stats: `msrvtt_region_board_stats.json`). Lead heatmap: windows ordered Batch 0 then Batch 1 × 24 embedding bins (8 video / 8 audio / 8 text). Middle: cosine$(B_0,B_1)$ geometry per modality. Bottom: video × region Cohen's $d$ with Holm stars, plus signed pooled $d$ vs mean $|d|$. Video/audio regions carry a **video-heterogeneous** early-vs-late shift; text is window-invariant ($d=0$). Signed pooled $d$ cancels across videos; mean $|d|$ does not. Mean |Cohen's d|: video $0.787$, audio $0.518$, text $0.000$; 12 Holm-significant video×region cells, 0 pooled-region Holm hits (signed $d$ cancels across videos).
 
+## Batch(i) ~ batch(j) prototype (K=10)
+
+See `msrvtt_batch_ij_cosine_board.png`. Equal-width bins of window index (2 windows × 16 videos per bin on this extract). This is the prototype of 10k frames / 1k-frame batches: cosine$(B_i, B_j)$ per modality. Clip-level captions are post-hoc, so text should be flat in lag; video/audio decay. The K=2 cosine$(B_0,B_1)$ panel is the early-vs-late special case of the same board.
+
 ## Per-video AUC
 
 | Video | n | AUC | Video | Audio | Text | Dominant |

@@ -138,6 +138,37 @@ def test_region_board_video_shift_lights_up_video_bins():
     assert pay["mean_abs_d_region"].shape == (24,)
 
 
+def test_batch_pair_text_flat_video_decays():
+    from msrvtt_multimodal_attribution import GROUPS, batch_pair_payload
+
+    b = make_synthetic_bundle(
+        n_videos=6, n_windows=20, seed=21, video_shift=2.2, audio_shift=0.35, text_shift=0.0
+    )
+    # post-hoc caption: freeze text within each video
+    for v in np.unique(b.video_id):
+        idx = np.flatnonzero(b.video_id == v)
+        b.X[idx, GROUPS["text"]] = b.X[idx[0], GROUPS["text"]]
+    pay = batch_pair_payload(b, n_batches=10)
+    assert pay["cosine"]["video"].shape == (10, 10)
+    lag_v = np.asarray(pay["lag_cosine"]["video"])
+    lag_a = np.asarray(pay["lag_cosine"]["audio"])
+    lag_t = np.asarray(pay["lag_cosine"]["text"])
+    assert np.nanstd(lag_t) < 0.05 * (np.nanstd(lag_v) + 1.0)
+    assert pay["lag0_minus_lagmax"]["video"] > pay["lag0_minus_lagmax"]["text"]
+    assert pay["lag0_minus_lagmax"]["video"] > pay["lag0_minus_lagmax"]["audio"]
+    assert abs(pay["lag0_minus_lagmax"]["text"]) < 0.35 * max(abs(pay["lag0_minus_lagmax"]["video"]), 1e-6)
+    assert np.all(np.array(list(pay["n_per_batch"].values())) == 12)
+
+
+def test_batch_pair_plot_writes(tmp_path):
+    from msrvtt_attribution_plots import plot_batch_pair_board
+
+    b = make_synthetic_bundle(n_videos=4, n_windows=20, seed=5)
+    out = plot_batch_pair_board(b, {}, tmp_path / "pair.png", n_batches=10)
+    assert out.exists()
+    assert out.stat().st_size > 8000
+
+
 def test_region_board_plot_writes(tmp_path):
     from msrvtt_attribution_plots import plot_batch_region_board
 

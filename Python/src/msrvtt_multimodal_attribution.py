@@ -293,6 +293,80 @@ def cosine_sim_matrix(X):
     return Z @ Z.T
 
 
+def assign_temporal_batches(window_idx, n_batches=10):
+    """Equal-width bins of window index: prototype of 10k frames / 1k per batch."""
+    w = np.asarray(window_idx, dtype=float).reshape(-1)
+    n_batches = int(max(1, n_batches))
+    lo, hi = float(np.min(w)), float(np.max(w))
+    if hi <= lo:
+        return np.zeros(w.size, dtype=int)
+    edges = np.linspace(lo, hi + 1.0, n_batches + 1)
+    return np.clip(np.digitize(w, edges[1:], right=False), 0, n_batches - 1)
+
+
+def pairwise_batch_cosine(X, batch, n_batches):
+    """K×K mean cosine: entry (i, j) = mean_{a in batch i, b in batch j} cos(x_a, x_b)."""
+    S = cosine_sim_matrix(X)
+    n_batches = int(n_batches)
+    idx = [np.flatnonzero(batch == k) for k in range(n_batches)]
+    M = np.full((n_batches, n_batches), np.nan)
+    for i in range(n_batches):
+        if idx[i].size == 0:
+            continue
+        for j in range(n_batches):
+            if idx[j].size == 0:
+                continue
+            M[i, j] = float(np.mean(S[np.ix_(idx[i], idx[j])]))
+    return M
+
+
+def lag_profile(M):
+    M = np.asarray(M, dtype=float)
+    k = M.shape[0]
+    out = np.full(k, np.nan)
+    for h in range(k):
+        vals = np.array([M[i, i + h] for i in range(k - h)], dtype=float)
+        vals = vals[np.isfinite(vals)]
+        if vals.size:
+            out[h] = float(vals.mean())
+    return out
+
+
+def batch_pair_payload(bundle, n_batches=10):
+    """Modality-specific batch(i) ~ batch(j) cosine board.
+
+    Batches are equal-width bins of ``window_idx`` (K=10 prototype of
+    10k frames with 1k frames per batch). Clip-level text is a post-hoc
+    caption, so cosine(i, j) should be approximately flat in |i-j|.
+    """
+    X = standardize_columns(bundle.X)
+    widx = np.asarray(bundle.window_idx)
+    batch = assign_temporal_batches(widx, n_batches=n_batches)
+    n_batches = int(batch.max()) + 1 if batch.size else int(n_batches)
+    n_per = {int(k): int(np.sum(batch == k)) for k in range(n_batches)}
+    cosine = {}
+    lags = {}
+    gap = {}
+    for name, sl in GROUPS.items():
+        M = pairwise_batch_cosine(X[:, sl], batch, n_batches)
+        cosine[name] = M
+        lags[name] = lag_profile(M)
+        lag = lags[name]
+        gap[name] = float(lag[0] - lag[-1]) if np.isfinite(lag[0]) and np.isfinite(lag[-1]) else float("nan")
+    return {
+        "n_batches": n_batches,
+        "n_per_batch": n_per,
+        "batch": batch,
+        "cosine": cosine,
+        "lag_cosine": lags,
+        "lag0_minus_lagmax": gap,
+        "video_minus_audio": cosine["video"] - cosine["audio"],
+        "n": int(len(batch)),
+        "n_videos": int(len(np.unique(bundle.video_id))),
+        "n_windows": int(len(np.unique(widx))),
+    }
+
+
 def region_board_payload(bundle):
     """Batch-0 vs Batch-1 region statistics for the heatmap board.
 

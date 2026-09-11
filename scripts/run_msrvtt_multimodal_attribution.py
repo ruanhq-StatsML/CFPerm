@@ -219,6 +219,12 @@ def write_readme(result, plot_paths, path: Path):
             if mad
             else "\n"
         ),
+        "\n## Batch(i) ~ batch(j) prototype (K=10)\n\n",
+        "See `msrvtt_batch_ij_cosine_board.png`. Equal-width bins of window index "
+        "(2 windows × 16 videos per bin on this extract). This is the prototype of "
+        "10k frames / 1k-frame batches: cosine$(B_i, B_j)$ per modality. "
+        "Clip-level captions are post-hoc, so text should be flat in lag; video/audio decay. "
+        "The K=2 cosine$(B_0,B_1)$ panel is the early-vs-late special case of the same board.\n",
         "\n## Per-video AUC\n\n",
         "| Video | n | AUC | Video | Audio | Text | Dominant |\n",
         "|------:|--:|----:|------:|------:|-----:|----------|\n",

@@ -463,6 +463,155 @@ def plot_batch_region_board(bundle, result, path: Path, pay=None):
     return _save(fig, path)
 
 
+def plot_batch_pair_board(bundle, result, path: Path, pay=None, n_batches=10):
+    """Prototype heatmap: cosine(batch i, batch j) per modality."""
+    from msrvtt_multimodal_attribution import GROUP_NAMES, batch_pair_payload
+
+    _style()
+    if pay is None:
+        pay = batch_pair_payload(bundle, n_batches=n_batches)
+    k = int(pay["n_batches"])
+    ticks = np.arange(k)
+    labs = ["B%d" % (i + 1) for i in ticks]
+    mats = [np.asarray(pay["cosine"][g], dtype=float) for g in GROUP_NAMES]
+    stacked = np.concatenate([m[np.isfinite(m)] for m in mats])
+    vmax = float(np.nanpercentile(np.abs(stacked), 98)) if stacked.size else 0.01
+    vmax = max(vmax, 1e-4)
+    nrm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+
+    fig = plt.figure(figsize=(16.4, 10.6), dpi=210)
+    fig.patch.set_facecolor("white")
+    gs = GridSpec(
+        2,
+        3,
+        figure=fig,
+        height_ratios=[1.15, 1.0],
+        hspace=0.38,
+        wspace=0.26,
+        left=0.055,
+        right=0.98,
+        top=0.88,
+        bottom=0.08,
+    )
+    fig.suptitle(
+        "Prototype  ·  cosine(batch i, batch j)   modality-specific attribution",
+        fontsize=18.5,
+        fontweight="bold",
+        color=INK,
+        y=0.975,
+    )
+    fig.text(
+        0.5,
+        0.925,
+        "K=%d temporal bins of window index  (this extract: %d windows × %d videos).  "
+        "Ideal design: 10k frames, 1k per batch, same K×K board.  "
+        "Current cosine(B0, B1) board is the K=2 special case (early vs late)."
+        % (k, pay.get("n_windows", 20), pay.get("n_videos", 16)),
+        ha="center",
+        fontsize=9.4,
+        color=MUTED,
+    )
+
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+    last_im = None
+    for i, name in enumerate(GROUP_NAMES):
+        ax = fig.add_subplot(gs[0, i])
+        M = mats[i]
+        last_im = ax.imshow(M, cmap="RdBu_r", norm=nrm, origin="upper", interpolation="nearest")
+        ax.set_xticks(ticks)
+        ax.set_yticks(ticks)
+        ax.set_xticklabels(labs, fontsize=7.5, rotation=90)
+        ax.set_yticklabels(labs, fontsize=7.5)
+        ax.set_title(
+            name.capitalize() + "  cosine(Bi, Bj)",
+            fontsize=12.2,
+            fontweight="bold",
+            color=COLORS[name],
+        )
+        ax.set_xlabel("batch j")
+        if i == 0:
+            ax.set_ylabel("batch i")
+        gap = pay["lag0_minus_lagmax"].get(name, float("nan"))
+        ax.text(
+            0.02,
+            -0.18,
+            "lag0 − lag%d  =  %.4f" % (k - 1, gap),
+            transform=ax.transAxes,
+            fontsize=8.2,
+            color=MUTED,
+            clip_on=False,
+        )
+        if i == 2:
+            div = make_axes_locatable(ax)
+            cax = div.append_axes("right", size="4.2%", pad=0.06)
+            cbar = fig.colorbar(last_im, cax=cax)
+            cbar.set_label("mean cosine", fontsize=8)
+            cbar.ax.tick_params(labelsize=7.5)
+
+    axd = fig.add_subplot(gs[1, 0])
+    D = np.asarray(pay["video_minus_audio"], dtype=float)
+    dv = float(np.nanpercentile(np.abs(D[np.isfinite(D)]), 98)) if np.isfinite(D).any() else 0.01
+    dv = max(dv, 1e-4)
+    imd = axd.imshow(D, cmap="RdBu_r", norm=TwoSlopeNorm(vmin=-dv, vcenter=0.0, vmax=dv), interpolation="nearest")
+    axd.set_xticks(ticks)
+    axd.set_yticks(ticks)
+    axd.set_xticklabels(labs, fontsize=7.5, rotation=90)
+    axd.set_yticklabels(labs, fontsize=7.5)
+    axd.set_title("Video − audio  cosine(Bi, Bj)", fontsize=12, fontweight="bold")
+    axd.set_xlabel("batch j")
+    axd.set_ylabel("batch i")
+    divd = make_axes_locatable(axd)
+    caxd = divd.append_axes("right", size="4.2%", pad=0.06)
+    fig.colorbar(imd, cax=caxd).ax.tick_params(labelsize=7.5)
+
+    axl = fig.add_subplot(gs[1, 1])
+    h = np.arange(k)
+    for name in GROUP_NAMES:
+        axl.plot(
+            h,
+            pay["lag_cosine"][name],
+            color=COLORS[name],
+            lw=2.2,
+            marker="o",
+            ms=4.5,
+            label=name.capitalize(),
+        )
+    axl.set_xlabel("lag  |i − j|")
+    axl.set_ylabel("mean cosine")
+    axl.set_title("Lag profile  (diagonal bands)", fontsize=12, fontweight="bold")
+    axl.legend(frameon=False, fontsize=8.5)
+    axl.grid(True, color=GRID)
+    axl.set_xticks(h)
+
+    axb = fig.add_subplot(gs[1, 2])
+    names = list(GROUP_NAMES)
+    vals = [pay["lag0_minus_lagmax"][g] for g in names]
+    axb.barh(np.arange(3)[::-1], vals, color=[COLORS[g] for g in names], height=0.62)
+    axb.set_yticks(np.arange(3)[::-1])
+    axb.set_yticklabels([g.capitalize() for g in names], fontsize=9.5)
+    axb.set_xlabel("cosine decay  (lag 0 − lag %d)" % (k - 1))
+    axb.set_title("Temporal decay by modality", fontsize=12, fontweight="bold")
+    axb.axvline(0, color=MUTED, lw=0.8)
+    axb.grid(True, axis="x", color=GRID)
+    span = max(abs(v) for v in vals) if vals else 0.01
+    span = max(span, 1e-4)
+    for i, v in enumerate(vals):
+        axb.text(v + 0.04 * span * (1 if v >= 0 else -1), 2 - i, "%.4f" % v, va="center", fontsize=8.5, color=INK)
+
+    fig.text(
+        0.055,
+        0.018,
+        "Text is a post-hoc clip-level caption (not time-aligned ASR): cosine(Bi, Bj) should be flat in lag.  "
+        "Video/audio carry within-clip motion and soundtrack, so nearby batches stay similar and far batches decay.  "
+        "n/batch = %s."
+        % ", ".join("%d:%d" % (k0, n) for k0, n in sorted(pay["n_per_batch"].items())),
+        fontsize=8.0,
+        color=MUTED,
+    )
+    return _save(fig, path)
+
+
 def write_all_plots(result, out_dir: Path, bundle=None):
     out_dir = Path(out_dir)
     paths = {
@@ -474,7 +623,12 @@ def write_all_plots(result, out_dir: Path, bundle=None):
         "scatter": plot_method_scatter(result, out_dir / "msrvtt_rf_mmd_porisk.png"),
     }
     if bundle is not None:
-        from msrvtt_multimodal_attribution import REGION_BOARD_SKIP, region_board_payload, write_json
+        from msrvtt_multimodal_attribution import (
+            REGION_BOARD_SKIP,
+            batch_pair_payload,
+            region_board_payload,
+            write_json,
+        )
 
         pay = region_board_payload(bundle)
         write_json(
@@ -485,4 +639,12 @@ def write_all_plots(result, out_dir: Path, bundle=None):
             bundle, result, out_dir / "msrvtt_batch_region_heatmap_board.png", pay=pay
         )
         paths["board_stats"] = str(out_dir / "msrvtt_region_board_stats.json")
+        pair = batch_pair_payload(bundle, n_batches=10)
+        write_json(
+            out_dir / "msrvtt_batch_pair_cosine_stats.json",
+            {k: v for k, v in pair.items() if k != "batch"},
+        )
+        paths["batch_pair"] = plot_batch_pair_board(
+            bundle, result, out_dir / "msrvtt_batch_ij_cosine_board.png", pay=pair
+        )
     return {k: str(v) for k, v in paths.items()}
