@@ -20,7 +20,7 @@ from typing import Dict, List, Sequence, Tuple
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import StratifiedKFold, train_test_split
+from sklearn.model_selection import StratifiedKFold
 
 EPS = 1e-12
 CLIP_E = 0.01
@@ -44,21 +44,23 @@ def logit(p: np.ndarray, clip: float = CLIP_E) -> np.ndarray:
     return np.log(p / (1.0 - p))
 
 
-def _rf_clf(p: int, n: int, seed: int, n_estimators: int = 80):
+def _rf_clf(p: int, n: int, seed: int, n_estimators: int = 100):
+    # Fixed capacity: sqrt(n) leaves underfit at large n and jitter small-n AUCs.
     return RandomForestClassifier(
         n_estimators=n_estimators,
-        max_depth=max(3, int(round(np.sqrt(max(p, 2))))),
-        min_samples_leaf=max(1, int(round(np.sqrt(max(n, 4)) // 2))),
+        max_depth=8,
+        min_samples_leaf=5,
+        max_features="sqrt",
         n_jobs=-1,
         random_state=seed,
     )
 
 
-def _rf_reg(seed: int, n_estimators: int = 60):
+def _rf_reg(seed: int, n_estimators: int = 80):
     return RandomForestRegressor(
         n_estimators=n_estimators,
-        max_depth=10,
-        min_samples_leaf=3,
+        max_depth=8,
+        min_samples_leaf=5,
         n_jobs=-1,
         random_state=seed,
     )
@@ -128,31 +130,53 @@ def crossfit_propensity(
     return np.clip(e, clip, 1.0 - clip)
 
 
+def fit_vimp(X: np.ndarray, W: np.ndarray, *, seed: int = 0, n_estimators: int = 100) -> np.ndarray:
+    X = np.asarray(X, dtype=float)
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    W = _as_1d(W).astype(int)
+    clf = _rf_clf(X.shape[1], len(W), seed, n_estimators=n_estimators)
+    clf.fit(X, W)
+    return clf.feature_importances_.astype(float)
+
+
+def cv_domain_auc(
+    X: np.ndarray,
+    W: np.ndarray,
+    *,
+    seed: int = 0,
+    n_estimators: int = 100,
+    n_splits: int = 5,
+) -> Tuple[float, float, np.ndarray]:
+    """K-fold domain AUC (mean, sd) plus mean OOF-fold VIMP."""
+    X = np.asarray(X, dtype=float)
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    W = _as_1d(W).astype(int)
+    n, p = X.shape
+    n_splits = int(min(n_splits, int((W == 0).sum()), int((W == 1).sum())))
+    n_splits = max(n_splits, 2)
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=seed)
+    aucs, vimps = [], []
+    for k, (tr, te) in enumerate(cv.split(X, W)):
+        clf = _rf_clf(p, len(tr), seed + k, n_estimators=n_estimators)
+        clf.fit(X[tr], W[tr])
+        aucs.append(float(roc_auc_score(W[te], clf.predict_proba(X[te])[:, 1])))
+        vimps.append(clf.feature_importances_.astype(float))
+    return float(np.mean(aucs)), float(np.std(aucs, ddof=1) if len(aucs) > 1 else 0.0), np.mean(np.stack(vimps), axis=0)
+
+
 def holdout_domain_auc(
     X: np.ndarray,
     W: np.ndarray,
     *,
     seed: int = 0,
-    n_estimators: int = 120,
+    n_estimators: int = 100,
     test_size: float = 0.25,
 ) -> Tuple[float, np.ndarray]:
-    X = np.asarray(X, dtype=float)
-    if X.ndim == 1:
-        X = X.reshape(-1, 1)
-    W = _as_1d(W).astype(int)
-    p = X.shape[1]
-    clf_full = _rf_clf(p, len(W), seed, n_estimators=n_estimators)
-    clf_full.fit(X, W)
-    vimp = clf_full.feature_importances_.astype(float)
-    try:
-        Xtr, Xte, Wtr, Wte = train_test_split(
-            X, W, test_size=test_size, random_state=seed, stratify=W
-        )
-    except ValueError:
-        return float("nan"), vimp
-    clf = _rf_clf(p, len(Wtr), seed + 1, n_estimators=n_estimators)
-    clf.fit(Xtr, Wtr)
-    auc = float(roc_auc_score(Wte, clf.predict_proba(Xte)[:, 1]))
+    """Back-compat wrapper: CV AUC mean + full-data VIMP."""
+    auc, _sd, _ = cv_domain_auc(X, W, seed=seed, n_estimators=n_estimators)
+    vimp = fit_vimp(X, W, seed=seed, n_estimators=n_estimators)
     return auc, vimp
 
 
@@ -280,10 +304,15 @@ def decompose_modality_gap(
     *,
     seed: int = 0,
     n_splits: int = 3,
-    n_estimators: int = 80,
+    n_estimators: int = 100,
     mmd_max_n: int = 120,
+    light: bool = False,
 ) -> GapDecomposition:
-    """Estimate each modality's relative contribution to P(X) shift (W)."""
+    """Estimate each modality's relative contribution to P(X) shift (W).
+
+    `light=True` skips LOMO (used for multi-seed efficiency / GT repeats).
+    Block AUCs come from OOF propensities, not a second holdout RF.
+    """
     X = np.asarray(X, dtype=float)
     W = _as_1d(W).astype(int)
     blocks = spec.split(X)
@@ -291,10 +320,11 @@ def decompose_modality_gap(
     M = len(names)
     n = len(W)
 
-    full_auc, full_vimp = holdout_domain_auc(X, W, seed=seed, n_estimators=n_estimators)
+    full_vimp = fit_vimp(X, W, seed=seed, n_estimators=n_estimators)
     vimp_share = vimp_mass_share(full_vimp, spec)
 
     e_full = crossfit_propensity(X, W, n_splits=n_splits, seed=seed, n_estimators=n_estimators)
+    full_auc = float(roc_auc_score(W, e_full))
     e_block = np.zeros((n, M), dtype=float)
     block_auc: Dict[str, float] = {}
     block_mmd: Dict[str, float] = {}
@@ -307,29 +337,34 @@ def decompose_modality_gap(
         e_block[:, j] = crossfit_propensity(
             Xj, W, n_splits=n_splits, seed=seed + 10 * (j + 1), n_estimators=n_estimators
         )
-        auc_j, _ = holdout_domain_auc(Xj, W, seed=seed + 20 * (j + 1), n_estimators=n_estimators)
-        block_auc[name] = auc_j
+        block_auc[name] = float(roc_auc_score(W, e_block[:, j]))
         block_mmd[name] = rbf_mmd2(X0[:, spec.slices[j]], X1[:, spec.slices[j]], max_n=mmd_max_n, seed=seed + j)
 
-        # LOMO design matrix
+        if light:
+            lomo_auc_drop[name] = 0.0
+            continue
         keep = [i for i in range(X.shape[1]) if i not in range(spec.slices[j].start, spec.slices[j].stop)]
         X_lomo = X[:, keep] if keep else np.ones((n, 1))
-        auc_lomo, _ = holdout_domain_auc(X_lomo, W, seed=seed + 30 * (j + 1), n_estimators=n_estimators)
-        lomo_auc_drop[name] = max(float(full_auc - auc_lomo), 0.0)
         e_lomo = crossfit_propensity(
             X_lomo, W, n_splits=n_splits, seed=seed + 40 * (j + 1), n_estimators=n_estimators
         )
+        auc_lomo = float(roc_auc_score(W, e_lomo))
+        lomo_auc_drop[name] = max(float(full_auc - auc_lomo), 0.0)
         instance_gap[:, j] = e_full - e_lomo
 
     pi_auc = relu_normalize(np.array([max(block_auc[n] - 0.5, 0.0) for n in names]))
     pi_mmd = relu_normalize(np.array([block_mmd[n] for n in names]))
-    pi_lomo = relu_normalize(np.array([lomo_auc_drop[n] for n in names]))
     pi_vimp = relu_normalize(np.array([vimp_share[n] for n in names]))
     abs_gap = np.abs(instance_gap)
     instance_share = abs_gap / (abs_gap.sum(axis=1, keepdims=True) + EPS)
-    pi_instance_mean = relu_normalize(abs_gap.mean(axis=0))
-    # Consensus: average of the four global decompositions
-    pi_consensus = relu_normalize(pi_auc + pi_mmd + pi_lomo + pi_vimp + pi_instance_mean)
+    if light:
+        pi_lomo = np.full(M, 1.0 / M)
+        pi_instance_mean = np.full(M, 1.0 / M)
+        pi_consensus = relu_normalize(pi_auc + pi_mmd + pi_vimp)
+    else:
+        pi_lomo = relu_normalize(np.array([lomo_auc_drop[n] for n in names]))
+        pi_instance_mean = relu_normalize(abs_gap.mean(axis=0))
+        pi_consensus = relu_normalize(pi_auc + pi_mmd + pi_lomo + pi_vimp + pi_instance_mean)
 
     z_logit_e = logit(e_block)
     H = np.zeros((n, M), dtype=float)
@@ -360,12 +395,13 @@ def decompose_modality_gap(
 
 
 def clever_z(gap: GapDecomposition) -> np.ndarray:
-    """X-only clever features: instance relative contribution + logit ê_m."""
-    return np.hstack([gap.instance_share, gap.z_logit_e])
+    """Contribution-weighted logit propensity: Z_m = π_m · logit ê_m(X_m)."""
+    pi = np.asarray(gap.pi_consensus, dtype=float).reshape(1, -1)
+    return gap.z_logit_e * pi
 
 
 def clever_design(X: np.ndarray, gap: GapDecomposition) -> np.ndarray:
-    """Raw X stacked with clever-Z (for CATE / optional stacking)."""
+    """Raw X stacked with clever-Z."""
     return np.hstack([X, clever_z(gap)])
 
 
@@ -378,44 +414,49 @@ def compare_raw_vs_clever(
     *,
     seed: int = 0,
     gt: str | None = None,
+    with_po: bool = False,
+    n_estimators: int = 100,
+    n_splits: int = 5,
 ) -> dict:
     W = _as_1d(W).astype(int)
     Z = clever_z(gap)
     XZ = clever_design(X, gap)
-    auc_raw, vimp_raw = holdout_domain_auc(X, W, seed=seed)
-    auc_z, vimp_z = holdout_domain_auc(Z, W, seed=seed + 1)
-    auc_xz, _ = holdout_domain_auc(XZ, W, seed=seed + 2)
+    auc_raw, sd_raw, _ = cv_domain_auc(X, W, seed=seed, n_estimators=n_estimators, n_splits=n_splits)
+    auc_z, sd_z, vimp_z = cv_domain_auc(Z, W, seed=seed + 1, n_estimators=n_estimators, n_splits=n_splits)
+    auc_xz, sd_xz, _ = cv_domain_auc(XZ, W, seed=seed + 2, n_estimators=n_estimators, n_splits=n_splits)
+    vimp_raw = fit_vimp(X, W, seed=seed, n_estimators=n_estimators)
     out = {
         "domain_auc_raw": round(float(auc_raw), 4),
+        "domain_auc_raw_sd": round(float(sd_raw), 4),
         "domain_auc_clever": round(float(auc_z), 4),
+        "domain_auc_clever_sd": round(float(sd_z), 4),
         "domain_auc_stack_xz": round(float(auc_xz), 4),
+        "domain_auc_stack_sd": round(float(sd_xz), 4),
         "domain_auc_delta": round(float(auc_z - auc_raw), 4),
+        "domain_auc_delta_stack": round(float(auc_xz - auc_raw), 4),
         "vimp_share_raw": {k: round(v, 4) for k, v in vimp_mass_share(vimp_raw, spec).items()},
         "p_raw": int(X.shape[1]),
         "p_clever": int(Z.shape[1]),
     }
-    M = spec.n_mod
-    share_block = vimp_z[:M]
-    logit_block = vimp_z[M:]
-    out["z_share_vimp"] = {n: round(float(share_block[i] / (share_block.sum() + EPS)), 4) for i, n in enumerate(spec.names)}
-    out["z_logit_vimp"] = {n: round(float(logit_block[i] / (logit_block.sum() + EPS)), 4) for i, n in enumerate(spec.names)}
+    tot_z = float(np.sum(np.maximum(vimp_z, 0.0))) + EPS
+    out["z_vimp"] = {n: round(float(max(vimp_z[i], 0.0) / tot_z), 4) for i, n in enumerate(spec.names)}
+    out["z_logit_vimp"] = out["z_vimp"]
+    out["z_share_vimp"] = out["z_vimp"]
 
-    if Y is not None:
+    if with_po and Y is not None:
         Y = _as_1d(Y)
-        _, po_raw, _ = po_risk_fit(X, Y, W, seed=seed)
-        _, po_z, _ = po_risk_fit(Z, Y, W, seed=seed + 2)
-        _, po_h, _ = po_risk_fit(X, Y, W, seed=seed + 3, clever_H=gap.H_clever)
-        _, po_zh, _ = po_risk_fit(XZ, Y, W, seed=seed + 4, clever_H=gap.H_clever)
+        _, po_raw, _ = po_risk_fit(X, Y, W, seed=seed, n_estimators=n_estimators)
+        _, po_z, _ = po_risk_fit(Z, Y, W, seed=seed + 2, n_estimators=n_estimators)
+        _, po_h, _ = po_risk_fit(X, Y, W, seed=seed + 3, clever_H=gap.H_clever, n_estimators=n_estimators)
         out["po_risk_raw"] = round(float(po_raw), 6)
         out["po_risk_clever_Z"] = round(float(po_z), 6)
         out["po_risk_tmle_H"] = round(float(po_h), 6)
-        out["po_risk_stack_tmle_H"] = round(float(po_zh), 6)
 
     if gt is not None and gt in spec.names:
         out["selection_auc_raw"] = round(selection_auc_block(vimp_raw, spec, gt), 4)
         out["mass_on_gt_raw"] = round(out["vimp_share_raw"][gt], 4)
-        out["z_share_on_gt"] = out["z_share_vimp"][gt]
-        out["z_logit_on_gt"] = out["z_logit_vimp"][gt]
+        out["z_share_on_gt"] = out["z_vimp"][gt]
+        out["z_logit_on_gt"] = out["z_vimp"][gt]
         out["pi_consensus_on_gt"] = round(float(gap.pi_consensus[spec.names.index(gt)]), 4)
     return out
 
@@ -425,44 +466,54 @@ def sample_efficiency_curve(
     W: np.ndarray,
     spec: ModalitySpec,
     *,
-    ns: Sequence[int] = (200, 400, 800, 1600),
+    ns: Sequence[int] = (200, 400, 800, 1200),
     seed: int = 0,
-    n_estimators: int = 60,
+    n_estimators: int = 80,
+    n_repeats: int = 4,
 ) -> List[dict]:
-    """Subsample n and compare holdout domain AUC of raw X vs compact clever-Z."""
+    """Subsample n over several seeds; light gap (no LOMO) + 5-fold CV AUC."""
     X = np.asarray(X, dtype=float)
     W = _as_1d(W).astype(int)
-    rng = np.random.default_rng(seed)
     i0 = np.where(W == 0)[0]
     i1 = np.where(W == 1)[0]
     rows = []
     for n in ns:
         n0 = min(len(i0), n // 2)
         n1 = min(len(i1), n // 2)
-        if n0 < 40 or n1 < 40:
+        if n0 < 50 or n1 < 50:
             continue
-        sel = np.concatenate([
-            rng.choice(i0, n0, replace=False),
-            rng.choice(i1, n1, replace=False),
-        ])
-        Xs, Ws = X[sel], W[sel]
-        gap = decompose_modality_gap(
-            Xs, Ws, spec, seed=seed + n, n_splits=3, n_estimators=n_estimators
-        )
-        Z = clever_z(gap)
-        XZ = clever_design(Xs, gap)
-        auc_raw, _ = holdout_domain_auc(Xs, Ws, seed=seed + n, n_estimators=n_estimators)
-        auc_z, _ = holdout_domain_auc(Z, Ws, seed=seed + n + 1, n_estimators=n_estimators)
-        auc_xz, _ = holdout_domain_auc(XZ, Ws, seed=seed + n + 2, n_estimators=n_estimators)
+        raws, zs, xzs = [], [], []
+        for r in range(n_repeats):
+            rng = np.random.default_rng(seed + 17 * n + r)
+            sel = np.concatenate([
+                rng.choice(i0, n0, replace=False),
+                rng.choice(i1, n1, replace=False),
+            ])
+            Xs, Ws = X[sel], W[sel]
+            gap = decompose_modality_gap(
+                Xs, Ws, spec, seed=seed + n + r, n_splits=3,
+                n_estimators=n_estimators, light=True,
+            )
+            row = compare_raw_vs_clever(
+                Xs, Ws, None, spec, gap, seed=seed + n + r,
+                with_po=False, n_estimators=n_estimators, n_splits=4,
+            )
+            raws.append(row["domain_auc_raw"])
+            zs.append(row["domain_auc_clever"])
+            xzs.append(row["domain_auc_stack_xz"])
         rows.append({
             "n": int(n0 + n1),
-            "auc_raw": round(float(auc_raw), 4),
-            "auc_clever": round(float(auc_z), 4),
-            "auc_stack": round(float(auc_xz), 4),
-            "delta": round(float(auc_z - auc_raw), 4),
-            "delta_stack": round(float(auc_xz - auc_raw), 4),
-            "p_raw": int(Xs.shape[1]),
-            "p_clever": int(Z.shape[1]),
+            "n_repeats": n_repeats,
+            "auc_raw": round(float(np.mean(raws)), 4),
+            "auc_raw_sd": round(float(np.std(raws, ddof=1)), 4),
+            "auc_clever": round(float(np.mean(zs)), 4),
+            "auc_clever_sd": round(float(np.std(zs, ddof=1)), 4),
+            "auc_stack": round(float(np.mean(xzs)), 4),
+            "auc_stack_sd": round(float(np.std(xzs, ddof=1)), 4),
+            "delta": round(float(np.mean(zs) - np.mean(raws)), 4),
+            "delta_stack": round(float(np.mean(xzs) - np.mean(raws)), 4),
+            "p_raw": int(X.shape[1]),
+            "p_clever": spec.n_mod,
         })
     return rows
 

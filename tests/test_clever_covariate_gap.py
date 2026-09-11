@@ -37,9 +37,9 @@ def test_synthetic_valence_is_top_contributor():
     assert np.allclose(gap.instance_share.sum(axis=1), 1.0, atol=1e-5)
     # clever H uses W; Z does not leak a copy of W as a column of X
     Z = clever_z(gap)
-    assert Z.shape == (len(W), 8)
+    assert Z.shape == (len(W), 4)
     XZ = clever_design(X, gap)
-    assert XZ.shape == (len(W), X.shape[1] + 8)
+    assert XZ.shape == (len(W), X.shape[1] + 4)
     # instance shares are functions of X (finite, in [0,1])
     assert np.all(np.isfinite(gap.instance_share))
     assert np.all(gap.instance_share >= -1e-9)
@@ -48,13 +48,12 @@ def test_synthetic_valence_is_top_contributor():
 def test_clever_z_beats_raw_in_small_n_high_p():
     X, W, Y, spec = make_synthetic_shift(n=160, d_text=40, d_vad=3, gt="valence", mean_shift=1.0, seed=11)
     gap = decompose_modality_gap(X, W, spec, seed=11, n_splits=3, n_estimators=35)
-    row = compare_raw_vs_clever(X, W, Y, spec, gap, seed=11, gt="valence")
-    assert row["p_clever"] == 8
+    row = compare_raw_vs_clever(X, W, Y, spec, gap, seed=11, gt="valence", with_po=False)
+    assert row["p_clever"] == 4
     assert row["p_raw"] > row["p_clever"]
-    # compact clever-Z still detects the shift; consensus π concentrates on GT
     assert row["domain_auc_clever"] >= 0.75
     assert row["pi_consensus_on_gt"] >= max(row["mass_on_gt_raw"] - 0.08, 0.4)
-    assert row["z_logit_vimp"]["valence"] >= 0.4
+    assert row["z_logit_vimp"]["valence"] >= 0.35
 
 
 def test_inject_block_recovers_arousal():

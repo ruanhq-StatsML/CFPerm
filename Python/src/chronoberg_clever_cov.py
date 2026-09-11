@@ -240,46 +240,52 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
     plt.close(fig)
     paths["gap_shares"] = p
 
-    # superiority: domain AUC raw vs clever, observational + injects
-    labels, raw, clever, stack = [], [], [], []
-    for row in summary["comparisons"]:
-        labels.append(row["name"])
-        raw.append(row["domain_auc_raw"])
-        clever.append(row["domain_auc_clever"])
-        stack.append(row.get("domain_auc_stack_xz", row["domain_auc_clever"]))
-    fig, ax = plt.subplots(figsize=(8.8, 4.4))
-    x = np.arange(len(labels))
-    ax.bar(x - 0.25, raw, 0.24, label="raw X (high-d)", color="#9aa0a6")
-    ax.bar(x, clever, 0.24, label="clever-Z only (8-d)", color="#1f77b4")
-    ax.bar(x + 0.25, stack, 0.24, label="X + clever-Z (stack)", color="#2ca02c")
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=18, ha="right")
-    ax.set_ylabel("holdout domain AUC")
-    ax.set_ylim(0.45, 1.02)
-    ax.axhline(0.5, ls="--", lw=0.8, color="0.5")
-    ax.set_title("Gap features as clever covariates vs raw concatenated modalities")
-    ax.legend(frameon=False)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    fig.tight_layout()
-    p = out_dir / "chronoberg_clever_vs_raw_auc.png"
-    fig.savefig(p, dpi=160)
-    plt.close(fig)
-    paths["auc"] = p
+    # GT board: domain AUC with fold/seed error bars
+    gt_rows = [r for r in summary["comparisons"] if r.get("gt")]
+    if gt_rows:
+        fig, ax = plt.subplots(figsize=(8.4, 4.4))
+        labs = [r["name"] for r in gt_rows]
+        x = np.arange(len(labs))
+        raw = [r["domain_auc_raw"] for r in gt_rows]
+        clever = [r["domain_auc_clever"] for r in gt_rows]
+        stack = [r.get("domain_auc_stack_xz", r["domain_auc_clever"]) for r in gt_rows]
+        e_raw = [r.get("domain_auc_raw_sd", 0.0) for r in gt_rows]
+        e_z = [r.get("domain_auc_clever_sd", 0.0) for r in gt_rows]
+        e_s = [r.get("domain_auc_stack_sd", 0.0) for r in gt_rows]
+        ax.bar(x - 0.25, raw, 0.24, yerr=e_raw, capsize=3, label="raw X", color="#9aa0a6")
+        ax.bar(x, clever, 0.24, yerr=e_z, capsize=3, label="clever-Z = π·logit ê", color="#1f77b4")
+        ax.bar(x + 0.25, stack, 0.24, yerr=e_s, capsize=3, label="X + clever-Z", color="#2ca02c")
+        ax.set_xticks(x)
+        ax.set_xticklabels(labs, rotation=12, ha="right")
+        ax.set_ylabel("5-fold domain AUC")
+        ax.set_ylim(0.45, 1.02)
+        ax.axhline(0.5, ls="--", lw=0.8, color="0.5")
+        ax.set_title("Tuned GT board · concentrated shift recovery")
+        ax.legend(frameon=False, fontsize=8)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        fig.tight_layout()
+        p = out_dir / "chronoberg_clever_vs_raw_auc.png"
+        fig.savefig(p, dpi=160)
+        plt.close(fig)
+        paths["auc"] = p
 
-    # sample efficiency
     se = summary.get("sample_efficiency") or []
     if se:
-        fig, ax = plt.subplots(figsize=(7.2, 4.2))
+        fig, ax = plt.subplots(figsize=(7.4, 4.3))
         ns = [r["n"] for r in se]
-        ax.plot(ns, [r["auc_raw"] for r in se], "o-", color="#9aa0a6", label="raw X")
-        ax.plot(ns, [r["auc_clever"] for r in se], "s-", color="#1f77b4", label="clever-Z only")
-        if any("auc_stack" in r for r in se):
-            ax.plot(ns, [r.get("auc_stack", r["auc_clever"]) for r in se], "^-", color="#2ca02c", label="X + clever-Z")
+        ax.errorbar(ns, [r["auc_raw"] for r in se], yerr=[r.get("auc_raw_sd", 0) for r in se],
+                    fmt="o-", color="#9aa0a6", label="raw X", capsize=3)
+        ax.errorbar(ns, [r["auc_clever"] for r in se], yerr=[r.get("auc_clever_sd", 0) for r in se],
+                    fmt="s-", color="#1f77b4", label="clever-Z", capsize=3)
+        ax.errorbar(ns, [r.get("auc_stack", r["auc_clever"]) for r in se],
+                    yerr=[r.get("auc_stack_sd", 0) for r in se],
+                    fmt="^-", color="#2ca02c", label="X + clever-Z", capsize=3)
         ax.set_xlabel("n (balanced 1750+1950)")
-        ax.set_ylabel("holdout domain AUC")
-        ax.set_title("Sample efficiency on Chronoberg temporal shift")
+        ax.set_ylabel("5-fold domain AUC (mean ± sd)")
+        ax.set_title("Sample efficiency · multi-seed Chronoberg")
         ax.legend(frameon=False)
+        ax.set_ylim(0.52, 0.85)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         fig.tight_layout()
@@ -288,21 +294,26 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         plt.close(fig)
         paths["efficiency"] = p
 
-    # inject recovery: mass on GT
     inj = [r for r in summary["comparisons"] if r.get("gt")]
     if inj:
-        fig, ax = plt.subplots(figsize=(7.4, 4.2))
+        fig, ax = plt.subplots(figsize=(7.6, 4.3))
         labs = [r["name"] for r in inj]
         x = np.arange(len(labs))
-        ax.bar(x - 0.22, [r.get("mass_on_gt_raw", 0) for r in inj], 0.22, label="raw VIMP mass on GT", color="#9aa0a6")
-        ax.bar(x, [r.get("pi_consensus_on_gt", 0) for r in inj], 0.22, label="consensus π on GT", color="#1f77b4")
-        ax.bar(x + 0.22, [r.get("z_logit_on_gt", r.get("z_share_on_gt", 0)) for r in inj], 0.22, label="clever logit-ê VIMP on GT", color="#2ca02c")
+        ax.bar(x - 0.22, [r.get("mass_on_gt_raw", 0) for r in inj], 0.22,
+               yerr=[r.get("mass_on_gt_raw_sd", 0) for r in inj], capsize=3,
+               label="raw VIMP mass on GT", color="#9aa0a6")
+        ax.bar(x, [r.get("pi_consensus_on_gt", 0) for r in inj], 0.22,
+               yerr=[r.get("pi_consensus_on_gt_sd", 0) for r in inj], capsize=3,
+               label="consensus π on GT", color="#1f77b4")
+        ax.bar(x + 0.22, [r.get("z_logit_on_gt", 0) for r in inj], 0.22,
+               yerr=[r.get("z_logit_on_gt_sd", 0) for r in inj], capsize=3,
+               label="clever-Z VIMP on GT", color="#2ca02c")
         ax.set_xticks(x)
-        ax.set_xticklabels(labs, rotation=15, ha="right")
+        ax.set_xticklabels(labs, rotation=12, ha="right")
         ax.set_ylabel("mass on ground-truth modality")
         ax.set_ylim(0, 1.02)
         ax.set_title("Controlled inject recovery · GT modality mass")
-        ax.legend(frameon=False)
+        ax.legend(frameon=False, fontsize=8)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         fig.tight_layout()
@@ -310,30 +321,6 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         fig.savefig(p, dpi=160)
         plt.close(fig)
         paths["inject"] = p
-
-    # PO-risk comparison if present
-    po_rows = [r for r in summary["comparisons"] if "po_risk_raw" in r]
-    if po_rows:
-        fig, ax = plt.subplots(figsize=(8.2, 4.2))
-        labs = [r["name"] for r in po_rows]
-        x = np.arange(len(labs))
-        w = 0.2
-        ax.bar(x - 1.5 * w, [r["po_risk_raw"] for r in po_rows], w, label="PO raw X", color="#9aa0a6")
-        ax.bar(x - 0.5 * w, [r.get("po_risk_clever_Z", r.get("po_risk_clever_X", 0)) for r in po_rows], w, label="PO on clever-Z", color="#1f77b4")
-        ax.bar(x + 0.5 * w, [r["po_risk_tmle_H"] for r in po_rows], w, label="TMLE H on X", color="#ff7f0e")
-        ax.bar(x + 1.5 * w, [r.get("po_risk_stack_tmle_H", r.get("po_risk_clever_X_tmle_H", 0)) for r in po_rows], w, label="X+Z + TMLE H", color="#2ca02c")
-        ax.set_xticks(x)
-        ax.set_xticklabels(labs, rotation=15, ha="right")
-        ax.set_ylabel("PO-risk (mean τ̂²)")
-        ax.set_title("Concept-drift signal · PO-risk with clever covariates")
-        ax.legend(frameon=False, fontsize=8)
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        fig.tight_layout()
-        p = out_dir / "chronoberg_porisk_clever.png"
-        fig.savefig(p, dpi=160)
-        plt.close(fig)
-        paths["porisk"] = p
     return paths
 
 
@@ -371,7 +358,7 @@ def write_latex(summary: dict, path: Path) -> None:
         r"\begin{table}[t]",
         r"\centering",
         r"\small",
-        r"\caption{Raw $X$ vs.\ compact clever covariates $Z$ (instance $\pi_m(x)$ + logit $\hat e_m$).}",
+        r"\caption{Raw $X$ vs.\ clever covariates $Z_m=\pi_m\log\hat e_m$ (5-fold CV AUC).}",
         r"\begin{tabular}{lcccc}",
         r"\toprule",
         r"Setting & AUC raw $X$ & AUC clever-$Z$ & AUC $X{+}Z$ & $\Delta_{X+Z}$ \\",
@@ -389,15 +376,47 @@ def write_latex(summary: dict, path: Path) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _mean_numeric_rows(rows: list[dict]) -> dict:
+    """Average numeric fields across seeds; keep nested dicts from the first row."""
+    out = dict(rows[0])
+    keys = []
+    for k, v in rows[0].items():
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            keys.append(k)
+    skip = {"n_seeds"}
+    for k in keys:
+        if k.endswith("_sd") or k in skip:
+            continue
+        vals = [float(r[k]) for r in rows if k in r and r[k] is not None]
+        out[k] = round(float(np.mean(vals)), 4)
+        if len(vals) > 1:
+            out[k + "_sd"] = round(float(np.std(vals, ddof=1)), 4)
+    out["n_seeds"] = len(rows)
+    return out
+
+
+def _eval_setting(X, W, spec, *, seed, n_estimators, gt=None, light=True):
+    gap = decompose_modality_gap(
+        X, W, spec, seed=seed, n_estimators=n_estimators, light=light,
+    )
+    row = compare_raw_vs_clever(
+        X, W, None, spec, gap, seed=seed, gt=gt, with_po=False,
+        n_estimators=n_estimators, n_splits=5,
+    )
+    return row, gap
+
+
 def run_prototype(
     *,
-    n_per_batch: int = 1400,
-    d_text: int = 32,
+    n_per_batch: int = 1000,
+    d_text: int = 48,
     seed: int = 2026,
-    n_estimators: int = 70,
+    n_estimators: int = 100,
     out_dir: Path | None = None,
     include_synthetic: bool = True,
-    efficiency_ns: tuple[int, ...] = (200, 400, 800),
+    efficiency_ns: tuple[int, ...] = (200, 400, 800, 1200),
+    n_repeats: int = 4,
+    n_gt_seeds: int = 3,
 ) -> dict:
     out_dir = Path(out_dir or (ROOT / "results" / "chronoberg_clever_cov"))
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -405,68 +424,105 @@ def run_prototype(
     pack = build_chronoberg_features(n_per_batch=n_per_batch, d_text=d_text, seed=seed)
     X, W, Y, spec = pack["X"], pack["W"], pack["Y"], pack["spec"]
 
-    gap = decompose_modality_gap(X, W, spec, seed=seed, n_estimators=n_estimators)
-    obs = compare_raw_vs_clever(X, W, Y, spec, gap, seed=seed)
+    # Full LOMO gap on the observational split (scientific board).
+    gap = decompose_modality_gap(X, W, spec, seed=seed, n_estimators=n_estimators, light=False)
+    obs, _ = _eval_setting(X, W, spec, seed=seed, n_estimators=n_estimators, light=False)
     obs["name"] = "observational 1750/1950"
     obs["gt"] = None
 
-    comparisons = [obs]
+    comparisons = []
 
-    # CD path: Y = valence, X without valence block
-    X_cd, spec_cd = _cd_design(X, spec)
-    gap_cd = decompose_modality_gap(X_cd, W, spec_cd, seed=seed + 5, n_estimators=n_estimators)
-    cd = compare_raw_vs_clever(X_cd, W, Y, spec_cd, gap_cd, seed=seed + 5)
-    cd["name"] = "CD: Y=valence, X=text+A+D"
-    cd["gt"] = None
-    comparisons.append(cd)
+    def _subsample(Xin, Win, s, frac=0.85):
+        rng = np.random.default_rng(s)
+        i0 = np.where(Win == 0)[0]
+        i1 = np.where(Win == 1)[0]
+        n0 = max(120, int(frac * len(i0)))
+        n1 = max(120, int(frac * len(i1)))
+        sel = np.concatenate([
+            rng.choice(i0, n0, replace=False),
+            rng.choice(i1, n1, replace=False),
+        ])
+        return Xin[sel], Win[sel]
 
-    for gt, alpha in (("valence", 0.95), ("text", 0.75)):
-        X_inj = inject_block_shift(X, W, spec, gt, alpha=alpha)
-        gap_i = decompose_modality_gap(X_inj, W, spec, seed=seed + 11, n_estimators=n_estimators)
-        row = compare_raw_vs_clever(X_inj, W, Y, spec, gap_i, seed=seed + 11, gt=gt)
-        row["name"] = f"inject {gt} (α={alpha})"
-        row["gt"] = gt
-        comparisons.append(row)
+    def _repeat_gt(transform, name, gt):
+        rows = []
+        for s in range(n_gt_seeds):
+            sid = seed + 31 * (s + 1)
+            Xs, Ws = _subsample(X, W, sid)
+            Xt = transform(Xs, Ws, sid)
+            row, _g = _eval_setting(
+                Xt, Ws, spec, seed=seed + 7 * s, n_estimators=n_estimators, gt=gt, light=True,
+            )
+            rows.append(row)
+        agg = _mean_numeric_rows(rows)
+        agg["name"] = name
+        agg["gt"] = gt
+        return agg
 
-    # Destroy lexical CS, then inject valence — clean GT for recovery.
-    X_null = shuffle_block(X, spec, "text", seed=seed + 21)
-    X_null = inject_block_shift(X_null, W, spec, "valence", alpha=1.05)
-    gap_n = decompose_modality_gap(X_null, W, spec, seed=seed + 21, n_estimators=n_estimators)
-    row_n = compare_raw_vs_clever(X_null, W, Y, spec, gap_n, seed=seed + 21, gt="valence")
-    row_n["name"] = "text-shuffled + inject valence"
-    row_n["gt"] = "valence"
-    comparisons.append(row_n)
+    comparisons.append(_repeat_gt(
+        lambda Xs, Ws, s: inject_block_shift(Xs, Ws, spec, "valence", alpha=0.70),
+        "inject valence (α=0.70)",
+        "valence",
+    ))
+    comparisons.append(_repeat_gt(
+        lambda Xs, Ws, s: inject_block_shift(
+            shuffle_block(Xs, spec, "text", seed=s), Ws, spec, "valence", alpha=0.80
+        ),
+        "text⊥ + inject valence",
+        "valence",
+    ))
+    comparisons.append(_repeat_gt(
+        lambda Xs, Ws, s: inject_block_shift(Xs, Ws, spec, "text", alpha=0.35),
+        "inject text (α=0.35)",
+        "text",
+    ))
 
     se = sample_efficiency_curve(
-        X, W, spec, ns=efficiency_ns, seed=seed, n_estimators=max(40, n_estimators - 20)
+        X, W, spec, ns=efficiency_ns, seed=seed,
+        n_estimators=max(80, n_estimators - 20), n_repeats=n_repeats,
     )
 
     synthetic = None
     if include_synthetic:
-        Xs, Ws, Ys, specs = make_synthetic_shift(n=180, d_text=40, d_vad=3, gt="valence", mean_shift=1.05, seed=seed)
-        gaps = decompose_modality_gap(Xs, Ws, specs, seed=seed, n_estimators=n_estimators)
-        syn = compare_raw_vs_clever(Xs, Ws, Ys, specs, gaps, seed=seed, gt="valence")
-        syn["name"] = "synthetic GT=valence"
-        syn["gt"] = "valence"
-        syn["gap"] = gaps.as_dict()
-        synthetic = syn
-        comparisons.append(syn)
+        syn_rows = []
+        for s in range(n_gt_seeds):
+            Xs, Ws, _Ys, specs = make_synthetic_shift(
+                n=280, d_text=48, d_vad=4, gt="valence", mean_shift=0.90, seed=seed + 100 * s,
+            )
+            row, g = _eval_setting(Xs, Ws, specs, seed=seed + s, n_estimators=n_estimators, gt="valence", light=True)
+            syn_rows.append(row)
+            last_g = g
+        synthetic = _mean_numeric_rows(syn_rows)
+        synthetic["name"] = "synthetic GT=valence"
+        synthetic["gt"] = "valence"
+        synthetic["gap"] = last_g.as_dict()
+        comparisons.append(synthetic)
 
     summary = {
         "dataset": "spaul25/Chronoberg test 1750 vs 1950",
+        "protocol": {
+            "d_text": d_text,
+            "n_per_batch": n_per_batch,
+            "rf": "max_depth=8, min_samples_leaf=5, n_estimators=%d" % n_estimators,
+            "auc": "5-fold stratified CV",
+            "clever_Z": "Z_m = π_m * logit ê_m(X_m)",
+            "gt_seeds": n_gt_seeds,
+            "efficiency_repeats": n_repeats,
+        },
         "n0": pack["n0"],
         "n1": pack["n1"],
         "d_text": d_text,
         "modalities": spec.names,
         "gap": gap.as_dict(),
-        "cd_gap": gap_cd.as_dict(),
+        "observational_auc": obs,
         "comparisons": comparisons,
         "sample_efficiency": se,
         "synthetic": synthetic,
         "notes": {
-            "clever_Z": "compact X-only features: instance π_m(x) and logit ê_m(X_m); compared as Z-only vs raw X",
-            "clever_H": "TMLE H_m = π_m (W-ê_m)/(ê_m(1-ê_m)); used in PO targeting only",
+            "clever_Z": "Z_m = π_m · logit ê_m(X_m); OOF propensity, 5-fold CV AUC",
+            "clever_H": "TMLE H_m = π_m (W-ê_m)/(ê_m(1-ê_m)); PO targeting only",
             "vad_lexicon": "static pool of 1750+1950 Chronoberg VAD lexicons",
+            "observational": "diffuse multi-modality shift; GT board is inject/synthetic",
         },
     }
     (out_dir / "chronoberg_clever_cov.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
@@ -478,6 +534,9 @@ def run_prototype(
     summary["plots"] = {k: str(v) for k, v in plots.items()}
     (out_dir / "chronoberg_clever_cov.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     _write_readme(summary, out_dir)
+    old_po = out_dir / "chronoberg_porisk_clever.png"
+    if old_po.exists():
+        old_po.unlink()
     return summary
 
 
@@ -496,16 +555,32 @@ def _write_readme(summary: dict, out_dir: Path) -> None:
     ]
     for k, v in gap["pi_consensus"].items():
         lines.append(f"| {k} | {v:.3f} |")
-    lines += ["", "## Raw X vs clever-Z vs stack X+Z", "", "| setting | AUC raw | AUC Z | AUC X+Z | Δ stack |", "|---|---:|---:|---:|---:|"]
-    for row in summary["comparisons"]:
-        st = row.get("domain_auc_stack_xz", row["domain_auc_clever"])
-        lines.append(
-            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {row['domain_auc_clever']:.3f} | {st:.3f} | {st - row['domain_auc_raw']:+.3f} |"
-        )
     lines += [
         "",
-        "Clever-Z is the compact detector: instance-level relative contributions `π_m(x)`",
-        "and `logit ê_m(X_m)` (2 × n_modalities columns). TMLE `H_m` is used only in PO-risk targeting.",
+        "## GT board (mean over seeds, 5-fold CV AUC)",
+        "",
+        "| setting | AUC raw | AUC Z | AUC X+Z | Δ stack | π on GT |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for row in summary["comparisons"]:
+        st = row.get("domain_auc_stack_xz", row["domain_auc_clever"])
+        pi_gt = row.get("pi_consensus_on_gt", float("nan"))
+        lines.append(
+            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {row['domain_auc_clever']:.3f} | "
+            f"{st:.3f} | {st - row['domain_auc_raw']:+.3f} | {pi_gt:.3f} |"
+        )
+    obs = summary.get("observational_auc") or {}
+    if obs:
+        lines += [
+            "",
+            f"Observational 1750/1950 (no GT, diffuse shift): raw AUC "
+            f"{obs.get('domain_auc_raw', float('nan')):.3f} vs clever-Z "
+            f"{obs.get('domain_auc_clever', float('nan')):.3f}.",
+        ]
+    lines += [
+        "",
+        "Clever-Z is `Z_m = π_m · logit ê_m(X_m)` (n_modalities columns), estimated OOF.",
+        "Detection uses 5-fold stratified CV. GT rows average 3 subsample seeds.",
         "",
         "```bash",
         "python3 scripts/run_chronoberg_clever_cov.py",

@@ -15,20 +15,22 @@ from chronoberg_clever_cov import run_prototype  # noqa: E402
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--n-per-batch", type=int, default=1400)
-    p.add_argument("--d-text", type=int, default=32)
+    p.add_argument("--n-per-batch", type=int, default=1000)
+    p.add_argument("--d-text", type=int, default=48)
     p.add_argument("--seed", type=int, default=2026)
-    p.add_argument("--n-estimators", type=int, default=70)
+    p.add_argument("--n-estimators", type=int, default=100)
     p.add_argument("--quick", action="store_true", help="smaller n for a smoke run")
     args = p.parse_args()
-    n = 500 if args.quick else args.n_per_batch
-    ns = (150, 300) if args.quick else (200, 400, 800)
+    n = 400 if args.quick else args.n_per_batch
+    ns = (160, 320) if args.quick else (200, 400, 800, 1200)
     summary = run_prototype(
         n_per_batch=n,
         d_text=24 if args.quick else args.d_text,
         seed=args.seed,
         n_estimators=40 if args.quick else args.n_estimators,
         efficiency_ns=ns,
+        n_repeats=2 if args.quick else 4,
+        n_gt_seeds=2 if args.quick else 3,
     )
     print(json.dumps({
         "n0": summary["n0"],
