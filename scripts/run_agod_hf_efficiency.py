@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """AGOD efficiency smoke on two Hugging Face datasets.
 
+IMPORTANT
+---------
+This measures ONLINE ADAPTATION / DISTILLATION TRAINING cost, NOT inference
+latency. Serving the student still uses a full forward unless a separate
+sparse student is designed. AGOD gates which modality distill losses L_m are
+materialized + backpropped at online step t.
+
 Datasets
 --------
 1) PolyAI/minds14  — audio + text, locale shift (en-US → fr-FR / de-DE / es-ES)
@@ -9,9 +16,10 @@ Datasets
 
 Efficiency claim
 ----------------
-Static distillation always pays |M| modality heads.
-AGOD hard-gates modalities with α_m < θ, so mean active heads / |M| is the
-relative FLOPs proxy. Report drift-coverage per FLOP vs B1/B2.
+Static online distillation always pays |M| modality *update* heads.
+AGOD hard-gates modalities with α_m < θ, so mean active update heads / |M|
+is the relative *adaptation* FLOPs proxy. Report drift-coverage per
+adaptation-FLOP vs B1/B2.
 
   python3 scripts/run_agod_hf_efficiency.py
 """
@@ -471,9 +479,9 @@ def plot_dashboard(results: dict, path: Path):
         ax.bar(x + (i - 1) * w, vals, w, label=b)
     ax.set_xticks(x)
     ax.set_xticklabels([n.split("/")[-1] for n in names], rotation=15)
-    ax.set_ylabel("relative FLOPs (|active|/|M|)")
+    ax.set_ylabel("relative adaptation FLOPs (|active|/|M|)")
     ax.set_ylim(0, 1.15)
-    ax.set_title("Compute: gated modality heads")
+    ax.set_title("Online update cost: gated distill heads")
     ax.legend(frameon=False, fontsize=8)
     ax.axhline(1.0, color="#888", ls="--", lw=0.8)
 
@@ -484,8 +492,8 @@ def plot_dashboard(results: dict, path: Path):
         ax.bar(x + (i - 1) * w, vals, w, label=b)
     ax.set_xticks(x)
     ax.set_xticklabels([n.split("/")[-1] for n in names], rotation=15)
-    ax.set_ylabel("drift coverage / FLOP")
-    ax.set_title("Efficiency: shift signal per compute")
+    ax.set_ylabel("drift coverage / adaptation-FLOP")
+    ax.set_title("Efficiency: shift signal per update compute")
     ax.legend(frameon=False, fontsize=8)
 
     # 3) alpha trajectory on first dataset
@@ -523,14 +531,14 @@ def plot_dashboard(results: dict, path: Path):
         )
     ax.set_ylim(0, 1.15)
     ax.set_xlabel("online step t")
-    ax.set_ylabel("relative FLOPs")
-    ax.set_title("B3 gates idle modalities over time")
+    ax.set_ylabel("relative adaptation FLOPs")
+    ax.set_title("B3 skips idle modality *updates* over time")
     ax.legend(frameon=False, fontsize=7, ncol=2)
 
     fig.text(
         0.5,
         0.015,
-        "Philosophy: train on the shift — skip stable modality heads (α < θ) → FLOPs ↓, coverage/FLOP ↑",
+        "Not inference latency — online distill updates only: skip L_m when α_m < θ → adaptation FLOPs ↓",
         ha="center",
         fontsize=9,
         color="#333",

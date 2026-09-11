@@ -103,18 +103,28 @@ where:
 \section{Efficiency Evidence on Hugging Face Datasets}
 \label{sec:efficiency}
 
-We stress-test the compute claim on two public Hub datasets where \emph{only one} modality is expected to drift:
+\paragraph{What ``efficiency'' means (and does not).}
+AGOD's efficiency claim is about \emph{online adaptation / distillation training cost}, not deployed student \emph{inference latency}.
+At serving time the student still runs its full forward pass unless one separately designs a sparse/early-exit student (out of scope here).
+What we save is the per-step update budget: which modality-specific distillation heads \(\mathcal{L}_m\) are materialized and backpropagated when a new batch arrives.
 
 \begin{itemize}
-    \item \textbf{\texttt{PolyAI/minds14}} (audio+text). Reference locale \texttt{en-US}; online stream over \texttt{fr-FR}/\texttt{de-DE}/\ldots{} Cross-locale batches make the transcription channel the dominant MSG driver, so AGOD gates the quieter audio head.
-    \item \textbf{\texttt{ChristophSchuhmann/MS\_COCO\_2017\_URL\_TEXT}} (image+text). Reference = person-centric captions; online stream alternates vehicle/food cohorts with imaging-domain perturbation while text features are mostly held stationary, so AGOD gates text.
+    \item \textbf{Not claimed:} lower p50/p99 query latency of the frozen student at inference.
+    \item \textbf{Claimed:} fewer active modality update heads per online step $\Rightarrow$ lower adaptation FLOPs / wall-clock / energy, and less overwriting of stable modalities.
 \end{itemize}
 
-\paragraph{Protocol.} At each step compute MSG $\rightarrow$ Softmax $\alpha$, then \emph{hard-gate} modality heads with $\alpha_m < \theta$. Relative FLOPs $= |\mathcal{A}_t|/|\mathcal{M}|$. Efficiency $= \text{drift-coverage}/\text{rel-FLOPs}$.
+We stress-test this adaptation-cost claim on two public Hub datasets where \emph{only a subset} of modalities should receive update capacity:
 
-\paragraph{Finding.} On both datasets AGOD (B3) reduces active modality heads versus static B1, raising coverage-per-FLOP: locale shift routes to audio; COCO semantic shift routes to image. Covariate-only B2 can over-gate; MSG (AUC$\cdot$VIMP+$γ$PO) is the more stable control signal.
+\begin{itemize}
+    \item \textbf{\texttt{PolyAI/minds14}} (audio+text). Reference locale \texttt{en-US}; online stream over \texttt{fr-FR}/\texttt{de-DE}/\ldots{} Cross-locale batches make the transcription channel the dominant MSG driver, so AGOD gates the quieter audio \emph{update} head.
+    \item \textbf{\texttt{ChristophSchuhmann/MS\_COCO\_2017\_URL\_TEXT}} (image+text). Reference = person-centric captions; online stream alternates vehicle/food cohorts with imaging-domain perturbation while text features are mostly held stationary, so AGOD gates the text \emph{update} head.
+\end{itemize}
+
+\paragraph{Protocol.} At each online step: compute MSG $\rightarrow$ Softmax $\alpha$, then \emph{hard-gate} modality distillation heads with $\alpha_m < \theta$ (skip \(\mathcal{L}_m\) + its backward). Relative adaptation FLOPs $= |\mathcal{A}_t|/|\mathcal{M}|$. Efficiency $= \text{drift-coverage}/\text{rel-FLOPs}$.
+
+\paragraph{Finding.} On both datasets AGOD (B3) reduces active update heads versus static B1, raising coverage-per-adaptation-FLOP. Covariate-only B2 can over-gate; MSG (AUC$\cdot$VIMP+$γ$PO) is the more stable control signal for which head to pay for.
 
 \section{Conclusion}
-We proposed AGOD, an online distillation framework where modality-specific gap decomposition acts as a clever covariate. By routing distillation capacity toward drifting modalities, AGOD offers a principled alternative to static and covariate-only distillation. Hugging Face evidence on \texttt{minds14} and COCO URL+TEXT supports the efficiency claim: skip stable modality heads, spend compute on the shift.
+We proposed AGOD, an online distillation framework where modality-specific gap decomposition acts as a clever covariate. By routing \emph{update} capacity toward drifting modalities, AGOD offers a principled alternative to static and covariate-only distillation. Hugging Face evidence on \texttt{minds14} and COCO URL+TEXT supports the adaptation-efficiency claim: skip stable modality update heads, spend training compute on the shift --- without claiming inference-latency reduction.
 
 \end{document}
