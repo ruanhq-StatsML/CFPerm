@@ -24,6 +24,7 @@ from clever_covariate_gap import (  # noqa: E402
     inject_block_shift,
     make_synthetic_shift,
     opinion_pool_scores,
+    pi_column_replicates,
     relu_normalize,
     smoothed_pi,
 )
@@ -138,3 +139,11 @@ def test_block_aware_forest_follows_pi_not_column_scale():
     val = spec.slices[spec.names.index("valence")]
     text = spec.slices[spec.names.index("text")]
     assert float(scales[val].mean()) > float(scales[text].mean())
+    idx = pi_column_replicates(spec, pi_gt, X.shape[1], floor=0.0)
+    val_idx = set(range(val.start, val.stop))
+    n_val = int(sum(int(j) in val_idx for j in idx))
+    n_text = int(sum(spec.slices[0].start <= int(j) < spec.slices[0].stop for j in idx))
+    assert n_val > spec.slices[1].stop - spec.slices[1].start
+    assert n_val / max(n_text, 1) > (spec.slices[1].stop - spec.slices[1].start) / max(
+        spec.slices[0].stop - spec.slices[0].start, 1
+    )

@@ -459,6 +459,62 @@ def block_column_probs(
     return p
 
 
+def pi_column_replicates(
+    spec: ModalitySpec,
+    pi: np.ndarray,
+    n_features: int,
+    *,
+    floor: float = 0.05,
+) -> np.ndarray:
+    """Repeat column j  ≈  d · p_j  times so uniform max_features ≈ sampling p_j.
+
+    This is the RF-fair way to feed π into sklearn: same trees, same per-split
+    uniform draw, but the *multiset* of columns is π-weighted. Random subspace
+    (BAWF) is a different estimator class and should not be compared to RF AUC.
+    """
+    p = block_column_probs(spec, pi, n_features=n_features, floor=floor)
+    reps = np.maximum(1, np.rint(p * n_features).astype(int))
+    return np.repeat(np.arange(int(n_features)), reps)
+
+
+def expand_by_pi(
+    X: np.ndarray,
+    spec: ModalitySpec,
+    pi: np.ndarray,
+    *,
+    floor: float = 0.05,
+) -> Tuple[np.ndarray, np.ndarray]:
+    X = np.asarray(X, dtype=float)
+    idx = pi_column_replicates(spec, pi, X.shape[1], floor=floor)
+    return X[:, idx], idx
+
+
+def collapse_expanded_vimp(vimp: np.ndarray, idx: np.ndarray, spec: ModalitySpec) -> Dict[str, float]:
+    d = int(np.max(idx)) + 1
+    raw = np.zeros(d, dtype=float)
+    vimp = np.asarray(vimp, dtype=float)
+    for imp, j in zip(vimp, idx):
+        raw[int(j)] += float(imp)
+    return vimp_mass_share(raw, spec)
+
+
+def cv_pi_weighted_rf_auc(
+    X: np.ndarray,
+    W: np.ndarray,
+    spec: ModalitySpec,
+    pi: np.ndarray,
+    *,
+    seed: int = 0,
+    n_estimators: int = 100,
+    n_splits: int = 5,
+    floor: float = 0.05,
+) -> Tuple[float, float, Dict[str, float]]:
+    """K-fold AUC of sklearn RF on π-replicated columns (fair RF analogue)."""
+    Xw, idx = expand_by_pi(X, spec, pi, floor=floor)
+    auc, sd, vimp = cv_domain_auc(Xw, W, seed=seed, n_estimators=n_estimators, n_splits=n_splits)
+    return auc, sd, collapse_expanded_vimp(vimp, idx, spec)
+
+
 def opinion_pool_scores(gap: GapDecomposition, *, log_pool: bool = False) -> np.ndarray:
     """Linear (or log) opinion pool of block-wise OOF propensities, weights = π."""
     pi = np.asarray(gap.pi_consensus, dtype=float).reshape(1, -1)
@@ -723,6 +779,13 @@ def compare_raw_vs_clever(
         out["domain_auc_delta_adapt"] = round(float(auc_adapt - auc_raw), 4)
         out["domain_auc_delta_adapt_vs_unif"] = round(float(auc_adapt - auc_logit_unif), 4)
         out["bawf_vimp"] = {k: round(v, 4) for k, v in mass_bawf.items()}
+        auc_pirf, sd_pirf, mass_pirf = cv_pi_weighted_rf_auc(
+            X, W, spec, pi, seed=seed + 5, n_estimators=n_estimators, n_splits=n_splits,
+        )
+        out["domain_auc_pi_rf"] = round(float(auc_pirf), 4)
+        out["domain_auc_pi_rf_sd"] = round(float(sd_pirf), 4)
+        out["domain_auc_delta_pi_rf"] = round(float(auc_pirf - auc_raw), 4)
+        out["pi_rf_vimp"] = {k: round(v, 4) for k, v in mass_pirf.items()}
     tot_z = float(np.sum(np.maximum(vimp_z, 0.0))) + EPS
     out["z_vimp"] = {n: round(float(max(vimp_z[i], 0.0) / tot_z), 4) for i, n in enumerate(spec.names)}
     out["z_logit_vimp"] = out["z_vimp"]
@@ -745,6 +808,8 @@ def compare_raw_vs_clever(
         out["pi_consensus_on_gt"] = round(float(gap.pi_consensus[spec.names.index(gt)]), 4)
         if "bawf_vimp" in out:
             out["bawf_on_gt"] = round(float(out["bawf_vimp"][gt]), 4)
+        if "pi_rf_vimp" in out:
+            out["pi_rf_on_gt"] = round(float(out["pi_rf_vimp"][gt]), 4)
     return out
 
 
@@ -769,7 +834,7 @@ def sample_efficiency_curve(
         n1 = min(len(i1), n // 2)
         if n0 < 50 or n1 < 50:
             continue
-        raws, zs, xzs, pools, bawfs, adapts, subs = [], [], [], [], [], [], []
+        raws, zs, xzs, pools, bawfs, adapts, subs, pirfs = [], [], [], [], [], [], [], []
         for r in range(n_repeats):
             rng = np.random.default_rng(seed + 17 * n + r)
             sel = np.concatenate([
@@ -792,6 +857,7 @@ def sample_efficiency_curve(
             bawfs.append(row.get("domain_auc_bawf", row["domain_auc_raw"]))
             adapts.append(row.get("domain_auc_adapt", row["domain_auc_raw"]))
             subs.append(row.get("domain_auc_subspace", row["domain_auc_raw"]))
+            pirfs.append(row.get("domain_auc_pi_rf", row["domain_auc_raw"]))
         rows.append({
             "n": int(n0 + n1),
             "n_repeats": n_repeats,
@@ -814,6 +880,9 @@ def sample_efficiency_curve(
             "delta_pool": round(float(np.mean(pools) - np.mean(raws)), 4),
             "delta_bawf": round(float(np.mean(bawfs) - np.mean(raws)), 4),
             "delta_bawf_vs_sub": round(float(np.mean(bawfs) - np.mean(subs)), 4),
+            "auc_pi_rf": round(float(np.mean(pirfs)), 4),
+            "auc_pi_rf_sd": round(float(np.std(pirfs, ddof=1)), 4),
+            "delta_pi_rf": round(float(np.mean(pirfs) - np.mean(raws)), 4),
             "p_raw": int(X.shape[1]),
             "p_clever": spec.n_mod,
         })

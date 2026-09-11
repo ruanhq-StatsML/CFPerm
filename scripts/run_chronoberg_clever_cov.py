@@ -41,11 +41,15 @@ def main() -> None:
                 "name": r["name"],
                 "auc_raw": r["domain_auc_raw"],
                 "auc_pool": r.get("domain_auc_pool"),
+                "auc_pi_rf": r.get("domain_auc_pi_rf"),
                 "auc_subspace": r.get("domain_auc_subspace"),
                 "auc_bawf": r.get("domain_auc_bawf"),
                 "auc_adapt": r.get("domain_auc_adapt"),
                 "auc_logit_unif": r.get("domain_auc_logit_unif"),
                 "auc_stack": r.get("domain_auc_stack_xz"),
+                "delta_pi_rf": round(
+                    r.get("domain_auc_pi_rf", r["domain_auc_raw"]) - r["domain_auc_raw"], 4
+                ),
                 "delta_bawf_vs_sub": round(
                     r.get("domain_auc_bawf", r["domain_auc_raw"])
                     - r.get("domain_auc_subspace", r["domain_auc_raw"]),
@@ -54,6 +58,7 @@ def main() -> None:
                 "gt": r.get("gt"),
                 "mass_on_gt_raw": r.get("mass_on_gt_raw"),
                 "pi_on_gt": r.get("pi_consensus_on_gt"),
+                "pi_rf_on_gt": r.get("pi_rf_on_gt"),
                 "bawf_on_gt": r.get("bawf_on_gt"),
             }
             for r in summary["comparisons"]

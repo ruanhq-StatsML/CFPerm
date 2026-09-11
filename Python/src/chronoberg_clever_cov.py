@@ -250,18 +250,18 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         labs = [r["name"] for r in gt_rows]
         x = np.arange(len(labs))
         raw = [r["domain_auc_raw"] for r in gt_rows]
-        sub = [r.get("domain_auc_subspace", r["domain_auc_raw"]) for r in gt_rows]
-        bawf = [r.get("domain_auc_bawf", r["domain_auc_raw"]) for r in gt_rows]
+        pirf = [r.get("domain_auc_pi_rf", r["domain_auc_raw"]) for r in gt_rows]
         pool = [r.get("domain_auc_pool", r["domain_auc_clever"]) for r in gt_rows]
+        stack = [r.get("domain_auc_stack_xz", r["domain_auc_clever"]) for r in gt_rows]
         e_raw = [r.get("domain_auc_raw_sd", 0.0) for r in gt_rows]
-        e_u = [r.get("domain_auc_subspace_sd", 0.0) for r in gt_rows]
-        e_b = [r.get("domain_auc_bawf_sd", 0.0) for r in gt_rows]
+        e_pi = [r.get("domain_auc_pi_rf_sd", 0.0) for r in gt_rows]
         e_p = [0.0 for _ in gt_rows]
+        e_s = [r.get("domain_auc_stack_sd", 0.0) for r in gt_rows]
         w = 0.18
         ax.bar(x - 1.5 * w, raw, w, yerr=e_raw, capsize=3, label="raw RF on X", color="#9aa0a6")
-        ax.bar(x - 0.5 * w, sub, w, yerr=e_u, capsize=3, label="uniform subspace", color="#c5cae9")
-        ax.bar(x + 0.5 * w, bawf, w, yerr=e_b, capsize=3, label="π-guided BAWF", color="#ff7f0e")
-        ax.bar(x + 1.5 * w, pool, w, yerr=e_p, capsize=3, label="π-opinion pool", color="#1f77b4")
+        ax.bar(x - 0.5 * w, pirf, w, yerr=e_pi, capsize=3, label="π-weighted RF", color="#ff7f0e")
+        ax.bar(x + 0.5 * w, pool, w, yerr=e_p, capsize=3, label="π-opinion pool", color="#1f77b4")
+        ax.bar(x + 1.5 * w, stack, w, yerr=e_s, capsize=3, label="X + clever-Z", color="#2ca02c")
         ax.set_xticks(x)
         ax.set_xticklabels(labs, rotation=12, ha="right")
         ax.set_ylabel("5-fold domain AUC")
@@ -286,12 +286,12 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         ax.errorbar(ns, [r.get("auc_pool", r["auc_clever"]) for r in se],
                     yerr=[r.get("auc_pool_sd", 0) for r in se],
                     fmt="s-", color="#1f77b4", label="π-opinion pool", capsize=3)
-        ax.errorbar(ns, [r.get("auc_subspace", r["auc_raw"]) for r in se],
-                    yerr=[r.get("auc_subspace_sd", 0) for r in se],
-                    fmt="x--", color="#c5cae9", label="uniform subspace", capsize=3)
+        ax.errorbar(ns, [r.get("auc_pi_rf", r["auc_raw"]) for r in se],
+                    yerr=[r.get("auc_pi_rf_sd", 0) for r in se],
+                    fmt="D-", color="#ff7f0e", label="π-weighted RF", capsize=3)
         ax.errorbar(ns, [r.get("auc_bawf", r["auc_raw"]) for r in se],
                     yerr=[r.get("auc_bawf_sd", 0) for r in se],
-                    fmt="D-", color="#ff7f0e", label="π-guided BAWF", capsize=3)
+                    fmt="x--", color="#c5cae9", label="π-BAWF (subspace)", capsize=3)
         ax.errorbar(ns, [r.get("auc_stack", r["auc_clever"]) for r in se],
                     yerr=[r.get("auc_stack_sd", 0) for r in se],
                     fmt="^-", color="#2ca02c", label="X + clever-Z", capsize=3)
@@ -322,9 +322,9 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         ax.bar(x, [r.get("pi_consensus_on_gt", 0) for r in inj], 0.22,
                yerr=[r.get("pi_consensus_on_gt_sd", 0) for r in inj], capsize=3,
                label="consensus π on GT", color="#1f77b4")
-        ax.bar(x + 0.22, [r.get("bawf_on_gt", r.get("z_logit_on_gt", 0)) for r in inj], 0.22,
-               yerr=[r.get("bawf_on_gt_sd", 0) for r in inj], capsize=3,
-               label="BAWF impurity mass on GT", color="#ff7f0e")
+        ax.bar(x + 0.22, [r.get("pi_rf_on_gt", r.get("bawf_on_gt", 0)) for r in inj], 0.22,
+               yerr=[r.get("pi_rf_on_gt_sd", 0) for r in inj], capsize=3,
+               label="π-weighted RF VIMP on GT", color="#ff7f0e")
         ax.set_xticks(x)
         ax.set_xticklabels(labs, rotation=12, ha="right")
         ax.set_ylabel("mass on ground-truth modality")
@@ -375,22 +375,22 @@ def write_latex(summary: dict, path: Path) -> None:
         r"\begin{table}[t]",
         r"\centering",
         r"\small",
-        r"\caption{Human blocks $\to$ Stage-1 $\pi$ $\to$ Stage-2. BAWF vs.\ uniform subspace isolates the $\pi$ weights.}",
+        r"\caption{Human blocks $\to$ Stage-1 $\pi$ $\to$ Stage-2. $\pi$-weighted RF replicates columns so sklearn $\mathtt{max\_features}$ samples $p_j\propto\pi_m/|B_m|$.}",
         r"\begin{tabular}{lcccccc}",
         r"\toprule",
-        r"Setting & raw RF & unif.\ subsp.\ & $\pi$-BAWF & pool & $X{+}Z$ & $\Delta_{\pi\mathrm{-sub}}$ \\",
+        r"Setting & raw RF & $\pi$-RF & pool & $X{+}Z$ & $\Delta_{\pi\mathrm{-RF}}$ & $\pi$-RF on GT \\",
         r"\midrule",
     ]
     for row in summary["comparisons"]:
-        bawf = row.get("domain_auc_bawf", row["domain_auc_raw"])
-        sub = row.get("domain_auc_subspace", row["domain_auc_raw"])
-        db = bawf - sub
+        pirf = row.get("domain_auc_pi_rf", row["domain_auc_raw"])
+        db = pirf - row["domain_auc_raw"]
         lines.append(
             f"{_tex_escape(row['name'])} & {row['domain_auc_raw']:.3f} & "
-            f"{sub:.3f} & {bawf:.3f} & "
+            f"{pirf:.3f} & "
             f"{row.get('domain_auc_pool', float('nan')):.3f} & "
             f"{row.get('domain_auc_stack_xz', row['domain_auc_clever']):.3f} & "
-            f"{db:+.3f} \\\\"
+            f"{db:+.3f} & "
+            f"{row.get('pi_rf_on_gt', float('nan')):.3f} \\\\"
         )
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -522,7 +522,7 @@ def run_prototype(
             "rf": "max_depth=8, min_samples_leaf=5, n_estimators=%d" % n_estimators,
             "auc": "5-fold stratified CV",
             "clever_Z": "Z_m = π_m * logit ê_m(X_m)",
-            "stage2": "π-opinion pool; BAWF p_j ∝ π_m/|B_m|; adaptive group-logit",
+            "stage2": "π-weighted RF (column replicates); opinion pool; BAWF subspace ablation; adaptive group-logit",
             "gt_seeds": n_gt_seeds,
             "efficiency_repeats": n_repeats,
         },
@@ -586,36 +586,37 @@ def _write_readme(summary: dict, out_dir: Path) -> None:
         "(opinion pool of block RFs; block-aware forest with p_j ∝ π_m/|B_m|; "
         "X+Z stacking as the feature view of the same weights).",
         "",
-        "| setting | AUC raw | unif subsp. | π-BAWF | pool | X+Z | Δ π−unif | π on GT | BAWF on GT |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| setting | AUC raw | π-RF | pool | X+Z | Δ π-RF | π on GT | π-RF on GT |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in summary["comparisons"]:
         st = row.get("domain_auc_stack_xz", row["domain_auc_clever"])
         pi_gt = row.get("pi_consensus_on_gt", float("nan"))
-        bawf = row.get("domain_auc_bawf", float("nan"))
+        pirf = row.get("domain_auc_pi_rf", float("nan"))
         pool = row.get("domain_auc_pool", float("nan"))
-        sub = row.get("domain_auc_subspace", float("nan"))
-        bawf_gt = row.get("bawf_on_gt", float("nan"))
-        dsub = (bawf - sub) if np.isfinite(bawf) and np.isfinite(sub) else float("nan")
+        pirf_gt = row.get("pi_rf_on_gt", float("nan"))
+        dlt = (pirf - row["domain_auc_raw"]) if np.isfinite(pirf) else float("nan")
         lines.append(
-            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {sub:.3f} | "
-            f"{bawf:.3f} | {pool:.3f} | {st:.3f} | {dsub:+.3f} | {pi_gt:.3f} | {bawf_gt:.3f} |"
+            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {pirf:.3f} | "
+            f"{pool:.3f} | {st:.3f} | {dlt:+.3f} | {pi_gt:.3f} | {pirf_gt:.3f} |"
         )
     obs = summary.get("observational_auc") or {}
     if obs:
         lines += [
             "",
             f"Observational 1750/1950 (no GT, diffuse shift): raw AUC "
-            f"{obs.get('domain_auc_raw', float('nan')):.3f} vs π-pool "
-            f"{obs.get('domain_auc_pool', float('nan')):.3f} vs BAWF "
-            f"{obs.get('domain_auc_bawf', float('nan')):.3f}.",
+            f"{obs.get('domain_auc_raw', float('nan')):.3f} vs π-RF "
+            f"{obs.get('domain_auc_pi_rf', float('nan')):.3f} vs π-pool "
+            f"{obs.get('domain_auc_pool', float('nan')):.3f}.",
         ]
     lines += [
         "",
         "Clever-Z is `Z_m = π_m · logit ê_m(X_m)` (n_modalities columns), estimated OOF.",
-        "Stage-2 uses the same π to *train*: opinion pool (no extra fit), "
-        "block-aware forest (biased subspace vs uniform-subspace ablation), "
-        "adaptive group-logit (column scaling; may saturate on mean-shift inject).",
+        "Stage-2 uses the same π to *train*: π-weighted RF (column replicates so "
+        "sklearn max_features samples p_j ∝ π_m/|B_m|), opinion pool of block RFs, "
+        "and X+Z stacking. Random-subspace BAWF is reported as an architecture "
+        "ablation (it is not comparable to RF AUC). Adaptive logit can saturate "
+        "on mean-shift inject.",
         "Detection uses 5-fold stratified CV. GT rows average 3 subsample seeds.",
         "Observational Chronoberg is a diffuse multi-modality shift; wins are on concentrated GT.",
         "",
