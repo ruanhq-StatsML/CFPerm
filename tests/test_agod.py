@@ -157,3 +157,38 @@ def test_baseline_comparison_smoke():
     for name in result.metrics:
         assert 0.0 <= result.metrics[name]["drift_subgroup_recall"] <= 1.0
         assert result.metrics[name]["steps"] == 4.0
+
+
+def test_newsgroups_and_amazon_streams():
+    from agod.suites import make_suite
+
+    news = make_suite("newsgroups", n_per_window=24, seed=1, dim=10)
+    amz = make_suite("amazon", n_per_window=24, seed=1, dim=10)
+    assert news.years[0] == 1990
+    assert amz.make_window(3).drifted_audio is True
+    ref = news.reference()
+    late = news.make_window(len(news.years) - 1)
+    assert ref.X["text"].shape[1] == 10
+    assert late.drifted_audio is True
+
+
+def test_budget_agod_uses_fewer_flops_than_static():
+    cfg = SyntheticChronoBergConfig(
+        n_per_window=40,
+        dims={"audio": 8, "image": 8, "text": 8},
+        seed=4,
+    )
+    tcfg = AGODConfig(seed=4, pretrain_steps=4, steps_per_window=4, teacher_dim=6)
+    result = run_baseline_comparison(config=cfg, trainer_config=tcfg, baselines=("B1", "B5"))
+    assert result.metrics["B5"]["rel_flops"] < 0.55
+    assert result.metrics["B1"]["rel_flops"] == 1.0
+
+
+def test_llm_boost_beats_always_student_on_ood():
+    from agod.llm_boost import run_llm_boost
+
+    policies, _ = run_llm_boost(seed=3, n_id=48, n_ood=48, dim=32)
+    assert policies["agod-boost"].ood_accuracy >= policies["always-student"].ood_accuracy - 1e-9
+    assert policies["agod-boost"].latency < policies["always-teacher"].latency
+    assert policies["always-student"].teacher_frac == 0.0
+

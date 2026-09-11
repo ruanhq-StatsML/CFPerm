@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Mapping, MutableMapping, Sequence
+from typing import Dict, Mapping, MutableMapping, Optional, Sequence
 
 import numpy as np
 
@@ -199,13 +199,22 @@ def sgd_step(
     lr: float = 0.08,
     kl_temperature: float = 0.07,
     modalities: Sequence[str] = MODALITIES,
-) -> None:
-    x_mods = {m: np.asarray(batch.X[m], dtype=np.float64) for m in modalities}
-    obs = {m: student.observe(m, x_mods[m]) for m in modalities}
-    s_raw = {m: obs[m] @ student.weights[m] for m in modalities}
-    t_fused = _l2_normalize(np.stack([teacher_mod[m] for m in modalities], axis=0).mean(axis=0))
-    g_kl = _grad_kl_fused(obs, s_raw, t_fused, temperature=kl_temperature, modalities=modalities)
-    for m in modalities:
+    active: Optional[Sequence[str]] = None,
+) -> int:
+    """One SGD step. Returns an MAC-count proxy for distill FLOPs."""
+    active_mods = tuple(active) if active is not None else tuple(modalities)
+    if not active_mods:
+        return 0
+    x_mods = {m: np.asarray(batch.X[m], dtype=np.float64) for m in active_mods}
+    obs = {m: student.observe(m, x_mods[m]) for m in active_mods}
+    s_raw = {m: obs[m] @ student.weights[m] for m in active_mods}
+    t_fused = _l2_normalize(np.stack([teacher_mod[m] for m in active_mods], axis=0).mean(axis=0))
+    g_kl = _grad_kl_fused(obs, s_raw, t_fused, temperature=kl_temperature, modalities=active_mods)
+    flops = 0
+    for m in active_mods:
         g_local = _grad_mse_normalized(obs[m], s_raw[m], teacher_mod[m])
-        grad = g_kl[m] + float(alpha[m]) * g_local
+        grad = g_kl[m] + float(alpha.get(m, 0.0)) * g_local
         student.weights[m] -= lr * grad
+        n, d_obs = obs[m].shape
+        flops += 6 * n * d_obs * student.out_dim
+    return int(flops)

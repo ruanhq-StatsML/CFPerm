@@ -131,6 +131,21 @@ At online step \(t\), AGOD treats the modality-specific gap as a clever covariat
     \item \textbf{Day 5}: Ablation studies (temperature \(\tau\), regularizer \(\lambda\)).
 \end{itemize}
 
+\section{Multi-suite evidence and LLM inference boosting}
+\label{sec:boost}
+
+We re-run AGOD on three shift suites (ChronoBerg calendar, newsgroups topic windows, Amazon-style review polarity) and add three compute policies: Sparse-AGOD (B4) drops low-\(\alpha\) modalities, Budget-AGOD (B5) spends a \(1/|\mathcal{M}|\) step budget, and Cascade-AGOD (B6) skips distillation when domain AUC is small.
+
+\input{results/tab_agod_suites.tex}
+
+The same clever covariate can gate \emph{decode} compute. A compressed student always drafts; the teacher is invoked only when prompt novelty vs.\ a frozen reference pool (MSG) is high.
+
+\begin{center}
+\includegraphics[width=0.95\linewidth]{results/llm_boost_diagram.png}
+\end{center}
+
+\input{results/tab_llm_boost.tex}
+
 \section{Conclusion}
 We proposed AGOD, an online distillation framework where modality-specific gap decomposition acts as a clever covariate. By routing distillation capacity toward drifting modalities, AGOD offers a principled alternative to static and covariate-only distillation. We position this as an online learning paradigm where the update signal is a distribution-shift statistic.
 

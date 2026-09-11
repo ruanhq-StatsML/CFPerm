@@ -82,8 +82,12 @@ def route_from_state(
     B1 : static uniform weights.
     B2 : covariate-only, alpha ∝ AUC.
     B3 : AGOD, alpha ∝ MSG gap.
+    B4 : Sparse-AGOD (B3 weights; trainer drops low-α modalities).
+    B5 : Budget-AGOD (B3 weights; trainer spends a 1/|M| step budget).
+    B6 : Cascade-AGOD (B3 weights; skip distill when shift is small).
     """
     mods = tuple(modalities)
+    agod_like = baseline in {"B3", "B4", "B5", "B6"}
     if baseline == "B1":
         alpha = np.ones(len(mods), dtype=np.float64) / len(mods)
         localize: Tuple[str, ...] = ()
@@ -94,10 +98,10 @@ def route_from_state(
         aucs = np.array([state.details[m].auc for m in mods], dtype=np.float64)
         scores = np.clip(2.0 * aucs - 1.0, 0.0, None) + 1e-3
         alpha = softmax_weights(scores, tau=tau)
-    elif baseline == "B3":
+    elif agod_like:
         alpha = softmax_weights(state.vector(mods), tau=tau)
     else:
-        raise ValueError(f"Unknown baseline {baseline!r}; expected B1, B2 or B3.")
+        raise ValueError(f"Unknown baseline {baseline!r}; expected B1–B6.")
 
     aucs = np.array([state.details[m].auc for m in mods], dtype=np.float64)
     alpha, loc_idx = gate_weights(

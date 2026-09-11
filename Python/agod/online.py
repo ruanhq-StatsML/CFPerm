@@ -29,6 +29,8 @@ class AGODConfig:
     teacher_dim: int = 12
     kl_temperature: float = 0.07
     seed: int = 2026
+    sparse_threshold: float = 0.22
+    cascade_auc: float = 0.60
 
 
 @dataclass
@@ -47,6 +49,9 @@ class StepLog:
     drift_recall: float
     alignment: Dict[str, float]
     fallback: Dict[str, bool]
+    distill_flops: int = 0
+    skipped: bool = False
+    drifted_audio: bool = False
 
 
 @dataclass
@@ -74,6 +79,54 @@ class AGODTrainer:
                 modalities=self.modalities,
             )
 
+    def _distill(self, current: TimeWindowBatch, t_mod, alpha_map: Dict[str, float]) -> int:
+        flops = 0
+        if self.baseline == "B4":
+            active = [m for m in self.modalities if alpha_map[m] >= self.config.sparse_threshold]
+            if not active:
+                active = [max(alpha_map, key=alpha_map.get)]
+            for _ in range(self.config.steps_per_window):
+                flops += sgd_step(
+                    self.student,
+                    current,
+                    t_mod,
+                    alpha_map,
+                    lr=self.config.lr,
+                    kl_temperature=self.config.kl_temperature,
+                    modalities=self.modalities,
+                    active=active,
+                )
+            return flops
+        if self.baseline == "B5":
+            mods = list(self.modalities)
+            p = np.array([max(alpha_map[m], 1e-8) for m in mods], dtype=np.float64)
+            p = p / p.sum()
+            rng = np.random.default_rng(self.config.seed + 13 * current.t_index)
+            for _ in range(self.config.steps_per_window):
+                pick = mods[int(rng.choice(len(mods), p=p))]
+                flops += sgd_step(
+                    self.student,
+                    current,
+                    t_mod,
+                    alpha_map,
+                    lr=self.config.lr,
+                    kl_temperature=self.config.kl_temperature,
+                    modalities=self.modalities,
+                    active=(pick,),
+                )
+            return flops
+        for _ in range(self.config.steps_per_window):
+            flops += sgd_step(
+                self.student,
+                current,
+                t_mod,
+                alpha_map,
+                lr=self.config.lr,
+                kl_temperature=self.config.kl_temperature,
+                modalities=self.modalities,
+            )
+        return flops
+
     def step(
         self,
         reference: TimeWindowBatch,
@@ -98,16 +151,13 @@ class AGODTrainer:
             baseline=self.baseline,
         )
         t_mod = self.teacher.embed_batch(current)
-        for _ in range(self.config.steps_per_window):
-            sgd_step(
-                self.student,
-                current,
-                t_mod,
-                alpha_map,
-                lr=self.config.lr,
-                kl_temperature=self.config.kl_temperature,
-                modalities=self.modalities,
-            )
+        distill_flops = 0
+        skipped = False
+        if self.baseline == "B6":
+            max_auc = max(state.details[m].auc for m in self.modalities)
+            skipped = bool(max_auc < self.config.cascade_auc)
+        if not skipped:
+            distill_flops = self._distill(current, t_mod, alpha_map)
         eval_on = eval_batch or current
         s_mod = self.student.embed_batch(eval_on)
         t_mod = self.teacher.embed_batch(eval_on)
@@ -146,6 +196,9 @@ class AGODTrainer:
             drift_recall=drift_recall,
             alignment=align,
             fallback={m: state.details[m].used_fallback for m in self.modalities},
+            distill_flops=int(distill_flops),
+            skipped=skipped,
+            drifted_audio=bool(current.drifted_audio),
         )
         self.logs.append(log)
         return log

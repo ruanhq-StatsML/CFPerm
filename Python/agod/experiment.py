@@ -28,8 +28,8 @@ def _summarize(trainer: AGODTrainer) -> Dict[str, float]:
     logs = trainer.logs
     if not logs:
         return {}
-    drift_logs = [lg for lg in logs if lg.year >= 1850]
-    stable_logs = [lg for lg in logs if lg.year < 1850]
+    drift_logs = [lg for lg in logs if lg.drifted_audio] or list(logs)
+    stable_logs = [lg for lg in logs if not lg.drifted_audio]
     audio_alpha = float(np.mean([lg.alpha["audio"] for lg in drift_logs])) if drift_logs else 0.0
     text_alpha = float(np.mean([lg.alpha["text"] for lg in drift_logs])) if drift_logs else 0.0
     drift_recall = float(np.mean([lg.drift_recall for lg in drift_logs])) if drift_logs else 0.0
@@ -46,6 +46,7 @@ def _summarize(trainer: AGODTrainer) -> Dict[str, float]:
             ]
         )
     ) if drift_logs else 0.0
+    flops = float(np.sum([lg.distill_flops for lg in logs]))
     return {
         "drift_subgroup_recall": drift_recall,
         "mean_recall": mean_recall,
@@ -56,6 +57,8 @@ def _summarize(trainer: AGODTrainer) -> Dict[str, float]:
         "attribution_consistency": attr,
         "mean_loss": float(np.mean([lg.loss for lg in logs])),
         "steps": float(len(logs)),
+        "distill_flops": flops,
+        "skip_rate": float(np.mean([lg.skipped for lg in logs])),
     }
 
 
@@ -75,6 +78,8 @@ def _trajectory(trainer: AGODTrainer) -> List[Dict[str, object]]:
                 "alignment": lg.alignment,
                 "loss": lg.loss,
                 "localize": list(lg.localize),
+                "distill_flops": lg.distill_flops,
+                "skipped": lg.skipped,
             }
         )
     return rows
@@ -84,22 +89,26 @@ def run_baseline_comparison(
     config: Optional[SyntheticChronoBergConfig] = None,
     trainer_config: Optional[AGODConfig] = None,
     baselines: Sequence[str] = BASELINES,
+    stream_factory=None,
 ) -> ExperimentResult:
     config = config or SyntheticChronoBergConfig()
     trainer_config = trainer_config or AGODConfig(seed=config.seed)
     metrics: Dict[str, Dict[str, float]] = {}
     trajectories: Dict[str, List[Dict[str, object]]] = {}
     for name in baselines:
-        # Independent streams with the same seed so X/Y match across methods.
-        stream = ChronoBergStream(config=config)
+        stream = stream_factory() if stream_factory is not None else ChronoBergStream(config=config)
         trainer = run_stream(stream, baseline=name, config=trainer_config)
         metrics[name] = _summarize(trainer)
         trajectories[name] = _trajectory(trainer)
+    b1_flops = metrics.get("B1", {}).get("distill_flops", 0.0) or 1.0
+    for row in metrics.values():
+        row["rel_flops"] = float(row.get("distill_flops", 0.0) / b1_flops)
     ranking = sorted(
         baselines,
         key=lambda b: (
             metrics[b].get("drift_subgroup_recall", 0.0),
             metrics[b].get("audio_alignment_on_drift", 0.0),
+            -metrics[b].get("rel_flops", 1.0),
         ),
         reverse=True,
     )
