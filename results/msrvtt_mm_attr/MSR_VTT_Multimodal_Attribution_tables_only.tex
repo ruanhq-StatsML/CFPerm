@@ -1,0 +1,119 @@
+% MSR-VTT multimodal attribution — RF / MMD-LOGO / PO-risk LOGO + bootstrap SI
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{MSR-VTT multimodal attribution on packed features $X=[\mathrm{video}_{768}\,\|\,\mathrm{audio}_{512}\,\|\,\mathrm{text}_{768}]$, $W=\texttt{labelsmsr}\in\{0,1\}$. Point estimates with bootstrap mean$\pm$std ($B=10$).}
+\label{tab:msrvtt-mm-share}
+\small
+\begin{tabular}{@{}l ccc ccc@{}}
+\toprule
+Method & \multicolumn{3}{c}{Modality share (point)} & \multicolumn{3}{c}{Boot mean$\pm$std} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+ & video & audio & text & video & audio & text \\
+\midrule
+RF-Domain VIMP & $0.453$ & $0.159$ & $0.388$ & $0.437\pm0.013$ & $0.147\pm0.019$ & $0.417\pm0.010$ \\
+PO-risk LOGO & $0.411$ & $0.589$ & $0.000$ & $0.269\pm0.041$ & $0.052\pm0.020$ & $0.679\pm0.046$ \\
+MMD-LOGO & $0.336$ & $0.493$ & $0.172$ & $0.431\pm0.385$ & $0.235\pm0.273$ & $0.134\pm0.122$ \\
+\midrule
+RF-Domain AUC & \multicolumn{6}{c}{$0.526$ (boot $0.670\pm0.024$)} \\
+PO-risk (full) & \multicolumn{6}{c}{$0.000015$} \\
+MMD$^2$ (full) & \multicolumn{6}{c}{$0.001604$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Leave-one-group-out PO-risk contributions $\Delta_g=\widehat R-\widehat R^{(-g)}$ and relative $\Delta_g/\widehat R$.}
+\label{tab:msrvtt-logo-po}
+\small
+\begin{tabular}{@{}l c c c@{}}
+\toprule
+Modality & $\Delta$ PO-risk & Rel. $\Delta$ & Share \\
+\midrule
+video & $0.000002$ & $0.123$ & $0.411$ \\
+audio & $0.000003$ & $0.176$ & $0.589$ \\
+text & $-0.003426$ & $-228.112$ & $0.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Statistical inference on modality-share differences (bootstrap $B=10$, mean$\pm$std of diffs; reject equal if $|\mathrm{mean}| > 2\,\mathrm{std}$).}
+\label{tab:msrvtt-si-diff}
+\small
+\begin{tabular}{@{}l l c c c@{}}
+\toprule
+Method & Contrast & Mean diff & Std & Reject equal \\
+\midrule
+RF & video-audio & $0.290$ & $0.032$ & yes \\
+RF & video-text & $0.020$ & $0.014$ & no \\
+RF & audio-text & $-0.270$ & $0.028$ & yes \\
+PO-LOGO & video-audio & $0.217$ & $0.045$ & yes \\
+PO-LOGO & video-text & $-0.410$ & $0.085$ & yes \\
+PO-LOGO & audio-text & $-0.627$ & $0.059$ & yes \\
+MMD-LOGO & video-audio & $0.196$ & $0.569$ & no \\
+MMD-LOGO & video-text & $0.296$ & $0.430$ & no \\
+MMD-LOGO & audio-text & $0.101$ & $0.208$ & no \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Per-modality RF-Domain AUC when using only that block (point estimate and bootstrap mean$\pm$std, $B=10$).}
+\label{tab:msrvtt-mod-auc}
+\small
+\begin{tabular}{@{}l c c@{}}
+\toprule
+Modality & Point AUC & Boot mean$\pm$std \\
+\midrule
+video & $0.555$ & $0.658\pm0.027$ \\
+audio & $0.531$ & $0.610\pm0.016$ \\
+text & $0.505$ & $0.671\pm0.029$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Video-/subset-granularity variation of RF modality mass (n\_groups=25).}
+\label{tab:msrvtt-granularity}
+\small
+\begin{tabular}{@{}l c c@{}}
+\toprule
+Modality & Mean share & Std across groups \\
+\midrule
+video & $0.448$ & $0.019$ \\
+audio & $0.144$ & $0.025$ \\
+text & $0.408$ & $0.026$ \\
+\midrule
+Group AUC & $0.483$ & $0.082$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Feature-specific PO $\widehat\tau$-VIMP top ranks (global index in concat $X$).}
+\label{tab:msrvtt-feat-vimp}
+\small
+\begin{tabular}{@{}r l r c@{}}
+\toprule
+Rank & Modality & Local idx & VIMP \\
+\midrule
+1 & text & 321 & $0.04416$ \\
+2 & text & 239 & $0.03337$ \\
+3 & text & 270 & $0.03090$ \\
+4 & text & 326 & $0.03000$ \\
+5 & text & 6 & $0.02223$ \\
+6 & text & 31 & $0.02094$ \\
+7 & text & 327 & $0.01783$ \\
+8 & text & 266 & $0.01629$ \\
+9 & video & 466 & $0.01518$ \\
+10 & text & 36 & $0.01492$ \\
+\bottomrule
+\end{tabular}
+\end{table}
