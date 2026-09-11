@@ -724,6 +724,7 @@ def compare_raw_vs_clever(
     n_estimators: int = 100,
     n_splits: int = 5,
     with_block_train: bool = True,
+    with_subspace: bool = True,
 ) -> dict:
     W = _as_1d(W).astype(int)
     Z = clever_z(gap)
@@ -753,32 +754,33 @@ def compare_raw_vs_clever(
         "p_clever": int(Z.shape[1]),
     }
     if with_block_train:
-        auc_bawf, sd_bawf, mass_bawf = cv_block_aware_auc(
-            X, W, spec, pi, seed=seed + 3, n_estimators=n_estimators, n_splits=n_splits,
-        )
         pi_unif = np.full(len(pi), 1.0 / max(len(pi), 1))
-        auc_sub, sd_sub, _ = cv_block_aware_auc(
-            X, W, spec, pi_unif, seed=seed + 3, n_estimators=n_estimators, n_splits=n_splits,
-        )
+        if with_subspace:
+            auc_bawf, sd_bawf, mass_bawf = cv_block_aware_auc(
+                X, W, spec, pi, seed=seed + 3, n_estimators=n_estimators, n_splits=n_splits,
+            )
+            auc_sub, sd_sub, _ = cv_block_aware_auc(
+                X, W, spec, pi_unif, seed=seed + 3, n_estimators=n_estimators, n_splits=n_splits,
+            )
+            out["domain_auc_bawf"] = round(float(auc_bawf), 4)
+            out["domain_auc_bawf_sd"] = round(float(sd_bawf), 4)
+            out["domain_auc_subspace"] = round(float(auc_sub), 4)
+            out["domain_auc_subspace_sd"] = round(float(sd_sub), 4)
+            out["domain_auc_delta_bawf"] = round(float(auc_bawf - auc_raw), 4)
+            out["domain_auc_delta_bawf_vs_sub"] = round(float(auc_bawf - auc_sub), 4)
+            out["bawf_vimp"] = {k: round(v, 4) for k, v in mass_bawf.items()}
         auc_adapt, sd_adapt = cv_adaptive_group_logit_auc(
             X, W, spec, pi, seed=seed + 4, n_splits=n_splits,
         )
         auc_logit_unif, sd_logit_unif = cv_adaptive_group_logit_auc(
             X, W, spec, pi_unif, seed=seed + 4, n_splits=n_splits,
         )
-        out["domain_auc_bawf"] = round(float(auc_bawf), 4)
-        out["domain_auc_bawf_sd"] = round(float(sd_bawf), 4)
-        out["domain_auc_subspace"] = round(float(auc_sub), 4)
-        out["domain_auc_subspace_sd"] = round(float(sd_sub), 4)
         out["domain_auc_adapt"] = round(float(auc_adapt), 4)
         out["domain_auc_adapt_sd"] = round(float(sd_adapt), 4)
         out["domain_auc_logit_unif"] = round(float(auc_logit_unif), 4)
         out["domain_auc_logit_unif_sd"] = round(float(sd_logit_unif), 4)
-        out["domain_auc_delta_bawf"] = round(float(auc_bawf - auc_raw), 4)
-        out["domain_auc_delta_bawf_vs_sub"] = round(float(auc_bawf - auc_sub), 4)
         out["domain_auc_delta_adapt"] = round(float(auc_adapt - auc_raw), 4)
         out["domain_auc_delta_adapt_vs_unif"] = round(float(auc_adapt - auc_logit_unif), 4)
-        out["bawf_vimp"] = {k: round(v, 4) for k, v in mass_bawf.items()}
         auc_pirf, sd_pirf, mass_pirf = cv_pi_weighted_rf_auc(
             X, W, spec, pi, seed=seed + 5, n_estimators=n_estimators, n_splits=n_splits,
         )
