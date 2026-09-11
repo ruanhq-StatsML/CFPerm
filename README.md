@@ -116,3 +116,44 @@ https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 <img width="1796" height="552" alt="Screenshot 2026-08-03 at 09 57 54" src="https://github.com/user-attachments/assets/bd74444f-992d-4928-ac54-df080e397cf7" />
 - **Consequently, upon observing a notable drop in model performance, we prioritize post-hoc feature selection or localization of distribution-shift drivers over disentangling the shift into concept drift versus covariate shift, as such decomposition is not identifiable, Subset Localization is all you need!**
 - It gives people concise proxy for efficiently dealing with the model performance degradation in the deployed ML model - distribution shift driver localization is what you will need.
+
+## MSR-VTT sliding-window embeddings + Layer-1 modality attribution
+
+`Python/src/extract_within_video.py` turns each MSR-VTT clip into **100 temporal windows**, encodes every window as
+
+`video (ViViT 768) ⊕ audio (CLAP 512) ⊕ text (GPT-2 768) = 2048-d`
+
+and concatenates them to `(N_videos * 100, 2048)` for FSDS-style RF variable importance (within-video early vs late, pooled temporal drift, and a video-group mixture shift).
+
+Captions are the Hugging Face `friedrichor/MSR-VTT` JSON files (`video_id` aligned). Videos come from the TrainValVideo zip; clips with no audio stream are filled with silence and masked.
+
+```bash
+# captions
+python -c "from huggingface_hub import hf_hub_download; hf_hub_download('friedrichor/MSR-VTT', 'msrvtt_train_7k.json', repo_type='dataset', local_dir='data/hf_ann')"
+
+# videos: Google Drive TrainValVideo zip (file id 1A-PCpZTkndYusZfXW73Wgn9JSJnmuid5)
+python -m gdown 1A-PCpZTkndYusZfXW73Wgn9JSJnmuid5 -O data/msrvtt/msrvtt_drive.bin
+
+python Python/src/extract_within_video.py \
+  --n-videos 8 --n-windows 100 --video-encoder vivit \
+  --zip-path data/msrvtt/msrvtt_drive.bin \
+  --caption-json data/hf_ann/msrvtt_train_7k.json \
+  --output-dir data/msrvtt/features_window \
+  --repo-out experiments/msrvtt
+```
+
+Use `--video-encoder vit_mean` on CPU if ViViT is too slow (same 768-d interface).
+
+Stopped once the three modalities were concatenated. A CPU snapshot of **39** TrainVal clips × 100 windows is in `experiments/msrvtt/concat_feat_f16.npz`:
+
+- layout: `video [:, :768] | audio [:, 768:1280] | text [:, 1280:2048]`
+- shape: **(3900, 2048)** = 39 × 100 windows
+
+Load:
+
+```python
+import numpy as np
+z = np.load("experiments/msrvtt/concat_feat_f16.npz")
+X = z["concat"]          # (3900, 2048)
+video, audio, text = X[:, :768], X[:, 768:1280], X[:, 1280:]
+```
