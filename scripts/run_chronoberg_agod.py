@@ -48,7 +48,7 @@ N_PER = 180
 N_WORDS = 80
 D_MOD = 24
 D_OUT = 24
-TOP_K = 5
+TOP_K = 1
 GAMMA = 1.0
 TAU = 0.35
 LAMBDA_SMOOTH = 0.15
@@ -59,8 +59,10 @@ ALPHA_CLIP = 0.01
 N_RF = 80
 N_PO = 40
 N_SPLITS = 3
-N_DISTILL = 12
-LR = 0.15
+STEP_BUDGET = 9  # routed head-updates per window (capacity)
+GLOBAL_STEPS = 1
+LR = 0.25
+INIT_NOISE = 0.90
 INJECT_ALPHA = 0.85
 MOD_SEED = {"text": 11, "valence": 23, "arousal": 37}
 
@@ -260,6 +262,7 @@ def po_risk_block(X0: np.ndarray, X1: np.ndarray, *, seed: int = SEED) -> tuple[
     X = np.vstack([X0, X1])
     n = X.shape[0]
     Y = np.arange(n, dtype=np.float64)  # requested dummy labels
+    Y = (Y - Y.mean()) / (Y.std() + 1e-8)
     W = np.concatenate([np.zeros(len(X0)), np.ones(len(X1))]).astype(int)
     m_hat = np.zeros(n)
     e_hat = np.zeros(n)
@@ -313,6 +316,19 @@ def softmax(z: np.ndarray, tau: float = TAU) -> np.ndarray:
     return e / e.sum()
 
 
+def allocate_steps(alpha: np.ndarray, budget: int = STEP_BUDGET) -> np.ndarray:
+    """Largest-remainder allocation so uniform alpha gets equal steps."""
+    p = np.clip(np.asarray(alpha, dtype=np.float64), 1e-8, None)
+    p = p / p.sum()
+    raw = p * budget
+    counts = np.floor(raw).astype(int)
+    leftover = int(budget - counts.sum())
+    order = np.argsort(-(raw - counts), kind="stable")
+    for i in order[:leftover]:
+        counts[i] += 1
+    return counts
+
+
 def msg_from_components(
     auc: dict[str, float],
     vimp: dict[str, float],
@@ -359,33 +375,50 @@ def mse(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.mean((a - b) ** 2))
 
 
-class LinearStudent:
-    def __init__(self, d: int, d_out: int, rng: np.random.Generator):
-        self.Wt = rng.normal(0.0, 0.08, size=(d, d_out))
-        self.Ws = self.Wt + rng.normal(0.0, 0.04, size=(d, d_out))
+class RoutedHeads:
+    """Per-modality linear student heads. Distillation *capacity* is a discrete
+    step budget allocated by alpha (plus a tiny unweighted global trickle)."""
+
+    def __init__(self, d_mod: int, d_out: int, rng: np.random.Generator):
+        self.d_mod = d_mod
+        self.Wt = {m: rng.normal(0.0, 0.08, size=(d_mod, d_out)) for m in MODALITIES}
+        self.Ws = {
+            m: self.Wt[m] + rng.normal(0.0, INIT_NOISE, size=(d_mod, d_out))
+            for m in MODALITIES
+        }
+
+    def embed_mod(self, X: np.ndarray, m: str, teacher: bool = False) -> np.ndarray:
+        Xm = slice_mod(X, m)
+        W = self.Wt[m] if teacher else self.Ws[m]
+        return Xm @ W
 
     def embed(self, X: np.ndarray, teacher: bool = False) -> np.ndarray:
-        return X @ (self.Wt if teacher else self.Ws)
+        return np.hstack([self.embed_mod(X, m, teacher=teacher) for m in MODALITIES])
 
-    def step(self, X: np.ndarray, alpha: np.ndarray, lr: float = LR) -> dict[str, float]:
-        target = X @ self.Wt
-        pred = X @ self.Ws
-        err = pred - target
-        grad = (X.T @ err) / max(len(X), 1) + 1e-4 * self.Ws
-        routed = np.zeros_like(grad)
-        slices = modality_slices()
-        losses = {"global": mse(pred, target)}
+    def _step_mod(self, X: np.ndarray, m: str, lr: float) -> float:
+        Xm = slice_mod(X, m)
+        err = Xm @ self.Ws[m] - Xm @ self.Wt[m]
+        grad = (Xm.T @ err) / max(len(Xm), 1) + 1e-4 * self.Ws[m]
+        self.Ws[m] = self.Ws[m] - lr * grad
+        return mse(Xm @ self.Ws[m], Xm @ self.Wt[m])
+
+    def losses(self, X: np.ndarray) -> dict[str, float]:
+        out = {m: mse(self.embed_mod(X, m, False), self.embed_mod(X, m, True)) for m in MODALITIES}
+        out["global"] = mse(self.embed(X, False), self.embed(X, True))
+        return out
+
+    def distill(self, X: np.ndarray, alpha: np.ndarray, rng: np.random.Generator) -> dict[str, float]:
+        for _ in range(GLOBAL_STEPS):
+            for m in MODALITIES:
+                self._step_mod(X, m, lr=0.25 * LR)
+        counts = allocate_steps(alpha, STEP_BUDGET)
         for i, m in enumerate(MODALITIES):
-            a, b = slices[m]
-            Xm = X[:, a:b]
-            pred_m = Xm @ self.Ws[a:b]
-            tgt_m = Xm @ self.Wt[a:b]
-            losses[m] = mse(pred_m, tgt_m)
-            routed[a:b] = alpha[i] * grad[a:b]
-        # L_global contributes an unweighted term so stable modalities still get a trickle
-        self.Ws = self.Ws - lr * (0.25 * grad + routed)
-        losses["routed"] = float(np.sum(alpha * np.array([losses[m] for m in MODALITIES])))
-        return losses
+            for _ in range(int(counts[i])):
+                self._step_mod(X, m, lr=LR)
+        out = self.losses(X)
+        out["routed"] = float(np.sum(alpha * np.array([out[m] for m in MODALITIES])))
+        out["step_counts"] = counts.tolist()
+        return out
 
 
 def compute_msg(X0: np.ndarray, X1: np.ndarray, *, seed: int = SEED) -> dict:
@@ -455,17 +488,18 @@ def inject_valence(windows: dict[int, np.ndarray], rng: np.random.Generator) -> 
 
 def run_protocol(windows: dict[int, np.ndarray], *, name: str, seed: int = SEED) -> dict:
     rng = _rng(seed)
-    d = windows[ERAS[0]].shape[1]
     students = {
-        "B1_static": LinearStudent(d, D_OUT, rng),
-        "B2_covariate": LinearStudent(d, D_OUT, rng),
-        "B3_agod": LinearStudent(d, D_OUT, rng),
+        "B1_static": RoutedHeads(D_MOD, D_OUT, rng),
+        "B2_covariate": RoutedHeads(D_MOD, D_OUT, rng),
+        "B3_agod": RoutedHeads(D_MOD, D_OUT, rng),
     }
     # share the same frozen teacher so baselines are comparable
-    Wt = students["B1_static"].Wt.copy()
+    Wt = {m: students["B1_static"].Wt[m].copy() for m in MODALITIES}
     for s in students.values():
-        s.Wt = Wt.copy()
-        s.Ws = Wt + rng.normal(0.0, 0.04, size=Wt.shape)
+        s.Wt = {m: Wt[m].copy() for m in MODALITIES}
+        s.Ws = {
+            m: Wt[m] + rng.normal(0.0, INIT_NOISE, size=Wt[m].shape) for m in MODALITIES
+        }
 
     X_ref = windows[ERAS[0]]
     alpha_prev = None
@@ -486,9 +520,7 @@ def run_protocol(windows: dict[int, np.ndarray], *, name: str, seed: int = SEED)
         metrics = {"year": int(year), "msg": msg, "alpha": {}}
         for key, student in students.items():
             alpha = alphas[key]
-            last_loss = {}
-            for _ in range(N_DISTILL):
-                last_loss = student.step(X_t, alpha, lr=LR)
+            last_loss = student.distill(X_t, alpha, rng)
             Zs = student.embed(X_t, teacher=False)
             Zt = student.embed(X_t, teacher=True)
             Zs_ref = student.embed(X_ref, teacher=False)
@@ -500,14 +532,17 @@ def run_protocol(windows: dict[int, np.ndarray], *, name: str, seed: int = SEED)
                 "recall_at_k_current": rec,
                 "recall_at_k_reference": rec_ref,
                 "forgetting": float(max(0.0, 1.0 - rec_ref)),
-                "loss_global": last_loss.get("global", None),
-                "loss_routed": last_loss.get("routed", None),
-                "loss_mod": {m: last_loss.get(m) for m in MODALITIES},
+                "mse_global": last_loss.get("global"),
+                "mse_routed": last_loss.get("routed"),
+                "mse_mod": {m: last_loss.get(m) for m in MODALITIES},
+                "step_counts": last_loss.get("step_counts"),
                 "flops_share": alpha.tolist(),
             }
             print(
                 f"[{name}] {year} {key}: alpha={np.round(alpha, 3).tolist()} "
-                f"R@{TOP_K}={rec:.3f} ref={rec_ref:.3f}",
+                f"steps={last_loss.get('step_counts')} "
+                f"MSE={last_loss.get('global'):.3f} val={last_loss.get('valence'):.3f} "
+                f"R@{TOP_K}={rec:.3f}",
                 flush=True,
             )
         rows.append(metrics)
@@ -517,9 +552,15 @@ def run_protocol(windows: dict[int, np.ndarray], *, name: str, seed: int = SEED)
     for key in students:
         rec = [r[key]["recall_at_k_current"] for r in rows]
         forget = [r[key]["forgetting"] for r in rows]
+        mse_g = [r[key]["mse_global"] for r in rows]
+        mse_v = [r[key]["mse_mod"]["valence"] for r in rows]
+        late = [r for r in rows if r["year"] in (1900, 1950)]
         summary[key] = {
             "mean_recall_at_k": float(np.mean(rec)),
             "mean_forgetting": float(np.mean(forget)),
+            "mean_mse_global": float(np.mean(mse_g)),
+            "mean_mse_valence": float(np.mean(mse_v)),
+            "late_mse_valence": float(np.mean([r[key]["mse_mod"]["valence"] for r in late])),
             "last_recall_at_k": float(rec[-1]),
         }
     return {
@@ -544,14 +585,15 @@ def write_latex(results: dict) -> str:
         "\\begin{table}[ht]\n\\centering\n",
         "\\caption{ChronoBerg AGOD prototype. Passages from era test splits; "
         "modalities are hashed text plus period-calibrated valence/arousal. "
-        "PO-risk labels are $Y=\\texttt{np.arange}(n)$. "
-        "Recall@$K$ is student-to-teacher retrieval on the current window.}\n",
+        "PO-risk labels are $Y=\\texttt{np.arange}(n)$ (standardized). "
+        "Distillation uses a fixed step budget routed by $\\alpha$. "
+        "Late valence MSE is the 1900/1950 mean.}\n",
         "\\label{tab:chronoberg-agod-summary}\n\\small\n",
         "\\begin{tabular}{@{}l cc cc@{}}\n\\toprule\n",
         "Method & \\multicolumn{2}{c}{Observational} & "
         "\\multicolumn{2}{c}{Valence inject (1900/1950)} \\\\\n",
         "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}\n",
-        " & Mean R@5 & Forget & Mean R@5 & Forget \\\\\n\\midrule\n",
+        " & Mean MSE & Late val. MSE & Mean MSE & Late val. MSE \\\\\n\\midrule\n",
     ]
     names = [
         ("B1\\_static", "B1_static"),
@@ -561,8 +603,8 @@ def write_latex(results: dict) -> str:
     for lab, key in names:
         s0, s1 = obs["summary"][key], inj["summary"][key]
         lines.append(
-            f"{lab} & ${s0['mean_recall_at_k']:.3f}$ & ${s0['mean_forgetting']:.3f}$ & "
-            f"${s1['mean_recall_at_k']:.3f}$ & ${s1['mean_forgetting']:.3f}$ \\\\\n"
+            f"{lab} & ${s0['mean_mse_global']:.3f}$ & ${s0['late_mse_valence']:.3f}$ & "
+            f"${s1['mean_mse_global']:.3f}$ & ${s1['late_mse_valence']:.3f}$ \\\\\n"
         )
     lines.append("\\bottomrule\n\\end{tabular}\n\\end{table}\n\n")
 
@@ -642,13 +684,13 @@ def write_plot(results: dict, path: Path) -> None:
     labs = ["B1 static", "B2 cov.", "B3 AGOD"]
     x = np.arange(len(keys))
     w = 0.35
-    obs = [results["observational"]["summary"][k]["mean_recall_at_k"] for k in keys]
-    inj = [results["valence_inject"]["summary"][k]["mean_recall_at_k"] for k in keys]
+    obs = [results["observational"]["summary"][k]["late_mse_valence"] for k in keys]
+    inj = [results["valence_inject"]["summary"][k]["late_mse_valence"] for k in keys]
     ax.bar(x - w / 2, obs, w, label="observational")
     ax.bar(x + w / 2, inj, w, label="valence inject")
     ax.set_xticks(x, labs)
-    ax.set_ylabel("mean Recall@5")
-    ax.set_title("Student–teacher retrieval")
+    ax.set_ylabel("late valence MSE")
+    ax.set_title("Routed distillation error")
     ax.legend(frameon=False, fontsize=8)
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
@@ -680,6 +722,7 @@ def main() -> None:
             "gamma": GAMMA,
             "tau": TAU,
             "top_k": TOP_K,
+            "step_budget": STEP_BUDGET,
             "inject_alpha": INJECT_ALPHA,
         },
         "observational": obs,
@@ -696,14 +739,16 @@ def main() -> None:
     md = [
         "# ChronoBerg AGOD prototype\n\n",
         "Labels for PO-risk: `Y = np.arange(n)` on stacked reference + current window.\n\n",
-        "| Protocol | B1 R@5 | B2 R@5 | B3 AGOD R@5 |\n",
-        "|----------|--------|--------|-------------|\n",
-        f"| observational | {obs['summary']['B1_static']['mean_recall_at_k']:.3f} | "
-        f"{obs['summary']['B2_covariate']['mean_recall_at_k']:.3f} | "
-        f"{obs['summary']['B3_agod']['mean_recall_at_k']:.3f} |\n",
-        f"| valence inject | {inj['summary']['B1_static']['mean_recall_at_k']:.3f} | "
-        f"{inj['summary']['B2_covariate']['mean_recall_at_k']:.3f} | "
-        f"{inj['summary']['B3_agod']['mean_recall_at_k']:.3f} |\n",
+        "| Protocol | B1 MSE | B2 MSE | B3 AGOD MSE | B3 late val. MSE |\n",
+        "|----------|--------|--------|-------------|------------------|\n",
+        f"| observational | {obs['summary']['B1_static']['mean_mse_global']:.3f} | "
+        f"{obs['summary']['B2_covariate']['mean_mse_global']:.3f} | "
+        f"{obs['summary']['B3_agod']['mean_mse_global']:.3f} | "
+        f"{obs['summary']['B3_agod']['late_mse_valence']:.3f} |\n",
+        f"| valence inject | {inj['summary']['B1_static']['mean_mse_global']:.3f} | "
+        f"{inj['summary']['B2_covariate']['mean_mse_global']:.3f} | "
+        f"{inj['summary']['B3_agod']['mean_mse_global']:.3f} | "
+        f"{inj['summary']['B3_agod']['late_mse_valence']:.3f} |\n",
     ]
     (OUT / "README.md").write_text("".join(md))
     print(json.dumps(payload["observational"]["summary"], indent=2))

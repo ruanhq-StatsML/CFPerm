@@ -34,15 +34,24 @@ def test_softmax_and_msg_route_to_drifting_modality():
 
 def test_distill_step_reduces_global_loss():
     rng = np.random.default_rng(0)
-    d = 3 * agod.D_MOD
-    X = rng.normal(size=(40, d))
-    student = agod.LinearStudent(d, agod.D_OUT, rng)
+    X = rng.normal(size=(40, 3 * agod.D_MOD))
+    student = agod.RoutedHeads(agod.D_MOD, agod.D_OUT, rng)
     alpha = np.array([0.1, 0.8, 0.1])
-    before = agod.mse(student.embed(X, False), student.embed(X, True))
-    for _ in range(8):
-        student.step(X, alpha, lr=0.2)
-    after = agod.mse(student.embed(X, False), student.embed(X, True))
+    before = student.losses(X)["global"]
+    student.distill(X, alpha, rng)
+    after = student.losses(X)["global"]
     assert after < before
+
+
+def test_allocate_steps_uniform_is_equal():
+    counts = agod.allocate_steps(np.ones(3) / 3.0, budget=9)
+    assert counts.tolist() == [3, 3, 3]
+
+
+def test_allocate_steps_follows_peak():
+    counts = agod.allocate_steps(np.array([0.1, 0.8, 0.1]), budget=9)
+    assert int(counts[1]) >= 6
+    assert int(counts.sum()) == 9
 
 
 def test_recall_perfect_when_query_equals_gallery():
