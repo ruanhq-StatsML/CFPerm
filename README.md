@@ -117,6 +117,6 @@ https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 - **Consequently, upon observing a notable drop in model performance, we prioritize post-hoc feature selection or localization of distribution-shift drivers over disentangling the shift into concept drift versus covariate shift, as such decomposition is not identifiable, Subset Localization is all you need!**
 - It gives people concise proxy for efficiently dealing with the model performance degradation in the deployed ML model - distribution shift driver localization is what you will need.
 
-### Frozen generator + localization: which part is worth adapting (writeup, not a prototype)
+### Adapt for distribution shift, then predict the next batch (writeup, not a prototype)
 
-This is **not** online learning. The LLM (or any foundation encoder) stays a frozen generator. PO-risk is a Neyman-orthogonal discrepancy, not a CATE; VIMP / LOCO of $\hat\tau$ ranks subsets (modality, instance, span). That ranking is the identifiable answer to **which part of $x$ is most worth an adaptation budget** — re-encode, retrieve, label, or fit a residual *on that subset only*. Unique CS/CD explanation remains impossible; subset localization is all you need. See [docs/pseudo_outcome_risk_beyond.md](docs/pseudo_outcome_risk_beyond.md).
+Not online learning, and nothing new: localize the shift with PO-risk / VIMP of $\hat\tau$, adapt **only on that subset**, use it for $\widehat{Y}_{t+1}$. The LLM (or any foundation encoder) stays a frozen generator. Unique CS/CD explanation remains impossible; subset localization is all you need. See [docs/pseudo_outcome_risk_beyond.md](docs/pseudo_outcome_risk_beyond.md).
