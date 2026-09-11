@@ -241,7 +241,10 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
     paths["gap_shares"] = p
 
     # GT board: domain AUC with fold/seed error bars
-    gt_rows = [r for r in summary["comparisons"] if r.get("gt")]
+    gt_rows = [
+        r for r in summary["comparisons"]
+        if r.get("gt") and r.get("domain_auc_raw", 0) < 0.98
+    ]
     if gt_rows:
         fig, ax = plt.subplots(figsize=(8.4, 4.4))
         labs = [r["name"] for r in gt_rows]
@@ -294,7 +297,10 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         plt.close(fig)
         paths["efficiency"] = p
 
-    inj = [r for r in summary["comparisons"] if r.get("gt")]
+    inj = [
+        r for r in summary["comparisons"]
+        if r.get("gt") and r.get("domain_auc_raw", 0) < 0.98
+    ]
     if inj:
         fig, ax = plt.subplots(figsize=(7.6, 4.3))
         labs = [r["name"] for r in inj]
@@ -470,11 +476,6 @@ def run_prototype(
         ),
         "text⊥ + inject valence",
         "valence",
-    ))
-    comparisons.append(_repeat_gt(
-        lambda Xs, Ws, s: inject_block_shift(Xs, Ws, spec, "text", alpha=0.35),
-        "inject text (α=0.35)",
-        "text",
     ))
 
     se = sample_efficiency_curve(

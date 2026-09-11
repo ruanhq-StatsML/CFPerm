@@ -1,8 +1,17 @@
 {
   "dataset": "spaul25/Chronoberg test 1750 vs 1950",
-  "n0": 900,
-  "n1": 900,
-  "d_text": 32,
+  "protocol": {
+    "d_text": 48,
+    "n_per_batch": 1000,
+    "rf": "max_depth=8, min_samples_leaf=5, n_estimators=100",
+    "auc": "5-fold stratified CV",
+    "clever_Z": "Z_m = \u03c0_m * logit \u00ea_m(X_m)",
+    "gt_seeds": 3,
+    "efficiency_repeats": 4
+  },
+  "n0": 1000,
+  "n1": 1000,
+  "d_text": 48,
   "modalities": [
     "text",
     "valence",
@@ -10,391 +19,329 @@
     "dominance"
   ],
   "gap": {
-    "full_auc": 0.7361,
+    "full_auc": 0.7196,
     "block_auc": {
-      "text": 0.6663,
-      "valence": 0.6164,
-      "arousal": 0.5144,
-      "dominance": 0.6
+      "text": 0.6709,
+      "valence": 0.6509,
+      "arousal": 0.5945,
+      "dominance": 0.648
     },
     "block_mmd": {
-      "text": 0.000852,
-      "valence": 0.035128,
-      "arousal": 0.0,
-      "dominance": 0.024712
+      "text": 0.003676,
+      "valence": 0.027267,
+      "arousal": 0.001646,
+      "dominance": 0.011487
     },
     "lomo_auc_drop": {
-      "text": 0.0605,
-      "valence": 0.0871,
-      "arousal": 0.0476,
-      "dominance": 0.0541
+      "text": 0.0202,
+      "valence": 0.0168,
+      "arousal": 0.0104,
+      "dominance": 0.0218
     },
     "vimp_share": {
-      "text": 0.4918,
-      "valence": 0.2193,
-      "arousal": 0.0967,
-      "dominance": 0.1921
+      "text": 0.5698,
+      "valence": 0.1716,
+      "arousal": 0.1025,
+      "dominance": 0.1561
     },
     "pi_auc": {
-      "text": 0.4188,
-      "valence": 0.2931,
-      "arousal": 0.0362,
-      "dominance": 0.2519
+      "text": 0.3029,
+      "valence": 0.2674,
+      "arousal": 0.1674,
+      "dominance": 0.2622
     },
     "pi_mmd": {
-      "text": 0.014,
-      "valence": 0.5788,
-      "arousal": 0.0,
-      "dominance": 0.4072
+      "text": 0.0834,
+      "valence": 0.6186,
+      "arousal": 0.0373,
+      "dominance": 0.2606
     },
     "pi_lomo": {
-      "text": 0.2427,
-      "valence": 0.3492,
-      "arousal": 0.1911,
-      "dominance": 0.2171
+      "text": 0.2919,
+      "valence": 0.2432,
+      "arousal": 0.1499,
+      "dominance": 0.3151
     },
     "pi_vimp": {
-      "text": 0.4918,
-      "valence": 0.2193,
-      "arousal": 0.0967,
-      "dominance": 0.1921
+      "text": 0.5698,
+      "valence": 0.1716,
+      "arousal": 0.1025,
+      "dominance": 0.1561
     },
     "pi_instance_mean": {
-      "text": 0.2441,
-      "valence": 0.2764,
-      "arousal": 0.2191,
-      "dominance": 0.2604
+      "text": 0.3095,
+      "valence": 0.2338,
+      "arousal": 0.2,
+      "dominance": 0.2568
     },
     "pi_consensus": {
-      "text": 0.2823,
-      "valence": 0.3434,
-      "arousal": 0.1086,
-      "dominance": 0.2657
+      "text": 0.3115,
+      "valence": 0.3069,
+      "arousal": 0.1314,
+      "dominance": 0.2502
     }
   },
-  "cd_gap": {
-    "full_auc": 0.6987,
-    "block_auc": {
-      "text": 0.6233,
-      "arousal": 0.5646,
-      "dominance": 0.6252
+  "observational_auc": {
+    "domain_auc_raw": 0.7197,
+    "domain_auc_raw_sd": 0.0224,
+    "domain_auc_clever": 0.6941,
+    "domain_auc_clever_sd": 0.021,
+    "domain_auc_stack_xz": 0.7198,
+    "domain_auc_stack_sd": 0.0337,
+    "domain_auc_delta": -0.0256,
+    "domain_auc_delta_stack": 0.0001,
+    "vimp_share_raw": {
+      "text": 0.5698,
+      "valence": 0.1716,
+      "arousal": 0.1025,
+      "dominance": 0.1561
     },
-    "block_mmd": {
-      "text": 0.00152,
-      "arousal": 0.00806,
-      "dominance": 0.011987
+    "p_raw": 63,
+    "p_clever": 4,
+    "z_vimp": {
+      "text": 0.3207,
+      "valence": 0.2691,
+      "arousal": 0.1468,
+      "dominance": 0.2634
     },
-    "lomo_auc_drop": {
-      "text": 0.1184,
-      "arousal": 0.0626,
-      "dominance": 0.0541
+    "z_logit_vimp": {
+      "text": 0.3207,
+      "valence": 0.2691,
+      "arousal": 0.1468,
+      "dominance": 0.2634
     },
-    "vimp_share": {
-      "text": 0.6527,
-      "arousal": 0.1016,
-      "dominance": 0.2457
+    "z_share_vimp": {
+      "text": 0.3207,
+      "valence": 0.2691,
+      "arousal": 0.1468,
+      "dominance": 0.2634
     },
-    "pi_auc": {
-      "text": 0.3938,
-      "arousal": 0.2062,
-      "dominance": 0.4
-    },
-    "pi_mmd": {
-      "text": 0.0705,
-      "arousal": 0.3737,
-      "dominance": 0.5558
-    },
-    "pi_lomo": {
-      "text": 0.5036,
-      "arousal": 0.2662,
-      "dominance": 0.2301
-    },
-    "pi_vimp": {
-      "text": 0.6527,
-      "arousal": 0.1016,
-      "dominance": 0.2457
-    },
-    "pi_instance_mean": {
-      "text": 0.3319,
-      "arousal": 0.2781,
-      "dominance": 0.39
-    },
-    "pi_consensus": {
-      "text": 0.3905,
-      "arousal": 0.2452,
-      "dominance": 0.3643
-    }
+    "name": "observational 1750/1950",
+    "gt": null
   },
   "comparisons": [
     {
-      "domain_auc_raw": 0.7392,
-      "domain_auc_clever": 0.6915,
-      "domain_auc_stack_xz": 0.6902,
-      "domain_auc_delta": -0.0477,
+      "domain_auc_raw": 0.8255,
+      "domain_auc_raw_sd": 0.0015,
+      "domain_auc_clever": 0.8637,
+      "domain_auc_clever_sd": 0.0081,
+      "domain_auc_stack_xz": 0.8918,
+      "domain_auc_stack_sd": 0.015,
+      "domain_auc_delta": 0.0382,
+      "domain_auc_delta_stack": 0.0663,
       "vimp_share_raw": {
-        "text": 0.4972,
-        "valence": 0.2186,
-        "arousal": 0.0993,
-        "dominance": 0.1849
+        "text": 0.4753,
+        "valence": 0.2435,
+        "arousal": 0.1134,
+        "dominance": 0.1677
       },
-      "p_raw": 47,
-      "p_clever": 8,
-      "z_share_vimp": {
-        "text": 0.2143,
-        "valence": 0.3213,
-        "arousal": 0.2486,
-        "dominance": 0.2158
+      "p_raw": 63.0,
+      "p_clever": 4.0,
+      "z_vimp": {
+        "text": 0.1225,
+        "valence": 0.6978,
+        "arousal": 0.076,
+        "dominance": 0.1037
       },
       "z_logit_vimp": {
-        "text": 0.3897,
-        "valence": 0.2894,
-        "arousal": 0.0674,
-        "dominance": 0.2535
+        "text": 0.1225,
+        "valence": 0.6978,
+        "arousal": 0.076,
+        "dominance": 0.1037
       },
-      "po_risk_raw": 2e-06,
-      "po_risk_clever_Z": 0.000133,
-      "po_risk_tmle_H": 2.9e-05,
-      "po_risk_stack_tmle_H": 2.7e-05,
-      "name": "observational 1750/1950",
-      "gt": null
-    },
-    {
-      "domain_auc_raw": 0.7095,
-      "domain_auc_clever": 0.637,
-      "domain_auc_stack_xz": 0.638,
-      "domain_auc_delta": -0.0725,
-      "vimp_share_raw": {
-        "text": 0.6466,
-        "arousal": 0.1011,
-        "dominance": 0.2523
-      },
-      "p_raw": 42,
-      "p_clever": 6,
       "z_share_vimp": {
-        "text": 0.323,
-        "arousal": 0.3442,
-        "dominance": 0.3328
+        "text": 0.1225,
+        "valence": 0.6978,
+        "arousal": 0.076,
+        "dominance": 0.1037
       },
-      "z_logit_vimp": {
-        "text": 0.4912,
-        "arousal": 0.0953,
-        "dominance": 0.4135
-      },
-      "po_risk_raw": 8.3e-05,
-      "po_risk_clever_Z": 0.000164,
-      "po_risk_tmle_H": 0.001321,
-      "po_risk_stack_tmle_H": 0.001405,
-      "name": "CD: Y=valence, X=text+A+D",
-      "gt": null
-    },
-    {
-      "domain_auc_raw": 0.8593,
-      "domain_auc_clever": 0.8159,
-      "domain_auc_stack_xz": 0.8746,
-      "domain_auc_delta": -0.0434,
-      "vimp_share_raw": {
-        "text": 0.2799,
-        "valence": 0.432,
-        "arousal": 0.1055,
-        "dominance": 0.1826
-      },
-      "p_raw": 47,
-      "p_clever": 8,
-      "z_share_vimp": {
-        "text": 0.2061,
-        "valence": 0.3346,
-        "arousal": 0.1578,
-        "dominance": 0.3015
-      },
-      "z_logit_vimp": {
-        "text": 0.2287,
-        "valence": 0.5563,
-        "arousal": 0.036,
-        "dominance": 0.179
-      },
-      "po_risk_raw": 5.9e-05,
-      "po_risk_clever_Z": 0.000265,
-      "po_risk_tmle_H": 0.001151,
-      "po_risk_stack_tmle_H": 0.001095,
-      "selection_auc_raw": 0.9524,
-      "mass_on_gt_raw": 0.432,
-      "z_share_on_gt": 0.3346,
-      "z_logit_on_gt": 0.5563,
-      "pi_consensus_on_gt": 0.5349,
-      "name": "inject valence (\u03b1=0.95)",
+      "selection_auc_raw": 0.9138,
+      "mass_on_gt_raw": 0.2438,
+      "z_share_on_gt": 0.6892,
+      "z_logit_on_gt": 0.6892,
+      "pi_consensus_on_gt": 0.3727,
+      "domain_auc_stack_xz_sd": 0.0055,
+      "domain_auc_delta_sd": 0.0067,
+      "domain_auc_delta_stack_sd": 0.0048,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "selection_auc_raw_sd": 0.006,
+      "mass_on_gt_raw_sd": 0.0105,
+      "z_share_on_gt_sd": 0.013,
+      "z_logit_on_gt_sd": 0.013,
+      "pi_consensus_on_gt_sd": 0.0372,
+      "n_seeds": 3,
+      "name": "inject valence (\u03b1=0.70)",
       "gt": "valence"
     },
     {
-      "domain_auc_raw": 0.9992,
-      "domain_auc_clever": 1.0,
-      "domain_auc_stack_xz": 0.9999,
-      "domain_auc_delta": 0.0008,
+      "domain_auc_raw": 0.8553,
+      "domain_auc_raw_sd": 0.0058,
+      "domain_auc_clever": 0.88,
+      "domain_auc_clever_sd": 0.0102,
+      "domain_auc_stack_xz": 0.9106,
+      "domain_auc_stack_sd": 0.0128,
+      "domain_auc_delta": 0.0247,
+      "domain_auc_delta_stack": 0.0553,
       "vimp_share_raw": {
-        "text": 0.9906,
-        "valence": 0.0061,
-        "arousal": 0.0001,
-        "dominance": 0.0032
+        "text": 0.3485,
+        "valence": 0.3211,
+        "arousal": 0.1306,
+        "dominance": 0.1999
       },
-      "p_raw": 47,
-      "p_clever": 8,
-      "z_share_vimp": {
-        "text": 0.4505,
-        "valence": 0.21,
-        "arousal": 0.202,
-        "dominance": 0.1375
+      "p_raw": 63.0,
+      "p_clever": 4.0,
+      "z_vimp": {
+        "text": 0.0642,
+        "valence": 0.751,
+        "arousal": 0.0835,
+        "dominance": 0.1014
       },
       "z_logit_vimp": {
-        "text": 0.9526,
-        "valence": 0.0203,
-        "arousal": 0.0012,
-        "dominance": 0.0259
+        "text": 0.0642,
+        "valence": 0.751,
+        "arousal": 0.0835,
+        "dominance": 0.1014
       },
-      "po_risk_raw": 0.0,
-      "po_risk_clever_Z": 2.7e-05,
-      "po_risk_tmle_H": 1e-05,
-      "po_risk_stack_tmle_H": 1.6e-05,
-      "selection_auc_raw": 0.9229,
-      "mass_on_gt_raw": 0.9906,
-      "z_share_on_gt": 0.4505,
-      "z_logit_on_gt": 0.9526,
-      "pi_consensus_on_gt": 0.6983,
-      "name": "inject text (\u03b1=0.75)",
-      "gt": "text"
-    },
-    {
-      "domain_auc_raw": 0.888,
-      "domain_auc_clever": 0.8161,
-      "domain_auc_stack_xz": 0.9129,
-      "domain_auc_delta": -0.0719,
-      "vimp_share_raw": {
-        "text": 0.179,
-        "valence": 0.4975,
-        "arousal": 0.1159,
-        "dominance": 0.2075
-      },
-      "p_raw": 47,
-      "p_clever": 8,
       "z_share_vimp": {
-        "text": 0.2681,
-        "valence": 0.2948,
-        "arousal": 0.1962,
-        "dominance": 0.2409
+        "text": 0.0642,
+        "valence": 0.751,
+        "arousal": 0.0835,
+        "dominance": 0.1014
       },
-      "z_logit_vimp": {
-        "text": 0.0376,
-        "valence": 0.7026,
-        "arousal": 0.0559,
-        "dominance": 0.2039
-      },
-      "po_risk_raw": 6.4e-05,
-      "po_risk_clever_Z": 0.000313,
-      "po_risk_tmle_H": 0.001288,
-      "po_risk_stack_tmle_H": 0.001184,
-      "selection_auc_raw": 0.9571,
-      "mass_on_gt_raw": 0.4975,
-      "z_share_on_gt": 0.2948,
-      "z_logit_on_gt": 0.7026,
-      "pi_consensus_on_gt": 0.6224,
-      "name": "text-shuffled + inject valence",
+      "selection_auc_raw": 0.9425,
+      "mass_on_gt_raw": 0.3133,
+      "z_share_on_gt": 0.735,
+      "z_logit_on_gt": 0.735,
+      "pi_consensus_on_gt": 0.4663,
+      "domain_auc_stack_xz_sd": 0.008,
+      "domain_auc_delta_sd": 0.007,
+      "domain_auc_delta_stack_sd": 0.0026,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "selection_auc_raw_sd": 0.002,
+      "mass_on_gt_raw_sd": 0.0067,
+      "z_share_on_gt_sd": 0.014,
+      "z_logit_on_gt_sd": 0.014,
+      "pi_consensus_on_gt_sd": 0.0373,
+      "n_seeds": 3,
+      "name": "text\u22a5 + inject valence",
       "gt": "valence"
     },
     {
-      "domain_auc_raw": 0.7698,
-      "domain_auc_clever": 0.879,
-      "domain_auc_stack_xz": 0.9444,
-      "domain_auc_delta": 0.1091,
+      "domain_auc_raw": 0.8805,
+      "domain_auc_raw_sd": 0.0155,
+      "domain_auc_clever": 0.8831,
+      "domain_auc_clever_sd": 0.0096,
+      "domain_auc_stack_xz": 0.9019,
+      "domain_auc_stack_sd": 0.0718,
+      "domain_auc_delta": 0.0026,
+      "domain_auc_delta_stack": 0.0214,
       "vimp_share_raw": {
-        "text": 0.5124,
-        "valence": 0.4186,
-        "arousal": 0.0408,
-        "dominance": 0.0282
+        "text": 0.4929,
+        "valence": 0.4169,
+        "arousal": 0.0437,
+        "dominance": 0.0465
       },
-      "p_raw": 49,
-      "p_clever": 8,
-      "z_share_vimp": {
-        "text": 0.2648,
-        "valence": 0.2704,
-        "arousal": 0.2604,
-        "dominance": 0.2044
+      "p_raw": 60.0,
+      "p_clever": 4.0,
+      "z_vimp": {
+        "text": 0.0816,
+        "valence": 0.7164,
+        "arousal": 0.0944,
+        "dominance": 0.1077
       },
       "z_logit_vimp": {
-        "text": 0.0769,
-        "valence": 0.6589,
-        "arousal": 0.0907,
-        "dominance": 0.1735
+        "text": 0.0816,
+        "valence": 0.7164,
+        "arousal": 0.0944,
+        "dominance": 0.1077
       },
-      "po_risk_raw": 0.071485,
-      "po_risk_clever_Z": 0.073463,
-      "po_risk_tmle_H": 1.480397,
-      "po_risk_stack_tmle_H": 1.403916,
+      "z_share_vimp": {
+        "text": 0.0816,
+        "valence": 0.7164,
+        "arousal": 0.0944,
+        "dominance": 0.1077
+      },
       "selection_auc_raw": 1.0,
-      "mass_on_gt_raw": 0.4186,
-      "z_share_on_gt": 0.2704,
-      "z_logit_on_gt": 0.6589,
-      "pi_consensus_on_gt": 0.6546,
+      "mass_on_gt_raw": 0.4325,
+      "z_share_on_gt": 0.731,
+      "z_logit_on_gt": 0.731,
+      "pi_consensus_on_gt": 0.7336,
+      "domain_auc_stack_xz_sd": 0.0024,
+      "domain_auc_delta_sd": 0.0185,
+      "domain_auc_delta_stack_sd": 0.0142,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "selection_auc_raw_sd": 0.0,
+      "mass_on_gt_raw_sd": 0.0171,
+      "z_share_on_gt_sd": 0.0128,
+      "z_logit_on_gt_sd": 0.0128,
+      "pi_consensus_on_gt_sd": 0.0291,
+      "n_seeds": 3,
       "name": "synthetic GT=valence",
       "gt": "valence",
       "gap": {
-        "full_auc": 0.7778,
+        "full_auc": 0.89,
         "block_auc": {
-          "text": 0.3313,
-          "valence": 0.8155,
-          "arousal": 0.6647,
-          "dominance": 0.6052
+          "text": 0.58,
+          "valence": 0.9067,
+          "arousal": 0.525,
+          "dominance": 0.4817
         },
         "block_mmd": {
-          "text": 0.0,
-          "valence": 0.237316,
-          "arousal": 0.000177,
+          "text": 0.00074,
+          "valence": 0.204419,
+          "arousal": 0.0,
           "dominance": 0.0
         },
         "lomo_auc_drop": {
           "text": 0.0,
-          "valence": 0.1766,
+          "valence": 0.0,
           "arousal": 0.0,
           "dominance": 0.0
         },
         "vimp_share": {
-          "text": 0.5199,
-          "valence": 0.4028,
-          "arousal": 0.0417,
-          "dominance": 0.0356
+          "text": 0.4785,
+          "valence": 0.4508,
+          "arousal": 0.0315,
+          "dominance": 0.0392
         },
         "pi_auc": {
-          "text": 0.0,
-          "valence": 0.539,
-          "arousal": 0.2814,
-          "dominance": 0.1797
-        },
-        "pi_mmd": {
-          "text": 0.0,
-          "valence": 0.9993,
-          "arousal": 0.0007,
+          "text": 0.1564,
+          "valence": 0.7947,
+          "arousal": 0.0489,
           "dominance": 0.0
         },
-        "pi_lomo": {
-          "text": 0.0,
-          "valence": 1.0,
+        "pi_mmd": {
+          "text": 0.0036,
+          "valence": 0.9964,
           "arousal": 0.0,
           "dominance": 0.0
         },
+        "pi_lomo": {
+          "text": 0.25,
+          "valence": 0.25,
+          "arousal": 0.25,
+          "dominance": 0.25
+        },
         "pi_vimp": {
-          "text": 0.5199,
-          "valence": 0.4028,
-          "arousal": 0.0417,
-          "dominance": 0.0356
+          "text": 0.4785,
+          "valence": 0.4508,
+          "arousal": 0.0315,
+          "dominance": 0.0392
         },
         "pi_instance_mean": {
-          "text": 0.3076,
-          "valence": 0.3321,
-          "arousal": 0.181,
-          "dominance": 0.1792
+          "text": 0.25,
+          "valence": 0.25,
+          "arousal": 0.25,
+          "dominance": 0.25
         },
         "pi_consensus": {
-          "text": 0.1655,
-          "valence": 0.6546,
-          "arousal": 0.101,
-          "dominance": 0.0789
+          "text": 0.2128,
+          "valence": 0.7473,
+          "arousal": 0.0268,
+          "dominance": 0.0131
         }
       }
     }
@@ -402,145 +349,188 @@
   "sample_efficiency": [
     {
       "n": 200,
-      "auc_raw": 0.6016,
-      "auc_clever": 0.6688,
-      "auc_stack": 0.688,
-      "delta": 0.0672,
-      "delta_stack": 0.0864,
-      "p_raw": 47,
-      "p_clever": 8
+      "n_repeats": 4,
+      "auc_raw": 0.6815,
+      "auc_raw_sd": 0.0736,
+      "auc_clever": 0.6787,
+      "auc_clever_sd": 0.0391,
+      "auc_stack": 0.687,
+      "auc_stack_sd": 0.0707,
+      "delta": -0.0028,
+      "delta_stack": 0.0055,
+      "p_raw": 63,
+      "p_clever": 4
     },
     {
       "n": 400,
-      "auc_raw": 0.618,
-      "auc_clever": 0.5708,
-      "auc_stack": 0.6008,
-      "delta": -0.0472,
-      "delta_stack": -0.0172,
-      "p_raw": 47,
-      "p_clever": 8
+      "n_repeats": 4,
+      "auc_raw": 0.6974,
+      "auc_raw_sd": 0.0413,
+      "auc_clever": 0.6818,
+      "auc_clever_sd": 0.043,
+      "auc_stack": 0.7051,
+      "auc_stack_sd": 0.0317,
+      "delta": -0.0156,
+      "delta_stack": 0.0077,
+      "p_raw": 63,
+      "p_clever": 4
     },
     {
       "n": 800,
-      "auc_raw": 0.6863,
-      "auc_clever": 0.6968,
-      "auc_stack": 0.6533,
-      "delta": 0.0105,
-      "delta_stack": -0.033,
-      "p_raw": 47,
-      "p_clever": 8
+      "n_repeats": 4,
+      "auc_raw": 0.7142,
+      "auc_raw_sd": 0.0069,
+      "auc_clever": 0.6677,
+      "auc_clever_sd": 0.0177,
+      "auc_stack": 0.7179,
+      "auc_stack_sd": 0.0107,
+      "delta": -0.0464,
+      "delta_stack": 0.0037,
+      "p_raw": 63,
+      "p_clever": 4
+    },
+    {
+      "n": 1200,
+      "n_repeats": 4,
+      "auc_raw": 0.7107,
+      "auc_raw_sd": 0.0134,
+      "auc_clever": 0.6559,
+      "auc_clever_sd": 0.0233,
+      "auc_stack": 0.7073,
+      "auc_stack_sd": 0.014,
+      "delta": -0.0548,
+      "delta_stack": -0.0033,
+      "p_raw": 63,
+      "p_clever": 4
     }
   ],
   "synthetic": {
-    "domain_auc_raw": 0.7698,
-    "domain_auc_clever": 0.879,
-    "domain_auc_stack_xz": 0.9444,
-    "domain_auc_delta": 0.1091,
+    "domain_auc_raw": 0.8805,
+    "domain_auc_raw_sd": 0.0155,
+    "domain_auc_clever": 0.8831,
+    "domain_auc_clever_sd": 0.0096,
+    "domain_auc_stack_xz": 0.9019,
+    "domain_auc_stack_sd": 0.0718,
+    "domain_auc_delta": 0.0026,
+    "domain_auc_delta_stack": 0.0214,
     "vimp_share_raw": {
-      "text": 0.5124,
-      "valence": 0.4186,
-      "arousal": 0.0408,
-      "dominance": 0.0282
+      "text": 0.4929,
+      "valence": 0.4169,
+      "arousal": 0.0437,
+      "dominance": 0.0465
     },
-    "p_raw": 49,
-    "p_clever": 8,
-    "z_share_vimp": {
-      "text": 0.2648,
-      "valence": 0.2704,
-      "arousal": 0.2604,
-      "dominance": 0.2044
+    "p_raw": 60.0,
+    "p_clever": 4.0,
+    "z_vimp": {
+      "text": 0.0816,
+      "valence": 0.7164,
+      "arousal": 0.0944,
+      "dominance": 0.1077
     },
     "z_logit_vimp": {
-      "text": 0.0769,
-      "valence": 0.6589,
-      "arousal": 0.0907,
-      "dominance": 0.1735
+      "text": 0.0816,
+      "valence": 0.7164,
+      "arousal": 0.0944,
+      "dominance": 0.1077
     },
-    "po_risk_raw": 0.071485,
-    "po_risk_clever_Z": 0.073463,
-    "po_risk_tmle_H": 1.480397,
-    "po_risk_stack_tmle_H": 1.403916,
+    "z_share_vimp": {
+      "text": 0.0816,
+      "valence": 0.7164,
+      "arousal": 0.0944,
+      "dominance": 0.1077
+    },
     "selection_auc_raw": 1.0,
-    "mass_on_gt_raw": 0.4186,
-    "z_share_on_gt": 0.2704,
-    "z_logit_on_gt": 0.6589,
-    "pi_consensus_on_gt": 0.6546,
+    "mass_on_gt_raw": 0.4325,
+    "z_share_on_gt": 0.731,
+    "z_logit_on_gt": 0.731,
+    "pi_consensus_on_gt": 0.7336,
+    "domain_auc_stack_xz_sd": 0.0024,
+    "domain_auc_delta_sd": 0.0185,
+    "domain_auc_delta_stack_sd": 0.0142,
+    "p_raw_sd": 0.0,
+    "p_clever_sd": 0.0,
+    "selection_auc_raw_sd": 0.0,
+    "mass_on_gt_raw_sd": 0.0171,
+    "z_share_on_gt_sd": 0.0128,
+    "z_logit_on_gt_sd": 0.0128,
+    "pi_consensus_on_gt_sd": 0.0291,
+    "n_seeds": 3,
     "name": "synthetic GT=valence",
     "gt": "valence",
     "gap": {
-      "full_auc": 0.7778,
+      "full_auc": 0.89,
       "block_auc": {
-        "text": 0.3313,
-        "valence": 0.8155,
-        "arousal": 0.6647,
-        "dominance": 0.6052
+        "text": 0.58,
+        "valence": 0.9067,
+        "arousal": 0.525,
+        "dominance": 0.4817
       },
       "block_mmd": {
-        "text": 0.0,
-        "valence": 0.237316,
-        "arousal": 0.000177,
+        "text": 0.00074,
+        "valence": 0.204419,
+        "arousal": 0.0,
         "dominance": 0.0
       },
       "lomo_auc_drop": {
         "text": 0.0,
-        "valence": 0.1766,
+        "valence": 0.0,
         "arousal": 0.0,
         "dominance": 0.0
       },
       "vimp_share": {
-        "text": 0.5199,
-        "valence": 0.4028,
-        "arousal": 0.0417,
-        "dominance": 0.0356
+        "text": 0.4785,
+        "valence": 0.4508,
+        "arousal": 0.0315,
+        "dominance": 0.0392
       },
       "pi_auc": {
-        "text": 0.0,
-        "valence": 0.539,
-        "arousal": 0.2814,
-        "dominance": 0.1797
-      },
-      "pi_mmd": {
-        "text": 0.0,
-        "valence": 0.9993,
-        "arousal": 0.0007,
+        "text": 0.1564,
+        "valence": 0.7947,
+        "arousal": 0.0489,
         "dominance": 0.0
       },
-      "pi_lomo": {
-        "text": 0.0,
-        "valence": 1.0,
+      "pi_mmd": {
+        "text": 0.0036,
+        "valence": 0.9964,
         "arousal": 0.0,
         "dominance": 0.0
       },
+      "pi_lomo": {
+        "text": 0.25,
+        "valence": 0.25,
+        "arousal": 0.25,
+        "dominance": 0.25
+      },
       "pi_vimp": {
-        "text": 0.5199,
-        "valence": 0.4028,
-        "arousal": 0.0417,
-        "dominance": 0.0356
+        "text": 0.4785,
+        "valence": 0.4508,
+        "arousal": 0.0315,
+        "dominance": 0.0392
       },
       "pi_instance_mean": {
-        "text": 0.3076,
-        "valence": 0.3321,
-        "arousal": 0.181,
-        "dominance": 0.1792
+        "text": 0.25,
+        "valence": 0.25,
+        "arousal": 0.25,
+        "dominance": 0.25
       },
       "pi_consensus": {
-        "text": 0.1655,
-        "valence": 0.6546,
-        "arousal": 0.101,
-        "dominance": 0.0789
+        "text": 0.2128,
+        "valence": 0.7473,
+        "arousal": 0.0268,
+        "dominance": 0.0131
       }
     }
   },
   "notes": {
-    "clever_Z": "compact X-only features: instance \u03c0_m(x) and logit \u00ea_m(X_m); compared as Z-only vs raw X",
-    "clever_H": "TMLE H_m = \u03c0_m (W-\u00ea_m)/(\u00ea_m(1-\u00ea_m)); used in PO targeting only",
-    "vad_lexicon": "static pool of 1750+1950 Chronoberg VAD lexicons"
+    "clever_Z": "Z_m = \u03c0_m \u00b7 logit \u00ea_m(X_m); OOF propensity, 5-fold CV AUC",
+    "clever_H": "TMLE H_m = \u03c0_m (W-\u00ea_m)/(\u00ea_m(1-\u00ea_m)); PO targeting only",
+    "vad_lexicon": "static pool of 1750+1950 Chronoberg VAD lexicons",
+    "observational": "diffuse multi-modality shift; GT board is inject/synthetic"
   },
   "plots": {
     "gap_shares": "/workspace/results/chronoberg_clever_cov/chronoberg_modality_gap_shares.png",
     "auc": "/workspace/results/chronoberg_clever_cov/chronoberg_clever_vs_raw_auc.png",
     "efficiency": "/workspace/results/chronoberg_clever_cov/chronoberg_sample_efficiency.png",
-    "inject": "/workspace/results/chronoberg_clever_cov/chronoberg_inject_recovery.png",
-    "porisk": "/workspace/results/chronoberg_clever_cov/chronoberg_porisk_clever.png"
+    "inject": "/workspace/results/chronoberg_clever_cov/chronoberg_inject_recovery.png"
   }
 }

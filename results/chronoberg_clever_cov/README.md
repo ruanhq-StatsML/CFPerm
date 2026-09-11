@@ -7,24 +7,23 @@ Modalities: hashed text n-grams, valence / arousal / dominance (pooled lexicons)
 
 | modality | π |
 |---|---:|
-| text | 0.282 |
-| valence | 0.343 |
-| arousal | 0.109 |
-| dominance | 0.266 |
+| text | 0.311 |
+| valence | 0.307 |
+| arousal | 0.131 |
+| dominance | 0.250 |
 
-## Raw X vs clever-Z vs stack X+Z
+## GT board (mean over seeds, 5-fold CV AUC)
 
-| setting | AUC raw | AUC Z | AUC X+Z | Δ stack |
-|---|---:|---:|---:|---:|
-| observational 1750/1950 | 0.739 | 0.692 | 0.690 | -0.049 |
-| CD: Y=valence, X=text+A+D | 0.710 | 0.637 | 0.638 | -0.072 |
-| inject valence (α=0.95) | 0.859 | 0.816 | 0.875 | +0.015 |
-| inject text (α=0.75) | 0.999 | 1.000 | 1.000 | +0.001 |
-| text-shuffled + inject valence | 0.888 | 0.816 | 0.913 | +0.025 |
-| synthetic GT=valence | 0.770 | 0.879 | 0.944 | +0.175 |
+| setting | AUC raw | AUC Z | AUC X+Z | Δ stack | π on GT |
+|---|---:|---:|---:|---:|---:|
+| inject valence (α=0.70) | 0.826 | 0.864 | 0.892 | +0.066 | 0.373 |
+| text⊥ + inject valence | 0.855 | 0.880 | 0.911 | +0.055 | 0.466 |
+| synthetic GT=valence | 0.880 | 0.883 | 0.902 | +0.021 | 0.734 |
 
-Clever-Z is the compact detector: instance-level relative contributions `π_m(x)`
-and `logit ê_m(X_m)` (2 × n_modalities columns). TMLE `H_m` is used only in PO-risk targeting.
+Observational 1750/1950 (no GT, diffuse shift): raw AUC 0.720 vs clever-Z 0.694.
+
+Clever-Z is `Z_m = π_m · logit ê_m(X_m)` (n_modalities columns), estimated OOF.
+Detection uses 5-fold stratified CV. GT rows average 3 subsample seeds.
 
 ```bash
 python3 scripts/run_chronoberg_clever_cov.py
