@@ -24,6 +24,7 @@ from gap_guided_inference import (  # noqa: E402
     pack_user_context,
     population_pack,
     predict_gap_scores,
+    query_update,
     render_system_prompt,
     route_from_shares,
     simplex_entropy,
@@ -210,3 +211,37 @@ def test_diffuse_shift_pack_all_beats_one_expert():
     # Gate on a flat constructed π (not the DGP's π): dropping is unjustified.
     E, mode = population_pack(spec.names, np.full(4, 0.25), config=RouterConfig())
     assert mode == "pack_all" and E == spec.names
+
+
+def test_query_update_changes_E_only_when_s_overrides_pi():
+    names = ["text", "valence", "arousal", "dominance"]
+    pi = np.array([0.10, 0.70, 0.12, 0.08])
+    s_agree = np.array([0.08, 0.80, 0.07, 0.05])
+    s_fight = np.array([0.82, 0.08, 0.05, 0.05])
+    keep = query_update(names, pi, s_agree, lam=0.4)
+    assert keep["E_prior"] == ["valence"]
+    assert keep["switched"][0] == False
+    fight0 = query_update(names, pi, s_fight, lam=0.0)
+    assert fight0["switched"][0] == True
+    assert fight0["E_query"][0][0] == "text"
+    frozen = query_update(names, pi, s_fight, lam=1.0)
+    assert frozen["switched"][0] == False
+    flat = query_update(names, np.full(4, 0.25), np.full(4, 0.25), lam=0.4)
+    assert flat["mode_prior"] == "pack_all"
+    assert flat["switched"][0] == False
+
+
+def test_block_then_adapt_is_two_stage():
+    X, W, Y, spec = make_synthetic_shift(
+        n=360, d_text=20, d_vad=4, gt="valence", mean_shift=1.2, seed=4,
+    )
+    row = budgeted_inference_eval(X, W, spec, gt="valence", seed=4, n_estimators=35)
+    a = row["stage_A_block"]
+    b = row["stage_B_adapt"]
+    assert a["block_auc"]["valence"] >= 0.75
+    assert a["block_auc"]["valence"] >= a["block_auc"]["text"] - 0.02
+    assert b["adapt_prior_hit"] == 1.0
+    assert "adapt_query_only_auc" in b
+    assert 0.0 <= b["switch_rate"] <= 1.0
+    # Noisy query-only gate should not beat the frozen prior on this DGP.
+    assert b["adapt_prior_auc"] >= b["adapt_query_only_auc"] - 0.03

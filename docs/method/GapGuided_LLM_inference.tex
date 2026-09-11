@@ -25,6 +25,11 @@ Output is $f(\mathrm{pack}(x))$ with one $f$. Dropped blocks are absent.
 This restricts the $\sigma$-algebra of a frozen reader. It is not Hedge,
 not a bandit over specialists, and not a per-query update of $\pi$.
 
+A query updates $E$ only: $r=\lambda\pi+(1-\lambda)s(x)$, then
+$E_{\mathrm{query}}=\mathrm{pack}(r)$. Stage A evaluates block prediction
+$\hat e_m$; Stage B evaluates the adapted read after that update.
+$\lambda=1$ is prior-only; $\lambda=0$ is a hard query gate (often noisier).
+
 \section{Same expert versus packing}
 A \emph{same expert} is $\hat m=\arg\max\pi$, then $f\in\mathcal{G}_{\hat m}$
 (functions of $X_{B_{\hat m}}$ only) for every query. That template does not
@@ -53,6 +58,12 @@ drop a block (pack all, or HITL). Forced top-1 on a diffuse shift discards signa
 \centering
 \includegraphics[width=\textwidth]{gt_hit_rate.png}
 \caption{Localization hit. Same-expert hit is $1\{\hat m=m^\star\}$, not a per-row mix.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{query_update_auc.png}
+\caption{Query update of $E$: prior vs shrinkage vs $s$-only. $\pi$ and $f$ stay frozen.}
 \end{figure}
 
 Inject valence with a wide text block: VIMP hires the wide specialist;

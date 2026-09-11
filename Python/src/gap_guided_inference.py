@@ -242,6 +242,51 @@ def packed_in_read_order(read_order: Sequence[str], enabled_names: Sequence[str]
     return [n for n in read_order if n in enabled]
 
 
+def query_update(
+    names: Sequence[str],
+    pi: np.ndarray,
+    instance_share: np.ndarray,
+    *,
+    lam: float = 0.4,
+    config: "RouterConfig | None" = None,
+) -> dict:
+    """Per-query update of the observation E — not of π, not of the reader.
+
+    Cheap pass (block prediction): s_m(x) from frozen ê, ê_{-m}.
+    Update: r = λπ + (1-λ)s(x), then E_query = population_pack(r).
+    Expensive pass (adaptation): reader sees pack_{E_query}(x).
+
+    λ=1 keeps E_prior for every x. λ=0 is a hard query gate. Nothing here
+    writes a loss back into π or f.
+    """
+    config = config or RouterConfig()
+    names = list(names)
+    pi = relu_normalize(np.asarray(pi, dtype=float).reshape(-1))
+    s = np.asarray(instance_share, dtype=float)
+    if s.ndim == 1:
+        s = s.reshape(1, -1)
+    r = blend_shares(pi, s, lam=lam)
+    E_prior, mode_prior = population_pack(names, pi, config=config)
+    E_query: List[List[str]] = []
+    mode_query: List[str] = []
+    for i in range(int(s.shape[0])):
+        Ei, mi = population_pack(names, r[i], config=config)
+        E_query.append(Ei)
+        mode_query.append(mi)
+    prior_t = tuple(E_prior)
+    switched = np.array([tuple(E) != prior_t for E in E_query], dtype=bool)
+    return {
+        "r": r,
+        "E_prior": E_prior,
+        "mode_prior": mode_prior,
+        "E_query": E_query,
+        "mode_query": mode_query,
+        "switched": switched,
+        "m_prior": int(np.argmax(pi)),
+        "m_query": np.argmax(r, axis=1).astype(int),
+    }
+
+
 def column_index(spec: ModalitySpec, enabled_names: Sequence[str]) -> np.ndarray:
     idx: List[int] = []
     for name in enabled_names:
@@ -836,6 +881,43 @@ def budgeted_inference_eval(
         pack_auc[key] = round(float(a), 4)
         pack_width[key] = int(w)
 
+    lam_eff = lam if models.has_lomo else 1.0
+    qu = query_update(names, models.pi, s, lam=lam_eff)
+    stage_A = {
+        "block_auc": {
+            n: round(_auc(Wte, e_block[:, j]), 4) for j, n in enumerate(names)
+        },
+        "pi": models.pack_pi(),
+        "mean_s": {n: round(float(s[:, j].mean()), 4) for j, n in enumerate(names)},
+    }
+    path_auc: Dict[str, float] = {}
+    path_hit: Dict[str, float] = {}
+    for lam_k, tag in ((1.0, "prior"), (lam_eff, "shrink"), (0.0, "query_only")):
+        r_k = blend_shares(models.pi, s, lam=lam_k)
+        m_k = np.argmax(r_k, axis=1)
+        path_auc[tag] = round(_auc(Wte, pick(m_k)), 4)
+        path_hit[tag] = round(hit(m_k), 4)
+    switch_rate = float(qu["switched"].mean())
+    toward: float | None = None
+    if gt is not None and gt in names and switch_rate > 0:
+        g = names.index(gt)
+        sw = qu["switched"]
+        toward = round(float(np.mean(qu["m_query"][sw] == g)), 4)
+    stage_B = {
+        "adapt_prior_auc": path_auc["prior"],
+        "adapt_shrink_auc": path_auc["shrink"],
+        "adapt_query_only_auc": path_auc["query_only"],
+        "adapt_prior_hit": path_hit["prior"],
+        "adapt_shrink_hit": path_hit["shrink"],
+        "adapt_query_only_hit": path_hit["query_only"],
+        "delta_auc_shrink_minus_prior": round(path_auc["shrink"] - path_auc["prior"], 4),
+        "delta_hit_shrink_minus_prior": round(path_hit["shrink"] - path_hit["prior"], 4),
+        "switch_rate": round(switch_rate, 4),
+        "switch_toward_gt": toward,
+        "E_prior": qu["E_prior"],
+        "mode_prior": qu["mode_prior"],
+    }
+
     return {
         "n_train": int(len(Wtr)),
         "n_test": int(len(Wte)),
@@ -853,12 +935,16 @@ def budgeted_inference_eval(
         "hit_gt": hits,
         "pack_auc": pack_auc,
         "pack_width": pack_width,
+        "stage_A_block": stage_A,
+        "stage_B_adapt": stage_B,
         "gt": gt,
         "has_lomo": models.has_lomo,
         "lam": lam if models.has_lomo else 1.0,
         "note": (
-            "auc.*_top1 is the frozen specialist ê_m (same expert reads only B_m). "
-            "pack_auc is one RF on concatenated enabled columns (context packing). "
+            "Stage A: block prediction = holdout AUC of ê_m and localization (π, s). "
+            "Stage B: adaptation = one reader on pack_E after a query update of E, "
+            "not an online update of π or f. "
+            "auc.*_top1 is the frozen specialist. pack_auc is one RF on concat columns. "
             "pi_pool mixes specialist scores — that is not packing."
         ),
     }

@@ -21,6 +21,15 @@ Two-sample localization of W on X. **Same expert**: one m̂=argmax π for every 
 | diffuse equal shift | nan | 0.710 | 0.698 | 0.780 | 0.876 |
 | shuffle valence (neg.) | 0.505 | 0.459 | 0.475 | 0.474 | 0.496 |
 
+## Stage B: query update of E (π, f frozen)
+
+| setting | prior AUC | shrink AUC | query-only AUC | switch rate | Δ AUC |
+|---|---:|---:|---:|---:|---:|
+| synthetic GT=valence | 0.959 | 0.957 | 0.931 | 0.101 | -0.002 |
+| inject valence | 0.747 | 0.745 | 0.698 | 0.414 | -0.002 |
+| diffuse equal shift | 0.716 | 0.725 | 0.694 | 0.286 | +0.009 |
+| shuffle valence (neg.) | 0.474 | 0.481 | 0.501 | 0.641 | +0.007 |
+
 ```bash
 python3 scripts/run_gap_guided_inference.py
 ```

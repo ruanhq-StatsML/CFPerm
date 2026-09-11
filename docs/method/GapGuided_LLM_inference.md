@@ -119,11 +119,56 @@ Evaluate four numbers, in order:
 3. **Packed-reader utility.** Held-out AUC of **one** RF trained on `pack_blocks(X, E)`, \(E\in\{\{\hat m_\pi\},\{\hat m_{\mathrm{VIMP}}\},\{m^\star\},\mathrm{top}\text{-}2(\pi),\mathrm{all}\}\). This is “one reader, concatenated sections”. It is the eval for packing, not (2).
 4. **Abstain check.** Diffuse / shuffle: pack-all \(\ge\) forced same-expert. Concentrated inject: same-expert π \(\approx\) oracle and **beats** VIMP when a wide nuisance block exists. Negative control: shuffle \(m^\star\) → hit on that name collapses.
 
+## Query update (of \(E\), not of \(\pi\) or \(f\))
+
+A new query \(x\) does **not** train anything. It updates the *observation* for this row.
+
+Cheap pass — **block prediction.** Frozen \(\hat e,\hat e_{-m}\) give \(s_m(x)\) and the specialist scores \(\hat e_m(x)\). This is “what this block says about the two-sample tag / about \(C\)”. No LLM.
+
+Update — **shrinkage, one row.**
+\[
+r(x)=\lambda\pi+(1-\lambda)s(x),\qquad E_{\mathrm{query}}(x)=\mathrm{pack}\bigl(r(x)\bigr).
+\]
+\(\lambda=1\): \(E\) stays \(E(\pi)\) (no query update). \(\lambda=0\): hard gate on \(s(x)\). Default \(\lambda=0.4\) is the posterior analogue. If \(r\) is flat, \(E=\text{all}\) (abstain-from-drop). If the query would switch \(E\) but \(s\) is diffuse, do not switch.
+
+Expensive pass — **adaptation.** One reader on \(\mathrm{pack}_{E_{\mathrm{query}}}(x)\). That is the next step after the block prediction.
+
+```
+π, f frozen
+x arrives
+   │
+   ├─ ê_m(x), s(x)     Stage A: block prediction
+   ├─ r = λπ+(1-λ)s    query update of E only
+   └─ f(pack_{E(r)}(x)) Stage B: adapted read
+π ← π,  f ← f          still frozen
+```
+
+Never: \(\pi \leftarrow \pi + \ell(x)\), never \(f \leftarrow f - \nabla\ell\). That would be online learning.
+
+## How to evaluate the two steps
+
+**Stage A — block prediction.** Holdout two-sample AUC of each \(\hat e_m\) (does this raw block even carry \(W\)?). Localization of \(\pi\), mean \(s\), and \(r\): \(1\{\arg\max = m^\star\}\).
+
+**Stage B — adaptation after the update.** Same frozen specialists, different \(E\):
+
+| path | \(E\) | what it tests |
+|---|---|---|
+| prior | \(E(\pi)\) | no query update |
+| shrink | \(E(r)\), \(\lambda=0.4\) | query update with prior |
+| query-only | \(E(s)\), \(\lambda=0\) | query update without prior |
+
+Report AUC and hit of \(\hat e_{m(x)}\), switch rate \(P(E_{\mathrm{query}}\neq E_{\mathrm{prior}})\), and among switches, \(P(m_{\mathrm{query}}=m^\star)\). Packed-reader AUC (one RF on a *fixed* \(E(\pi)\)) stays the population adaptation eval; it does not vary \(E\) per row.
+
+Typical: on concentrated inject, Stage A \(\hat e_{\mathrm{valence}}\) is strong and prior hit is 1; query-only hit/AUC can **drop** because \(s(x)\) is noisy — that is why the update shrinks toward \(\pi\). On diffuse, Stage A block AUCs are similar and Stage B pack-all beats any one-block adaptation.
+
+## Code
+
 Headline from `scripts/run_gap_guided_inference.py` (3 seeds):
 
 - Inject valence, wide text: same-expert π packed AUC **0.753** (hit 1); VIMP packed AUC **0.600** (hit 0).
 - Diffuse equal shift: pack-all **0.876** vs one specialist **0.710**. Abstain-from-drop is pack-all here.
 - Shuffle valence: packed AUC ~0.5, hit collapses.
+- Query update on inject: prior AUC **0.747** / hit 1; shrink λ=0.4 almost matches; query-only λ=0 drops to **0.698** / hit 0.47. The query should update \(E\) toward \(s(x)\) only with shrinkage.
 
 ## Code
 
@@ -132,4 +177,4 @@ python3 -m pytest -q tests/test_gap_guided_inference.py
 python3 scripts/run_gap_guided_inference.py
 ```
 
-`population_pack` → \(E(\pi)\). `pack_user_context` → string concat. `holdout_packed_auc` → one reader on packed columns.
+`population_pack` → \(E(\pi)\). `query_update` → \(E(r(x))\) without touching \(\pi\) or \(f\). `pack_user_context` → string concat. `holdout_packed_auc` → one reader on packed columns. `stage_A_block` / `stage_B_adapt` in `budgeted_inference_eval`.

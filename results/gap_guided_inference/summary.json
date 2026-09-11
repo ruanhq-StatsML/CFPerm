@@ -55,6 +55,37 @@
           "pi_top1": "valence",
           "vimp_top1": "valence",
           "random_fixed": "arousal"
+        },
+        "stage_A_last": {
+          "block_auc": {
+            "text": 0.4955,
+            "valence": 0.9536,
+            "arousal": 0.4595,
+            "dominance": 0.5749
+          },
+          "pi": {
+            "text": 0.1119,
+            "valence": 0.8041,
+            "arousal": 0.0411,
+            "dominance": 0.0429
+          },
+          "mean_s": {
+            "text": 0.2153,
+            "valence": 0.4911,
+            "arousal": 0.1502,
+            "dominance": 0.1435
+          }
+        },
+        "stage_B": {
+          "adapt_prior_auc": 0.9593,
+          "adapt_shrink_auc": 0.9573,
+          "adapt_query_only_auc": 0.9315,
+          "adapt_prior_hit": 1.0,
+          "adapt_shrink_hit": 0.9798,
+          "adapt_query_only_hit": 0.7491,
+          "delta_auc_shrink_minus_prior": -0.002,
+          "delta_hit_shrink_minus_prior": -0.0202,
+          "switch_rate": 0.1007
         }
       },
       "inject valence": {
@@ -111,6 +142,37 @@
           "pi_top1": "valence",
           "vimp_top1": "text",
           "random_fixed": "valence"
+        },
+        "stage_A_last": {
+          "block_auc": {
+            "text": 0.681,
+            "valence": 0.751,
+            "arousal": 0.5036,
+            "dominance": 0.5436
+          },
+          "pi": {
+            "text": 0.2486,
+            "valence": 0.6407,
+            "arousal": 0.0552,
+            "dominance": 0.0554
+          },
+          "mean_s": {
+            "text": 0.2732,
+            "valence": 0.3613,
+            "arousal": 0.1833,
+            "dominance": 0.1822
+          }
+        },
+        "stage_B": {
+          "adapt_prior_auc": 0.7465,
+          "adapt_shrink_auc": 0.7446,
+          "adapt_query_only_auc": 0.6984,
+          "adapt_prior_hit": 1.0,
+          "adapt_shrink_hit": 0.8242,
+          "adapt_query_only_hit": 0.4652,
+          "delta_auc_shrink_minus_prior": -0.0018,
+          "delta_hit_shrink_minus_prior": -0.1758,
+          "switch_rate": 0.4139
         }
       },
       "diffuse equal shift": {
@@ -158,6 +220,37 @@
           "pi_top1": "arousal",
           "vimp_top1": "text",
           "random_fixed": "valence"
+        },
+        "stage_A_last": {
+          "block_auc": {
+            "text": 0.7347,
+            "valence": 0.7034,
+            "arousal": 0.6923,
+            "dominance": 0.6506
+          },
+          "pi": {
+            "text": 0.2291,
+            "valence": 0.2598,
+            "arousal": 0.2721,
+            "dominance": 0.239
+          },
+          "mean_s": {
+            "text": 0.324,
+            "valence": 0.2399,
+            "arousal": 0.2296,
+            "dominance": 0.2065
+          }
+        },
+        "stage_B": {
+          "adapt_prior_auc": 0.7164,
+          "adapt_shrink_auc": 0.7251,
+          "adapt_query_only_auc": 0.6939,
+          "adapt_prior_hit": null,
+          "adapt_shrink_hit": null,
+          "adapt_query_only_hit": null,
+          "delta_auc_shrink_minus_prior": 0.0087,
+          "delta_hit_shrink_minus_prior": null,
+          "switch_rate": 0.2857
         }
       },
       "shuffle valence (neg.)": {
@@ -214,6 +307,37 @@
           "pi_top1": "valence",
           "vimp_top1": "text",
           "random_fixed": "valence"
+        },
+        "stage_A_last": {
+          "block_auc": {
+            "text": 0.4957,
+            "valence": 0.5078,
+            "arousal": 0.4974,
+            "dominance": 0.476
+          },
+          "pi": {
+            "text": 0.3054,
+            "valence": 0.3265,
+            "arousal": 0.067,
+            "dominance": 0.3011
+          },
+          "mean_s": {
+            "text": 0.2907,
+            "valence": 0.2276,
+            "arousal": 0.2484,
+            "dominance": 0.2332
+          }
+        },
+        "stage_B": {
+          "adapt_prior_auc": 0.4742,
+          "adapt_shrink_auc": 0.4812,
+          "adapt_query_only_auc": 0.5009,
+          "adapt_prior_hit": 0.3333,
+          "adapt_shrink_hit": 0.1282,
+          "adapt_query_only_hit": 0.1905,
+          "delta_auc_shrink_minus_prior": 0.007,
+          "delta_hit_shrink_minus_prior": -0.2051,
+          "switch_rate": 0.641
         }
       }
     }
@@ -226,6 +350,7 @@
   "plots": {
     "auc": "/workspace/results/gap_guided_inference/budgeted_auc.png",
     "hit": "/workspace/results/gap_guided_inference/gt_hit_rate.png",
-    "pack": "/workspace/results/gap_guided_inference/packed_auc.png"
+    "pack": "/workspace/results/gap_guided_inference/packed_auc.png",
+    "query": "/workspace/results/gap_guided_inference/query_update_auc.png"
   }
 }

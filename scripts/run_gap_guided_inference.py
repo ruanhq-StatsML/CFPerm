@@ -45,6 +45,21 @@ def _mean_eval(maker, *, n_seeds: int, **kw) -> dict:
         for k in pack_keys
     }
     modes = [r["population_pack"]["mode"] for r in rows]
+    bkeys = [
+        "adapt_prior_auc", "adapt_shrink_auc", "adapt_query_only_auc",
+        "adapt_prior_hit", "adapt_shrink_hit", "adapt_query_only_hit",
+        "delta_auc_shrink_minus_prior", "delta_hit_shrink_minus_prior",
+        "switch_rate",
+    ]
+    stage_B = {}
+    for k in bkeys:
+        vals = [
+            r["stage_B_adapt"][k]
+            for r in rows
+            if r["stage_B_adapt"].get(k) is not None
+            and r["stage_B_adapt"][k] == r["stage_B_adapt"][k]
+        ]
+        stage_B[k] = round(float(np.mean(vals)), 4) if vals else None
     return {
         "n_seeds": n_seeds,
         "gt": kw.get("gt"),
@@ -56,6 +71,8 @@ def _mean_eval(maker, *, n_seeds: int, **kw) -> dict:
         "pi_last": rows[-1]["pi"],
         "pi_vimp_last": rows[-1]["pi_vimp"],
         "selected_last": rows[-1]["selected_block"],
+        "stage_A_last": rows[-1]["stage_A_block"],
+        "stage_B": stage_B,
     }
 
 
@@ -151,6 +168,32 @@ def plot_board(board: dict, out_dir: Path) -> dict:
     fig.savefig(p, dpi=160)
     plt.close(fig)
     paths["pack"] = p
+
+    if any(board["settings"][s].get("stage_B") for s in settings):
+        fig, ax = plt.subplots(figsize=(8.8, 4.3))
+        w = 0.22
+        qseries = [
+            ("adapt_prior_auc", "prior E(π)", "#ff7f0e"),
+            ("adapt_shrink_auc", "query update λ=0.4", "#111111"),
+            ("adapt_query_only_auc", "query-only λ=0", "#d62728"),
+        ]
+        for i, (key, lab, c) in enumerate(qseries):
+            vals = [board["settings"][s].get("stage_B", {}).get(key, np.nan) for s in settings]
+            ax.bar(x + (i - 1) * w, vals, w, label=lab, color=c)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labs, rotation=12, ha="right")
+        ax.set_ylabel("held-out AUC after choosing E")
+        ax.set_ylim(0.45, 1.02)
+        ax.axhline(0.5, ls="--", lw=0.8, color="0.5")
+        ax.set_title("Query update of E (π and f stay frozen)")
+        ax.legend(frameon=False, fontsize=8)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        fig.tight_layout()
+        p = out_dir / "query_update_auc.png"
+        fig.savefig(p, dpi=160)
+        plt.close(fig)
+        paths["query"] = p
     return {k: str(v) for k, v in paths.items()}
 
 
@@ -186,6 +229,22 @@ def write_readme(board: dict, out_dir: Path) -> None:
             f"| {name} | {p.get('same_expert_oracle', float('nan')):.3f} | "
             f"{p.get('same_expert_pi', float('nan')):.3f} | {p.get('same_expert_vimp', float('nan')):.3f} | "
             f"{p.get('concat_top2_pi', float('nan')):.3f} | {p.get('pack_all', float('nan')):.3f} |"
+        )
+    lines += [
+        "",
+        "## Stage B: query update of E (π, f frozen)",
+        "",
+        "| setting | prior AUC | shrink AUC | query-only AUC | switch rate | Δ AUC |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for name, row in board["settings"].items():
+        b = row.get("stage_B") or {}
+        lines.append(
+            f"| {name} | {b.get('adapt_prior_auc', float('nan')):.3f} | "
+            f"{b.get('adapt_shrink_auc', float('nan')):.3f} | "
+            f"{b.get('adapt_query_only_auc', float('nan')):.3f} | "
+            f"{b.get('switch_rate', float('nan')):.3f} | "
+            f"{b.get('delta_auc_shrink_minus_prior', float('nan')):+.3f} |"
         )
     lines += [
         "",
@@ -278,6 +337,7 @@ def main() -> None:
         "board_pack": {k: v["pack_auc"] for k, v in board["settings"].items()},
         "board_auc": {k: v["auc"] for k, v in board["settings"].items()},
         "board_hit": {k: v["hit_gt"] for k, v in board["settings"].items()},
+        "board_stage_B": {k: v.get("stage_B") for k, v in board["settings"].items()},
     }, indent=2))
 
 
