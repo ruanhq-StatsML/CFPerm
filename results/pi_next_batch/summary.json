@@ -1,0 +1,51 @@
+{
+  "board": {
+    "synthetic GT=valence": {
+      "domain_auc": {
+        "uniform": 0.9273,
+        "pi_boost": 0.9426,
+        "vimp_boost": 0.9285,
+        "pi_damp": 0.7508,
+        "oracle": 0.9504
+      },
+      "mass_on_gt": {
+        "uniform": 0.4585,
+        "pi_boost": 0.6661,
+        "vimp_boost": 0.5136,
+        "pi_damp": 0.1494,
+        "oracle": 1.0
+      },
+      "y_mse": {
+        "uniform": 0.4631,
+        "pi_boost": 0.3663,
+        "vimp_boost": 0.3998,
+        "pi_damp": 0.934,
+        "oracle": 0.3613
+      }
+    },
+    "inject valence": {
+      "domain_auc": {
+        "uniform": 0.8049,
+        "pi_boost": 0.8049,
+        "vimp_boost": 0.783,
+        "pi_damp": 0.7384,
+        "oracle": 0.8132
+      },
+      "mass_on_gt": {
+        "uniform": 0.2684,
+        "pi_boost": 0.3254,
+        "vimp_boost": 0.2416,
+        "pi_damp": 0.1435,
+        "oracle": 1.0
+      },
+      "y_mse": {
+        "uniform": 0.6089,
+        "pi_boost": 0.5711,
+        "vimp_boost": 0.5387,
+        "pi_damp": 0.8767,
+        "oracle": 1.0658
+      }
+    }
+  },
+  "path": "/workspace/results/pi_next_batch/next_batch_lr_path.png"
+}
