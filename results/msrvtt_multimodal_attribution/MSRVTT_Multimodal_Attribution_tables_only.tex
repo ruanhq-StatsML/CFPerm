@@ -2,6 +2,28 @@
 % Requires booktabs.
 
 \begin{table}[ht]\centering
+\caption{Modality contribution to within-video covariate shift $P(X\mid W)$.
+Batch $W$ is the early vs.\ late window split inside each video ($n=320$ windows, $16$ videos; column-standardized $X$).
+RF-Domain, coordinate-MMD, and PO-risk VIMP are L1-normalized shares.
+Mean $|d|$ is Cohen's $d$ on region-mean activation, averaged over $16$ videos $\times$ $8$ embedding bins.
+Holm cells count video$\times$region tests with Holm $p<0.05$ (within video).}
+\label{tab:msrvtt-mm-shift-contrib}
+\small
+\begin{tabular}{@{}l ccc cc l@{}}\toprule
+Modality & RF-Domain & MMD & PO-risk & mean $|d|$ & Holm cells & Role in $W$-shift \\
+\midrule
+Video ($768$-d) & $0.772$ & $0.897$ & $0.813$ & $0.787$ & $10$ & primary \\
+Audio ($512$-d) & $0.191$ & $0.101$ & $0.174$ & $0.518$ & $2$  & secondary \\
+Text ($768$-d)  & $0.037$ & $0.002$ & $0.013$ & $0.000$ & $0$  & structural null$^{\dagger}$ \\
+\bottomrule\end{tabular}\\[0.45em]
+{\footnotesize
+Friedman test of equal per-video RF shares: $\chi^{2}=30.13$, $p=2.87\times 10^{-7}$.
+Wilcoxon signed-rank (Holm) rejects video$=$audio, video$=$text, and audio$=$text at $p<10^{-4}$.
+$^{\dagger}$Clip-level caption (window-invariant on this extract), hence a structural zero for $W$-shift, not a claim that language is uninformative for retrieval.
+}
+\end{table}
+
+\begin{table}[ht]\centering
 \caption{MSR-VTT sliding-window multimodal attribution. Columns are video/audio/text VIMP or LOGO shares. RF-Domain and MMD-LOCO target covariate shift $P(X)$; PO-risk LOGO targets concept drift through the pseudo-outcome. Batch $W$ is early vs.\ late windows inside each video.}
 \label{tab:msrvtt-mm-shares}
 \small

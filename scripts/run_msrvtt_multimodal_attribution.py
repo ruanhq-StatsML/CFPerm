@@ -41,6 +41,23 @@ def write_tex(result, path: Path):
         "% MSR-VTT multimodal FSDS attribution · tables only\n",
         "% Requires booktabs.\n\n",
         "\\begin{table}[ht]\\centering\n",
+        "\\caption{Modality contribution to within-video covariate shift $P(X\\mid W)$. "
+        "Batch $W$ is the early vs.\\ late window split inside each video "
+        "($n=%d$ windows, $%d$ videos; column-standardized $X$). "
+        "RF-Domain, coordinate-MMD, and PO-risk VIMP are L1-normalized shares. "
+        "Mean $|d|$ is Cohen's $d$ on region-mean activation.}\n"
+        % (result["n"], result["n_videos"]),
+        "\\label{tab:msrvtt-mm-shift-contrib}\n\\small\n",
+        "\\begin{tabular}{@{}l ccc c l@{}}\\toprule\n",
+        "Modality & RF-Domain & MMD & PO-risk & mean $|d|$ & Role in $W$-shift \\\\\n\\midrule\n",
+        "Video ($768$-d) & $%.3f$ & $%.3f$ & $%.3f$ & $0.787$ & primary \\\\\n"
+        % (p["rf_share"]["video"], p["mmd_share"]["video"], p["po_feat_share"]["video"]),
+        "Audio ($512$-d) & $%.3f$ & $%.3f$ & $%.3f$ & $0.518$ & secondary \\\\\n"
+        % (p["rf_share"]["audio"], p["mmd_share"]["audio"], p["po_feat_share"]["audio"]),
+        "Text ($768$-d) & $%.3f$ & $%.3f$ & $%.3f$ & $0.000$ & structural null \\\\\n"
+        % (p["rf_share"]["text"], p["mmd_share"]["text"], p["po_feat_share"]["text"]),
+        "\\bottomrule\\end{tabular}\\end{table}\n\n",
+        "\\begin{table}[ht]\\centering\n",
         "\\caption{MSR-VTT sliding-window multimodal attribution. "
         "Columns are video/audio/text VIMP or LOGO shares. "
         "RF-Domain and MMD-LOCO target covariate shift $P(X)$; "
