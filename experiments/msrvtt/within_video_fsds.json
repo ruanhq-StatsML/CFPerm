@@ -1,0 +1,73 @@
+{
+  "within_video": [
+    {
+      "video_id": "video1181",
+      "video_share": 0.9955458661400637,
+      "audio_share": 0.0,
+      "text_share": 0.004454133858936252
+    },
+    {
+      "video_id": "video1819",
+      "video_share": 0.5939660519844363,
+      "audio_share": 0.4043719391133534,
+      "text_share": 0.0016620089012102687
+    },
+    {
+      "video_id": "video2026",
+      "video_share": 0.9745877585027803,
+      "audio_share": 0.02362269360974426,
+      "text_share": 0.001789547886475329
+    },
+    {
+      "video_id": "video2643",
+      "video_share": 0.8396289689492578,
+      "audio_share": 0.15610072692967214,
+      "text_share": 0.004270304120070067
+    },
+    {
+      "video_id": "video2803",
+      "video_share": 0.9787287963104239,
+      "audio_share": 0.02014116936122861,
+      "text_share": 0.0011300343273474814
+    },
+    {
+      "video_id": "video3025",
+      "video_share": 0.9263214332301222,
+      "audio_share": 0.06609241957173113,
+      "text_share": 0.007586147197146666
+    },
+    {
+      "video_id": "video5712",
+      "video_share": 0.942471742467163,
+      "audio_share": 0.056060487266000006,
+      "text_share": 0.0014677702658368633
+    },
+    {
+      "video_id": "video6465",
+      "video_share": 0.5084363975942301,
+      "audio_share": 0.48836557915321255,
+      "text_share": 0.0031980232515573352
+    }
+  ],
+  "within_video_average": {
+    "video_share": 0.8449608768973097,
+    "audio_share": 0.15184437687561775,
+    "text_share": 0.0031947462260725327
+  },
+  "pooled_temporal": {
+    "video_share": 0.7980008471002925,
+    "audio_share": 0.18449377138331358,
+    "text_share": 0.01750538151539387
+  },
+  "mixture_shift": {
+    "video_share": 0.5155320775747014,
+    "audio_share": 0.4753208515722756,
+    "text_share": 0.009147070852022916
+  },
+  "dims": {
+    "video": 768,
+    "audio": 512,
+    "text": 768,
+    "concat": 2048
+  }
+}

@@ -143,3 +143,13 @@ python Python/src/extract_within_video.py \
 ```
 
 Use `--video-encoder vit_mean` on CPU if ViViT is too slow (same 768-d interface). Outputs include `concat_feat.npy` of shape `(N_videos * N_windows, 2048)` and `experiments/msrvtt/within_video_fsds.json`.
+
+A CPU run on 8 TrainVal clips (`video1181, 1819, 2026, 2643, 2803, 3025, 5712, 6465`) produced `concat_feat` of shape **(800, 2048)** (8 × 100 windows). Layer-1 RF VIMP:
+
+- within-video early vs late (average): video 0.85, audio 0.15, text 0.003
+- pooled temporal: video 0.80, audio 0.18, text 0.02
+- video-group mixture: video 0.52, audio 0.48, text 0.01
+
+Text share is small because MSR-VTT captions have no timestamps (captions are cycled across windows). Audio share jumps on the mixture contrast, which is the user-preference / mixture-shift setting the three-layer procedure targets.
+
+<img width="1200" alt="MSR-VTT Layer-1 multimodal attribution" src="./experiments/msrvtt/msrvtt_modality_attribution.png" />

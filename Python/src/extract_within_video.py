@@ -281,7 +281,7 @@ class CLAPEncoder(torch.nn.Module):
             try:
                 arr = wav.numpy()
                 inputs = self.processor(
-                    audios=arr,
+                    audio=arr,
                     sampling_rate=self.target_sr,
                     return_tensors="pt",
                     padding=True,
@@ -519,15 +519,52 @@ def main() -> None:
         print(f"\n[{vi+1}/{len(picked)}] {vid}")
         if ckpt.exists():
             z = np.load(ckpt, allow_pickle=True)
-            all_video.append(torch.from_numpy(z["video"]))
-            all_audio.append(torch.from_numpy(z["audio"]))
-            all_text.append(torch.from_numpy(z["text"]))
-            all_mask.append(torch.from_numpy(z["mask"]))
+            vf = torch.from_numpy(z["video"])
+            af = torch.from_numpy(z["audio"])
+            tf = torch.from_numpy(z["text"])
+            am = torch.from_numpy(z["mask"])
             raw_meta = z["meta"]
             if isinstance(raw_meta, np.ndarray):
                 raw_meta = raw_meta.item()
-            meta_videos.append(json.loads(raw_meta) if isinstance(raw_meta, str) else dict(raw_meta))
-            print(f"  resume {tuple(z['video'].shape)}")
+            rec = json.loads(raw_meta) if isinstance(raw_meta, str) else dict(raw_meta)
+            audio_dead = bool(torch.as_tensor(af).abs().max() < 1e-8)
+            if audio_dead:
+                print(f"  resume video/text {tuple(vf.shape)}; re-encoding audio")
+                vpath = ensure_video(vid, video_root, zip_path)
+                apath = ensure_audio(vid, vpath, audio_root, args.sample_rate)
+                frames, fps = load_frames_pil(vpath)
+                n_frames = len(frames)
+                windows = compute_windows(n_frames, args.t_frames, args.stride, args.n_windows)
+                wav = load_wav_mono(apath, args.sample_rate)
+                segs, masks = [], []
+                half_span = (args.t_frames * args.stride) / (2.0 * fps)
+                for idx in windows:
+                    center_t = float(idx[args.t_frames // 2]) / fps
+                    t_start = max(0.0, center_t - half_span)
+                    t_end = t_start + 2 * half_span
+                    seg, mask = slice_audio(wav, args.sample_rate, t_start, t_end)
+                    segs.append(seg)
+                    masks.append(mask)
+                af = audio_enc.encode_segments(segs)
+                am = torch.stack(masks)
+                rec["n_frames"] = n_frames
+                rec["fps"] = fps
+                np.savez_compressed(
+                    ckpt,
+                    video=vf.numpy(),
+                    audio=af.numpy(),
+                    text=tf.numpy(),
+                    mask=am.numpy(),
+                    meta=json.dumps(rec),
+                )
+                print(f"  audio_feat {tuple(af.shape)} mask_mean={float(am.mean()):.2f} norm={float(af.norm(dim=1).mean()):.3f}")
+            else:
+                print(f"  resume {tuple(vf.shape)}")
+            all_video.append(vf)
+            all_audio.append(af)
+            all_text.append(tf)
+            all_mask.append(am)
+            meta_videos.append(rec)
             continue
 
         vpath = ensure_video(vid, video_root, zip_path)
