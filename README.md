@@ -119,4 +119,4 @@ https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 
 ### Blockwise weights for distribution-shift adaptation (writeup, not a prototype)
 
-Not online learning, and not a larger claim. PO-risk / VIMP of $\hat\tau$ yields **blockwise weights**; those weights are used to adapt for distribution shift on the next batch. Unique CS/CD explanation remains impossible. See [docs/pseudo_outcome_risk_beyond.md](docs/pseudo_outcome_risk_beyond.md).
+Not online learning. Three or four batches, or streaming data — same thing. PO-risk / VIMP of $\hat\tau$ gives **blockwise weights**; use $w$ to adapt for the shift. See [docs/pseudo_outcome_risk_beyond.md](docs/pseudo_outcome_risk_beyond.md).
