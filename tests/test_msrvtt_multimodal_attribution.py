@@ -55,6 +55,19 @@ def test_zip_roundtrip_s(tmp_path):
     assert (got.W == b.W).all()
 
 
+def test_group_mmd_block_recovers_video_shift():
+    from msrvtt_multimodal_attribution import group_mmd_loco, _share_from_contrib
+
+    b = make_synthetic_bundle(
+        n_videos=4, n_windows=20, seed=3, video_shift=1.6, audio_shift=0.05, text_shift=0.02
+    )
+    X = standardize_columns(b.X)
+    _, loco, block = group_mmd_loco(X[b.W == 0], X[b.W == 1], max_n=40, seed=3)
+    share = _share_from_contrib(block)
+    assert share["video"] > share["audio"]
+    assert share["video"] > share["text"]
+
+
 def test_rf_recovers_video_block_shift():
     b = make_synthetic_bundle(
         n_videos=6,

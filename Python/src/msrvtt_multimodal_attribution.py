@@ -127,19 +127,27 @@ def _import_mmd():
     return MMD, _rbf_mmd2_unbiased, _median_bandwidth, _subsample_batch
 
 
+def _mmd_auto(A, B, median_bw, rbf, seed):
+    pooled = np.vstack([A, B])
+    med = median_bw(pooled, seed=seed)
+    gamma = 1.0 / (2.0 * med * med + 1e-12)
+    return rbf(A, B, gamma)
+
+
 def group_mmd_loco(X0, X1, max_n=80, seed=SEED):
+    """Group MMD: block-wise MMD (own bandwidth) + leave-one-group-out delta."""
     MMD, rbf, median_bw, subsample = _import_mmd()
     rng = np.random.default_rng(seed)
     A = subsample(X0, max_n, rng)
     B = subsample(X1, max_n, rng)
-    pooled = np.vstack([A, B])
-    gamma = 1.0 / (2.0 * median_bw(pooled, seed=seed) ** 2 + 1e-12)
-    full = rbf(A, B, gamma)
-    contrib = {}
-    for name in GROUP_NAMES:
-        g = rbf(drop_group(A, name), drop_group(B, name), gamma)
-        contrib[name] = float(full - g)
-    return float(full), contrib
+    full = _mmd_auto(A, B, median_bw, rbf, seed)
+    loco = {}
+    block = {}
+    for name, sl in GROUPS.items():
+        block[name] = float(_mmd_auto(A[:, sl], B[:, sl], median_bw, rbf, seed + 1))
+        g = _mmd_auto(drop_group(A, name), drop_group(B, name), median_bw, rbf, seed + 2)
+        loco[name] = float(full - g)
+    return float(full), loco, block
 
 
 def coord_mmd_vimp(X0, X1, max_n=80, seed=SEED):
@@ -206,6 +214,21 @@ def po_tau_vimp(X, po, seed=SEED, n_estimators=150):
     return float(np.mean(hat ** 2)), tau.feature_importances_.astype(float), tau
 
 
+def group_permute_po_risk(X, po, tau, seed=SEED, n_repeat=5):
+    """Leave-one-group-permuted PO-risk: shuffle a modality block, keep tau fixed."""
+    rng = np.random.default_rng(seed)
+    r_full = float(np.mean(tau.predict(X) ** 2))
+    contrib = {}
+    for name, sl in GROUPS.items():
+        deltas = []
+        for k in range(n_repeat):
+            Xp = X.copy()
+            Xp[:, sl] = rng.permutation(Xp[:, sl])
+            deltas.append(float(np.mean(tau.predict(Xp) ** 2)) - r_full)
+        contrib[name] = float(np.mean(deltas))
+    return contrib
+
+
 def logo_po_risk(X, po, seed=SEED, n_estimators=120):
     r_full, vimp, tau = po_tau_vimp(X, po, seed=seed, n_estimators=n_estimators)
     contrib = {}
@@ -215,7 +238,8 @@ def logo_po_risk(X, po, seed=SEED, n_estimators=120):
         tau_g.fit(Xg, po)
         r_g = float(np.mean(tau_g.predict(Xg) ** 2))
         contrib[name] = r_g - r_full
-    return r_full, contrib, vimp
+    perm = group_permute_po_risk(X, po, tau, seed=seed + 21)
+    return r_full, contrib, vimp, perm
 
 
 def holm_adjust(pvals):
@@ -516,7 +540,7 @@ def per_video_table(bundle: WindowBundle, seed=SEED, n_estimators=120):
         mass, share = modality_mass(vimp)
         rows.append(
             {
-                "video_id": int(v) if np.issubdtype(type(v), np.integer) else str(v),
+                "video_id": int(v) if float(v).is_integer() else str(v),
                 "n": int(len(idx)),
                 "n0": int((W == 0).sum()),
                 "n1": int((W == 1).sum()),
@@ -533,17 +557,14 @@ def pooled_point_estimates(bundle: WindowBundle, seed=SEED, n_estimators=120, mm
     X0, X1 = X[bundle.W == 0], X[bundle.W == 1]
     rf_vimp, rf_auc = rf_domain(X0, X1, seed=seed, n_estimators=n_estimators)
     rf_mass, rf_share = modality_mass(rf_vimp)
-    mmd_full, mmd_contrib = group_mmd_loco(X0, X1, max_n=mmd_n, seed=seed)
-    _, mmd_share = modality_mass(
-        _contrib_to_vimp(mmd_contrib), positive=False
-    )
-    # rebuild share from signed group LOCO
-    mmd_share = _share_from_contrib(mmd_contrib)
+    mmd_full, mmd_loco, mmd_block = group_mmd_loco(X0, X1, max_n=mmd_n, seed=seed)
     coord = coord_mmd_vimp(X0, X1, max_n=mmd_n, seed=seed)
     _, coord_share = modality_mass(coord)
+    mmd_share = coord_share  # FSDS-style: coordinate MMD aggregated to modality
     po, _, _ = crossfit_po(X, bundle.y, bundle.W, seed=seed, n_estimators=max(40, n_estimators // 2))
-    r_full, logo, po_vimp = logo_po_risk(X, po, seed=seed + 4, n_estimators=n_estimators)
+    r_full, logo, po_vimp, po_perm = logo_po_risk(X, po, seed=seed + 4, n_estimators=n_estimators)
     logo_share = _share_from_contrib(logo)
+    perm_share = _share_from_contrib(po_perm)
     _, po_feat_share = modality_mass(po_vimp)
     return {
         "rf_auc": rf_auc,
@@ -551,7 +572,9 @@ def pooled_point_estimates(bundle: WindowBundle, seed=SEED, n_estimators=120, mm
         "rf_share": rf_share,
         "rf_feature_indices": top_local_indices(rf_vimp),
         "mmd_full": mmd_full,
-        "mmd_logo": mmd_contrib,
+        "mmd_logo": mmd_loco,
+        "mmd_block": mmd_block,
+        "mmd_block_share": _share_from_contrib(mmd_block),
         "mmd_share": mmd_share,
         "coord_mmd_vimp": coord,
         "coord_mmd_share": coord_share,
@@ -559,6 +582,8 @@ def pooled_point_estimates(bundle: WindowBundle, seed=SEED, n_estimators=120, mm
         "po_risk": r_full,
         "po_logo": logo,
         "po_logo_share": logo_share,
+        "po_perm": po_perm,
+        "po_perm_share": perm_share,
         "po_vimp": po_vimp,
         "po_feat_share": po_feat_share,
         "po_feature_indices": top_local_indices(po_vimp),
@@ -597,17 +622,19 @@ def _shares_from_split(X, y, W, seed, n_estimators, mmd_n):
         return None
     rf_vimp, auc = rf_domain(X0, X1, seed=seed, n_estimators=n_estimators)
     _, rf_share = modality_mass(rf_vimp)
-    _, mmd_contrib = group_mmd_loco(X0, X1, max_n=mmd_n, seed=seed)
-    mmd_share = _share_from_contrib(mmd_contrib)
+    coord = coord_mmd_vimp(X0, X1, max_n=mmd_n, seed=seed)
+    _, mmd_share = modality_mass(coord)
     po, _, _ = crossfit_po(X, y, W, seed=seed, n_splits=3, n_estimators=max(30, n_estimators // 2))
-    r_full, logo, _ = logo_po_risk(X, po, seed=seed + 4, n_estimators=n_estimators)
+    r_full, logo, po_vimp, po_perm = logo_po_risk(X, po, seed=seed + 4, n_estimators=n_estimators)
+    _, po_share = modality_mass(po_vimp)
     return {
         "auc": auc,
         "po_risk": r_full,
         "rf": rf_share,
         "mmd": mmd_share,
-        "po": _share_from_contrib(logo),
+        "po": po_share,
         "po_logo": logo,
+        "po_perm": po_perm,
     }
 
 
@@ -796,12 +823,16 @@ def run_attribution(
             "rf_feature_indices": point["rf_feature_indices"],
             "mmd_full": point["mmd_full"],
             "mmd_logo": point["mmd_logo"],
+            "mmd_block": point["mmd_block"],
+            "mmd_block_share": point.get("mmd_block_share"),
             "mmd_share": point["mmd_share"],
             "coord_mmd_share": point["coord_mmd_share"],
             "coord_feature_indices": point["coord_feature_indices"],
             "po_risk": point["po_risk"],
             "po_logo": point["po_logo"],
             "po_logo_share": point["po_logo_share"],
+            "po_perm": point["po_perm"],
+            "po_perm_share": point["po_perm_share"],
             "po_feat_share": point["po_feat_share"],
             "po_feature_indices": point["po_feature_indices"],
         },

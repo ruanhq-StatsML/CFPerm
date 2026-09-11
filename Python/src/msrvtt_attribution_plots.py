@@ -45,14 +45,14 @@ def plot_modality_shares(result, path: Path):
     _style()
     methods = [
         ("rf", "RF-Domain VIMP"),
-        ("mmd", "MMD-LOCO"),
-        ("po", "PO-risk LOGO"),
+        ("mmd", "MMD (coord VIMP)"),
+        ("po", "PO-risk VIMP"),
     ]
     point = result["point"]
     share_map = {
         "rf": point["rf_share"],
         "mmd": point["mmd_share"],
-        "po": point["po_logo_share"],
+        "po": point.get("po_feat_share", point.get("po_logo_share")),
     }
     boot = result.get("bootstrap", {})
     fig, ax = plt.subplots(figsize=(9.6, 5.2))
@@ -160,7 +160,7 @@ def plot_bootstrap_diffs(result, path: Path):
     _style()
     boot = result["bootstrap"]
     fig, axes = plt.subplots(1, 3, figsize=(11.4, 3.8), sharey=True)
-    methods = [("rf", "RF-Domain"), ("mmd", "MMD-LOCO"), ("po", "PO-risk LOGO")]
+    methods = [("rf", "RF-Domain"), ("mmd", "MMD coord-VIMP"), ("po", "PO-risk VIMP")]
     pair = "video-audio"
     for ax, (key, lab) in zip(axes, methods):
         rec = boot[key]["pairwise"][pair]
@@ -241,7 +241,7 @@ def plot_method_scatter(result, path: Path):
     for g in GROUPS:
         ax.scatter(
             [p["rf_share"][g]],
-            [p["po_logo_share"][g]],
+            [p["po_feat_share"][g]],
             s=140,
             color=COLORS[g],
             label="%s RF vs PO" % g,
@@ -249,7 +249,7 @@ def plot_method_scatter(result, path: Path):
         )
         ax.scatter(
             [p["mmd_share"][g]],
-            [p["po_logo_share"][g]],
+            [p["po_feat_share"][g]],
             s=90,
             facecolors="none",
             edgecolors=COLORS[g],
@@ -261,8 +261,8 @@ def plot_method_scatter(result, path: Path):
     ax.plot([0, 1], [0, 1], color=MUTED, ls="--", lw=1)
     ax.set_xlim(-0.05, 1.05)
     ax.set_ylim(-0.05, 1.05)
-    ax.set_xlabel("RF-Domain / MMD-LOCO share")
-    ax.set_ylabel("PO-risk LOGO share")
+    ax.set_xlabel("RF-Domain / MMD-block share")
+    ax.set_ylabel("PO-risk VIMP share")
     ax.set_title("CS detectors vs PO-risk", loc="left", fontsize=13, fontweight="bold")
     ax.legend(frameon=False, fontsize=8)
     ax.grid(True, color=GRID)

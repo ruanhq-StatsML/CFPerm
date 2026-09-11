@@ -50,10 +50,14 @@ def write_tex(result, path: Path):
         "Method & Video & Audio & Text & Diagnostic \\\\\n\\midrule\n",
         "RF-Domain VIMP & $%.3f$ & $%.3f$ & $%.3f$ & AUC $%.3f$ \\\\\n"
         % (p["rf_share"]["video"], p["rf_share"]["audio"], p["rf_share"]["text"], p["rf_auc"]),
-        "MMD-LOCO & $%.3f$ & $%.3f$ & $%.3f$ & MMD $%.4f$ \\\\\n"
+        "MMD (coord VIMP) & $%.3f$ & $%.3f$ & $%.3f$ & MMD $%.4f$ \\\\\n"
         % (p["mmd_share"]["video"], p["mmd_share"]["audio"], p["mmd_share"]["text"], p["mmd_full"]),
-        "PO-risk LOGO & $%.3f$ & $%.3f$ & $%.3f$ & $R_{\\mathrm{PO}}=%.4f$ \\\\\n"
-        % (p["po_logo_share"]["video"], p["po_logo_share"]["audio"], p["po_logo_share"]["text"], p["po_risk"]),
+        "PO-risk VIMP & $%.3f$ & $%.3f$ & $%.3f$ & $R_{\\mathrm{PO}}=%.4f$ \\\\\n"
+        % (p["po_feat_share"]["video"], p["po_feat_share"]["audio"], p["po_feat_share"]["text"], p["po_risk"]),
+        "PO-risk permute-group & $%.3f$ & $%.3f$ & $%.3f$ & -- \\\\\n"
+        % (p["po_perm_share"]["video"], p["po_perm_share"]["audio"], p["po_perm_share"]["text"]),
+        "PO-risk LOGO (refit) & $%.3f$ & $%.3f$ & $%.3f$ & signed L1 share \\\\\n"
+        % (p["po_logo_share"]["video"], p["po_logo_share"]["audio"], p["po_logo_share"]["text"]),
         "\\bottomrule\\end{tabular}\\end{table}\n\n",
         "\\begin{table}[ht]\\centering\n",
         "\\caption{Video-clustered bootstrap ($B=10$) for modality share differences. "
@@ -63,7 +67,7 @@ def write_tex(result, path: Path):
         "\\begin{tabular}{@{}l l r r r r c@{}}\\toprule\n",
         "Method & Contrast & Mean & SD & $\\mathrm{mean}\\pm 1.96\\mathrm{SD}$ & $p$ & Holm \\\\\n\\midrule\n",
     ]
-    for method, lab in (("rf", "RF-Domain"), ("mmd", "MMD-LOCO"), ("po", "PO-risk")):
+    for method, lab in (("rf", "RF-Domain"), ("mmd", "MMD coord-VIMP"), ("po", "PO-risk VIMP")):
         for pair, rec in b[method]["pairwise"].items():
             lo, hi = rec["ci95"]
             lines.append(
@@ -141,16 +145,36 @@ def write_readme(result, plot_paths, path: Path):
         "|--------|------:|------:|-----:|------------|\n",
         "| RF-Domain | %.3f | %.3f | %.3f | AUC %.3f |\n"
         % (p["rf_share"]["video"], p["rf_share"]["audio"], p["rf_share"]["text"], p["rf_auc"]),
-        "| MMD-LOCO | %.3f | %.3f | %.3f | MMD %.4f |\n"
+        "| MMD (coord VIMP) | %.3f | %.3f | %.3f | MMD %.4f |\n"
         % (p["mmd_share"]["video"], p["mmd_share"]["audio"], p["mmd_share"]["text"], p["mmd_full"]),
-        "| PO-risk LOGO | %.3f | %.3f | %.3f | R=%.4f |\n"
-        % (p["po_logo_share"]["video"], p["po_logo_share"]["audio"], p["po_logo_share"]["text"], p["po_risk"]),
+        "| PO-risk VIMP | %.3f | %.3f | %.3f | R=%.4f |\n"
+        % (p["po_feat_share"]["video"], p["po_feat_share"]["audio"], p["po_feat_share"]["text"], p["po_risk"]),
+        "| PO permute-group | %.3f | %.3f | %.3f | -- |\n"
+        % (p["po_perm_share"]["video"], p["po_perm_share"]["audio"], p["po_perm_share"]["text"]),
         "\nInference: video-clustered bootstrap with **B=10** (mean and variance of replicates), ",
         "Friedman/Wilcoxon on per-video shares, within-video permutation of $W$ for AUC, ",
         "and a group-label permutation test that the named 768/512/768 blocks are more ",
         "imbalanced than random partitions of the same sizes.\n\n",
         "n=%d windows, n_videos=%d, bootstrap B=%s.\n"
         % (result["n"], result["n_videos"], result.get("bootstrap", {}).get("B", 10)),
+        "\n## Inference readout\n\n",
+        "Across RF-Domain, coordinate-MMD, and PO-risk VIMP the **video block dominates** ",
+        "early-vs-late window shift (shares $\\approx$ 0.77 / 0.90 / 0.81), then audio, then text.\n\n",
+        "- Per-video Friedman test of equal RF shares: $p=%.2e$ (n=%d videos).\n"
+        % (
+            result["tests"]["per_video_rf_shares"].get("friedman", {}).get("p", float("nan")),
+            result["tests"]["per_video_rf_shares"].get("n_videos", result["n_videos"]),
+        ),
+        "- Wilcoxon signed-rank (Holm) rejects video=audio, video=text, and audio=text at $p<10^{-4}$.\n",
+        "- Group-label permutation (named 768/512/768 vs random partitions): RF $p=%.3f$.\n"
+        % result["tests"]["rf_group_label_perm"]["p"],
+        "- Video-clustered bootstrap $B=10$: RF video$-$audio mean diff $%.3f$ (SD $%.3f$); "
+        "the two-sided bootstrap $p$ floor with $B=10$ is $1/11\\approx0.091$ "
+        "(all 10 replicates had the same sign). Use Wilcoxon/Friedman as the primary tests.\n"
+        % (
+            result["bootstrap"]["rf"]["pairwise"]["video-audio"]["mean_diff"],
+            result["bootstrap"]["rf"]["pairwise"]["video-audio"]["sd"],
+        ),
         "\n## Per-video AUC\n\n",
         "| Video | n | AUC | Video | Audio | Text | Dominant |\n",
         "|------:|--:|----:|------:|------:|-----:|----------|\n",
@@ -220,9 +244,11 @@ def main():
     write_readme(result, plots, OUT / "README.md")
     print("wrote", OUT, flush=True)
     print("rf_share", result["point"]["rf_share"], "auc", result["point"]["rf_auc"], flush=True)
-    print("mmd_share", result["point"]["mmd_share"], flush=True)
-    print("po_logo_share", result["point"]["po_logo_share"], flush=True)
+    print("mmd_share", result["point"]["mmd_share"], "mmd_block", result["point"]["mmd_block"], flush=True)
+    print("po_feat_share", result["point"]["po_feat_share"], flush=True)
+    print("po_perm_share", result["point"]["po_perm_share"], flush=True)
     print("bootstrap pairwise rf", result["bootstrap"]["rf"]["pairwise"], flush=True)
+    print("friedman p", result["tests"]["per_video_rf_shares"].get("friedman"), flush=True)
     print("auc perm p", result["tests"]["within_video_auc_perm"]["p"], flush=True)
 
 
