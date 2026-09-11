@@ -1,8 +1,56 @@
 # Gap-guided reading budget
 
-This line is a **two-sample reading problem** on \(X\). It is not TMLE, not PO-risk, and not causal reasoning. There is no treatment effect, no \(Y\)-intervening, no clever covariate \(H_m\) in the loop.
+This line is a **two-sample reading problem** on \(X\). It is not TMLE, not PO-risk, not causal reasoning, and **not online learning**. There is no treatment effect, no sequential regret, no per-query update of \(\pi\) or of the reader.
 
-\(W\in\{0,1\}\) is a batch/domain tag. \(\hat e(x)\approx P(W=1\mid X=x)\). Human blocks \(B_m\) partition coordinates. Scores \(\pi\) and \(s_m(x)\) localize *which block carries the two-sample difference*. They do not say that \(W\) causes \(Y\), or that a channel is a mediator.
+\(W\in\{0,1\}\) is a batch/domain tag. \(\hat e(x)\approx P(W=1\mid X=x)\). Human blocks \(B_m\) partition coordinates. Scores \(\pi\) and \(s_m(x)\) localize *which block carries the two-sample difference*. Adaptation means: freeze that localization, then **change what raw blocks a single reader is allowed to see**.
+
+## Raw block + one reader (the actual map)
+
+Two objects only.
+
+**Raw block** \(B_m\). The coordinates / tokens themselves, \(X_{B_m}\). A section in the window is a header plus that payload. Not \(\hat e_m(x_{B_m})\), not \(Z_m\), not a specialist vote. If a block is dropped it is *absent* from the string (no empty header).
+
+**Reader** \(f\). One function, one forward pass. For an LLM the weights stay frozen. For the statistical stand-in, \(f\) is a single RF on the packed design of the *training* two-sample — still a batch fit, then frozen for test. In both cases there is one \(f\), not \(M\) experts whose outputs are mixed at inference.
+
+The adapted observation is
+
+\[
+E=E(\pi)\qquad\text{(frozen after the domain pair; same }E\text{ for every later }x\text{)}
+\]
+\[
+\mathrm{pack}(x)=\underset{m\in E}{\mathrm{concat}}^{\text{read-order}}\;\mathrm{serialize}(x_{B_m})
+\]
+\[
+\text{output}=f\bigl(\mathrm{pack}(x)\bigr).
+\]
+
+That is the whole loop. \(\pi\) chooses the σ-algebra; \(f\) reads whatever landed in the window.
+
+```
+domain pair (X, W)
+        │
+        ▼
+   freeze π, freeze f
+        │
+        ▼
+   E = E(π)          ← adaptation of the observation, once
+        │
+        ▼
+   x  →  pack_E(x)  →  f(·)  →  output
+              ↑
+        raw blocks only
+        one reader
+```
+
+Three things this is **not**:
+
+| not this | why |
+|---|---|
+| Opinion pool \(\sum_m\pi_m\hat e_m\) | Each specialist already saw its raw block and collapsed it to a score. The mixer sees \(M\) scalars. Packing never ran those specialists; the one reader sees the raw concat, or it doesn't. |
+| Sidecar \(Z_m=\pi_m\mathrm{logit}\,\hat e_m\) | A summary in the system prompt. Useful as a prior packet. It is not the raw block. |
+| Online / bandit / Hedge | After \(x_t\) you do **not** update \(\pi\) or \(f\) from a loss. No regret, no sequential expert weights. The stream does not train. |
+
+LLM landing: \(f\) is the frozen model; only `pack(x)` changes. Stand-in eval `holdout_packed_auc`: still iid — choose \(E\) from train \(\pi\), fit one \(f\) on packed train columns, score packed test columns. Batch adaptation of the observation, then a batch reader.
 
 ## π as a prior (shrinkage, not a causal prior)
 
@@ -38,28 +86,15 @@ Gate (on \(\pi\) for the same template; on \(r\) if you allow instance updates):
 
 Forced top-1 on a **diffuse** shift (equal signal in every block) is the failure mode abstain exists for: you discard three-quarters of the two-sample signal.
 
-## Context packing and concatenating enabled blocks
+## Context packing is the same map, as a string
 
-Opinion pool \(\sum_m\pi_m\hat e_m(X_{B_m})\) **looks at every specialist’s score**. That is not packing.
+The rules above are exactly `pack_user_context` / `pack_blocks`:
 
-Context packing is one reader on a **subset of raw channels**:
-
-\[
-E=E(\pi)\qquad\text{(same template for every }x\text{)}
-\]
-\[
-\mathrm{pack}(x)=\mathrm{concat}_{m\in E}^{\text{read-order}}\;\mathrm{serialize}(x_{B_m})
-\]
-
-Rules:
-
-1. Order is read-order (descending \(\pi\) or \(r\)). Concatenation is the prompt string; the statistical analogue is column-bind of those slices, **one** RF/LLM on the packed design.
-2. Disabled blocks are **absent**. Do not emit empty `### text` headers (that still spends tokens and leaks that the channel exists).
-3. Sidecar \(\pi,s,r,Z\) may sit in the system prompt. \(W\) does not. \(H_m\) does not (it is not part of this line).
-4. \(|E|=1\) packing **is** the same expert, written as a window: the user message contains only that section.
-5. \(|E|=k>1\) is still **one** forward pass, several sections. It is not \(k\) experts voting.
-
-`pack_user_context` does (4)–(5) as strings. `pack_blocks` + `holdout_packed_auc` do the same map on columns.
+1. Order is read-order (descending \(\pi\)). Concatenation is the prompt; the analogue is column-bind, **one** \(f\) on that design.
+2. Disabled blocks are absent.
+3. Sidecar \(\pi,s,r\) may sit in the system prompt. \(W\) does not.
+4. \(|E|=1\) packing **is** the same expert written as a window.
+5. \(|E|=k>1\) is still one forward pass, several raw sections — not \(k\) votes.
 
 ## “同一个专家” — characterize, then evaluate
 

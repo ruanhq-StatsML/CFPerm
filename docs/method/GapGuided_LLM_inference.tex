@@ -11,9 +11,19 @@
 \date{}
 \begin{document}
 \maketitle
-\noindent Not TMLE and not causal. $W$ is a batch tag; $\hat e\approx P(W{=}1\mid X)$.
-$\pi$ is a shrinkage prior over which human block localizes the two-sample
-difference. It is not a treatment propensity and is not used to target $Y$.
+\noindent Not TMLE, not causal, not online learning.
+$W$ is a batch tag; $\hat e\approx P(W{=}1\mid X)$.
+Adaptation: freeze $\pi$ from a domain pair, then feed a \emph{single} reader
+the concatenated \emph{raw} blocks $E=E(\pi)$.
+The reader is not updated from the query stream; $\pi$ is not updated either.
+An opinion pool of $\hat e_m$ is a mixture of scores, not this map.
+
+\section{Raw block + one reader}
+Let $E=E(\pi)$. The observation is
+$\mathrm{pack}(x)=\mathrm{concat}_{m\in E}\mathrm{serialize}(x_{B_m})$.
+Output is $f(\mathrm{pack}(x))$ with one $f$. Dropped blocks are absent.
+This restricts the $\sigma$-algebra of a frozen reader. It is not Hedge,
+not a bandit over specialists, and not a per-query update of $\pi$.
 
 \section{Same expert versus packing}
 A \emph{same expert} is $\hat m=\arg\max\pi$, then $f\in\mathcal{G}_{\hat m}$

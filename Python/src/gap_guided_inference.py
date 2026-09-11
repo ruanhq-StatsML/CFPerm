@@ -1,20 +1,18 @@
-"""Gap-guided LLM inference: two-sample localization as a reading budget.
+"""Gap-guided reading: adapt the observation, not the reader.
 
-Not TMLE. Not causal. W is a batch/domain indicator for a two-sample problem
-on X. ê estimates P(W=1 | X). π and s_m(x) say which human block B_m localizes
-that two-sample difference. They never identify an effect of W on Y.
+Two-sample, not TMLE, not causal, not online learning.
 
-The LLM is a reader with a token/tool budget. Three distinct maps:
+  raw block B_m   the actual coordinates / tokens X_{B_m}
+  reader f        one frozen map, one forward pass
+  adaptation      E = E(π) from a domain pair; feed f(concat_{m in E} X_{B_m})
 
-  same expert     pick one m from π only (not from this x); every query is
-                  read by the same specialist f_m(X_{B_m})
-  context pack    serialize enabled blocks in read-order into one string;
-                  one forward pass on concat_m∈E X_{B_m}  (not an opinion pool)
-  instance gate   m(x) = argmax s_m(x)  — different experts for different x;
-                  this is *not* “the same expert”
+π is frozen after the two-sample. It is not updated from the query stream.
+The reader weights are not updated from the stream. Only which raw blocks
+enter the window changes. That is a restriction of the observation, not
+a bandit / regret / sequential expert algorithm.
 
-π is a shrinkage prior over channel identity C ∈ {1..M}. Abstain means the
-posterior over C is too flat to justify *dropping* a block: pack all, or HITL.
+Opinion pool Σ π_m ê_m is a mixture of specialist *scores*. Packing is
+concatenating specialist *inputs* for a single reader.
 """
 from __future__ import annotations
 
@@ -253,7 +251,11 @@ def column_index(spec: ModalitySpec, enabled_names: Sequence[str]) -> np.ndarray
 
 
 def pack_blocks(X: np.ndarray, spec: ModalitySpec, enabled_names: Sequence[str]) -> np.ndarray:
-    """Column-concat of enabled blocks in the given order (context-packing analogue)."""
+    """Adapt the observation: column-concat of raw blocks in E, in that order.
+
+    This is not an online update of π or of the reader. Dropped blocks are
+    gone from the design matrix (not zero-filled).
+    """
     X = np.asarray(X, dtype=float)
     idx = column_index(spec, enabled_names)
     if idx.size == 0:
@@ -262,7 +264,10 @@ def pack_blocks(X: np.ndarray, spec: ModalitySpec, enabled_names: Sequence[str])
 
 
 def pack_user_context(block_texts: Dict[str, str], decision: RoutingDecision) -> str:
-    """Serialize only packed_blocks. Omitted channels are absent, not empty headers."""
+    """Adapt the prompt observation: serialize packed raw blocks only.
+
+    The reader (LLM) is unchanged. Omitted channels are absent, not empty headers.
+    """
     if decision.abstain or decision.pack_mode == "hitl_abstain":
         ask = ", ".join(decision.ask_missing) or "a more localized channel"
         return (
@@ -288,7 +293,10 @@ def holdout_packed_auc(
     seed: int = 0,
     n_estimators: int = 50,
 ) -> tuple[float, int]:
-    """One reader on the packed columns — not a mixture of block-wise scores."""
+    """Batch stand-in: one reader fit on packed *raw* columns of the train split.
+
+    Still not online learning — iid holdout after a frozen E = E(π).
+    """
     Xptr = pack_blocks(Xtr, spec, enabled_names)
     Xpte = pack_blocks(Xte, spec, enabled_names)
     Wtr = _as_1d(Wtr).astype(int)
