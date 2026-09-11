@@ -9,9 +9,10 @@ Signed LR (locked):
   concept drift   δ_m large  →  η_m up     (relearn P(Y|X))
   both quiet (clip-level text) → η_m ≈ 0   (do not invert π)
 
-The prototype still uses η_m = η0 · π_m^{RF} as a *which-head budget*
-(open vision, then audio, not text). That is not the signed step.
-Refresh / KV is a separate board from SGD. Cosine decay is another board.
+The formal stepsize is ``typed_shift_stepsize`` (TSS): covariate intensity
+lowers η_m, concept intensity raises it, both-quiet freezes the head.
+This file keeps the warmup-then-rotate loop and the η∝π budget path as
+a comparator, not as the signed map.
 """
 from __future__ import annotations
 

@@ -1,0 +1,66 @@
+% Typed shift stepsize (TSS): a statistical procedure, not a dashboard.
+% Estimators, signed LR map, and the scheduler comparison.
+% Requires amsmath, booktabs. Table~\ref{tab:tss-vs-schedulers} is auto-generated.
+
+\paragraph{Typed shift stepsize.}
+Let $W$ index consecutive batches and let $X=(X^{(v)},X^{(a)},X^{(t)})$ be the concatenated video/audio/text block.
+Covariate shift on modality $m$ is a change in $P(X^{(m)}\mid W)$.
+Concept drift on modality $m$ is a change in $P(Y\mid X^{(m)})$.
+These are different identified objects and they must not share a learning-rate sign.
+
+\emph{Covariate intensity.}
+Let $z_i^{(m)}$ be the coordinate-mean of block $m$ on window $i$.
+The two-sample Cohen statistic
+\begin{equation}
+  \hat c_m
+  =
+  \bigl|\,d\bigl(z^{(m)}\mid W=t-1,\; z^{(m)}\mid W=t\bigr)\bigr|
+\end{equation}
+is an absolute intensity, not a simplex share.
+The share $\pi_m=\hat c_m/\sum_{m'}\hat c_{m'}$ remains a \emph{which-head} budget (open vision, then audio, not clip-level text).
+Using $\eta_m=\eta_0\pi_m$ has the wrong sign whenever the map $P(Y\mid X^{(m)})$ is still valid.
+
+\emph{Concept intensity.}
+Let $h_{t-1}^{(m)}$ be the frozen unimodal head from the previous round.
+Translate the new block to the old mean, $\tilde X_t^{(m)}=X_t^{(m)}-(\bar x_t^{(m)}-\bar x_{t-1}^{(m)})$.
+A pure location shift in $P(X^{(m)})$ is removed by that alignment; a change in $P(Y\mid X^{(m)})$ is not.
+\begin{equation}
+  \hat\delta_m
+  =
+  \bigl(
+    L(h_{t-1}^{(m)}(\tilde X_t^{(m)}),Y_t)
+    -
+    L(h_{t-1}^{(m)}(X_{t-1}^{(m)}),Y_{t-1})
+  \bigr)_+.
+\end{equation}
+
+\emph{Signed stepsize.}
+With a quiet freeze when both channels are off,
+\begin{equation}
+  \eta_m
+  =
+  \eta_0\,
+  \frac{\hat\delta_m}{\hat\delta_m+\kappa}\,
+  \frac{1}{1+\lambda\hat c_m},
+  \qquad
+  \eta_m=0
+  \text{ if }
+  \hat c_m<\tau_c
+  \text{ and }
+  \hat\delta_m<\tau_\delta.
+\end{equation}
+Large $\hat c_m$ lowers the step (do not chase $X$).
+Large $\hat\delta_m$ raises the step (relearn the map).
+Clip-level text on the MSR-VTT extract is both-quiet, so $\eta_t=0$; inverting $\pi$ would give it the largest step.
+
+Refresh / KV invalidation is a different control: it may still follow $\hat c_m$.
+TSS is the SGD map, not a memory schedule, and not a cosine lag board.
+
+\emph{Comparators.}
+Constant, step decay, cosine annealing, inverse-time, and a plateau rule (halve $\eta$ after two non-improving rounds) are scalar schedulers of $t$ or of the loss.
+They cannot type the shift.
+$\eta\propto\pi$ uses the same $\hat c_m$ with the opposite sign.
+Oracle TSS substitutes the known $(c_m,\delta_m)$ of the simulation DGP.
+Table~\ref{tab:tss-vs-schedulers} reports the Monte Carlo comparison.
+On covariate-only streams the target is backward transfer (accuracy on batch~0 after the stream); on concept-only streams it is post-change accuracy.
+A second labelled extract is required before claiming a downstream-task magnitude; the present MSR-VTT windows illustrate $\hat c$ and the quiet text freeze, not a finished applied study.
