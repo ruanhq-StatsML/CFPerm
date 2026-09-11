@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Run Layer-1 attribution on the already-concatenated MSR-VTT windows.
+"""Attribution on concatenated MSR-VTT windows (3900 x 2048).
 
-On (N_videos * 100, 2048) = video[768] ⊕ audio[512] ⊕ text[768]:
+  1. RF VIMP modality shares.
+  2. Leave-one-group-out AUC for batch label W.
+  3. Leave-one-group-out PO-risk: drop a modality block, refit (μ, e, τ),
+     recompute E[τ²] / R-risk.
+  4. After the top modality is named, subset localization: high-|τ| videos
+     and top coordinates in that block, with a simple W=0 vs W=1 mean split.
 
-  1. RF VIMP modality shares (the FSDS block shares already used in extract).
-  2. Leave-one-group-out AUC for predicting the batch label W.
-  3. PO-risk (R-learner residual) attributed to features, then summed to blocks.
-
-Two batches only: pooled early vs late windows, and a 50/50 video mixture.
-Y for PO-risk is the MSR-VTT category id. Not online learning.
+Two batches: pooled early vs late windows, and a 50/50 video mixture.
+Y for PO-risk is the MSR-VTT category id.
 """
 from __future__ import annotations
 
@@ -30,6 +31,7 @@ GROUPS = {
     "audio": slice(VIDEO_DIM, VIDEO_DIM + AUDIO_DIM),
     "text": slice(VIDEO_DIM + AUDIO_DIM, CONCAT_DIM),
 }
+GROUP_SEED = {"video": 1, "audio": 2, "text": 3}
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,6 +46,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--min-samples-leaf", type=int, default=5)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--clip-e", type=float, default=0.01)
+    p.add_argument("--top-k-features", type=int, default=20)
+    p.add_argument("--top-n-videos", type=int, default=12)
+    p.add_argument("--top-row-frac", type=float, default=0.1)
     return p.parse_args()
 
 
@@ -143,6 +148,7 @@ def load_arrays(feat_dir: Path, caption_json: Path):
             "mixture_shift": w_mixture,
         },
         "meta": meta,
+        "categories": [int(cap[v]) for v in video_ids],
     }
 
 
@@ -187,8 +193,8 @@ def crossfit_nuisances(X, Y, W, *, n_splits, seed, n_estimators, max_depth, min_
     return mu, e
 
 
-def po_risk_attribution(X, Y, W, *, n_splits, seed, n_estimators, max_depth, min_samples_leaf, clip_e) -> dict:
-    """R-learner φ = (Y-μ)(W-e); τ from RF on φ; impurity = feature-level attribution."""
+def fit_po_risk(X, Y, W, *, n_splits, seed, n_estimators, max_depth, min_samples_leaf, clip_e) -> dict:
+    """Refit μ, e, τ on this X. PO-risk = mean(τ²); R-risk = mean((Y-μ-τ(W-e))²)."""
     X = np.ascontiguousarray(X)
     Y = np.asarray(Y, dtype=np.float64)
     W = np.asarray(W, dtype=int)
@@ -202,33 +208,178 @@ def po_risk_attribution(X, Y, W, *, n_splits, seed, n_estimators, max_depth, min
     tau_model = RandomForestRegressor(**_rf_kwargs(seed + 200, n_estimators, max_depth, min_samples_leaf))
     tau_model.fit(X, phi)
     tau = tau_model.predict(X)
-    po_risk = float(np.mean(tau ** 2))
-    r_risk = float(np.mean((residual_y - tau * residual_t) ** 2))
-    vimp = tau_model.feature_importances_.astype(np.float64)
-    shares = modality_shares(vimp)
+    return {
+        "po_risk": float(np.mean(tau ** 2)),
+        "r_risk": float(np.mean((residual_y - tau * residual_t) ** 2)),
+        "phi": phi,
+        "tau": tau,
+        "vimp": tau_model.feature_importances_.astype(np.float64),
+        "phi_mean": float(phi.mean()),
+        "phi_std": float(phi.std()),
+    }
 
-    logo_r_risk = {}
-    logo_po_risk = {}
+
+def leave_one_group_out_po_risk(X, Y, W, **kw) -> dict:
+    """Drop (or keep-only) a modality, refit the whole PO-risk pipeline."""
+    full = fit_po_risk(X, Y, W, **kw)
+    out = {
+        "full": {"po_risk": full["po_risk"], "r_risk": full["r_risk"]},
+        "fit": full,
+    }
     for name, sl in GROUPS.items():
         keep = np.ones(X.shape[1], dtype=bool)
         keep[sl] = False
-        tau_m = RandomForestRegressor(**_rf_kwargs(seed + 300 + {"video": 1, "audio": 2, "text": 3}[name], n_estimators, max_depth, min_samples_leaf))
-        tau_m.fit(X[:, keep], phi)
-        tau_hat = tau_m.predict(X[:, keep])
-        rr = float(np.mean((residual_y - tau_hat * residual_t) ** 2))
-        pr = float(np.mean(tau_hat ** 2))
-        logo_r_risk[name] = {"r_risk": rr, "delta_vs_full": rr - r_risk}
-        logo_po_risk[name] = {"po_risk": pr, "delta_vs_full": po_risk - pr}
+        dropped = fit_po_risk(X[:, keep], Y, W, **{**kw, "seed": kw["seed"] + 10 * GROUP_SEED[name]})
+        only = fit_po_risk(X[:, sl], Y, W, **{**kw, "seed": kw["seed"] + 20 * GROUP_SEED[name]})
+        out[f"without_{name}"] = {
+            "po_risk": dropped["po_risk"],
+            "r_risk": dropped["r_risk"],
+            "delta_po_risk": full["po_risk"] - dropped["po_risk"],
+            "delta_r_risk": dropped["r_risk"] - full["r_risk"],
+        }
+        out[f"only_{name}"] = {
+            "po_risk": only["po_risk"],
+            "r_risk": only["r_risk"],
+        }
+    deltas = {g: out[f"without_{g}"]["delta_po_risk"] for g in GROUPS}
+    out["top_modality"] = max(deltas, key=deltas.get)
+    return out
+
+
+def _feature_meta(j: int) -> tuple[str, int]:
+    if j < VIDEO_DIM:
+        return "video", int(j)
+    if j < VIDEO_DIM + AUDIO_DIM:
+        return "audio", int(j - VIDEO_DIM)
+    return "text", int(j - VIDEO_DIM - AUDIO_DIM)
+
+
+def subset_localize(
+    X: np.ndarray,
+    W: np.ndarray,
+    Y: np.ndarray,
+    tau: np.ndarray,
+    phi: np.ndarray,
+    vimp_full: np.ndarray,
+    *,
+    labels: np.ndarray,
+    windows: np.ndarray,
+    video_ids: list[str],
+    categories: list[int],
+    top_modality: str,
+    top_k_features: int,
+    top_n_videos: int,
+    top_row_frac: float,
+) -> dict:
+    """Layer-2 subset after the modality is named: videos/windows and coordinates."""
+    sl = GROUPS[top_modality]
+    tau_sq = tau ** 2
+    n = len(tau)
+    k_rows = max(1, int(round(top_row_frac * n)))
+    row_order = np.argsort(-tau_sq)
+
+    top_rows = []
+    for rank, i in enumerate(row_order[:k_rows], start=1):
+        vid = video_ids[int(labels[i])]
+        top_rows.append({
+            "rank": rank,
+            "row": int(i),
+            "video_id": vid,
+            "window": int(windows[i]),
+            "W": int(W[i]),
+            "Y": float(Y[i]),
+            "tau": float(tau[i]),
+            "tau_sq": float(tau_sq[i]),
+            "phi": float(phi[i]),
+        })
+
+    per_video = []
+    for vi, vid in enumerate(video_ids):
+        mask = labels == vi
+        per_video.append({
+            "video_id": vid,
+            "category": int(categories[vi]),
+            "n": int(mask.sum()),
+            "mean_tau_sq": float(tau_sq[mask].mean()),
+            "mean_abs_phi": float(np.abs(phi[mask]).mean()),
+            "mean_W": float(W[mask].mean()),
+        })
+    per_video.sort(key=lambda r: -r["mean_tau_sq"])
+
+    # Coordinates inside the named modality, ranked by full-model VIMP on those columns.
+    idx = np.arange(CONCAT_DIM)[sl]
+    local_vimp = vimp_full[sl]
+    order = np.argsort(-local_vimp)[:top_k_features]
+    feat_rows = []
+    for rank, loc in enumerate(order, start=1):
+        j = int(idx[loc])
+        x0 = X[W == 0, j]
+        x1 = X[W == 1, j]
+        feat_rows.append({
+            "rank": rank,
+            "index": j,
+            "group": top_modality,
+            "local_index": int(loc),
+            "vimp": float(local_vimp[loc]),
+            "mean_W0": float(x0.mean()) if x0.size else 0.0,
+            "mean_W1": float(x1.mean()) if x1.size else 0.0,
+            "diff_W1_minus_W0": float(x1.mean() - x0.mean()) if x0.size and x1.size else 0.0,
+        })
+
+    # Discretize the top coordinate in that modality (median split + quartiles).
+    bins = None
+    if feat_rows:
+        j0 = feat_rows[0]["index"]
+        col = X[:, j0]
+        qs = np.quantile(col, [0.25, 0.5, 0.75])
+        bin_id = np.digitize(col, qs, right=True)  # 0..3
+        bins = []
+        for b in range(4):
+            m = bin_id == b
+            bins.append({
+                "bin": b,
+                "n": int(m.sum()),
+                "n_W1": int((W[m] == 1).sum()) if m.any() else 0,
+                "mean_Y": float(Y[m].mean()) if m.any() else 0.0,
+                "mean_tau_sq": float(tau_sq[m].mean()) if m.any() else 0.0,
+                "frac_W1": float(W[m].mean()) if m.any() else 0.0,
+            })
+        median = float(qs[1])
+        low, high = col <= median, col > median
+        median_split = {
+            "feature_index": int(j0),
+            "median": median,
+            "low": {
+                "n": int(low.sum()),
+                "mean_Y": float(Y[low].mean()) if low.any() else 0.0,
+                "mean_tau_sq": float(tau_sq[low].mean()) if low.any() else 0.0,
+                "frac_W1": float(W[low].mean()) if low.any() else 0.0,
+            },
+            "high": {
+                "n": int(high.sum()),
+                "mean_Y": float(Y[high].mean()) if high.any() else 0.0,
+                "mean_tau_sq": float(tau_sq[high].mean()) if high.any() else 0.0,
+                "frac_W1": float(W[high].mean()) if high.any() else 0.0,
+            },
+        }
+    else:
+        median_split = None
+
+    mass = float(tau_sq.sum()) + 1e-12
+    top_video_mass = float(sum(r["mean_tau_sq"] * r["n"] for r in per_video[:top_n_videos])) / mass
+    top_row_mass = float(tau_sq[row_order[:k_rows]].sum()) / mass
 
     return {
-        "po_risk": po_risk,
-        "r_risk": r_risk,
-        "phi_mean": float(phi.mean()),
-        "phi_std": float(phi.std()),
-        "blockwise_shares": shares,
-        "leave_one_group_r_risk": logo_r_risk,
-        "leave_one_group_po_risk": logo_po_risk,
-        "feature_vimp": vimp,
+        "top_modality": top_modality,
+        "top_row_frac": top_row_frac,
+        "top_row_mass": top_row_mass,
+        "top_video_mass": top_video_mass,
+        "top_rows": top_rows[: min(50, len(top_rows))],
+        "per_video": per_video,
+        "top_videos": per_video[:top_n_videos],
+        "top_features_in_modality": feat_rows,
+        "quartile_bins_top_feature": bins,
+        "median_split_top_feature": median_split,
     }
 
 
@@ -236,12 +387,7 @@ def top_features(vimp: np.ndarray, k: int = 30) -> list[dict]:
     order = np.argsort(-vimp)[:k]
     rows = []
     for rank, j in enumerate(order, start=1):
-        if j < VIDEO_DIM:
-            group, local = "video", int(j)
-        elif j < VIDEO_DIM + AUDIO_DIM:
-            group, local = "audio", int(j - VIDEO_DIM)
-        else:
-            group, local = "text", int(j - VIDEO_DIM - AUDIO_DIM)
+        group, local = _feature_meta(int(j))
         rows.append({"rank": rank, "index": int(j), "group": group, "local_index": local, "vimp": float(vimp[j])})
     return rows
 
@@ -251,20 +397,22 @@ def plot_results(payload: dict, out_png: Path) -> None:
 
     contrasts = list(payload["contrasts"].keys())
     x = np.arange(len(contrasts))
-    w = 0.25
+    w = 0.18
+    labels = ["early vs late", "video mix A vs B"]
+
+    fig, axes = plt.subplots(2, 2, figsize=(11.6, 7.6), dpi=150)
 
     def share_of(contrast, key):
         rec = payload["contrasts"][contrast]["fsds_shares"]
         return float(rec.get(f"{key}_mean", rec.get(key, 0.0)))
 
-    fig, axes = plt.subplots(1, 3, figsize=(13.4, 4.4), dpi=150)
-
-    ax = axes[0]
-    ax.bar(x - w, [share_of(c, "video_share") for c in contrasts], w, color="#E07A3D", label="video")
-    ax.bar(x, [share_of(c, "audio_share") for c in contrasts], w, color="#2C4A6E", label="audio")
-    ax.bar(x + w, [share_of(c, "text_share") for c in contrasts], w, color="#2F6B4F", label="text")
+    ax = axes[0, 0]
+    ww = 0.25
+    ax.bar(x - ww, [share_of(c, "video_share") for c in contrasts], ww, color="#E07A3D", label="video")
+    ax.bar(x, [share_of(c, "audio_share") for c in contrasts], ww, color="#2C4A6E", label="audio")
+    ax.bar(x + ww, [share_of(c, "text_share") for c in contrasts], ww, color="#2F6B4F", label="text")
     ax.set_xticks(x)
-    ax.set_xticklabels(["early vs late", "video mix A vs B"])
+    ax.set_xticklabels(labels)
     ax.set_ylim(0, 1.05)
     ax.set_ylabel("block share")
     ax.set_title("RF VIMP shares")
@@ -272,41 +420,57 @@ def plot_results(payload: dict, out_png: Path) -> None:
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    ax = axes[1]
-    full = [payload["contrasts"][c]["logo_auc"]["full"]["mean"] for c in contrasts]
-    ov = [payload["contrasts"][c]["logo_auc"]["only_video"]["mean"] for c in contrasts]
-    oa = [payload["contrasts"][c]["logo_auc"]["only_audio"]["mean"] for c in contrasts]
-    ot = [payload["contrasts"][c]["logo_auc"]["only_text"]["mean"] for c in contrasts]
-    ax.bar(x - 1.5 * 0.2, full, 0.2, color="#1A2332", label="full")
-    ax.bar(x - 0.5 * 0.2, ov, 0.2, color="#E07A3D", label="video only")
-    ax.bar(x + 0.5 * 0.2, oa, 0.2, color="#2C4A6E", label="audio only")
-    ax.bar(x + 1.5 * 0.2, ot, 0.2, color="#2F6B4F", label="text only")
-    ax.axhline(0.5, color="#888", lw=0.8, ls="--")
+    ax = axes[0, 1]
+    full = [payload["contrasts"][c]["logo_po_risk"]["full"]["po_risk"] for c in contrasts]
+    dv = [payload["contrasts"][c]["logo_po_risk"]["without_video"]["po_risk"] for c in contrasts]
+    da = [payload["contrasts"][c]["logo_po_risk"]["without_audio"]["po_risk"] for c in contrasts]
+    dt = [payload["contrasts"][c]["logo_po_risk"]["without_text"]["po_risk"] for c in contrasts]
+    ax.bar(x - 1.5 * w, full, w, color="#1A2332", label="full")
+    ax.bar(x - 0.5 * w, dv, w, color="#E07A3D", label="−video")
+    ax.bar(x + 0.5 * w, da, w, color="#2C4A6E", label="−audio")
+    ax.bar(x + 1.5 * w, dt, w, color="#2F6B4F", label="−text")
     ax.set_xticks(x)
-    ax.set_xticklabels(["early vs late", "video mix A vs B"])
-    ax.set_ylim(0.0, 1.08)
-    ax.set_ylabel("CV AUC")
-    ax.set_title("AUC using one group only")
+    ax.set_xticklabels(labels)
+    ax.set_ylabel(r"PO-risk  $E[\hat\tau^2]$")
+    ax.set_title("Leave-one-group-out PO-risk")
     ax.legend(frameon=False, fontsize=8)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    ax = axes[2]
-    def po_share(contrast, key):
-        return float(payload["contrasts"][contrast]["po_risk"]["blockwise_shares"][key])
-    ax.bar(x - w, [po_share(c, "video_share") for c in contrasts], w, color="#E07A3D", label="video")
-    ax.bar(x, [po_share(c, "audio_share") for c in contrasts], w, color="#2C4A6E", label="audio")
-    ax.bar(x + w, [po_share(c, "text_share") for c in contrasts], w, color="#2F6B4F", label="text")
+    ax = axes[1, 0]
+    ov = [payload["contrasts"][c]["logo_po_risk"]["only_video"]["po_risk"] for c in contrasts]
+    oa = [payload["contrasts"][c]["logo_po_risk"]["only_audio"]["po_risk"] for c in contrasts]
+    ot = [payload["contrasts"][c]["logo_po_risk"]["only_text"]["po_risk"] for c in contrasts]
+    ax.bar(x - ww, ov, ww, color="#E07A3D", label="video only")
+    ax.bar(x, oa, ww, color="#2C4A6E", label="audio only")
+    ax.bar(x + ww, ot, ww, color="#2F6B4F", label="text only")
     ax.set_xticks(x)
-    ax.set_xticklabels(["early vs late", "video mix A vs B"])
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("block share")
-    ax.set_title("PO-risk feature VIMP (block sums)")
+    ax.set_xticklabels(labels)
+    ax.set_ylabel(r"PO-risk  $E[\hat\tau^2]$")
+    ax.set_title("PO-risk using one group only")
     ax.legend(frameon=False, fontsize=8)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    fig.suptitle("MSR-VTT concat 2048-d  ·  39 clips × 100 windows", fontsize=11)
+    ax = axes[1, 1]
+    colors = ["#E07A3D", "#2C4A6E"]
+    y_pos = None
+    names = None
+    # show subset videos for pooled_temporal (more within-clip structure)
+    rec = payload["contrasts"]["pooled_temporal"]["subset"]
+    names = [r["video_id"] for r in rec["top_videos"]][::-1]
+    vals = [r["mean_tau_sq"] for r in rec["top_videos"]][::-1]
+    y_pos = np.arange(len(names))
+    ax.barh(y_pos, vals, color=colors[0])
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(names, fontsize=8)
+    top_m = rec["top_modality"]
+    ax.set_xlabel(r"mean $\tau^2$")
+    ax.set_title(f"Subset: top videos by |τ|  (early/late, after {top_m})")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    fig.suptitle("MSR-VTT concat 2048-d  ·  LOGO PO-risk then subset", fontsize=11)
     fig.tight_layout()
     out_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_png, bbox_inches="tight", facecolor="white")
@@ -314,8 +478,9 @@ def plot_results(payload: dict, out_png: Path) -> None:
 
 
 def json_safe(obj):
+    skip = {"feature_vimp", "phi", "tau", "vimp", "fit"}
     if isinstance(obj, dict):
-        return {k: json_safe(v) for k, v in obj.items() if k != "feature_vimp"}
+        return {k: json_safe(v) for k, v in obj.items() if k not in skip}
     if isinstance(obj, list):
         return [json_safe(v) for v in obj]
     if isinstance(obj, (np.floating, np.integer)):
@@ -342,6 +507,7 @@ def main() -> None:
         max_depth=args.max_depth,
         min_samples_leaf=args.min_samples_leaf,
     )
+    pokw = {**rfkw, "clip_e": args.clip_e}
     payload = {
         "n_videos": data["n_videos"],
         "n_windows": data["n_windows"],
@@ -354,6 +520,7 @@ def main() -> None:
         "contrasts": {},
     }
     vimp_store = {}
+    tau_store = {}
     for name, W in data["contrasts"].items():
         print(f"\n=== {name}  W mean={float(W.mean()):.3f} ===", flush=True)
         print("  FSDS RF VIMP shares...", flush=True)
@@ -368,39 +535,68 @@ def main() -> None:
             flush=True,
         )
         print("  leave-one-group-out AUC...", flush=True)
-        logo = leave_one_group_out_auc(X, W, **rfkw)
+        logo_auc = leave_one_group_out_auc(X, W, **rfkw)
         print(
-            f"    full={logo['full']['mean']:.3f}  "
-            f"-video={logo['without_video']['mean']:.3f} (Δ={logo['delta_without_video']:.3f})  "
-            f"-audio={logo['without_audio']['mean']:.3f} (Δ={logo['delta_without_audio']:.3f})  "
-            f"-text={logo['without_text']['mean']:.3f} (Δ={logo['delta_without_text']:.3f})",
+            f"    full={logo_auc['full']['mean']:.3f}  "
+            f"-video={logo_auc['without_video']['mean']:.3f} (Δ={logo_auc['delta_without_video']:.3f})  "
+            f"-audio={logo_auc['without_audio']['mean']:.3f} (Δ={logo_auc['delta_without_audio']:.3f})  "
+            f"-text={logo_auc['without_text']['mean']:.3f} (Δ={logo_auc['delta_without_text']:.3f})",
             flush=True,
         )
-        print("  PO-risk feature attribution...", flush=True)
-        po = po_risk_attribution(
-            X, data["y_cat"], W, clip_e=args.clip_e, **rfkw,
-        )
+        print("  leave-one-group-out PO-risk (refit μ,e,τ)...", flush=True)
+        logo_po = leave_one_group_out_po_risk(X, data["y_cat"], W, **pokw)
+        full_fit = logo_po["fit"]
         print(
-            f"    PO-risk={po['po_risk']:.4g}  R-risk={po['r_risk']:.4g}  "
-            f"shares video={po['blockwise_shares']['video_share']:.3f}  "
-            f"audio={po['blockwise_shares']['audio_share']:.3f}  "
-            f"text={po['blockwise_shares']['text_share']:.3f}",
+            f"    full PO-risk={logo_po['full']['po_risk']:.4g}  "
+            f"-video={logo_po['without_video']['po_risk']:.4g} "
+            f"(Δ={logo_po['without_video']['delta_po_risk']:.4g})  "
+            f"-audio={logo_po['without_audio']['po_risk']:.4g} "
+            f"(Δ={logo_po['without_audio']['delta_po_risk']:.4g})  "
+            f"-text={logo_po['without_text']['po_risk']:.4g} "
+            f"(Δ={logo_po['without_text']['delta_po_risk']:.4g})",
             flush=True,
         )
-        vimp_store[name] = po["feature_vimp"]
+        print(
+            f"    only: video={logo_po['only_video']['po_risk']:.4g}  "
+            f"audio={logo_po['only_audio']['po_risk']:.4g}  "
+            f"text={logo_po['only_text']['po_risk']:.4g}  "
+            f"top_modality={logo_po['top_modality']}",
+            flush=True,
+        )
+        print(f"  subset localization inside {logo_po['top_modality']}...", flush=True)
+        subset = subset_localize(
+            X, W, data["y_cat"], full_fit["tau"], full_fit["phi"], full_fit["vimp"],
+            labels=data["labels"], windows=data["windows"], video_ids=data["video_ids"],
+            categories=data["categories"], top_modality=logo_po["top_modality"],
+            top_k_features=args.top_k_features, top_n_videos=args.top_n_videos,
+            top_row_frac=args.top_row_frac,
+        )
+        print(
+            f"    top videos: {', '.join(r['video_id'] for r in subset['top_videos'][:5])}  "
+            f"row-mass={subset['top_row_mass']:.3f}  video-mass={subset['top_video_mass']:.3f}",
+            flush=True,
+        )
+        vimp_store[name] = full_fit["vimp"]
+        tau_store[name] = full_fit["tau"]
         payload["contrasts"][name] = {
             "fsds_shares": shares,
-            "logo_auc": logo,
+            "logo_auc": logo_auc,
+            "logo_po_risk": {k: v for k, v in logo_po.items() if k != "fit"},
             "po_risk": {
-                **{k: v for k, v in po.items() if k != "feature_vimp"},
-                "top_features": top_features(po["feature_vimp"], 30),
+                "po_risk": full_fit["po_risk"],
+                "r_risk": full_fit["r_risk"],
+                "blockwise_shares": modality_shares(full_fit["vimp"]),
+                "top_features": top_features(full_fit["vimp"], 30),
             },
+            "subset": subset,
         }
 
     np.savez_compressed(
         out_dir / "po_risk_feature_vimp.npz",
         pooled_temporal=vimp_store["pooled_temporal"],
         mixture_shift=vimp_store["mixture_shift"],
+        tau_pooled_temporal=tau_store["pooled_temporal"],
+        tau_mixture_shift=tau_store["mixture_shift"],
     )
     (out_dir / "concat_attribution.json").write_text(json.dumps(json_safe(payload), indent=2))
     plot_results(payload, out_dir / "concat_attribution.png")
