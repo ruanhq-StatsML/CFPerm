@@ -22,6 +22,10 @@ Across RF-Domain, coordinate-MMD, and PO-risk VIMP the **video block dominates**
 - Group-label permutation (named 768/512/768 vs random partitions): RF $p=0.010$.
 - Video-clustered bootstrap $B=10$: RF video$-$audio mean diff $0.635$ (SD $0.039$); the two-sided bootstrap $p$ floor with $B=10$ is $1/11\approx0.091$ (all 10 replicates had the same sign). Use Wilcoxon/Friedman as the primary tests.
 
+## Batch 0 vs Batch 1 region board
+
+See `msrvtt_batch_region_heatmap_board.png` (stats: `msrvtt_region_board_stats.json`). Lead heatmap: windows ordered Batch 0 then Batch 1 × 24 embedding bins (8 video / 8 audio / 8 text). Middle: cosine$(B_0,B_1)$ geometry per modality. Bottom: video × region Cohen's $d$ with Holm stars, plus signed pooled $d$ vs mean $|d|$. Video/audio regions carry a **video-heterogeneous** early-vs-late shift; text is window-invariant ($d=0$). Signed pooled $d$ cancels across videos; mean $|d|$ does not. Mean |Cohen's d|: video $0.787$, audio $0.518$, text $0.000$; 12 Holm-significant video×region cells, 0 pooled-region Holm hits (signed $d$ cancels across videos).
+
 ## Per-video AUC
 
 | Video | n | AUC | Video | Audio | Text | Dominant |

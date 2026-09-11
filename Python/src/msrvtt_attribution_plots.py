@@ -5,6 +5,8 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import TwoSlopeNorm
+from matplotlib.gridspec import GridSpec
 
 VIDEO_C = "#C45C26"
 AUDIO_C = "#2C4A6E"
@@ -269,7 +271,199 @@ def plot_method_scatter(result, path: Path):
     return _save(fig, path)
 
 
-def write_all_plots(result, out_dir: Path):
+def _col_zscore(M):
+    M = np.asarray(M, dtype=float)
+    sd = M.std(axis=0, ddof=0)
+    sd = np.where(sd < 1e-10, 1.0, sd)
+    return (M - M.mean(axis=0)) / sd
+
+
+def plot_batch_region_board(bundle, result, path: Path, pay=None):
+    """Batch 0 vs Batch 1 heatmap board across modality regions."""
+    from msrvtt_multimodal_attribution import GROUPS, region_board_payload
+
+    _style()
+    if pay is None:
+        pay = region_board_payload(bundle)
+    n0 = pay["order_n0"]
+    n = pay["n"]
+    d_vr = np.asarray(pay["d_video_region"], dtype=float)
+    p_vr = np.asarray(pay["p_holm_video_region"], dtype=float)
+    act = _col_zscore(pay["act_window_region"])
+    n_reg = act.shape[1]
+    vmax_d = float(np.nanpercentile(np.abs(d_vr), 98)) if d_vr.size else 1.0
+    vmax_d = max(vmax_d, 0.35)
+    dnorm = TwoSlopeNorm(vmin=-vmax_d, vcenter=0.0, vmax=vmax_d)
+    amax = float(np.nanpercentile(np.abs(act), 98))
+    amax = max(amax, 0.35)
+    anorm = TwoSlopeNorm(vmin=-amax, vcenter=0.0, vmax=amax)
+    mad = pay.get("mean_abs_d_mod") or {
+        g: float(np.mean(np.abs(d_vr[:, sl])))
+        for g, sl in (("video", slice(0, 8)), ("audio", slice(8, 16)), ("text", slice(16, n_reg)))
+    }
+
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+    fig = plt.figure(figsize=(16.8, 14.4), dpi=210)
+    fig.patch.set_facecolor("white")
+    gs = GridSpec(
+        3,
+        3,
+        figure=fig,
+        height_ratios=[1.18, 1.02, 1.22],
+        hspace=0.52,
+        wspace=0.28,
+        left=0.058,
+        right=0.975,
+        top=0.90,
+        bottom=0.07,
+    )
+    fig.suptitle(
+        "MSR-VTT  ·  Batch 0 vs Batch 1 region board",
+        fontsize=20.5,
+        fontweight="bold",
+        color=INK,
+        y=0.978,
+    )
+    fig.text(
+        0.5,
+        0.932,
+        "Windows ordered Batch 0 (early) then Batch 1 (late), grouped by video.  "
+        "Lead: region-mean activation (text stripes are between-video captions, identical across batches).  "
+        "Middle: cosine(B0, B1).  Bottom: Cohen's d with Holm stars.",
+        ha="center",
+        fontsize=9.6,
+        color=MUTED,
+    )
+
+    ax0 = fig.add_subplot(gs[0, :2])
+    im0 = ax0.imshow(act, cmap="RdBu_r", norm=anorm, aspect="auto", interpolation="nearest")
+    for yb in pay.get("video_boundaries", []):
+        if abs(yb - (n0 - 0.5)) > 0.1:
+            ax0.axhline(yb, color="white", lw=0.35, alpha=0.55)
+    ax0.axhline(n0 - 0.5, color=INK, lw=1.55)
+    ax0.axvline(7.5, color=INK, lw=1.15)
+    ax0.axvline(15.5, color=INK, lw=1.15)
+    ax0.set_yticks([n0 / 2.0 - 0.5, n0 + (n - n0) / 2.0 - 0.5])
+    ax0.set_yticklabels(["Batch 0\n(early)", "Batch 1\n(late)"], fontsize=9.5)
+    ax0.set_xticks(np.arange(n_reg))
+    ax0.set_xticklabels(pay["region_labels"], fontsize=6.5, rotation=90)
+    ax0.set_title("Region activation  ·  windows × embedding bins", loc="left", fontsize=12.2, fontweight="bold", pad=8)
+    div0 = make_axes_locatable(ax0)
+    cax0 = div0.append_axes("right", size="2.4%", pad=0.08)
+    cbar = fig.colorbar(im0, cax=cax0)
+    cbar.set_label("column z-score", fontsize=8)
+    cbar.ax.tick_params(labelsize=7.5)
+
+    axb = fig.add_subplot(gs[0, 2])
+    vals = [mad[g] for g in ("video", "audio", "text")]
+    colors = [VIDEO_C, AUDIO_C, TEXT_C]
+    axb.barh(np.arange(3)[::-1], vals, color=colors, height=0.62)
+    axb.set_yticks(np.arange(3)[::-1])
+    axb.set_yticklabels(["Video", "Audio", "Text"], fontsize=9.5)
+    axb.set_xlabel("mean |Cohen's d|  across videos × regions")
+    axb.set_title("Modality effect size", fontsize=11.5, fontweight="bold")
+    axb.axvline(0, color=MUTED, lw=0.8)
+    axb.grid(True, axis="x", color=GRID)
+    xmax = max(max(vals), 0.2) * 1.22
+    axb.set_xlim(0, xmax)
+    for i, v in enumerate(vals):
+        axb.text(v + 0.025 * xmax, 2 - i, "%.3f" % v, va="center", fontsize=8.5, color=INK)
+
+    for i, name in enumerate(GROUPS):
+        ax = fig.add_subplot(gs[1, i])
+        S = pay["sims"][name]
+        im = ax.imshow(S, cmap="magma", vmin=0.0, vmax=1.0, aspect="auto", interpolation="nearest")
+        ax.axhline(n0 - 0.5, color="white", lw=1.15)
+        ax.axvline(n0 - 0.5, color="white", lw=1.15)
+        ax.set_title(name.capitalize() + "  cosine(B0, B1)", fontsize=12, fontweight="bold", color=COLORS[name])
+        ticks = [n0 / 2.0 - 0.5, n0 + (n - n0) / 2.0 - 0.5]
+        ax.set_xticks(ticks)
+        ax.set_xticklabels(["Batch 0", "Batch 1"], fontsize=8.5)
+        ax.set_yticks(ticks)
+        ax.set_yticklabels(["Batch 0", "Batch 1"], fontsize=8.5)
+        bm = pay["block_mean"][name]
+        ax.text(
+            0.02,
+            -0.18,
+            "within %.3f   cross %.3f   gap %.3f"
+            % (0.5 * (bm["B0B0"] + bm["B1B1"]), bm["B0B1"], bm["gap"]),
+            transform=ax.transAxes,
+            fontsize=8.0,
+            color=MUTED,
+            clip_on=False,
+        )
+        if i == 2:
+            divs = make_axes_locatable(ax)
+            caxs = divs.append_axes("right", size="4.5%", pad=0.06)
+            cbar = fig.colorbar(im, cax=caxs)
+            cbar.ax.tick_params(labelsize=7.5)
+            cbar.set_label("cosine", fontsize=8)
+
+    axh = fig.add_subplot(gs[2, :2])
+    imh = axh.imshow(d_vr, cmap="RdBu_r", norm=dnorm, aspect="auto", interpolation="nearest")
+    axh.axvline(7.5, color=INK, lw=1.2)
+    axh.axvline(15.5, color=INK, lw=1.2)
+    axh.set_yticks(np.arange(len(pay["video_ids"])))
+    axh.set_yticklabels(["v%s" % v for v in pay["video_ids"]], fontsize=8)
+    axh.set_xticks(np.arange(n_reg))
+    axh.set_xticklabels(pay["region_labels"], fontsize=6.6, rotation=90)
+    axh.set_title("Cohen's d by video × region   (Holm * p<0.05)", loc="left", fontsize=12.0, fontweight="bold", pad=8)
+    yy, xx = np.where(p_vr < 0.05)
+    axh.scatter(xx, yy, marker="*", s=22, c=INK, linewidths=0, zorder=4)
+    divh = make_axes_locatable(axh)
+    caxh = divh.append_axes("right", size="2.4%", pad=0.08)
+    cbar = fig.colorbar(imh, cax=caxh)
+    cbar.set_label("d  (B1 − B0)", fontsize=8)
+    cbar.ax.tick_params(labelsize=7.5)
+
+    axp = fig.add_subplot(gs[2, 2])
+    stacked = np.vstack(
+        [
+            np.asarray(pay["pooled_d"], dtype=float),
+            np.asarray(pay.get("mean_abs_d_region", np.mean(np.abs(d_vr), axis=0)), dtype=float),
+        ]
+    )
+    abs_max = max(float(np.nanpercentile(np.abs(stacked), 98)), 0.2)
+    pnorm = TwoSlopeNorm(vmin=-abs_max, vcenter=0.0, vmax=abs_max)
+    axp.imshow(stacked, cmap="RdBu_r", norm=pnorm, aspect="auto", interpolation="nearest")
+    axp.set_yticks([0, 1])
+    axp.set_yticklabels(["signed pooled d", "mean |d|"], fontsize=8.2)
+    axp.set_xticks(np.arange(n_reg))
+    axp.set_xticklabels(pay["region_labels"], fontsize=6.2, rotation=90)
+    axp.set_title("Pooled vs mean |d|", fontsize=11, fontweight="bold", pad=8)
+    axp.axvline(7.5, color=INK, lw=1.0)
+    axp.axvline(15.5, color=INK, lw=1.0)
+    for j, pval in enumerate(pay["pooled_p_holm"]):
+        if pval < 0.05:
+            axp.text(j, 0, "*", ha="center", va="center", fontsize=11, color=INK, fontweight="bold")
+
+    fried = result.get("tests", {}).get("per_video_rf_shares", {}).get("friedman", {})
+    fig.text(
+        0.055,
+        0.018,
+        "Region = equal-width bin inside 768 / 512 / 768.  "
+        "Welch t on region-mean activation; Holm within video (stars) and across pooled regions.  "
+        "Friedman p(equal modality RF shares) = %.2e.  "
+        "Mean |d|: video %.3f, audio %.3f, text %.3f.  "
+        "%d/%d pooled Holm-sig, %d video×region stars.  "
+        "Text is window-invariant on this extract (d=0)."
+        % (
+            fried.get("p", float("nan")),
+            mad["video"],
+            mad["audio"],
+            mad["text"],
+            pay["n_sig_pooled"],
+            n_reg,
+            pay["n_sig_cells"],
+        ),
+        fontsize=8.0,
+        color=MUTED,
+    )
+    return _save(fig, path)
+
+
+def write_all_plots(result, out_dir: Path, bundle=None):
     out_dir = Path(out_dir)
     paths = {
         "shares": plot_modality_shares(result, out_dir / "msrvtt_modality_shares.png"),
@@ -279,4 +473,16 @@ def write_all_plots(result, out_dir: Path):
         "features": plot_feature_vimp(result, out_dir / "msrvtt_feature_specific_vimp.png"),
         "scatter": plot_method_scatter(result, out_dir / "msrvtt_rf_mmd_porisk.png"),
     }
+    if bundle is not None:
+        from msrvtt_multimodal_attribution import REGION_BOARD_SKIP, region_board_payload, write_json
+
+        pay = region_board_payload(bundle)
+        write_json(
+            out_dir / "msrvtt_region_board_stats.json",
+            {k: v for k, v in pay.items() if k not in REGION_BOARD_SKIP},
+        )
+        paths["board"] = plot_batch_region_board(
+            bundle, result, out_dir / "msrvtt_batch_region_heatmap_board.png", pay=pay
+        )
+        paths["board_stats"] = str(out_dir / "msrvtt_region_board_stats.json")
     return {k: str(v) for k, v in paths.items()}

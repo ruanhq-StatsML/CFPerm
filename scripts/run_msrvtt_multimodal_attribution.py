@@ -11,6 +11,7 @@ inside each video.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "Python" / "src"))
 sys.path.insert(0, str(ROOT / "vendor" / "fsds"))
 
-from msrvtt_multimodal_attribution import (  # noqa: E402
+from msrvtt_multimodal_attribution import (
     find_feature_zip,
     load_window_bundle,
     make_synthetic_bundle,
@@ -137,6 +138,11 @@ def write_tex(result, path: Path):
 
 def write_readme(result, plot_paths, path: Path):
     p = result["point"]
+    board_stats = {}
+    stats_path = path.parent / "msrvtt_region_board_stats.json"
+    if stats_path.exists():
+        board_stats = json.loads(stats_path.read_text(encoding="utf-8"))
+    mad = board_stats.get("mean_abs_d_mod") or {}
     lines = [
         "# MSR-VTT multimodal FSDS attribution\n\n",
         "Window matrix `s`: **768 video + 512 audio + 768 text + 1 label**. ",
@@ -174,6 +180,27 @@ def write_readme(result, plot_paths, path: Path):
         % (
             result["bootstrap"]["rf"]["pairwise"]["video-audio"]["mean_diff"],
             result["bootstrap"]["rf"]["pairwise"]["video-audio"]["sd"],
+        ),
+        "\n## Batch 0 vs Batch 1 region board\n\n",
+        "See `msrvtt_batch_region_heatmap_board.png` (stats: `msrvtt_region_board_stats.json`). ",
+        "Lead heatmap: windows ordered Batch 0 then Batch 1 × 24 embedding bins "
+        "(8 video / 8 audio / 8 text). Middle: cosine$(B_0,B_1)$ geometry per modality. ",
+        "Bottom: video × region Cohen's $d$ with Holm stars, plus signed pooled $d$ vs mean $|d|$. ",
+        "Video/audio regions carry a **video-heterogeneous** early-vs-late shift; text is window-invariant ($d=0$). ",
+        "Signed pooled $d$ cancels across videos; mean $|d|$ does not. "
+        + (
+            "Mean |Cohen's d|: video $%.3f$, audio $%.3f$, text $%.3f$; "
+            "%d Holm-significant video×region cells, %d pooled-region Holm hits "
+            "(signed $d$ cancels across videos).\n"
+            % (
+                float(mad.get("video", float("nan"))),
+                float(mad.get("audio", float("nan"))),
+                float(mad.get("text", float("nan"))),
+                int(board_stats.get("n_sig_cells", 0)),
+                int(board_stats.get("n_sig_pooled", 0)),
+            )
+            if mad
+            else "\n"
         ),
         "\n## Per-video AUC\n\n",
         "| Video | n | AUC | Video | Audio | Text | Dominant |\n",
@@ -238,7 +265,7 @@ def main():
 
     for name, arr in result["arrays"].items():
         np.save(np_dir / ("%s.npy" % name), arr)
-    plots = write_all_plots(result, OUT)
+    plots = write_all_plots(result, OUT, bundle=bundle)
     write_tex(result, OUT / "MSRVTT_Multimodal_Attribution_tables_only.tex")
     write_tex(result, DOCS / "MSRVTT_Multimodal_Attribution_tables_only.tex")
     write_readme(result, plots, OUT / "README.md")

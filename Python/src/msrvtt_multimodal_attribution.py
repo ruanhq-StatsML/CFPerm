@@ -254,6 +254,179 @@ def holm_adjust(pvals):
     return adj
 
 
+REGION_BINS = (("video", 8), ("audio", 8), ("text", 8))
+
+
+def iter_regions():
+    """Contiguous embedding bins inside each modality (the 'regions')."""
+    for name, nbin in REGION_BINS:
+        sl = GROUPS[name]
+        width = int(np.ceil((sl.stop - sl.start) / float(nbin)))
+        for i in range(nbin):
+            a = sl.start + i * width
+            b = min(sl.stop, sl.start + (i + 1) * width)
+            if a < b:
+                yield name, i, slice(a, b)
+
+
+def _cohens_d(a, b):
+    a = np.asarray(a, dtype=float).reshape(-1)
+    b = np.asarray(b, dtype=float).reshape(-1)
+    if a.size < 2 or b.size < 2:
+        return 0.0
+    sp2 = ((a.size - 1) * a.var(ddof=1) + (b.size - 1) * b.var(ddof=1)) / (a.size + b.size - 2)
+    return float((b.mean() - a.mean()) / np.sqrt(sp2 + 1e-12))
+
+
+def _batch_order(video_id, window_idx, W):
+    idx0 = np.flatnonzero(W == 0)
+    idx1 = np.flatnonzero(W == 1)
+    idx0 = idx0[np.lexsort((window_idx[idx0], video_id[idx0]))]
+    idx1 = idx1[np.lexsort((window_idx[idx1], video_id[idx1]))]
+    return np.concatenate([idx0, idx1]), int(idx0.size)
+
+
+def cosine_sim_matrix(X):
+    X = np.asarray(X, dtype=float)
+    nrm = np.linalg.norm(X, axis=1, keepdims=True) + 1e-12
+    Z = X / nrm
+    return Z @ Z.T
+
+
+def region_board_payload(bundle):
+    """Batch-0 vs Batch-1 region statistics for the heatmap board.
+
+    Regions = equal-width bins inside video/audio/text embedding blocks.
+    Effect size is Cohen's d on the region's mean activation (one scalar / window).
+    """
+    X = standardize_columns(bundle.X)
+    W = np.asarray(bundle.W, dtype=int)
+    vid = np.asarray(bundle.video_id)
+    widx = np.asarray(bundle.window_idx)
+    order, n0 = _batch_order(vid, widx, W)
+    regions = list(iter_regions())
+    labels = ["%s-%d" % (name, i) for name, i, _ in regions]
+    mods = [name for name, _, _ in regions]
+
+    d_feat = np.zeros(X.shape[1])
+    t_feat = np.zeros(X.shape[1])
+    p_feat = np.ones(X.shape[1])
+    X0, X1 = X[W == 0], X[W == 1]
+    for j in range(X.shape[1]):
+        a, b = X0[:, j], X1[:, j]
+        d_feat[j] = _cohens_d(a, b)
+        if a.std() < 1e-10 and b.std() < 1e-10:
+            t_feat[j], p_feat[j] = 0.0, 1.0
+        else:
+            try:
+                t_feat[j], p_feat[j] = stats.ttest_ind(a, b, equal_var=False)
+            except Exception:
+                t_feat[j], p_feat[j] = 0.0, 1.0
+
+    pooled_d = np.zeros(len(regions))
+    pooled_p = np.ones(len(regions))
+    for k, (_, _, sl) in enumerate(regions):
+        s0 = X0[:, sl].mean(axis=1)
+        s1 = X1[:, sl].mean(axis=1)
+        pooled_d[k] = _cohens_d(s0, s1)
+        if s0.std() < 1e-10 and s1.std() < 1e-10:
+            pooled_p[k] = 1.0
+        else:
+            try:
+                _, pooled_p[k] = stats.ttest_ind(s0, s1, equal_var=False)
+            except Exception:
+                pooled_p[k] = 1.0
+    pooled_p_holm = holm_adjust(pooled_p)
+
+    videos = np.unique(vid)
+    d_mat = np.zeros((len(videos), len(regions)))
+    p_mat = np.ones((len(videos), len(regions)))
+    for vi, v in enumerate(videos):
+        idx = np.flatnonzero(vid == v)
+        Wv = W[idx]
+        Xv = X[idx]
+        for k, (_, _, sl) in enumerate(regions):
+            s = Xv[:, sl].mean(axis=1)
+            s0, s1 = s[Wv == 0], s[Wv == 1]
+            d_mat[vi, k] = _cohens_d(s0, s1)
+            if s0.size >= 3 and s1.size >= 3 and (s0.std() > 1e-10 or s1.std() > 1e-10):
+                try:
+                    _, p_mat[vi, k] = stats.ttest_ind(s0, s1, equal_var=False)
+                except Exception:
+                    p_mat[vi, k] = 1.0
+        p_mat[vi] = holm_adjust(p_mat[vi])
+
+    from sklearn.decomposition import PCA
+
+    def _pca_cosine(Xm, k=12):
+        k = int(min(k, Xm.shape[0] - 1, Xm.shape[1]))
+        if k < 2:
+            return cosine_sim_matrix(Xm)
+        Z = PCA(n_components=k, random_state=0).fit_transform(Xm)
+        return cosine_sim_matrix(Z)
+
+    sims_raw = {}
+    sims_pca = {}
+    for name, sl in GROUPS.items():
+        Xo = X[order][:, sl]
+        sims_raw[name] = cosine_sim_matrix(Xo)
+        sims_pca[name] = _pca_cosine(Xo, k=12)
+
+    act = np.column_stack([X[order][:, sl].mean(axis=1) for _, _, sl in regions])
+    vid_ord = vid[order]
+    boundaries = [float(i) - 0.5 for i in range(1, len(vid_ord)) if vid_ord[i] != vid_ord[i - 1]]
+
+    def _blocks(S):
+        b00 = float(np.mean(S[:n0, :n0]))
+        b11 = float(np.mean(S[n0:, n0:]))
+        b01 = float(np.mean(S[:n0, n0:]))
+        return {"B0B0": b00, "B1B1": b11, "B0B1": b01, "gap": 0.5 * (b00 + b11) - b01}
+
+    block_mean = {name: _blocks(S) for name, S in sims_raw.items()}
+    block_mean_pca = {name: _blocks(S) for name, S in sims_pca.items()}
+    n_video_r = sum(1 for m in mods if m == "video")
+    n_audio_r = sum(1 for m in mods if m == "audio")
+    slices = {
+        "video": slice(0, n_video_r),
+        "audio": slice(n_video_r, n_video_r + n_audio_r),
+        "text": slice(n_video_r + n_audio_r, len(mods)),
+    }
+    mean_abs_d_region = np.mean(np.abs(d_mat), axis=0)
+    mean_abs_d_mod = {g: float(np.mean(np.abs(d_mat[:, sl]))) for g, sl in slices.items()}
+
+    return {
+        "order_n0": n0,
+        "n": int(len(W)),
+        "region_labels": labels,
+        "region_modalities": mods,
+        "pooled_d": pooled_d,
+        "pooled_p_holm": pooled_p_holm,
+        "mean_abs_d_region": mean_abs_d_region,
+        "mean_abs_d_mod": mean_abs_d_mod,
+        "video_ids": [int(v) if float(v).is_integer() else str(v) for v in videos],
+        "d_video_region": d_mat,
+        "p_holm_video_region": p_mat,
+        "d_feat": d_feat,
+        "act_window_region": act,
+        "video_boundaries": boundaries,
+        "sims": sims_raw,
+        "sims_pca": sims_pca,
+        "block_mean": block_mean,
+        "block_mean_pca": block_mean_pca,
+        "n_sig_pooled": int(np.sum(pooled_p_holm < 0.05)),
+        "n_sig_cells": int(np.sum(p_mat < 0.05)),
+    }
+
+
+REGION_BOARD_SKIP = ("sims", "sims_pca", "d_feat", "act_window_region")
+
+
+def region_board_stats(bundle):
+    """JSON-safe region-board summary (drops window-scale matrices)."""
+    pay = region_board_payload(bundle)
+    return {k: v for k, v in pay.items() if k not in REGION_BOARD_SKIP}
+
+
 def percentile_ci(samples, level=0.95):
     a = np.asarray(samples, dtype=float)
     a = a[np.isfinite(a)]

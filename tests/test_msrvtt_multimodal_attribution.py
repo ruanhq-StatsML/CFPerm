@@ -121,6 +121,35 @@ def test_standardize_columns_unit_variance():
     assert np.allclose(Z.std(0), 1.0, atol=1e-10)
 
 
+def test_region_board_video_shift_lights_up_video_bins():
+    from msrvtt_multimodal_attribution import region_board_payload
+
+    b = make_synthetic_bundle(
+        n_videos=6, n_windows=24, seed=11, video_shift=1.7, audio_shift=0.05, text_shift=0.02
+    )
+    pay = region_board_payload(b)
+    d = np.asarray(pay["pooled_d"])
+    assert d.size == 24
+    assert np.mean(np.abs(d[:8])) > np.mean(np.abs(d[8:16]))
+    assert np.mean(np.abs(d[:8])) > np.mean(np.abs(d[16:]))
+    assert pay["block_mean"]["video"]["gap"] > pay["block_mean"]["text"]["gap"]
+    assert pay["d_video_region"].shape[0] == 6
+    assert pay["mean_abs_d_mod"]["video"] > pay["mean_abs_d_mod"]["text"]
+    assert pay["mean_abs_d_region"].shape == (24,)
+
+
+def test_region_board_plot_writes(tmp_path):
+    from msrvtt_attribution_plots import plot_batch_region_board
+
+    b = make_synthetic_bundle(
+        n_videos=4, n_windows=16, seed=4, video_shift=1.2, audio_shift=0.04, text_shift=0.0
+    )
+    dummy = {"tests": {"per_video_rf_shares": {"friedman": {"p": 1e-4}}}}
+    out = plot_batch_region_board(b, dummy, tmp_path / "board.png")
+    assert out.exists()
+    assert out.stat().st_size > 8000
+
+
 def test_bundle_from_s_uses_label_as_video_id():
     rng = np.random.default_rng(0)
     n_v, n_w = 5, 10
