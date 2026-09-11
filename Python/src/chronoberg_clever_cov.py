@@ -250,18 +250,18 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         labs = [r["name"] for r in gt_rows]
         x = np.arange(len(labs))
         raw = [r["domain_auc_raw"] for r in gt_rows]
-        pool = [r.get("domain_auc_pool", r["domain_auc_clever"]) for r in gt_rows]
+        sub = [r.get("domain_auc_subspace", r["domain_auc_raw"]) for r in gt_rows]
         bawf = [r.get("domain_auc_bawf", r["domain_auc_raw"]) for r in gt_rows]
-        stack = [r.get("domain_auc_stack_xz", r["domain_auc_clever"]) for r in gt_rows]
+        pool = [r.get("domain_auc_pool", r["domain_auc_clever"]) for r in gt_rows]
         e_raw = [r.get("domain_auc_raw_sd", 0.0) for r in gt_rows]
-        e_p = [0.0 for _ in gt_rows]  # OOF pool is a single score
+        e_u = [r.get("domain_auc_subspace_sd", 0.0) for r in gt_rows]
         e_b = [r.get("domain_auc_bawf_sd", 0.0) for r in gt_rows]
-        e_s = [r.get("domain_auc_stack_sd", 0.0) for r in gt_rows]
+        e_p = [0.0 for _ in gt_rows]
         w = 0.18
         ax.bar(x - 1.5 * w, raw, w, yerr=e_raw, capsize=3, label="raw RF on X", color="#9aa0a6")
-        ax.bar(x - 0.5 * w, pool, w, yerr=e_p, capsize=3, label="π-opinion pool Σ π_m ê_m", color="#1f77b4")
-        ax.bar(x + 0.5 * w, bawf, w, yerr=e_b, capsize=3, label="block-aware forest", color="#ff7f0e")
-        ax.bar(x + 1.5 * w, stack, w, yerr=e_s, capsize=3, label="X + clever-Z", color="#2ca02c")
+        ax.bar(x - 0.5 * w, sub, w, yerr=e_u, capsize=3, label="uniform subspace", color="#c5cae9")
+        ax.bar(x + 0.5 * w, bawf, w, yerr=e_b, capsize=3, label="π-guided BAWF", color="#ff7f0e")
+        ax.bar(x + 1.5 * w, pool, w, yerr=e_p, capsize=3, label="π-opinion pool", color="#1f77b4")
         ax.set_xticks(x)
         ax.set_xticklabels(labs, rotation=12, ha="right")
         ax.set_ylabel("5-fold domain AUC")
@@ -286,9 +286,12 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         ax.errorbar(ns, [r.get("auc_pool", r["auc_clever"]) for r in se],
                     yerr=[r.get("auc_pool_sd", 0) for r in se],
                     fmt="s-", color="#1f77b4", label="π-opinion pool", capsize=3)
+        ax.errorbar(ns, [r.get("auc_subspace", r["auc_raw"]) for r in se],
+                    yerr=[r.get("auc_subspace_sd", 0) for r in se],
+                    fmt="x--", color="#c5cae9", label="uniform subspace", capsize=3)
         ax.errorbar(ns, [r.get("auc_bawf", r["auc_raw"]) for r in se],
                     yerr=[r.get("auc_bawf_sd", 0) for r in se],
-                    fmt="D-", color="#ff7f0e", label="block-aware forest", capsize=3)
+                    fmt="D-", color="#ff7f0e", label="π-guided BAWF", capsize=3)
         ax.errorbar(ns, [r.get("auc_stack", r["auc_clever"]) for r in se],
                     yerr=[r.get("auc_stack_sd", 0) for r in se],
                     fmt="^-", color="#2ca02c", label="X + clever-Z", capsize=3)
@@ -372,20 +375,20 @@ def write_latex(summary: dict, path: Path) -> None:
         r"\begin{table}[t]",
         r"\centering",
         r"\small",
-        r"\caption{Human blocks $\to$ Stage-1 $\pi$ $\to$ Stage-2 training. Opinion pool $\sum_m\pi_m\hat e_m$; BAWF samples $p_j\propto\pi_m/|B_m|$.}",
+        r"\caption{Human blocks $\to$ Stage-1 $\pi$ $\to$ Stage-2. BAWF vs.\ uniform subspace isolates the $\pi$ weights.}",
         r"\begin{tabular}{lcccccc}",
         r"\toprule",
-        r"Setting & raw RF & pool & BAWF & adapt-logit & $X{+}Z$ & $\Delta_{\mathrm{BAWF}}$ \\",
+        r"Setting & raw RF & unif.\ subsp.\ & $\pi$-BAWF & pool & $X{+}Z$ & $\Delta_{\pi\mathrm{-sub}}$ \\",
         r"\midrule",
     ]
     for row in summary["comparisons"]:
         bawf = row.get("domain_auc_bawf", row["domain_auc_raw"])
-        db = bawf - row["domain_auc_raw"]
+        sub = row.get("domain_auc_subspace", row["domain_auc_raw"])
+        db = bawf - sub
         lines.append(
             f"{_tex_escape(row['name'])} & {row['domain_auc_raw']:.3f} & "
+            f"{sub:.3f} & {bawf:.3f} & "
             f"{row.get('domain_auc_pool', float('nan')):.3f} & "
-            f"{bawf:.3f} & "
-            f"{row.get('domain_auc_adapt', float('nan')):.3f} & "
             f"{row.get('domain_auc_stack_xz', row['domain_auc_clever']):.3f} & "
             f"{db:+.3f} \\\\"
         )
@@ -583,19 +586,20 @@ def _write_readme(summary: dict, out_dir: Path) -> None:
         "(opinion pool of block RFs; block-aware forest with p_j ∝ π_m/|B_m|; "
         "X+Z stacking as the feature view of the same weights).",
         "",
-        "| setting | AUC raw | pool | BAWF | adapt-logit | X+Z | π on GT | BAWF on GT |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "| setting | AUC raw | unif subsp. | π-BAWF | pool | X+Z | Δ π−unif | π on GT | BAWF on GT |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in summary["comparisons"]:
         st = row.get("domain_auc_stack_xz", row["domain_auc_clever"])
         pi_gt = row.get("pi_consensus_on_gt", float("nan"))
         bawf = row.get("domain_auc_bawf", float("nan"))
         pool = row.get("domain_auc_pool", float("nan"))
-        adapt = row.get("domain_auc_adapt", float("nan"))
+        sub = row.get("domain_auc_subspace", float("nan"))
         bawf_gt = row.get("bawf_on_gt", float("nan"))
+        dsub = (bawf - sub) if np.isfinite(bawf) and np.isfinite(sub) else float("nan")
         lines.append(
-            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {pool:.3f} | "
-            f"{bawf:.3f} | {adapt:.3f} | {st:.3f} | {pi_gt:.3f} | {bawf_gt:.3f} |"
+            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {sub:.3f} | "
+            f"{bawf:.3f} | {pool:.3f} | {st:.3f} | {dsub:+.3f} | {pi_gt:.3f} | {bawf_gt:.3f} |"
         )
     obs = summary.get("observational_auc") or {}
     if obs:
@@ -610,8 +614,10 @@ def _write_readme(summary: dict, out_dir: Path) -> None:
         "",
         "Clever-Z is `Z_m = π_m · logit ê_m(X_m)` (n_modalities columns), estimated OOF.",
         "Stage-2 uses the same π to *train*: opinion pool (no extra fit), "
-        "block-aware forest (biased subspace), adaptive group-logit (column scaling).",
+        "block-aware forest (biased subspace vs uniform-subspace ablation), "
+        "adaptive group-logit (column scaling; may saturate on mean-shift inject).",
         "Detection uses 5-fold stratified CV. GT rows average 3 subsample seeds.",
+        "Observational Chronoberg is a diffuse multi-modality shift; wins are on concentrated GT.",
         "",
         "```bash",
         "python3 scripts/run_chronoberg_clever_cov.py",

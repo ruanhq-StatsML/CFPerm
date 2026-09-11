@@ -700,15 +700,28 @@ def compare_raw_vs_clever(
         auc_bawf, sd_bawf, mass_bawf = cv_block_aware_auc(
             X, W, spec, pi, seed=seed + 3, n_estimators=n_estimators, n_splits=n_splits,
         )
+        pi_unif = np.full(len(pi), 1.0 / max(len(pi), 1))
+        auc_sub, sd_sub, _ = cv_block_aware_auc(
+            X, W, spec, pi_unif, seed=seed + 3, n_estimators=n_estimators, n_splits=n_splits,
+        )
         auc_adapt, sd_adapt = cv_adaptive_group_logit_auc(
             X, W, spec, pi, seed=seed + 4, n_splits=n_splits,
         )
+        auc_logit_unif, sd_logit_unif = cv_adaptive_group_logit_auc(
+            X, W, spec, pi_unif, seed=seed + 4, n_splits=n_splits,
+        )
         out["domain_auc_bawf"] = round(float(auc_bawf), 4)
         out["domain_auc_bawf_sd"] = round(float(sd_bawf), 4)
+        out["domain_auc_subspace"] = round(float(auc_sub), 4)
+        out["domain_auc_subspace_sd"] = round(float(sd_sub), 4)
         out["domain_auc_adapt"] = round(float(auc_adapt), 4)
         out["domain_auc_adapt_sd"] = round(float(sd_adapt), 4)
+        out["domain_auc_logit_unif"] = round(float(auc_logit_unif), 4)
+        out["domain_auc_logit_unif_sd"] = round(float(sd_logit_unif), 4)
         out["domain_auc_delta_bawf"] = round(float(auc_bawf - auc_raw), 4)
+        out["domain_auc_delta_bawf_vs_sub"] = round(float(auc_bawf - auc_sub), 4)
         out["domain_auc_delta_adapt"] = round(float(auc_adapt - auc_raw), 4)
+        out["domain_auc_delta_adapt_vs_unif"] = round(float(auc_adapt - auc_logit_unif), 4)
         out["bawf_vimp"] = {k: round(v, 4) for k, v in mass_bawf.items()}
     tot_z = float(np.sum(np.maximum(vimp_z, 0.0))) + EPS
     out["z_vimp"] = {n: round(float(max(vimp_z[i], 0.0) / tot_z), 4) for i, n in enumerate(spec.names)}
@@ -756,7 +769,7 @@ def sample_efficiency_curve(
         n1 = min(len(i1), n // 2)
         if n0 < 50 or n1 < 50:
             continue
-        raws, zs, xzs, pools, bawfs, adapts = [], [], [], [], [], []
+        raws, zs, xzs, pools, bawfs, adapts, subs = [], [], [], [], [], [], []
         for r in range(n_repeats):
             rng = np.random.default_rng(seed + 17 * n + r)
             sel = np.concatenate([
@@ -778,6 +791,7 @@ def sample_efficiency_curve(
             pools.append(row["domain_auc_pool"])
             bawfs.append(row.get("domain_auc_bawf", row["domain_auc_raw"]))
             adapts.append(row.get("domain_auc_adapt", row["domain_auc_raw"]))
+            subs.append(row.get("domain_auc_subspace", row["domain_auc_raw"]))
         rows.append({
             "n": int(n0 + n1),
             "n_repeats": n_repeats,
@@ -791,12 +805,15 @@ def sample_efficiency_curve(
             "auc_pool_sd": round(float(np.std(pools, ddof=1)), 4),
             "auc_bawf": round(float(np.mean(bawfs)), 4),
             "auc_bawf_sd": round(float(np.std(bawfs, ddof=1)), 4),
+            "auc_subspace": round(float(np.mean(subs)), 4),
+            "auc_subspace_sd": round(float(np.std(subs, ddof=1)), 4),
             "auc_adapt": round(float(np.mean(adapts)), 4),
             "auc_adapt_sd": round(float(np.std(adapts, ddof=1)), 4),
             "delta": round(float(np.mean(zs) - np.mean(raws)), 4),
             "delta_stack": round(float(np.mean(xzs) - np.mean(raws)), 4),
             "delta_pool": round(float(np.mean(pools) - np.mean(raws)), 4),
             "delta_bawf": round(float(np.mean(bawfs) - np.mean(raws)), 4),
+            "delta_bawf_vs_sub": round(float(np.mean(bawfs) - np.mean(subs)), 4),
             "p_raw": int(X.shape[1]),
             "p_clever": spec.n_mod,
         })

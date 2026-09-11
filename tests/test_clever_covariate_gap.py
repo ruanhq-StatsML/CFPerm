@@ -127,6 +127,13 @@ def test_block_aware_forest_follows_pi_not_column_scale():
         X, W, spec, pi_unif, seed=9, n_estimators=40, n_splits=4, floor=0.0,
     )
     assert auc_pi >= auc_unif - 0.02
+    row = compare_raw_vs_clever(
+        X, W, Y, spec,
+        decompose_modality_gap(X, W, spec, seed=9, n_splits=3, n_estimators=35, light=True),
+        seed=9, gt="valence", with_po=False, n_estimators=35, n_splits=4,
+    )
+    assert "domain_auc_subspace" in row
+    assert row["domain_auc_bawf"] >= row["domain_auc_subspace"] - 0.03
     scales = adaptive_group_scale(X, spec, pi_gt, floor=0.0)
     val = spec.slices[spec.names.index("valence")]
     text = spec.slices[spec.names.index("text")]
