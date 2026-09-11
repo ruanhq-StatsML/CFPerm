@@ -39,10 +39,12 @@ def main() -> None:
                 "name": r["name"],
                 "auc_raw": r["domain_auc_raw"],
                 "auc_clever": r["domain_auc_clever"],
-                "delta": r["domain_auc_delta"],
+                "auc_stack": r.get("domain_auc_stack_xz"),
+                "delta_stack": round(r.get("domain_auc_stack_xz", r["domain_auc_clever"]) - r["domain_auc_raw"], 4),
                 "gt": r.get("gt"),
                 "mass_on_gt_raw": r.get("mass_on_gt_raw"),
-                "z_share_on_gt": r.get("z_share_on_gt"),
+                "pi_on_gt": r.get("pi_consensus_on_gt"),
+                "z_logit_on_gt": r.get("z_logit_on_gt"),
             }
             for r in summary["comparisons"]
         ],

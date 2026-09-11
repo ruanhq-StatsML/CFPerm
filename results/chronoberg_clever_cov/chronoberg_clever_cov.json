@@ -1,0 +1,546 @@
+{
+  "dataset": "spaul25/Chronoberg test 1750 vs 1950",
+  "n0": 900,
+  "n1": 900,
+  "d_text": 32,
+  "modalities": [
+    "text",
+    "valence",
+    "arousal",
+    "dominance"
+  ],
+  "gap": {
+    "full_auc": 0.7361,
+    "block_auc": {
+      "text": 0.6663,
+      "valence": 0.6164,
+      "arousal": 0.5144,
+      "dominance": 0.6
+    },
+    "block_mmd": {
+      "text": 0.000852,
+      "valence": 0.035128,
+      "arousal": 0.0,
+      "dominance": 0.024712
+    },
+    "lomo_auc_drop": {
+      "text": 0.0605,
+      "valence": 0.0871,
+      "arousal": 0.0476,
+      "dominance": 0.0541
+    },
+    "vimp_share": {
+      "text": 0.4918,
+      "valence": 0.2193,
+      "arousal": 0.0967,
+      "dominance": 0.1921
+    },
+    "pi_auc": {
+      "text": 0.4188,
+      "valence": 0.2931,
+      "arousal": 0.0362,
+      "dominance": 0.2519
+    },
+    "pi_mmd": {
+      "text": 0.014,
+      "valence": 0.5788,
+      "arousal": 0.0,
+      "dominance": 0.4072
+    },
+    "pi_lomo": {
+      "text": 0.2427,
+      "valence": 0.3492,
+      "arousal": 0.1911,
+      "dominance": 0.2171
+    },
+    "pi_vimp": {
+      "text": 0.4918,
+      "valence": 0.2193,
+      "arousal": 0.0967,
+      "dominance": 0.1921
+    },
+    "pi_instance_mean": {
+      "text": 0.2441,
+      "valence": 0.2764,
+      "arousal": 0.2191,
+      "dominance": 0.2604
+    },
+    "pi_consensus": {
+      "text": 0.2823,
+      "valence": 0.3434,
+      "arousal": 0.1086,
+      "dominance": 0.2657
+    }
+  },
+  "cd_gap": {
+    "full_auc": 0.6987,
+    "block_auc": {
+      "text": 0.6233,
+      "arousal": 0.5646,
+      "dominance": 0.6252
+    },
+    "block_mmd": {
+      "text": 0.00152,
+      "arousal": 0.00806,
+      "dominance": 0.011987
+    },
+    "lomo_auc_drop": {
+      "text": 0.1184,
+      "arousal": 0.0626,
+      "dominance": 0.0541
+    },
+    "vimp_share": {
+      "text": 0.6527,
+      "arousal": 0.1016,
+      "dominance": 0.2457
+    },
+    "pi_auc": {
+      "text": 0.3938,
+      "arousal": 0.2062,
+      "dominance": 0.4
+    },
+    "pi_mmd": {
+      "text": 0.0705,
+      "arousal": 0.3737,
+      "dominance": 0.5558
+    },
+    "pi_lomo": {
+      "text": 0.5036,
+      "arousal": 0.2662,
+      "dominance": 0.2301
+    },
+    "pi_vimp": {
+      "text": 0.6527,
+      "arousal": 0.1016,
+      "dominance": 0.2457
+    },
+    "pi_instance_mean": {
+      "text": 0.3319,
+      "arousal": 0.2781,
+      "dominance": 0.39
+    },
+    "pi_consensus": {
+      "text": 0.3905,
+      "arousal": 0.2452,
+      "dominance": 0.3643
+    }
+  },
+  "comparisons": [
+    {
+      "domain_auc_raw": 0.7392,
+      "domain_auc_clever": 0.6915,
+      "domain_auc_stack_xz": 0.6902,
+      "domain_auc_delta": -0.0477,
+      "vimp_share_raw": {
+        "text": 0.4972,
+        "valence": 0.2186,
+        "arousal": 0.0993,
+        "dominance": 0.1849
+      },
+      "p_raw": 47,
+      "p_clever": 8,
+      "z_share_vimp": {
+        "text": 0.2143,
+        "valence": 0.3213,
+        "arousal": 0.2486,
+        "dominance": 0.2158
+      },
+      "z_logit_vimp": {
+        "text": 0.3897,
+        "valence": 0.2894,
+        "arousal": 0.0674,
+        "dominance": 0.2535
+      },
+      "po_risk_raw": 2e-06,
+      "po_risk_clever_Z": 0.000133,
+      "po_risk_tmle_H": 2.9e-05,
+      "po_risk_stack_tmle_H": 2.7e-05,
+      "name": "observational 1750/1950",
+      "gt": null
+    },
+    {
+      "domain_auc_raw": 0.7095,
+      "domain_auc_clever": 0.637,
+      "domain_auc_stack_xz": 0.638,
+      "domain_auc_delta": -0.0725,
+      "vimp_share_raw": {
+        "text": 0.6466,
+        "arousal": 0.1011,
+        "dominance": 0.2523
+      },
+      "p_raw": 42,
+      "p_clever": 6,
+      "z_share_vimp": {
+        "text": 0.323,
+        "arousal": 0.3442,
+        "dominance": 0.3328
+      },
+      "z_logit_vimp": {
+        "text": 0.4912,
+        "arousal": 0.0953,
+        "dominance": 0.4135
+      },
+      "po_risk_raw": 8.3e-05,
+      "po_risk_clever_Z": 0.000164,
+      "po_risk_tmle_H": 0.001321,
+      "po_risk_stack_tmle_H": 0.001405,
+      "name": "CD: Y=valence, X=text+A+D",
+      "gt": null
+    },
+    {
+      "domain_auc_raw": 0.8593,
+      "domain_auc_clever": 0.8159,
+      "domain_auc_stack_xz": 0.8746,
+      "domain_auc_delta": -0.0434,
+      "vimp_share_raw": {
+        "text": 0.2799,
+        "valence": 0.432,
+        "arousal": 0.1055,
+        "dominance": 0.1826
+      },
+      "p_raw": 47,
+      "p_clever": 8,
+      "z_share_vimp": {
+        "text": 0.2061,
+        "valence": 0.3346,
+        "arousal": 0.1578,
+        "dominance": 0.3015
+      },
+      "z_logit_vimp": {
+        "text": 0.2287,
+        "valence": 0.5563,
+        "arousal": 0.036,
+        "dominance": 0.179
+      },
+      "po_risk_raw": 5.9e-05,
+      "po_risk_clever_Z": 0.000265,
+      "po_risk_tmle_H": 0.001151,
+      "po_risk_stack_tmle_H": 0.001095,
+      "selection_auc_raw": 0.9524,
+      "mass_on_gt_raw": 0.432,
+      "z_share_on_gt": 0.3346,
+      "z_logit_on_gt": 0.5563,
+      "pi_consensus_on_gt": 0.5349,
+      "name": "inject valence (\u03b1=0.95)",
+      "gt": "valence"
+    },
+    {
+      "domain_auc_raw": 0.9992,
+      "domain_auc_clever": 1.0,
+      "domain_auc_stack_xz": 0.9999,
+      "domain_auc_delta": 0.0008,
+      "vimp_share_raw": {
+        "text": 0.9906,
+        "valence": 0.0061,
+        "arousal": 0.0001,
+        "dominance": 0.0032
+      },
+      "p_raw": 47,
+      "p_clever": 8,
+      "z_share_vimp": {
+        "text": 0.4505,
+        "valence": 0.21,
+        "arousal": 0.202,
+        "dominance": 0.1375
+      },
+      "z_logit_vimp": {
+        "text": 0.9526,
+        "valence": 0.0203,
+        "arousal": 0.0012,
+        "dominance": 0.0259
+      },
+      "po_risk_raw": 0.0,
+      "po_risk_clever_Z": 2.7e-05,
+      "po_risk_tmle_H": 1e-05,
+      "po_risk_stack_tmle_H": 1.6e-05,
+      "selection_auc_raw": 0.9229,
+      "mass_on_gt_raw": 0.9906,
+      "z_share_on_gt": 0.4505,
+      "z_logit_on_gt": 0.9526,
+      "pi_consensus_on_gt": 0.6983,
+      "name": "inject text (\u03b1=0.75)",
+      "gt": "text"
+    },
+    {
+      "domain_auc_raw": 0.888,
+      "domain_auc_clever": 0.8161,
+      "domain_auc_stack_xz": 0.9129,
+      "domain_auc_delta": -0.0719,
+      "vimp_share_raw": {
+        "text": 0.179,
+        "valence": 0.4975,
+        "arousal": 0.1159,
+        "dominance": 0.2075
+      },
+      "p_raw": 47,
+      "p_clever": 8,
+      "z_share_vimp": {
+        "text": 0.2681,
+        "valence": 0.2948,
+        "arousal": 0.1962,
+        "dominance": 0.2409
+      },
+      "z_logit_vimp": {
+        "text": 0.0376,
+        "valence": 0.7026,
+        "arousal": 0.0559,
+        "dominance": 0.2039
+      },
+      "po_risk_raw": 6.4e-05,
+      "po_risk_clever_Z": 0.000313,
+      "po_risk_tmle_H": 0.001288,
+      "po_risk_stack_tmle_H": 0.001184,
+      "selection_auc_raw": 0.9571,
+      "mass_on_gt_raw": 0.4975,
+      "z_share_on_gt": 0.2948,
+      "z_logit_on_gt": 0.7026,
+      "pi_consensus_on_gt": 0.6224,
+      "name": "text-shuffled + inject valence",
+      "gt": "valence"
+    },
+    {
+      "domain_auc_raw": 0.7698,
+      "domain_auc_clever": 0.879,
+      "domain_auc_stack_xz": 0.9444,
+      "domain_auc_delta": 0.1091,
+      "vimp_share_raw": {
+        "text": 0.5124,
+        "valence": 0.4186,
+        "arousal": 0.0408,
+        "dominance": 0.0282
+      },
+      "p_raw": 49,
+      "p_clever": 8,
+      "z_share_vimp": {
+        "text": 0.2648,
+        "valence": 0.2704,
+        "arousal": 0.2604,
+        "dominance": 0.2044
+      },
+      "z_logit_vimp": {
+        "text": 0.0769,
+        "valence": 0.6589,
+        "arousal": 0.0907,
+        "dominance": 0.1735
+      },
+      "po_risk_raw": 0.071485,
+      "po_risk_clever_Z": 0.073463,
+      "po_risk_tmle_H": 1.480397,
+      "po_risk_stack_tmle_H": 1.403916,
+      "selection_auc_raw": 1.0,
+      "mass_on_gt_raw": 0.4186,
+      "z_share_on_gt": 0.2704,
+      "z_logit_on_gt": 0.6589,
+      "pi_consensus_on_gt": 0.6546,
+      "name": "synthetic GT=valence",
+      "gt": "valence",
+      "gap": {
+        "full_auc": 0.7778,
+        "block_auc": {
+          "text": 0.3313,
+          "valence": 0.8155,
+          "arousal": 0.6647,
+          "dominance": 0.6052
+        },
+        "block_mmd": {
+          "text": 0.0,
+          "valence": 0.237316,
+          "arousal": 0.000177,
+          "dominance": 0.0
+        },
+        "lomo_auc_drop": {
+          "text": 0.0,
+          "valence": 0.1766,
+          "arousal": 0.0,
+          "dominance": 0.0
+        },
+        "vimp_share": {
+          "text": 0.5199,
+          "valence": 0.4028,
+          "arousal": 0.0417,
+          "dominance": 0.0356
+        },
+        "pi_auc": {
+          "text": 0.0,
+          "valence": 0.539,
+          "arousal": 0.2814,
+          "dominance": 0.1797
+        },
+        "pi_mmd": {
+          "text": 0.0,
+          "valence": 0.9993,
+          "arousal": 0.0007,
+          "dominance": 0.0
+        },
+        "pi_lomo": {
+          "text": 0.0,
+          "valence": 1.0,
+          "arousal": 0.0,
+          "dominance": 0.0
+        },
+        "pi_vimp": {
+          "text": 0.5199,
+          "valence": 0.4028,
+          "arousal": 0.0417,
+          "dominance": 0.0356
+        },
+        "pi_instance_mean": {
+          "text": 0.3076,
+          "valence": 0.3321,
+          "arousal": 0.181,
+          "dominance": 0.1792
+        },
+        "pi_consensus": {
+          "text": 0.1655,
+          "valence": 0.6546,
+          "arousal": 0.101,
+          "dominance": 0.0789
+        }
+      }
+    }
+  ],
+  "sample_efficiency": [
+    {
+      "n": 200,
+      "auc_raw": 0.6016,
+      "auc_clever": 0.6688,
+      "auc_stack": 0.688,
+      "delta": 0.0672,
+      "delta_stack": 0.0864,
+      "p_raw": 47,
+      "p_clever": 8
+    },
+    {
+      "n": 400,
+      "auc_raw": 0.618,
+      "auc_clever": 0.5708,
+      "auc_stack": 0.6008,
+      "delta": -0.0472,
+      "delta_stack": -0.0172,
+      "p_raw": 47,
+      "p_clever": 8
+    },
+    {
+      "n": 800,
+      "auc_raw": 0.6863,
+      "auc_clever": 0.6968,
+      "auc_stack": 0.6533,
+      "delta": 0.0105,
+      "delta_stack": -0.033,
+      "p_raw": 47,
+      "p_clever": 8
+    }
+  ],
+  "synthetic": {
+    "domain_auc_raw": 0.7698,
+    "domain_auc_clever": 0.879,
+    "domain_auc_stack_xz": 0.9444,
+    "domain_auc_delta": 0.1091,
+    "vimp_share_raw": {
+      "text": 0.5124,
+      "valence": 0.4186,
+      "arousal": 0.0408,
+      "dominance": 0.0282
+    },
+    "p_raw": 49,
+    "p_clever": 8,
+    "z_share_vimp": {
+      "text": 0.2648,
+      "valence": 0.2704,
+      "arousal": 0.2604,
+      "dominance": 0.2044
+    },
+    "z_logit_vimp": {
+      "text": 0.0769,
+      "valence": 0.6589,
+      "arousal": 0.0907,
+      "dominance": 0.1735
+    },
+    "po_risk_raw": 0.071485,
+    "po_risk_clever_Z": 0.073463,
+    "po_risk_tmle_H": 1.480397,
+    "po_risk_stack_tmle_H": 1.403916,
+    "selection_auc_raw": 1.0,
+    "mass_on_gt_raw": 0.4186,
+    "z_share_on_gt": 0.2704,
+    "z_logit_on_gt": 0.6589,
+    "pi_consensus_on_gt": 0.6546,
+    "name": "synthetic GT=valence",
+    "gt": "valence",
+    "gap": {
+      "full_auc": 0.7778,
+      "block_auc": {
+        "text": 0.3313,
+        "valence": 0.8155,
+        "arousal": 0.6647,
+        "dominance": 0.6052
+      },
+      "block_mmd": {
+        "text": 0.0,
+        "valence": 0.237316,
+        "arousal": 0.000177,
+        "dominance": 0.0
+      },
+      "lomo_auc_drop": {
+        "text": 0.0,
+        "valence": 0.1766,
+        "arousal": 0.0,
+        "dominance": 0.0
+      },
+      "vimp_share": {
+        "text": 0.5199,
+        "valence": 0.4028,
+        "arousal": 0.0417,
+        "dominance": 0.0356
+      },
+      "pi_auc": {
+        "text": 0.0,
+        "valence": 0.539,
+        "arousal": 0.2814,
+        "dominance": 0.1797
+      },
+      "pi_mmd": {
+        "text": 0.0,
+        "valence": 0.9993,
+        "arousal": 0.0007,
+        "dominance": 0.0
+      },
+      "pi_lomo": {
+        "text": 0.0,
+        "valence": 1.0,
+        "arousal": 0.0,
+        "dominance": 0.0
+      },
+      "pi_vimp": {
+        "text": 0.5199,
+        "valence": 0.4028,
+        "arousal": 0.0417,
+        "dominance": 0.0356
+      },
+      "pi_instance_mean": {
+        "text": 0.3076,
+        "valence": 0.3321,
+        "arousal": 0.181,
+        "dominance": 0.1792
+      },
+      "pi_consensus": {
+        "text": 0.1655,
+        "valence": 0.6546,
+        "arousal": 0.101,
+        "dominance": 0.0789
+      }
+    }
+  },
+  "notes": {
+    "clever_Z": "compact X-only features: instance \u03c0_m(x) and logit \u00ea_m(X_m); compared as Z-only vs raw X",
+    "clever_H": "TMLE H_m = \u03c0_m (W-\u00ea_m)/(\u00ea_m(1-\u00ea_m)); used in PO targeting only",
+    "vad_lexicon": "static pool of 1750+1950 Chronoberg VAD lexicons"
+  },
+  "plots": {
+    "gap_shares": "/workspace/results/chronoberg_clever_cov/chronoberg_modality_gap_shares.png",
+    "auc": "/workspace/results/chronoberg_clever_cov/chronoberg_clever_vs_raw_auc.png",
+    "efficiency": "/workspace/results/chronoberg_clever_cov/chronoberg_sample_efficiency.png",
+    "inject": "/workspace/results/chronoberg_clever_cov/chronoberg_inject_recovery.png",
+    "porisk": "/workspace/results/chronoberg_clever_cov/chronoberg_porisk_clever.png"
+  }
+}

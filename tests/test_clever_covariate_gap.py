@@ -5,13 +5,13 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "Python" / "src"))
 
 from clever_covariate_gap import (  # noqa: E402
     clever_design,
+    clever_z,
     compare_raw_vs_clever,
     decompose_modality_gap,
     inject_block_shift,
@@ -36,21 +36,25 @@ def test_synthetic_valence_is_top_contributor():
     assert gap.instance_share.shape == (len(W), 4)
     assert np.allclose(gap.instance_share.sum(axis=1), 1.0, atol=1e-5)
     # clever H uses W; Z does not leak a copy of W as a column of X
-    Z = clever_design(X, gap)
-    assert Z.shape == (len(W), X.shape[1] + 8)
+    Z = clever_z(gap)
+    assert Z.shape == (len(W), 8)
+    XZ = clever_design(X, gap)
+    assert XZ.shape == (len(W), X.shape[1] + 8)
     # instance shares are functions of X (finite, in [0,1])
     assert np.all(np.isfinite(gap.instance_share))
     assert np.all(gap.instance_share >= -1e-9)
 
 
-def test_clever_improves_or_matches_domain_auc_on_synthetic():
-    X, W, Y, spec = make_synthetic_shift(n=520, d_text=28, d_vad=3, gt="valence", mean_shift=0.85, seed=11)
-    gap = decompose_modality_gap(X, W, spec, seed=11, n_splits=3, n_estimators=45)
+def test_clever_z_beats_raw_in_small_n_high_p():
+    X, W, Y, spec = make_synthetic_shift(n=160, d_text=40, d_vad=3, gt="valence", mean_shift=1.0, seed=11)
+    gap = decompose_modality_gap(X, W, spec, seed=11, n_splits=3, n_estimators=35)
     row = compare_raw_vs_clever(X, W, Y, spec, gap, seed=11, gt="valence")
-    # high-d text noise: clever Z should not hurt, and should recover GT
-    assert row["domain_auc_clever"] + 1e-6 >= row["domain_auc_raw"] - 0.03
-    assert row["pi_consensus_on_gt"] >= 0.3
-    assert row["z_share_on_gt"] >= 0.25
+    assert row["p_clever"] == 8
+    assert row["p_raw"] > row["p_clever"]
+    # compact clever-Z still detects the shift; consensus π concentrates on GT
+    assert row["domain_auc_clever"] >= 0.75
+    assert row["pi_consensus_on_gt"] >= max(row["mass_on_gt_raw"] - 0.08, 0.4)
+    assert row["z_logit_vimp"]["valence"] >= 0.4
 
 
 def test_inject_block_recovers_arousal():

@@ -359,9 +359,14 @@ def decompose_modality_gap(
     )
 
 
-def clever_design(X: np.ndarray, gap: GapDecomposition) -> np.ndarray:
+def clever_z(gap: GapDecomposition) -> np.ndarray:
     """X-only clever features: instance relative contribution + logit ê_m."""
-    return np.hstack([X, gap.instance_share, gap.z_logit_e])
+    return np.hstack([gap.instance_share, gap.z_logit_e])
+
+
+def clever_design(X: np.ndarray, gap: GapDecomposition) -> np.ndarray:
+    """Raw X stacked with clever-Z (for CATE / optional stacking)."""
+    return np.hstack([X, clever_z(gap)])
 
 
 def compare_raw_vs_clever(
@@ -375,22 +380,23 @@ def compare_raw_vs_clever(
     gt: str | None = None,
 ) -> dict:
     W = _as_1d(W).astype(int)
-    Z = clever_design(X, gap)
+    Z = clever_z(gap)
+    XZ = clever_design(X, gap)
     auc_raw, vimp_raw = holdout_domain_auc(X, W, seed=seed)
     auc_z, vimp_z = holdout_domain_auc(Z, W, seed=seed + 1)
+    auc_xz, _ = holdout_domain_auc(XZ, W, seed=seed + 2)
     out = {
         "domain_auc_raw": round(float(auc_raw), 4),
         "domain_auc_clever": round(float(auc_z), 4),
+        "domain_auc_stack_xz": round(float(auc_xz), 4),
         "domain_auc_delta": round(float(auc_z - auc_raw), 4),
         "vimp_share_raw": {k: round(v, 4) for k, v in vimp_mass_share(vimp_raw, spec).items()},
+        "p_raw": int(X.shape[1]),
+        "p_clever": int(Z.shape[1]),
     }
-    # VIMP mass on the clever-cov block (last 2M columns)
     M = spec.n_mod
-    clever_vimp = vimp_z[-2 * M :]
-    share_block = clever_vimp[:M]
-    logit_block = clever_vimp[M:]
-    tot_z = float(vimp_z.sum()) + EPS
-    out["clever_feature_vimp_mass"] = round(float(clever_vimp.sum() / tot_z), 4)
+    share_block = vimp_z[:M]
+    logit_block = vimp_z[M:]
     out["z_share_vimp"] = {n: round(float(share_block[i] / (share_block.sum() + EPS)), 4) for i, n in enumerate(spec.names)}
     out["z_logit_vimp"] = {n: round(float(logit_block[i] / (logit_block.sum() + EPS)), 4) for i, n in enumerate(spec.names)}
 
@@ -399,16 +405,17 @@ def compare_raw_vs_clever(
         _, po_raw, _ = po_risk_fit(X, Y, W, seed=seed)
         _, po_z, _ = po_risk_fit(Z, Y, W, seed=seed + 2)
         _, po_h, _ = po_risk_fit(X, Y, W, seed=seed + 3, clever_H=gap.H_clever)
-        _, po_zh, _ = po_risk_fit(Z, Y, W, seed=seed + 4, clever_H=gap.H_clever)
+        _, po_zh, _ = po_risk_fit(XZ, Y, W, seed=seed + 4, clever_H=gap.H_clever)
         out["po_risk_raw"] = round(float(po_raw), 6)
-        out["po_risk_clever_X"] = round(float(po_z), 6)
+        out["po_risk_clever_Z"] = round(float(po_z), 6)
         out["po_risk_tmle_H"] = round(float(po_h), 6)
-        out["po_risk_clever_X_tmle_H"] = round(float(po_zh), 6)
+        out["po_risk_stack_tmle_H"] = round(float(po_zh), 6)
 
     if gt is not None and gt in spec.names:
         out["selection_auc_raw"] = round(selection_auc_block(vimp_raw, spec, gt), 4)
         out["mass_on_gt_raw"] = round(out["vimp_share_raw"][gt], 4)
         out["z_share_on_gt"] = out["z_share_vimp"][gt]
+        out["z_logit_on_gt"] = out["z_logit_vimp"][gt]
         out["pi_consensus_on_gt"] = round(float(gap.pi_consensus[spec.names.index(gt)]), 4)
     return out
 
@@ -422,7 +429,7 @@ def sample_efficiency_curve(
     seed: int = 0,
     n_estimators: int = 60,
 ) -> List[dict]:
-    """Subsample n and compare holdout domain AUC of raw X vs X+clever-Z."""
+    """Subsample n and compare holdout domain AUC of raw X vs compact clever-Z."""
     X = np.asarray(X, dtype=float)
     W = _as_1d(W).astype(int)
     rng = np.random.default_rng(seed)
@@ -442,14 +449,20 @@ def sample_efficiency_curve(
         gap = decompose_modality_gap(
             Xs, Ws, spec, seed=seed + n, n_splits=3, n_estimators=n_estimators
         )
-        Z = clever_design(Xs, gap)
+        Z = clever_z(gap)
+        XZ = clever_design(Xs, gap)
         auc_raw, _ = holdout_domain_auc(Xs, Ws, seed=seed + n, n_estimators=n_estimators)
         auc_z, _ = holdout_domain_auc(Z, Ws, seed=seed + n + 1, n_estimators=n_estimators)
+        auc_xz, _ = holdout_domain_auc(XZ, Ws, seed=seed + n + 2, n_estimators=n_estimators)
         rows.append({
             "n": int(n0 + n1),
             "auc_raw": round(float(auc_raw), 4),
             "auc_clever": round(float(auc_z), 4),
+            "auc_stack": round(float(auc_xz), 4),
             "delta": round(float(auc_z - auc_raw), 4),
+            "delta_stack": round(float(auc_xz - auc_raw), 4),
+            "p_raw": int(Xs.shape[1]),
+            "p_clever": int(Z.shape[1]),
         })
     return rows
 

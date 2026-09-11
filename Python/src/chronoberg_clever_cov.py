@@ -51,19 +51,23 @@ def load_lexicon(path: Path) -> dict[str, float]:
         if str(c).lower() not in {"unnamed: 0", "words", "word"} and not str(c).startswith("Unnamed")
     ]
     score_col = score_cols[0]
-    words = df[word_col].astype(str).str.lower()
+    words = df[word_col].astype(str).str.lower().str.strip()
     scores = pd.to_numeric(df[score_col], errors="coerce").fillna(0.0)
-    return dict(zip(words, scores.astype(float)))
+    out: dict[str, float] = {}
+    for w, s in zip(words.tolist(), scores.astype(float).tolist()):
+        if not w or w == "nan":
+            continue
+        out[w] = float(s)
+    return out
 
 
 def pool_lexicons(a: dict[str, float], b: dict[str, float]) -> dict[str, float]:
-    keys = set(a) | set(b)
-    out = {}
-    for w in keys:
-        if w in a and w in b:
-            out[w] = 0.5 * (a[w] + b[w])
-        else:
-            out[w] = a.get(w, b[w])
+    out: dict[str, float] = {}
+    for w, sa in a.items():
+        out[str(w)] = float(sa)
+    for w, sb in b.items():
+        w = str(w)
+        out[w] = 0.5 * (out[w] + float(sb)) if w in out else float(sb)
     return out
 
 
@@ -197,6 +201,8 @@ def _cd_design(X: np.ndarray, spec: ModalitySpec) -> tuple[np.ndarray, ModalityS
 
 
 def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
+    import matplotlib
+    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -235,21 +241,23 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
     paths["gap_shares"] = p
 
     # superiority: domain AUC raw vs clever, observational + injects
-    labels, raw, clever = [], [], []
+    labels, raw, clever, stack = [], [], [], []
     for row in summary["comparisons"]:
         labels.append(row["name"])
         raw.append(row["domain_auc_raw"])
         clever.append(row["domain_auc_clever"])
-    fig, ax = plt.subplots(figsize=(8.6, 4.3))
+        stack.append(row.get("domain_auc_stack_xz", row["domain_auc_clever"]))
+    fig, ax = plt.subplots(figsize=(8.8, 4.4))
     x = np.arange(len(labels))
-    ax.bar(x - 0.18, raw, 0.36, label="raw X", color="#9aa0a6")
-    ax.bar(x + 0.18, clever, 0.36, label="X + clever-Z", color="#1f77b4")
+    ax.bar(x - 0.25, raw, 0.24, label="raw X (high-d)", color="#9aa0a6")
+    ax.bar(x, clever, 0.24, label="clever-Z only (8-d)", color="#1f77b4")
+    ax.bar(x + 0.25, stack, 0.24, label="X + clever-Z (stack)", color="#2ca02c")
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=18, ha="right")
     ax.set_ylabel("holdout domain AUC")
     ax.set_ylim(0.45, 1.02)
     ax.axhline(0.5, ls="--", lw=0.8, color="0.5")
-    ax.set_title("Clever covariates vs raw features · distribution-shift detection")
+    ax.set_title("Gap features as clever covariates vs raw concatenated modalities")
     ax.legend(frameon=False)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -265,7 +273,9 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         fig, ax = plt.subplots(figsize=(7.2, 4.2))
         ns = [r["n"] for r in se]
         ax.plot(ns, [r["auc_raw"] for r in se], "o-", color="#9aa0a6", label="raw X")
-        ax.plot(ns, [r["auc_clever"] for r in se], "s-", color="#1f77b4", label="X + clever-Z")
+        ax.plot(ns, [r["auc_clever"] for r in se], "s-", color="#1f77b4", label="clever-Z only")
+        if any("auc_stack" in r for r in se):
+            ax.plot(ns, [r.get("auc_stack", r["auc_clever"]) for r in se], "^-", color="#2ca02c", label="X + clever-Z")
         ax.set_xlabel("n (balanced 1750+1950)")
         ax.set_ylabel("holdout domain AUC")
         ax.set_title("Sample efficiency on Chronoberg temporal shift")
@@ -284,8 +294,9 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         fig, ax = plt.subplots(figsize=(7.4, 4.2))
         labs = [r["name"] for r in inj]
         x = np.arange(len(labs))
-        ax.bar(x - 0.18, [r.get("mass_on_gt_raw", 0) for r in inj], 0.36, label="raw VIMP mass on GT", color="#9aa0a6")
-        ax.bar(x + 0.18, [r.get("z_share_on_gt", 0) for r in inj], 0.36, label="clever-Z VIMP on GT", color="#2ca02c")
+        ax.bar(x - 0.22, [r.get("mass_on_gt_raw", 0) for r in inj], 0.22, label="raw VIMP mass on GT", color="#9aa0a6")
+        ax.bar(x, [r.get("pi_consensus_on_gt", 0) for r in inj], 0.22, label="consensus π on GT", color="#1f77b4")
+        ax.bar(x + 0.22, [r.get("z_logit_on_gt", r.get("z_share_on_gt", 0)) for r in inj], 0.22, label="clever logit-ê VIMP on GT", color="#2ca02c")
         ax.set_xticks(x)
         ax.set_xticklabels(labs, rotation=15, ha="right")
         ax.set_ylabel("mass on ground-truth modality")
@@ -308,9 +319,9 @@ def plot_results(summary: dict, out_dir: Path) -> dict[str, Path]:
         x = np.arange(len(labs))
         w = 0.2
         ax.bar(x - 1.5 * w, [r["po_risk_raw"] for r in po_rows], w, label="PO raw X", color="#9aa0a6")
-        ax.bar(x - 0.5 * w, [r["po_risk_clever_X"] for r in po_rows], w, label="PO on X+Z", color="#1f77b4")
+        ax.bar(x - 0.5 * w, [r.get("po_risk_clever_Z", r.get("po_risk_clever_X", 0)) for r in po_rows], w, label="PO on clever-Z", color="#1f77b4")
         ax.bar(x + 0.5 * w, [r["po_risk_tmle_H"] for r in po_rows], w, label="TMLE H on X", color="#ff7f0e")
-        ax.bar(x + 1.5 * w, [r["po_risk_clever_X_tmle_H"] for r in po_rows], w, label="X+Z + TMLE H", color="#2ca02c")
+        ax.bar(x + 1.5 * w, [r.get("po_risk_stack_tmle_H", r.get("po_risk_clever_X_tmle_H", 0)) for r in po_rows], w, label="X+Z + TMLE H", color="#2ca02c")
         ax.set_xticks(x)
         ax.set_xticklabels(labs, rotation=15, ha="right")
         ax.set_ylabel("PO-risk (mean τ̂²)")
@@ -360,16 +371,18 @@ def write_latex(summary: dict, path: Path) -> None:
         r"\begin{table}[t]",
         r"\centering",
         r"\small",
-        r"\caption{Raw $X$ vs.\ clever covariates $Z$ (instance $\pi_m(x)$ + logit $\hat e_m$).}",
-        r"\begin{tabular}{lccc}",
+        r"\caption{Raw $X$ vs.\ compact clever covariates $Z$ (instance $\pi_m(x)$ + logit $\hat e_m$).}",
+        r"\begin{tabular}{lcccc}",
         r"\toprule",
-        r"Setting & AUC raw & AUC clever & $\Delta$ \\",
+        r"Setting & AUC raw $X$ & AUC clever-$Z$ & AUC $X{+}Z$ & $\Delta_{X+Z}$ \\",
         r"\midrule",
     ]
     for row in summary["comparisons"]:
+        dstack = row.get("domain_auc_stack_xz", row["domain_auc_clever"]) - row["domain_auc_raw"]
         lines.append(
             f"{_tex_escape(row['name'])} & {row['domain_auc_raw']:.3f} & "
-            f"{row['domain_auc_clever']:.3f} & {row['domain_auc_delta']:+.3f} \\\\"
+            f"{row['domain_auc_clever']:.3f} & {row.get('domain_auc_stack_xz', row['domain_auc_clever']):.3f} & "
+            f"{dstack:+.3f} \\\\"
         )
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -430,7 +443,7 @@ def run_prototype(
 
     synthetic = None
     if include_synthetic:
-        Xs, Ws, Ys, specs = make_synthetic_shift(n=700, d_text=24, d_vad=4, gt="valence", seed=seed)
+        Xs, Ws, Ys, specs = make_synthetic_shift(n=180, d_text=40, d_vad=3, gt="valence", mean_shift=1.05, seed=seed)
         gaps = decompose_modality_gap(Xs, Ws, specs, seed=seed, n_estimators=n_estimators)
         syn = compare_raw_vs_clever(Xs, Ws, Ys, specs, gaps, seed=seed, gt="valence")
         syn["name"] = "synthetic GT=valence"
@@ -451,7 +464,7 @@ def run_prototype(
         "sample_efficiency": se,
         "synthetic": synthetic,
         "notes": {
-            "clever_Z": "instance relative contribution π_m(x) and logit ê_m(X_m); X-only",
+            "clever_Z": "compact X-only features: instance π_m(x) and logit ê_m(X_m); compared as Z-only vs raw X",
             "clever_H": "TMLE H_m = π_m (W-ê_m)/(ê_m(1-ê_m)); used in PO targeting only",
             "vad_lexicon": "static pool of 1750+1950 Chronoberg VAD lexicons",
         },
@@ -483,15 +496,16 @@ def _write_readme(summary: dict, out_dir: Path) -> None:
     ]
     for k, v in gap["pi_consensus"].items():
         lines.append(f"| {k} | {v:.3f} |")
-    lines += ["", "## Raw X vs clever-Z (holdout domain AUC)", "", "| setting | AUC raw | AUC clever | Δ |", "|---|---:|---:|---:|"]
+    lines += ["", "## Raw X vs clever-Z vs stack X+Z", "", "| setting | AUC raw | AUC Z | AUC X+Z | Δ stack |", "|---|---:|---:|---:|---:|"]
     for row in summary["comparisons"]:
+        st = row.get("domain_auc_stack_xz", row["domain_auc_clever"])
         lines.append(
-            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {row['domain_auc_clever']:.3f} | {row['domain_auc_delta']:+.3f} |"
+            f"| {row['name']} | {row['domain_auc_raw']:.3f} | {row['domain_auc_clever']:.3f} | {st:.3f} | {st - row['domain_auc_raw']:+.3f} |"
         )
     lines += [
         "",
-        "Clever-Z concatenates instance-level relative contributions `π_m(x)` and",
-        "`logit ê_m(X_m)`. TMLE clever covariates `H_m` are used only in PO-risk targeting.",
+        "Clever-Z is the compact detector: instance-level relative contributions `π_m(x)`",
+        "and `logit ê_m(X_m)` (2 × n_modalities columns). TMLE `H_m` is used only in PO-risk targeting.",
         "",
         "```bash",
         "python3 scripts/run_chronoberg_clever_cov.py",
