@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+data/raw/
+data/msrvtt/raw/
+data/msrvtt/features_window/.unzipped_from
+*.mp4
+*.wav
+.DS_Store
+results/msrvtt_multimodal_attribution_smoke/
