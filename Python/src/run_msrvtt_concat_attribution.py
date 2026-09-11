@@ -241,8 +241,12 @@ def leave_one_group_out_po_risk(X, Y, W, **kw) -> dict:
             "po_risk": only["po_risk"],
             "r_risk": only["r_risk"],
         }
-    deltas = {g: out[f"without_{g}"]["delta_po_risk"] for g in GROUPS}
-    out["top_modality"] = max(deltas, key=deltas.get)
+    # Drill into the group whose removal raises R-risk the most (LOCO).
+    r_deltas = {g: out[f"without_{g}"]["delta_r_risk"] for g in GROUPS}
+    po_inflate = {g: out[f"without_{g}"]["po_risk"] - out["full"]["po_risk"] for g in GROUPS}
+    out["top_modality"] = max(r_deltas, key=r_deltas.get)
+    out["rank_by_r_risk_loco"] = r_deltas
+    out["rank_by_po_risk_inflate"] = po_inflate
     return out
 
 
@@ -547,13 +551,13 @@ def main() -> None:
         logo_po = leave_one_group_out_po_risk(X, data["y_cat"], W, **pokw)
         full_fit = logo_po["fit"]
         print(
-            f"    full PO-risk={logo_po['full']['po_risk']:.4g}  "
-            f"-video={logo_po['without_video']['po_risk']:.4g} "
-            f"(Δ={logo_po['without_video']['delta_po_risk']:.4g})  "
-            f"-audio={logo_po['without_audio']['po_risk']:.4g} "
-            f"(Δ={logo_po['without_audio']['delta_po_risk']:.4g})  "
-            f"-text={logo_po['without_text']['po_risk']:.4g} "
-            f"(Δ={logo_po['without_text']['delta_po_risk']:.4g})",
+            f"    full PO-risk={logo_po['full']['po_risk']:.4g} R-risk={logo_po['full']['r_risk']:.4g}\n"
+            f"    -video PO={logo_po['without_video']['po_risk']:.4g} "
+            f"RΔ={logo_po['without_video']['delta_r_risk']:.4g}  "
+            f"-audio PO={logo_po['without_audio']['po_risk']:.4g} "
+            f"RΔ={logo_po['without_audio']['delta_r_risk']:.4g}  "
+            f"-text PO={logo_po['without_text']['po_risk']:.4g} "
+            f"RΔ={logo_po['without_text']['delta_r_risk']:.4g}",
             flush=True,
         )
         print(
