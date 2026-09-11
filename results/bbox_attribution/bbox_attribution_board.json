@@ -1,0 +1,1046 @@
+{
+  "baseline_time_order": {
+    "scenario": "coco_time_order_with_bbox",
+    "n0": 3000,
+    "n1": 3000,
+    "block_dims": {
+      "image": 512,
+      "text": 512,
+      "bbox": 118
+    },
+    "rf_domain": {
+      "domain_auc": 0.5701,
+      "time_s": 2.97,
+      "modality_mass_share": {
+        "image": 0.5252620343942326,
+        "text": 0.44222916773549575,
+        "bbox": 0.03250879786927152
+      },
+      "feature_ranking": {
+        "image": [
+          120,
+          148,
+          69,
+          30,
+          418,
+          169,
+          54,
+          332,
+          301,
+          213,
+          294,
+          286,
+          215,
+          363,
+          238,
+          21,
+          16,
+          346,
+          303,
+          272
+        ],
+        "text": [
+          330,
+          376,
+          187,
+          365,
+          194,
+          59,
+          505,
+          61,
+          360,
+          195,
+          383,
+          501,
+          126,
+          118,
+          30,
+          202,
+          186,
+          45,
+          54,
+          456
+        ],
+        "bbox": [
+          6,
+          93,
+          107,
+          95,
+          8,
+          90,
+          97,
+          2,
+          106,
+          98,
+          108,
+          111,
+          1,
+          0,
+          100,
+          103,
+          110,
+          102,
+          94,
+          5
+        ]
+      },
+      "bbox_subgroup_mass_share": {
+        "geo": 0.2861797737714111,
+        "category_hist": 0.06601810191179595,
+        "top_boxes": 0.6478021242860321
+      },
+      "bbox_geo_ranking": [
+        {
+          "rank": 1,
+          "name": "std_cx",
+          "local_index": 6,
+          "vimp": 0.004673705930048057
+        },
+        {
+          "rank": 2,
+          "name": "mean_area_frac",
+          "local_index": 2,
+          "vimp": 0.0009609216366681737
+        },
+        {
+          "rank": 3,
+          "name": "total_area_frac",
+          "local_index": 1,
+          "vimp": 0.0007476621624608806
+        },
+        {
+          "rank": 4,
+          "name": "n_boxes_log1p",
+          "local_index": 0,
+          "vimp": 0.0007387345842597297
+        },
+        {
+          "rank": 5,
+          "name": "mean_cy",
+          "local_index": 5,
+          "vimp": 0.000674602175547101
+        },
+        {
+          "rank": 6,
+          "name": "std_cy",
+          "local_index": 7,
+          "vimp": 0.0006196925124941911
+        },
+        {
+          "rank": 7,
+          "name": "mean_cx",
+          "local_index": 4,
+          "vimp": 0.0005150786002910601
+        },
+        {
+          "rank": 8,
+          "name": "max_area_frac",
+          "local_index": 3,
+          "vimp": 0.000372962818334944
+        }
+      ],
+      "bbox_category_ranking_top20": [
+        {
+          "rank": 1,
+          "category_id": 1,
+          "local_index": 0,
+          "vimp": 0.00101449300698681
+        },
+        {
+          "rank": 2,
+          "category_id": 72,
+          "local_index": 62,
+          "vimp": 0.00029788468595248947
+        },
+        {
+          "rank": 3,
+          "category_id": 40,
+          "local_index": 35,
+          "vimp": 0.00024541441045756866
+        },
+        {
+          "rank": 4,
+          "category_id": 37,
+          "local_index": 32,
+          "vimp": 0.0001931056361184116
+        },
+        {
+          "rank": 5,
+          "category_id": 43,
+          "local_index": 38,
+          "vimp": 0.0001577502452514433
+        },
+        {
+          "rank": 6,
+          "category_id": 8,
+          "local_index": 7,
+          "vimp": 9.336328820328554e-05
+        },
+        {
+          "rank": 7,
+          "category_id": 44,
+          "local_index": 39,
+          "vimp": 7.948759929684348e-05
+        },
+        {
+          "rank": 8,
+          "category_id": 62,
+          "local_index": 56,
+          "vimp": 6.467025856485462e-05
+        },
+        {
+          "rank": 9,
+          "category_id": 9,
+          "local_index": 8,
+          "vimp": 0.0
+        },
+        {
+          "rank": 10,
+          "category_id": 10,
+          "local_index": 9,
+          "vimp": 0.0
+        },
+        {
+          "rank": 11,
+          "category_id": 3,
+          "local_index": 2,
+          "vimp": 0.0
+        },
+        {
+          "rank": 12,
+          "category_id": 2,
+          "local_index": 1,
+          "vimp": 0.0
+        },
+        {
+          "rank": 13,
+          "category_id": 4,
+          "local_index": 3,
+          "vimp": 0.0
+        },
+        {
+          "rank": 14,
+          "category_id": 5,
+          "local_index": 4,
+          "vimp": 0.0
+        },
+        {
+          "rank": 15,
+          "category_id": 6,
+          "local_index": 5,
+          "vimp": 0.0
+        },
+        {
+          "rank": 16,
+          "category_id": 7,
+          "local_index": 6,
+          "vimp": 0.0
+        },
+        {
+          "rank": 17,
+          "category_id": 18,
+          "local_index": 16,
+          "vimp": 0.0
+        },
+        {
+          "rank": 18,
+          "category_id": 19,
+          "local_index": 17,
+          "vimp": 0.0
+        },
+        {
+          "rank": 19,
+          "category_id": 20,
+          "local_index": 18,
+          "vimp": 0.0
+        },
+        {
+          "rank": 20,
+          "category_id": 21,
+          "local_index": 19,
+          "vimp": 0.0
+        }
+      ]
+    },
+    "coord_mmd": {
+      "time_s": 0.7,
+      "modality_mass_share": {
+        "image": 0.4723165941507731,
+        "text": 0.4775969298173213,
+        "bbox": 0.05008647603154711
+      },
+      "feature_ranking": {
+        "image": [
+          442,
+          83,
+          165,
+          122,
+          329,
+          181,
+          123,
+          247,
+          222,
+          55,
+          22,
+          483,
+          469,
+          143,
+          400,
+          437,
+          493,
+          245,
+          81,
+          5
+        ],
+        "text": [
+          1,
+          346,
+          338,
+          331,
+          39,
+          116,
+          442,
+          502,
+          299,
+          25,
+          505,
+          406,
+          182,
+          356,
+          22,
+          474,
+          408,
+          506,
+          441,
+          251
+        ],
+        "bbox": [
+          96,
+          7,
+          111,
+          94,
+          98,
+          114,
+          113,
+          102,
+          108,
+          116,
+          117,
+          0,
+          97,
+          115,
+          112,
+          4,
+          64,
+          95,
+          40,
+          47
+        ]
+      },
+      "bbox_subgroup_mass_share": {
+        "geo": 0.16406916480058742,
+        "category_hist": 0.13725313544569276,
+        "top_boxes": 0.6986776997465657
+      },
+      "bbox_geo_ranking": [
+        {
+          "rank": 1,
+          "name": "std_cy",
+          "local_index": 7,
+          "vimp": 0.010700450015584506
+        },
+        {
+          "rank": 2,
+          "name": "n_boxes_log1p",
+          "local_index": 0,
+          "vimp": 0.004760242849951801
+        },
+        {
+          "rank": 3,
+          "name": "mean_cx",
+          "local_index": 4,
+          "vimp": 0.003359508769381625
+        },
+        {
+          "rank": 4,
+          "name": "mean_cy",
+          "local_index": 5,
+          "vimp": 0.0020016831697187154
+        },
+        {
+          "rank": 5,
+          "name": "std_cx",
+          "local_index": 6,
+          "vimp": 0.001320467628009192
+        },
+        {
+          "rank": 6,
+          "name": "mean_area_frac",
+          "local_index": 2,
+          "vimp": 0.000791208837704227
+        },
+        {
+          "rank": 7,
+          "name": "max_area_frac",
+          "local_index": 3,
+          "vimp": 0.0
+        },
+        {
+          "rank": 8,
+          "name": "total_area_frac",
+          "local_index": 1,
+          "vimp": 0.0
+        }
+      ],
+      "bbox_category_ranking_top20": [
+        {
+          "rank": 1,
+          "category_id": 62,
+          "local_index": 56,
+          "vimp": 0.0033380202734134556
+        },
+        {
+          "rank": 2,
+          "category_id": 37,
+          "local_index": 32,
+          "vimp": 0.002217623720875972
+        },
+        {
+          "rank": 3,
+          "category_id": 44,
+          "local_index": 39,
+          "vimp": 0.0021463222008142324
+        },
+        {
+          "rank": 4,
+          "category_id": 79,
+          "local_index": 69,
+          "vimp": 0.0014523286565628624
+        },
+        {
+          "rank": 5,
+          "category_id": 1,
+          "local_index": 0,
+          "vimp": 0.0011379967578086791
+        },
+        {
+          "rank": 6,
+          "category_id": 38,
+          "local_index": 33,
+          "vimp": 0.0008660893724727892
+        },
+        {
+          "rank": 7,
+          "category_id": 51,
+          "local_index": 45,
+          "vimp": 0.0008470887754097323
+        },
+        {
+          "rank": 8,
+          "category_id": 48,
+          "local_index": 42,
+          "vimp": 0.0006883462822755426
+        },
+        {
+          "rank": 9,
+          "category_id": 49,
+          "local_index": 43,
+          "vimp": 0.000677406368535971
+        },
+        {
+          "rank": 10,
+          "category_id": 2,
+          "local_index": 1,
+          "vimp": 0.0006736819686286033
+        },
+        {
+          "rank": 11,
+          "category_id": 60,
+          "local_index": 54,
+          "vimp": 0.0004584289102766981
+        },
+        {
+          "rank": 12,
+          "category_id": 50,
+          "local_index": 44,
+          "vimp": 0.00044992948762878626
+        },
+        {
+          "rank": 13,
+          "category_id": 54,
+          "local_index": 48,
+          "vimp": 0.0003755841030588236
+        },
+        {
+          "rank": 14,
+          "category_id": 13,
+          "local_index": 11,
+          "vimp": 0.00036492432192281044
+        },
+        {
+          "rank": 15,
+          "category_id": 70,
+          "local_index": 61,
+          "vimp": 0.00034371527462817575
+        },
+        {
+          "rank": 16,
+          "category_id": 82,
+          "local_index": 72,
+          "vimp": 0.00032676345237514504
+        },
+        {
+          "rank": 17,
+          "category_id": 22,
+          "local_index": 20,
+          "vimp": 0.0002943089253648612
+        },
+        {
+          "rank": 18,
+          "category_id": 61,
+          "local_index": 55,
+          "vimp": 0.00029074131504391865
+        },
+        {
+          "rank": 19,
+          "category_id": 56,
+          "local_index": 50,
+          "vimp": 0.0002724196106422827
+        },
+        {
+          "rank": 20,
+          "category_id": 19,
+          "local_index": 17,
+          "vimp": 0.0002570812440920722
+        }
+      ]
+    }
+  },
+  "bbox_inject": {
+    "scenario": "coco_time_order_bbox_inject",
+    "n0": 3000,
+    "n1": 3000,
+    "block_dims": {
+      "image": 512,
+      "text": 512,
+      "bbox": 118
+    },
+    "rf_domain": {
+      "domain_auc": 1.0,
+      "time_s": 1.03,
+      "modality_mass_share": {
+        "image": 0.0007153083346553143,
+        "text": 0.0008640774371463599,
+        "bbox": 0.9984206142271982
+      },
+      "feature_ranking": {
+        "image": [
+          60,
+          149,
+          30,
+          111,
+          273,
+          418,
+          506,
+          284,
+          221,
+          204,
+          309,
+          224,
+          296,
+          244,
+          492,
+          11,
+          133,
+          196,
+          456,
+          399
+        ],
+        "text": [
+          378,
+          76,
+          185,
+          10,
+          72,
+          224,
+          52,
+          193,
+          500,
+          112,
+          376,
+          77,
+          168,
+          377,
+          305,
+          248,
+          130,
+          272,
+          338,
+          163
+        ],
+        "bbox": [
+          29,
+          45,
+          63,
+          39,
+          62,
+          72,
+          48,
+          86,
+          43,
+          19,
+          84,
+          87,
+          18,
+          74,
+          25,
+          27,
+          42,
+          57,
+          56,
+          28
+        ]
+      },
+      "bbox_subgroup_mass_share": {
+        "geo": 0.0005336410833727671,
+        "category_hist": 0.9928344208823925,
+        "top_boxes": 0.006631938033233105
+      },
+      "bbox_geo_ranking": [
+        {
+          "rank": 1,
+          "name": "std_cy",
+          "local_index": 7,
+          "vimp": 0.0005156673259538164
+        },
+        {
+          "rank": 2,
+          "name": "max_area_frac",
+          "local_index": 3,
+          "vimp": 8.55524675577363e-06
+        },
+        {
+          "rank": 3,
+          "name": "mean_area_frac",
+          "local_index": 2,
+          "vimp": 8.471704121328806e-06
+        },
+        {
+          "rank": 4,
+          "name": "mean_cy",
+          "local_index": 5,
+          "vimp": 1.039814080532907e-07
+        },
+        {
+          "rank": 5,
+          "name": "n_boxes_log1p",
+          "local_index": 0,
+          "vimp": 0.0
+        },
+        {
+          "rank": 6,
+          "name": "total_area_frac",
+          "local_index": 1,
+          "vimp": 0.0
+        },
+        {
+          "rank": 7,
+          "name": "mean_cx",
+          "local_index": 4,
+          "vimp": 0.0
+        },
+        {
+          "rank": 8,
+          "name": "std_cx",
+          "local_index": 6,
+          "vimp": 0.0
+        }
+      ],
+      "bbox_category_ranking_top20": [
+        {
+          "rank": 1,
+          "category_id": 23,
+          "local_index": 21,
+          "vimp": 0.04496985349360618
+        },
+        {
+          "rank": 2,
+          "category_id": 42,
+          "local_index": 37,
+          "vimp": 0.03982267885667856
+        },
+        {
+          "rank": 3,
+          "category_id": 61,
+          "local_index": 55,
+          "vimp": 0.03863577861049508
+        },
+        {
+          "rank": 4,
+          "category_id": 36,
+          "local_index": 31,
+          "vimp": 0.03533268428086929
+        },
+        {
+          "rank": 5,
+          "category_id": 60,
+          "local_index": 54,
+          "vimp": 0.03504576220883717
+        },
+        {
+          "rank": 6,
+          "category_id": 74,
+          "local_index": 64,
+          "vimp": 0.030698258667803225
+        },
+        {
+          "rank": 7,
+          "category_id": 46,
+          "local_index": 40,
+          "vimp": 0.030611080620575232
+        },
+        {
+          "rank": 8,
+          "category_id": 89,
+          "local_index": 78,
+          "vimp": 0.02540681339861267
+        },
+        {
+          "rank": 9,
+          "category_id": 40,
+          "local_index": 35,
+          "vimp": 0.025099558216482357
+        },
+        {
+          "rank": 10,
+          "category_id": 13,
+          "local_index": 11,
+          "vimp": 0.024917490212802856
+        },
+        {
+          "rank": 11,
+          "category_id": 87,
+          "local_index": 76,
+          "vimp": 0.024793135199591147
+        },
+        {
+          "rank": 12,
+          "category_id": 90,
+          "local_index": 79,
+          "vimp": 0.024730444741220024
+        },
+        {
+          "rank": 13,
+          "category_id": 11,
+          "local_index": 10,
+          "vimp": 0.02424276339715024
+        },
+        {
+          "rank": 14,
+          "category_id": 76,
+          "local_index": 66,
+          "vimp": 0.022040812060366153
+        },
+        {
+          "rank": 15,
+          "category_id": 19,
+          "local_index": 17,
+          "vimp": 0.020316754175527134
+        },
+        {
+          "rank": 16,
+          "category_id": 21,
+          "local_index": 19,
+          "vimp": 0.02024147867509889
+        },
+        {
+          "rank": 17,
+          "category_id": 39,
+          "local_index": 34,
+          "vimp": 0.02005664023272675
+        },
+        {
+          "rank": 18,
+          "category_id": 55,
+          "local_index": 49,
+          "vimp": 0.01979187472015464
+        },
+        {
+          "rank": 19,
+          "category_id": 54,
+          "local_index": 48,
+          "vimp": 0.019754269945389338
+        },
+        {
+          "rank": 20,
+          "category_id": 22,
+          "local_index": 20,
+          "vimp": 0.019719616202962083
+        }
+      ],
+      "bbox_recovery": {
+        "selection_AUC": 0.8664,
+        "P@20": 1.0,
+        "mass_on_bbox": 0.9984
+      }
+    },
+    "coord_mmd": {
+      "time_s": 0.7,
+      "modality_mass_share": {
+        "image": 0.020754486767909284,
+        "text": 0.02098651472982864,
+        "bbox": 0.9582589985022463
+      },
+      "feature_ranking": {
+        "image": [
+          442,
+          83,
+          165,
+          122,
+          329,
+          181,
+          123,
+          247,
+          222,
+          55,
+          22,
+          483,
+          469,
+          143,
+          400,
+          437,
+          493,
+          245,
+          81,
+          5
+        ],
+        "text": [
+          1,
+          346,
+          338,
+          331,
+          39,
+          116,
+          442,
+          502,
+          299,
+          25,
+          505,
+          406,
+          182,
+          356,
+          22,
+          474,
+          408,
+          506,
+          441,
+          251
+        ],
+        "bbox": [
+          78,
+          27,
+          84,
+          45,
+          60,
+          86,
+          70,
+          54,
+          25,
+          20,
+          74,
+          38,
+          26,
+          39,
+          37,
+          59,
+          85,
+          72,
+          28,
+          63
+        ]
+      },
+      "bbox_subgroup_mass_share": {
+        "geo": 0.004924497442896215,
+        "category_hist": 0.9632172323724912,
+        "top_boxes": 0.031858270184596076
+      },
+      "bbox_geo_ranking": [
+        {
+          "rank": 1,
+          "name": "mean_area_frac",
+          "local_index": 2,
+          "vimp": 0.1995520913334038
+        },
+        {
+          "rank": 2,
+          "name": "std_cy",
+          "local_index": 7,
+          "vimp": 0.04552291975095635
+        },
+        {
+          "rank": 3,
+          "name": "max_area_frac",
+          "local_index": 3,
+          "vimp": 0.027685241630524438
+        },
+        {
+          "rank": 4,
+          "name": "mean_cx",
+          "local_index": 4,
+          "vimp": 0.024644132123025964
+        },
+        {
+          "rank": 5,
+          "name": "total_area_frac",
+          "local_index": 1,
+          "vimp": 0.0022979208979865273
+        },
+        {
+          "rank": 6,
+          "name": "n_boxes_log1p",
+          "local_index": 0,
+          "vimp": 0.0
+        },
+        {
+          "rank": 7,
+          "name": "mean_cy",
+          "local_index": 5,
+          "vimp": 0.0
+        },
+        {
+          "rank": 8,
+          "name": "std_cx",
+          "local_index": 6,
+          "vimp": 0.0
+        }
+      ],
+      "bbox_category_ranking_top20": [
+        {
+          "rank": 1,
+          "category_id": 80,
+          "local_index": 70,
+          "vimp": 0.7892288690339966
+        },
+        {
+          "rank": 2,
+          "category_id": 21,
+          "local_index": 19,
+          "vimp": 0.7869386805381196
+        },
+        {
+          "rank": 3,
+          "category_id": 87,
+          "local_index": 76,
+          "vimp": 0.7869386800968015
+        },
+        {
+          "rank": 4,
+          "category_id": 42,
+          "local_index": 37,
+          "vimp": 0.779123879152297
+        },
+        {
+          "rank": 5,
+          "category_id": 58,
+          "local_index": 52,
+          "vimp": 0.7790861849283715
+        },
+        {
+          "rank": 6,
+          "category_id": 89,
+          "local_index": 78,
+          "vimp": 0.779069293619578
+        },
+        {
+          "rank": 7,
+          "category_id": 72,
+          "local_index": 62,
+          "vimp": 0.7788740098352636
+        },
+        {
+          "rank": 8,
+          "category_id": 52,
+          "local_index": 46,
+          "vimp": 0.7777609106188879
+        },
+        {
+          "rank": 9,
+          "category_id": 19,
+          "local_index": 17,
+          "vimp": 0.7775357235300118
+        },
+        {
+          "rank": 10,
+          "category_id": 14,
+          "local_index": 12,
+          "vimp": 0.7756368394120203
+        },
+        {
+          "rank": 11,
+          "category_id": 76,
+          "local_index": 66,
+          "vimp": 0.7745078508921781
+        },
+        {
+          "rank": 12,
+          "category_id": 35,
+          "local_index": 30,
+          "vimp": 0.7722112530606062
+        },
+        {
+          "rank": 13,
+          "category_id": 20,
+          "local_index": 18,
+          "vimp": 0.7716039472390535
+        },
+        {
+          "rank": 14,
+          "category_id": 36,
+          "local_index": 31,
+          "vimp": 0.7714027036873778
+        },
+        {
+          "rank": 15,
+          "category_id": 34,
+          "local_index": 29,
+          "vimp": 0.7714019448947653
+        },
+        {
+          "rank": 16,
+          "category_id": 57,
+          "local_index": 51,
+          "vimp": 0.7714019269539667
+        },
+        {
+          "rank": 17,
+          "category_id": 88,
+          "local_index": 77,
+          "vimp": 0.7709639337399281
+        },
+        {
+          "rank": 18,
+          "category_id": 74,
+          "local_index": 64,
+          "vimp": 0.7684660461423247
+        },
+        {
+          "rank": 19,
+          "category_id": 22,
+          "local_index": 20,
+          "vimp": 0.7667655224444321
+        },
+        {
+          "rank": 20,
+          "category_id": 61,
+          "local_index": 55,
+          "vimp": 0.7647823006011842
+        }
+      ],
+      "bbox_recovery": {
+        "selection_AUC": 0.9335,
+        "P@20": 1.0,
+        "mass_on_bbox": 0.9583
+      }
+    }
+  }
+}

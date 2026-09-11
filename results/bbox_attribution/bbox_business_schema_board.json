@@ -1,0 +1,349 @@
+{
+  "business_value": "Per-sample bbox summary stats are human-readable (histogram/position/size/area/aspect/crowd/spatial). VIMP ranks NAMES, not embedding indices.",
+  "schema": {
+    "feature_names": [
+      "cat_hist_1",
+      "cat_hist_2",
+      "cat_hist_3",
+      "cat_hist_4",
+      "cat_hist_5",
+      "cat_hist_6",
+      "cat_hist_7",
+      "cat_hist_8",
+      "cat_hist_9",
+      "cat_hist_10",
+      "cat_hist_11",
+      "cat_hist_13",
+      "cat_hist_14",
+      "cat_hist_15",
+      "cat_hist_16",
+      "cat_hist_17",
+      "cat_hist_18",
+      "cat_hist_19",
+      "cat_hist_20",
+      "cat_hist_21",
+      "cat_hist_22",
+      "cat_hist_23",
+      "cat_hist_24",
+      "cat_hist_25",
+      "cat_hist_27",
+      "cat_hist_28",
+      "cat_hist_31",
+      "cat_hist_32",
+      "cat_hist_33",
+      "cat_hist_34",
+      "cat_hist_35",
+      "cat_hist_36",
+      "cat_hist_37",
+      "cat_hist_38",
+      "cat_hist_39",
+      "cat_hist_40",
+      "cat_hist_41",
+      "cat_hist_42",
+      "cat_hist_43",
+      "cat_hist_44",
+      "cat_hist_46",
+      "cat_hist_47",
+      "cat_hist_48",
+      "cat_hist_49",
+      "cat_hist_50",
+      "cat_hist_51",
+      "cat_hist_52",
+      "cat_hist_53",
+      "cat_hist_54",
+      "cat_hist_55",
+      "cat_hist_56",
+      "cat_hist_57",
+      "cat_hist_58",
+      "cat_hist_59",
+      "cat_hist_60",
+      "cat_hist_61",
+      "cat_hist_62",
+      "cat_hist_63",
+      "cat_hist_64",
+      "cat_hist_65",
+      "cat_hist_67",
+      "cat_hist_70",
+      "cat_hist_72",
+      "cat_hist_73",
+      "cat_hist_74",
+      "cat_hist_75",
+      "cat_hist_76",
+      "cat_hist_77",
+      "cat_hist_78",
+      "cat_hist_79",
+      "cat_hist_80",
+      "cat_hist_81",
+      "cat_hist_82",
+      "cat_hist_84",
+      "cat_hist_85",
+      "cat_hist_86",
+      "cat_hist_87",
+      "cat_hist_88",
+      "cat_hist_89",
+      "cat_hist_90",
+      "cx_mean",
+      "cy_mean",
+      "cx_std",
+      "cy_std",
+      "w_mean",
+      "h_mean",
+      "w_std",
+      "h_std",
+      "area_mean",
+      "area_std",
+      "aspect_mean",
+      "aspect_std",
+      "score_mean",
+      "score_std",
+      "iscrowd_ratio",
+      "densest_quad",
+      "nn_center_dist_mean",
+      "pairwise_iou_mean",
+      "densest_is_TL",
+      "densest_is_TR",
+      "densest_is_BL",
+      "densest_is_BR"
+    ],
+    "n_features": 102,
+    "blocks": {
+      "category_histogram": [
+        "cat_hist_1",
+        "cat_hist_2",
+        "cat_hist_3",
+        "cat_hist_4",
+        "cat_hist_5",
+        "cat_hist_6",
+        "cat_hist_7",
+        "cat_hist_8",
+        "cat_hist_9",
+        "cat_hist_10",
+        "cat_hist_11",
+        "cat_hist_13",
+        "cat_hist_14",
+        "cat_hist_15",
+        "cat_hist_16",
+        "cat_hist_17",
+        "cat_hist_18",
+        "cat_hist_19",
+        "cat_hist_20",
+        "cat_hist_21",
+        "cat_hist_22",
+        "cat_hist_23",
+        "cat_hist_24",
+        "cat_hist_25",
+        "cat_hist_27",
+        "cat_hist_28",
+        "cat_hist_31",
+        "cat_hist_32",
+        "cat_hist_33",
+        "cat_hist_34",
+        "cat_hist_35",
+        "cat_hist_36",
+        "cat_hist_37",
+        "cat_hist_38",
+        "cat_hist_39",
+        "cat_hist_40",
+        "cat_hist_41",
+        "cat_hist_42",
+        "cat_hist_43",
+        "cat_hist_44",
+        "cat_hist_46",
+        "cat_hist_47",
+        "cat_hist_48",
+        "cat_hist_49",
+        "cat_hist_50",
+        "cat_hist_51",
+        "cat_hist_52",
+        "cat_hist_53",
+        "cat_hist_54",
+        "cat_hist_55",
+        "cat_hist_56",
+        "cat_hist_57",
+        "cat_hist_58",
+        "cat_hist_59",
+        "cat_hist_60",
+        "cat_hist_61",
+        "cat_hist_62",
+        "cat_hist_63",
+        "cat_hist_64",
+        "cat_hist_65",
+        "cat_hist_67",
+        "cat_hist_70",
+        "cat_hist_72",
+        "cat_hist_73",
+        "cat_hist_74",
+        "cat_hist_75",
+        "cat_hist_76",
+        "cat_hist_77",
+        "cat_hist_78",
+        "cat_hist_79",
+        "cat_hist_80",
+        "cat_hist_81",
+        "cat_hist_82",
+        "cat_hist_84",
+        "cat_hist_85",
+        "cat_hist_86",
+        "cat_hist_87",
+        "cat_hist_88",
+        "cat_hist_89",
+        "cat_hist_90"
+      ],
+      "position": [
+        "cx_mean",
+        "cy_mean",
+        "cx_std",
+        "cy_std"
+      ],
+      "size": [
+        "w_mean",
+        "h_mean",
+        "w_std",
+        "h_std"
+      ],
+      "area": [
+        "area_mean",
+        "area_std"
+      ],
+      "aspect": [
+        "aspect_mean",
+        "aspect_std"
+      ],
+      "score": [
+        "score_mean",
+        "score_std"
+      ],
+      "occlusion": [
+        "iscrowd_ratio"
+      ],
+      "spatial_distribution": [
+        "densest_quad",
+        "nn_center_dist_mean",
+        "densest_is_TL",
+        "densest_is_TR",
+        "densest_is_BL",
+        "densest_is_BR"
+      ],
+      "spatial_relation": [
+        "pairwise_iou_mean"
+      ]
+    },
+    "omitted": {
+      "bbox_count": "skipped by design",
+      "roi_embedding_512": "omitted from business ranking (not interpretable)"
+    },
+    "notes": {
+      "score": "COCO GT has no detector score; filled with 1.0 (std=0). Replace when using detector outputs.",
+      "interpretable": true
+    }
+  },
+  "n_features": 102,
+  "rf_domain_auc": 0.5996,
+  "modality_mass_share": {
+    "image_clip": 0.5254073079849956,
+    "text_clip": 0.44875344863049016,
+    "bbox_named": 0.025839243383514312
+  },
+  "named_feature_ranking_top20": [
+    {
+      "rank": 1,
+      "feature": "cx_std",
+      "vimp": 0.005014692603887307
+    },
+    {
+      "rank": 2,
+      "feature": "aspect_std",
+      "vimp": 0.0026851448162425766
+    },
+    {
+      "rank": 3,
+      "feature": "h_mean",
+      "vimp": 0.002400242999764829
+    },
+    {
+      "rank": 4,
+      "feature": "aspect_mean",
+      "vimp": 0.0021881209245849
+    },
+    {
+      "rank": 5,
+      "feature": "w_mean",
+      "vimp": 0.0016319139881062336
+    },
+    {
+      "rank": 6,
+      "feature": "h_std",
+      "vimp": 0.0015243691154542673
+    },
+    {
+      "rank": 7,
+      "feature": "area_mean",
+      "vimp": 0.0013574040800142422
+    },
+    {
+      "rank": 8,
+      "feature": "cx_mean",
+      "vimp": 0.0012711499506025598
+    },
+    {
+      "rank": 9,
+      "feature": "pairwise_iou_mean",
+      "vimp": 0.0011855518005422837
+    },
+    {
+      "rank": 10,
+      "feature": "cat_hist_1",
+      "vimp": 0.0010828158502438567
+    },
+    {
+      "rank": 11,
+      "feature": "w_std",
+      "vimp": 0.0010068155863076041
+    },
+    {
+      "rank": 12,
+      "feature": "nn_center_dist_mean",
+      "vimp": 0.0009574738639930704
+    },
+    {
+      "rank": 13,
+      "feature": "area_std",
+      "vimp": 0.0009306062445571771
+    },
+    {
+      "rank": 14,
+      "feature": "cy_mean",
+      "vimp": 0.0008752181516606454
+    },
+    {
+      "rank": 15,
+      "feature": "cy_std",
+      "vimp": 0.0007627667637840658
+    },
+    {
+      "rank": 16,
+      "feature": "cat_hist_42",
+      "vimp": 0.00019271322473901086
+    },
+    {
+      "rank": 17,
+      "feature": "iscrowd_ratio",
+      "vimp": 0.00012232789493756257
+    },
+    {
+      "rank": 18,
+      "feature": "cat_hist_16",
+      "vimp": 0.00010253482380149388
+    },
+    {
+      "rank": 19,
+      "feature": "cat_hist_15",
+      "vimp": 8.363010448532841e-05
+    },
+    {
+      "rank": 20,
+      "feature": "cat_hist_32",
+      "vimp": 7.240282179223607e-05
+    }
+  ]
+}

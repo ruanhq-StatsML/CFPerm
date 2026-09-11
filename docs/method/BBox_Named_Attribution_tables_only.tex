@@ -1,0 +1,75 @@
+% Interpretable bbox attribution — handcrafted named features only
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Hierarchical board with an interpretable bbox module. CLIP blocks are used only for modality-level mass; bbox evidence is restricted to handcrafted named features (no CLIP coordinate claims).}
+\label{tab:bbox-named-l1}
+\small
+\begin{tabular}{@{}l ccc c@{}}
+\toprule
+Method & Image CLIP & Text CLIP & BBox named & RF AUC \\
+\midrule
+RF Domain & $0.527$ & $0.451$ & $0.023$ & $0.568$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{BBox named-feature group mass.}
+\label{tab:bbox-named-groups}
+\small
+\begin{tabular}{@{}l c@{}}
+\toprule
+Group & Mass share \\
+\midrule
+\texttt{geometry_counts} & $0.759$ \\
+\texttt{supercategory} & $0.126$ \\
+\texttt{key_class} & $0.109$ \\
+\texttt{largest_flags} & $0.006$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Top named bbox features by RF Domain VIMP (human-readable names only).}
+\label{tab:bbox-named-ranking}
+\small
+\begin{tabular}{@{}r l c@{}}
+\toprule
+Rank & Feature & VIMP \\
+\midrule
+1 & \texttt{std\_cx} & $0.00486$ \\
+2 & \texttt{std\_cy} & $0.00194$ \\
+3 & \texttt{area\_frac\_vehicle} & $0.00153$ \\
+4 & \texttt{mean\_area\_frac} & $0.00146$ \\
+5 & \texttt{n\_objects} & $0.00123$ \\
+6 & \texttt{count\_person} & $0.00094$ \\
+7 & \texttt{largest\_cy} & $0.00091$ \\
+8 & \texttt{mean\_cy} & $0.00090$ \\
+9 & \texttt{largest\_w\_frac} & $0.00086$ \\
+10 & \texttt{largest\_cx} & $0.00083$ \\
+11 & \texttt{n\_people} & $0.00077$ \\
+12 & \texttt{largest\_h\_frac} & $0.00076$ \\
+13 & \texttt{coverage\_union\_proxy} & $0.00072$ \\
+14 & \texttt{mean\_cx} & $0.00068$ \\
+15 & \texttt{area\_frac\_person} & $0.00062$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Named-bbox inject recovery (GT = bbox\_named block).}
+\label{tab:bbox-named-inject}
+\small
+\begin{tabular}{@{}l ccc@{}}
+\toprule
+Method & Mass on bbox named & RF AUC & P@20 \\
+\midrule
+RF Domain & $0.997$ & $1.000$ & $1.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}

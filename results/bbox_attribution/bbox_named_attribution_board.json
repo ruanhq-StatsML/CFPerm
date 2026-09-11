@@ -1,0 +1,308 @@
+{
+  "principle": "BBox board ranks handcrafted named features only; never CLIP coordinate indices.",
+  "n0": 3000,
+  "n1": 3000,
+  "d_bbox_named": 98,
+  "feature_names": [
+    "n_objects",
+    "n_people",
+    "n_unique_categories",
+    "total_area_frac",
+    "mean_area_frac",
+    "max_area_frac",
+    "largest_cx",
+    "largest_cy",
+    "largest_w_frac",
+    "largest_h_frac",
+    "mean_cx",
+    "mean_cy",
+    "std_cx",
+    "std_cy",
+    "coverage_union_proxy",
+    "count_person",
+    "area_frac_person",
+    "count_vehicle",
+    "area_frac_vehicle",
+    "count_animal",
+    "area_frac_animal",
+    "count_outdoor",
+    "area_frac_outdoor",
+    "count_accessory",
+    "area_frac_accessory",
+    "count_sports",
+    "area_frac_sports",
+    "count_kitchen",
+    "area_frac_kitchen",
+    "count_food",
+    "area_frac_food",
+    "count_furniture",
+    "area_frac_furniture",
+    "count_electronic",
+    "area_frac_electronic",
+    "count_appliance",
+    "area_frac_appliance",
+    "count_indoor",
+    "area_frac_indoor",
+    "has_person",
+    "count_person",
+    "area_frac_person",
+    "has_car",
+    "count_car",
+    "area_frac_car",
+    "has_truck",
+    "count_truck",
+    "area_frac_truck",
+    "has_bus",
+    "count_bus",
+    "area_frac_bus",
+    "has_bicycle",
+    "count_bicycle",
+    "area_frac_bicycle",
+    "has_motorcycle",
+    "count_motorcycle",
+    "area_frac_motorcycle",
+    "has_dog",
+    "count_dog",
+    "area_frac_dog",
+    "has_cat",
+    "count_cat",
+    "area_frac_cat",
+    "has_chair",
+    "count_chair",
+    "area_frac_chair",
+    "has_couch",
+    "count_couch",
+    "area_frac_couch",
+    "has_dining_table",
+    "count_dining_table",
+    "area_frac_dining_table",
+    "has_tv",
+    "count_tv",
+    "area_frac_tv",
+    "has_laptop",
+    "count_laptop",
+    "area_frac_laptop",
+    "has_cell_phone",
+    "count_cell_phone",
+    "area_frac_cell_phone",
+    "has_bottle",
+    "count_bottle",
+    "area_frac_bottle",
+    "has_cup",
+    "count_cup",
+    "area_frac_cup",
+    "has_bowl",
+    "count_bowl",
+    "area_frac_bowl",
+    "has_book",
+    "count_book",
+    "area_frac_book",
+    "largest_is_person",
+    "largest_is_vehicle",
+    "largest_is_animal",
+    "largest_is_furniture",
+    "largest_is_food"
+  ],
+  "baseline": {
+    "rf_domain_auc": 0.5678,
+    "modality_mass_share": {
+      "image_clip": 0.5268401820759925,
+      "text_clip": 0.4506490614983519,
+      "bbox_named": 0.022510756424655564
+    },
+    "bbox_group_mass_share": {
+      "geometry_counts": 0.75916744756827,
+      "supercategory": 0.12635213986264773,
+      "key_class": 0.1085987239692969,
+      "largest_flags": 0.005881688555362111
+    },
+    "named_feature_ranking": [
+      {
+        "rank": 1,
+        "feature": "std_cx",
+        "vimp": 0.004859463761137068
+      },
+      {
+        "rank": 2,
+        "feature": "std_cy",
+        "vimp": 0.001940415008915803
+      },
+      {
+        "rank": 3,
+        "feature": "area_frac_vehicle",
+        "vimp": 0.0015274705835914369
+      },
+      {
+        "rank": 4,
+        "feature": "mean_area_frac",
+        "vimp": 0.0014592203949196404
+      },
+      {
+        "rank": 5,
+        "feature": "n_objects",
+        "vimp": 0.001225957731026486
+      },
+      {
+        "rank": 6,
+        "feature": "count_person",
+        "vimp": 0.0009366576591409642
+      },
+      {
+        "rank": 7,
+        "feature": "largest_cy",
+        "vimp": 0.0009135001257923
+      },
+      {
+        "rank": 8,
+        "feature": "mean_cy",
+        "vimp": 0.0009047510288342777
+      },
+      {
+        "rank": 9,
+        "feature": "largest_w_frac",
+        "vimp": 0.0008646010578198188
+      },
+      {
+        "rank": 10,
+        "feature": "largest_cx",
+        "vimp": 0.0008257371992134541
+      },
+      {
+        "rank": 11,
+        "feature": "n_people",
+        "vimp": 0.0007742405392062637
+      },
+      {
+        "rank": 12,
+        "feature": "largest_h_frac",
+        "vimp": 0.0007636392218768775
+      },
+      {
+        "rank": 13,
+        "feature": "coverage_union_proxy",
+        "vimp": 0.0007171707930184202
+      },
+      {
+        "rank": 14,
+        "feature": "mean_cx",
+        "vimp": 0.0006810477699872503
+      },
+      {
+        "rank": 15,
+        "feature": "area_frac_person",
+        "vimp": 0.0006223626572764455
+      },
+      {
+        "rank": 16,
+        "feature": "total_area_frac",
+        "vimp": 0.0005514786718109302
+      },
+      {
+        "rank": 17,
+        "feature": "has_person",
+        "vimp": 0.0004676349539098018
+      },
+      {
+        "rank": 18,
+        "feature": "max_area_frac",
+        "vimp": 0.00033142903505145046
+      },
+      {
+        "rank": 19,
+        "feature": "n_unique_categories",
+        "vimp": 0.00027678115990302006
+      },
+      {
+        "rank": 20,
+        "feature": "area_frac_accessory",
+        "vimp": 0.00027306112902369495
+      },
+      {
+        "rank": 21,
+        "feature": "area_frac_animal",
+        "vimp": 0.0002576518886702265
+      },
+      {
+        "rank": 22,
+        "feature": "area_frac_kitchen",
+        "vimp": 0.00020117803732962885
+      },
+      {
+        "rank": 23,
+        "feature": "count_sports",
+        "vimp": 0.00010988129503155142
+      },
+      {
+        "rank": 24,
+        "feature": "largest_is_person",
+        "vimp": 0.00010481829154732942
+      },
+      {
+        "rank": 25,
+        "feature": "area_frac_sports",
+        "vimp": 9.41706960003593e-05
+      }
+    ]
+  },
+  "bbox_named_inject": {
+    "rf_domain_auc": 1.0,
+    "modality_mass_share": {
+      "image_clip": 0.0011746177717307143,
+      "text_clip": 0.001507717613619479,
+      "bbox_named": 0.9973176646136498
+    },
+    "P@20_on_bbox_named": 1.0,
+    "named_feature_ranking": [
+      {
+        "rank": 1,
+        "feature": "count_bus",
+        "vimp": 0.04079340092881042
+      },
+      {
+        "rank": 2,
+        "feature": "has_bus",
+        "vimp": 0.03174713561095781
+      },
+      {
+        "rank": 3,
+        "feature": "area_frac_tv",
+        "vimp": 0.030714518039377546
+      },
+      {
+        "rank": 4,
+        "feature": "count_bicycle",
+        "vimp": 0.028826132061534466
+      },
+      {
+        "rank": 5,
+        "feature": "area_frac_bottle",
+        "vimp": 0.027922451706266387
+      },
+      {
+        "rank": 6,
+        "feature": "area_frac_laptop",
+        "vimp": 0.02771591676962377
+      },
+      {
+        "rank": 7,
+        "feature": "area_frac_car",
+        "vimp": 0.02768650819074752
+      },
+      {
+        "rank": 8,
+        "feature": "count_cell_phone",
+        "vimp": 0.02556688772549811
+      },
+      {
+        "rank": 9,
+        "feature": "has_bicycle",
+        "vimp": 0.025331014961532713
+      },
+      {
+        "rank": 10,
+        "feature": "count_person",
+        "vimp": 0.024864550845953758
+      }
+    ]
+  }
+}

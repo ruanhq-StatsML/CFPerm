@@ -1,0 +1,311 @@
+{
+  "dataset": "coco_time_order",
+  "rf_domain_auc": 0.584056,
+  "modality_mass_share": {
+    "image_clip": 0.5243947680555425,
+    "text_clip": 0.44733833920144095,
+    "bbox_layered": 0.028266892743016542
+  },
+  "bbox_family_mass_share": {
+    "geometry": 0.439600098349368,
+    "iou": 0.08370412310812389,
+    "crowding": 0.2531759116614544,
+    "area": 0.19036675255707522,
+    "semantic": 0.03315311432397855
+  },
+  "named_feature_ranking_top20": [
+    {
+      "rank": 1,
+      "feature": "cx_std",
+      "family": "geometry",
+      "vimp": 0.003265869168310796
+    },
+    {
+      "rank": 2,
+      "feature": "aspect_std",
+      "family": "geometry",
+      "vimp": 0.002753617371333593
+    },
+    {
+      "rank": 3,
+      "feature": "area_gini",
+      "family": "area",
+      "vimp": 0.001841949436371716
+    },
+    {
+      "rank": 4,
+      "feature": "w_mean",
+      "family": "geometry",
+      "vimp": 0.0015091816231270875
+    },
+    {
+      "rank": 5,
+      "feature": "aspect_mean",
+      "family": "geometry",
+      "vimp": 0.0014459187081631727
+    },
+    {
+      "rank": 6,
+      "feature": "coverage_area",
+      "family": "crowding",
+      "vimp": 0.0013338446663852103
+    },
+    {
+      "rank": 7,
+      "feature": "obj_density",
+      "family": "crowding",
+      "vimp": 0.001064857353156941
+    },
+    {
+      "rank": 8,
+      "feature": "cx_mean",
+      "family": "geometry",
+      "vimp": 0.0010307738677929777
+    },
+    {
+      "rank": 9,
+      "feature": "densest_quad_area_prop",
+      "family": "crowding",
+      "vimp": 0.0009311571753117772
+    },
+    {
+      "rank": 10,
+      "feature": "nn_center_dist_mean",
+      "family": "crowding",
+      "vimp": 0.0009182641893085643
+    },
+    {
+      "rank": 11,
+      "feature": "cy_mean",
+      "family": "geometry",
+      "vimp": 0.0008907079765577367
+    },
+    {
+      "rank": 12,
+      "feature": "pairwise_iou_mean",
+      "family": "iou",
+      "vimp": 0.0008796148191548618
+    },
+    {
+      "rank": 13,
+      "feature": "nn_center_dist_min",
+      "family": "crowding",
+      "vimp": 0.0008769862151223997
+    },
+    {
+      "rank": 14,
+      "feature": "h_mean",
+      "family": "geometry",
+      "vimp": 0.000852531315066914
+    },
+    {
+      "rank": 15,
+      "feature": "person_area_frac",
+      "family": "area",
+      "vimp": 0.0007833548424345938
+    },
+    {
+      "rank": 16,
+      "feature": "area_std",
+      "family": "area",
+      "vimp": 0.0007096009374204089
+    },
+    {
+      "rank": 17,
+      "feature": "periphery_vs_center_area",
+      "family": "crowding",
+      "vimp": 0.0006777624931816034
+    },
+    {
+      "rank": 18,
+      "feature": "cy_std",
+      "family": "geometry",
+      "vimp": 0.0006775287995088293
+    },
+    {
+      "rank": 19,
+      "feature": "congest_score",
+      "family": "crowding",
+      "vimp": 0.0006679689086641197
+    },
+    {
+      "rank": 20,
+      "feature": "vehicle_area_frac",
+      "family": "area",
+      "vimp": 0.0006497071687936604
+    }
+  ],
+  "emphasis_family_tops": {
+    "iou": [
+      {
+        "feature": "pairwise_iou_mean",
+        "vimp": 0.0008796148191548618
+      },
+      {
+        "feature": "pairwise_iou_max",
+        "vimp": 0.0006245671289564813
+      },
+      {
+        "feature": "heavy_overlap_pair_frac",
+        "vimp": 0.00044547318551616644
+      },
+      {
+        "feature": "overlap_pair_frac",
+        "vimp": 0.00024254483156321784
+      },
+      {
+        "feature": "max_box_overlap_count",
+        "vimp": 0.00011560095372157597
+      }
+    ],
+    "crowding": [
+      {
+        "feature": "coverage_area",
+        "vimp": 0.0013338446663852103
+      },
+      {
+        "feature": "obj_density",
+        "vimp": 0.001064857353156941
+      },
+      {
+        "feature": "densest_quad_area_prop",
+        "vimp": 0.0009311571753117772
+      },
+      {
+        "feature": "nn_center_dist_mean",
+        "vimp": 0.0009182641893085643
+      },
+      {
+        "feature": "nn_center_dist_min",
+        "vimp": 0.0008769862151223997
+      }
+    ],
+    "area": [
+      {
+        "feature": "area_gini",
+        "vimp": 0.001841949436371716
+      },
+      {
+        "feature": "person_area_frac",
+        "vimp": 0.0007833548424345938
+      },
+      {
+        "feature": "area_std",
+        "vimp": 0.0007096009374204089
+      },
+      {
+        "feature": "vehicle_area_frac",
+        "vimp": 0.0006497071687936604
+      },
+      {
+        "feature": "area_mean",
+        "vimp": 0.0005142917125706178
+      }
+    ]
+  },
+  "schema": {
+    "layers": {
+      "L1_modality": [
+        "image_clip",
+        "text_clip",
+        "bbox_layered"
+      ],
+      "L2_bbox_family": [
+        "geometry",
+        "iou",
+        "crowding",
+        "area",
+        "semantic"
+      ],
+      "L3_named_feature": [
+        "cx_mean",
+        "cy_mean",
+        "cx_std",
+        "cy_std",
+        "w_mean",
+        "h_mean",
+        "aspect_mean",
+        "aspect_std",
+        "pairwise_iou_mean",
+        "pairwise_iou_max",
+        "overlap_pair_frac",
+        "heavy_overlap_pair_frac",
+        "person_person_iou_mean",
+        "max_box_overlap_count",
+        "iscrowd_ratio",
+        "coverage_area",
+        "n_objects_norm",
+        "obj_density",
+        "nn_center_dist_mean",
+        "nn_center_dist_min",
+        "congest_score",
+        "densest_quad_area_prop",
+        "periphery_vs_center_area",
+        "area_mean",
+        "area_std",
+        "largest_area_frac",
+        "person_area_frac",
+        "vehicle_area_frac",
+        "free_area_approx",
+        "area_gini",
+        "person_count_norm",
+        "vehicle_count_norm",
+        "n_categories_present",
+        "top1_cat_share"
+      ]
+    },
+    "families": {
+      "geometry": [
+        "cx_mean",
+        "cy_mean",
+        "cx_std",
+        "cy_std",
+        "w_mean",
+        "h_mean",
+        "aspect_mean",
+        "aspect_std"
+      ],
+      "iou": [
+        "pairwise_iou_mean",
+        "pairwise_iou_max",
+        "overlap_pair_frac",
+        "heavy_overlap_pair_frac",
+        "person_person_iou_mean",
+        "max_box_overlap_count"
+      ],
+      "crowding": [
+        "iscrowd_ratio",
+        "coverage_area",
+        "n_objects_norm",
+        "obj_density",
+        "nn_center_dist_mean",
+        "nn_center_dist_min",
+        "congest_score",
+        "densest_quad_area_prop",
+        "periphery_vs_center_area"
+      ],
+      "area": [
+        "area_mean",
+        "area_std",
+        "largest_area_frac",
+        "person_area_frac",
+        "vehicle_area_frac",
+        "free_area_approx",
+        "area_gini"
+      ],
+      "semantic": [
+        "person_count_norm",
+        "vehicle_count_norm",
+        "n_categories_present",
+        "top1_cat_share"
+      ]
+    },
+    "n_features": 34,
+    "emphasis": [
+      "iou",
+      "crowding",
+      "area"
+    ],
+    "note": "All geometric quantities normalized by image W/H; IoU/crowd/area are primary signal blocks."
+  }
+}

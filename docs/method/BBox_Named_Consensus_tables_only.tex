@@ -1,0 +1,57 @@
+% Named bbox features with region proportions · cross-dataset VIMP consensus
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Cross-dataset recovery of handcrafted bbox features $S^{\star}$ (region proportions included). Features are concatenated with image/text CLIP; RF Domain VIMP ranks \emph{named} bbox features only. A feature counts as recovered if it appears in the top-20 named ranks after a targeted late-batch inject on $S^{\star}$.}
+\label{tab:bbox-named-consensus-recovery}
+\small
+\begin{tabular}{@{}l c c c p{6.5cm}@{}}
+\toprule
+Dataset & RF AUC & BBox mass & Recover & Recovered $S^{\star}$ features \\
+\midrule
+coco\_time\_order & $1.000$ & $0.912$ & $1.00$ & n\_objects, n\_people, area\_frac\_person, area\_frac\_vehicle, region\_center\_area\_prop, region\_periphery\_area\_prop, quad\_TL\_area\_prop, quad\_TR\_area\_prop, quad\_BL\_area\_prop, quad\_BR\_area\_prop \\
+coco\_outdoor\_indoor & $1.000$ & $0.616$ & $1.00$ & n\_objects, n\_people, area\_frac\_person, area\_frac\_vehicle, region\_center\_area\_prop, region\_periphery\_area\_prop, quad\_TL\_area\_prop, quad\_TR\_area\_prop, quad\_BL\_area\_prop, quad\_BR\_area\_prop \\
+coco\_center\_split & $1.000$ & $0.927$ & $1.00$ & n\_objects, n\_people, area\_frac\_person, area\_frac\_vehicle, region\_center\_area\_prop, region\_periphery\_area\_prop, quad\_TL\_area\_prop, quad\_TR\_area\_prop, quad\_BL\_area\_prop, quad\_BR\_area\_prop \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Consensus features: members of $S^{\star}$ recovered on at least two datasets.}
+\label{tab:bbox-named-consensus-features}
+\small
+\begin{tabular}{@{}l c l@{}}
+\toprule
+Feature & \# datasets & Datasets \\
+\midrule
+\texttt{n\_objects} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{n\_people} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{area\_frac\_person} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{area\_frac\_vehicle} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{region\_center\_area\_prop} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{region\_periphery\_area\_prop} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{quad\_TL\_area\_prop} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{quad\_TR\_area\_prop} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{quad\_BL\_area\_prop} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\texttt{quad\_BR\_area\_prop} & 3 & coco\_time\_order, coco\_outdoor\_indoor, coco\_center\_split \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Baseline modality mass on concat $X=(\mathrm{img},\mathrm{txt},\mathrm{bbox\_named})$ before inject.}
+\label{tab:bbox-named-baseline-mass}
+\small
+\begin{tabular}{@{}l cccc@{}}
+\toprule
+Dataset & Image CLIP & Text CLIP & BBox named & RF AUC \\
+\midrule
+coco\_time\_order & $0.524$ & $0.445$ & $0.030$ & $0.584$ \\
+coco\_outdoor\_indoor & $0.249$ & $0.532$ & $0.219$ & $1.000$ \\
+coco\_center\_split & $0.123$ & $0.114$ & $0.762$ & $1.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,3902 @@
+{
+  "principle": "Post-hoc LOBO bbox attribution: select named f* with RF/PO VIMP, locate images, remove one box(+text), recalculate_bbox_features, \u0394 PO contrib.",
+  "form": "data/img_txt/coco_time_order/coco_bbx_text_form/samples_bbx_text.jsonl",
+  "y_normalization": "rank_quantile_to_[0,1]",
+  "y_raw_summary": {
+    "min": 0.0,
+    "max": 327.0,
+    "mean": 15.510311362717347
+  },
+  "n_samples_form": 4946,
+  "n_fit": 2400,
+  "po_risk": 0.0018006959972001102,
+  "f_star": [
+    "nn_center_dist_mean",
+    "largest_area_frac",
+    "area_gini",
+    "cx_std",
+    "cy_mean"
+  ],
+  "rf_named_ranking_top15": [
+    {
+      "rank": 1,
+      "feature": "cx_std",
+      "vimp": 0.08006150774899866
+    },
+    {
+      "rank": 2,
+      "feature": "aspect_std",
+      "vimp": 0.05251682376544652
+    },
+    {
+      "rank": 3,
+      "feature": "cx_mean",
+      "vimp": 0.04542635548651953
+    },
+    {
+      "rank": 4,
+      "feature": "aspect_mean",
+      "vimp": 0.044627183624878025
+    },
+    {
+      "rank": 5,
+      "feature": "largest_area_frac",
+      "vimp": 0.042320825157568076
+    },
+    {
+      "rank": 6,
+      "feature": "cy_mean",
+      "vimp": 0.041265620650922034
+    },
+    {
+      "rank": 7,
+      "feature": "area_gini",
+      "vimp": 0.04084384269649322
+    },
+    {
+      "rank": 8,
+      "feature": "w_mean",
+      "vimp": 0.0392546014607796
+    },
+    {
+      "rank": 9,
+      "feature": "periphery_vs_center_area",
+      "vimp": 0.03882940089799065
+    },
+    {
+      "rank": 10,
+      "feature": "h_mean",
+      "vimp": 0.038578140080647486
+    },
+    {
+      "rank": 11,
+      "feature": "densest_quad_area_prop",
+      "vimp": 0.03823330188541855
+    },
+    {
+      "rank": 12,
+      "feature": "coverage_area",
+      "vimp": 0.033905232984475085
+    },
+    {
+      "rank": 13,
+      "feature": "cy_std",
+      "vimp": 0.033713201647401984
+    },
+    {
+      "rank": 14,
+      "feature": "person_area_frac",
+      "vimp": 0.03148487693710319
+    },
+    {
+      "rank": 15,
+      "feature": "area_std",
+      "vimp": 0.03138394044644611
+    }
+  ],
+  "po_named_ranking_top15": [
+    {
+      "rank": 1,
+      "feature": "nn_center_dist_mean",
+      "vimp": 0.06810789049778516
+    },
+    {
+      "rank": 2,
+      "feature": "cx_std",
+      "vimp": 0.055685834529507504
+    },
+    {
+      "rank": 3,
+      "feature": "cy_mean",
+      "vimp": 0.054161303709268825
+    },
+    {
+      "rank": 4,
+      "feature": "cx_mean",
+      "vimp": 0.05326464663301883
+    },
+    {
+      "rank": 5,
+      "feature": "aspect_std",
+      "vimp": 0.05112522605162988
+    },
+    {
+      "rank": 6,
+      "feature": "aspect_mean",
+      "vimp": 0.0472577257333135
+    },
+    {
+      "rank": 7,
+      "feature": "cy_std",
+      "vimp": 0.04578632474387152
+    },
+    {
+      "rank": 8,
+      "feature": "largest_area_frac",
+      "vimp": 0.044248105117440414
+    },
+    {
+      "rank": 9,
+      "feature": "h_mean",
+      "vimp": 0.043622109426925765
+    },
+    {
+      "rank": 10,
+      "feature": "nn_center_dist_min",
+      "vimp": 0.04348573549413439
+    },
+    {
+      "rank": 11,
+      "feature": "periphery_vs_center_area",
+      "vimp": 0.042878256502019624
+    },
+    {
+      "rank": 12,
+      "feature": "densest_quad_area_prop",
+      "vimp": 0.03990217020594742
+    },
+    {
+      "rank": 13,
+      "feature": "w_mean",
+      "vimp": 0.03819928905138402
+    },
+    {
+      "rank": 14,
+      "feature": "area_gini",
+      "vimp": 0.037735637800896706
+    },
+    {
+      "rank": 15,
+      "feature": "pairwise_iou_max",
+      "vimp": 0.033600702140917024
+    }
+  ],
+  "n_lobo_images": 40,
+  "top_box_category_counter": [
+    {
+      "category": "person",
+      "n_top": 4,
+      "mean_abs_delta_po_rel": 0.9696363274180111
+    },
+    {
+      "category": "car",
+      "n_top": 3,
+      "mean_abs_delta_po_rel": 0.9630737655651301
+    },
+    {
+      "category": "traffic light",
+      "n_top": 3,
+      "mean_abs_delta_po_rel": 0.9634661557105769
+    },
+    {
+      "category": "bench",
+      "n_top": 2,
+      "mean_abs_delta_po_rel": 0.6767625524184532
+    },
+    {
+      "category": "bed",
+      "n_top": 2,
+      "mean_abs_delta_po_rel": 0.993253183339172
+    },
+    {
+      "category": "toilet",
+      "n_top": 2,
+      "mean_abs_delta_po_rel": 0.9903037883869936
+    },
+    {
+      "category": "surfboard",
+      "n_top": 2,
+      "mean_abs_delta_po_rel": 0.9963482609405707
+    },
+    {
+      "category": "chair",
+      "n_top": 2,
+      "mean_abs_delta_po_rel": 0.9708385506968524
+    },
+    {
+      "category": "dining table",
+      "n_top": 2,
+      "mean_abs_delta_po_rel": 0.9857354523526635
+    },
+    {
+      "category": "bowl",
+      "n_top": 2,
+      "mean_abs_delta_po_rel": 0.9508483242021963
+    },
+    {
+      "category": "sink",
+      "n_top": 2,
+      "mean_abs_delta_po_rel": 0.9992965623839067
+    },
+    {
+      "category": "pizza",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9068783472731756
+    },
+    {
+      "category": "bus",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9036212728539592
+    },
+    {
+      "category": "carrot",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9999876942330901
+    },
+    {
+      "category": "suitcase",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9158498715058708
+    },
+    {
+      "category": "toothbrush",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.456856917444512
+    },
+    {
+      "category": "teddy bear",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.8304837804581635
+    },
+    {
+      "category": "cell phone",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9753255811667844
+    },
+    {
+      "category": "apple",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9653909679285183
+    },
+    {
+      "category": "zebra",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.7649944059486794
+    },
+    {
+      "category": "dog",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9951085193313285
+    },
+    {
+      "category": "boat",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9787024419601322
+    },
+    {
+      "category": "donut",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.9076595586623469
+    },
+    {
+      "category": "hot dog",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.867593241945075
+    },
+    {
+      "category": "kite",
+      "n_top": 1,
+      "mean_abs_delta_po_rel": 0.8248592050849659
+    }
+  ],
+  "examples": [
+    {
+      "coco_image_id": 500859,
+      "batch": 0,
+      "bbx_id": "bbx_1",
+      "category": "bench",
+      "delta_po_rel": 0.9694,
+      "text": "bench"
+    },
+    {
+      "coco_image_id": 330531,
+      "batch": 0,
+      "bbx_id": "bbx_2",
+      "category": "pizza",
+      "delta_po_rel": 0.9069,
+      "text": "pizza: A pizza with various toppings is pictured uncooked."
+    },
+    {
+      "coco_image_id": 230976,
+      "batch": 0,
+      "bbx_id": "bbx_2",
+      "category": "car",
+      "delta_po_rel": 0.9334,
+      "text": "car"
+    },
+    {
+      "coco_image_id": 270918,
+      "batch": 0,
+      "bbx_id": "bbx_2",
+      "category": "person",
+      "delta_po_rel": 0.9207,
+      "text": "person"
+    },
+    {
+      "coco_image_id": 235788,
+      "batch": 0,
+      "bbx_id": "bbx_2",
+      "category": "bus",
+      "delta_po_rel": 0.9036,
+      "text": "bus: A vintage VW bus that is red and white."
+    },
+    {
+      "coco_image_id": 391735,
+      "batch": 0,
+      "bbx_id": "bbx_2",
+      "category": "person",
+      "delta_po_rel": 0.9588,
+      "text": "person"
+    },
+    {
+      "coco_image_id": 234147,
+      "batch": 0,
+      "bbx_id": "bbx_1",
+      "category": "carrot",
+      "delta_po_rel": 1.0,
+      "text": "carrot"
+    },
+    {
+      "coco_image_id": 109869,
+      "batch": 0,
+      "bbx_id": "bbx_1",
+      "category": "bench",
+      "delta_po_rel": -0.3841,
+      "text": "bench: A cat standing on top of a wooden bench."
+    },
+    {
+      "coco_image_id": 558577,
+      "batch": 0,
+      "bbx_id": "bbx_1",
+      "category": "bed",
+      "delta_po_rel": 0.9912,
+      "text": "bed: A man lying down on a bed showing his clean sneaker bottoms."
+    },
+    {
+      "coco_image_id": 520437,
+      "batch": 0,
+      "bbx_id": "bbx_1",
+      "category": "suitcase",
+      "delta_po_rel": 0.9158,
+      "text": "suitcase"
+    },
+    {
+      "coco_image_id": 191691,
+      "batch": 0,
+      "bbx_id": "bbx_2",
+      "category": "toothbrush",
+      "delta_po_rel": 0.4569,
+      "text": "toothbrush"
+    },
+    {
+      "coco_image_id": 169226,
+      "batch": 0,
+      "bbx_id": "bbx_1",
+      "category": "car",
+      "delta_po_rel": 0.9827,
+      "text": "car"
+    }
+  ],
+  "attributions": [
+    {
+      "coco_image_id": 500859,
+      "batch": 0,
+      "caption": "A cat laying down on a wooden table in a park.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.03602296861212083,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.05135906601417898,
+        "largest_area_frac": 0.6446753889794264,
+        "area_gini": 0.14467538897942633,
+        "cx_std": 0.020406250000000015,
+        "cy_mean": 0.5155892070484582
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.0,
+          0.0,
+          640.0,
+          454.0
+        ],
+        "category": "bench",
+        "text_description": "bench",
+        "delta_po_contrib": 0.03492027127215923,
+        "delta_po_rel": 0.9693890486149451,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.05135906601417898,
+          "largest_area_frac": -0.35532461102057356,
+          "area_gini": 0.14467538897942633,
+          "cx_std": 0.020406250000000015,
+          "cy_mean": -0.01558920704845812
+        },
+        "abs_delta_po": 0.03492027127215923,
+        "abs_delta_po_rel": 0.9693890486149451
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            0.0,
+            640.0,
+            454.0
+          ],
+          "category": "bench",
+          "text_description": "bench",
+          "delta_po_contrib": 0.03492027127215923,
+          "delta_po_rel": 0.9693890486149451,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.05135906601417898,
+            "largest_area_frac": -0.35532461102057356,
+            "area_gini": 0.14467538897942633,
+            "cx_std": 0.020406250000000015,
+            "cy_mean": -0.01558920704845812
+          },
+          "abs_delta_po": 0.03492027127215923,
+          "abs_delta_po_rel": 0.9693890486149451
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            49.79,
+            77.13,
+            488.18,
+            328.05
+          ],
+          "category": "cat",
+          "text_description": "cat: A cat laying down on a wooden table in a park.",
+          "delta_po_contrib": 0.0338930443105892,
+          "delta_po_rel": 0.9408731599717233,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.05135906601417898,
+            "largest_area_frac": -0.35532461102057356,
+            "area_gini": 0.14467538897942633,
+            "cx_std": 0.020406250000000015,
+            "cy_mean": 0.015589207048458231
+          },
+          "abs_delta_po": 0.0338930443105892,
+          "abs_delta_po_rel": 0.9408731599717233
+        }
+      ]
+    },
+    {
+      "coco_image_id": 330531,
+      "batch": 0,
+      "caption": "A pizza with various toppings is pictured uncooked.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.022872492487721573,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.0133436425090812,
+        "largest_area_frac": 0.5061301956051091,
+        "area_gini": 0.00613019560510919,
+        "cx_std": 0.006343750000000037,
+        "cy_mean": 0.49793359374999996
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          1.51,
+          2.65,
+          627.9,
+          629.41
+        ],
+        "category": "pizza",
+        "text_description": "pizza: A pizza with various toppings is pictured uncooked.",
+        "delta_po_contrib": 0.02074256818618994,
+        "delta_po_rel": 0.9068783472731756,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.0133436425090812,
+          "largest_area_frac": -0.4938698043948909,
+          "area_gini": 0.00613019560510919,
+          "cx_std": 0.006343750000000037,
+          "cy_mean": -0.0020664062500000413
+        },
+        "abs_delta_po": 0.02074256818618994,
+        "abs_delta_po_rel": 0.9068783472731756
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            1.51,
+            2.65,
+            627.9,
+            629.41
+          ],
+          "category": "pizza",
+          "text_description": "pizza: A pizza with various toppings is pictured uncooked.",
+          "delta_po_contrib": 0.02074256818618994,
+          "delta_po_rel": 0.9068783472731756,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.0133436425090812,
+            "largest_area_frac": -0.4938698043948909,
+            "area_gini": 0.00613019560510919,
+            "cx_std": 0.006343750000000037,
+            "cy_mean": -0.0020664062500000413
+          },
+          "abs_delta_po": 0.02074256818618994,
+          "abs_delta_po_rel": 0.9068783472731756
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            7.16,
+            0.0,
+            632.84,
+            640.0
+          ],
+          "category": "dining table",
+          "text_description": "dining table",
+          "delta_po_contrib": 0.020566781594956236,
+          "delta_po_rel": 0.8991928450778908,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.0133436425090812,
+            "largest_area_frac": -0.4938698043948909,
+            "area_gini": 0.00613019560510919,
+            "cx_std": 0.006343750000000037,
+            "cy_mean": 0.0020664062500000413
+          },
+          "abs_delta_po": 0.020566781594956236,
+          "abs_delta_po_rel": 0.8991928450778908
+        }
+      ]
+    },
+    {
+      "coco_image_id": 230976,
+      "batch": 0,
+      "caption": "A chalk sign is placed outside on a wall advertising a restaurant. ",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0037421432911396405,
+      "base_f_star": {
+        "nn_center_dist_mean": 1.0653772970906832,
+        "largest_area_frac": 0.6365633282467271,
+        "area_gini": 0.13656332824672712,
+        "cx_std": 0.46375,
+        "cy_mean": 0.332375
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          0.94,
+          19.5,
+          36.94,
+          50.96
+        ],
+        "category": "car",
+        "text_description": "car",
+        "delta_po_contrib": 0.003493096638556103,
+        "delta_po_rel": 0.9334481247399962,
+        "delta_f_star": {
+          "nn_center_dist_mean": 1.0653772970906832,
+          "largest_area_frac": -0.3634366717532729,
+          "area_gini": 0.13656332824672712,
+          "cx_std": 0.46375,
+          "cy_mean": -0.26209375
+        },
+        "abs_delta_po": 0.003493096638556103,
+        "abs_delta_po_rel": 0.9334481247399962
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            0.94,
+            19.5,
+            36.94,
+            50.96
+          ],
+          "category": "car",
+          "text_description": "car",
+          "delta_po_contrib": 0.003493096638556103,
+          "delta_po_rel": 0.9334481247399962,
+          "delta_f_star": {
+            "nn_center_dist_mean": 1.0653772970906832,
+            "largest_area_frac": -0.3634366717532729,
+            "area_gini": 0.13656332824672712,
+            "cx_std": 0.46375,
+            "cy_mean": -0.26209375
+          },
+          "abs_delta_po": 0.003493096638556103,
+          "abs_delta_po_rel": 0.9334481247399962
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            449.22,
+            326.9,
+            30.78,
+            107.12
+          ],
+          "category": "chair",
+          "text_description": "chair",
+          "delta_po_contrib": 0.0033188698464180462,
+          "delta_po_rel": 0.8868901020945192,
+          "delta_f_star": {
+            "nn_center_dist_mean": 1.0653772970906832,
+            "largest_area_frac": -0.3634366717532729,
+            "area_gini": 0.13656332824672712,
+            "cx_std": 0.46375,
+            "cy_mean": 0.26209374999999996
+          },
+          "abs_delta_po": 0.0033188698464180462,
+          "abs_delta_po_rel": 0.8868901020945192
+        }
+      ]
+    },
+    {
+      "coco_image_id": 270918,
+      "batch": 0,
+      "caption": "A sharp steeple on a building is lit in the sky.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0023436142696095933,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.7457164452139954,
+        "largest_area_frac": 0.557686784406529,
+        "area_gini": 0.05768678440652897,
+        "cx_std": 0.37284375000000003,
+        "cy_mean": 0.97044921875
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          61.82,
+          598.15,
+          32.63,
+          41.67
+        ],
+        "category": "person",
+        "text_description": "person",
+        "delta_po_contrib": 0.0021576585341519677,
+        "delta_po_rel": 0.920654290772322,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.7457164452139954,
+          "largest_area_frac": -0.44231321559347103,
+          "area_gini": 0.05768678440652897,
+          "cx_std": 0.37284375000000003,
+          "cy_mean": -0.003285156250000032
+        },
+        "abs_delta_po": 0.0021576585341519677,
+        "abs_delta_po_rel": 0.920654290772322
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            61.82,
+            598.15,
+            32.63,
+            41.67
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.0021576585341519677,
+          "delta_po_rel": 0.920654290772322,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.7457164452139954,
+            "largest_area_frac": -0.44231321559347103,
+            "area_gini": 0.05768678440652897,
+            "cx_std": 0.37284375000000003,
+            "cy_mean": -0.003285156250000032
+          },
+          "abs_delta_po": 0.0021576585341519677,
+          "abs_delta_po_rel": 0.920654290772322
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            402.05,
+            610.59,
+            68.03,
+            25.2
+          ],
+          "category": "car",
+          "text_description": "car",
+          "delta_po_contrib": 0.0021260417633371283,
+          "delta_po_rel": 0.907163687300866,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.7457164452139954,
+            "largest_area_frac": -0.44231321559347103,
+            "area_gini": 0.05768678440652897,
+            "cx_std": 0.37284375000000003,
+            "cy_mean": 0.003285156250000032
+          },
+          "abs_delta_po": 0.0021260417633371283,
+          "abs_delta_po_rel": 0.907163687300866
+        }
+      ]
+    },
+    {
+      "coco_image_id": 235788,
+      "batch": 0,
+      "caption": "A vintage VW bus that is red and white.",
+      "n_boxes": 8,
+      "base_po_contrib": 0.015916914703460436,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.02592190131660263,
+        "largest_area_frac": 0.4306513421104995,
+        "area_gini": 0.6551705006894142,
+        "cx_std": 0.3699971000647956,
+        "cy_mean": 0.46915544496487116
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          56.61,
+          29.59,
+          446.19,
+          331.04
+        ],
+        "category": "bus",
+        "text_description": "bus: A vintage VW bus that is red and white.",
+        "delta_po_contrib": 0.014382862725152438,
+        "delta_po_rel": 0.9036212728539592,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.051742142005833755,
+          "largest_area_frac": -0.31940769649625267,
+          "area_gini": -0.047724073884751084,
+          "cx_std": -0.02537047473100923,
+          "cy_mean": -0.0017461943793911638
+        },
+        "abs_delta_po": 0.014382862725152438,
+        "abs_delta_po_rel": 0.9036212728539592
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            56.61,
+            29.59,
+            446.19,
+            331.04
+          ],
+          "category": "bus",
+          "text_description": "bus: A vintage VW bus that is red and white.",
+          "delta_po_contrib": 0.014382862725152438,
+          "delta_po_rel": 0.9036212728539592,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.051742142005833755,
+            "largest_area_frac": -0.31940769649625267,
+            "area_gini": -0.047724073884751084,
+            "cx_std": -0.02537047473100923,
+            "cy_mean": -0.0017461943793911638
+          },
+          "abs_delta_po": 0.014382862725152438,
+          "abs_delta_po_rel": 0.9036212728539592
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            49.9,
+            30.55,
+            453.86,
+            329.12
+          ],
+          "category": "truck",
+          "text_description": "truck",
+          "delta_po_contrib": 0.014308484887202398,
+          "delta_po_rel": 0.898948392504277,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.0523831239580793,
+            "largest_area_frac": -0.31729703918240637,
+            "area_gini": -0.04642150521438593,
+            "cx_std": -0.025312143892110395,
+            "cy_mean": -0.0017461943793911638
+          },
+          "abs_delta_po": 0.014308484887202398,
+          "abs_delta_po_rel": 0.898948392504277
+        },
+        {
+          "bbx_id": "bbx_3",
+          "box": [
+            493.29,
+            147.72,
+            144.16,
+            130.1
+          ],
+          "category": "car",
+          "text_description": "car",
+          "delta_po_contrib": 0.006684842084729629,
+          "delta_po_rel": 0.4199835337973081,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.011763318469137536,
+            "largest_area_frac": -0.024617240791559192,
+            "area_gini": 0.003945089450647421,
+            "cx_std": 0.012165431456172437,
+            "cy_mean": 0.004162136165941743
+          },
+          "abs_delta_po": 0.006684842084729629,
+          "abs_delta_po_rel": 0.4199835337973081
+        }
+      ]
+    },
+    {
+      "coco_image_id": 391735,
+      "batch": 0,
+      "caption": "A man kneeling down beside the street and a yellow building. ",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0039783198494810525,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.8599952531542543,
+        "largest_area_frac": 0.6642881246437474,
+        "area_gini": 0.1642881246437473,
+        "cx_std": 0.36474609375,
+        "cy_mean": 0.3456367924528302
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          475.57,
+          212.45,
+          45.9,
+          61.31
+        ],
+        "category": "person",
+        "text_description": "person",
+        "delta_po_contrib": 0.0038142280289710697,
+        "delta_po_rel": 0.9587534869801528,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.8599952531542543,
+          "largest_area_frac": -0.3357118753562526,
+          "area_gini": 0.1642881246437473,
+          "cx_std": 0.36474609375,
+          "cy_mean": 0.2277240566037736
+        },
+        "abs_delta_po": 0.0038142280289710697,
+        "abs_delta_po_rel": 0.9587534869801528
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            475.57,
+            212.45,
+            45.9,
+            61.31
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.0038142280289710697,
+          "delta_po_rel": 0.9587534869801528,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.8599952531542543,
+            "largest_area_frac": -0.3357118753562526,
+            "area_gini": 0.1642881246437473,
+            "cx_std": 0.36474609375,
+            "cy_mean": 0.2277240566037736
+          },
+          "abs_delta_po": 0.0038142280289710697,
+          "abs_delta_po_rel": 0.9587534869801528
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            3.8,
+            0.0,
+            55.69,
+            99.99
+          ],
+          "category": "traffic light",
+          "text_description": "traffic light",
+          "delta_po_contrib": 0.0036714593374626648,
+          "delta_po_rel": 0.9228668069558854,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.8599952531542543,
+            "largest_area_frac": -0.3357118753562526,
+            "area_gini": 0.1642881246437473,
+            "cx_std": 0.36474609375,
+            "cy_mean": -0.2277240566037736
+          },
+          "abs_delta_po": 0.0036714593374626648,
+          "abs_delta_po_rel": 0.9228668069558854
+        }
+      ]
+    },
+    {
+      "coco_image_id": 234147,
+      "batch": 0,
+      "caption": "A basket of large carrots next to a box of bell peppers.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.017887858395533963,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.051621332440093294,
+        "largest_area_frac": 0.7376371778705001,
+        "area_gini": 0.2376371778705002,
+        "cx_std": 0.010945312500000082,
+        "cy_mean": 0.4907916666666667
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          209.35,
+          101.78,
+          369.77,
+          290.04
+        ],
+        "category": "carrot",
+        "text_description": "carrot",
+        "delta_po_contrib": 0.017887638272718016,
+        "delta_po_rel": 0.9999876942330901,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.051621332440093294,
+          "largest_area_frac": -0.2623628221294999,
+          "area_gini": 0.2376371778705002,
+          "cx_std": 0.010945312500000082,
+          "cy_mean": 0.02337499999999998
+        },
+        "abs_delta_po": 0.017887638272718016,
+        "abs_delta_po_rel": 0.9999876942330901
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            209.35,
+            101.78,
+            369.77,
+            290.04
+          ],
+          "category": "carrot",
+          "text_description": "carrot",
+          "delta_po_contrib": 0.017887638272718016,
+          "delta_po_rel": 0.9999876942330901,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.051621332440093294,
+            "largest_area_frac": -0.2623628221294999,
+            "area_gini": 0.2376371778705002,
+            "cx_std": 0.010945312500000082,
+            "cy_mean": 0.02337499999999998
+          },
+          "abs_delta_po": 0.017887638272718016,
+          "abs_delta_po_rel": 0.9999876942330901
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            289.08,
+            119.73,
+            182.29,
+            209.26
+          ],
+          "category": "carrot",
+          "text_description": "carrot",
+          "delta_po_contrib": 0.01748539958533657,
+          "delta_po_rel": 0.9775010064214633,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.051621332440093294,
+            "largest_area_frac": -0.2623628221294999,
+            "area_gini": 0.2376371778705002,
+            "cx_std": 0.010945312500000082,
+            "cy_mean": -0.02337499999999998
+          },
+          "abs_delta_po": 0.01748539958533657,
+          "abs_delta_po_rel": 0.9775010064214633
+        }
+      ]
+    },
+    {
+      "coco_image_id": 109869,
+      "batch": 0,
+      "caption": "A cat standing on top of a wooden bench.",
+      "n_boxes": 3,
+      "base_po_contrib": 0.012190408813240875,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.02227046400237621,
+        "largest_area_frac": 0.3539772055421514,
+        "area_gini": 0.03768385292791665,
+        "cx_std": 0.026390369662414283,
+        "cy_mean": 0.4958697916666666
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          1.29,
+          0.0,
+          423.71,
+          640.0
+        ],
+        "category": "bench",
+        "text_description": "bench: A cat standing on top of a wooden bench.",
+        "delta_po_contrib": -0.004682775565635925,
+        "delta_po_rel": -0.3841360562219613,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.033788842426100335,
+          "largest_area_frac": -0.18558791707878997,
+          "area_gini": -0.001881269693024601,
+          "cx_std": -0.0016272773964092248,
+          "cy_mean": 0.0020651041666666647
+        },
+        "abs_delta_po": 0.004682775565635925,
+        "abs_delta_po_rel": 0.3841360562219613
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            1.29,
+            0.0,
+            423.71,
+            640.0
+          ],
+          "category": "bench",
+          "text_description": "bench: A cat standing on top of a wooden bench.",
+          "delta_po_contrib": -0.004682775565635925,
+          "delta_po_rel": -0.3841360562219613,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.033788842426100335,
+            "largest_area_frac": -0.18558791707878997,
+            "area_gini": -0.001881269693024601,
+            "cx_std": -0.0016272773964092248,
+            "cy_mean": 0.0020651041666666647
+          },
+          "abs_delta_po": 0.004682775565635925,
+          "abs_delta_po_rel": 0.3841360562219613
+        },
+        {
+          "bbx_id": "bbx_3",
+          "box": [
+            4.15,
+            7.95,
+            370.45,
+            615.12
+          ],
+          "category": "cat",
+          "text_description": "cat: A cat standing on top of a wooden bench.",
+          "delta_po_contrib": -0.0019119349515117744,
+          "delta_po_rel": -0.15683928083513046,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.016894421213050168,
+            "largest_area_frac": -0.14987009942422047,
+            "area_gini": 0.03383654796154478,
+            "cx_std": 0.026337428485943695,
+            "cy_mean": -0.0014427083333333757
+          },
+          "abs_delta_po": 0.0019119349515117744,
+          "abs_delta_po_rel": 0.15683928083513046
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            1.38,
+            1.38,
+            423.62,
+            630.36
+          ],
+          "category": "chair",
+          "text_description": "chair",
+          "delta_po_contrib": 0.00025958465575447176,
+          "delta_po_rel": 0.021294171484324963,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.03409724035469905,
+            "largest_area_frac": -0.18940880532831006,
+            "area_gini": -0.0057021579425446944,
+            "cx_std": -0.0015743362199386358,
+            "cy_mean": -0.0006223958333334001
+          },
+          "abs_delta_po": 0.00025958465575447176,
+          "abs_delta_po_rel": 0.021294171484324963
+        }
+      ]
+    },
+    {
+      "coco_image_id": 558577,
+      "batch": 0,
+      "caption": "A man lying down on a bed showing his clean sneaker bottoms.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.014877535292210744,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.041115945711815156,
+        "largest_area_frac": 0.616087500994437,
+        "area_gini": 0.11608750099443688,
+        "cx_std": 0.012191406249999981,
+        "cy_mean": 0.6174588235294117
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.95,
+          90.53,
+          639.05,
+          329.71
+        ],
+        "category": "bed",
+        "text_description": "bed: A man lying down on a bed showing his clean sneaker bottoms.",
+        "delta_po_contrib": 0.014746537286115118,
+        "delta_po_rel": 0.9911949120258242,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.041115945711815156,
+          "largest_area_frac": -0.383912499005563,
+          "area_gini": 0.11608750099443688,
+          "cx_std": 0.012191406249999981,
+          "cy_mean": -0.016552941176470548
+        },
+        "abs_delta_po": 0.014746537286115118,
+        "abs_delta_po_rel": 0.9911949120258242
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.95,
+            90.53,
+            639.05,
+            329.71
+          ],
+          "category": "bed",
+          "text_description": "bed: A man lying down on a bed showing his clean sneaker bottoms.",
+          "delta_po_contrib": 0.014746537286115118,
+          "delta_po_rel": 0.9911949120258242,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.041115945711815156,
+            "largest_area_frac": -0.383912499005563,
+            "area_gini": 0.11608750099443688,
+            "cx_std": 0.012191406249999981,
+            "cy_mean": -0.016552941176470548
+          },
+          "abs_delta_po": 0.014746537286115118,
+          "abs_delta_po_rel": 0.9911949120258242
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            54.56,
+            138.32,
+            500.62,
+            262.27
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.01367911859817654,
+          "delta_po_rel": 0.9194479010524618,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.041115945711815156,
+            "largest_area_frac": -0.383912499005563,
+            "area_gini": 0.11608750099443688,
+            "cx_std": 0.012191406249999981,
+            "cy_mean": 0.016552941176470548
+          },
+          "abs_delta_po": 0.01367911859817654,
+          "abs_delta_po_rel": 0.9194479010524618
+        }
+      ]
+    },
+    {
+      "coco_image_id": 520437,
+      "batch": 0,
+      "caption": "THERE IS A DUMM IN THE SUIT CASE ",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0115947454439623,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.012153682569493155,
+        "largest_area_frac": 0.5003157802415992,
+        "area_gini": 0.00031578024159917284,
+        "cx_std": 0.005680000000000018,
+        "cy_mean": 0.56516
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.0,
+          52.63,
+          500.0,
+          316.99
+        ],
+        "category": "suitcase",
+        "text_description": "suitcase",
+        "delta_po_contrib": 0.010619046125912003,
+        "delta_po_rel": 0.9158498715058708,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.012153682569493155,
+          "largest_area_frac": -0.4996842197584008,
+          "area_gini": 0.00031578024159917284,
+          "cx_std": 0.005680000000000018,
+          "cy_mean": -0.0021600000000000508
+        },
+        "abs_delta_po": 0.010619046125912003,
+        "abs_delta_po_rel": 0.9158498715058708
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            52.63,
+            500.0,
+            316.99
+          ],
+          "category": "suitcase",
+          "text_description": "suitcase",
+          "delta_po_contrib": 0.010619046125912003,
+          "delta_po_rel": 0.9158498715058708,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.012153682569493155,
+            "largest_area_frac": -0.4996842197584008,
+            "area_gini": 0.00031578024159917284,
+            "cx_std": 0.005680000000000018,
+            "cy_mean": -0.0021600000000000508
+          },
+          "abs_delta_po": 0.010619046125912003,
+          "abs_delta_po_rel": 0.9158498715058708
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            11.36,
+            50.77,
+            488.64,
+            323.95
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.010273203505304916,
+          "delta_po_rel": 0.8860223412466921,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.012153682569493155,
+            "largest_area_frac": -0.4996842197584008,
+            "area_gini": 0.00031578024159917284,
+            "cx_std": 0.005680000000000018,
+            "cy_mean": 0.0021600000000000508
+          },
+          "abs_delta_po": 0.010273203505304916,
+          "abs_delta_po_rel": 0.8860223412466921
+        }
+      ]
+    },
+    {
+      "coco_image_id": 191691,
+      "batch": 0,
+      "caption": "A man is shaving while looking in a mirror of a cluttered bathroom.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0004895133572528683,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.7847507354721001,
+        "largest_area_frac": 0.9767135761256172,
+        "area_gini": 0.47671357612561716,
+        "cx_std": 0.3523671875,
+        "cy_mean": 0.32738541666666665
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          595.32,
+          36.07,
+          44.68,
+          76.44
+        ],
+        "category": "toothbrush",
+        "text_description": "toothbrush",
+        "delta_po_contrib": 0.00022363756389931646,
+        "delta_po_rel": 0.456856917444512,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.7847507354721001,
+          "largest_area_frac": -0.023286423874382844,
+          "area_gini": 0.47671357612561716,
+          "cx_std": 0.3523671875,
+          "cy_mean": -0.17261458333333335
+        },
+        "abs_delta_po": 0.00022363756389931646,
+        "abs_delta_po_rel": 0.456856917444512
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            595.32,
+            36.07,
+            44.68,
+            76.44
+          ],
+          "category": "toothbrush",
+          "text_description": "toothbrush",
+          "delta_po_contrib": 0.00022363756389931646,
+          "delta_po_rel": 0.456856917444512,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.7847507354721001,
+            "largest_area_frac": -0.023286423874382844,
+            "area_gini": 0.47671357612561716,
+            "cx_std": 0.3523671875,
+            "cy_mean": -0.17261458333333335
+          },
+          "abs_delta_po": 0.00022363756389931646,
+          "abs_delta_po_rel": 0.456856917444512
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            17.41,
+            0.0,
+            298.44,
+            480.0
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.0002121848261717227,
+          "delta_po_rel": 0.43346074748406405,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.7847507354721001,
+            "largest_area_frac": -0.023286423874382844,
+            "area_gini": 0.47671357612561716,
+            "cx_std": 0.3523671875,
+            "cy_mean": 0.17261458333333332
+          },
+          "abs_delta_po": 0.0002121848261717227,
+          "abs_delta_po_rel": 0.43346074748406405
+        }
+      ]
+    },
+    {
+      "coco_image_id": 169226,
+      "batch": 0,
+      "caption": "A busy city street with dimly lit trees at night.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.00481225424759174,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.5046688791061339,
+        "largest_area_frac": 0.5234485249419725,
+        "area_gini": 0.02344852494197247,
+        "cx_std": 0.25232421875,
+        "cy_mean": 0.9599823943661971
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          243.45,
+          395.02,
+          45.08,
+          29.8
+        ],
+        "category": "car",
+        "text_description": "car",
+        "delta_po_contrib": 0.004729122824123024,
+        "delta_po_rel": 0.9827250556237663,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.5046688791061339,
+          "largest_area_frac": -0.47655147505802753,
+          "area_gini": 0.02344852494197247,
+          "cx_std": 0.25232421875,
+          "cy_mean": 0.002271126760563291
+        },
+        "abs_delta_po": 0.004729122824123024,
+        "abs_delta_po_rel": 0.9827250556237663
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            243.45,
+            395.02,
+            45.08,
+            29.8
+          ],
+          "category": "car",
+          "text_description": "car",
+          "delta_po_contrib": 0.004729122824123024,
+          "delta_po_rel": 0.9827250556237663,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.5046688791061339,
+            "largest_area_frac": -0.47655147505802753,
+            "area_gini": 0.02344852494197247,
+            "cx_std": 0.25232421875,
+            "cy_mean": 0.002271126760563291
+          },
+          "abs_delta_po": 0.004729122824123024,
+          "abs_delta_po_rel": 0.9827250556237663
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            570.27,
+            391.63,
+            37.39,
+            32.71
+          ],
+          "category": "car",
+          "text_description": "car",
+          "delta_po_contrib": 0.0039094004435343424,
+          "delta_po_rel": 0.8123844339019267,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.5046688791061339,
+            "largest_area_frac": -0.47655147505802753,
+            "area_gini": 0.02344852494197247,
+            "cx_std": 0.25232421875,
+            "cy_mean": -0.002271126760563291
+          },
+          "abs_delta_po": 0.0039094004435343424,
+          "abs_delta_po_rel": 0.8123844339019267
+        }
+      ]
+    },
+    {
+      "coco_image_id": 404349,
+      "batch": 0,
+      "caption": "A tray with a brown cat sleeping on top of a teddy bear inside",
+      "n_boxes": 3,
+      "base_po_contrib": 0.009020210310238039,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.03288241573007281,
+        "largest_area_frac": 0.3682735215438824,
+        "area_gini": 0.045489392742472656,
+        "cx_std": 0.02035053630250266,
+        "cy_mean": 0.5074097222222221
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          154.09,
+          98.91,
+          457.59,
+          270.35
+        ],
+        "category": "teddy bear",
+        "text_description": "teddy bear: A tray with a brown cat sleeping on top of a teddy bear inside",
+        "delta_po_contrib": -0.007491138359804675,
+        "delta_po_rel": -0.8304837804581635,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.009051327998734059,
+          "largest_area_frac": -0.1827759820666356,
+          "area_gini": -0.00556011086804542,
+          "cx_std": 0.015221630052502707,
+          "cy_mean": -0.009866319444444493
+        },
+        "abs_delta_po": 0.007491138359804675,
+        "abs_delta_po_rel": 0.8304837804581635
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            154.09,
+            98.91,
+            457.59,
+            270.35
+          ],
+          "category": "teddy bear",
+          "text_description": "teddy bear: A tray with a brown cat sleeping on top of a teddy bear inside",
+          "delta_po_contrib": -0.007491138359804675,
+          "delta_po_rel": -0.8304837804581635,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.009051327998734059,
+            "largest_area_frac": -0.1827759820666356,
+            "area_gini": -0.00556011086804542,
+            "cx_std": 0.015221630052502707,
+            "cy_mean": -0.009866319444444493
+          },
+          "abs_delta_po": 0.007491138359804675,
+          "abs_delta_po_rel": 0.8304837804581635
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            129.47,
+            89.21,
+            446.19,
+            307.84
+          ],
+          "category": "backpack",
+          "text_description": "backpack",
+          "delta_po_contrib": 0.0033229330357487583,
+          "delta_po_rel": 0.36838753433595717,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.021945901545503528,
+            "largest_area_frac": -0.15677498811580037,
+            "area_gini": 0.020440883082790018,
+            "cx_std": 0.001791942552502642,
+            "cy_mean": -0.00044444444444458053
+          },
+          "abs_delta_po": 0.0033229330357487583,
+          "abs_delta_po_rel": 0.36838753433595717
+        },
+        {
+          "bbx_id": "bbx_3",
+          "box": [
+            174.29,
+            102.1,
+            369.68,
+            302.71
+          ],
+          "category": "cat",
+          "text_description": "cat: A tray with a brown cat sleeping on top of a teddy bear inside",
+          "delta_po_contrib": -0.0025195002558020888,
+          "delta_po_rel": -0.27931724082565024,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.018102655997468103,
+            "largest_area_frac": -0.15786114747394653,
+            "area_gini": 0.019354723724643863,
+            "cx_std": -0.0033369636974973117,
+            "cy_mean": 0.010310763888888796
+          },
+          "abs_delta_po": 0.0025195002558020888,
+          "abs_delta_po_rel": 0.27931724082565024
+        }
+      ]
+    },
+    {
+      "coco_image_id": 134366,
+      "batch": 0,
+      "caption": "A young man is using his cell phone.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.011663044656714704,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.04434785770372868,
+        "largest_area_frac": 0.7405844114259797,
+        "area_gini": 0.24058441142597986,
+        "cx_std": 0.01844140625000007,
+        "cy_mean": 0.44714583333333335
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          132.97,
+          79.46,
+          328.65,
+          282.16
+        ],
+        "category": "cell phone",
+        "text_description": "cell phone: A young man is using his cell phone.",
+        "delta_po_contrib": 0.011375265808959754,
+        "delta_po_rel": 0.9753255811667844,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.04434785770372868,
+          "largest_area_frac": -0.25941558857402025,
+          "area_gini": 0.24058441142597986,
+          "cx_std": 0.01844140625000007,
+          "cy_mean": 0.012312500000000004
+        },
+        "abs_delta_po": 0.011375265808959754,
+        "abs_delta_po_rel": 0.9753255811667844
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            132.97,
+            79.46,
+            328.65,
+            282.16
+          ],
+          "category": "cell phone",
+          "text_description": "cell phone: A young man is using his cell phone.",
+          "delta_po_contrib": 0.011375265808959754,
+          "delta_po_rel": 0.9753255811667844,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.04434785770372868,
+            "largest_area_frac": -0.25941558857402025,
+            "area_gini": 0.24058441142597986,
+            "cx_std": 0.01844140625000007,
+            "cy_mean": 0.012312500000000004
+          },
+          "abs_delta_po": 0.011375265808959754,
+          "abs_delta_po_rel": 0.9753255811667844
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            2.16,
+            1.08,
+            637.48,
+            415.28
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.011300742733655946,
+          "delta_po_rel": 0.9689359052724618,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.04434785770372868,
+            "largest_area_frac": -0.25941558857402025,
+            "area_gini": 0.24058441142597986,
+            "cx_std": 0.01844140625000007,
+            "cy_mean": -0.012312500000000004
+          },
+          "abs_delta_po": 0.011300742733655946,
+          "abs_delta_po_rel": 0.9689359052724618
+        }
+      ]
+    },
+    {
+      "coco_image_id": 421155,
+      "batch": 0,
+      "caption": "Here is an image of an outdoor place. \n",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0017854327286925251,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.6553379522544373,
+        "largest_area_frac": 0.517668117530278,
+        "area_gini": 0.01766811753027797,
+        "cx_std": 0.32763671875000006,
+        "cy_mean": 0.33774609375
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          504.5,
+          150.63,
+          50.45,
+          136.94
+        ],
+        "category": "traffic light",
+        "text_description": "traffic light",
+        "delta_po_contrib": 0.001624210426584386,
+        "delta_po_rel": 0.9097012727352075,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.6553379522544373,
+          "largest_area_frac": -0.48233188246972203,
+          "area_gini": 0.01766811753027797,
+          "cx_std": 0.32763671875000006,
+          "cy_mean": 0.004597656249999971
+        },
+        "abs_delta_po": 0.001624210426584386,
+        "abs_delta_po_rel": 0.9097012727352075
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            504.5,
+            150.63,
+            50.45,
+            136.94
+          ],
+          "category": "traffic light",
+          "text_description": "traffic light",
+          "delta_po_contrib": 0.001624210426584386,
+          "delta_po_rel": 0.9097012727352075,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.6553379522544373,
+            "largest_area_frac": -0.48233188246972203,
+            "area_gini": 0.01766811753027797,
+            "cx_std": 0.32763671875000006,
+            "cy_mean": 0.004597656249999971
+          },
+          "abs_delta_po": 0.001624210426584386,
+          "abs_delta_po_rel": 0.9097012727352075
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            85.51,
+            148.43,
+            49.68,
+            129.57
+          ],
+          "category": "traffic light",
+          "text_description": "traffic light",
+          "delta_po_contrib": 0.0015578071766940119,
+          "delta_po_rel": 0.8725095887327475,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.6553379522544373,
+            "largest_area_frac": -0.48233188246972203,
+            "area_gini": 0.01766811753027797,
+            "cx_std": 0.32763671875000006,
+            "cy_mean": -0.004597656250000026
+          },
+          "abs_delta_po": 0.0015578071766940119,
+          "abs_delta_po_rel": 0.8725095887327475
+        }
+      ]
+    },
+    {
+      "coco_image_id": 17909,
+      "batch": 0,
+      "caption": "Well stocked refrigerator with food and beverage items.",
+      "n_boxes": 8,
+      "base_po_contrib": 0.008219552469340712,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.10605651588374387,
+        "largest_area_frac": 0.9129458235470891,
+        "area_gini": 0.8116120714895956,
+        "cx_std": 0.18971319187461155,
+        "cy_mean": 0.27404296875
+      },
+      "top_box": {
+        "bbx_id": "bbx_6",
+        "box": [
+          211.99,
+          317.05,
+          59.51,
+          56.46
+        ],
+        "category": "apple",
+        "text_description": "apple",
+        "delta_po_contrib": 0.007935081715281464,
+        "delta_po_rel": 0.9653909679285183,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.03469055666588883,
+          "largest_area_frac": -0.0093778639331632,
+          "area_gini": 0.010137896218354703,
+          "cx_std": -0.006652155646263841,
+          "cy_mean": 0.0379224330357143
+        },
+        "abs_delta_po": 0.007935081715281464,
+        "abs_delta_po_rel": 0.9653909679285183
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_6",
+          "box": [
+            211.99,
+            317.05,
+            59.51,
+            56.46
+          ],
+          "category": "apple",
+          "text_description": "apple",
+          "delta_po_contrib": 0.007935081715281464,
+          "delta_po_rel": 0.9653909679285183,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.03469055666588883,
+            "largest_area_frac": -0.0093778639331632,
+            "area_gini": 0.010137896218354703,
+            "cx_std": -0.006652155646263841,
+            "cy_mean": 0.0379224330357143
+          },
+          "abs_delta_po": 0.007935081715281464,
+          "abs_delta_po_rel": 0.9653909679285183
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            2.97,
+            478.92,
+            629.93
+          ],
+          "category": "refrigerator",
+          "text_description": "refrigerator: Well stocked refrigerator with food and beverage items.",
+          "delta_po_contrib": 0.007894148943381243,
+          "delta_po_rel": 0.9604110408524491,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.035919075038804565,
+            "largest_area_frac": 0.5814758653591767,
+            "area_gini": 0.5009188732103318,
+            "cx_std": -0.00714003345102604,
+            "cy_mean": 0.03181863839285712
+          },
+          "abs_delta_po": 0.007894148943381243,
+          "abs_delta_po_rel": 0.9604110408524491
+        },
+        {
+          "bbx_id": "bbx_7",
+          "box": [
+            31.41,
+            0.16,
+            21.02,
+            98.74
+          ],
+          "category": "bottle",
+          "text_description": "bottle",
+          "delta_po_contrib": 0.007255626028417359,
+          "delta_po_rel": 0.8827276247214714,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.003830360455902529,
+            "largest_area_frac": -0.005770280219399515,
+            "area_gini": 0.015507878207114079,
+            "cx_std": 0.024644464588651938,
+            "cy_mean": -0.028093191964285724
+          },
+          "abs_delta_po": 0.007255626028417359,
+          "abs_delta_po_rel": 0.8827276247214714
+        }
+      ]
+    },
+    {
+      "coco_image_id": 430783,
+      "batch": 0,
+      "caption": "The bathroom is clean and ready to be used. ",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0010922957286391706,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.9605661220910955,
+        "largest_area_frac": 0.9396773676831115,
+        "area_gini": 0.4396773676831116,
+        "cx_std": 0.2683229166666667,
+        "cy_mean": 0.57554296875
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.0,
+          5.06,
+          268.71,
+          216.7
+        ],
+        "category": "toilet",
+        "text_description": "toilet",
+        "delta_po_contrib": 0.0010836344868380414,
+        "delta_po_rel": 0.9920706063695861,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.9605661220910955,
+          "largest_area_frac": -0.0603226323168885,
+          "area_gini": 0.4396773676831116,
+          "cx_std": 0.2683229166666667,
+          "cy_mean": -0.39833984375
+        },
+        "abs_delta_po": 0.0010836344868380414,
+        "abs_delta_po_rel": 0.9920706063695861
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            5.06,
+            268.71,
+            216.7
+          ],
+          "category": "toilet",
+          "text_description": "toilet",
+          "delta_po_contrib": 0.0010836344868380414,
+          "delta_po_rel": 0.9920706063695861,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.9605661220910955,
+            "largest_area_frac": -0.0603226323168885,
+            "area_gini": 0.4396773676831116,
+            "cx_std": 0.2683229166666667,
+            "cy_mean": -0.39833984375
+          },
+          "abs_delta_po": 0.0010836344868380414,
+          "abs_delta_po_rel": 0.9920706063695861
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            335.7,
+            606.67,
+            112.49,
+            33.23
+          ],
+          "category": "vase",
+          "text_description": "vase",
+          "delta_po_contrib": 0.0009553215521047784,
+          "delta_po_rel": 0.874599731723166,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.9605661220910955,
+            "largest_area_frac": -0.0603226323168885,
+            "area_gini": 0.4396773676831116,
+            "cx_std": 0.2683229166666667,
+            "cy_mean": 0.39833984375
+          },
+          "abs_delta_po": 0.0009553215521047784,
+          "abs_delta_po_rel": 0.874599731723166
+        }
+      ]
+    },
+    {
+      "coco_image_id": 144053,
+      "batch": 0,
+      "caption": "A street sign that reads broadway on  a traffic light.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.00023268913005101486,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.8180184309213907,
+        "largest_area_frac": 0.8079042139774328,
+        "area_gini": 0.3079042139774326,
+        "cx_std": 0.39801171874999997,
+        "cy_mean": 0.46490624999999997
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          72.51,
+          123.46,
+          86.31,
+          108.95
+        ],
+        "category": "traffic light",
+        "text_description": "traffic light: A street sign that reads broadway on  a traffic light.",
+        "delta_po_contrib": 0.00023083865815982124,
+        "delta_po_rel": 0.9920474459514488,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.8180184309213907,
+          "largest_area_frac": -0.19209578602256716,
+          "area_gini": 0.3079042139774326,
+          "cx_std": 0.39801171874999997,
+          "cy_mean": -0.09420833333333334
+        },
+        "abs_delta_po": 0.00023083865815982124,
+        "abs_delta_po_rel": 0.9920474459514488
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            72.51,
+            123.46,
+            86.31,
+            108.95
+          ],
+          "category": "traffic light",
+          "text_description": "traffic light: A street sign that reads broadway on  a traffic light.",
+          "delta_po_contrib": 0.00023083865815982124,
+          "delta_po_rel": 0.9920474459514488,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.8180184309213907,
+            "largest_area_frac": -0.19209578602256716,
+            "area_gini": 0.3079042139774326,
+            "cx_std": 0.39801171874999997,
+            "cy_mean": -0.09420833333333334
+          },
+          "abs_delta_po": 0.00023083865815982124,
+          "abs_delta_po_rel": 0.9920474459514488
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            610.24,
+            230.81,
+            29.76,
+            75.13
+          ],
+          "category": "traffic light",
+          "text_description": "traffic light: A street sign that reads broadway on  a traffic light.",
+          "delta_po_contrib": 0.00019563024677690227,
+          "delta_po_rel": 0.8407365049380506,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.8180184309213907,
+            "largest_area_frac": -0.19209578602256716,
+            "area_gini": 0.3079042139774326,
+            "cx_std": 0.39801171874999997,
+            "cy_mean": 0.09420833333333328
+          },
+          "abs_delta_po": 0.00019563024677690227,
+          "abs_delta_po_rel": 0.8407365049380506
+        }
+      ]
+    },
+    {
+      "coco_image_id": 143541,
+      "batch": 0,
+      "caption": "A person stands in shallow water at the beach and looks at the ocean.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.007139357934506379,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.025129316798906256,
+        "largest_area_frac": 0.5219810024061845,
+        "area_gini": 0.021981002406184613,
+        "cx_std": 0.01182825484764538,
+        "cy_mean": 0.40310546875
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          144.76,
+          235.77,
+          71.45,
+          39.01
+        ],
+        "category": "surfboard",
+        "text_description": "surfboard",
+        "delta_po_contrib": 0.007125907552828625,
+        "delta_po_rel": 0.9981160234856888,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.025129316798906256,
+          "largest_area_frac": -0.4780189975938155,
+          "area_gini": 0.021981002406184613,
+          "cx_std": 0.01182825484764538,
+          "cy_mean": -0.004238281250000031
+        },
+        "abs_delta_po": 0.007125907552828625,
+        "abs_delta_po_rel": 0.9981160234856888
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            144.76,
+            235.77,
+            71.45,
+            39.01
+          ],
+          "category": "surfboard",
+          "text_description": "surfboard",
+          "delta_po_contrib": 0.007125907552828625,
+          "delta_po_rel": 0.9981160234856888,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.025129316798906256,
+            "largest_area_frac": -0.4780189975938155,
+            "area_gini": 0.021981002406184613,
+            "cx_std": 0.01182825484764538,
+            "cy_mean": -0.004238281250000031
+          },
+          "abs_delta_po": 0.007125907552828625,
+          "abs_delta_po_rel": 0.9981160234856888
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            156.27,
+            219.99,
+            31.35,
+            81.42
+          ],
+          "category": "person",
+          "text_description": "person: A person stands in shallow water at the beach and looks at the ocean.",
+          "delta_po_contrib": 0.007077165149460534,
+          "delta_po_rel": 0.9912887424040556,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.025129316798906256,
+            "largest_area_frac": -0.4780189975938155,
+            "area_gini": 0.021981002406184613,
+            "cx_std": 0.01182825484764538,
+            "cy_mean": 0.004238281249999976
+          },
+          "abs_delta_po": 0.007077165149460534,
+          "abs_delta_po_rel": 0.9912887424040556
+        }
+      ]
+    },
+    {
+      "coco_image_id": 546622,
+      "batch": 0,
+      "caption": "A cat laying on top of a chair as it sleeps.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.011000466635819522,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.04314763720892459,
+        "largest_area_frac": 0.6197412926546201,
+        "area_gini": 0.11974129265462019,
+        "cx_std": 0.014339843749999998,
+        "cy_mean": 0.47867096018735356
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.0,
+          1.67,
+          639.39,
+          419.21
+        ],
+        "category": "chair",
+        "text_description": "chair: A cat laying on top of a chair as it sleeps.",
+        "delta_po_contrib": 0.010362464468602589,
+        "delta_po_rel": 0.9420022632420442,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.04314763720892459,
+          "largest_area_frac": -0.3802587073453799,
+          "area_gini": 0.11974129265462019,
+          "cx_std": 0.014339843749999998,
+          "cy_mean": 0.016118266978922657
+        },
+        "abs_delta_po": 0.010362464468602589,
+        "abs_delta_po_rel": 0.9420022632420442
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            1.67,
+            639.39,
+            419.21
+          ],
+          "category": "chair",
+          "text_description": "chair: A cat laying on top of a chair as it sleeps.",
+          "delta_po_contrib": 0.010362464468602589,
+          "delta_po_rel": 0.9420022632420442,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.04314763720892459,
+            "largest_area_frac": -0.3802587073453799,
+            "area_gini": 0.11974129265462019,
+            "cx_std": 0.014339843749999998,
+            "cy_mean": 0.016118266978922657
+          },
+          "abs_delta_po": 0.010362464468602589,
+          "abs_delta_po_rel": 0.9420022632420442
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            50.87,
+            54.34,
+            574.36,
+            286.34
+          ],
+          "category": "cat",
+          "text_description": "cat: A cat laying on top of a chair as it sleeps.",
+          "delta_po_contrib": 0.008712842393846,
+          "delta_po_rel": 0.792042981584377,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.04314763720892459,
+            "largest_area_frac": -0.3802587073453799,
+            "area_gini": 0.11974129265462019,
+            "cx_std": 0.014339843749999998,
+            "cy_mean": -0.016118266978922713
+          },
+          "abs_delta_po": 0.008712842393846,
+          "abs_delta_po_rel": 0.792042981584377
+        }
+      ]
+    },
+    {
+      "coco_image_id": 565201,
+      "batch": 1,
+      "caption": "a close up of a pizza on a tortilla",
+      "n_boxes": 2,
+      "base_po_contrib": 0.036688023583519226,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.02373047116382282,
+        "largest_area_frac": 0.6536660676003913,
+        "area_gini": 0.15366606760039114,
+        "cx_std": 0.009113281249999938,
+        "cy_mean": 0.49635103926096996
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          14.66,
+          10.51,
+          624.58,
+          415.4
+        ],
+        "category": "dining table",
+        "text_description": "dining table",
+        "delta_po_contrib": 0.0363475020008748,
+        "delta_po_rel": 0.9907184538611092,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.02373047116382282,
+          "largest_area_frac": -0.34633393239960875,
+          "area_gini": 0.15366606760039114,
+          "cx_std": 0.009113281249999938,
+          "cy_mean": 0.007598152424942273
+        },
+        "abs_delta_po": 0.0363475020008748,
+        "abs_delta_po_rel": 0.9907184538611092
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            14.66,
+            10.51,
+            624.58,
+            415.4
+          ],
+          "category": "dining table",
+          "text_description": "dining table",
+          "delta_po_contrib": 0.0363475020008748,
+          "delta_po_rel": 0.9907184538611092,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.02373047116382282,
+            "largest_area_frac": -0.34633393239960875,
+            "area_gini": 0.15366606760039114,
+            "cx_std": 0.009113281249999938,
+            "cy_mean": 0.007598152424942273
+          },
+          "abs_delta_po": 0.0363475020008748,
+          "abs_delta_po_rel": 0.9907184538611092
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            126.49,
+            49.62,
+            424.25,
+            324.02
+          ],
+          "category": "pizza",
+          "text_description": "pizza: a close up of a pizza on a tortilla",
+          "delta_po_contrib": 0.03433981669447891,
+          "delta_po_rel": 0.9359952741899359,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.02373047116382282,
+            "largest_area_frac": -0.34633393239960875,
+            "area_gini": 0.15366606760039114,
+            "cx_std": 0.009113281249999938,
+            "cy_mean": -0.007598152424942273
+          },
+          "abs_delta_po": 0.03433981669447891,
+          "abs_delta_po_rel": 0.9359952741899359
+        }
+      ]
+    },
+    {
+      "coco_image_id": 91264,
+      "batch": 1,
+      "caption": "Four zebras standing a wide open field of grass and bushes.",
+      "n_boxes": 4,
+      "base_po_contrib": 0.031926327221695645,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.060997356422494445,
+        "largest_area_frac": 0.3440127351132981,
+        "area_gini": 0.17308079136494214,
+        "cx_std": 0.06882181817905354,
+        "cy_mean": 0.57328125
+      },
+      "top_box": {
+        "bbx_id": "bbx_3",
+        "box": [
+          243.61,
+          248.51,
+          44.72,
+          41.96
+        ],
+        "category": "zebra",
+        "text_description": "zebra",
+        "delta_po_contrib": 0.024423461727849205,
+        "delta_po_rel": 0.7649944059486794,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.025476047740815827,
+          "largest_area_frac": -0.08208072538130884,
+          "area_gini": 0.01503164383886646,
+          "cx_std": -0.006704602860640285,
+          "cy_mean": -0.003947916666666607
+        },
+        "abs_delta_po": 0.024423461727849205,
+        "abs_delta_po_rel": 0.7649944059486794
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_3",
+          "box": [
+            243.61,
+            248.51,
+            44.72,
+            41.96
+          ],
+          "category": "zebra",
+          "text_description": "zebra",
+          "delta_po_contrib": 0.024423461727849205,
+          "delta_po_rel": 0.7649944059486794,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.025476047740815827,
+            "largest_area_frac": -0.08208072538130884,
+            "area_gini": 0.01503164383886646,
+            "cx_std": -0.006704602860640285,
+            "cy_mean": -0.003947916666666607
+          },
+          "abs_delta_po": 0.024423461727849205,
+          "abs_delta_po_rel": 0.7649944059486794
+        },
+        {
+          "bbx_id": "bbx_4",
+          "box": [
+            216.92,
+            255.07,
+            35.06,
+            42.4
+          ],
+          "category": "zebra",
+          "text_description": "zebra",
+          "delta_po_contrib": 0.022120275900521146,
+          "delta_po_rel": 0.6928537612931682,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.008986162337947634,
+            "largest_area_frac": -0.06195364789852176,
+            "area_gini": 0.05398816542985463,
+            "cx_std": 0.014022050108187946,
+            "cy_mean": 0.0007604166666667078
+          },
+          "abs_delta_po": 0.022120275900521146,
+          "abs_delta_po_rel": 0.6928537612931682
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            281.5,
+            251.64,
+            50.09,
+            60.43
+          ],
+          "category": "zebra",
+          "text_description": "zebra",
+          "delta_po_contrib": 0.02037546844509354,
+          "delta_po_rel": 0.638202706592856,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.01795063753479126,
+            "largest_area_frac": -0.15509457095549695,
+            "area_gini": -0.012051090632593686,
+            "cx_std": -0.008685368935187551,
+            "cy_mean": 0.004638888888888859
+          },
+          "abs_delta_po": 0.02037546844509354,
+          "abs_delta_po_rel": 0.638202706592856
+        }
+      ]
+    },
+    {
+      "coco_image_id": 14783,
+      "batch": 1,
+      "caption": "a close up of a bowl of apples",
+      "n_boxes": 2,
+      "base_po_contrib": 0.027864485415833563,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.05074006591346782,
+        "largest_area_frac": 0.5335643524487024,
+        "area_gini": 0.03356435244870237,
+        "cx_std": 0.024343749999999997,
+        "cy_mean": 0.5071428571428571
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          1.92,
+          5.76,
+          605.48,
+          415.48
+        ],
+        "category": "bowl",
+        "text_description": "bowl: a close up of a bowl of apples",
+        "delta_po_contrib": 0.02614882844358749,
+        "delta_po_rel": 0.9384285427280991,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.05074006591346782,
+          "largest_area_frac": -0.4664356475512976,
+          "area_gini": 0.03356435244870237,
+          "cx_std": 0.024343749999999997,
+          "cy_mean": -0.0071428571428571175
+        },
+        "abs_delta_po": 0.02614882844358749,
+        "abs_delta_po_rel": 0.9384285427280991
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            1.92,
+            5.76,
+            605.48,
+            415.48
+          ],
+          "category": "bowl",
+          "text_description": "bowl: a close up of a bowl of apples",
+          "delta_po_contrib": 0.02614882844358749,
+          "delta_po_rel": 0.9384285427280991,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.05074006591346782,
+            "largest_area_frac": -0.4664356475512976,
+            "area_gini": 0.03356435244870237,
+            "cx_std": 0.024343749999999997,
+            "cy_mean": -0.0071428571428571175
+          },
+          "abs_delta_po": 0.02614882844358749,
+          "abs_delta_po_rel": 0.9384285427280991
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            2.0,
+            17.1,
+            543.0,
+            405.0
+          ],
+          "category": "apple",
+          "text_description": "apple",
+          "delta_po_contrib": 0.02533460535280058,
+          "delta_po_rel": 0.9092077235165942,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.05074006591346782,
+            "largest_area_frac": -0.4664356475512976,
+            "area_gini": 0.03356435244870237,
+            "cx_std": 0.024343749999999997,
+            "cy_mean": 0.0071428571428571175
+          },
+          "abs_delta_po": 0.02533460535280058,
+          "abs_delta_po_rel": 0.9092077235165942
+        }
+      ]
+    },
+    {
+      "coco_image_id": 369058,
+      "batch": 1,
+      "caption": "Whippet dog in a kitchen looking at an open toolbox.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.006262269222938397,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.8768680898133873,
+        "largest_area_frac": 0.9672236254867735,
+        "area_gini": 0.46722362548677365,
+        "cx_std": 0.40418359375,
+        "cy_mean": 0.22723415132924335
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.17,
+          61.77,
+          178.37,
+          264.84
+        ],
+        "category": "dog",
+        "text_description": "dog: Whippet dog in a kitchen looking at an open toolbox.",
+        "delta_po_contrib": 0.006231637455087486,
+        "delta_po_rel": 0.9951085193313285,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.8768680898133873,
+          "largest_area_frac": -0.03277637451322646,
+          "area_gini": 0.46722362548677365,
+          "cx_std": 0.40418359375,
+          "cy_mean": 0.16988241308793456
+        },
+        "abs_delta_po": 0.006231637455087486,
+        "abs_delta_po_rel": 0.9951085193313285
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.17,
+            61.77,
+            178.37,
+            264.84
+          ],
+          "category": "dog",
+          "text_description": "dog: Whippet dog in a kitchen looking at an open toolbox.",
+          "delta_po_contrib": 0.006231637455087486,
+          "delta_po_rel": 0.9951085193313285,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.8768680898133873,
+            "largest_area_frac": -0.03277637451322646,
+            "area_gini": 0.46722362548677365,
+            "cx_std": 0.40418359375,
+            "cy_mean": 0.16988241308793456
+          },
+          "abs_delta_po": 0.006231637455087486,
+          "abs_delta_po_rel": 0.9951085193313285
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            592.44,
+            0.0,
+            28.54,
+            56.09
+          ],
+          "category": "book",
+          "text_description": "book",
+          "delta_po_contrib": 0.00620828073396609,
+          "delta_po_rel": 0.9913787657410307,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.8768680898133873,
+            "largest_area_frac": -0.03277637451322646,
+            "area_gini": 0.46722362548677365,
+            "cx_std": 0.40418359375,
+            "cy_mean": -0.16988241308793456
+          },
+          "abs_delta_po": 0.00620828073396609,
+          "abs_delta_po_rel": 0.9913787657410307
+        }
+      ]
+    },
+    {
+      "coco_image_id": 156499,
+      "batch": 1,
+      "caption": "this is an orange bowl on the ground near trees",
+      "n_boxes": 2,
+      "base_po_contrib": 0.019960462521674313,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.00934579689176374,
+        "largest_area_frac": 0.5106783512003118,
+        "area_gini": 0.010678351200311909,
+        "cx_std": 0.0034648437500000018,
+        "cy_mean": 0.5190104166666667
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          195.88,
+          128.9,
+          318.36,
+          237.44
+        ],
+        "category": "bowl",
+        "text_description": "bowl: this is an orange bowl on the ground near trees",
+        "delta_po_contrib": 0.019227276922639137,
+        "delta_po_rel": 0.9632681056762936,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.00934579689176374,
+          "largest_area_frac": -0.4893216487996882,
+          "area_gini": 0.010678351200311909,
+          "cx_std": 0.0034648437500000018,
+          "cy_mean": -0.003135416666666613
+        },
+        "abs_delta_po": 0.019227276922639137,
+        "abs_delta_po_rel": 0.9632681056762936
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            195.88,
+            128.9,
+            318.36,
+            237.44
+          ],
+          "category": "bowl",
+          "text_description": "bowl: this is an orange bowl on the ground near trees",
+          "delta_po_contrib": 0.019227276922639137,
+          "delta_po_rel": 0.9632681056762936,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.00934579689176374,
+            "largest_area_frac": -0.4893216487996882,
+            "area_gini": 0.010678351200311909,
+            "cx_std": 0.0034648437500000018,
+            "cy_mean": -0.003135416666666613
+          },
+          "abs_delta_po": 0.019227276922639137,
+          "abs_delta_po_rel": 0.9632681056762936
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            191.25,
+            126.88,
+            318.75,
+            247.5
+          ],
+          "category": "frisbee",
+          "text_description": "frisbee",
+          "delta_po_contrib": 0.01898263820457192,
+          "delta_po_rel": 0.9510119408810482,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.00934579689176374,
+            "largest_area_frac": -0.4893216487996882,
+            "area_gini": 0.010678351200311909,
+            "cx_std": 0.0034648437500000018,
+            "cy_mean": 0.003135416666666724
+          },
+          "abs_delta_po": 0.01898263820457192,
+          "abs_delta_po_rel": 0.9510119408810482
+        }
+      ]
+    },
+    {
+      "coco_image_id": 251700,
+      "batch": 1,
+      "caption": "Paper rolls and boxes sit atop a battered orange metal container.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.014590210214890731,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.6216335448031441,
+        "largest_area_frac": 0.6284456921137344,
+        "area_gini": 0.12844569211373447,
+        "cx_std": 0.2735677083333333,
+        "cy_mean": 0.8029062499999999
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          2.76,
+          377.21,
+          28.51,
+          84.45
+        ],
+        "category": "chair",
+        "text_description": "chair",
+        "delta_po_contrib": 0.014585466036169272,
+        "delta_po_rel": 0.9996748381516606,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.6216335448031441,
+          "largest_area_frac": -0.37155430788626564,
+          "area_gini": 0.12844569211373447,
+          "cx_std": 0.2735677083333333,
+          "cy_mean": -0.14753906250000004
+        },
+        "abs_delta_po": 0.014585466036169272,
+        "abs_delta_po_rel": 0.9996748381516606
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            2.76,
+            377.21,
+            28.51,
+            84.45
+          ],
+          "category": "chair",
+          "text_description": "chair",
+          "delta_po_contrib": 0.014585466036169272,
+          "delta_po_rel": 0.9996748381516606,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.6216335448031441,
+            "largest_area_frac": -0.37155430788626564,
+            "area_gini": 0.12844569211373447,
+            "cx_std": 0.2735677083333333,
+            "cy_mean": -0.14753906250000004
+          },
+          "abs_delta_po": 0.014585466036169272,
+          "abs_delta_po_rel": 0.9996748381516606
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            239.28,
+            583.06,
+            80.72,
+            50.45
+          ],
+          "category": "book",
+          "text_description": "book",
+          "delta_po_contrib": 0.014451813155290056,
+          "delta_po_rel": 0.9905143888571295,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.6216335448031441,
+            "largest_area_frac": -0.37155430788626564,
+            "area_gini": 0.12844569211373447,
+            "cx_std": 0.2735677083333333,
+            "cy_mean": 0.14753906249999993
+          },
+          "abs_delta_po": 0.014451813155290056,
+          "abs_delta_po_rel": 0.9905143888571295
+        }
+      ]
+    },
+    {
+      "coco_image_id": 166229,
+      "batch": 1,
+      "caption": "There are different views of a man holding a remote ",
+      "n_boxes": 6,
+      "base_po_contrib": 0.009292649870410997,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.0666416163197293,
+        "largest_area_frac": 0.2116390676109647,
+        "area_gini": 0.09157502304291398,
+        "cx_std": 0.2939443083598805,
+        "cy_mean": 0.8538103651354536
+      },
+      "top_box": {
+        "bbx_id": "bbx_5",
+        "box": [
+          256.17,
+          213.53,
+          84.32,
+          66.44
+        ],
+        "category": "person",
+        "text_description": "person",
+        "delta_po_contrib": 0.00928596494728824,
+        "delta_po_rel": 0.9992806224042377,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.048561626720804524,
+          "largest_area_frac": -0.03798485423510728,
+          "area_gini": -0.003602383019178257,
+          "cx_std": -0.027917327338100262,
+          "cy_mean": 0.0036195524146055424
+        },
+        "abs_delta_po": 0.00928596494728824,
+        "abs_delta_po_rel": 0.9992806224042377
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_5",
+          "box": [
+            256.17,
+            213.53,
+            84.32,
+            66.44
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.00928596494728824,
+          "delta_po_rel": 0.9992806224042377,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.048561626720804524,
+            "largest_area_frac": -0.03798485423510728,
+            "area_gini": -0.003602383019178257,
+            "cx_std": -0.027917327338100262,
+            "cy_mean": 0.0036195524146055424
+          },
+          "abs_delta_po": 0.00928596494728824,
+          "abs_delta_po_rel": 0.9992806224042377
+        },
+        {
+          "bbx_id": "bbx_3",
+          "box": [
+            299.53,
+            189.32,
+            66.78,
+            91.37
+          ],
+          "category": "remote",
+          "text_description": "remote: There are different views of a man holding a remote ",
+          "delta_po_contrib": 0.009285958432831615,
+          "delta_po_rel": 0.9992799213709785,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.04904643763821902,
+            "largest_area_frac": -0.042044177925464804,
+            "area_gini": -0.009858498204238675,
+            "cx_std": -0.027604162369370966,
+            "cy_mean": -0.004680800942285068
+          },
+          "abs_delta_po": 0.009285958432831615,
+          "abs_delta_po_rel": 0.9992799213709785
+        },
+        {
+          "bbx_id": "bbx_4",
+          "box": [
+            513.22,
+            186.33,
+            64.23,
+            92.85
+          ],
+          "category": "remote",
+          "text_description": "remote: There are different views of a man holding a remote ",
+          "delta_po_contrib": 0.009074909503152753,
+          "delta_po_rel": 0.9765685384393824,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.050236047297010936,
+            "largest_area_frac": -0.040910018037253165,
+            "area_gini": -0.009405012082696063,
+            "cx_std": 0.026711553849869507,
+            "cy_mean": -0.006270906949352173
+          },
+          "abs_delta_po": 0.009074909503152753,
+          "abs_delta_po_rel": 0.9765685384393824
+        }
+      ]
+    },
+    {
+      "coco_image_id": 447862,
+      "batch": 1,
+      "caption": "a wooden table with some kind of tooth brush on it",
+      "n_boxes": 2,
+      "base_po_contrib": 0.01834187447382546,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.049566330639697044,
+        "largest_area_frac": 0.7516861001954741,
+        "area_gini": 0.251686100195474,
+        "cx_std": 0.020317708333333323,
+        "cy_mean": 0.51190234375
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.0,
+          3.51,
+          480.0,
+          630.05
+        ],
+        "category": "dining table",
+        "text_description": "dining table",
+        "delta_po_contrib": 0.017988838344262067,
+        "delta_po_rel": 0.9807524508442177,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.049566330639697044,
+          "largest_area_frac": -0.2483138998045259,
+          "area_gini": 0.251686100195474,
+          "cx_std": 0.020317708333333323,
+          "cy_mean": -0.014191406250000038
+        },
+        "abs_delta_po": 0.017988838344262067,
+        "abs_delta_po_rel": 0.9807524508442177
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            3.51,
+            480.0,
+            630.05
+          ],
+          "category": "dining table",
+          "text_description": "dining table",
+          "delta_po_contrib": 0.017988838344262067,
+          "delta_po_rel": 0.9807524508442177,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.049566330639697044,
+            "largest_area_frac": -0.2483138998045259,
+            "area_gini": 0.251686100195474,
+            "cx_std": 0.020317708333333323,
+            "cy_mean": -0.014191406250000038
+          },
+          "abs_delta_po": 0.017988838344262067,
+          "abs_delta_po_rel": 0.9807524508442177
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            136.02,
+            41.04,
+            168.95,
+            591.32
+          ],
+          "category": "toothbrush",
+          "text_description": "toothbrush",
+          "delta_po_contrib": 0.016309746703091293,
+          "delta_po_rel": 0.8892082826908834,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.049566330639697044,
+            "largest_area_frac": -0.2483138998045259,
+            "area_gini": 0.251686100195474,
+            "cx_std": 0.020317708333333323,
+            "cy_mean": 0.014191406250000038
+          },
+          "abs_delta_po": 0.016309746703091293,
+          "abs_delta_po_rel": 0.8892082826908834
+        }
+      ]
+    },
+    {
+      "coco_image_id": 50096,
+      "batch": 1,
+      "caption": "A white bathroom which includes a white sink and a bathtub.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0014891121579312363,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.880075692642454,
+        "largest_area_frac": 0.5752490407008763,
+        "area_gini": 0.07524904070087635,
+        "cx_std": 0.4354893867924528,
+        "cy_mean": 0.65658984375
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          403.0,
+          417.8,
+          21.0,
+          85.61
+        ],
+        "category": "toilet",
+        "text_description": "toilet",
+        "delta_po_contrib": 0.0014720424221822417,
+        "delta_po_rel": 0.9885369704044012,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.880075692642454,
+          "largest_area_frac": -0.42475095929912365,
+          "area_gini": 0.07524904070087635,
+          "cx_std": 0.4354893867924528,
+          "cy_mean": 0.06310546875
+        },
+        "abs_delta_po": 0.0014720424221822417,
+        "abs_delta_po_rel": 0.9885369704044012
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            403.0,
+            417.8,
+            21.0,
+            85.61
+          ],
+          "category": "toilet",
+          "text_description": "toilet",
+          "delta_po_contrib": 0.0014720424221822417,
+          "delta_po_rel": 0.9885369704044012,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.880075692642454,
+            "largest_area_frac": -0.42475095929912365,
+            "area_gini": 0.07524904070087635,
+            "cx_std": 0.4354893867924528,
+            "cy_mean": 0.06310546875
+          },
+          "abs_delta_po": 0.0014720424221822417,
+          "abs_delta_po_rel": 0.9885369704044012
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            366.06,
+            88.41,
+            27.54
+          ],
+          "category": "sink",
+          "text_description": "sink: A white bathroom which includes a white sink and a bathtub.",
+          "delta_po_contrib": 0.0014430043430621535,
+          "delta_po_rel": 0.9690367071462399,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.880075692642454,
+            "largest_area_frac": -0.42475095929912365,
+            "area_gini": 0.07524904070087635,
+            "cx_std": 0.4354893867924528,
+            "cy_mean": -0.06310546875000012
+          },
+          "abs_delta_po": 0.0014430043430621535,
+          "abs_delta_po_rel": 0.9690367071462399
+        }
+      ]
+    },
+    {
+      "coco_image_id": 17305,
+      "batch": 1,
+      "caption": "Boats in a mooring area with a sea wall at low tide.",
+      "n_boxes": 3,
+      "base_po_contrib": 0.014851564983934284,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.0674225956575547,
+        "largest_area_frac": 0.44354282179446625,
+        "area_gini": 0.17571444015375537,
+        "cx_std": 0.03947919535371646,
+        "cy_mean": 0.3552156862745098
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          441.24,
+          134.66,
+          83.09,
+          28.65
+        ],
+        "category": "boat",
+        "text_description": "boat",
+        "delta_po_contrib": 0.014535262917684779,
+        "delta_po_rel": 0.9787024419601322,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.06766233223649502,
+          "largest_area_frac": -0.26781704122818295,
+          "area_gini": -0.03564542286889405,
+          "cx_std": -0.0075286171462835075,
+          "cy_mean": -0.0023313725490196058
+        },
+        "abs_delta_po": 0.014535262917684779,
+        "abs_delta_po_rel": 0.9787024419601322
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            441.24,
+            134.66,
+            83.09,
+            28.65
+          ],
+          "category": "boat",
+          "text_description": "boat",
+          "delta_po_contrib": 0.014535262917684779,
+          "delta_po_rel": 0.9787024419601322,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.06766233223649502,
+            "largest_area_frac": -0.26781704122818295,
+            "area_gini": -0.03564542286889405,
+            "cx_std": -0.0075286171462835075,
+            "cy_mean": -0.0023313725490196058
+          },
+          "abs_delta_po": 0.014535262917684779,
+          "abs_delta_po_rel": 0.9787024419601322
+        },
+        {
+          "bbx_id": "bbx_3",
+          "box": [
+            496.64,
+            121.46,
+            57.56,
+            19.77
+          ],
+          "category": "boat",
+          "text_description": "boat",
+          "delta_po_contrib": 0.010854575461465434,
+          "delta_po_rel": 0.7308708188313168,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.005533408630522159,
+            "largest_area_frac": -0.09734403608765785,
+            "area_gini": 0.13482758227163139,
+            "cx_std": 0.02577997660371644,
+            "cy_mean": -0.02308431372549019
+          },
+          "abs_delta_po": 0.010854575461465434,
+          "abs_delta_po_rel": 0.7308708188313168
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            415.7,
+            158.42,
+            99.1,
+            28.3
+          ],
+          "category": "boat",
+          "text_description": "boat",
+          "delta_po_contrib": 0.007002931733373867,
+          "delta_po_rel": 0.4715282019422045,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.011066817261044304,
+            "largest_area_frac": -0.23303397762035083,
+            "area_gini": -0.000862359261061707,
+            "cx_std": 0.006170601603716512,
+            "cy_mean": 0.025415686274509797
+          },
+          "abs_delta_po": 0.007002931733373867,
+          "abs_delta_po_rel": 0.4715282019422045
+        }
+      ]
+    },
+    {
+      "coco_image_id": 433196,
+      "batch": 1,
+      "caption": "doughnuts being prepared and fried inside a doughnut shoppe ",
+      "n_boxes": 8,
+      "base_po_contrib": 0.017246899505463296,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.09197604860647984,
+        "largest_area_frac": 0.2145608133051217,
+        "area_gini": 0.18385293153061633,
+        "cx_std": 0.27298703136312163,
+        "cy_mean": 0.5506763497652583
+      },
+      "top_box": {
+        "bbx_id": "bbx_6",
+        "box": [
+          492.06,
+          111.09,
+          45.67,
+          43.4
+        ],
+        "category": "donut",
+        "text_description": "donut",
+        "delta_po_contrib": 0.015654313194330322,
+        "delta_po_rel": 0.9076595586623469,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.055131230968495065,
+          "largest_area_frac": -0.02138943062419224,
+          "area_gini": 0.0012865193526461205,
+          "cx_std": 0.02923654298526676,
+          "cy_mean": -0.03413753353454052
+        },
+        "abs_delta_po": 0.015654313194330322,
+        "abs_delta_po_rel": 0.9076595586623469
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_6",
+          "box": [
+            492.06,
+            111.09,
+            45.67,
+            43.4
+          ],
+          "category": "donut",
+          "text_description": "donut",
+          "delta_po_contrib": 0.015654313194330322,
+          "delta_po_rel": 0.9076595586623469,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.055131230968495065,
+            "largest_area_frac": -0.02138943062419224,
+            "area_gini": 0.0012865193526461205,
+            "cx_std": 0.02923654298526676,
+            "cy_mean": -0.03413753353454052
+          },
+          "abs_delta_po": 0.015654313194330322,
+          "abs_delta_po_rel": 0.9076595586623469
+        },
+        {
+          "bbx_id": "bbx_8",
+          "box": [
+            530.69,
+            129.07,
+            46.62,
+            37.18
+          ],
+          "category": "donut",
+          "text_description": "donut",
+          "delta_po_contrib": 0.015572634921664375,
+          "delta_po_rel": 0.9029237351228557,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.049597167547009685,
+            "largest_area_frac": -0.01847398027896127,
+            "area_gini": 0.012399650308373422,
+            "cx_std": 0.04741953410737812,
+            "cy_mean": -0.029150947350771172
+          },
+          "abs_delta_po": 0.015572634921664375,
+          "abs_delta_po_rel": 0.9029237351228557
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            73.56,
+            253.22,
+            74.8,
+            45.24
+          ],
+          "category": "donut",
+          "text_description": "donut",
+          "delta_po_contrib": 0.014778601003179806,
+          "delta_po_rel": 0.8568845082933028,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.013133628753808621,
+            "largest_area_frac": -0.039287728441638775,
+            "area_gini": -0.004276655545882413,
+            "cx_std": -0.003109864169147214,
+            "cy_mean": 0.013833626760563544
+          },
+          "abs_delta_po": 0.014778601003179806,
+          "abs_delta_po_rel": 0.8568845082933028
+        }
+      ]
+    },
+    {
+      "coco_image_id": 413510,
+      "batch": 1,
+      "caption": "It's important to teach children to begin brushing their teeth at an early age.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.020139650898236154,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.17031876291022702,
+        "largest_area_frac": 0.9734000531445449,
+        "area_gini": 0.4734000531445448,
+        "cx_std": 0.0850294117647059,
+        "cy_mean": 0.5604609375
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.0,
+          92.04,
+          339.42,
+          539.33
+        ],
+        "category": "person",
+        "text_description": "person",
+        "delta_po_contrib": 0.02013676910682793,
+        "delta_po_rel": 0.9998569095153317,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.17031876291022702,
+          "largest_area_frac": -0.02659994685545508,
+          "area_gini": 0.4734000531445448,
+          "cx_std": 0.0850294117647059,
+          "cy_mean": 0.00470312500000003
+        },
+        "abs_delta_po": 0.02013676910682793,
+        "abs_delta_po_rel": 0.9998569095153317
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            92.04,
+            339.42,
+            539.33
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.02013676910682793,
+          "delta_po_rel": 0.9998569095153317,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.17031876291022702,
+            "largest_area_frac": -0.02659994685545508,
+            "area_gini": 0.4734000531445448,
+            "cx_std": 0.0850294117647059,
+            "cy_mean": 0.00470312500000003
+          },
+          "abs_delta_po": 0.02013676910682793,
+          "abs_delta_po_rel": 0.9998569095153317
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            8.01,
+            341.7,
+            178.85,
+            27.97
+          ],
+          "category": "toothbrush",
+          "text_description": "toothbrush",
+          "delta_po_contrib": 0.01853807573172402,
+          "delta_po_rel": 0.9204765179135812,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.17031876291022702,
+            "largest_area_frac": -0.02659994685545508,
+            "area_gini": 0.4734000531445448,
+            "cx_std": 0.0850294117647059,
+            "cy_mean": -0.00470312500000003
+          },
+          "abs_delta_po": 0.01853807573172402,
+          "abs_delta_po_rel": 0.9204765179135812
+        }
+      ]
+    },
+    {
+      "coco_image_id": 521602,
+      "batch": 1,
+      "caption": "There is a ocean and a individual carrying a surfboard. ",
+      "n_boxes": 2,
+      "base_po_contrib": 0.01669145015138918,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.06155236976429193,
+        "largest_area_frac": 0.7605524758759928,
+        "area_gini": 0.26055247587599295,
+        "cx_std": 0.017269531249999998,
+        "cy_mean": 0.5759543325526932
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          210.04,
+          199.43,
+          69.02,
+          114.76
+        ],
+        "category": "surfboard",
+        "text_description": "surfboard: There is a ocean and a individual carrying a surfboard. ",
+        "delta_po_contrib": 0.01660099081150608,
+        "delta_po_rel": 0.9945804983954525,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.06155236976429193,
+          "largest_area_frac": -0.23944752412400716,
+          "area_gini": 0.26055247587599295,
+          "cx_std": 0.017269531249999998,
+          "cy_mean": 0.025474238875878186
+        },
+        "abs_delta_po": 0.01660099081150608,
+        "abs_delta_po_rel": 0.9945804983954525
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            210.04,
+            199.43,
+            69.02,
+            114.76
+          ],
+          "category": "surfboard",
+          "text_description": "surfboard: There is a ocean and a individual carrying a surfboard. ",
+          "delta_po_contrib": 0.01660099081150608,
+          "delta_po_rel": 0.9945804983954525,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.06155236976429193,
+            "largest_area_frac": -0.23944752412400716,
+            "area_gini": 0.26055247587599295,
+            "cx_std": 0.017269531249999998,
+            "cy_mean": 0.025474238875878186
+          },
+          "abs_delta_po": 0.01660099081150608,
+          "abs_delta_po_rel": 0.9945804983954525
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            205.95,
+            197.26,
+            32.99,
+            75.59
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.016585595932983723,
+          "delta_po_rel": 0.9936581771841854,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.06155236976429193,
+            "largest_area_frac": -0.23944752412400716,
+            "area_gini": 0.26055247587599295,
+            "cx_std": 0.017269531249999998,
+            "cy_mean": -0.025474238875878186
+          },
+          "abs_delta_po": 0.016585595932983723,
+          "abs_delta_po_rel": 0.9936581771841854
+        }
+      ]
+    },
+    {
+      "coco_image_id": 7827,
+      "batch": 1,
+      "caption": "A kitten with blue eyes sitting on a colorful blanket.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.014365058967740723,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.04217458950600466,
+        "largest_area_frac": 0.7437047720784797,
+        "area_gini": 0.24370477207847996,
+        "cx_std": 0.015079999999999982,
+        "cy_mean": 0.47922
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          0.0,
+          0.65,
+          498.38,
+          369.17
+        ],
+        "category": "bed",
+        "text_description": "bed",
+        "delta_po_contrib": 0.014297707738346554,
+        "delta_po_rel": 0.9953114546525197,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.04217458950600466,
+          "largest_area_frac": -0.25629522792152026,
+          "area_gini": 0.24370477207847996,
+          "cx_std": 0.015079999999999982,
+          "cy_mean": 0.014739999999999975
+        },
+        "abs_delta_po": 0.014297707738346554,
+        "abs_delta_po_rel": 0.9953114546525197
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            0.0,
+            0.65,
+            498.38,
+            369.17
+          ],
+          "category": "bed",
+          "text_description": "bed",
+          "delta_po_contrib": 0.014297707738346554,
+          "delta_po_rel": 0.9953114546525197,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.04217458950600466,
+            "largest_area_frac": -0.25629522792152026,
+            "area_gini": 0.24370477207847996,
+            "cx_std": 0.015079999999999982,
+            "cy_mean": 0.014739999999999975
+          },
+          "abs_delta_po": 0.014297707738346554,
+          "abs_delta_po_rel": 0.9953114546525197
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            98.21,
+            57.54,
+            271.8,
+            233.28
+          ],
+          "category": "cat",
+          "text_description": "cat",
+          "delta_po_contrib": 0.012332931197006555,
+          "delta_po_rel": 0.8585367608893074,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.04217458950600466,
+            "largest_area_frac": -0.25629522792152026,
+            "area_gini": 0.24370477207847996,
+            "cx_std": 0.015079999999999982,
+            "cy_mean": -0.01474000000000003
+          },
+          "abs_delta_po": 0.012332931197006555,
+          "abs_delta_po_rel": 0.8585367608893074
+        }
+      ]
+    },
+    {
+      "coco_image_id": 91288,
+      "batch": 1,
+      "caption": "Parking signs mounted on top of a yellow rail.",
+      "n_boxes": 3,
+      "base_po_contrib": 0.010997881504583779,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.044717929720059245,
+        "largest_area_frac": 0.37854125478390505,
+        "area_gini": 0.05575893313228675,
+        "cx_std": 0.026818006709294462,
+        "cy_mean": 0.6063671875
+      },
+      "top_box": {
+        "bbx_id": "bbx_3",
+        "box": [
+          83.56,
+          320.07,
+          343.44,
+          125.14
+        ],
+        "category": "car",
+        "text_description": "car",
+        "delta_po_contrib": 0.010701467882646745,
+        "delta_po_rel": 0.973048116331628,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.03823574028293888,
+          "largest_area_frac": -0.15832271851979302,
+          "area_gini": 0.018894959828588576,
+          "cx_std": -0.005073093993281652,
+          "cy_mean": -0.004246093750000068
+        },
+        "abs_delta_po": 0.010701467882646745,
+        "abs_delta_po_rel": 0.973048116331628
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_3",
+          "box": [
+            83.56,
+            320.07,
+            343.44,
+            125.14
+          ],
+          "category": "car",
+          "text_description": "car",
+          "delta_po_contrib": 0.010701467882646745,
+          "delta_po_rel": 0.973048116331628,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.03823574028293888,
+            "largest_area_frac": -0.15832271851979302,
+            "area_gini": 0.018894959828588576,
+            "cx_std": -0.005073093993281652,
+            "cy_mean": -0.004246093750000068
+          },
+          "abs_delta_po": 0.010701467882646745,
+          "abs_delta_po_rel": 0.973048116331628
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            47.72,
+            300.51,
+            376.26,
+            146.62
+          ],
+          "category": "car",
+          "text_description": "car",
+          "delta_po_contrib": 0.006586683959643384,
+          "delta_po_rel": 0.5989047941914297,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.0014133537902092583,
+            "largest_area_frac": -0.14692546789785382,
+            "area_gini": 0.0302922104505281,
+            "cx_std": 0.017678662446999394,
+            "cy_mean": -0.011136718749999996
+          },
+          "abs_delta_po": 0.006586683959643384,
+          "abs_delta_po_rel": 0.5989047941914297
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            99.17,
+            335.18,
+            327.83,
+            145.17
+          ],
+          "category": "car",
+          "text_description": "car",
+          "delta_po_contrib": 0.00021049946054905143,
+          "delta_po_rel": 0.019140000775801948,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.0028267075804184957,
+            "largest_area_frac": -0.18355625150704175,
+            "area_gini": -0.0063385731586600436,
+            "cx_std": 0.004066250269013416,
+            "cy_mean": 0.015382812500000065
+          },
+          "abs_delta_po": 0.00021049946054905143,
+          "abs_delta_po_rel": 0.019140000775801948
+        }
+      ]
+    },
+    {
+      "coco_image_id": 154382,
+      "batch": 1,
+      "caption": "Three plates of toasted sandwiches are on a counter.",
+      "n_boxes": 8,
+      "base_po_contrib": 0.014600075698486762,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.18157758609894392,
+        "largest_area_frac": 0.20067967455295765,
+        "area_gini": 0.23922650953326574,
+        "cx_std": 0.20740308111361297,
+        "cy_mean": 0.2863960280373832
+      },
+      "top_box": {
+        "bbx_id": "bbx_3",
+        "box": [
+          244.34,
+          85.43,
+          112.54,
+          101.79
+        ],
+        "category": "hot dog",
+        "text_description": "hot dog",
+        "delta_po_contrib": 0.01266692700876123,
+        "delta_po_rel": 0.867593241945075,
+        "delta_f_star": {
+          "nn_center_dist_mean": -0.06847569051680796,
+          "largest_area_frac": -0.03874350631736326,
+          "area_gini": -0.02300716345172038,
+          "cx_std": -0.012386701069954209,
+          "cy_mean": 0.0045886181575434115
+        },
+        "abs_delta_po": 0.01266692700876123,
+        "abs_delta_po_rel": 0.867593241945075
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_3",
+          "box": [
+            244.34,
+            85.43,
+            112.54,
+            101.79
+          ],
+          "category": "hot dog",
+          "text_description": "hot dog",
+          "delta_po_contrib": 0.01266692700876123,
+          "delta_po_rel": 0.867593241945075,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.06847569051680796,
+            "largest_area_frac": -0.03874350631736326,
+            "area_gini": -0.02300716345172038,
+            "cx_std": -0.012386701069954209,
+            "cy_mean": 0.0045886181575434115
+          },
+          "abs_delta_po": 0.01266692700876123,
+          "abs_delta_po_rel": 0.867593241945075
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            244.71,
+            86.44,
+            114.7,
+            100.78
+          ],
+          "category": "sandwich",
+          "text_description": "sandwich",
+          "delta_po_contrib": 0.012148812878301676,
+          "delta_po_rel": 0.8321061567323753,
+          "delta_f_star": {
+            "nn_center_dist_mean": -0.06754556363156924,
+            "largest_area_frac": -0.039163967651423326,
+            "area_gini": -0.022464173006887078,
+            "cx_std": -0.012506454615866608,
+            "cy_mean": 0.004757176234979954
+          },
+          "abs_delta_po": 0.012148812878301676,
+          "abs_delta_po_rel": 0.8321061567323753
+        },
+        {
+          "bbx_id": "bbx_5",
+          "box": [
+            100.99,
+            0.96,
+            208.71,
+            43.28
+          ],
+          "category": "microwave",
+          "text_description": "microwave",
+          "delta_po_contrib": 0.011053920053689173,
+          "delta_po_rel": 0.7571138863394902,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.017569664134986424,
+            "largest_area_frac": -0.029352089324207437,
+            "area_gini": -0.01767936697626915,
+            "cx_std": 0.0044854033548564765,
+            "cy_mean": -0.0333703271028038
+          },
+          "abs_delta_po": 0.011053920053689173,
+          "abs_delta_po_rel": 0.7571138863394902
+        }
+      ]
+    },
+    {
+      "coco_image_id": 580732,
+      "batch": 1,
+      "caption": "A man flying a colorful kite over a green field.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0008077154034228895,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.9413134267033154,
+        "largest_area_frac": 0.6184722144678321,
+        "area_gini": 0.11847221446783207,
+        "cx_std": 0.3848541666666667,
+        "cy_mean": 0.49557421875
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          375.66,
+          85.95,
+          68.56,
+          115.64
+        ],
+        "category": "kite",
+        "text_description": "kite: A man flying a colorful kite over a green field.",
+        "delta_po_contrib": 0.0006662514864271464,
+        "delta_po_rel": 0.8248592050849659,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.9413134267033154,
+          "largest_area_frac": -0.38152778553216793,
+          "area_gini": 0.11847221446783207,
+          "cx_std": 0.3848541666666667,
+          "cy_mean": -0.27093359375
+        },
+        "abs_delta_po": 0.0006662514864271464,
+        "abs_delta_po_rel": 0.8248592050849659
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            375.66,
+            85.95,
+            68.56,
+            115.64
+          ],
+          "category": "kite",
+          "text_description": "kite: A man flying a colorful kite over a green field.",
+          "delta_po_contrib": 0.0006662514864271464,
+          "delta_po_rel": 0.8248592050849659,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.9413134267033154,
+            "largest_area_frac": -0.38152778553216793,
+            "area_gini": 0.11847221446783207,
+            "cx_std": 0.3848541666666667,
+            "cy_mean": -0.27093359375
+          },
+          "abs_delta_po": 0.0006662514864271464,
+          "abs_delta_po_rel": 0.8248592050849659
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            11.37,
+            380.19,
+            58.22,
+            220.75
+          ],
+          "category": "person",
+          "text_description": "person",
+          "delta_po_contrib": 0.0006419974178932975,
+          "delta_po_rel": 0.7948312170076822,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.9413134267033154,
+            "largest_area_frac": -0.38152778553216793,
+            "area_gini": 0.11847221446783207,
+            "cx_std": 0.3848541666666667,
+            "cy_mean": 0.27093359375000003
+          },
+          "abs_delta_po": 0.0006419974178932975,
+          "abs_delta_po_rel": 0.7948312170076822
+        }
+      ]
+    },
+    {
+      "coco_image_id": 327068,
+      "batch": 1,
+      "caption": "A road is shown with snow and stoplights on the side.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0013077154010884846,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.8408601001611158,
+        "largest_area_frac": 0.6939645702885126,
+        "area_gini": 0.19396457028851266,
+        "cx_std": 0.41632318501170956,
+        "cy_mean": 0.45818359374999995
+      },
+      "top_box": {
+        "bbx_id": "bbx_1",
+        "box": [
+          5.97,
+          208.88,
+          49.55,
+          93.68
+        ],
+        "category": "traffic light",
+        "text_description": "traffic light",
+        "delta_po_contrib": 0.0012928725033125295,
+        "delta_po_rel": 0.9886497484450744,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.8408601001611158,
+          "largest_area_frac": -0.30603542971148745,
+          "area_gini": 0.19396457028851266,
+          "cx_std": 0.41632318501170956,
+          "cy_mean": -0.05862109375000002
+        },
+        "abs_delta_po": 0.0012928725033125295,
+        "abs_delta_po_rel": 0.9886497484450744
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            5.97,
+            208.88,
+            49.55,
+            93.68
+          ],
+          "category": "traffic light",
+          "text_description": "traffic light",
+          "delta_po_contrib": 0.0012928725033125295,
+          "delta_po_rel": 0.9886497484450744,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.8408601001611158,
+            "largest_area_frac": -0.30603542971148745,
+            "area_gini": 0.19396457028851266,
+            "cx_std": 0.41632318501170956,
+            "cy_mean": -0.05862109375000002
+          },
+          "abs_delta_po": 0.0012928725033125295,
+          "abs_delta_po_rel": 0.9886497484450744
+        },
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            370.26,
+            298.82,
+            32.05,
+            63.87
+          ],
+          "category": "traffic light",
+          "text_description": "traffic light",
+          "delta_po_contrib": 0.0008844411228784395,
+          "delta_po_rel": 0.6763253850692165,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.8408601001611158,
+            "largest_area_frac": -0.30603542971148745,
+            "area_gini": 0.19396457028851266,
+            "cx_std": 0.41632318501170956,
+            "cy_mean": 0.058621093749999964
+          },
+          "abs_delta_po": 0.0008844411228784395,
+          "abs_delta_po_rel": 0.6763253850692165
+        }
+      ]
+    },
+    {
+      "coco_image_id": 521107,
+      "batch": 1,
+      "caption": "A bathroom with track lighting and a white toilet near a sink.",
+      "n_boxes": 2,
+      "base_po_contrib": 0.0015377245993252432,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.7669733981885664,
+        "largest_area_frac": 0.9454318995172606,
+        "area_gini": 0.44543189951726037,
+        "cx_std": 0.36572265625000006,
+        "cy_mean": 0.7289496527777778
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          327.04,
+          342.01,
+          49.6,
+          22.83
+        ],
+        "category": "sink",
+        "text_description": "sink: A bathroom with track lighting and a white toilet near a sink.",
+        "delta_po_contrib": 0.0015366274663574364,
+        "delta_po_rel": 0.9992865211575762,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.7669733981885664,
+          "largest_area_frac": -0.05456810048273941,
+          "area_gini": 0.44543189951726037,
+          "cx_std": 0.36572265625000006,
+          "cy_mean": -0.11536458333333333
+        },
+        "abs_delta_po": 0.0015366274663574364,
+        "abs_delta_po_rel": 0.9992865211575762
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            327.04,
+            342.01,
+            49.6,
+            22.83
+          ],
+          "category": "sink",
+          "text_description": "sink: A bathroom with track lighting and a white toilet near a sink.",
+          "delta_po_contrib": 0.0015366274663574364,
+          "delta_po_rel": 0.9992865211575762,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.7669733981885664,
+            "largest_area_frac": -0.05456810048273941,
+            "area_gini": 0.44543189951726037,
+            "cx_std": 0.36572265625000006,
+            "cy_mean": -0.11536458333333333
+          },
+          "abs_delta_po": 0.0015366274663574364,
+          "abs_delta_po_rel": 0.9992865211575762
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            16.27,
+            396.65,
+            109.39,
+            179.35
+          ],
+          "category": "toilet",
+          "text_description": "toilet: A bathroom with track lighting and a white toilet near a sink.",
+          "delta_po_contrib": 0.0014985743386807158,
+          "delta_po_rel": 0.9745401344062216,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.7669733981885664,
+            "largest_area_frac": -0.05456810048273941,
+            "area_gini": 0.44543189951726037,
+            "cx_std": 0.36572265625000006,
+            "cy_mean": 0.11536458333333333
+          },
+          "abs_delta_po": 0.0014985743386807158,
+          "abs_delta_po_rel": 0.9745401344062216
+        }
+      ]
+    },
+    {
+      "coco_image_id": 203129,
+      "batch": 1,
+      "caption": "a bathroom with double sinks and a large mirror",
+      "n_boxes": 2,
+      "base_po_contrib": 0.008010765050484809,
+      "base_f_star": {
+        "nn_center_dist_mean": 0.5850623342200044,
+        "largest_area_frac": 0.5747151186899185,
+        "area_gini": 0.07471511868991865,
+        "cx_std": 0.28289583333333335,
+        "cy_mean": 0.738734375
+      },
+      "top_box": {
+        "bbx_id": "bbx_2",
+        "box": [
+          0.0,
+          491.05,
+          52.13,
+          58.79
+        ],
+        "category": "sink",
+        "text_description": "sink",
+        "delta_po_contrib": 0.008005210415918873,
+        "delta_po_rel": 0.9993066036102374,
+        "delta_f_star": {
+          "nn_center_dist_mean": 0.5850623342200044,
+          "largest_area_frac": -0.42528488131008146,
+          "area_gini": 0.07471511868991865,
+          "cx_std": 0.28289583333333335,
+          "cy_mean": 0.07446093750000005
+        },
+        "abs_delta_po": 0.008005210415918873,
+        "abs_delta_po_rel": 0.9993066036102374
+      },
+      "ranking_top3": [
+        {
+          "bbx_id": "bbx_2",
+          "box": [
+            0.0,
+            491.05,
+            52.13,
+            58.79
+          ],
+          "category": "sink",
+          "text_description": "sink",
+          "delta_po_contrib": 0.008005210415918873,
+          "delta_po_rel": 0.9993066036102374,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.5850623342200044,
+            "largest_area_frac": -0.42528488131008146,
+            "area_gini": 0.07471511868991865,
+            "cx_std": 0.28289583333333335,
+            "cy_mean": 0.07446093750000005
+          },
+          "abs_delta_po": 0.008005210415918873,
+          "abs_delta_po_rel": 0.9993066036102374
+        },
+        {
+          "bbx_id": "bbx_1",
+          "box": [
+            242.38,
+            406.4,
+            110.53,
+            37.47
+          ],
+          "category": "sink",
+          "text_description": "sink",
+          "delta_po_contrib": 0.007881081310213684,
+          "delta_po_rel": 0.9838113163427397,
+          "delta_f_star": {
+            "nn_center_dist_mean": 0.5850623342200044,
+            "largest_area_frac": -0.42528488131008146,
+            "area_gini": 0.07471511868991865,
+            "cx_std": 0.28289583333333335,
+            "cy_mean": -0.07446093750000005
+          },
+          "abs_delta_po": 0.007881081310213684,
+          "abs_delta_po_rel": 0.9838113163427397
+        }
+      ]
+    }
+  ]
+}

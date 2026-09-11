@@ -1,0 +1,939 @@
+{
+  "principle": "Named bbox features + concat VIMP; value = cross-dataset recovery of S*.",
+  "S_star": [
+    "n_objects",
+    "n_people",
+    "area_frac_person",
+    "area_frac_vehicle",
+    "region_center_area_prop",
+    "region_periphery_area_prop",
+    "quad_TL_area_prop",
+    "quad_TR_area_prop",
+    "quad_BL_area_prop",
+    "quad_BR_area_prop"
+  ],
+  "boards": [
+    {
+      "dataset": "coco_time_order",
+      "mode": "baseline",
+      "n0": 3000,
+      "n1": 3000,
+      "rf_domain_auc": 0.584,
+      "modality_mass_share": {
+        "image_clip": 0.5242045884381065,
+        "text_clip": 0.4454199899682145,
+        "bbox_named": 0.030375421592679037
+      },
+      "named_feature_ranking_top20": [
+        {
+          "rank": 1,
+          "feature": "std_cx",
+          "vimp": 0.005383124567826639
+        },
+        {
+          "rank": 2,
+          "feature": "area_frac_vehicle",
+          "vimp": 0.0016916571706898863
+        },
+        {
+          "rank": 3,
+          "feature": "mean_cy",
+          "vimp": 0.0013381601376989435
+        },
+        {
+          "rank": 4,
+          "feature": "count_person",
+          "vimp": 0.001196470752736153
+        },
+        {
+          "rank": 5,
+          "feature": "mean_area_frac",
+          "vimp": 0.0009276682477002169
+        },
+        {
+          "rank": 6,
+          "feature": "n_people",
+          "vimp": 0.0008610560218366907
+        },
+        {
+          "rank": 7,
+          "feature": "person_to_total_area_prop",
+          "vimp": 0.0008399852782530494
+        },
+        {
+          "rank": 8,
+          "feature": "max_area_frac",
+          "vimp": 0.0007652893271040182
+        },
+        {
+          "rank": 9,
+          "feature": "region_periphery_count_prop",
+          "vimp": 0.0007585890515478407
+        },
+        {
+          "rank": 10,
+          "feature": "region_center_count_prop",
+          "vimp": 0.0007562558098846937
+        },
+        {
+          "rank": 11,
+          "feature": "largest_cx",
+          "vimp": 0.0007203879753253136
+        },
+        {
+          "rank": 12,
+          "feature": "coverage_union_proxy",
+          "vimp": 0.0006889015819617515
+        },
+        {
+          "rank": 13,
+          "feature": "quad_BL_area_prop",
+          "vimp": 0.000672466727586089
+        },
+        {
+          "rank": 14,
+          "feature": "n_objects",
+          "vimp": 0.000670802091207195
+        },
+        {
+          "rank": 15,
+          "feature": "quad_BR_count_prop",
+          "vimp": 0.0006633227882801795
+        },
+        {
+          "rank": 16,
+          "feature": "quad_TR_area_prop",
+          "vimp": 0.0006600055462512133
+        },
+        {
+          "rank": 17,
+          "feature": "region_center_area_prop",
+          "vimp": 0.0006550079017221245
+        },
+        {
+          "rank": 18,
+          "feature": "total_area_frac",
+          "vimp": 0.0006459363426691475
+        },
+        {
+          "rank": 19,
+          "feature": "region_periphery_area_prop",
+          "vimp": 0.0006326971567961436
+        },
+        {
+          "rank": 20,
+          "feature": "largest_cy",
+          "vimp": 0.000590302729099622
+        }
+      ],
+      "S_star_recovered_in_top20": [
+        "n_objects",
+        "n_people",
+        "area_frac_vehicle",
+        "region_center_area_prop",
+        "region_periphery_area_prop",
+        "quad_TR_area_prop",
+        "quad_BL_area_prop"
+      ],
+      "S_star_recovery_rate": 0.7,
+      "S_star_rank_positions": {
+        "n_objects": 14,
+        "n_people": 6,
+        "area_frac_person": 23,
+        "area_frac_vehicle": 2,
+        "region_center_area_prop": 17,
+        "region_periphery_area_prop": 19,
+        "quad_TL_area_prop": 28,
+        "quad_TR_area_prop": 16,
+        "quad_BL_area_prop": 13,
+        "quad_BR_area_prop": 21
+      }
+    },
+    {
+      "dataset": "coco_time_order",
+      "mode": "inject_S_star",
+      "n0": 3000,
+      "n1": 3000,
+      "rf_domain_auc": 1.0,
+      "modality_mass_share": {
+        "image_clip": 0.04598943730333694,
+        "text_clip": 0.04156367073575394,
+        "bbox_named": 0.9124468919599092
+      },
+      "named_feature_ranking_top20": [
+        {
+          "rank": 1,
+          "feature": "quad_TR_area_prop",
+          "vimp": 0.1257796011305449
+        },
+        {
+          "rank": 2,
+          "feature": "region_periphery_area_prop",
+          "vimp": 0.11652498943859221
+        },
+        {
+          "rank": 3,
+          "feature": "area_frac_vehicle",
+          "vimp": 0.11488488516834844
+        },
+        {
+          "rank": 4,
+          "feature": "region_center_area_prop",
+          "vimp": 0.11473608894554427
+        },
+        {
+          "rank": 5,
+          "feature": "quad_TL_area_prop",
+          "vimp": 0.09847409853989873
+        },
+        {
+          "rank": 6,
+          "feature": "area_frac_person",
+          "vimp": 0.0957029160465104
+        },
+        {
+          "rank": 7,
+          "feature": "quad_BR_area_prop",
+          "vimp": 0.08974142206206305
+        },
+        {
+          "rank": 8,
+          "feature": "quad_BL_area_prop",
+          "vimp": 0.06701215912761797
+        },
+        {
+          "rank": 9,
+          "feature": "n_people",
+          "vimp": 0.05674595921113609
+        },
+        {
+          "rank": 10,
+          "feature": "n_objects",
+          "vimp": 0.024405063240431506
+        },
+        {
+          "rank": 11,
+          "feature": "std_cx",
+          "vimp": 0.0006953703004581929
+        },
+        {
+          "rank": 12,
+          "feature": "count_person",
+          "vimp": 0.000685642257814119
+        },
+        {
+          "rank": 13,
+          "feature": "has_person",
+          "vimp": 0.00066341714347729
+        },
+        {
+          "rank": 14,
+          "feature": "person_to_total_area_prop",
+          "vimp": 0.0005764849805980997
+        },
+        {
+          "rank": 15,
+          "feature": "largest_to_total_area_prop",
+          "vimp": 0.0005245859898679882
+        },
+        {
+          "rank": 16,
+          "feature": "region_center_count_prop",
+          "vimp": 0.0004954883685092573
+        },
+        {
+          "rank": 17,
+          "feature": "quad_BL_count_prop",
+          "vimp": 0.00047635144672931063
+        },
+        {
+          "rank": 18,
+          "feature": "std_cy",
+          "vimp": 0.0004257591324490004
+        },
+        {
+          "rank": 19,
+          "feature": "largest_cx",
+          "vimp": 0.0003298697717679997
+        },
+        {
+          "rank": 20,
+          "feature": "quad_BR_count_prop",
+          "vimp": 0.00028462236101827116
+        }
+      ],
+      "S_star_recovered_in_top20": [
+        "n_objects",
+        "n_people",
+        "area_frac_person",
+        "area_frac_vehicle",
+        "region_center_area_prop",
+        "region_periphery_area_prop",
+        "quad_TL_area_prop",
+        "quad_TR_area_prop",
+        "quad_BL_area_prop",
+        "quad_BR_area_prop"
+      ],
+      "S_star_recovery_rate": 1.0,
+      "S_star_rank_positions": {
+        "n_objects": 10,
+        "n_people": 9,
+        "area_frac_person": 6,
+        "area_frac_vehicle": 3,
+        "region_center_area_prop": 4,
+        "region_periphery_area_prop": 2,
+        "quad_TL_area_prop": 5,
+        "quad_TR_area_prop": 1,
+        "quad_BL_area_prop": 8,
+        "quad_BR_area_prop": 7
+      }
+    },
+    {
+      "dataset": "coco_outdoor_indoor",
+      "mode": "baseline",
+      "n0": 3000,
+      "n1": 3000,
+      "rf_domain_auc": 0.9998,
+      "modality_mass_share": {
+        "image_clip": 0.24915178251028272,
+        "text_clip": 0.5322698465017219,
+        "bbox_named": 0.21857837098699529
+      },
+      "named_feature_ranking_top20": [
+        {
+          "rank": 1,
+          "feature": "furniture_to_total_area_prop",
+          "vimp": 0.03634028475434583
+        },
+        {
+          "rank": 2,
+          "feature": "count_furniture",
+          "vimp": 0.034756464366887584
+        },
+        {
+          "rank": 3,
+          "feature": "area_frac_furniture",
+          "vimp": 0.03312019743016275
+        },
+        {
+          "rank": 4,
+          "feature": "count_kitchen",
+          "vimp": 0.01769597574674562
+        },
+        {
+          "rank": 5,
+          "feature": "largest_is_furniture",
+          "vimp": 0.01419613625454412
+        },
+        {
+          "rank": 6,
+          "feature": "area_frac_kitchen",
+          "vimp": 0.01333333379708964
+        },
+        {
+          "rank": 7,
+          "feature": "count_vehicle",
+          "vimp": 0.005771945103286534
+        },
+        {
+          "rank": 8,
+          "feature": "area_frac_sports",
+          "vimp": 0.005430100274587092
+        },
+        {
+          "rank": 9,
+          "feature": "vehicle_to_total_area_prop",
+          "vimp": 0.004315989244071029
+        },
+        {
+          "rank": 10,
+          "feature": "area_frac_vehicle",
+          "vimp": 0.003705450550297629
+        },
+        {
+          "rank": 11,
+          "feature": "count_appliance",
+          "vimp": 0.0036531693691021832
+        },
+        {
+          "rank": 12,
+          "feature": "count_indoor",
+          "vimp": 0.002979887664507129
+        },
+        {
+          "rank": 13,
+          "feature": "area_frac_indoor",
+          "vimp": 0.002482209779866686
+        },
+        {
+          "rank": 14,
+          "feature": "count_sports",
+          "vimp": 0.0024226040785569267
+        },
+        {
+          "rank": 15,
+          "feature": "count_outdoor",
+          "vimp": 0.0023717613532888587
+        },
+        {
+          "rank": 16,
+          "feature": "has_dining_table",
+          "vimp": 0.0022992230787793454
+        },
+        {
+          "rank": 17,
+          "feature": "area_frac_electronic",
+          "vimp": 0.0018550877886823022
+        },
+        {
+          "rank": 18,
+          "feature": "largest_is_vehicle",
+          "vimp": 0.001835769612012593
+        },
+        {
+          "rank": 19,
+          "feature": "area_frac_appliance",
+          "vimp": 0.001811932474300679
+        },
+        {
+          "rank": 20,
+          "feature": "count_dining_table",
+          "vimp": 0.0017360117801712865
+        }
+      ],
+      "S_star_recovered_in_top20": [
+        "area_frac_vehicle"
+      ],
+      "S_star_recovery_rate": 0.1,
+      "S_star_rank_positions": {
+        "n_objects": 60,
+        "n_people": 40,
+        "area_frac_person": 56,
+        "area_frac_vehicle": 10,
+        "region_center_area_prop": 65,
+        "region_periphery_area_prop": 74,
+        "quad_TL_area_prop": 73,
+        "quad_TR_area_prop": 61,
+        "quad_BL_area_prop": 66,
+        "quad_BR_area_prop": 69
+      }
+    },
+    {
+      "dataset": "coco_outdoor_indoor",
+      "mode": "inject_S_star",
+      "n0": 3000,
+      "n1": 3000,
+      "rf_domain_auc": 1.0,
+      "modality_mass_share": {
+        "image_clip": 0.12143286784243257,
+        "text_clip": 0.26298499611053405,
+        "bbox_named": 0.6155821360460334
+      },
+      "named_feature_ranking_top20": [
+        {
+          "rank": 1,
+          "feature": "region_periphery_area_prop",
+          "vimp": 0.07255819081447959
+        },
+        {
+          "rank": 2,
+          "feature": "quad_TR_area_prop",
+          "vimp": 0.06857584100897864
+        },
+        {
+          "rank": 3,
+          "feature": "area_frac_person",
+          "vimp": 0.06684131993133996
+        },
+        {
+          "rank": 4,
+          "feature": "region_center_area_prop",
+          "vimp": 0.06055719497530335
+        },
+        {
+          "rank": 5,
+          "feature": "area_frac_vehicle",
+          "vimp": 0.05900115702295888
+        },
+        {
+          "rank": 6,
+          "feature": "quad_BR_area_prop",
+          "vimp": 0.05427908914589778
+        },
+        {
+          "rank": 7,
+          "feature": "quad_TL_area_prop",
+          "vimp": 0.05381129611266763
+        },
+        {
+          "rank": 8,
+          "feature": "quad_BL_area_prop",
+          "vimp": 0.031087596180438104
+        },
+        {
+          "rank": 9,
+          "feature": "area_frac_furniture",
+          "vimp": 0.0278828529712903
+        },
+        {
+          "rank": 10,
+          "feature": "count_furniture",
+          "vimp": 0.020902118046597584
+        },
+        {
+          "rank": 11,
+          "feature": "n_people",
+          "vimp": 0.020866385698564246
+        },
+        {
+          "rank": 12,
+          "feature": "furniture_to_total_area_prop",
+          "vimp": 0.015199497612560215
+        },
+        {
+          "rank": 13,
+          "feature": "area_frac_kitchen",
+          "vimp": 0.010770270788787416
+        },
+        {
+          "rank": 14,
+          "feature": "n_objects",
+          "vimp": 0.006774143386774424
+        },
+        {
+          "rank": 15,
+          "feature": "largest_is_furniture",
+          "vimp": 0.006757544888638185
+        },
+        {
+          "rank": 16,
+          "feature": "count_vehicle",
+          "vimp": 0.004832910254429721
+        },
+        {
+          "rank": 17,
+          "feature": "vehicle_to_total_area_prop",
+          "vimp": 0.004039338629119763
+        },
+        {
+          "rank": 18,
+          "feature": "count_kitchen",
+          "vimp": 0.003725344936812492
+        },
+        {
+          "rank": 19,
+          "feature": "count_sports",
+          "vimp": 0.0035947724969751377
+        },
+        {
+          "rank": 20,
+          "feature": "area_frac_indoor",
+          "vimp": 0.002949989003740006
+        }
+      ],
+      "S_star_recovered_in_top20": [
+        "n_objects",
+        "n_people",
+        "area_frac_person",
+        "area_frac_vehicle",
+        "region_center_area_prop",
+        "region_periphery_area_prop",
+        "quad_TL_area_prop",
+        "quad_TR_area_prop",
+        "quad_BL_area_prop",
+        "quad_BR_area_prop"
+      ],
+      "S_star_recovery_rate": 1.0,
+      "S_star_rank_positions": {
+        "n_objects": 14,
+        "n_people": 11,
+        "area_frac_person": 3,
+        "area_frac_vehicle": 5,
+        "region_center_area_prop": 4,
+        "region_periphery_area_prop": 1,
+        "quad_TL_area_prop": 7,
+        "quad_TR_area_prop": 2,
+        "quad_BL_area_prop": 8,
+        "quad_BR_area_prop": 6
+      }
+    },
+    {
+      "dataset": "coco_center_split",
+      "mode": "baseline",
+      "n0": 3000,
+      "n1": 3000,
+      "rf_domain_auc": 0.9998,
+      "modality_mass_share": {
+        "image_clip": 0.12346448963043008,
+        "text_clip": 0.11432773706209091,
+        "bbox_named": 0.7622077733064788
+      },
+      "named_feature_ranking_top20": [
+        {
+          "rank": 1,
+          "feature": "region_center_area_prop",
+          "vimp": 0.17265903877206368
+        },
+        {
+          "rank": 2,
+          "feature": "region_periphery_area_prop",
+          "vimp": 0.15874666664878972
+        },
+        {
+          "rank": 3,
+          "feature": "region_center_count_prop",
+          "vimp": 0.06909721294664492
+        },
+        {
+          "rank": 4,
+          "feature": "region_periphery_count_prop",
+          "vimp": 0.06111673120188687
+        },
+        {
+          "rank": 5,
+          "feature": "largest_to_total_area_prop",
+          "vimp": 0.046165064973052464
+        },
+        {
+          "rank": 6,
+          "feature": "std_cx",
+          "vimp": 0.028996966201735253
+        },
+        {
+          "rank": 7,
+          "feature": "mean_area_frac",
+          "vimp": 0.023836648755129055
+        },
+        {
+          "rank": 8,
+          "feature": "max_area_frac",
+          "vimp": 0.0201014649452936
+        },
+        {
+          "rank": 9,
+          "feature": "largest_cy",
+          "vimp": 0.0199216848959655
+        },
+        {
+          "rank": 10,
+          "feature": "n_objects",
+          "vimp": 0.01890065664581291
+        },
+        {
+          "rank": 11,
+          "feature": "largest_cx",
+          "vimp": 0.014693658189370433
+        },
+        {
+          "rank": 12,
+          "feature": "largest_w_frac",
+          "vimp": 0.014131963927300754
+        },
+        {
+          "rank": 13,
+          "feature": "largest_h_frac",
+          "vimp": 0.010500832872183969
+        },
+        {
+          "rank": 14,
+          "feature": "std_cy",
+          "vimp": 0.009826866285907811
+        },
+        {
+          "rank": 15,
+          "feature": "n_unique_categories",
+          "vimp": 0.008729011559766955
+        },
+        {
+          "rank": 16,
+          "feature": "largest_aspect_ratio",
+          "vimp": 0.008581484953030972
+        },
+        {
+          "rank": 17,
+          "feature": "quad_BL_area_prop",
+          "vimp": 0.00795872256796032
+        },
+        {
+          "rank": 18,
+          "feature": "quad_BR_area_prop",
+          "vimp": 0.00755377825174419
+        },
+        {
+          "rank": 19,
+          "feature": "count_person",
+          "vimp": 0.005690041951705792
+        },
+        {
+          "rank": 20,
+          "feature": "mean_cy",
+          "vimp": 0.0053560149629266925
+        }
+      ],
+      "S_star_recovered_in_top20": [
+        "n_objects",
+        "region_center_area_prop",
+        "region_periphery_area_prop",
+        "quad_BL_area_prop",
+        "quad_BR_area_prop"
+      ],
+      "S_star_recovery_rate": 0.5,
+      "S_star_rank_positions": {
+        "n_objects": 10,
+        "n_people": 21,
+        "area_frac_person": 44,
+        "area_frac_vehicle": 29,
+        "region_center_area_prop": 1,
+        "region_periphery_area_prop": 2,
+        "quad_TL_area_prop": 23,
+        "quad_TR_area_prop": 22,
+        "quad_BL_area_prop": 17,
+        "quad_BR_area_prop": 18
+      }
+    },
+    {
+      "dataset": "coco_center_split",
+      "mode": "inject_S_star",
+      "n0": 3000,
+      "n1": 3000,
+      "rf_domain_auc": 1.0,
+      "modality_mass_share": {
+        "image_clip": 0.03634622235304636,
+        "text_clip": 0.03680202639567669,
+        "bbox_named": 0.926851751250277
+      },
+      "named_feature_ranking_top20": [
+        {
+          "rank": 1,
+          "feature": "quad_BR_area_prop",
+          "vimp": 0.10846241241805422
+        },
+        {
+          "rank": 2,
+          "feature": "quad_TR_area_prop",
+          "vimp": 0.10234987327769828
+        },
+        {
+          "rank": 3,
+          "feature": "area_frac_vehicle",
+          "vimp": 0.10190489731190097
+        },
+        {
+          "rank": 4,
+          "feature": "region_center_area_prop",
+          "vimp": 0.09408883008269944
+        },
+        {
+          "rank": 5,
+          "feature": "quad_TL_area_prop",
+          "vimp": 0.09342417465027436
+        },
+        {
+          "rank": 6,
+          "feature": "region_periphery_area_prop",
+          "vimp": 0.09203804256125918
+        },
+        {
+          "rank": 7,
+          "feature": "area_frac_person",
+          "vimp": 0.0882413278516717
+        },
+        {
+          "rank": 8,
+          "feature": "quad_BL_area_prop",
+          "vimp": 0.052415900371518026
+        },
+        {
+          "rank": 9,
+          "feature": "n_people",
+          "vimp": 0.03677649029709928
+        },
+        {
+          "rank": 10,
+          "feature": "region_center_count_prop",
+          "vimp": 0.030989375095218145
+        },
+        {
+          "rank": 11,
+          "feature": "region_periphery_count_prop",
+          "vimp": 0.020655119038916824
+        },
+        {
+          "rank": 12,
+          "feature": "largest_to_total_area_prop",
+          "vimp": 0.016578020383741284
+        },
+        {
+          "rank": 13,
+          "feature": "std_cx",
+          "vimp": 0.011225205276708268
+        },
+        {
+          "rank": 14,
+          "feature": "n_objects",
+          "vimp": 0.010315833928020726
+        },
+        {
+          "rank": 15,
+          "feature": "largest_cy",
+          "vimp": 0.007895925471302398
+        },
+        {
+          "rank": 16,
+          "feature": "largest_w_frac",
+          "vimp": 0.007204158475732094
+        },
+        {
+          "rank": 17,
+          "feature": "mean_area_frac",
+          "vimp": 0.006605016044298618
+        },
+        {
+          "rank": 18,
+          "feature": "max_area_frac",
+          "vimp": 0.0052962972855886015
+        },
+        {
+          "rank": 19,
+          "feature": "largest_h_frac",
+          "vimp": 0.004183566997464795
+        },
+        {
+          "rank": 20,
+          "feature": "count_person",
+          "vimp": 0.004129878497935254
+        }
+      ],
+      "S_star_recovered_in_top20": [
+        "n_objects",
+        "n_people",
+        "area_frac_person",
+        "area_frac_vehicle",
+        "region_center_area_prop",
+        "region_periphery_area_prop",
+        "quad_TL_area_prop",
+        "quad_TR_area_prop",
+        "quad_BL_area_prop",
+        "quad_BR_area_prop"
+      ],
+      "S_star_recovery_rate": 1.0,
+      "S_star_rank_positions": {
+        "n_objects": 14,
+        "n_people": 9,
+        "area_frac_person": 7,
+        "area_frac_vehicle": 3,
+        "region_center_area_prop": 4,
+        "region_periphery_area_prop": 6,
+        "quad_TL_area_prop": 5,
+        "quad_TR_area_prop": 2,
+        "quad_BL_area_prop": 8,
+        "quad_BR_area_prop": 1
+      }
+    }
+  ],
+  "inject_consensus": {
+    "n_objects": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "n_people": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "area_frac_person": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "area_frac_vehicle": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "region_center_area_prop": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "region_periphery_area_prop": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "quad_TL_area_prop": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "quad_TR_area_prop": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "quad_BL_area_prop": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    },
+    "quad_BR_area_prop": {
+      "n_datasets_recovered": 3,
+      "datasets": [
+        "coco_time_order",
+        "coco_outdoor_indoor",
+        "coco_center_split"
+      ],
+      "consensus_ok": true
+    }
+  },
+  "consensus_features_recovered_on_ge_2_datasets": [
+    "n_objects",
+    "n_people",
+    "area_frac_person",
+    "area_frac_vehicle",
+    "region_center_area_prop",
+    "region_periphery_area_prop",
+    "quad_TL_area_prop",
+    "quad_TR_area_prop",
+    "quad_BL_area_prop",
+    "quad_BR_area_prop"
+  ],
+  "natural_top20_intersection_baseline": []
+}

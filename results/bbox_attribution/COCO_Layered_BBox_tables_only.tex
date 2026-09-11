@@ -1,0 +1,89 @@
+% COCO multi-layer bbox features: IoU / crowding / area
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{COCO early/late multi-layer attribution. L1 modality mass on concat $X=(\mathrm{image},\mathrm{text},\mathrm{bbox\_layered})$; L2 family mass inside the bbox block (IoU / crowding / area emphasized).}
+\label{tab:coco-layered-mass}
+\small
+\begin{tabular}{@{}l c c@{}}
+\toprule
+Level & Block & Mass share \\
+\midrule
+L1 modality & Image CLIP & $0.524$ \\
+L1 modality & Text CLIP & $0.447$ \\
+L1 modality & BBox layered & $0.028$ \\
+\midrule
+L2 bbox family & geometry & $0.440$ \\
+L2 bbox family & crowding & $0.253$ \\
+L2 bbox family & area & $0.190$ \\
+L2 bbox family & iou & $0.084$ \\
+L2 bbox family & semantic & $0.033$ \\
+\midrule
+RF Domain AUC & \multicolumn{2}{c}{$0.584$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Emphasis families on COCO: top features inside IoU, crowding, and area (RF Domain VIMP within the bbox block).}
+\label{tab:coco-layered-emphasis}
+\small
+\begin{tabular}{@{}l l c@{}}
+\toprule
+Family & Feature & VIMP \\
+\midrule
+iou & \texttt{pairwise\_iou\_mean} & $0.00088$ \\
+iou & \texttt{pairwise\_iou\_max} & $0.00062$ \\
+iou & \texttt{heavy\_overlap\_pair\_frac} & $0.00045$ \\
+iou & \texttt{overlap\_pair\_frac} & $0.00024$ \\
+iou & \texttt{max\_box\_overlap\_count} & $0.00012$ \\
+\midrule
+crowding & \texttt{coverage\_area} & $0.00133$ \\
+crowding & \texttt{obj\_density} & $0.00106$ \\
+crowding & \texttt{densest\_quad\_area\_prop} & $0.00093$ \\
+crowding & \texttt{nn\_center\_dist\_mean} & $0.00092$ \\
+crowding & \texttt{nn\_center\_dist\_min} & $0.00088$ \\
+\midrule
+area & \texttt{area\_gini} & $0.00184$ \\
+area & \texttt{person\_area\_frac} & $0.00078$ \\
+area & \texttt{area\_std} & $0.00071$ \\
+area & \texttt{vehicle\_area\_frac} & $0.00065$ \\
+area & \texttt{area\_mean} & $0.00051$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Top-20 named layered bbox features on COCO early/late.}
+\label{tab:coco-layered-top20}
+\small
+\begin{tabular}{@{}r l l c@{}}
+\toprule
+Rank & Family & Feature & VIMP \\
+\midrule
+1 & geometry & \texttt{cx\_std} & $0.00327$ \\
+2 & geometry & \texttt{aspect\_std} & $0.00275$ \\
+3 & area & \texttt{area\_gini} & $0.00184$ \\
+4 & geometry & \texttt{w\_mean} & $0.00151$ \\
+5 & geometry & \texttt{aspect\_mean} & $0.00145$ \\
+6 & crowding & \texttt{coverage\_area} & $0.00133$ \\
+7 & crowding & \texttt{obj\_density} & $0.00106$ \\
+8 & geometry & \texttt{cx\_mean} & $0.00103$ \\
+9 & crowding & \texttt{densest\_quad\_area\_prop} & $0.00093$ \\
+10 & crowding & \texttt{nn\_center\_dist\_mean} & $0.00092$ \\
+11 & geometry & \texttt{cy\_mean} & $0.00089$ \\
+12 & iou & \texttt{pairwise\_iou\_mean} & $0.00088$ \\
+13 & crowding & \texttt{nn\_center\_dist\_min} & $0.00088$ \\
+14 & geometry & \texttt{h\_mean} & $0.00085$ \\
+15 & area & \texttt{person\_area\_frac} & $0.00078$ \\
+16 & area & \texttt{area\_std} & $0.00071$ \\
+17 & crowding & \texttt{periphery\_vs\_center\_area} & $0.00068$ \\
+18 & geometry & \texttt{cy\_std} & $0.00068$ \\
+19 & crowding & \texttt{congest\_score} & $0.00067$ \\
+20 & area & \texttt{vehicle\_area\_frac} & $0.00065$ \\
+\bottomrule
+\end{tabular}
+\end{table}

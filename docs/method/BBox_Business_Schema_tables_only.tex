@@ -1,0 +1,54 @@
+% Business interpretable bbox feature schema
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{Per-sample interpretable bounding-box feature schema (highly readable names). BBox count and RoI-512 embeddings are omitted from business ranking.}
+\label{tab:bbox-business-schema}
+\small
+\begin{tabular}{@{}l l r@{}}
+\toprule
+Category & Features & Dims \\
+\midrule
+Category & histogram over COCO classes & 80 \\
+Position & $c_x,c_y$ mean/std & 4 \\
+Size & $w,h$ mean/std & 4 \\
+Area & area mean/std & 2 \\
+Aspect & aspect mean/std & 2 \\
+Score & detection score mean/std (GT placeholder) & 2 \\
+Occlusion & iscrowd ratio & 1 \\
+Spatial distribution & densest quadrant + NN distance (+one-hot) & 6 \\
+Spatial relation & pairwise IoU mean & 1 \\
+\midrule
+Total named & & 102 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Top named business bbox features by RF Domain VIMP on COCO early/late (AUC $0.600$).}
+\label{tab:bbox-business-rank}
+\small
+\begin{tabular}{@{}r l c@{}}
+\toprule
+Rank & Feature & VIMP \\
+\midrule
+1 & \texttt{cx\_std} & $0.00501$ \\
+2 & \texttt{aspect\_std} & $0.00269$ \\
+3 & \texttt{h\_mean} & $0.00240$ \\
+4 & \texttt{aspect\_mean} & $0.00219$ \\
+5 & \texttt{w\_mean} & $0.00163$ \\
+6 & \texttt{h\_std} & $0.00152$ \\
+7 & \texttt{area\_mean} & $0.00136$ \\
+8 & \texttt{cx\_mean} & $0.00127$ \\
+9 & \texttt{pairwise\_iou\_mean} & $0.00119$ \\
+10 & \texttt{cat\_hist\_1} & $0.00108$ \\
+11 & \texttt{w\_std} & $0.00101$ \\
+12 & \texttt{nn\_center\_dist\_mean} & $0.00096$ \\
+13 & \texttt{area\_std} & $0.00093$ \\
+14 & \texttt{cy\_mean} & $0.00088$ \\
+15 & \texttt{cy\_std} & $0.00076$ \\
+\bottomrule
+\end{tabular}
+\end{table}
