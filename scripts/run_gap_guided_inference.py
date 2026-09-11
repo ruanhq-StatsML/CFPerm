@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Budgeted-block stand-in for gap-guided LLM routing (no vendor API)."""
+"""Same-expert + context-packing board (two-sample, no TMLE, no vendor LLM)."""
 from __future__ import annotations
 
 import argparse
@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "Python" / "src"))
 from clever_covariate_gap import inject_block_shift, make_synthetic_shift, shuffle_block  # noqa: E402
 from gap_guided_inference import (  # noqa: E402
     budgeted_inference_eval,
+    make_diffuse_equal_shift,
     worked_example_packet,
 )
 
@@ -26,7 +27,7 @@ def _mean_eval(maker, *, n_seeds: int, **kw) -> dict:
         rows.append(
             budgeted_inference_eval(
                 X, W, spec,
-                gt=kw["gt"],
+                gt=kw.get("gt"),
                 seed=kw.get("base_seed", 7) + s,
                 n_estimators=kw.get("n_estimators", 50),
                 test_size=0.35,
@@ -34,13 +35,24 @@ def _mean_eval(maker, *, n_seeds: int, **kw) -> dict:
         )
     keys = rows[0]["auc"].keys()
     auc = {k: round(float(np.mean([r["auc"][k] for r in rows])), 4) for k in keys}
-    hit_keys = rows[0]["hit_gt"].keys()
-    hit = {k: round(float(np.mean([r["hit_gt"][k] for r in rows])), 4) for k in hit_keys}
+    hit = {}
+    if kw.get("gt") is not None and rows[0].get("hit_gt"):
+        hit_keys = rows[0]["hit_gt"].keys()
+        hit = {k: round(float(np.mean([r["hit_gt"][k] for r in rows])), 4) for k in hit_keys}
+    pack_keys = rows[0]["pack_auc"].keys()
+    pack_auc = {
+        k: round(float(np.mean([r["pack_auc"][k] for r in rows if k in r["pack_auc"]])), 4)
+        for k in pack_keys
+    }
+    modes = [r["population_pack"]["mode"] for r in rows]
     return {
         "n_seeds": n_seeds,
-        "gt": kw["gt"],
+        "gt": kw.get("gt"),
         "auc": auc,
         "hit_gt": hit,
+        "pack_auc": pack_auc,
+        "pi_entropy_last": rows[-1]["pi_entropy"],
+        "population_pack_modes": modes,
         "pi_last": rows[-1]["pi"],
         "pi_vimp_last": rows[-1]["pi_vimp"],
         "selected_last": rows[-1]["selected_block"],
@@ -55,27 +67,27 @@ def plot_board(board: dict, out_dir: Path) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = {}
     settings = list(board["settings"].keys())
-    # AUC: blend / pi / vimp / random / oracle
-    fig, ax = plt.subplots(figsize=(9.0, 4.4))
     labs = settings
     x = np.arange(len(labs))
+
+    fig, ax = plt.subplots(figsize=(9.0, 4.4))
     w = 0.15
     series = [
-        ("oracle_gt", "oracle GT block", "#2ca02c"),
-        ("blend_top1", "blend r top-1", "#111111"),
-        ("pi_top1", "π top-1", "#ff7f0e"),
-        ("vimp_top1", "VIMP top-1", "#1f77b4"),
-        ("random_row", "random block", "#9aa0a6"),
+        ("oracle_gt", "oracle GT specialist", "#2ca02c"),
+        ("pi_top1", "same expert (π)", "#ff7f0e"),
+        ("vimp_top1", "same expert (VIMP)", "#1f77b4"),
+        ("instance_top1", "instance expert s(x)", "#d62728"),
+        ("random_fixed", "same random expert", "#9aa0a6"),
     ]
     for i, (key, lab, c) in enumerate(series):
         vals = [board["settings"][s]["auc"].get(key, np.nan) for s in settings]
         ax.bar(x + (i - 2) * w, vals, w, label=lab, color=c)
     ax.set_xticks(x)
     ax.set_xticklabels(labs, rotation=12, ha="right")
-    ax.set_ylabel("held-out domain AUC (one-block budget)")
+    ax.set_ylabel("held-out two-sample AUC")
     ax.set_ylim(0.45, 1.02)
     ax.axhline(0.5, ls="--", lw=0.8, color="0.5")
-    ax.set_title("Budgeted inference · routed block expert vs VIMP / random")
+    ax.set_title("Same expert: one specialist ê_m for every query (m from π, not from x)")
     ax.legend(frameon=False, fontsize=8, ncol=2)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -85,69 +97,97 @@ def plot_board(board: dict, out_dir: Path) -> dict:
     plt.close(fig)
     paths["auc"] = p
 
-    fig, ax = plt.subplots(figsize=(8.4, 4.3))
-    hit_series = [
-        ("blend_top1", "blend r", "#111111"),
-        ("pi_top1", "π", "#ff7f0e"),
-        ("instance_top1", "instance s", "#d62728"),
-        ("vimp_top1", "VIMP", "#1f77b4"),
-        ("random_row", "random", "#9aa0a6"),
+    hit_settings = [s for s in settings if board["settings"][s].get("hit_gt")]
+    if hit_settings:
+        fig, ax = plt.subplots(figsize=(8.4, 4.3))
+        xh = np.arange(len(hit_settings))
+        hit_series = [
+            ("pi_top1", "π (same expert)", "#ff7f0e"),
+            ("vimp_top1", "VIMP (same expert)", "#1f77b4"),
+            ("instance_top1", "instance s(x)", "#d62728"),
+            ("random_fixed", "same random", "#9aa0a6"),
+        ]
+        w = 0.18
+        for i, (key, lab, c) in enumerate(hit_series):
+            vals = [board["settings"][s]["hit_gt"].get(key, np.nan) for s in hit_settings]
+            ax.bar(xh + (i - 1.5) * w, vals, w, label=lab, color=c)
+        ax.set_xticks(xh)
+        ax.set_xticklabels(hit_settings, rotation=12, ha="right")
+        ax.set_ylabel("P(selected block = GT)")
+        ax.set_ylim(0.0, 1.05)
+        ax.set_title("Localization: same-expert hit vs per-row instance hit")
+        ax.legend(frameon=False, fontsize=8, ncol=2)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        fig.tight_layout()
+        p = out_dir / "gt_hit_rate.png"
+        fig.savefig(p, dpi=160)
+        plt.close(fig)
+        paths["hit"] = p
+
+    fig, ax = plt.subplots(figsize=(9.0, 4.4))
+    pack_series = [
+        ("same_expert_oracle", "pack GT block", "#2ca02c"),
+        ("same_expert_pi", "pack π block", "#ff7f0e"),
+        ("same_expert_vimp", "pack VIMP block", "#1f77b4"),
+        ("concat_top2_pi", "concat top-2(π)", "#9467bd"),
+        ("pack_all", "pack all (abstain-from-drop)", "#111111"),
     ]
     w = 0.15
-    for i, (key, lab, c) in enumerate(hit_series):
-        vals = [board["settings"][s]["hit_gt"][key] for s in settings]
+    for i, (key, lab, c) in enumerate(pack_series):
+        vals = [board["settings"][s]["pack_auc"].get(key, np.nan) for s in settings]
         ax.bar(x + (i - 2) * w, vals, w, label=lab, color=c)
     ax.set_xticks(x)
     ax.set_xticklabels(labs, rotation=12, ha="right")
-    ax.set_ylabel("P(selected block = GT)")
-    ax.set_ylim(0.0, 1.05)
-    ax.set_title("Channel hit rate under a one-tool budget")
-    ax.legend(frameon=False, fontsize=8, ncol=3)
+    ax.set_ylabel("held-out AUC of one RF on concatenated columns")
+    ax.set_ylim(0.45, 1.02)
+    ax.axhline(0.5, ls="--", lw=0.8, color="0.5")
+    ax.set_title("Context packing: one reader on concat(E), E = E(π) for all rows")
+    ax.legend(frameon=False, fontsize=8, ncol=2)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     fig.tight_layout()
-    p = out_dir / "gt_hit_rate.png"
+    p = out_dir / "packed_auc.png"
     fig.savefig(p, dpi=160)
     plt.close(fig)
-    paths["hit"] = p
+    paths["pack"] = p
     return {k: str(v) for k, v in paths.items()}
 
 
 def write_readme(board: dict, out_dir: Path) -> None:
     lines = [
-        "# Gap-guided LLM inference (budgeted-block stand-in)",
+        "# Gap-guided reading budget (not TMLE, not causal)",
         "",
-        "Frozen π / s_m(x) route a one-block expert — the same decision as enabling one tool or packing one modality into the prompt.",
-        "No vendor LLM is called. Wide text + concentrated valence shift is the regime where raw VIMP overweights text.",
+        "Two-sample localization of W on X. **Same expert**: one m̂=argmax π for every query.",
+        "**Context packing**: one reader on concatenated columns of E=E(π). Not an opinion pool.",
         "",
-        "## Held-out domain AUC (one-block budget, mean over seeds)",
+        "## Same-expert specialist AUC (ê_m, one block, all rows)",
         "",
-        "| setting | oracle | blend | π | VIMP | random |",
+        "| setting | oracle | π | VIMP | instance s(x) | same random |",
         "|---|---:|---:|---:|---:|---:|",
     ]
     for name, row in board["settings"].items():
         a = row["auc"]
         lines.append(
             f"| {name} | {a.get('oracle_gt', float('nan')):.3f} | "
-            f"{a['blend_top1']:.3f} | {a['pi_top1']:.3f} | "
-            f"{a['vimp_top1']:.3f} | {a['random_row']:.3f} |"
+            f"{a.get('pi_top1', float('nan')):.3f} | {a.get('vimp_top1', float('nan')):.3f} | "
+            f"{a.get('instance_top1', float('nan')):.3f} | {a.get('random_fixed', float('nan')):.3f} |"
         )
     lines += [
         "",
-        "## P(selected block = GT)",
+        "## Context packing AUC (one RF on concat E)",
         "",
-        "| setting | blend | π | instance | VIMP | random |",
+        "| setting | pack GT | pack π | pack VIMP | concat top-2(π) | pack all |",
         "|---|---:|---:|---:|---:|---:|",
     ]
     for name, row in board["settings"].items():
-        h = row["hit_gt"]
+        p = row["pack_auc"]
         lines.append(
-            f"| {name} | {h['blend_top1']:.3f} | {h['pi_top1']:.3f} | "
-            f"{h['instance_top1']:.3f} | {h['vimp_top1']:.3f} | {h['random_row']:.3f} |"
+            f"| {name} | {p.get('same_expert_oracle', float('nan')):.3f} | "
+            f"{p.get('same_expert_pi', float('nan')):.3f} | {p.get('same_expert_vimp', float('nan')):.3f} | "
+            f"{p.get('concat_top2_pi', float('nan')):.3f} | {p.get('pack_all', float('nan')):.3f} |"
         )
     lines += [
-        "",
-        "Copy-paste prompt: `example_system_prompt.txt`. Packet JSON: `example_packet.json`.",
         "",
         "```bash",
         "python3 scripts/run_gap_guided_inference.py",
@@ -188,6 +228,11 @@ def main() -> None:
         X = shuffle_block(X, spec, "valence", seed=seed + 3)
         return X, W, Y, spec
 
+    def synth_diffuse(seed: int):
+        return make_diffuse_equal_shift(
+            n=n, d_text=d_text, d_vad=4, mean_shift=0.95, seed=seed,
+        )
+
     board = {
         "settings": {
             "synthetic GT=valence": _mean_eval(
@@ -197,6 +242,10 @@ def main() -> None:
             "inject valence": _mean_eval(
                 synth_inject, n_seeds=n_seeds, gt="valence",
                 base_seed=args.seed + 3, n_estimators=n_est,
+            ),
+            "diffuse equal shift": _mean_eval(
+                synth_diffuse, n_seeds=n_seeds, gt=None,
+                base_seed=args.seed + 6, n_estimators=n_est,
             ),
             "shuffle valence (neg.)": _mean_eval(
                 synth_shuffle_neg, n_seeds=n_seeds, gt="valence",
@@ -211,19 +260,22 @@ def main() -> None:
         encoding="utf-8",
     )
     (out_dir / "example_system_prompt.txt").write_text(pkt["system_prompt"], encoding="utf-8")
+    (out_dir / "example_packed_user.txt").write_text(pkt["user_message"], encoding="utf-8")
     paths = plot_board(board, out_dir)
     write_readme(board, out_dir)
     summary = {
         "board": board,
         "example_row": pkt["row_index"],
-        "example_tools": pkt["openai_tools"],
-        "example_must_cite": pkt["decision"]["critic_must_cite"],
+        "example_pack_mode": pkt["decision"].get("pack_mode"),
+        "example_packed_blocks": pkt["decision"].get("packed_blocks"),
         "plots": paths,
     }
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps({
         "plots": paths,
-        "must_cite": pkt["decision"]["critic_must_cite"],
+        "pack_mode": pkt["decision"].get("pack_mode"),
+        "packed_blocks": pkt["decision"].get("packed_blocks"),
+        "board_pack": {k: v["pack_auc"] for k, v in board["settings"].items()},
         "board_auc": {k: v["auc"] for k, v in board["settings"].items()},
         "board_hit": {k: v["hit_gt"] for k, v in board["settings"].items()},
     }, indent=2))

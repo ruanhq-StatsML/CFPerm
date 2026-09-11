@@ -12,15 +12,18 @@ Blend r = λπ + (1−λ)s used for routing:
 Read order (inspect in this order): ['valence', 'text', 'dominance', 'arousal']
 Tools you MAY call: ['vad_valence']
 Tools you must NOT call: ['read_tokens', 'vad_arousal', 'vad_dominance']
-Abstain: false
+Pack mode: same_expert
+User context concatenates ONLY these blocks, in this order: ['valence']
+Omitted blocks are not in the window (no empty headers).
+Abstain / pack-all: false
 If abstain, ask the user for: []
 critic_must_cite: valence
 
 Rules:
-1. Call enabled tools in read order before writing the answer.
-2. First reasoning sentence names the channel you are using and cites π and s.
-3. If critic_must_cite is set, your evidence must come from that channel.
-4. If abstain is true, do not guess; request ask_missing and stop.
+1. Read packed_blocks in order. Do not retrieve omitted channels.
+2. First reasoning sentence names the packed expert and cites π (prior) and s.
+3. If critic_must_cite is set, evidence must come from that channel.
+4. If abstain is true, do not pack a subset; request ask_missing and stop.
 5. After the answer, emit one JSON line: {"cited": ["<channel>"], "confidence": 0-1}.
 
-Router rationale: Concentrated gap on 'valence' (r=0.89 ≥ τ_hi). Enable only that tool; CoT must cite valence.
+Router rationale: Same expert 'valence' (r=0.89 ≥ τ_hi). Pack only that block; CoT must cite valence.

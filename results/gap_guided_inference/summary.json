@@ -24,6 +24,21 @@
           "random_fixed": 0.0,
           "random_row": 0.2308
         },
+        "pack_auc": {
+          "same_expert_pi": 0.9597,
+          "same_expert_vimp": 0.9597,
+          "same_expert_random": 0.4832,
+          "concat_top2_pi": 0.952,
+          "pack_all": 0.9468,
+          "abstain_policy": 0.9597,
+          "same_expert_oracle": 0.9597
+        },
+        "pi_entropy_last": 0.6866,
+        "population_pack_modes": [
+          "same_expert",
+          "same_expert",
+          "same_expert"
+        ],
         "pi_last": {
           "text": 0.1119,
           "valence": 0.8041,
@@ -65,6 +80,21 @@
           "random_fixed": 0.6667,
           "random_row": 0.2454
         },
+        "pack_auc": {
+          "same_expert_pi": 0.7529,
+          "same_expert_vimp": 0.5998,
+          "same_expert_random": 0.6694,
+          "concat_top2_pi": 0.7546,
+          "pack_all": 0.7674,
+          "abstain_policy": 0.7529,
+          "same_expert_oracle": 0.7529
+        },
+        "pi_entropy_last": 0.9516,
+        "population_pack_modes": [
+          "same_expert",
+          "same_expert",
+          "same_expert"
+        ],
         "pi_last": {
           "text": 0.2486,
           "valence": 0.6407,
@@ -79,6 +109,53 @@
         },
         "selected_last": {
           "pi_top1": "valence",
+          "vimp_top1": "text",
+          "random_fixed": "valence"
+        }
+      },
+      "diffuse equal shift": {
+        "n_seeds": 3,
+        "gt": null,
+        "auc": {
+          "unconstrained": 0.8822,
+          "pi_top1": 0.7164,
+          "vimp_top1": 0.698,
+          "instance_top1": 0.6939,
+          "blend_top1": 0.7251,
+          "random_fixed": 0.727,
+          "random_row": 0.6778,
+          "pi_pool": 0.8574,
+          "uniform_pool": 0.8661
+        },
+        "hit_gt": {},
+        "pack_auc": {
+          "same_expert_pi": 0.7095,
+          "same_expert_vimp": 0.6981,
+          "same_expert_random": 0.7328,
+          "concat_top2_pi": 0.7799,
+          "pack_all": 0.8758,
+          "abstain_policy": 0.8758
+        },
+        "pi_entropy_last": 1.384,
+        "population_pack_modes": [
+          "pack_all",
+          "pack_all",
+          "pack_all"
+        ],
+        "pi_last": {
+          "text": 0.2291,
+          "valence": 0.2598,
+          "arousal": 0.2721,
+          "dominance": 0.239
+        },
+        "pi_vimp_last": {
+          "text": 0.5188,
+          "valence": 0.1682,
+          "arousal": 0.1805,
+          "dominance": 0.1325
+        },
+        "selected_last": {
+          "pi_top1": "arousal",
           "vimp_top1": "text",
           "random_fixed": "valence"
         }
@@ -106,6 +183,21 @@
           "random_fixed": 0.3333,
           "random_row": 0.2564
         },
+        "pack_auc": {
+          "same_expert_pi": 0.4591,
+          "same_expert_vimp": 0.475,
+          "same_expert_random": 0.4927,
+          "concat_top2_pi": 0.4743,
+          "pack_all": 0.4965,
+          "abstain_policy": 0.4785,
+          "same_expert_oracle": 0.5051
+        },
+        "pi_entropy_last": 1.2703,
+        "population_pack_modes": [
+          "same_expert",
+          "pack_all",
+          "concat_k"
+        ],
         "pi_last": {
           "text": 0.3054,
           "valence": 0.3265,
@@ -127,27 +219,13 @@
     }
   },
   "example_row": 273,
-  "example_tools": [
-    {
-      "type": "function",
-      "function": {
-        "name": "vad_valence",
-        "description": "Look up valence lexicon statistics (mean/max/p90). Gap blend r_valence=0.89. call the valence lexicon tool before arguing from wording",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "note": {
-              "type": "string",
-              "description": "Optional focus inside this channel."
-            }
-          }
-        }
-      }
-    }
+  "example_pack_mode": "same_expert",
+  "example_packed_blocks": [
+    "valence"
   ],
-  "example_must_cite": "valence",
   "plots": {
     "auc": "/workspace/results/gap_guided_inference/budgeted_auc.png",
-    "hit": "/workspace/results/gap_guided_inference/gt_hit_rate.png"
+    "hit": "/workspace/results/gap_guided_inference/gt_hit_rate.png",
+    "pack": "/workspace/results/gap_guided_inference/packed_auc.png"
   }
 }

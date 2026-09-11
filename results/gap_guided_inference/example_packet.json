@@ -37,7 +37,11 @@
       "dominance": 0.0268
     },
     "entropy": 0.4492,
-    "rationale": "Concentrated gap on 'valence' (r=0.89 \u2265 \u03c4_hi). Enable only that tool; CoT must cite valence.",
+    "rationale": "Same expert 'valence' (r=0.89 \u2265 \u03c4_hi). Pack only that block; CoT must cite valence.",
+    "packed_blocks": [
+      "valence"
+    ],
+    "pack_mode": "same_expert",
     "packet": {
       "population_shift_pi": {
         "text": 0.0934,
@@ -71,6 +75,16 @@
         "vad_arousal",
         "vad_dominance"
       ],
+      "packed_blocks": [
+        "valence"
+      ],
+      "pack_mode": "same_expert",
+      "population_pack": {
+        "mode": "same_expert",
+        "blocks": [
+          "valence"
+        ]
+      },
       "abstain": false,
       "ask_missing": [],
       "critic_must_cite": "valence",
@@ -81,10 +95,10 @@
         "arousal": 0.019,
         "dominance": 0.0232
       },
-      "rationale": "Concentrated gap on 'valence' (r=0.89 \u2265 \u03c4_hi). Enable only that tool; CoT must cite valence."
+      "rationale": "Same expert 'valence' (r=0.89 \u2265 \u03c4_hi). Pack only that block; CoT must cite valence."
     }
   },
-  "user_message": "[features omitted; sidecar carries Z and s]",
+  "user_message": "### channel: valence\n<valence payload>",
   "openai_tools": [
     {
       "type": "function",

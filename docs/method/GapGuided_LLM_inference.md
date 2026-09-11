@@ -1,92 +1,100 @@
-# Gap-guided LLM inference
+# Gap-guided reading budget
 
-Stage-1 gap scores are not another attention heatmap. They are a **frozen routing contract** for a model that can only inspect *k* channels (tools, RAG indices, prompt sections).
+This line is a **two-sample reading problem** on \(X\). It is not TMLE, not PO-risk, and not causal reasoning. There is no treatment effect, no \(Y\)-intervening, no clever covariate \(H_m\) in the loop.
 
-This is deployable without touching LLM weights.
+\(W\in\{0,1\}\) is a batch/domain tag. \(\hat e(x)\approx P(W=1\mid X=x)\). Human blocks \(B_m\) partition coordinates. Scores \(\pi\) and \(s_m(x)\) localize *which block carries the two-sample difference*. They do not say that \(W\) causes \(Y\), or that a channel is a mediator.
 
-## What is frozen
+## π as a prior (shrinkage, not a causal prior)
 
-Fit once on a domain pair \(W\in\{0,1\}\) (two corpora, two vendors, two years):
+Channel identity \(C\in\{1,\ldots,M\}\) is the unobserved index “which block localizes \(P_0\neq P_1\) on \(X\)”.
 
-| score | formula | when it is used |
-|---|---|---|
-| \(\pi_m\) | consensus simplex over blocks \(B_m\) | population prior: which channel drifted |
-| \(s_m(x)\) | \(\lvert\hat e(x)-\hat e(x_{-m})\rvert / \sum_{m'}\lvert\cdot\rvert\) | this example: which channel moved the propensity |
-| \(r_m(x)\) | \(\lambda\pi_m + (1-\lambda)s_m(x)\) | the actual gate (\(\lambda=0.4\) default) |
-| \(Z_m(x)\) | \(\pi_m\cdot\mathrm{logit}\,\hat e_m(x_m)\) | numeric sidecar in the prompt, not a tool |
-| \(H_m\) | TMLE clever covariate | **training** of \(P(Y\mid X)\), not the chat loop |
+- \(\pi\) is estimated from the **training two-sample only**. It is a Dirichlet-mean style estimate of \(P(C=m\mid\text{domain pair})\). After Stage-1 it is frozen. It does not depend on the query \(x\).
+- \(s_m(x)=|\hat e(x)-\hat e(x_{-m})|/\sum|\cdot|\) is a noisy, per-row measurement of the same \(C\) (LOMO on the propensity, still two-sample).
+- Blend \(r=\lambda\pi+(1-\lambda)s\) is **linear shrinkage**. \(\lambda=1\) ignores this \(x\) and uses the batch localization. \(\lambda=0\) is a hard instance gate.
 
-\(\hat e\) is \(P(W=1\mid X)\), not \(P(Y\mid X)\). That is the point: routing is driven by *where the world moved*, not by where the label model already looks.
+That is the only sense in which \(\pi\) is a prior: a population distribution over *which block to read*, updated by a noisy row-level localization. It is not \(P(Y\mid do(X))\), not a propensity of a treatment, not TMLE.
 
-## Online loop (one query)
+**Same expert** is the \(\lambda=1\) rule: \(\hat m=\arg\max_m\pi_m\), then every later query is read by the same specialist. **Instance expert** is \(\hat m(x)=\arg\max_m s_m(x)\). Those are different evaluands. Do not mix them.
 
-```mermaid
-flowchart TD
-  x["query x"] --> s["s_m(x) from frozen ê, ê_{-m}"]
-  pi["π frozen from the domain pair"] --> r["r = λπ + (1-λ)s"]
-  s --> r
-  r --> gate{"max r vs τ_hi / entropy"}
-  gate -->|"concentrated"| one["enable 1 tool; CoT must cite that channel"]
-  gate -->|"spread"| k["enable top-k under cost budget"]
-  gate -->|"flat"| ask["abstain; ask for the top channel"]
-  one --> gen["generate"]
-  k --> gen
-  gen --> cit["JSON cited: [...]"]
-  cit --> crit{"cited contains critic_must_cite?"}
-  crit -->|no| reask["re-ask: you ignored the drifted channel"]
-  crit -->|yes| done["accept"]
-  ask --> done
-```
+## Abstain: you may not drop a block
 
-Concrete gates (defaults in `RouterConfig`):
+Loss of a reading policy, stripped of LLM poetry:
 
-- \(\tau_{\mathrm{hi}}=0.42\): one tool only.
-- cost budget \(4.0\), \(k_{\max}=2\): greedy by \(r_m/\mathrm{cost}\) (text dumps are expensive; lexicon lookups are cheap).
-- entropy \(\ge 0.92\log M\) or \(r_{\max}<\tau_{\mathrm{lo}}\): **abstain**, do not guess from a low-share channel.
+\[
+L(E,C)=\mathbf{1}\{C\notin E\}\,L_{\mathrm{miss}} + |E|\,L_{\mathrm{token}}
+\]
 
-The LLM never sees \(W\). It sees \(\pi\), \(s\), \(r\), the enabled tool schema, and \(Z\).
+If the posterior over \(C\) is flat, the action that avoids \(L_{\mathrm{miss}}\) is \(E=\{1,\ldots,M\}\): **do not subset**. That is abstain-from-dropping.
 
-## Where this plugs in
+Two operationalizations, same logic:
 
-| surface | what \(\pi,s\) do |
+| if you must produce a score | if you may refuse |
 |---|---|
-| Tool calling | Drop low-share functions from the schema. The model cannot call `read_tokens` if valence is the gate. |
-| RAG | Each block is an index. Query only `index_{m*}` (Chronoberg: VAD lexicon vs full-text; MNLI: overlap checker vs premise dump). |
-| Context packing | Concatenate only \(B_m\) for enabled \(m\). This is the one-block expert in the stand-in eval. |
-| CoT read-order | Force the first sentence to name \(m^*=\arg\max r_m\) and cite \(\pi,s\). |
-| Critic / second pass | If `cited` misses `critic_must_cite`, regenerate with a fixed re-ask string. |
-| Abstain / HITL | Flat \(r\) → ask for the missing sensor (VAD scores, overlap table, hours-worked). |
-| Outcome heads | Keep \(H_m\) for TMLE / PO-risk when you *train* \(P(Y\mid X)\). Do not put \(H_m\) in the chat prompt (it uses \(W\)). |
+| **pack all** — concatenate every \(B_m\) (or enable every tool) | **HITL** — do not pack a subset; ask for the top channel |
 
-Worked Chronoberg mapping: `text → read_tokens` (cost 3), `valence → vad_valence` (cost 1). If \(r_{\mathrm{valence}}\) is large, the system prompt disables `read_tokens` and the critic rejects a lexical-only argument.
+Abstain is **not** “the LLM is unsure about the answer”. It is “the two-sample gap is not localized, so a subset window is an unjustified restriction of the σ-algebra”.
 
-Worked MNLI mapping: `overlap → lexical_overlap`. A fiction vs telephone shift that lives in overlap should not be answered by re-reading the premise first.
+Gate (on \(\pi\) for the same template; on \(r\) if you allow instance updates): entropy \(\ge 0.92\log M\), or \(\max\pi<\tau_{\mathrm{lo}}\). When \(\max\pi\ge\tau_{\mathrm{hi}}\), \(|E|=1\) (same expert). In between, \(|E|=k\) concat.
 
-## Prompt contract (copy-paste)
+Forced top-1 on a **diffuse** shift (equal signal in every block) is the failure mode abstain exists for: you discard three-quarters of the two-sample signal.
 
-`Python/src/gap_guided_inference.py` → `render_system_prompt` / `openai_tool_schema`. A generated example lives in `results/gap_guided_inference/example_system_prompt.txt`.
+## Context packing and concatenating enabled blocks
 
-The first reasoning sentence is specified, not hoped for. The trailing `{"cited": [...], "confidence": 0-1}` line is what the critic parses. No JSON in the schema beyond that.
+Opinion pool \(\sum_m\pi_m\hat e_m(X_{B_m})\) **looks at every specialist’s score**. That is not packing.
 
-## What “better reasoning” means here
+Context packing is one reader on a **subset of raw channels**:
 
-Not higher MMLU. Three falsifiable claims, in order:
+\[
+E=E(\pi)\qquad\text{(same template for every }x\text{)}
+\]
+\[
+\mathrm{pack}(x)=\mathrm{concat}_{m\in E}^{\text{read-order}}\;\mathrm{serialize}(x_{B_m})
+\]
 
-1. **Hit rate.** Under a one-tool budget, \(P(m^*=\mathrm{GT})\) for blend / \(\pi\) beats RF-VIMP and random when the shift is concentrated and a wide nuisance block exists (VIMP overweights width).
-2. **Budgeted AUC.** A frozen expert that only reads the routed block has higher domain AUC than a VIMP-routed or random-routed expert. Oracle GT block is the ceiling.
-3. **Negative control.** Shuffle the GT block: hit rate on that name must collapse. If it does not, the router is using width / prior names, not gap.
+Rules:
 
-Headline from `scripts/run_gap_guided_inference.py` (wide text + inject valence, 3 seeds): **VIMP hit rate 0 / AUC 0.60**; **π hit rate 1 / AUC 0.75** (matches the oracle GT block). Shuffle-valence collapses the hit rate. Strong synthetic GT is too easy (both π and VIMP find valence); inject with a wide nuisance block is the shipping check.
+1. Order is read-order (descending \(\pi\) or \(r\)). Concatenation is the prompt string; the statistical analogue is column-bind of those slices, **one** RF/LLM on the packed design.
+2. Disabled blocks are **absent**. Do not emit empty `### text` headers (that still spends tokens and leaks that the channel exists).
+3. Sidecar \(\pi,s,r,Z\) may sit in the system prompt. \(W\) does not. \(H_m\) does not (it is not part of this line).
+4. \(|E|=1\) packing **is** the same expert, written as a window: the user message contains only that section.
+5. \(|E|=k>1\) is still **one** forward pass, several sections. It is not \(k\) experts voting.
 
-Diffuse observational shift (Chronoberg 1750 vs 1950) is **not** a routing win. Same honesty as Stage-2: ship the gate on concentrated channel shift; keep \(\pi\) as a prior, not a dictator, when \(H(r)\) is high.
+`pack_user_context` does (4)–(5) as strings. `pack_blocks` + `holdout_packed_auc` do the same map on columns.
+
+## “同一个专家” — characterize, then evaluate
+
+Let \(\mathcal{G}_m\) be functions of \(X_{B_m}\) only (measurable w.r.t. that block). Training data may be used; **this** \(x\)’s other blocks may not.
+
+**Same expert.** Choose \(\hat m=\hat m(\pi)\) from the training two-sample. Deploy one \(f\in\mathcal{G}_{\hat m}\) for every subsequent query. Equivalent packing: \(E=\{\hat m\}\) for the whole deployment window.
+
+Not the same object:
+
+| object | \(m\) depends on | what the reader sees |
+|---|---|---|
+| same expert | \(\pi\) only | \(X_{B_{\hat m}}\) for all \(x\) |
+| instance expert | \(\pi,s(x)\) | \(X_{B_{\hat m(x)}}\) — different specialist per row |
+| concat-\(k\) | \(\pi\) only | \(\mathrm{concat}_{m\in E} X_{B_m}\), \(|E|=k\) |
+| pack all / abstain | — | full \(X\) |
+| opinion pool | \(\pi\) | all \(\hat e_m\), not raw concat |
+
+Evaluate four numbers, in order:
+
+1. **Localization.** \(1\{\hat m=m^\star\}\) for same-expert π vs VIMP vs a *single* random specialist (not a per-row coin flip — that would not be 同一个). Instance hit \(P(\hat m(X)=m^\star)\) is a separate line.
+2. **Specialist utility.** Held-out two-sample AUC of the frozen \(\hat e_{\hat m}\). Ceiling: oracle \(m^\star\). This is “hire one specialist”.
+3. **Packed-reader utility.** Held-out AUC of **one** RF trained on `pack_blocks(X, E)`, \(E\in\{\{\hat m_\pi\},\{\hat m_{\mathrm{VIMP}}\},\{m^\star\},\mathrm{top}\text{-}2(\pi),\mathrm{all}\}\). This is “one reader, concatenated sections”. It is the eval for packing, not (2).
+4. **Abstain check.** Diffuse / shuffle: pack-all \(\ge\) forced same-expert. Concentrated inject: same-expert π \(\approx\) oracle and **beats** VIMP when a wide nuisance block exists. Negative control: shuffle \(m^\star\) → hit on that name collapses.
+
+Headline from `scripts/run_gap_guided_inference.py` (3 seeds):
+
+- Inject valence, wide text: same-expert π packed AUC **0.753** (hit 1); VIMP packed AUC **0.600** (hit 0).
+- Diffuse equal shift: pack-all **0.876** vs one specialist **0.710**. Abstain-from-drop is pack-all here.
+- Shuffle valence: packed AUC ~0.5, hit collapses.
 
 ## Code
 
 ```bash
-python3 -m pytest -q tests/test_gap_guided_inference.py tests/test_clever_covariate_gap.py
+python3 -m pytest -q tests/test_gap_guided_inference.py
 python3 scripts/run_gap_guided_inference.py
 ```
 
-- `fit_frozen_gap` / `predict_gap_scores` — deployable \(\hat e,\hat e_{-m}\)
-- `GapGuidedRouter` — packet, prompt, OpenAI tool filter, critic
-- `budgeted_inference_eval` — one-block expert board (no LLM vendor)
+`population_pack` → \(E(\pi)\). `pack_user_context` → string concat. `holdout_packed_auc` → one reader on packed columns.

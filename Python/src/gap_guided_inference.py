@@ -1,22 +1,20 @@
-"""Gap-guided LLM inference: π and instance shares as a routing contract.
+"""Gap-guided LLM inference: two-sample localization as a reading budget.
 
-Stage-1 (this repo) estimates a simplex over human blocks B_m:
+Not TMLE. Not causal. W is a batch/domain indicator for a two-sample problem
+on X. ê estimates P(W=1 | X). π and s_m(x) say which human block B_m localizes
+that two-sample difference. They never identify an effect of W on Y.
 
-  π_m     population share of the batch shift W
-  s_m(x)  instance LOMO share |ê(x) − ê(x_{-m})| / Σ |·|
+The LLM is a reader with a token/tool budget. Three distinct maps:
 
-Those scores do not retrain the LLM. They change *what the LLM is allowed
-to look at* under a context / tool budget:
+  same expert     pick one m from π only (not from this x); every query is
+                  read by the same specialist f_m(X_{B_m})
+  context pack    serialize enabled blocks in read-order into one string;
+                  one forward pass on concat_m∈E X_{B_m}  (not an opinion pool)
+  instance gate   m(x) = argmax s_m(x)  — different experts for different x;
+                  this is *not* “the same expert”
 
-  1. freeze ê, ê_m, ê_{-m} on a labeled two-sample (or unlabeled domain pair)
-  2. per query x, blend r_m(x) = λ π_m + (1−λ) s_m(x)
-  3. emit a deterministic packet: read-order, enabled tools, abstain, critic
-  4. generate; if the CoT cites a low-share channel, re-ask
-
-This module is the shippable loop. It does not call an LLM vendor. The
-stand-in evaluation is *budgeted block experts*: a predictor that may use
-only the routed block, vs VIMP / random / oracle. That is the same decision
-an LLM makes when it can retrieve or inspect only k channels.
+π is a shrinkage prior over channel identity C ∈ {1..M}. Abstain means the
+posterior over C is too flat to justify *dropping* a block: pack all, or HITL.
 """
 from __future__ import annotations
 
@@ -160,6 +158,8 @@ class RoutingDecision:
     instance_share: Dict[str, float]
     entropy: float
     rationale: str
+    packed_blocks: List[str] = field(default_factory=list)
+    pack_mode: str = "same_expert"
     packet: dict = field(default_factory=dict)
 
     def as_dict(self) -> dict:
@@ -204,8 +204,129 @@ def simplex_entropy(p: np.ndarray) -> float:
     return float(-np.sum(p * np.log(p)))
 
 
+def entropy_gate(M: int, config: "RouterConfig") -> float:
+    if config.entropy_abstain is not None:
+        return float(config.entropy_abstain)
+    return 0.92 * float(np.log(max(int(M), 2)))
+
+
+def population_pack(
+    names: Sequence[str],
+    pi: np.ndarray,
+    *,
+    config: "RouterConfig | None" = None,
+    k: int | None = None,
+) -> tuple[List[str], str]:
+    """Same template for every query: E = E(π), never E(x).
+
+    pack_all     — π too flat; dropping a block is unjustified
+    same_expert  — |E|=1, m̂ = argmax π  (the “same specialist”)
+    concat_k     — |E|=k>1, still one reader on concatenated columns
+    """
+    config = config or RouterConfig()
+    names = list(names)
+    pi = relu_normalize(np.asarray(pi, dtype=float).reshape(-1))
+    M = len(names)
+    ent = simplex_entropy(pi)
+    pmax = float(pi.max())
+    order = [names[i] for i in np.argsort(-pi)]
+    if ent >= entropy_gate(M, config) or pmax < config.tau_lo:
+        return list(names), "pack_all"
+    if pmax >= config.tau_hi:
+        return [order[0]], "same_expert"
+    kk = int(config.k_max if k is None else k)
+    kk = max(1, min(kk, M))
+    return order[:kk], "concat_k"
+
+
+def packed_in_read_order(read_order: Sequence[str], enabled_names: Sequence[str]) -> List[str]:
+    enabled = set(enabled_names)
+    return [n for n in read_order if n in enabled]
+
+
+def column_index(spec: ModalitySpec, enabled_names: Sequence[str]) -> np.ndarray:
+    idx: List[int] = []
+    for name in enabled_names:
+        sl = spec.slices[spec.names.index(name)]
+        idx.extend(range(sl.start, sl.stop))
+    return np.asarray(idx, dtype=int)
+
+
+def pack_blocks(X: np.ndarray, spec: ModalitySpec, enabled_names: Sequence[str]) -> np.ndarray:
+    """Column-concat of enabled blocks in the given order (context-packing analogue)."""
+    X = np.asarray(X, dtype=float)
+    idx = column_index(spec, enabled_names)
+    if idx.size == 0:
+        return np.ones((X.shape[0], 1), dtype=float)
+    return X[:, idx]
+
+
+def pack_user_context(block_texts: Dict[str, str], decision: RoutingDecision) -> str:
+    """Serialize only packed_blocks. Omitted channels are absent, not empty headers."""
+    if decision.abstain or decision.pack_mode == "hitl_abstain":
+        ask = ", ".join(decision.ask_missing) or "a more localized channel"
+        return (
+            "[no subset packed] The two-sample gap is not localized. "
+            f"Do not concatenate a subset of blocks. Request: {ask}."
+        )
+    parts = []
+    for name in decision.packed_blocks:
+        if name not in block_texts:
+            continue
+        parts.append(f"### channel: {name}\n{block_texts[name]}")
+    return "\n\n".join(parts)
+
+
+def holdout_packed_auc(
+    Xtr: np.ndarray,
+    Wtr: np.ndarray,
+    Xte: np.ndarray,
+    Wte: np.ndarray,
+    spec: ModalitySpec,
+    enabled_names: Sequence[str],
+    *,
+    seed: int = 0,
+    n_estimators: int = 50,
+) -> tuple[float, int]:
+    """One reader on the packed columns — not a mixture of block-wise scores."""
+    Xptr = pack_blocks(Xtr, spec, enabled_names)
+    Xpte = pack_blocks(Xte, spec, enabled_names)
+    Wtr = _as_1d(Wtr).astype(int)
+    clf = _rf_clf(Xptr.shape[1], len(Wtr), seed, n_estimators=n_estimators)
+    clf.fit(Xptr, Wtr)
+    pred = _predict_pos(clf, Xpte, float(Wtr.mean()), CLIP_E)
+    return _auc(Wte, pred), int(Xptr.shape[1])
+
+
+def make_diffuse_equal_shift(
+    *,
+    n: int = 500,
+    d_text: int = 24,
+    d_vad: int = 4,
+    mean_shift: float = 0.95,
+    seed: int = 0,
+) -> tuple:
+    """Each block gets the same one-coordinate shift — π should not concentrate."""
+    rng = np.random.default_rng(seed)
+    W = rng.integers(0, 2, size=n)
+    names = ["text", "valence", "arousal", "dominance"]
+    dims = [d_text, d_vad, d_vad, d_vad]
+    blocks = []
+    for d in dims:
+        Xj = rng.normal(0.0, 1.0, size=(n, d))
+        Xj[W == 1, 0] += mean_shift
+        blocks.append(Xj)
+    X = np.hstack(blocks)
+    Y = rng.normal(0.0, 1.0, size=n)
+    slices, start = [], 0
+    for d in dims:
+        slices.append(slice(start, start + d))
+        start += d
+    return X, W, Y, ModalitySpec(names=names, slices=slices)
+
+
 def blend_shares(pi: np.ndarray, instance_share: np.ndarray, *, lam: float = 0.4) -> np.ndarray:
-    """r = λπ + (1−λ)s, then renormalize. λ=1 is population-only routing."""
+    """r = λπ + (1−λ)s, then renormalize. λ=1 is π-only (same expert for all x)."""
     pi = np.asarray(pi, dtype=float).reshape(1, -1)
     s = np.asarray(instance_share, dtype=float)
     if s.ndim == 1:
@@ -409,20 +530,26 @@ def route_from_shares(
     ask = [top] if abstain else []
     must = None if abstain else top
 
+    pop_blocks, pop_mode = population_pack(names, pi, config=config)
     if abstain:
+        pack_mode = "hitl_abstain"
+        packed_blocks: List[str] = []
         rationale = (
-            f"Blend is too flat (H={ent:.2f} nats, r_max={rmax:.2f} < gate). "
-            f"Ask for '{top}' rather than guessing from a low-share channel."
+            f"Neither π nor s localizes a channel (H(r)={ent:.2f}, r_max={rmax:.2f}). "
+            f"Do not drop blocks. HITL: ask for '{top}'. If a score is required, pack_all={list(names)}."
         )
     elif rmax >= config.tau_hi:
+        pack_mode = "same_expert"
+        packed_blocks = packed_in_read_order(read_order, enabled_names)
         rationale = (
-            f"Concentrated gap on '{top}' (r={rmax:.2f} ≥ τ_hi). "
-            f"Enable only that tool; CoT must cite {top}."
+            f"Same expert '{top}' (r={rmax:.2f} ≥ τ_hi). Pack only that block; CoT must cite {top}."
         )
     else:
+        pack_mode = "concat_k"
+        packed_blocks = packed_in_read_order(read_order, enabled_names)
         rationale = (
-            f"Spread budget over {enabled_names} in read-order {read_order}. "
-            f"Critic still requires a citation of '{top}'."
+            f"Concat {packed_blocks} in read-order (one reader, k sections). "
+            f"Population template would be {pop_mode}:{pop_blocks}."
         )
 
     pack_pi = {n: round(float(v), 4) for n, v in zip(names, pi)}
@@ -435,6 +562,9 @@ def route_from_shares(
         "read_order": read_order,
         "tools_enabled": enabled_ids,
         "tools_disabled": disabled,
+        "packed_blocks": packed_blocks,
+        "pack_mode": pack_mode,
+        "population_pack": {"mode": pop_mode, "blocks": pop_blocks},
         "abstain": abstain,
         "ask_missing": ask,
         "critic_must_cite": must,
@@ -456,6 +586,8 @@ def route_from_shares(
         instance_share=pack_s,
         entropy=round(ent, 4),
         rationale=rationale,
+        packed_blocks=packed_blocks,
+        pack_mode=pack_mode,
         packet=packet,
     )
 
@@ -508,15 +640,18 @@ def render_system_prompt(decision: RoutingDecision) -> str:
         f"Read order (inspect in this order): {decision.read_order}",
         f"Tools you MAY call: {decision.tools_enabled}",
         f"Tools you must NOT call: {decision.tools_disabled}",
-        f"Abstain: {str(decision.abstain).lower()}",
+        f"Pack mode: {decision.pack_mode}",
+        f"User context concatenates ONLY these blocks, in this order: {decision.packed_blocks}",
+        "Omitted blocks are not in the window (no empty headers).",
+        f"Abstain / pack-all: {str(decision.abstain).lower()}",
         f"If abstain, ask the user for: {decision.ask_missing}",
         f"critic_must_cite: {must}",
         "",
         "Rules:",
-        "1. Call enabled tools in read order before writing the answer.",
-        "2. First reasoning sentence names the channel you are using and cites π and s.",
-        "3. If critic_must_cite is set, your evidence must come from that channel.",
-        "4. If abstain is true, do not guess; request ask_missing and stop.",
+        "1. Read packed_blocks in order. Do not retrieve omitted channels.",
+        "2. First reasoning sentence names the packed expert and cites π (prior) and s.",
+        "3. If critic_must_cite is set, evidence must come from that channel.",
+        "4. If abstain is true, do not pack a subset; request ask_missing and stop.",
         "5. After the answer, emit one JSON line: "
         '{"cited": ["<channel>"], "confidence": 0-1}.',
         "",
@@ -671,11 +806,36 @@ def budgeted_inference_eval(
         "random_fixed": round(hit(rand_fixed_i), 4),
         "random_row": round(hit(rand_row_i), 4),
     }
+    cfg = RouterConfig()
+    pop_E, pop_mode = population_pack(names, models.pi, config=cfg)
+    order_pi = [names[i] for i in np.argsort(-models.pi)]
+    pack_sets = {
+        "same_expert_pi": [names[pi_i]],
+        "same_expert_vimp": [names[vimp_i]],
+        "same_expert_random": [names[rand_fixed_i]],
+        "concat_top2_pi": order_pi[: min(2, M)],
+        "pack_all": list(names),
+        "abstain_policy": pop_E,
+    }
+    if gt is not None and gt in names:
+        pack_sets["same_expert_oracle"] = [gt]
+    pack_auc: Dict[str, float] = {}
+    pack_width: Dict[str, int] = {}
+    for key, E in pack_sets.items():
+        a, w = holdout_packed_auc(
+            Xtr, Wtr, Xte, Wte, spec, E, seed=seed + 21, n_estimators=n_estimators,
+        )
+        pack_auc[key] = round(float(a), 4)
+        pack_width[key] = int(w)
+
     return {
         "n_train": int(len(Wtr)),
         "n_test": int(len(Wte)),
         "pi": models.pack_pi(),
         "pi_vimp": {n: round(float(v), 4) for n, v in zip(names, models.pi_vimp)},
+        "pi_entropy": round(simplex_entropy(models.pi), 4),
+        "same_expert": names[pi_i],
+        "population_pack": {"mode": pop_mode, "blocks": pop_E},
         "selected_block": {
             "pi_top1": names[pi_i],
             "vimp_top1": names[vimp_i],
@@ -683,9 +843,16 @@ def budgeted_inference_eval(
         },
         "auc": aucs,
         "hit_gt": hits,
+        "pack_auc": pack_auc,
+        "pack_width": pack_width,
         "gt": gt,
         "has_lomo": models.has_lomo,
         "lam": lam if models.has_lomo else 1.0,
+        "note": (
+            "auc.*_top1 is the frozen specialist ê_m (same expert reads only B_m). "
+            "pack_auc is one RF on concatenated enabled columns (context packing). "
+            "pi_pool mixes specialist scores — that is not packing."
+        ),
     }
 
 
@@ -707,6 +874,10 @@ def worked_example_packet(
     decision = router.route_row(scores, i)
     prompt = render_system_prompt(decision)
     tools = openai_tool_schema(decision, router.catalog)
+    packed_user = pack_user_context(
+        {n: f"<{n} payload>" for n in spec.names},
+        decision,
+    )
     wrong = critic_check(decision, ["text"] if decision.critic_must_cite != "text" else ["valence"])
     right = critic_check(
         decision,
@@ -716,7 +887,7 @@ def worked_example_packet(
         "row_index": i,
         "decision": decision.as_dict(),
         "system_prompt": prompt,
-        "user_message": query_preview,
+        "user_message": packed_user if packed_user else query_preview,
         "openai_tools": tools,
         "critic_on_wrong_cite": asdict(wrong),
         "critic_on_correct_cite": asdict(right),

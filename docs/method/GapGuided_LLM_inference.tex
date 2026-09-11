@@ -6,79 +6,48 @@
 \usepackage{hyperref}
 \usepackage[T1]{fontenc}
 \graphicspath{{../../results/gap_guided_inference/}}
-\title{Gap-guided LLM inference: a routing contract}
+\title{Two-sample reading budget: same expert and context packing}
 \author{CFPerm prototype}
 \date{}
 \begin{document}
 \maketitle
-\noindent Stage-1 modality-gap scores are a frozen routing contract for a model that
-can inspect only $k$ channels (tools, RAG indices, prompt sections).
-They do not retrain the LLM. $\hat e$ is $P(W{=}1\mid X)$, not $P(Y\mid X)$.
+\noindent Not TMLE and not causal. $W$ is a batch tag; $\hat e\approx P(W{=}1\mid X)$.
+$\pi$ is a shrinkage prior over which human block localizes the two-sample
+difference. It is not a treatment propensity and is not used to target $Y$.
 
-\section{Online packet}
-For each query $x$, blend $r_m(x)=\lambda\pi_m+(1-\lambda)s_m(x)$ with
-$s_m(x)=\lvert\hat e(x)-\hat e(x_{-m})\rvert/\sum_{m'}\lvert\cdot\rvert$.
-Gates (defaults): $\tau_{\mathrm{hi}}=0.42$ enables one tool;
-cost budget and $k_{\max}$ pack the rest by $r_m/\mathrm{cost}$;
-entropy $\ge 0.92\log M$ abstains and asks for the top channel.
-The chat schema never includes $W$ or the TMLE $H_m$ (those use the batch label).
-$H_m$ stays in outcome training.
+\section{Same expert versus packing}
+A \emph{same expert} is $\hat m=\arg\max\pi$, then $f\in\mathcal{G}_{\hat m}$
+(functions of $X_{B_{\hat m}}$ only) for every query. That template does not
+depend on $x$. An instance gate $\hat m(x)=\arg\max s_m(x)$ is a different object.
 
-Copy-paste artifacts live in \texttt{gap\_guided\_inference.py}:
-\texttt{render\_system\_prompt}, \texttt{openai\_tool\_schema}, \texttt{critic\_check}.
+Context packing is one reader on concatenated raw blocks
+$E=E(\pi)$, not an opinion pool of $\hat e_m$. Disabled channels are omitted,
+not emitted as empty headers. Abstain means the gap is not localized: do not
+drop a block (pack all, or HITL). Forced top-1 on a diffuse shift discards signal.
 
-\section{Budgeted-block stand-in (no vendor LLM)}
-A block RF that only reads $B_m$ is the same decision as packing one modality
-into the context window. The ceiling is the oracle GT block.
-Wide text plus a concentrated valence shift is the regime where raw VIMP
-overweights width and $\pi$ should route to valence.
-Shuffle-valence is the negative control: hit rate on that name must collapse.
-The inject row is the shipping check: VIMP selects the wide text block (hit 0),
-$\pi$ selects valence (hit 1), and the routed expert's AUC matches the oracle.
-
-\begin{table}[h]
-\centering
-\small
-\caption{Held-out domain AUC of a one-block expert (mean of 3 seeds).}
-\begin{tabular}{lccccc}
-\toprule
-Setting & oracle & blend $r$ & $\pi$ & VIMP & random \\
-\midrule
-synthetic GT=valence & 0.959 & 0.957 & 0.959 & 0.959 & 0.642 \\
-inject valence & 0.747 & 0.745 & 0.747 & 0.600 & 0.583 \\
-shuffle valence (neg.) & 0.505 & 0.481 & 0.474 & 0.470 & 0.516 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[h]
-\centering
-\small
-\caption{$P(\textrm{selected block}=\textrm{GT})$ under a one-tool budget.}
-\begin{tabular}{lccccc}
-\toprule
-Setting & blend $r$ & $\pi$ & instance $s$ & VIMP & random \\
-\midrule
-synthetic GT=valence & 0.980 & 1.000 & 0.749 & 1.000 & 0.231 \\
-inject valence & 0.824 & 1.000 & 0.465 & 0.000 & 0.245 \\
-shuffle valence (neg.) & 0.128 & 0.333 & 0.191 & 0.000 & 0.256 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
+\section{Specialist $\hat e_m$ (one block, all rows)}
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{budgeted_auc.png}
-\caption{Held-out domain AUC of the routed one-block expert.}
+\caption{Frozen specialist AUC. $\pi$ picks one $m$ for the whole test set.}
+\end{figure}
+
+\section{Packed reader (one RF on concat $E$)}
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{packed_auc.png}
+\caption{Column-concat of $E(\pi)$. Pack-all is the abstain-from-dropping action.}
 \end{figure}
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{gt_hit_rate.png}
-\caption{$P(\textrm{selected block}=\textrm{GT})$ under a one-tool budget.}
+\caption{Localization hit. Same-expert hit is $1\{\hat m=m^\star\}$, not a per-row mix.}
 \end{figure}
 
-Diffuse observational shifts are not a routing win; the same honesty as Stage-2.
-Ship the gate when the channel is concentrated; keep $\pi$ as a prior when $H(r)$ is high.
+Inject valence with a wide text block: VIMP hires the wide specialist;
+$\pi$ hires valence and the packed reader matches the GT block.
+Diffuse equal shift: pack-all beats one specialist.
+Shuffle valence: hit collapses.
 
 \end{document}
