@@ -2,14 +2,12 @@
 """Attribution on concatenated MSR-VTT windows (3900 x 2048).
 
   1. RF VIMP modality shares.
-  2. Leave-one-group-out AUC for batch label W.
-  3. Leave-one-group-out PO-risk: drop a modality block, refit (μ, e, τ),
-     recompute E[τ²] / R-risk.
-  4. After the top modality is named, subset localization: high-|τ| videos
-     and top coordinates in that block, with a simple W=0 vs W=1 mean split.
+  2. Leave-one-group-out AUC for W.
+  3. Leave-one-group-out PO-risk: drop a modality, fit again, compare E[τ²].
+  4. Subset inside that modality: high-|τ| videos and top coordinates.
 
-Two batches: pooled early vs late windows, and a 50/50 video mixture.
-Y for PO-risk is the MSR-VTT category id.
+Two batches: early vs late windows, and a 50/50 video split.
+Y is the MSR-VTT category id.
 """
 from __future__ import annotations
 
@@ -220,7 +218,7 @@ def fit_po_risk(X, Y, W, *, n_splits, seed, n_estimators, max_depth, min_samples
 
 
 def leave_one_group_out_po_risk(X, Y, W, **kw) -> dict:
-    """Drop (or keep-only) a modality, refit the whole PO-risk pipeline."""
+    """Drop a modality, fit μ, e, τ again, compare PO-risk. That is the whole step."""
     full = fit_po_risk(X, Y, W, **kw)
     out = {
         "full": {"po_risk": full["po_risk"], "r_risk": full["r_risk"]},
@@ -241,7 +239,7 @@ def leave_one_group_out_po_risk(X, Y, W, **kw) -> dict:
             "po_risk": only["po_risk"],
             "r_risk": only["r_risk"],
         }
-    # Drill into the group whose removal raises R-risk the most (LOCO).
+    # Subset the group whose drop raises R-risk the most.
     r_deltas = {g: out[f"without_{g}"]["delta_r_risk"] for g in GROUPS}
     po_inflate = {g: out[f"without_{g}"]["po_risk"] - out["full"]["po_risk"] for g in GROUPS}
     out["top_modality"] = max(r_deltas, key=r_deltas.get)
@@ -547,7 +545,7 @@ def main() -> None:
             f"-text={logo_auc['without_text']['mean']:.3f} (Δ={logo_auc['delta_without_text']:.3f})",
             flush=True,
         )
-        print("  leave-one-group-out PO-risk (refit μ,e,τ)...", flush=True)
+        print("  leave-one-group-out PO-risk (drop block, fit again)...", flush=True)
         logo_po = leave_one_group_out_po_risk(X, data["y_cat"], W, **pokw)
         full_fit = logo_po["fit"]
         print(

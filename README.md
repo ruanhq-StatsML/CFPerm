@@ -158,4 +158,4 @@ X = z["concat"]          # (3900, 2048)
 video, audio, text = X[:, :768], X[:, 768:1280], X[:, 1280:]
 ```
 
-On that matrix, `Python/src/run_msrvtt_concat_attribution.py` reports RF VIMP block shares, leave-one-group-out AUC, **leave-one-group-out PO-risk** (refit μ, e, τ after dropping a modality), then subset localization inside the named modality (high-|τ| videos and top coordinates). Two batches: pooled early vs late windows, and a 50/50 video split. Numbers: `experiments/msrvtt/concat_attribution.json`.
+On that matrix, `Python/src/run_msrvtt_concat_attribution.py` reports block shares, leave-one-group-out AUC, and leave-one-group-out PO-risk (drop a modality, fit again). Then a subset of high-|τ| videos inside the named modality. Numbers: `experiments/msrvtt/concat_attribution.json`.
