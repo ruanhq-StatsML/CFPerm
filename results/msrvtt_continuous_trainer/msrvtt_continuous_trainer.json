@@ -3,6 +3,7 @@
   "n_classes": 16,
   "equal_lr": false,
   "eta0": 0.05,
+  "schedule": "warmup_each_head_then_rotate",
   "mean_pi": {
     "video": 0.6383723903414876,
     "audio": 0.3143248457478805,
@@ -13,9 +14,51 @@
   "holdout_acc": 1.0,
   "history": [
     {
+      "round": 0,
+      "phase": "warmup",
+      "batch": 0,
+      "active": [
+        "video",
+        "audio",
+        "text"
+      ],
+      "pi": {
+        "video": 0.3333333333333333,
+        "audio": 0.3333333333333333,
+        "text": 0.3333333333333333
+      },
+      "delta_pi": {
+        "video": 0.0,
+        "audio": 0.0,
+        "text": 0.0
+      },
+      "lr": {
+        "video": 0.016666666666666666,
+        "audio": 0.016666666666666666,
+        "text": 0.016666666666666666
+      },
+      "auc_shift": NaN,
+      "acc_video_id": 1.0,
+      "n": 32,
+      "updates": {
+        "video": 4,
+        "audio": 4,
+        "text": 4
+      }
+    },
+    {
       "round": 1,
+      "phase": "rotate",
       "batch_prev": 0,
       "batch": 1,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.723302833707139,
         "audio": 0.23508568575916763,
@@ -33,12 +76,26 @@
       },
       "auc_shift": 0.30078125,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 6,
+        "audio": 6,
+        "text": 6
+      }
     },
     {
       "round": 2,
+      "phase": "rotate",
       "batch_prev": 1,
       "batch": 2,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.5556397790239357,
         "audio": 0.38406341041967756,
@@ -56,12 +113,26 @@
       },
       "auc_shift": 0.1748046875,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 8,
+        "audio": 8,
+        "text": 8
+      }
     },
     {
       "round": 3,
+      "phase": "rotate",
       "batch_prev": 2,
       "batch": 3,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.6636996567385193,
         "audio": 0.27655788892772337,
@@ -79,12 +150,26 @@
       },
       "auc_shift": 0.1875,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 10,
+        "audio": 10,
+        "text": 10
+      }
     },
     {
       "round": 4,
+      "phase": "rotate",
       "batch_prev": 3,
       "batch": 4,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.5941125158748983,
         "audio": 0.36487563725122396,
@@ -102,12 +187,26 @@
       },
       "auc_shift": 0.1669921875,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 12,
+        "audio": 12,
+        "text": 12
+      }
     },
     {
       "round": 5,
+      "phase": "rotate",
       "batch_prev": 4,
       "batch": 5,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.6562703791127071,
         "audio": 0.3104409158665982,
@@ -125,12 +224,26 @@
       },
       "auc_shift": 0.2294921875,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 14,
+        "audio": 14,
+        "text": 14
+      }
     },
     {
       "round": 6,
+      "phase": "rotate",
       "batch_prev": 5,
       "batch": 6,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.6286246277703883,
         "audio": 0.33111259012389643,
@@ -148,12 +261,26 @@
       },
       "auc_shift": 0.21484375,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 16,
+        "audio": 16,
+        "text": 16
+      }
     },
     {
       "round": 7,
+      "phase": "rotate",
       "batch_prev": 6,
       "batch": 7,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.6226018234751767,
         "audio": 0.33345632388997515,
@@ -171,12 +298,26 @@
       },
       "auc_shift": 0.3359375,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 18,
+        "audio": 18,
+        "text": 18
+      }
     },
     {
       "round": 8,
+      "phase": "rotate",
       "batch_prev": 7,
       "batch": 8,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.7223359066976018,
         "audio": 0.25115590632213647,
@@ -194,12 +335,26 @@
       },
       "auc_shift": 0.2958984375,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 20,
+        "audio": 20,
+        "text": 20
+      }
     },
     {
       "round": 9,
+      "phase": "rotate",
       "batch_prev": 8,
       "batch": 9,
+      "active": [
+        "video",
+        "video",
+        "audio",
+        "audio",
+        "text",
+        "text"
+      ],
       "pi": {
         "video": 0.5787639906730223,
         "audio": 0.3421752531705261,
@@ -217,7 +372,12 @@
       },
       "auc_shift": 0.0888671875,
       "acc_video_id": 1.0,
-      "n": 32
+      "n": 32,
+      "updates": {
+        "video": 22,
+        "audio": 22,
+        "text": 22
+      }
     }
   ]
 }

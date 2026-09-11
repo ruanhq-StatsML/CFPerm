@@ -117,6 +117,15 @@ def rf_domain(X0, X1, seed=SEED, n_estimators=150):
     return vimp, auc
 
 
+def benchmark_feature_selection(X0, X1, seed=SEED, n_estimators=40):
+    """FSDS domain-shift feature selection on two batches (RF-Domain VIMP).
+
+    Drop-in hook: swap the body for another selector; shares still come from
+    ``modality_mass(vimp)``.
+    """
+    return rf_domain(X0, X1, seed=seed, n_estimators=n_estimators)
+
+
 def _import_mmd():
     import sys
 

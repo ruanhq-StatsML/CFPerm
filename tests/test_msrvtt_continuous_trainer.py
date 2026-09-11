@@ -19,8 +19,13 @@ def test_continuous_trainer_logs_round_to_round_pi():
     )
     summary, probe = run_continuous_trainer(b, n_batches=10, eta0=0.04, steps_per_batch=4, n_estimators=25, seed=8)
     assert summary["n_batches"] == 10
-    assert len(summary["history"]) == 9
-    for row in summary["history"]:
+    assert len(summary["history"]) == 10
+    assert summary["history"][0]["phase"] == "warmup"
+    assert summary["history"][0]["active"] == list(GROUP_NAMES)
+    rot = [h for h in summary["history"] if h["phase"] == "rotate"]
+    assert len(rot) == 9
+    assert rot[0]["active"][:3] == list(GROUP_NAMES)
+    for row in rot:
         s = sum(row["pi"][g] for g in GROUP_NAMES)
         assert abs(s - 1.0) < 1e-6
         assert set(row["lr"]) == set(GROUP_NAMES)
