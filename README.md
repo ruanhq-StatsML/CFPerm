@@ -157,3 +157,5 @@ z = np.load("experiments/msrvtt/concat_feat_f16.npz")
 X = z["concat"]          # (3900, 2048)
 video, audio, text = X[:, :768], X[:, 768:1280], X[:, 1280:]
 ```
+
+On that matrix, `Python/src/run_msrvtt_concat_attribution.py` reports RF VIMP block shares, leave-one-group-out AUC for the batch label, and R-learner PO-risk RF impurity at the 2048 features (also summed to blocks). Two batches: pooled early vs late windows, and a 50/50 video split. Numbers: `experiments/msrvtt/concat_attribution.json`.

@@ -274,19 +274,19 @@ def plot_results(payload: dict, out_png: Path) -> None:
 
     ax = axes[1]
     full = [payload["contrasts"][c]["logo_auc"]["full"]["mean"] for c in contrasts]
-    dv = [payload["contrasts"][c]["logo_auc"]["without_video"]["mean"] for c in contrasts]
-    da = [payload["contrasts"][c]["logo_auc"]["without_audio"]["mean"] for c in contrasts]
-    dt = [payload["contrasts"][c]["logo_auc"]["without_text"]["mean"] for c in contrasts]
+    ov = [payload["contrasts"][c]["logo_auc"]["only_video"]["mean"] for c in contrasts]
+    oa = [payload["contrasts"][c]["logo_auc"]["only_audio"]["mean"] for c in contrasts]
+    ot = [payload["contrasts"][c]["logo_auc"]["only_text"]["mean"] for c in contrasts]
     ax.bar(x - 1.5 * 0.2, full, 0.2, color="#1A2332", label="full")
-    ax.bar(x - 0.5 * 0.2, dv, 0.2, color="#E07A3D", label="−video")
-    ax.bar(x + 0.5 * 0.2, da, 0.2, color="#2C4A6E", label="−audio")
-    ax.bar(x + 1.5 * 0.2, dt, 0.2, color="#2F6B4F", label="−text")
+    ax.bar(x - 0.5 * 0.2, ov, 0.2, color="#E07A3D", label="video only")
+    ax.bar(x + 0.5 * 0.2, oa, 0.2, color="#2C4A6E", label="audio only")
+    ax.bar(x + 1.5 * 0.2, ot, 0.2, color="#2F6B4F", label="text only")
     ax.axhline(0.5, color="#888", lw=0.8, ls="--")
     ax.set_xticks(x)
     ax.set_xticklabels(["early vs late", "video mix A vs B"])
-    ax.set_ylim(0.45, 1.05)
+    ax.set_ylim(0.0, 1.08)
     ax.set_ylabel("CV AUC")
-    ax.set_title("Leave-one-group-out AUC")
+    ax.set_title("AUC using one group only")
     ax.legend(frameon=False, fontsize=8)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)

@@ -1,0 +1,687 @@
+{
+  "n_videos": 39,
+  "n_windows": 100,
+  "concat_shape": [
+    3900,
+    2048
+  ],
+  "layout": "video[768] | audio[512] | text[768] = 2048",
+  "y": "msrvtt category id",
+  "n_estimators": 40,
+  "n_splits": 3,
+  "n_bootstrap": 3,
+  "contrasts": {
+    "pooled_temporal": {
+      "fsds_shares": {
+        "n_bootstrap": 3.0,
+        "video_share": 0.7783247602653169,
+        "video_share_mean": 0.7783247602653169,
+        "video_share_var": 0.00017624010866516045,
+        "video_share_std": 0.013275545512903055,
+        "audio_share": 0.19309172419142465,
+        "audio_share_mean": 0.19309172419142465,
+        "audio_share_var": 0.00012193265124424095,
+        "audio_share_std": 0.011042311861392113,
+        "text_share": 0.028583515542258214,
+        "text_share_mean": 0.028583515542258214,
+        "text_share_var": 1.763195389384498e-05,
+        "text_share_std": 0.004199042020966804
+      },
+      "logo_auc": {
+        "full": {
+          "mean": 0.9955637080867851,
+          "std": 0.0019677414334673305,
+          "folds": [
+            0.9963573964497042,
+            0.997010650887574,
+            0.993323076923077
+          ]
+        },
+        "without_video": {
+          "mean": 0.887323076923077,
+          "std": 0.004301065844194808,
+          "folds": [
+            0.8899573964497041,
+            0.8896520710059173,
+            0.8823597633136095
+          ]
+        },
+        "only_video": {
+          "mean": 0.9959984220907296,
+          "std": 0.0018754321265598967,
+          "folds": [
+            0.9972639053254437,
+            0.996887573964497,
+            0.9938437869822485
+          ]
+        },
+        "delta_without_video": 0.10824063116370808,
+        "without_audio": {
+          "mean": 0.9949625246548323,
+          "std": 0.00233266215852593,
+          "folds": [
+            0.9958343195266272,
+            0.9967337278106508,
+            0.9923195266272189
+          ]
+        },
+        "only_audio": {
+          "mean": 0.9385104536489152,
+          "std": 0.005908183645425426,
+          "folds": [
+            0.9342106508875739,
+            0.9360733727810651,
+            0.9452473372781065
+          ]
+        },
+        "delta_without_audio": 0.000601183431952812,
+        "without_text": {
+          "mean": 0.9960457593688363,
+          "std": 0.002433237781741438,
+          "folds": [
+            0.9973633136094675,
+            0.9975360946745563,
+            0.9932378698224853
+          ]
+        },
+        "only_text": {
+          "mean": 0.29422090729783035,
+          "std": 0.007927502141127985,
+          "folds": [
+            0.28828994082840237,
+            0.2911479289940828,
+            0.3032248520710059
+          ]
+        },
+        "delta_without_text": -0.0004820512820512546
+      },
+      "po_risk": {
+        "po_risk": 0.0211449438524867,
+        "r_risk": 1.0835169997494685,
+        "phi_mean": -0.004996635171618531,
+        "phi_std": 0.30894331478449066,
+        "blockwise_shares": {
+          "video_share": 0.606516334380416,
+          "audio_share": 0.338500766302247,
+          "text_share": 0.054982899316337104
+        },
+        "leave_one_group_r_risk": {
+          "video": {
+            "r_risk": 1.0935229161495537,
+            "delta_vs_full": 0.01000591640008519
+          },
+          "audio": {
+            "r_risk": 1.080659573882574,
+            "delta_vs_full": -0.002857425866894525
+          },
+          "text": {
+            "r_risk": 1.081431238464412,
+            "delta_vs_full": -0.002085761285056442
+          }
+        },
+        "leave_one_group_po_risk": {
+          "video": {
+            "po_risk": 0.01767362090810236,
+            "delta_vs_full": 0.003471322944384337
+          },
+          "audio": {
+            "po_risk": 0.02225085353970821,
+            "delta_vs_full": -0.001105909687221511
+          },
+          "text": {
+            "po_risk": 0.022782854411331127,
+            "delta_vs_full": -0.0016379105588444284
+          }
+        },
+        "top_features": [
+          {
+            "rank": 1,
+            "index": 1083,
+            "group": "audio",
+            "local_index": 315,
+            "vimp": 0.012652982098830276
+          },
+          {
+            "rank": 2,
+            "index": 819,
+            "group": "audio",
+            "local_index": 51,
+            "vimp": 0.012295082346490297
+          },
+          {
+            "rank": 3,
+            "index": 1081,
+            "group": "audio",
+            "local_index": 313,
+            "vimp": 0.010447735900755633
+          },
+          {
+            "rank": 4,
+            "index": 551,
+            "group": "video",
+            "local_index": 551,
+            "vimp": 0.009432138191720245
+          },
+          {
+            "rank": 5,
+            "index": 683,
+            "group": "video",
+            "local_index": 683,
+            "vimp": 0.009402920269550016
+          },
+          {
+            "rank": 6,
+            "index": 631,
+            "group": "video",
+            "local_index": 631,
+            "vimp": 0.008538574731509872
+          },
+          {
+            "rank": 7,
+            "index": 414,
+            "group": "video",
+            "local_index": 414,
+            "vimp": 0.008173509040051565
+          },
+          {
+            "rank": 8,
+            "index": 176,
+            "group": "video",
+            "local_index": 176,
+            "vimp": 0.00810147437023941
+          },
+          {
+            "rank": 9,
+            "index": 103,
+            "group": "video",
+            "local_index": 103,
+            "vimp": 0.007854928445536955
+          },
+          {
+            "rank": 10,
+            "index": 60,
+            "group": "video",
+            "local_index": 60,
+            "vimp": 0.00785173151533118
+          },
+          {
+            "rank": 11,
+            "index": 1135,
+            "group": "audio",
+            "local_index": 367,
+            "vimp": 0.0076554364395737306
+          },
+          {
+            "rank": 12,
+            "index": 784,
+            "group": "audio",
+            "local_index": 16,
+            "vimp": 0.007647135136061335
+          },
+          {
+            "rank": 13,
+            "index": 898,
+            "group": "audio",
+            "local_index": 130,
+            "vimp": 0.007316036764499241
+          },
+          {
+            "rank": 14,
+            "index": 371,
+            "group": "video",
+            "local_index": 371,
+            "vimp": 0.007011257835997426
+          },
+          {
+            "rank": 15,
+            "index": 1272,
+            "group": "audio",
+            "local_index": 504,
+            "vimp": 0.006491396913654803
+          },
+          {
+            "rank": 16,
+            "index": 1101,
+            "group": "audio",
+            "local_index": 333,
+            "vimp": 0.006149024016894325
+          },
+          {
+            "rank": 17,
+            "index": 456,
+            "group": "video",
+            "local_index": 456,
+            "vimp": 0.0060583936498307105
+          },
+          {
+            "rank": 18,
+            "index": 1,
+            "group": "video",
+            "local_index": 1,
+            "vimp": 0.005797011705394718
+          },
+          {
+            "rank": 19,
+            "index": 286,
+            "group": "video",
+            "local_index": 286,
+            "vimp": 0.005705791882873679
+          },
+          {
+            "rank": 20,
+            "index": 1149,
+            "group": "audio",
+            "local_index": 381,
+            "vimp": 0.005402631647866635
+          },
+          {
+            "rank": 21,
+            "index": 624,
+            "group": "video",
+            "local_index": 624,
+            "vimp": 0.005380390901179627
+          },
+          {
+            "rank": 22,
+            "index": 849,
+            "group": "audio",
+            "local_index": 81,
+            "vimp": 0.005360713720557107
+          },
+          {
+            "rank": 23,
+            "index": 314,
+            "group": "video",
+            "local_index": 314,
+            "vimp": 0.0052062968146852975
+          },
+          {
+            "rank": 24,
+            "index": 654,
+            "group": "video",
+            "local_index": 654,
+            "vimp": 0.005094971763039823
+          },
+          {
+            "rank": 25,
+            "index": 664,
+            "group": "video",
+            "local_index": 664,
+            "vimp": 0.005084527999733071
+          },
+          {
+            "rank": 26,
+            "index": 322,
+            "group": "video",
+            "local_index": 322,
+            "vimp": 0.004909628678629575
+          },
+          {
+            "rank": 27,
+            "index": 954,
+            "group": "audio",
+            "local_index": 186,
+            "vimp": 0.004868866323327812
+          },
+          {
+            "rank": 28,
+            "index": 208,
+            "group": "video",
+            "local_index": 208,
+            "vimp": 0.004808953640523083
+          },
+          {
+            "rank": 29,
+            "index": 44,
+            "group": "video",
+            "local_index": 44,
+            "vimp": 0.004628418049547146
+          },
+          {
+            "rank": 30,
+            "index": 719,
+            "group": "video",
+            "local_index": 719,
+            "vimp": 0.004371477358669491
+          }
+        ]
+      }
+    },
+    "mixture_shift": {
+      "fsds_shares": {
+        "n_bootstrap": 3.0,
+        "video_share": 0.6805340191034223,
+        "video_share_mean": 0.6805340191034223,
+        "video_share_var": 5.258682515595047e-05,
+        "video_share_std": 0.007251677402915168,
+        "audio_share": 0.29915131059654027,
+        "audio_share_mean": 0.29915131059654027,
+        "audio_share_var": 0.00013950277595484476,
+        "audio_share_std": 0.01181112932597238,
+        "text_share": 0.02031467029903741,
+        "text_share_mean": 0.02031467029903741,
+        "text_share_var": 2.3309764489839102e-05,
+        "text_share_std": 0.004828018691952125
+      },
+      "logo_auc": {
+        "full": {
+          "mean": 1.0,
+          "std": 0.0,
+          "folds": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "without_video": {
+          "mean": 0.9990281556953985,
+          "std": 0.00038074551186591797,
+          "folds": [
+            0.9990929415219636,
+            0.9993723517388224,
+            0.9986191738254095
+          ]
+        },
+        "only_video": {
+          "mean": 0.9999968420213273,
+          "std": 5.469779510162634e-06,
+          "folds": [
+            1.0,
+            1.0,
+            0.9999905260639822
+          ]
+        },
+        "delta_without_video": 0.0009718443046015102,
+        "without_audio": {
+          "mean": 0.9999881580735943,
+          "std": 1.032347285232975e-05,
+          "folds": [
+            0.999981053608814,
+            1.0,
+            0.9999834206119689
+          ]
+        },
+        "only_audio": {
+          "mean": 0.9879257486726943,
+          "std": 0.001296774799755966,
+          "folds": [
+            0.9892479230018661,
+            0.9878733618972504,
+            0.9866559611189666
+          ]
+        },
+        "delta_without_audio": 1.184192640568682e-05,
+        "without_text": {
+          "mean": 1.0,
+          "std": 7.850462293418876e-17,
+          "folds": [
+            1.0,
+            0.9999999999999999,
+            1.0
+          ]
+        },
+        "only_text": {
+          "mean": 0.999968420213274,
+          "std": 5.469779510149814e-05,
+          "folds": [
+            1.0,
+            1.0,
+            0.9999052606398222
+          ]
+        },
+        "delta_without_text": 0.0
+      },
+      "po_risk": {
+        "po_risk": 0.012708559444275026,
+        "r_risk": 1.116354415993881,
+        "phi_mean": -0.014442580060513363,
+        "phi_std": 0.16846845874896024,
+        "blockwise_shares": {
+          "video_share": 0.5656708127703246,
+          "audio_share": 0.3676037806195624,
+          "text_share": 0.06672540660911286
+        },
+        "leave_one_group_r_risk": {
+          "video": {
+            "r_risk": 1.1192478424578325,
+            "delta_vs_full": 0.0028934264639515206
+          },
+          "audio": {
+            "r_risk": 1.1180394490157695,
+            "delta_vs_full": 0.0016850330218884935
+          },
+          "text": {
+            "r_risk": 1.1148252729398715,
+            "delta_vs_full": -0.0015291430540094186
+          }
+        },
+        "leave_one_group_po_risk": {
+          "video": {
+            "po_risk": 0.010972613620472246,
+            "delta_vs_full": 0.0017359458238027804
+          },
+          "audio": {
+            "po_risk": 0.01157125686484785,
+            "delta_vs_full": 0.0011373025794271761
+          },
+          "text": {
+            "po_risk": 0.013683254464728494,
+            "delta_vs_full": -0.0009746950204534682
+          }
+        },
+        "top_features": [
+          {
+            "rank": 1,
+            "index": 551,
+            "group": "video",
+            "local_index": 551,
+            "vimp": 0.01942907575096391
+          },
+          {
+            "rank": 2,
+            "index": 1135,
+            "group": "audio",
+            "local_index": 367,
+            "vimp": 0.016344728909170388
+          },
+          {
+            "rank": 3,
+            "index": 819,
+            "group": "audio",
+            "local_index": 51,
+            "vimp": 0.013962013602047903
+          },
+          {
+            "rank": 4,
+            "index": 1046,
+            "group": "audio",
+            "local_index": 278,
+            "vimp": 0.008215350875405994
+          },
+          {
+            "rank": 5,
+            "index": 683,
+            "group": "video",
+            "local_index": 683,
+            "vimp": 0.008019058838421047
+          },
+          {
+            "rank": 6,
+            "index": 914,
+            "group": "audio",
+            "local_index": 146,
+            "vimp": 0.00656017835534217
+          },
+          {
+            "rank": 7,
+            "index": 60,
+            "group": "video",
+            "local_index": 60,
+            "vimp": 0.0065479215784782245
+          },
+          {
+            "rank": 8,
+            "index": 796,
+            "group": "audio",
+            "local_index": 28,
+            "vimp": 0.006214615554733425
+          },
+          {
+            "rank": 9,
+            "index": 892,
+            "group": "audio",
+            "local_index": 124,
+            "vimp": 0.00600501813457925
+          },
+          {
+            "rank": 10,
+            "index": 665,
+            "group": "video",
+            "local_index": 665,
+            "vimp": 0.005956060447222326
+          },
+          {
+            "rank": 11,
+            "index": 777,
+            "group": "audio",
+            "local_index": 9,
+            "vimp": 0.005751628548964298
+          },
+          {
+            "rank": 12,
+            "index": 1235,
+            "group": "audio",
+            "local_index": 467,
+            "vimp": 0.005712040544542824
+          },
+          {
+            "rank": 13,
+            "index": 1230,
+            "group": "audio",
+            "local_index": 462,
+            "vimp": 0.00512747480632264
+          },
+          {
+            "rank": 14,
+            "index": 395,
+            "group": "video",
+            "local_index": 395,
+            "vimp": 0.005123240227647598
+          },
+          {
+            "rank": 15,
+            "index": 611,
+            "group": "video",
+            "local_index": 611,
+            "vimp": 0.004843223865087534
+          },
+          {
+            "rank": 16,
+            "index": 1279,
+            "group": "audio",
+            "local_index": 511,
+            "vimp": 0.004821145092902648
+          },
+          {
+            "rank": 17,
+            "index": 986,
+            "group": "audio",
+            "local_index": 218,
+            "vimp": 0.004675672269230628
+          },
+          {
+            "rank": 18,
+            "index": 329,
+            "group": "video",
+            "local_index": 329,
+            "vimp": 0.004564522705817683
+          },
+          {
+            "rank": 19,
+            "index": 348,
+            "group": "video",
+            "local_index": 348,
+            "vimp": 0.004539322961542786
+          },
+          {
+            "rank": 20,
+            "index": 588,
+            "group": "video",
+            "local_index": 588,
+            "vimp": 0.004274495355247062
+          },
+          {
+            "rank": 21,
+            "index": 280,
+            "group": "video",
+            "local_index": 280,
+            "vimp": 0.0042096085237060005
+          },
+          {
+            "rank": 22,
+            "index": 324,
+            "group": "video",
+            "local_index": 324,
+            "vimp": 0.004092408846835194
+          },
+          {
+            "rank": 23,
+            "index": 664,
+            "group": "video",
+            "local_index": 664,
+            "vimp": 0.004085218906890135
+          },
+          {
+            "rank": 24,
+            "index": 253,
+            "group": "video",
+            "local_index": 253,
+            "vimp": 0.00405894651569799
+          },
+          {
+            "rank": 25,
+            "index": 478,
+            "group": "video",
+            "local_index": 478,
+            "vimp": 0.004004875909754777
+          },
+          {
+            "rank": 26,
+            "index": 686,
+            "group": "video",
+            "local_index": 686,
+            "vimp": 0.003994316937721676
+          },
+          {
+            "rank": 27,
+            "index": 1081,
+            "group": "audio",
+            "local_index": 313,
+            "vimp": 0.003956738095327769
+          },
+          {
+            "rank": 28,
+            "index": 1101,
+            "group": "audio",
+            "local_index": 333,
+            "vimp": 0.0038570094560819107
+          },
+          {
+            "rank": 29,
+            "index": 849,
+            "group": "audio",
+            "local_index": 81,
+            "vimp": 0.00385169203491164
+          },
+          {
+            "rank": 30,
+            "index": 1056,
+            "group": "audio",
+            "local_index": 288,
+            "vimp": 0.003774831517240272
+          }
+        ]
+      }
+    }
+  }
+}
