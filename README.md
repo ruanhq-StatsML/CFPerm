@@ -116,3 +116,7 @@ https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 <img width="1796" height="552" alt="Screenshot 2026-08-03 at 09 57 54" src="https://github.com/user-attachments/assets/bd74444f-992d-4928-ac54-df080e397cf7" />
 - **Consequently, upon observing a notable drop in model performance, we prioritize post-hoc feature selection or localization of distribution-shift drivers over disentangling the shift into concept drift versus covariate shift, as such decomposition is not identifiable, Subset Localization is all you need!**
 - It gives people concise proxy for efficiently dealing with the model performance degradation in the deployed ML model - distribution shift driver localization is what you will need.
+
+### What else PO-risk can do (writeup, not a prototype)
+
+The DR / R-learner residual in CFPerm is a Neyman-orthogonal *distance*, not a CATE. The same per-example score can be updated online (slow nuisances, fast $\hat\tau$, rare permutation audit) and used as a control variate for frozen-LLM inference (route / retrieve / abstain / spend test-time compute from localization of $\varphi$, not from the model's own confidence). See [docs/pseudo_outcome_risk_beyond.md](docs/pseudo_outcome_risk_beyond.md). Unique CS/CD decomposition remains impossible; the product surface is localization + a monitor + an occasional test.
