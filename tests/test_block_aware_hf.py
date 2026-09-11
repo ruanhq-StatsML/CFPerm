@@ -41,7 +41,7 @@ def test_encode_adult_blocks_no_sex_leak():
         "income": ["<=50K", ">50K", ">50K", "<=50K"],
     })
     X, W, Y, spec = encode_adult_blocks(df)
-    assert spec.names == ["demography", "work", "capital"]
+    assert spec.names == ["demography", "work", "hours", "capital"]
     assert X.shape[0] == 4
     assert set(np.unique(W)) == {0, 1}
     assert Y.sum() == 2

@@ -23,8 +23,8 @@ def main() -> None:
     p.add_argument("--quick", action="store_true")
     p.add_argument(
         "--datasets",
-        default="adult,imdb_rt,mnli",
-        help="comma-separated: adult,imdb_rt,mnli",
+        default="adult,yelp_amazon,mnli",
+        help="comma-separated: adult,yelp_amazon,mnli,imdb_rt",
     )
     args = p.parse_args()
     ds = tuple(x.strip() for x in args.datasets.split(",") if x.strip())

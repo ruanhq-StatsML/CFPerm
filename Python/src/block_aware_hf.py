@@ -3,8 +3,8 @@
 Three labeled boards (Y is the dataset label; W is the batch/domain):
 
   * scikit-learn/adult-census-income  — Y = income, W = sex
-      blocks: demography / work / capital
-  * stanfordnlp/imdb vs rotten_tomatoes — Y = sentiment, W = source
+      blocks: demography / work / hours / capital
+  * fancyzhx/yelp_polarity vs amazon_polarity — Y = sentiment, W = marketplace
       blocks: text / style / polarity
   * nyu-mll/multi_nli (fiction vs telephone) — Y = entailment, W = genre
       blocks: premise / hypothesis / overlap
@@ -90,22 +90,25 @@ def encode_adult_blocks(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, np.nd
         native,
     ])
     work = np.hstack([
-        df[["education.num", "hours.per.week"]].to_numpy(dtype=float),
+        df[["education.num"]].to_numpy(dtype=float),
         workclass,
         occupation,
     ])
-    capital = df[["capital.gain", "capital.loss", "fnlwgt"]].to_numpy(dtype=float)
+    hours = df[["hours.per.week"]].to_numpy(dtype=float)
+    capital = np.log1p(df[["capital.gain", "capital.loss", "fnlwgt"]].to_numpy(dtype=float))
     scaler = StandardScaler()
     demo = scaler.fit_transform(demo)
     work = StandardScaler().fit_transform(work)
+    hours = StandardScaler().fit_transform(hours)
     capital = StandardScaler().fit_transform(capital)
-    X = np.hstack([demo, work, capital])
-    slices = [
-        slice(0, demo.shape[1]),
-        slice(demo.shape[1], demo.shape[1] + work.shape[1]),
-        slice(demo.shape[1] + work.shape[1], X.shape[1]),
-    ]
-    spec = ModalitySpec(names=["demography", "work", "capital"], slices=slices)
+    X = np.hstack([demo, work, hours, capital])
+    i1 = demo.shape[1]
+    i2 = i1 + work.shape[1]
+    i3 = i2 + hours.shape[1]
+    spec = ModalitySpec(
+        names=["demography", "work", "hours", "capital"],
+        slices=[slice(0, i1), slice(i1, i2), slice(i2, i3), slice(i3, X.shape[1])],
+    )
     W = (df["sex"].astype(str).str.strip() == "Male").to_numpy(dtype=int)
     Y = df["income"].astype(str).str.contains(">50K", regex=False).to_numpy(dtype=float)
     return X, W, Y, spec
@@ -126,7 +129,8 @@ def load_adult(*, n_per_batch: int = 1000, seed: int = 2026) -> dict:
         "label": "income >50K",
         "batch": "W = sex (Female vs Male); relationship dropped (Husband/Wife leak)",
         "slug": "adult",
-        "gt_block": "capital",
+        "gt_block": "hours",
+        "inject_alpha": 0.40,
         "title": "Adult census · income label · sex as batch",
     }
 
@@ -170,6 +174,34 @@ def hashed_text(texts: list[str], *, d_text: int, seed: int) -> np.ndarray:
     return np.asarray(vec.fit_transform(texts).toarray(), dtype=float)
 
 
+def _truncate(text: str, max_tokens: int = 50) -> str:
+    return " ".join(str(text).split()[:max_tokens])
+
+
+def fetch_hf_rows(dataset: str, config: str, split: str, n: int, *, offset: int = 0) -> list[dict]:
+    """Paginated Dataset Viewer rows (avoids multi-hundred-MB parquet shards)."""
+    import urllib.parse
+    import urllib.request
+
+    rows: list[dict] = []
+    pos = int(offset)
+    while len(rows) < n:
+        q = urllib.parse.urlencode({
+            "dataset": dataset, "config": config, "split": split,
+            "offset": pos, "length": min(100, n - len(rows)),
+        })
+        with urllib.request.urlopen(
+            "https://datasets-server.huggingface.co/rows?" + q, timeout=90
+        ) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+        chunk = [item["row"] for item in payload.get("rows") or []]
+        if not chunk:
+            break
+        rows.extend(chunk)
+        pos += len(chunk)
+    return rows[:n]
+
+
 def overlap_features(prem: list[str], hyp: list[str]) -> np.ndarray:
     rows = []
     for a, b in zip(prem, hyp):
@@ -192,11 +224,16 @@ def _pack_text_blocks(
     *,
     d_text: int,
     seed: int,
+    polarity_jitter: float = 0.40,
 ) -> dict:
     texts = list(texts0) + list(texts1)
+    rng = np.random.default_rng(seed)
     text = hashed_text(texts, d_text=d_text, seed=seed)
     style = StandardScaler().fit_transform(style_features(texts))
     polar = StandardScaler().fit_transform(polarity_features(texts))
+    # Sparse lexicon counts are point masses; jitter so a mean-shift inject is not AUC=1.
+    if polarity_jitter > 0:
+        polar = polar + rng.normal(0.0, float(polarity_jitter), size=polar.shape)
     X = np.hstack([text, style, polar])
     spec = ModalitySpec(
         names=["text", "style", "polarity"],
@@ -207,7 +244,37 @@ def _pack_text_blocks(
     return {"X": X, "W": W, "Y": Y, "spec": spec, "n0": len(texts0), "n1": len(texts1)}
 
 
+def load_yelp_amazon(*, n_per_batch: int = 800, d_text: int = 32, seed: int = 2026) -> dict:
+    """Yelp vs Amazon polarity: same sentiment label space, review-domain batch.
+
+    Amazon train parquet is ~250MB/shard; pull n rows from the Dataset Viewer.
+    Reviews are truncated so length does not saturate domain AUC.
+    """
+    rng = np.random.default_rng(seed)
+    yelp = _read_parquet("fancyzhx/yelp_polarity", "plain_text", "test", columns=["text", "label"])
+    i_y = rng.choice(len(yelp), min(n_per_batch, len(yelp)), replace=False)
+    yelp_t = [_truncate(t) for t in yelp.iloc[i_y]["text"]]
+    yelp_y = yelp.iloc[i_y]["label"].to_numpy(dtype=float)
+    am = fetch_hf_rows("fancyzhx/amazon_polarity", "amazon_polarity", "test", n_per_batch)
+    am_t = [_truncate((r.get("title") or "") + " " + (r.get("content") or "")) for r in am]
+    am_y = np.array([float(r["label"]) for r in am], dtype=float)
+    pack = _pack_text_blocks(
+        yelp_t, am_t, yelp_y, am_y, d_text=d_text, seed=seed, polarity_jitter=0.40,
+    )
+    pack.update({
+        "dataset": "fancyzhx/yelp_polarity vs fancyzhx/amazon_polarity",
+        "label": "binary sentiment",
+        "batch": "W = marketplace (Yelp vs Amazon); reviews truncated to 50 tokens",
+        "slug": "yelp_amazon",
+        "gt_block": "polarity",
+        "inject_alpha": 0.70,
+        "title": "Yelp vs Amazon · sentiment label · marketplace as batch",
+    })
+    return pack
+
+
 def load_imdb_rt(*, n_per_batch: int = 800, d_text: int = 32, seed: int = 2026) -> dict:
+    """Kept as a length-shift diagnostic; not on the default board (AUC saturates)."""
     rng = np.random.default_rng(seed)
     imdb = _read_parquet("stanfordnlp/imdb", "plain_text", "test", columns=["text", "label"])
     rt = _read_parquet(
@@ -218,8 +285,8 @@ def load_imdb_rt(*, n_per_batch: int = 800, d_text: int = 32, seed: int = 2026) 
     a = imdb.iloc[i_imdb]
     b = rt.iloc[i_rt]
     pack = _pack_text_blocks(
-        a["text"].astype(str).tolist(),
-        b["text"].astype(str).tolist(),
+        [_truncate(t, 40) for t in a["text"].astype(str).tolist()],
+        [_truncate(t, 40) for t in b["text"].astype(str).tolist()],
         a["label"].to_numpy(dtype=float),
         b["label"].to_numpy(dtype=float),
         d_text=d_text, seed=seed,
@@ -230,6 +297,7 @@ def load_imdb_rt(*, n_per_batch: int = 800, d_text: int = 32, seed: int = 2026) 
         "batch": "W = source (IMDB vs Rotten Tomatoes)",
         "slug": "imdb_rt",
         "gt_block": "polarity",
+        "inject_alpha": 0.70,
         "title": "IMDB vs Rotten Tomatoes · sentiment label · source as batch",
     })
     return pack
@@ -274,6 +342,7 @@ def load_mnli_genre(*, n_per_batch: int = 800, d_text: int = 24, seed: int = 202
         "batch": "W = genre (fiction vs telephone)",
         "slug": "mnli",
         "gt_block": "overlap",
+        "inject_alpha": 0.80,
         "title": "MultiNLI · entailment label · fiction vs telephone",
     }
 
@@ -324,13 +393,14 @@ def run_labeled_board(
     n_estimators: int = 80,
     n_gt_seeds: int = 2,
     out_dir: Path | None = None,
-    inject_alpha: float = 0.80,
+    inject_alpha: float | None = None,
 ) -> dict:
     slug = pack["slug"]
     out_dir = Path(out_dir or (ROOT / "results" / "hf_block_aware" / slug))
     out_dir.mkdir(parents=True, exist_ok=True)
     X, W, spec = pack["X"], pack["W"], pack["spec"]
     gt = pack["gt_block"]
+    inject_alpha = float(pack.get("inject_alpha", 0.80) if inject_alpha is None else inject_alpha)
 
     gap = decompose_modality_gap(X, W, spec, seed=seed, n_estimators=n_estimators, light=False)
     obs, _ = _eval_setting(X, W, spec, seed=seed, n_estimators=n_estimators, light=False)
@@ -393,7 +463,16 @@ def run_labeled_board(
 
 
 def _tex_escape(s: str) -> str:
-    return str(s).replace("_", r"\_").replace("%", r"\%")
+    return (
+        str(s)
+        .replace("\\", r"\textbackslash{}")
+        .replace("_", r"\_")
+        .replace("%", r"\%")
+        .replace("&", r"\&")
+        .replace("⊥", r"$\perp$")
+        .replace("α", r"$\alpha$")
+        .replace("·", " -- ")
+    )
 
 
 def plot_board(summary: dict, out_dir: Path) -> dict[str, Path]:
@@ -628,6 +707,11 @@ def write_dashboard_latex(summaries: list[dict], chronoberg: dict | None, path: 
         r"\usepackage{caption}",
         r"\usepackage{subcaption}",
         r"\usepackage{hyperref}",
+        r"\usepackage[T1]{fontenc}",
+        r"\usepackage{newunicodechar}",
+        r"\newunicodechar{⊥}{\ensuremath{\perp}}",
+        r"\newunicodechar{α}{\ensuremath{\alpha}}",
+        r"\newunicodechar{·}{--}",
         r"\graphicspath{{../../results/chronoberg_clever_cov/}{../../results/hf_block_aware/}}",
         r"\title{Block-aware $\pi$ weights on labeled Hugging Face datasets}",
         r"\author{CFPerm prototype}",
@@ -786,14 +870,15 @@ def run_all(
     seed: int = 2026,
     n_estimators: int = 80,
     n_gt_seeds: int = 2,
-    datasets: tuple[str, ...] = ("adult", "imdb_rt", "mnli"),
+    datasets: tuple[str, ...] = ("adult", "yelp_amazon", "mnli"),
 ) -> dict:
     out_root = ROOT / "results" / "hf_block_aware"
     out_root.mkdir(parents=True, exist_ok=True)
     loaders = {
         "adult": lambda: load_adult(n_per_batch=n_per_batch, seed=seed),
-        "imdb_rt": lambda: load_imdb_rt(n_per_batch=n_per_batch, d_text=d_text, seed=seed),
+        "yelp_amazon": lambda: load_yelp_amazon(n_per_batch=n_per_batch, d_text=d_text, seed=seed),
         "mnli": lambda: load_mnli_genre(n_per_batch=n_per_batch, d_text=max(16, d_text - 8), seed=seed),
+        "imdb_rt": lambda: load_imdb_rt(n_per_batch=n_per_batch, d_text=d_text, seed=seed),
     }
     summaries = []
     for key in datasets:
