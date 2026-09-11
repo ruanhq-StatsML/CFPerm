@@ -21,18 +21,15 @@ The share $\pi_m=\hat c_m/\sum_{m'}\hat c_{m'}$ remains a \emph{which-head} budg
 Using $\eta_m=\eta_0\pi_m$ has the wrong sign whenever the map $P(Y\mid X^{(m)})$ is still valid.
 
 \emph{Concept intensity.}
-Let $h_{t-1}^{(m)}$ be the frozen unimodal head from the previous round.
 Translate the new block to the old mean, $\tilde X_t^{(m)}=X_t^{(m)}-(\bar x_t^{(m)}-\bar x_{t-1}^{(m)})$.
 A pure location shift in $P(X^{(m)})$ is removed by that alignment; a change in $P(Y\mid X^{(m)})$ is not.
+Fit a unimodal ridge head on ANOVA-screened coordinates of one half of batch $t-1$ and evaluate 0-1 risk on the other half ($R_{t-1}$) and on $\tilde X_t^{(m)}$ ($R_t^{\mathrm{al}}$):
 \begin{equation}
   \hat\delta_m
   =
-  \bigl(
-    L(h_{t-1}^{(m)}(\tilde X_t^{(m)}),Y_t)
-    -
-    L(h_{t-1}^{(m)}(X_{t-1}^{(m)}),Y_{t-1})
-  \bigr)_+.
+  \bigl(R_t^{\mathrm{al}}-R_{t-1}\bigr)_+.
 \end{equation}
+In-sample CE of a joint SGD probe is not a concept estimator: it confuses generalization gap with a change in $P(Y\mid X)$.
 
 \emph{Signed stepsize.}
 With a quiet freeze when both channels are off,
@@ -40,8 +37,7 @@ With a quiet freeze when both channels are off,
   \eta_m
   =
   \eta_0\,
-  \frac{\hat\delta_m}{\hat\delta_m+\kappa}\,
-  \frac{1}{1+\lambda\hat c_m},
+  \frac{1+\beta\hat\delta_m}{1+\lambda\hat c_m},
   \qquad
   \eta_m=0
   \text{ if }
@@ -51,6 +47,7 @@ With a quiet freeze when both channels are off,
 \end{equation}
 Large $\hat c_m$ lowers the step (do not chase $X$).
 Large $\hat\delta_m$ raises the step (relearn the map).
+The map is not $\eta\propto\hat\delta$: a numerator of $\hat\delta$ alone would freeze under pure covariate shift, which is stronger than the claimed sign.
 Clip-level text on the MSR-VTT extract is both-quiet, so $\eta_t=0$; inverting $\pi$ would give it the largest step.
 
 Refresh / KV invalidation is a different control: it may still follow $\hat c_m$.

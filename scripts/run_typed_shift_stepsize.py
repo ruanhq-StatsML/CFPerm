@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "Python" / "src"))
 from msrvtt_multimodal_attribution import find_feature_zip, load_window_bundle, write_json
 from typed_shift_stepsize import (
     METHODS,
+    graft_midclip_concept,
     plot_comparison,
     plot_eta_paths,
     run_bundle_suite,
@@ -41,7 +42,7 @@ def main():
     args = ap.parse_args()
 
     n_batches = 8 if args.quick else 12
-    n_per = 28 if args.quick else 40
+    n_per = 48 if args.quick else 64
     n_seeds = 3 if args.quick else args.seeds
     methods = list(METHODS) if not args.quick else ["constant", "cosine", "plateau", "fsds_pi", "tss", "oracle_tss"]
     seeds = list(range(2026, 2026 + n_seeds))
@@ -96,6 +97,28 @@ def main():
             write_json(OUT / "tss_msrvtt_illustration.json", slim)
             print("bundle last_acc", {m: slim[m]["last_acc"] for m in slim}, flush=True)
             print("bundle bwt", {m: slim[m]["bwt"] for m in slim}, flush=True)
+
+            y_graft = graft_midclip_concept(bundle)
+            gsuite = run_bundle_suite(
+                bundle,
+                n_batches=8 if args.quick else 10,
+                methods=[m for m in methods if m != "oracle_tss"],
+                y=y_graft,
+                label="msrvtt_grafted_concept",
+            )
+            gslim = {
+                m: {
+                    **{k: v for k, v in rec.items() if k != "history"},
+                    "last_lr": rec["history"][-1]["lr"],
+                    "last_c": rec["history"][-1]["c"],
+                    "last_delta": rec["history"][-1]["delta"],
+                }
+                for m, rec in gsuite.items()
+            }
+            write_json(OUT / "tss_msrvtt_grafted_concept.json", gslim)
+            print("grafted last_acc", {m: gslim[m]["last_acc"] for m in gslim}, flush=True)
+            print("grafted bwt", {m: gslim[m]["bwt"] for m in gslim}, flush=True)
+            print("grafted post_acc", {m: gslim[m]["post_acc"] for m in gslim}, flush=True)
 
     print("wrote", OUT, flush=True)
 

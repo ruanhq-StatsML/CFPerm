@@ -3,19 +3,18 @@
 Two identified channels, opposite signs:
 
     covariate intensity  c_m  = |Cohen's d| of the modality-mean under W
-    concept intensity    δ_m  = excess CE of the frozen unimodal head after
-                                aligning the block mean (undoes a location shift
-                                in P(X); does not undo a change in P(Y|X))
+    concept intensity    δ_m  = two-fold excess 0-1 risk of a unimodal
+                                ridge head after aligning the block mean
 
-    η_m = η0 · (δ_m / (δ_m + κ)) / (1 + λ c_m)
+    η_m = η0 · (1 + β δ_m) / (1 + λ c_m)
     η_m = 0  if both channels are below threshold (quiet freeze)
 
-c_m is P(X^{(m)} | W). δ_m is leftover risk in P(Y | X^{(m)}).
-The simplex share π_m = c_m / ∑ c is a which-head budget only; using
-η_m ∝ π_m has the wrong sign for pure covariate shift.
+Large c_m lowers the step; large δ_m raises it. The map is not η ∝ δ,
+which would freeze under pure covariate shift. π_m = c_m / ∑ c is a
+which-head budget only; η ∝ π has the wrong sign for pure covariate shift.
 
-Comparators are ordinary LR schedulers (constant, step, cosine, inverse-time,
-ReduceLROnPlateau) plus the wrong-sign map η ∝ π.
+Comparators: constant, step, cosine, inverse-time, plateau, and η ∝ π.
+Oracle TSS substitutes the known (c, δ) of the simulation DGP.
 """
 from __future__ import annotations
 
@@ -36,11 +35,12 @@ from msrvtt_multimodal_attribution import (
     standardize_columns,
 )
 
-KAPPA = 0.25
-LAMBDA = 1.0
-TAU_C = 0.20
-TAU_D = 0.04
-ETA0 = 0.08
+BETA = 2.5
+LAMBDA = 1.5
+TAU_C = 0.25
+TAU_D = 0.05
+ETA0 = 0.10
+ETA_MAX_MULT = 2.5
 METHODS = (
     "constant",
     "step",
@@ -104,45 +104,117 @@ def _gaussian_iw(z0, z1):
     return np.clip(w, 0.05, 20.0)
 
 
-def concept_intensity(probe, Xs0, y0, Xs1, y1):
-    """Excess CE of the frozen unimodal head after mean-aligning X.
+def _anova_f(Xm, y):
+    Xm = np.asarray(Xm, dtype=float)
+    y = np.asarray(y, dtype=int)
+    classes = np.unique(y)
+    n = Xm.shape[0]
+    if len(classes) < 2 or n <= len(classes):
+        return np.zeros(Xm.shape[1])
+    grand = Xm.mean(axis=0)
+    ssb = np.zeros(Xm.shape[1])
+    ssw = np.zeros(Xm.shape[1])
+    for c in classes:
+        xc = Xm[y == c]
+        nc = xc.shape[0]
+        if nc == 0:
+            continue
+        mc = xc.mean(axis=0)
+        ssb += nc * (mc - grand) ** 2
+        ssw += ((xc - mc) ** 2).sum(axis=0)
+    dfb = len(classes) - 1
+    dfw = max(n - len(classes), 1)
+    return (ssb / dfb) / (ssw / dfw + 1e-12)
 
-    Aligning the block mean removes a pure covariate location shift. A change
-    in P(Y | X^{(m)}) is not undone by that translation, so δ_m stays large.
+
+def _screen_coords(Xm, y, k=12):
+    """Supervised coordinate screen (ANOVA F) for a unimodal plug-in."""
+    k = int(max(1, min(k, Xm.shape[1], max(Xm.shape[0] - 1, 1))))
+    fvals = _anova_f(Xm, y)
+    return np.argpartition(fvals, -k)[-k:]
+
+
+def _ridge_head(Xm, y, cols, ridge=0.8, n_classes=None):
+    X = np.asarray(Xm, dtype=float)[:, cols]
+    y = np.asarray(y, dtype=int)
+    mu = X.mean(axis=0)
+    Z = np.c_[X - mu, np.ones(len(X))]
+    if n_classes is None:
+        n_classes = int(y.max()) + 1
+    yoh = np.eye(n_classes)[np.clip(y, 0, n_classes - 1)]
+    gram = Z.T @ Z + float(ridge) * np.eye(Z.shape[1])
+    b = np.linalg.solve(gram, Z.T @ yoh)
+    return mu, b, n_classes
+
+
+def _ridge_logits(Xm, cols, mu, b):
+    X = np.asarray(Xm, dtype=float)[:, cols] - mu
+    Z = np.c_[X, np.ones(len(X))]
+    return Z @ b
+
+
+def concept_intensity(probe, Xs0, y0, Xs1, y1, k=12, ridge=0.8):
+    """Two-fold excess 0-1 risk after mean-aligning X.
+
+    Screen coordinates by ANOVA F on batch t-1, fit a ridge head, evaluate
+    OOS on the other fold (R_{t-1}) and on mean-aligned batch t (R_t^{al}).
     """
     y0 = np.asarray(y0, dtype=int)
     y1 = np.asarray(y1, dtype=int)
     out = {}
     extras = {}
+    n0 = len(y0)
+    n_classes = int(max(int(y0.max() if n0 else 0), int(y1.max() if len(y1) else 0))) + 1
+    rng = np.random.default_rng(n0 * 17 + 3 * len(y1) + int(y0[:1].sum() if n0 else 0))
+    fold = (rng.random(n0) >= 0.5).astype(int)
+    if fold.min() == fold.max() and n0 > 1:
+        fold[0] = 1 - fold[0]
     for name in GROUP_NAMES:
-        mu0 = Xs0[name].mean(axis=0)
         mu1 = Xs1[name].mean(axis=0)
+        mu0 = Xs0[name].mean(axis=0)
         x1_al = Xs1[name] - (mu1 - mu0)
-        ce0 = _ce(Xs0[name] @ probe.W[name], y0)
-        ce1 = _ce(Xs1[name] @ probe.W[name], y1)
-        ce_al = _ce(x1_al @ probe.W[name], y1)
-        z0 = modality_mean(Xs0[name])
-        z1 = modality_mean(Xs1[name])
-        w = _gaussian_iw(z0, z1)
-        P0 = _softmax(Xs0[name] @ probe.W[name])
-        p0 = np.clip(P0[np.arange(len(y0)), y0], 1e-8, 1.0)
-        ce_iw = float(-np.mean(w * np.log(p0)))
-        delta = max(0.0, ce_al - ce0)
+        a0s, aals = [], []
+        for f in (0, 1):
+            tr, te = np.flatnonzero(fold == f), np.flatnonzero(fold != f)
+            if tr.size < 4 or te.size < 2:
+                continue
+            cols = _screen_coords(Xs0[name][tr], y0[tr], k=k)
+            mu, b, _ = _ridge_head(Xs0[name][tr], y0[tr], cols, ridge=ridge, n_classes=n_classes)
+            a0s.append(_acc(_ridge_logits(Xs0[name][te], cols, mu, b), y0[te]))
+            aals.append(_acc(_ridge_logits(x1_al, cols, mu, b), y1))
+        acc0 = float(np.mean(a0s)) if a0s else float("nan")
+        acc_al = float(np.mean(aals)) if aals else float("nan")
+        delta = max(0.0, acc0 - acc_al) if np.isfinite(acc0) and np.isfinite(acc_al) else 0.0
         out[name] = float(delta)
-        extras[name] = {"ce0": ce0, "ce1": ce1, "ce_al": ce_al, "ce_iw": ce_iw}
+        extras[name] = {"acc0": acc0, "acc_al": acc_al}
     return out, extras
 
 
-def tss_lr(c, delta, eta0=ETA0, lam=LAMBDA, kappa=KAPPA, tau_c=TAU_C, tau_d=TAU_D):
-    """Signed per-head stepsize. Quiet freeze when both channels are off."""
+def tss_lr(
+    c,
+    delta,
+    eta0=ETA0,
+    lam=LAMBDA,
+    beta=BETA,
+    tau_c=TAU_C,
+    tau_d=TAU_D,
+    eta_max_mult=ETA_MAX_MULT,
+):
+    """Signed per-head stepsize. Quiet freeze when both channels are off.
+
+    η ∝ (1+βδ)/(1+λc): covariate intensity lowers the step, concept intensity
+    raises it. A numerator of δ alone would freeze under pure covariate shift.
+    """
     lrs = {}
+    cap = float(eta0) * float(eta_max_mult)
     for name in GROUP_NAMES:
         cm = float(c.get(name, 0.0))
         dm = float(delta.get(name, 0.0))
         if cm < tau_c and dm < tau_d:
             lrs[name] = 0.0
             continue
-        lrs[name] = float(eta0) * (dm / (dm + float(kappa))) / (1.0 + float(lam) * cm)
+        eta = float(eta0) * (1.0 + float(beta) * dm) / (1.0 + float(lam) * cm)
+        lrs[name] = float(min(max(eta, 0.0), cap))
     return lrs
 
 
@@ -199,19 +271,25 @@ def make_typed_stream(
     concept=None,
     concept_at=6,
     noise=1.0,
+    signal=1.15,
+    rank=12,
 ):
     """Oracle DGP with known per-modality covariate and concept schedules.
 
-    Class means live in the first 12 coordinates of each block. Covariate
-    shift is a class-independent mean drift in those coordinates. Concept
-    drift is a cyclic permutation of the class-mean assignment after
-    ``concept_at``.
+    Class means live in the first ``rank`` coordinates of each block.
+    Covariate shift is a class-independent mean drift on the *whole* block
+    (so |d| of the coordinate-mean is an absolute intensity, not a diluted
+    subspace statistic). Concept drift is a cyclic permutation of the
+    class-mean assignment after ``concept_at``. Remaining coordinates are
+    high-d noise, so an oversized step overfits batch-specific directions.
+    Oracle ``true_c`` / ``true_delta`` are on the same scale as the TSS map,
+    not the raw drift coefficients.
     """
     cov = {g: float((cov or {}).get(g, 0.0)) for g in GROUP_NAMES}
     concept = {g: float((concept or {}).get(g, 0.0)) for g in GROUP_NAMES}
     rng = np.random.default_rng(seed)
-    rank = 12
-    means = {g: rng.normal(scale=1.15, size=(n_classes, rank)) for g in GROUP_NAMES}
+    rank = int(rank)
+    means = {g: rng.normal(scale=float(signal), size=(n_classes, rank)) for g in GROUP_NAMES}
     rows, labs, batches = [], [], []
     true_c = {g: [] for g in GROUP_NAMES}
     true_delta = {g: [] for g in GROUP_NAMES}
@@ -228,9 +306,9 @@ def make_typed_stream(
                 use = (y + int(round(concept[name]))) % n_classes
             X[:, sl.start : sl.start + rank] += means[name][use]
             if cov[name] > 0:
-                X[:, sl.start : sl.start + rank] += cov[name] * float(t)
-            true_c[name].append(float(cov[name]))
-            true_delta[name].append(float(concept[name] if drifted else 0.0))
+                X[:, sl] += cov[name] * float(t)
+            true_c[name].append(1.0 if cov[name] > 0 else 0.0)
+            true_delta[name].append(0.40 if drifted else 0.0)
         rows.append(X)
         labs.append(y)
         batches.append(np.full(n_per, t, dtype=int))
@@ -250,6 +328,16 @@ def make_typed_stream(
             "seed": int(seed),
         },
     )
+
+
+def graft_midclip_concept(bundle):
+    """Controlled concept drift on real X: flip the video-id map at mid-clip."""
+    vid = np.asarray(bundle.video_id)
+    w = np.asarray(bundle.window_idx, dtype=float)
+    _, y0 = np.unique(vid, return_inverse=True)
+    n = int(y0.max()) + 1
+    mid = float(np.median(w))
+    return (y0 + (w >= mid).astype(int)) % n
 
 
 def stream_from_bundle(bundle, n_batches=10, y=None):
@@ -290,7 +378,7 @@ def run_method(
     warmup_steps=4,
     seed=SEED,
     lam=LAMBDA,
-    kappa=KAPPA,
+    beta=BETA,
 ):
     """Warmup on B0, then one SGD round per later batch under ``method``."""
     X = np.asarray(stream.X, dtype=float)
@@ -359,7 +447,7 @@ def run_method(
             plateau_eta=plateau_eta,
         )
         if method == "tss":
-            lrs = tss_lr(c_hat, d_hat, eta0=eta0, lam=lam, kappa=kappa)
+            lrs = tss_lr(c_hat, d_hat, eta0=eta0, lam=lam, beta=beta)
         n_steps = max(1, int(steps_per_batch) // 3)
         chunk_t = max(4, ic.size // 2)
         for head in GROUP_NAMES:
@@ -404,16 +492,39 @@ def run_method(
 
 
 REGIMES = {
-    "cov_only": dict(cov={"video": 0.55, "audio": 0.08, "text": 0.0}, concept={}),
-    "concept_only": dict(cov={}, concept={"video": 1.0, "audio": 0.0, "text": 0.0}, concept_at=6),
-    "both": dict(cov={"video": 0.55, "audio": 0.08, "text": 0.0}, concept={"video": 1.0}, concept_at=6),
+    "cov_only": dict(
+        cov={"video": 0.12, "audio": 0.04, "text": 0.0},
+        concept={},
+        n_classes=6,
+        signal=0.80,
+        noise=1.15,
+        rank=10,
+    ),
+    "concept_only": dict(
+        cov={},
+        concept={"video": 1.0, "audio": 0.0, "text": 0.0},
+        concept_at=6,
+        n_classes=6,
+        signal=0.80,
+        noise=1.15,
+        rank=10,
+    ),
+    "both": dict(
+        cov={"video": 0.12, "audio": 0.04, "text": 0.0},
+        concept={"video": 1.0},
+        concept_at=6,
+        n_classes=6,
+        signal=0.80,
+        noise=1.15,
+        rank=10,
+    ),
 }
 
 
 def run_suite(
     seeds=None,
     n_batches=12,
-    n_per=40,
+    n_per=64,
     methods=None,
     regimes=None,
     eta0=ETA0,
@@ -605,7 +716,7 @@ def plot_comparison(suite, path):
     fig.text(
         0.04,
         0.01,
-        "TSS: η_m ∝ (δ_m / (δ_m+κ)) / (1+λ c_m).  Covariate c_m lowers the step; concept δ_m raises it.  "
+        "TSS: η_m = η0 (1+β δ_m) / (1+λ c_m).  Covariate c_m lowers the step; concept δ_m raises it.  "
         "η∝π uses the same c_m as a simplex share with the opposite sign.  Error bars are seed s.d.",
         fontsize=8.2,
         color=MUTED,
@@ -631,7 +742,8 @@ def plot_eta_paths(suite, path):
             ax.plot(t, mu, color=colors[method], lw=2.1, label=method if method != "fsds_pi" else r"$\eta\propto\pi$")
             ax.fill_between(t, mu - sd, mu + sd, color=colors[method], alpha=0.14, lw=0)
         if regime == "concept_only":
-            ax.axvline(6, color=MUTED, ls="--", lw=0.9)
+            at = recs[0]["meta"].get("concept_at", 7)
+            ax.axvline(at, color=MUTED, ls="--", lw=0.9)
         ax.set_title(title, loc="left", fontsize=12, fontweight="bold")
         ax.set_xlabel("round")
         ax.grid(True, color=GRID)
@@ -662,8 +774,8 @@ def write_tex_table(suite, path):
         r"% Typed shift stepsize vs LR schedulers. Auto-generated.",
         r"\begin{table}[ht]\centering",
         r"\caption{Typed shift stepsize (TSS) versus standard LR schedulers on an oracle multimodal stream.",
-        r"Covariate intensity $c_m$ is $|d|$ of the modality mean; concept intensity $\delta_m$ is excess frozen-head CE after mean-alignment of $X$.",
-        r"TSS uses $\eta_m=\eta_0(\delta_m/(\delta_m+\kappa))/(1+\lambda c_m)$ with a quiet freeze.",
+        r"Covariate intensity $c_m$ is $|d|$ of the modality mean; concept intensity $\delta_m$ is two-fold excess 0-1 risk after mean-alignment of $X$.",
+        r"TSS uses $\eta_m=\eta_0(1+\beta\delta_m)/(1+\lambda c_m)$ with a quiet freeze.",
         r"$\eta\propto\pi$ uses the same $c_m$ as a simplex share (wrong sign for pure covariate shift).",
         r"Entries are mean (s.d.) over seeds. BWT is accuracy on batch 0 after the stream;",
         r"post-change accuracy is the mean on rounds at or after the known concept time.}",
@@ -684,8 +796,10 @@ def write_tex_table(suite, path):
             star = ""
             if method != "tss" and regime in tests and method in tests[regime]:
                 key = "bwt" if regime == "cov_only" else "post_acc"
-                p = tests[regime][method].get(key, {}).get("p", float("nan"))
-                if p == p and p < 0.05:
+                rec = tests[regime][method].get(key, {})
+                p = rec.get("p", float("nan"))
+                diff = rec.get("mean_diff", float("nan"))
+                if p == p and p < 0.05 and diff == diff and diff > 0:
                     star = r"$^{\ast}$"
             lines.append(
                 r"%s & %s%s & %s & %s & %s & $%.4f$ \\"
@@ -695,7 +809,7 @@ def write_tex_table(suite, path):
     if lines[-1] == r"\midrule":
         lines[-1] = r"\bottomrule"
     lines.append(r"\end{tabular}\\[0.4em]")
-    lines.append(r"{\footnotesize Wilcoxon signed-rank, TSS vs comparator: $^{\ast}$ $p<0.05$ on BWT (covariate-only) or post-change accuracy (concept/both).")
+    lines.append(r"{\footnotesize Wilcoxon signed-rank, TSS $-$ comparator: $^{\ast}$ $p<0.05$ and mean difference $>0$ on BWT (covariate-only) or post-change accuracy (concept/both).")
     if "concept_only" in ident and "delta_jump" in ident["concept_only"]:
         lines.append(
             r" Concept-only $\hat\delta_{\mathrm{v}}$ jump at the known change point: $%.3f \to %.3f$."
