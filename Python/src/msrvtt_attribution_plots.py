@@ -581,8 +581,8 @@ def plot_batch_pair_board(bundle, result, path: Path, pay=None, n_batches=10):
     axr.barh(y - hgt / 2, po_v[::-1], height=hgt, color="#9AA3AE", label="PO-risk VIMP")
     axr.set_yticks(y)
     axr.set_yticklabels(["Text", "Audio", "Video"], fontsize=9.5)
-    axr.set_xlabel("share  →  head LR  η_m")
-    axr.set_title("Per-head LR  (separate modality heads)", fontsize=12.0, fontweight="bold")
+    axr.set_xlabel("share  →  which-head budget  (not the signed η)")
+    axr.set_title("Which head  (cov. mass);  η sign is separate", fontsize=11.2, fontweight="bold")
     axr.set_xlim(0, 1.05)
     axr.axvline(1.0 / 3.0, color=MUTED, ls="--", lw=0.9)
     axr.legend(frameon=False, fontsize=7.8, loc="lower right")
@@ -617,9 +617,8 @@ def plot_batch_pair_board(bundle, result, path: Path, pay=None, n_batches=10):
     fig.text(
         0.05,
         0.016,
-        "Adapt-for-distribution-shift: η_m = η0 · π_m^{RF}.  Larger shift share → larger head step; "
-        "shrinking share → smaller step.  Heatmaps decide which head to open; VIMP sets the scale.  "
-        "Clip-level text is post-hoc: heatmap flat, η_t ≈ 0.",
+        "Refresh ≠ step.  Covariate mass opens the head / KV; large c_m^{cov} lowers η_m; "
+        "large concept drift raises η_m.  Do not invert π: clip-level text is both-quiet, η_t ≈ 0.",
         fontsize=8.0,
         color=MUTED,
     )

@@ -4,12 +4,14 @@
   2. Warmup: train each head once (the other heads stay frozen).
   3. Rotate: cycle video → audio → text; only the active head gets SGD.
 
-Locked LR policy is adapt-for-distribution-shift, nothing else:
-  η_m = η0 · π_m^{RF}(B_{t-1}, B_t)
-  π_m large (this modality carries the shift) → larger step
-  π_m shrinks → smaller step; clip-level text has π_t ≈ 0 so η_t ≈ 0.
+Signed LR (locked):
+  covariate shift c_m large  →  η_m down   (do not chase P(X|W))
+  concept drift   δ_m large  →  η_m up     (relearn P(Y|X))
+  both quiet (clip-level text) → η_m ≈ 0   (do not invert π)
 
-Heads are summed at inference. Cosine decay is a separate board, not this loop.
+The prototype still uses η_m = η0 · π_m^{RF} as a *which-head budget*
+(open vision, then audio, not text). That is not the signed step.
+Refresh / KV is a separate board from SGD. Cosine decay is another board.
 """
 from __future__ import annotations
 
@@ -104,9 +106,9 @@ def run_continuous_trainer(
 ):
     """Warmup each head once, then rotate.
 
-    Learning rates follow adapt-for-distribution-shift: ``lrs[m] = eta0 * π_m``,
-    with ``π`` from RF-Domain VIMP on the consecutive-batch pair. A shrinking
-    share shrinks the step; there is no countervailing ``freeze-the-drifter`` rule.
+    Code path: ``lrs[m] = eta0 * π_m`` is a which-head budget from RF-Domain
+    VIMP, not the signed step. Locked signs: large covariate intensity lowers
+    ``η_m``; large concept drift raises it; both quiet freezes the head.
     """
     X = standardize_columns(bundle.X)
     y_raw = np.asarray(bundle.video_id)
@@ -212,7 +214,7 @@ def plot_continuous_trainer(summary, path):
     rounds = [h["round"] for h in hist]
     fig, axes = plt.subplots(1, 2, figsize=(11.2, 4.2))
     fig.suptitle(
-        "Continuous trainer  ·  warmup each head, then rotate   η_m from benchmark_feature_selection",
+        "Continuous trainer  ·  warmup, rotate  ·  π is which-head budget, not signed η",
         fontsize=12.5,
         fontweight="bold",
         color=INK,
@@ -223,7 +225,7 @@ def plot_continuous_trainer(summary, path):
     ax.axhline(1.0 / 3.0, color=MUTED, ls="--", lw=0.9)
     ax.set_xlabel("round  (B_{t-1} vs B_t)")
     ax.set_ylabel("RF share  π_m")
-    ax.set_title("Attribution each round vs last", loc="left", fontsize=11, fontweight="bold")
+    ax.set_title("Covariate share each round vs last", loc="left", fontsize=11, fontweight="bold")
     ax.legend(frameon=False, fontsize=8.5)
     ax.set_ylim(-0.05, 1.05)
     ax.grid(True, color=GRID)
@@ -231,8 +233,8 @@ def plot_continuous_trainer(summary, path):
     for g in GROUP_NAMES:
         ax.plot(rounds, [h["lr"][g] for h in hist], color=COLORS[g], lw=2.1, marker="o", ms=4.5, label=g.capitalize())
     ax.set_xlabel("round")
-    ax.set_ylabel("head LR  η_m")
-        ax.set_title("adapt-for-shift  η_m = η0 · π_m   (one head at a time)", loc="left", fontsize=11, fontweight="bold")
+    ax.set_ylabel("prototype budget  η0 π_m")
+    ax.set_title("budget only  ·  signed η: cov↓  concept↑", loc="left", fontsize=11, fontweight="bold")
     ax.legend(frameon=False, fontsize=8.5)
     ax.grid(True, color=GRID)
     fig.text(

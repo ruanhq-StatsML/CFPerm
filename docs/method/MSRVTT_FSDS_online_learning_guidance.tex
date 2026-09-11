@@ -12,7 +12,8 @@ Signed pooled $d$ cancels across videos ($0/24$ Holm hits at the pooled-region l
 
 These facts constrain the next OL protocol in three concrete ways.
 \emph{(i)~Where to adapt.}
-Update capacity and step sizes should be concentrated on the visual encoder and, secondarily, the audio encoder.
+Update \emph{capacity and refresh} should be concentrated on the visual encoder and, secondarily, the audio encoder.
+That is not the same as a larger SGD step: a large covariate intensity on those towers \emph{lowers} $\eta_m$.
 Clip-level caption embeddings are window-invariant on this extract, hence a \emph{structural} zero for $W$-shift rather than evidence that language is uninformative for retrieval; a time-aligned ASR stream would be required before attributing residual $W$-shift to text.
 \emph{(ii)~How to monitor.}
 Drift triggers should be video-clustered (the same sampling unit as the bootstrap and Friedman tests).
@@ -21,11 +22,13 @@ A global MMD or pooled $d$ will miss the heterogeneous $|d|$ that FSDS detects.
 The RF shares provide a hot-start for modality gates, with a documented per-video exception (video~13 is audio-dominant; Table~\ref{tab:msrvtt-mm-pervideo-auc}) that argues against a frozen global fusion weight.
 Until a window-aligned text encoder is in the stream, a rising text VIMP in OL is a diagnostic for leakage, not a reason to retune the language tower against $W$.
 
-The per-head learning-rate map is the same object, with a locked sign.
-The product is \emph{adapt-for-distribution-shift}: $\eta_m=\eta_0\pi_m^{\mathrm{RF}}(B_{t-1},B_t)$.
-A large shift share on modality $m$ is a large step; a shrinking share is a smaller step; on this $W$, $\pi_{\mathrm{t}}\approx 0$ so $\eta_{\mathrm{t}}\approx 0$.
-There is no competing freeze-the-drifter / IRM rule in this loop.
-Ranking of $\pi$ can be shared across batches; the scale can still be session-specific (video~13).
-Cosine lag and round-to-round VIMP comparison are separate boards, not this LR map.
+The per-head learning-rate map is \emph{not} $\eta_m=\eta_0\pi_m^{\mathrm{RF}}$.
+FSDS $\pi$ and $c_m^{\mathrm{cov}}$ are covariate shift $P(X^{(m)}\mid W)$.
+A large covariate intensity on modality $m$ \emph{lowers} $\eta_m$: the embedding moved, so a large step would chase $X$ and fit $W$ as a shortcut.
+A large concept drift $\delta_m^{\mathrm{concept}}$ in $P(Y\mid X^{(m)})$ \emph{raises} $\eta_m$.
+Both quiet (clip-level text on this $W$) $\Rightarrow$ $\eta_{\mathrm{t}}\approx 0$; do not invert $\pi$ or text inherits the largest step.
+Refresh / KV invalidation still follows covariate mass; that is a memory schedule, not the SGD sign.
+Ranking of $\pi$ can be shared across batches; the scale of $c_m$ and $\delta_m$ can be session-specific (video~13).
+Cosine lag and round-to-round VIMP comparison are separate boards.
 
-In short, the offline FSDS readout is the design matrix for the next round of streaming results: adapt vision and audio, cluster by video, treat clip-level text as a negative control, and set $\eta_m$ proportional to the shift mass.
+In short, the offline FSDS readout is the design matrix for the next round of streaming results: re-encode vision and audio, cluster by video, treat clip-level text as a negative control, shrink $\eta_m$ when covariate shift is large, and raise $\eta_m$ only when concept drift is large.

@@ -1,0 +1,44 @@
+% Per-head LR: covariate shift lowers the step; concept drift raises it.
+% Refresh / KV invalidation is a different control from SGD step size.
+% Sits after MSRVTT_FSDS_online_learning_guidance.tex.
+
+\paragraph{Two channels, opposite signs.}
+FSDS attributes covariate shift $P(X^{(m)}\mid W)$, not concept drift $P(Y\mid X^{(m)})$.
+Those two objects must not share a learning-rate sign.
+
+\emph{Covariate shift large $\Rightarrow$ $\eta_m$ down.}
+RF-Domain / coordinate-MMD / mean $|d|$ say that the embedding $X^{(m)}$ moved.
+If $P(Y\mid X^{(m)})$ is still the same map, a large SGD step chases the new $X$-marginal, fits $W$ as a shortcut, and overwrites a head that is still valid.
+The right response is a smaller step (and, if needed, importance weighting or alignment), not a larger one.
+On this extract the visual block is the extreme case: $\pi_{\mathrm{v}}\approx 0.77$--$0.90$, mean $|d|=0.787$, while a clip-level label such as video identity does not move with the window.
+
+\emph{Concept drift large $\Rightarrow$ $\eta_m$ up.}
+Concept drift is a change in the map $P(Y\mid X^{(m)})$.
+It is not identified by FSDS.
+A usable scalar is the frozen-head residual after the $X$-shift has been accounted for: if $h_{t-1}$ still predicts $Y_t$ once $X_t$ is reweighted or aligned to $X_{t-1}$, the concept is stable; if that residual stays large, the map is stale and the step must grow.
+Error-based detectors (ADWIN / DDM on the residual) are the same object.
+
+A compact map, with a freeze when both channels are quiet, is
+\begin{equation}
+  \eta_m
+  =
+  \eta_0\,
+  \delta_m^{\mathrm{concept}}\,
+  \bigl(1+\lambda c_m^{\mathrm{cov}}\bigr)^{-1},
+  \qquad
+  \eta_m=0
+  \text{ if }
+  c_m^{\mathrm{cov}}\approx 0
+  \text{ and }
+  \delta_m^{\mathrm{concept}}\approx 0.
+\end{equation}
+Here $c_m^{\mathrm{cov}}$ is an \emph{absolute} covariate intensity (mean $|d|$, MMD, RF AUC on $W$), not the simplex share $\pi_m$.
+Inverting $\pi_m$ would give clip-level text the largest step, which is the leakage we are guarding against: $\pi_{\mathrm{t}}\approx 0$ means both channels are off, so $\eta_{\mathrm{t}}\approx 0$.
+
+\emph{Refresh is not the step.}
+Covariate mass still decides which tokens to re-encode and which KV entries to drop: visual first, audio second, clip-level caption once per clip.
+That is a memory schedule.
+The SGD schedule is the opposite sign on the same $c_m^{\mathrm{cov}}$, gated by $\delta_m^{\mathrm{concept}}$.
+The prototype $\eta_m=\eta_0\pi_m^{\mathrm{RF}}$ remains a \emph{which-head budget} (open vision, then audio, not text), not the signed step.
+Both-large (moving $X$ and a stale map) still raises $\eta_m$, but with shorter memory / importance weights because the new support has also moved.
+Ranking of $\pi$ can be shared across batches; the scale of $c_m$ and $\delta_m$ can be session-specific (video~13).

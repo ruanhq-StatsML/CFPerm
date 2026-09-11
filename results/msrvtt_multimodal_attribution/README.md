@@ -53,4 +53,4 @@ See `msrvtt_batch_ij_cosine_board.png`. Equal-width bins of window index (2 wind
 
 ## Per-head LR (locked)
 
-Adapt-for-distribution-shift, nothing else: $\eta_m = \eta_0 \pi_m^{\mathrm{RF}}$. Larger shift share → larger head step; shrinking share → smaller step. On this $W$, clip-level text has $\pi_t \approx 0$ so $\eta_t \approx 0$. Cosine lag and round-to-round VIMP comparison are separate boards.
+Two channels, opposite signs. FSDS $\pi$ / mean $|d|$ is **covariate** $P(X^{(m)}\mid W)$: when it is large, **lower** $\eta_m$ (do not chase the moving embedding). **Concept** drift $P(Y\mid X^{(m)})$ is a different object: when it is large, **raise** $\eta_m$. Both quiet (clip-level text here) $\Rightarrow \eta_t\approx 0$; do not invert $\pi$ or text gets the biggest step. Refresh / KV still follows covariate mass; that is not the SGD sign. The trainer prototype still uses $\eta_m=\eta_0\pi_m$ only as a which-head budget. Cosine lag and round-to-round VIMP comparison stay on separate boards.
