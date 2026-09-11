@@ -44,7 +44,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir", default="/workspace/data/msrvtt/features_window")
     p.add_argument("--repo-out", default="/workspace/experiments/msrvtt")
     p.add_argument("--n-windows", type=int, default=100)
-    p.add_argument("--n-videos", type=int, default=8)
+    p.add_argument(
+        "--n-videos",
+        type=int,
+        default=8,
+        help="Total videos to encode, keeping any per_video checkpoints and sampling the rest.",
+    )
     p.add_argument("--t-frames", type=int, default=32)
     p.add_argument("--stride", type=int, default=2)
     p.add_argument("--frame-size", type=int, default=224)
@@ -59,6 +64,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     p.add_argument("--video-batch-size", type=int, default=1)
     p.add_argument("--text-batch-size", type=int, default=16)
+    p.add_argument("--n-bootstrap", type=int, default=10, help="Bootstrap replicates for FSDS mean/variance.")
+    p.add_argument("--n-estimators", type=int, default=100)
+    p.add_argument(
+        "--fsds-only",
+        action="store_true",
+        help="Skip encoding; rerun Layer-1 FSDS from saved video/audio/text npy.",
+    )
     return p.parse_args()
 
 
@@ -348,9 +360,9 @@ def modality_shares(vimp: np.ndarray) -> dict[str, float]:
     return {"video_share": v / total, "audio_share": a / total, "text_share": t / total}
 
 
-def fit_rf_vimp(X: np.ndarray, y: np.ndarray, seed: int = 42) -> np.ndarray:
+def fit_rf_vimp(X: np.ndarray, y: np.ndarray, seed: int = 42, n_estimators: int = 100) -> np.ndarray:
     rf = RandomForestClassifier(
-        n_estimators=200,
+        n_estimators=n_estimators,
         max_features="sqrt",
         random_state=seed,
         n_jobs=-1,
@@ -359,10 +371,68 @@ def fit_rf_vimp(X: np.ndarray, y: np.ndarray, seed: int = 42) -> np.ndarray:
     return rf.feature_importances_
 
 
-def run_fsds(video_mat: np.ndarray, audio_mat: np.ndarray, text_mat: np.ndarray, video_ids: list[str], out_dir: Path) -> dict:
+def _summarize_share_rows(rows: list[dict]) -> dict[str, float]:
+    keys = ("video_share", "audio_share", "text_share")
+    out: dict[str, float] = {"n_bootstrap": float(len(rows))}
+    for k in keys:
+        arr = np.asarray([r[k] for r in rows], dtype=np.float64)
+        mean = float(arr.mean()) if arr.size else 0.0
+        var = float(arr.var(ddof=1)) if arr.size > 1 else 0.0
+        out[k] = mean
+        out[f"{k}_mean"] = mean
+        out[f"{k}_var"] = var
+        out[f"{k}_std"] = float(np.sqrt(var))
+    return out
+
+
+def bootstrap_shares(
+    X: np.ndarray,
+    y: np.ndarray,
+    n_bootstrap: int = 10,
+    seed: int = 42,
+    n_estimators: int = 100,
+) -> dict[str, float]:
+    """Row-bootstrap RF VIMP n_bootstrap times; return mean/variance of modality shares."""
+    rng = np.random.RandomState(seed)
+    n = int(len(y))
+    rows: list[dict] = []
+    b = 0
+    attempts = 0
+    while len(rows) < n_bootstrap and attempts < n_bootstrap * 5:
+        attempts += 1
+        idx = rng.randint(0, n, size=n)
+        yb = y[idx]
+        if len(np.unique(yb)) < 2:
+            continue
+        vimp = fit_rf_vimp(X[idx], yb, seed=seed + b, n_estimators=n_estimators)
+        rows.append(modality_shares(vimp))
+        b += 1
+    if not rows:
+        vimp = fit_rf_vimp(X, y, seed=seed, n_estimators=n_estimators)
+        rows.append(modality_shares(vimp))
+    return _summarize_share_rows(rows)
+
+
+def _fmt_share(rec: dict, name: str) -> str:
+    return (
+        f"{name}={rec[f'{name}_share_mean']:.3f} "
+        f"(var={rec[f'{name}_share_var']:.4g})"
+    )
+
+
+def run_fsds(
+    video_mat: np.ndarray,
+    audio_mat: np.ndarray,
+    text_mat: np.ndarray,
+    video_ids: list[str],
+    out_dir: Path,
+    n_bootstrap: int = 10,
+    n_estimators: int = 100,
+    seed: int = 42,
+) -> dict:
     """Layer-1 multimodal attribution on concatenated 2048-d windows."""
     n_videos, n_windows, _ = video_mat.shape
-    concat_3d = np.concatenate([video_mat, audio_mat, text_mat], axis=-1)  # (N, W, 2048)
+    concat_3d = np.concatenate([video_mat, audio_mat, text_mat], axis=-1)
 
     within = []
     for vi, vid in enumerate(video_ids):
@@ -370,27 +440,23 @@ def run_fsds(video_mat: np.ndarray, audio_mat: np.ndarray, text_mat: np.ndarray,
         y = np.array([0] * (n_windows // 2) + [1] * (n_windows - n_windows // 2))
         if len(np.unique(y)) < 2:
             continue
-        vimp = fit_rf_vimp(X, y)
-        rec = {"video_id": vid, **modality_shares(vimp)}
+        rec = {"video_id": vid, **bootstrap_shares(X, y, n_bootstrap, seed + vi, n_estimators)}
         within.append(rec)
         print(
-            f"  [within] {vid}: video={rec['video_share']:.3f} "
-            f"audio={rec['audio_share']:.3f} text={rec['text_share']:.3f}"
+            f"  [within] {vid}: {_fmt_share(rec, 'video')} "
+            f"{_fmt_share(rec, 'audio')} {_fmt_share(rec, 'text')}"
         )
 
-    # Pooled temporal drift: all early windows vs all late windows
     early = concat_3d[:, : n_windows // 2].reshape(-1, CONCAT_DIM)
     late = concat_3d[:, n_windows // 2 :].reshape(-1, CONCAT_DIM)
     Xp = np.concatenate([early, late], axis=0)
     yp = np.array([0] * len(early) + [1] * len(late))
-    pooled_vimp = fit_rf_vimp(Xp, yp)
-    pooled = modality_shares(pooled_vimp)
+    pooled = bootstrap_shares(Xp, yp, n_bootstrap, seed + 101, n_estimators)
     print(
-        f"  [pooled early vs late] video={pooled['video_share']:.3f} "
-        f"audio={pooled['audio_share']:.3f} text={pooled['text_share']:.3f}"
+        f"  [pooled early vs late] {_fmt_share(pooled, 'video')} "
+        f"{_fmt_share(pooled, 'audio')} {_fmt_share(pooled, 'text')}"
     )
 
-    # Mixture shift: first half of videos vs second half
     mixture = None
     if n_videos >= 2:
         mid = n_videos // 2
@@ -398,23 +464,36 @@ def run_fsds(video_mat: np.ndarray, audio_mat: np.ndarray, text_mat: np.ndarray,
         b = concat_3d[mid:].reshape(-1, CONCAT_DIM)
         Xm = np.concatenate([a, b], axis=0)
         ym = np.array([0] * len(a) + [1] * len(b))
-        mix_vimp = fit_rf_vimp(Xm, ym)
-        mixture = modality_shares(mix_vimp)
+        mixture = bootstrap_shares(Xm, ym, n_bootstrap, seed + 202, n_estimators)
         print(
             f"  [mixture videos 0..{mid-1} vs {mid}..{n_videos-1}] "
-            f"video={mixture['video_share']:.3f} "
-            f"audio={mixture['audio_share']:.3f} text={mixture['text_share']:.3f}"
+            f"{_fmt_share(mixture, 'video')} {_fmt_share(mixture, 'audio')} {_fmt_share(mixture, 'text')}"
         )
 
     avg = None
     if within:
-        avg = {
-            "video_share": float(np.mean([r["video_share"] for r in within])),
-            "audio_share": float(np.mean([r["audio_share"] for r in within])),
-            "text_share": float(np.mean([r["text_share"] for r in within])),
-        }
+        clip_means = [
+            {
+                "video_share": r["video_share_mean"],
+                "audio_share": r["audio_share_mean"],
+                "text_share": r["text_share_mean"],
+            }
+            for r in within
+        ]
+        avg = _summarize_share_rows(clip_means)
+        # Plot/report bootstrap uncertainty as the mean of per-clip bootstrap variances,
+        # not the across-clip spread of the means.
+        for key in ("video_share", "audio_share", "text_share"):
+            boot_vars = np.asarray([r[f"{key}_var"] for r in within], dtype=np.float64)
+            avg[f"{key}_across_clip_var"] = avg[f"{key}_var"]
+            avg[f"{key}_across_clip_std"] = avg[f"{key}_std"]
+            avg[f"{key}_var"] = float(boot_vars.mean()) if boot_vars.size else 0.0
+            avg[f"{key}_std"] = float(np.sqrt(avg[f"{key}_var"]))
+        avg["n_bootstrap"] = float(n_bootstrap)
 
     payload = {
+        "n_bootstrap": n_bootstrap,
+        "n_estimators": n_estimators,
         "within_video": within,
         "within_video_average": avg,
         "pooled_temporal": pooled,
@@ -422,7 +501,6 @@ def run_fsds(video_mat: np.ndarray, audio_mat: np.ndarray, text_mat: np.ndarray,
         "dims": {"video": VIDEO_DIM, "audio": AUDIO_DIM, "text": TEXT_DIM, "concat": CONCAT_DIM},
     }
     (out_dir / "within_video_fsds.json").write_text(json.dumps(payload, indent=2))
-    np.save(out_dir / "pooled_temporal_vimp.npy", pooled_vimp)
     return payload
 
 
@@ -439,22 +517,30 @@ def plot_shares(payload: dict, out_png: Path) -> None:
     if not rows:
         return
 
+    n_boot = int(payload.get("n_bootstrap", 10))
     labels = [r[0] for r in rows]
-    video = [r[1]["video_share"] for r in rows]
-    audio = [r[1]["audio_share"] for r in rows]
-    text = [r[1]["text_share"] for r in rows]
+
+    def _mean_std(rec: dict, key: str) -> tuple[float, float]:
+        mean = rec.get(f"{key}_mean", rec.get(key, 0.0))
+        std = rec.get(f"{key}_std", float(np.sqrt(rec.get(f"{key}_var", 0.0))))
+        return float(mean), float(std)
+
+    video_m, video_s = zip(*[_mean_std(r[1], "video_share") for r in rows])
+    audio_m, audio_s = zip(*[_mean_std(r[1], "audio_share") for r in rows])
+    text_m, text_s = zip(*[_mean_std(r[1], "text_share") for r in rows])
     x = np.arange(len(labels))
     w = 0.25
+    err = dict(capsize=3.0, ecolor="#1A2332", linewidth=0.8)
 
-    fig, ax = plt.subplots(figsize=(9.2, 4.6), dpi=160)
-    ax.bar(x - w, video, w, label="Video (768)", color="#E07A3D")
-    ax.bar(x, audio, w, label="Audio (512)", color="#2C4A6E")
-    ax.bar(x + w, text, w, label="Text (768)", color="#2F6B4F")
+    fig, ax = plt.subplots(figsize=(9.2, 4.8), dpi=160)
+    ax.bar(x - w, video_m, w, yerr=video_s, label="Video (768)", color="#E07A3D", **err)
+    ax.bar(x, audio_m, w, yerr=audio_s, label="Audio (512)", color="#2C4A6E", **err)
+    ax.bar(x + w, text_m, w, yerr=text_s, label="Text (768)", color="#2F6B4F", **err)
     ax.set_xticks(x)
     ax.set_xticklabels(labels)
-    ax.set_ylim(0, 1.05)
+    ax.set_ylim(0, 1.08)
     ax.set_ylabel("Modality share of RF VIMP")
-    ax.set_title("MSR-VTT Layer-1 multimodal attribution (FSDS)")
+    ax.set_title(f"MSR-VTT Layer-1 multimodal attribution  (n_bootstrap={n_boot}, mean ± sd)")
     ax.legend(frameon=False)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -480,6 +566,28 @@ def main() -> None:
     repo_out = Path(args.repo_out)
     out_dir.mkdir(parents=True, exist_ok=True)
     repo_out.mkdir(parents=True, exist_ok=True)
+
+    if args.fsds_only:
+        video_mat = np.load(out_dir / "video_feat_3d.npy")
+        audio_mat = np.load(out_dir / "audio_feat_3d.npy")
+        text_mat = np.load(out_dir / "text_feat_3d.npy")
+        meta = json.loads((out_dir / "meta.json").read_text())
+        picked = list(meta["video_ids"])
+        print(f"[fsds-only] {video_mat.shape} videos={picked} n_bootstrap={args.n_bootstrap}")
+        print("\nLayer-1 FSDS modality attribution")
+        payload = run_fsds(
+            video_mat, audio_mat, text_mat, picked, out_dir,
+            n_bootstrap=args.n_bootstrap, n_estimators=args.n_estimators, seed=args.seed,
+        )
+        plot_png = repo_out / "msrvtt_modality_attribution.png"
+        plot_shares(payload, plot_png)
+        (repo_out / "within_video_fsds.json").write_text(json.dumps(payload, indent=2))
+        meta["n_bootstrap"] = args.n_bootstrap
+        meta["n_estimators"] = args.n_estimators
+        (repo_out / "meta.json").write_text(json.dumps(meta, indent=2))
+        (out_dir / "meta.json").write_text(json.dumps(meta, indent=2))
+        print(f"wrote {plot_png}")
+        return
     ckpt_dir = out_dir / "per_video"
     ckpt_dir.mkdir(parents=True, exist_ok=True)
 
@@ -494,13 +602,23 @@ def main() -> None:
     available = [v for v in available if v in captions]
     if not available:
         raise RuntimeError("no videos with captions found")
+    existing = [
+        p.stem
+        for p in sorted(ckpt_dir.glob("*.npz"))
+        if p.stem in captions
+    ]
     rng = random.Random(args.seed)
-    if args.n_videos < len(available):
-        picked = rng.sample(available, args.n_videos)
-        picked = sorted(picked, key=lambda x: int(x.replace("video", "")) if x.replace("video", "").isdigit() else x)
-    else:
-        picked = available[: args.n_videos]
-    print(f"[pick] n={len(picked)} {picked}")
+    remaining = [v for v in available if v not in set(existing)]
+    need = max(0, args.n_videos - len(existing))
+    extra = rng.sample(remaining, min(need, len(remaining))) if need and remaining else []
+    picked = existing + extra
+    picked = sorted(
+        picked,
+        key=lambda x: int(x.replace("video", "")) if x.replace("video", "").isdigit() else x,
+    )
+    print(
+        f"[pick] n={len(picked)} resume={len(existing)} new={len(extra)} {picked}"
+    )
 
     print(f"[encoders] video={args.video_encoder} device={args.device}")
     if args.video_encoder == "vivit":
@@ -668,7 +786,10 @@ def main() -> None:
     print("=" * 60)
 
     print("\nLayer-1 FSDS modality attribution")
-    payload = run_fsds(video_mat, audio_mat, text_mat, picked, out_dir)
+    payload = run_fsds(
+        video_mat, audio_mat, text_mat, picked, out_dir,
+        n_bootstrap=args.n_bootstrap, n_estimators=args.n_estimators, seed=args.seed,
+    )
     plot_png = repo_out / "msrvtt_modality_attribution.png"
     plot_shares(payload, plot_png)
     (repo_out / "within_video_fsds.json").write_text(json.dumps(payload, indent=2))
