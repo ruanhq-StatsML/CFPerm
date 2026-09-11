@@ -64,10 +64,16 @@ def plot_modality_shares(result, path: Path):
         for j, (key, _) in enumerate(methods):
             mu = share_map[key][g]
             means.append(mu)
-            ci = boot.get(key, {}).get(g, {}).get("ci95")
-            if ci:
-                yerr[0, j] = max(0.0, mu - ci[0])
-                yerr[1, j] = max(0.0, ci[1] - mu)
+            rec = boot.get(key, {}).get(g, {})
+            sd = rec.get("sd")
+            if sd is not None and np.isfinite(sd):
+                yerr[0, j] = sd
+                yerr[1, j] = sd
+            else:
+                ci = rec.get("ci95")
+                if ci:
+                    yerr[0, j] = max(0.0, mu - ci[0])
+                    yerr[1, j] = max(0.0, ci[1] - mu)
         ax.bar(
             x + (i - 1) * width,
             means,
@@ -90,7 +96,7 @@ def plot_modality_shares(result, path: Path):
     ax.text(
         0.0,
         -0.18,
-        "Error bars: video-clustered bootstrap 95% CI. W = early vs late windows.",
+        "Error bars: SD across B=10 video-clustered bootstrap replicates. W = early vs late windows.",
         transform=ax.transAxes,
         fontsize=8.5,
         color=MUTED,
@@ -179,7 +185,7 @@ def plot_bootstrap_diffs(result, path: Path):
         ax.set_title(lab, fontsize=11, fontweight="bold")
         ax.grid(True, axis="x", color=GRID)
         ax.set_xlabel("share difference")
-    fig.suptitle("Cluster-bootstrap 95% CI for modality share gaps", fontsize=13, fontweight="bold", y=1.03)
+    fig.suptitle("Cluster-bootstrap mean ± 1.96 SD (B=10) for modality share gaps", fontsize=13, fontweight="bold", y=1.03)
     fig.tight_layout()
     return _save(fig, path)
 

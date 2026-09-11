@@ -44,6 +44,14 @@ def _as_1d(x):
     return np.asarray(x, dtype=float).reshape(-1)
 
 
+def standardize_columns(X):
+    X = np.asarray(X, dtype=float)
+    mu = X.mean(axis=0)
+    sd = X.std(axis=0)
+    sd = np.where(sd < 1e-8, 1.0, sd)
+    return (X - mu) / sd
+
+
 def drop_group(X, name):
     mask = np.ones(X.shape[1], dtype=bool)
     mask[GROUPS[name]] = False
@@ -500,7 +508,7 @@ def per_video_table(bundle: WindowBundle, seed=SEED, n_estimators=120):
     rows = []
     for v in np.unique(bundle.video_id):
         idx = np.flatnonzero(bundle.video_id == v)
-        X = bundle.X[idx]
+        X = standardize_columns(bundle.X[idx])
         W = bundle.W[idx]
         if W.sum() < 4 or (len(W) - W.sum()) < 4:
             continue
@@ -521,7 +529,8 @@ def per_video_table(bundle: WindowBundle, seed=SEED, n_estimators=120):
 
 
 def pooled_point_estimates(bundle: WindowBundle, seed=SEED, n_estimators=120, mmd_n=80):
-    X0, X1 = bundle.X[bundle.W == 0], bundle.X[bundle.W == 1]
+    X = standardize_columns(bundle.X)
+    X0, X1 = X[bundle.W == 0], X[bundle.W == 1]
     rf_vimp, rf_auc = rf_domain(X0, X1, seed=seed, n_estimators=n_estimators)
     rf_mass, rf_share = modality_mass(rf_vimp)
     mmd_full, mmd_contrib = group_mmd_loco(X0, X1, max_n=mmd_n, seed=seed)
@@ -532,8 +541,8 @@ def pooled_point_estimates(bundle: WindowBundle, seed=SEED, n_estimators=120, mm
     mmd_share = _share_from_contrib(mmd_contrib)
     coord = coord_mmd_vimp(X0, X1, max_n=mmd_n, seed=seed)
     _, coord_share = modality_mass(coord)
-    po, _, _ = crossfit_po(bundle.X, bundle.y, bundle.W, seed=seed, n_estimators=max(40, n_estimators // 2))
-    r_full, logo, po_vimp = logo_po_risk(bundle.X, po, seed=seed + 4, n_estimators=n_estimators)
+    po, _, _ = crossfit_po(X, bundle.y, bundle.W, seed=seed, n_estimators=max(40, n_estimators // 2))
+    r_full, logo, po_vimp = logo_po_risk(X, po, seed=seed + 4, n_estimators=n_estimators)
     logo_share = _share_from_contrib(logo)
     _, po_feat_share = modality_mass(po_vimp)
     return {
@@ -582,6 +591,7 @@ def _share_from_contrib(contrib):
 
 
 def _shares_from_split(X, y, W, seed, n_estimators, mmd_n):
+    X = standardize_columns(X)
     X0, X1 = X[W == 0], X[W == 1]
     if min(len(X0), len(X1)) < 8:
         return None
@@ -601,7 +611,7 @@ def _shares_from_split(X, y, W, seed, n_estimators, mmd_n):
     }
 
 
-def cluster_bootstrap(bundle, B=99, seed=SEED, n_estimators=60, mmd_n=60):
+def cluster_bootstrap(bundle, B=10, seed=SEED, n_estimators=60, mmd_n=60):
     rng = np.random.default_rng(seed)
     recs = []
     for b in range(B):
@@ -614,10 +624,11 @@ def cluster_bootstrap(bundle, B=99, seed=SEED, n_estimators=60, mmd_n=60):
     return recs
 
 
-def within_video_permute_auc(bundle, B=99, seed=SEED, n_estimators=80):
+def within_video_permute_auc(bundle, B=10, seed=SEED, n_estimators=80):
     rng = np.random.default_rng(seed)
+    X = standardize_columns(bundle.X)
     _, obs_auc = rf_domain(
-        bundle.X[bundle.W == 0], bundle.X[bundle.W == 1], seed=seed, n_estimators=n_estimators
+        X[bundle.W == 0], X[bundle.W == 1], seed=seed, n_estimators=n_estimators
     )
     null = []
     for b in range(B):
@@ -627,7 +638,7 @@ def within_video_permute_auc(bundle, B=99, seed=SEED, n_estimators=80):
             Wp[idx] = rng.permutation(Wp[idx])
         if Wp.sum() < 8 or (len(Wp) - Wp.sum()) < 8:
             continue
-        _, auc = rf_domain(bundle.X[Wp == 0], bundle.X[Wp == 1], seed=seed + b, n_estimators=n_estimators)
+        _, auc = rf_domain(X[Wp == 0], X[Wp == 1], seed=seed + b, n_estimators=n_estimators)
         null.append(auc)
     null = np.asarray(null, dtype=float)
     p = (1.0 + np.sum(null >= obs_auc)) / (len(null) + 1.0) if len(null) else float("nan")
@@ -642,11 +653,19 @@ def pairwise_from_bootstrap(recs, method):
     for a, b in pairs:
         diffs = np.array([r[method][a] - r[method][b] for r in recs], dtype=float)
         mean = float(np.mean(diffs))
-        lo, hi = percentile_ci(diffs)
         p = bootstrap_pvalue(diffs)
+        sd = float(np.std(diffs, ddof=1)) if diffs.size > 1 else float("nan")
+        var = float(np.var(diffs, ddof=1)) if diffs.size > 1 else float("nan")
+        # B=10: interval from bootstrap SD rather than unstable percentiles.
+        if np.isfinite(sd):
+            lo, hi = mean - 1.96 * sd, mean + 1.96 * sd
+        else:
+            lo, hi = percentile_ci(diffs)
         out["%s-%s" % (a, b)] = {
             "mean_diff": mean,
-            "ci95": [lo, hi],
+            "sd": sd,
+            "var": var,
+            "ci95": [float(lo), float(hi)],
             "p_bootstrap": p,
             "excludes_zero": bool(lo > 0 or hi < 0),
         }
@@ -687,7 +706,7 @@ def friedman_wilcoxon(per_video, method_share_key="share"):
     return {"friedman": friedman, "wilcoxon": wx, "n_videos": int(len(per_video))}
 
 
-def group_label_permutation_test(vimp, B=399, seed=SEED):
+def group_label_permutation_test(vimp, B=99, seed=SEED):
     rng = np.random.default_rng(seed)
     obs = group_partition_stat(vimp)
     null = np.array([permute_group_labels(vimp, rng) for _ in range(B)])
@@ -695,31 +714,47 @@ def group_label_permutation_test(vimp, B=399, seed=SEED):
     return {"obs_gap": float(obs), "p": float(p), "null_mean": float(null.mean())}
 
 
+def _mean_sd_ci(samples):
+    a = np.asarray(samples, dtype=float)
+    a = a[np.isfinite(a)]
+    if a.size == 0:
+        return {
+            "mean": float("nan"),
+            "sd": float("nan"),
+            "var": float("nan"),
+            "ci95": [float("nan"), float("nan")],
+        }
+    mean = float(np.mean(a))
+    if a.size < 2:
+        return {"mean": mean, "sd": float("nan"), "var": float("nan"), "ci95": [mean, mean]}
+    sd = float(np.std(a, ddof=1))
+    var = float(np.var(a, ddof=1))
+    # B is small (default 10): report mean/variance and a normal interval from the bootstrap SE.
+    return {
+        "mean": mean,
+        "sd": sd,
+        "var": var,
+        "ci95": [mean - 1.96 * sd, mean + 1.96 * sd],
+    }
+
+
 def summarize_bootstrap(recs):
-    summary = {"n_valid": len(recs)}
+    summary = {"n_valid": len(recs), "B": len(recs)}
     for method in ("rf", "mmd", "po"):
         summary[method] = {}
         for g in GROUP_NAMES:
             samples = np.array([r[method][g] for r in recs], dtype=float)
-            lo, hi = percentile_ci(samples)
-            summary[method][g] = {
-                "mean": float(np.mean(samples)),
-                "sd": float(np.std(samples, ddof=1)) if len(samples) > 1 else float("nan"),
-                "ci95": [lo, hi],
-            }
+            summary[method][g] = _mean_sd_ci(samples)
         summary[method]["pairwise"] = pairwise_from_bootstrap(recs, method)
     aucs = np.array([r["auc"] for r in recs], dtype=float)
-    summary["auc"] = {
-        "mean": float(np.nanmean(aucs)),
-        "ci95": list(percentile_ci(aucs)),
-    }
+    summary["auc"] = _mean_sd_ci(aucs)
     return summary
 
 
 def run_attribution(
     bundle: WindowBundle,
-    B=99,
-    B_perm=99,
+    B=10,
+    B_perm=10,
     seed=SEED,
     n_estimators=120,
     bootstrap_estimators=60,
@@ -733,10 +768,10 @@ def run_attribution(
     boot_sum = summarize_bootstrap(boots)
     tests = {
         "per_video_rf_shares": friedman_wilcoxon(videos, "share"),
-        "rf_group_label_perm": group_label_permutation_test(point["rf_vimp"], B=min(399, max(B_perm * 3, 99)), seed=seed),
-        "po_group_label_perm": group_label_permutation_test(point["po_vimp"], B=min(399, max(B_perm * 3, 99)), seed=seed + 3),
+        "rf_group_label_perm": group_label_permutation_test(point["rf_vimp"], B=99, seed=seed),
+        "po_group_label_perm": group_label_permutation_test(point["po_vimp"], B=99, seed=seed + 3),
         "coord_mmd_group_label_perm": group_label_permutation_test(
-            point["coord_mmd_vimp"], B=min(399, max(B_perm * 3, 99)), seed=seed + 5
+            point["coord_mmd_vimp"], B=99, seed=seed + 5
         ),
     }
     obs_auc, null_auc, p_auc = within_video_permute_auc(

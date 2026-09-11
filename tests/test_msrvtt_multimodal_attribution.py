@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "Python" / "src"))
 
 from msrvtt_multimodal_attribution import (  # noqa: E402
     P_X,
+    _mean_sd_ci,
     bundle_from_s,
     drop_group,
     group_label_permutation_test,
@@ -21,6 +22,7 @@ from msrvtt_multimodal_attribution import (  # noqa: E402
     make_synthetic_bundle,
     modality_mass,
     rf_domain,
+    standardize_columns,
 )
 
 
@@ -84,6 +86,26 @@ def test_holm_adjust():
     assert adj[0] <= adj[2] <= adj[1] or adj[0] < 0.01
     assert np.all(adj >= np.array([0.001, 0.04, 0.02]) - 1e-12)
     assert np.all(adj <= 1.0)
+
+
+def test_bootstrap_mean_sd_from_ten_replicates():
+    rng = np.random.default_rng(0)
+    samples = rng.normal(loc=0.4, scale=0.05, size=10)
+    rec = _mean_sd_ci(samples)
+    assert rec["mean"] == pytest.approx(float(np.mean(samples)))
+    assert rec["sd"] == pytest.approx(float(np.std(samples, ddof=1)))
+    assert rec["var"] == pytest.approx(float(np.var(samples, ddof=1)))
+    half = 1.96 * rec["sd"]
+    assert rec["ci95"][0] == pytest.approx(rec["mean"] - half)
+    assert rec["ci95"][1] == pytest.approx(rec["mean"] + half)
+
+
+def test_standardize_columns_unit_variance():
+    rng = np.random.default_rng(1)
+    X = rng.normal(loc=3.0, scale=4.0, size=(40, 6))
+    Z = standardize_columns(X)
+    assert np.allclose(Z.mean(0), 0.0, atol=1e-10)
+    assert np.allclose(Z.std(0), 1.0, atol=1e-10)
 
 
 def test_bundle_from_s_uses_label_as_video_id():

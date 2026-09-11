@@ -56,19 +56,28 @@ def write_tex(result, path: Path):
         % (p["po_logo_share"]["video"], p["po_logo_share"]["audio"], p["po_logo_share"]["text"], p["po_risk"]),
         "\\bottomrule\\end{tabular}\\end{table}\n\n",
         "\\begin{table}[ht]\\centering\n",
-        "\\caption{Video-clustered bootstrap inference for modality share differences "
-        "(percentile 95\\% CI, two-sided bootstrap $p$, Holm within method). "
-        "Sampling unit = video.}\n",
+        "\\caption{Video-clustered bootstrap ($B=10$) for modality share differences. "
+        "Mean and SD of the 10 replicates; interval is $\\mathrm{mean}\\pm 1.96\\,\\mathrm{SD}$. "
+        "Two-sided bootstrap $p$ and Holm within method. Sampling unit = video.}\n",
         "\\label{tab:msrvtt-mm-bootstrap}\n\\small\n",
-        "\\begin{tabular}{@{}l l r r r c@{}}\\toprule\n",
-        "Method & Contrast & Mean & 95\\% CI & $p$ & Holm \\\\\n\\midrule\n",
+        "\\begin{tabular}{@{}l l r r r r c@{}}\\toprule\n",
+        "Method & Contrast & Mean & SD & $\\mathrm{mean}\\pm 1.96\\mathrm{SD}$ & $p$ & Holm \\\\\n\\midrule\n",
     ]
     for method, lab in (("rf", "RF-Domain"), ("mmd", "MMD-LOCO"), ("po", "PO-risk")):
         for pair, rec in b[method]["pairwise"].items():
             lo, hi = rec["ci95"]
             lines.append(
-                "%s & %s & $%.3f$ & $[%.3f, %.3f]$ & $%.4f$ & $%.4f$ \\\\\n"
-                % (lab, pair, rec["mean_diff"], lo, hi, rec["p_bootstrap"], rec["p_holm"])
+                "%s & %s & $%.3f$ & $%.3f$ & $[%.3f, %.3f]$ & $%.4f$ & $%.4f$ \\\\\n"
+                % (
+                    lab,
+                    pair,
+                    rec["mean_diff"],
+                    rec.get("sd", float("nan")),
+                    lo,
+                    hi,
+                    rec["p_bootstrap"],
+                    rec["p_holm"],
+                )
             )
     lines.append("\\bottomrule\\end{tabular}\\end{table}\n\n")
 
@@ -93,8 +102,31 @@ def write_tex(result, path: Path):
     lines += [
         "Within-video AUC permutation & AUC $%.3f$ & $%.4f$ \\\\\n" % (perm["obs_auc"], perm["p"]),
         "RF group-label permutation (gap) & $%.3f$ & $%.4f$ \\\\\n" % (gperm["obs_gap"], gperm["p"]),
-        "\\bottomrule\\end{tabular}\\end{table}\n",
+        "\\bottomrule\\end{tabular}\\end{table}\n\n",
     ]
+    lines += [
+        "\\begin{table}[ht]\\centering\n",
+        "\\caption{Per-video RF-Domain AUC for the early vs.\\ late window split "
+        "(video-granularity subsets). Dominant modality is the largest RF VIMP share.}\n",
+        "\\label{tab:msrvtt-mm-pervideo-auc}\n\\small\n",
+        "\\begin{tabular}{@{}r r r r r r r@{}}\\toprule\n",
+        "Video & $n$ & AUC & Video share & Audio share & Text share & Dominant \\\\\n\\midrule\n",
+    ]
+    for row in result["per_video"]:
+        sh = row["share"]
+        lines.append(
+            "%s & %d & $%.3f$ & $%.3f$ & $%.3f$ & $%.3f$ & %s \\\\\n"
+            % (
+                row["video_id"],
+                row["n"],
+                row["auc"],
+                sh["video"],
+                sh["audio"],
+                sh["text"],
+                row["dominant"],
+            )
+        )
+    lines.append("\\bottomrule\\end{tabular}\\end{table}\n")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("".join(lines))
 
@@ -113,12 +145,22 @@ def write_readme(result, plot_paths, path: Path):
         % (p["mmd_share"]["video"], p["mmd_share"]["audio"], p["mmd_share"]["text"], p["mmd_full"]),
         "| PO-risk LOGO | %.3f | %.3f | %.3f | R=%.4f |\n"
         % (p["po_logo_share"]["video"], p["po_logo_share"]["audio"], p["po_logo_share"]["text"], p["po_risk"]),
-        "\nInference: video-clustered bootstrap, Holm pairwise tests, ",
+        "\nInference: video-clustered bootstrap with **B=10** (mean and variance of replicates), ",
         "Friedman/Wilcoxon on per-video shares, within-video permutation of $W$ for AUC, ",
         "and a group-label permutation test that the named 768/512/768 blocks are more ",
         "imbalanced than random partitions of the same sizes.\n\n",
-        "n=%d windows, n_videos=%d.\n" % (result["n"], result["n_videos"]),
+        "n=%d windows, n_videos=%d, bootstrap B=%s.\n"
+        % (result["n"], result["n_videos"], result.get("bootstrap", {}).get("B", 10)),
+        "\n## Per-video AUC\n\n",
+        "| Video | n | AUC | Video | Audio | Text | Dominant |\n",
+        "|------:|--:|----:|------:|------:|-----:|----------|\n",
     ]
+    for row in result["per_video"]:
+        sh = row["share"]
+        lines.append(
+            "| %s | %d | %.3f | %.3f | %.3f | %.3f | %s |\n"
+            % (row["video_id"], row["n"], row["auc"], sh["video"], sh["audio"], sh["text"], row["dominant"])
+        )
     path.write_text("".join(lines))
 
 
@@ -126,8 +168,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--zip", type=str, default=None, help="path to feature_video_audio.zip")
     ap.add_argument("--synthetic", action="store_true")
-    ap.add_argument("--B", type=int, default=79)
-    ap.add_argument("--B-perm", type=int, default=79)
+    ap.add_argument("--B", type=int, default=10)
+    ap.add_argument("--B-perm", type=int, default=10)
     ap.add_argument("--n-estimators", type=int, default=120)
     ap.add_argument("--bootstrap-estimators", type=int, default=50)
     ap.add_argument("--seed", type=int, default=2026)
