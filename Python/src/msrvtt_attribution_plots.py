@@ -464,7 +464,9 @@ def plot_batch_region_board(bundle, result, path: Path, pay=None):
 
 
 def plot_batch_pair_board(bundle, result, path: Path, pay=None, n_batches=10):
-    """Prototype heatmap: cosine(batch i, batch j) per modality."""
+    """Product dashboard: three modality cosine(Bi, Bj) heatmaps + head LR + drill-down."""
+    from matplotlib.patches import FancyBboxPatch
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
     from msrvtt_multimodal_attribution import GROUP_NAMES, batch_pair_payload
 
     _style()
@@ -478,41 +480,42 @@ def plot_batch_pair_board(bundle, result, path: Path, pay=None, n_batches=10):
     vmax = float(np.nanpercentile(np.abs(stacked), 98)) if stacked.size else 0.01
     vmax = max(vmax, 1e-4)
     nrm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+    point = (result or {}).get("point") or {}
+    rf = point.get("rf_share") or {"video": 0.772, "audio": 0.191, "text": 0.037}
+    po = point.get("po_feat_share") or {"video": 0.813, "audio": 0.174, "text": 0.013}
 
-    fig = plt.figure(figsize=(16.4, 10.6), dpi=210)
+    fig = plt.figure(figsize=(16.8, 11.8), dpi=210)
     fig.patch.set_facecolor("white")
     gs = GridSpec(
         2,
         3,
         figure=fig,
-        height_ratios=[1.15, 1.0],
-        hspace=0.38,
-        wspace=0.26,
-        left=0.055,
+        height_ratios=[1.38, 0.95],
+        hspace=0.42,
+        wspace=0.28,
+        left=0.05,
         right=0.98,
         top=0.88,
-        bottom=0.08,
+        bottom=0.07,
     )
     fig.suptitle(
-        "Prototype  ·  cosine(batch i, batch j)   modality-specific attribution",
-        fontsize=18.5,
+        "Dashboard  ·  three modality heatmaps   cosine(Bi, Bj)",
+        fontsize=19.5,
         fontweight="bold",
         color=INK,
-        y=0.975,
+        y=0.978,
     )
     fig.text(
         0.5,
-        0.925,
-        "K=%d temporal bins of window index  (this extract: %d windows × %d videos).  "
-        "Ideal design: 10k frames, 1k per batch, same K×K board.  "
-        "Current cosine(B0, B1) board is the K=2 special case (early vs late)."
-        % (k, pay.get("n_windows", 20), pay.get("n_videos", 16)),
+        0.928,
+        "Post on the board: VIDEO / AUDIO / TEXT heatmaps (shared color scale), lag decay, "
+        "per-head LR from RF & PO-risk VIMP, drill-down  token/frame  →  patch/box  |  audio slice.  "
+        "K=%d bins of window index  ·  prototype of 10k frames / 1k per batch."
+        % k,
         ha="center",
-        fontsize=9.4,
+        fontsize=9.3,
         color=MUTED,
     )
-
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
 
     last_im = None
     for i, name in enumerate(GROUP_NAMES):
@@ -521,91 +524,102 @@ def plot_batch_pair_board(bundle, result, path: Path, pay=None, n_batches=10):
         last_im = ax.imshow(M, cmap="RdBu_r", norm=nrm, origin="upper", interpolation="nearest")
         ax.set_xticks(ticks)
         ax.set_yticks(ticks)
-        ax.set_xticklabels(labs, fontsize=7.5, rotation=90)
-        ax.set_yticklabels(labs, fontsize=7.5)
+        ax.set_xticklabels(labs, fontsize=7.4, rotation=90)
+        ax.set_yticklabels(labs, fontsize=7.4)
         ax.set_title(
-            name.capitalize() + "  cosine(Bi, Bj)",
-            fontsize=12.2,
+            name.upper() + "   cosine(Bi, Bj)",
+            fontsize=13.2,
             fontweight="bold",
             color=COLORS[name],
+            pad=8,
         )
         ax.set_xlabel("batch j")
         if i == 0:
             ax.set_ylabel("batch i")
         gap = pay["lag0_minus_lagmax"].get(name, float("nan"))
         ax.text(
-            0.02,
-            -0.18,
-            "lag0 − lag%d  =  %.4f" % (k - 1, gap),
+            0.0,
+            -0.16,
+            "decay  lag0−lag%d  =  %.4f" % (k - 1, gap),
             transform=ax.transAxes,
-            fontsize=8.2,
+            fontsize=8.4,
             color=MUTED,
             clip_on=False,
         )
         if i == 2:
             div = make_axes_locatable(ax)
-            cax = div.append_axes("right", size="4.2%", pad=0.06)
+            cax = div.append_axes("right", size="4.0%", pad=0.06)
             cbar = fig.colorbar(last_im, cax=cax)
             cbar.set_label("mean cosine", fontsize=8)
             cbar.ax.tick_params(labelsize=7.5)
 
-    axd = fig.add_subplot(gs[1, 0])
-    D = np.asarray(pay["video_minus_audio"], dtype=float)
-    dv = float(np.nanpercentile(np.abs(D[np.isfinite(D)]), 98)) if np.isfinite(D).any() else 0.01
-    dv = max(dv, 1e-4)
-    imd = axd.imshow(D, cmap="RdBu_r", norm=TwoSlopeNorm(vmin=-dv, vcenter=0.0, vmax=dv), interpolation="nearest")
-    axd.set_xticks(ticks)
-    axd.set_yticks(ticks)
-    axd.set_xticklabels(labs, fontsize=7.5, rotation=90)
-    axd.set_yticklabels(labs, fontsize=7.5)
-    axd.set_title("Video − audio  cosine(Bi, Bj)", fontsize=12, fontweight="bold")
-    axd.set_xlabel("batch j")
-    axd.set_ylabel("batch i")
-    divd = make_axes_locatable(axd)
-    caxd = divd.append_axes("right", size="4.2%", pad=0.06)
-    fig.colorbar(imd, cax=caxd).ax.tick_params(labelsize=7.5)
-
-    axl = fig.add_subplot(gs[1, 1])
+    axl = fig.add_subplot(gs[1, 0])
     h = np.arange(k)
     for name in GROUP_NAMES:
         axl.plot(
             h,
             pay["lag_cosine"][name],
             color=COLORS[name],
-            lw=2.2,
+            lw=2.3,
             marker="o",
-            ms=4.5,
+            ms=4.8,
             label=name.capitalize(),
         )
     axl.set_xlabel("lag  |i − j|")
     axl.set_ylabel("mean cosine")
-    axl.set_title("Lag profile  (diagonal bands)", fontsize=12, fontweight="bold")
-    axl.legend(frameon=False, fontsize=8.5)
+    axl.set_title("Lag  ·  refresh half-life", fontsize=12.2, fontweight="bold")
+    axl.legend(frameon=False, fontsize=8.5, loc="upper right")
     axl.grid(True, color=GRID)
     axl.set_xticks(h)
 
-    axb = fig.add_subplot(gs[1, 2])
-    names = list(GROUP_NAMES)
-    vals = [pay["lag0_minus_lagmax"][g] for g in names]
-    axb.barh(np.arange(3)[::-1], vals, color=[COLORS[g] for g in names], height=0.62)
-    axb.set_yticks(np.arange(3)[::-1])
-    axb.set_yticklabels([g.capitalize() for g in names], fontsize=9.5)
-    axb.set_xlabel("cosine decay  (lag 0 − lag %d)" % (k - 1))
-    axb.set_title("Temporal decay by modality", fontsize=12, fontweight="bold")
-    axb.axvline(0, color=MUTED, lw=0.8)
-    axb.grid(True, axis="x", color=GRID)
-    span = max(abs(v) for v in vals) if vals else 0.01
-    span = max(span, 1e-4)
-    for i, v in enumerate(vals):
-        axb.text(v + 0.04 * span * (1 if v >= 0 else -1), 2 - i, "%.4f" % v, va="center", fontsize=8.5, color=INK)
+    axr = fig.add_subplot(gs[1, 1])
+    y = np.arange(3)
+    hgt = 0.36
+    rf_v = [rf[g] for g in GROUP_NAMES]
+    po_v = [po[g] for g in GROUP_NAMES]
+    axr.barh(y + hgt / 2, rf_v[::-1], height=hgt, color=[COLORS[g] for g in GROUP_NAMES][::-1], label="RF-Domain VIMP")
+    axr.barh(y - hgt / 2, po_v[::-1], height=hgt, color="#9AA3AE", label="PO-risk VIMP")
+    axr.set_yticks(y)
+    axr.set_yticklabels(["Text", "Audio", "Video"], fontsize=9.5)
+    axr.set_xlabel("share  →  head LR  η_m")
+    axr.set_title("Per-head LR  (separate modality heads)", fontsize=12.0, fontweight="bold")
+    axr.set_xlim(0, 1.05)
+    axr.axvline(1.0 / 3.0, color=MUTED, ls="--", lw=0.9)
+    axr.legend(frameon=False, fontsize=7.8, loc="lower right")
+    axr.grid(True, axis="x", color=GRID)
+
+    axd = fig.add_subplot(gs[1, 2])
+    axd.set_xlim(0, 1)
+    axd.set_ylim(0, 1)
+    axd.axis("off")
+    axd.set_title("Drill-down  (after a heatmap cell)", fontsize=12.0, fontweight="bold")
+    steps = (
+        (0.72, "1   token / frame", "stored sliding-window embeddings"),
+        (0.44, "2   patch / bounding-box", "spatial slice of the frame"),
+        (0.16, "3   audio slice", "time slice of the soundtrack"),
+    )
+    for y0, title, sub in steps:
+        box = FancyBboxPatch(
+            (0.06, y0 - 0.08),
+            0.88,
+            0.22,
+            boxstyle="round,pad=0.012,rounding_size=0.04",
+            facecolor="#F4F6F8",
+            edgecolor="#C5CCD4",
+            lw=1.0,
+            transform=axd.transAxes,
+            clip_on=False,
+        )
+        axd.add_patch(box)
+        axd.text(0.12, y0 + 0.06, title, transform=axd.transAxes, fontsize=10.2, fontweight="bold", color=INK, va="center")
+        axd.text(0.12, y0 - 0.02, sub, transform=axd.transAxes, fontsize=8.0, color=MUTED, va="center")
 
     fig.text(
-        0.055,
-        0.018,
-        "Text is a post-hoc clip-level caption (not time-aligned ASR): cosine(Bi, Bj) should be flat in lag.  "
-        "Video/audio carry within-clip motion and soundtrack, so nearby batches stay similar and far batches decay.  "
-        "n/batch = %s."
-        % ", ".join("%d:%d" % (k0, n) for k0, n in sorted(pay["n_per_batch"].items())),
+        0.05,
+        0.016,
+        "Joint-embedding shift (RF / MMD / PO-risk VIMP) sets each head's training LR when modalities are trained separately.  "
+        "Heatmaps decide which head to open; VIMP decides how large η_m is.  "
+        "Clip-level text is post-hoc: heatmap flat, η_t = 0.",
         fontsize=8.0,
         color=MUTED,
     )
