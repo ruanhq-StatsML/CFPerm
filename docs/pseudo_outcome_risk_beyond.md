@@ -1,304 +1,186 @@
-# Pseudo-Outcome Risk Beyond Batch Testing
+# Frozen Generator, Localization, and Where the Adaptation Budget Goes
 
-**What else the score can do — especially online update, and statistically grounded LLM inference.**
+**This is not online learning.** The LLM stays frozen. Pseudo-outcome (PO) risk plus variable importance tell you **which part of $x$ is most worth adapting** — which modality, which instances, which spans — under a scarce intervention budget. That is the statistical intuition. The rest of this note is only that sentence, unpacked.
 
-This is a writeup, not a prototype. The implementation stays out of this pass on purpose: the object is already in CFPerm; what is missing is a map of *uses* in which a statistical method is the inner loop, not a dashboard after the model has already decided.
-
-The claim in one sentence: **once you have a Neyman-orthogonal, per-example discrepancy, you can update it online and you can hand it to an LLM as a control variate.** Almost everything people currently ask prompting, RAG, RLHF, or “the model’s own confidence” to do is a *policy*. Pseudo-outcome (PO) risk is a *score*. Policies should be functions of scores. That inversion is where statistics plays a core role rather than a supporting one.
+No prototype in this pass.
 
 ---
 
-## 0. Doctrine that does not change
+## 0. Yes: “which part is most worth adapting”
 
-CFPerm already says this, and none of the uses below walk it back:
+That reading is the right one.
 
-- Under the alternative, ignorability fails. $\hat\tau$ is **not** a causal CATE. The DR / R-learner residual is a **distance / discrepancy** between two batches.
-- Unique decomposition of that discrepancy into covariate shift vs. concept drift is **impossible** (README: three levels — performance drop, $P(X)$ vs $P(Y\mid X)$, and VIMP change each have infinitely many realizations). The identifiable target is **localization**, not disentanglement.
-- The permutation / CF-split procedure is the type-I device. Online monitors and LLM gates do **not** inherit that guarantee automatically.
+CFPerm’s doctrine is already: unique CS / CD / dependence decomposition is impossible; **subset localization is all you need.** PO-risk is the discrepancy. Localization of $\hat\tau$ is a ranking of subsets by how much they carry that discrepancy. If you are allowed to change *one* thing — re-encode one modality, retrieve on one span, collect labels on one slice, attach a tiny residual on one block of coordinates — you should change the subset that ranks first.
 
-What changes is only the *use* of the residual: from a one-shot test statistic to a streaming control signal.
+That is not:
+
+- online learning of the generator,
+- continual pretraining,
+- LoRA on the 70B every $N$ users,
+- “the model adapts itself because it saw new tokens.”
+
+Those are *parameter updates of a huge conditional*. The object here is *an identified ranking of subsets*. The generator can stay frozen; the ranking tells the *policy around the generator* where to spend the budget.
 
 ---
 
-## 1. The object, in one place
+## 1. Two objects, not one
 
-Batch indicator $W$ is “old vs new”, “user A vs user B”, “session $t-1$ vs $t$”, “trusted corpus vs current prompt”, “no-tool vs with-tool” — **not** a treatment unless you actually randomized it.
-
-Cross-fit nuisances $\hat\mu(x)\approx\mathbb{E}[Y\mid X=x]$ and $\hat e(x)\approx\mathbb{P}(W=1\mid X=x)$. Two siblings already in the repo:
-
-- **DR / AIPW-style pseudo-outcome** (efficient residual for a contrast):
-  \[
-  \varphi^{\mathrm{DR}}
-  =
-  (\hat\mu_1-\hat\mu_0)
-  +
-  \frac{(Y-\hat\mu_W)\,(W-\hat e)}{\hat e(1-\hat e)}.
-  \]
-- **R-learner / product residual** (what `DRPerm` / `cfperm_vimp` store as `residual_y * residual_t`):
-  \[
-  \varphi^{\mathrm{R}}
-  =
-  (Y-\hat\mu(X))\,(W-\hat e(X)).
-  \]
-
-Then $\hat\tau(x)$ is a regression of $\varphi$ on $X$, and
+Write the deployed system as
 
 \[
-\text{PO-risk}
-\;=\;
-\mathbb{E}[\hat\tau(X)^2]
+\underbrace{p_\theta(y\mid x)}_{\text{frozen generator}}
+\qquad\text{and}\qquad
+\underbrace{\mathcal{L}(\varphi, \hat\tau; D_0, D_t)}_{\text{localization of the discrepancy}}.
+\]
+
+- $p_\theta$ is the LLM (or ViViT / CLAP / GPT-2 encoders). $\theta$ does **not** move. It is a fixed conditional, trained on some mixture that is already gone.
+- $D_0$ is a reference batch (calibration users, trusted corpus, last week, no-tool). $D_t$ is the current batch (this user, this session, this prompt, this video window). $W$ is the batch label.
+- $\varphi$ is the DR / R-learner residual — a Neyman-orthogonal score for “$D_t$ is distinguishable from $D_0$ after partialling out $\mu$ and $e$.” It is a **distance**, not a CATE (ignorability fails under the alternative; README).
+- $\hat\tau(x)$ is $\varphi$ regressed on $x$. Variable importance / LOCO / permuCATE of $\hat\tau$ is a **ranking of coordinates, groups, instances, or spans**.
+
+The statistical job is the second object. The first object is a sampler you are allowed to call.
+
+If you update $\theta$ online, you have thrown away the split: the generator and the discrepancy become the same high-capacity fit, the ranking is no longer a readout of a frozen conditional against a moving world, and you are back to ordinary continual learning with no orthogonality and no localization theorem. That is someone else’s bill.
+
+---
+
+## 2. Why localization, not explanation, and not a full adapt
+
+Three facts from the CFPerm impossibility, reused as inference logic:
+
+1. A drop in performance (or a rise in PO-risk) has **infinitely many** CS / CD / noise realizations. “The concept drifted” is not identified. Adapting the whole generator is a response to an unidentified story: $\theta$ can absorb any of those realizations. You will not know *what* you adapted.
+2. A change in VIMP likewise has infinitely many coordinate-plus-dependence realizations. So even the ranking is not a unique “root cause.” It *is* a **sufficient statistic for a budgeted intervention**: which subset, if you were allowed to touch only that subset, would move the discrepancy most.
+3. Therefore the honest action is not “fine-tune everything until the loss comes back.” It is: **localize, then spend the adaptation budget on the localized set, leave $p_\theta$ alone.**
+
+“Most worth adapting” is an optimization sentence with a constraint:
+
+\[
+S^\star
+\;\in\;
+\arg\max_{S:\; \mathrm{cost}(S)\le B}
+\;
+\text{VIMP}_{\hat\tau}(S)
 \quad\text{or}\quad
-\mathbb{E}[\varphi^2].
+\text{LOCO-risk of }S.
 \]
 
-Four properties that make this the right primitive for everything below:
+$S$ can be a modality block (video vs audio vs text), a set of windows, a set of tokens, a bounding box, a retrieved passage vs a continuation. $B$ is compute, labels, latency, or “how many coordinates of a residual head you are willing to fit.” The generator is not in the argmax. It is the thing you generate *from* after the intervention on $S$.
 
-1. **Orthogonality.** First-order errors in $\hat\mu$ or $\hat e$ drop out of $\mathbb{E}[\varphi]$ when the other nuisance is consistent. Streams and LLMs are exactly the setting where one nuisance will be stale and the other still usable.
-2. **One number per example.** After nuisances exist, a new point $(x,w,y)$ produces a scalar $\varphi$ without refitting the permutation test.
-3. **Localization is free.** LOCO, permuCATE, RF VIMP on concatenated modalities — anything we already do to $\hat\tau$ — is a readout of the same residual. Layer-1 modality shares, Layer-2 instance selection, Layer-3 token/box localization are *views* of $\varphi$, not a second scientific claim.
-4. **It is not an explanation.** $\varphi$ does not say why the user changed their mind. It says *where the two batches remain distinguishable after outcome and propensity have been partialled out*. That is the statistically honest sentence, and it is already enough to act.
-
-The R-loss form makes the same point operationally: $\tau$ is fit by residual-on-residual regression. Online, that is a *fast* regression. The nuisances are a *slow* regression. Two timescales, one orthogonal score.
+That is the same logic as post-hoc subgroup localization in the batch test. The LLM does not change the math. It only makes the cost of adapting the *wrong* $S$ (or adapting $\theta$ instead of $S$) obvious.
 
 ---
 
-## 2. Online update: the residual as a monitor, not a batch $p$-value
+## 3. What the residual actually says (statistical intuition)
 
-The current CFPerm test is batch-vs-batch: permute $W$, refit, threshold the VIMP quantile. That is the right **validity** device. It is the wrong **runtime** device. You cannot permute 150 times per token, per session, or per video window. You also should not wait until a full new batch has been labeled and then run a test that tells you, after the fact, that the operating point already moved.
+Nuisances: $\hat\mu(x)\approx\mathbb{E}[Y\mid X=x]$, $\hat e(x)\approx\mathbb{P}(W=1\mid X=x)$. Cross-fit, clip $e$.
 
-Online-update is the statement that **the same $\varphi$ can be computed on arrival**, accumulated, and only occasionally audited by the expensive test.
-
-### 2.1 Split the timescales (this is the architecture)
-
-| Object | Role | Update frequency |
-|---|---|---|
-| $\hat\mu,\hat e$ | nuisances | slow — every $B$ points, or when a CUSUM on their own residuals fires |
-| $\varphi_i$ | per-point score | every arrival (or when $Y$ completes) |
-| PO-risk / $\hat\tau$ | discrepancy + localization | fast — SGD, recursive least squares, streaming forest, EWMA of $\varphi^2$ |
-| Permutation / CF-split | confirmatory type-I control | rare — end of window, or when the monitor exceeds a bound |
-
-Two-timescale stochastic approximation is the statistical name for this, not “fine-tune more often.” Nuisances move on a slow clock because they are high-capacity and because orthogonality *forgives* them being slightly stale. $\hat\tau$ moves on a fast clock because it is a regression on an already-orthogonalized target.
-
-Double robustness is what makes the split respectable:
-
-- If $\hat e$ is still good and $\hat\mu$ is stale, the product residual still has signal through $(Y-\hat\mu)(W-\hat e)$.
-- If $\hat\mu$ is still good and the mixture $W$ is drifting, signal comes through $W-\hat e$.
-- If both are badly wrong, the monitor is allowed to go quiet — that is the honest failure mode — and the rare permutation audit is what catches it.
-
-### 2.2 What you actually accumulate
-
-Do not store a new copy of the world. Store a sketch:
+R-learner product (what the code stores as `residual_y * residual_t`):
 
 \[
-\mathcal{S}_t
+\varphi
 =
-\bigl\{\,
-\varphi_i,\;
-\hat\tau(x_i),\;
-\text{top-$k$ VIMP coordinates},\;
-W_i,\;
-\text{window id}
-\,\bigr\}_{i\le t}.
+\bigl(Y-\hat\mu(X)\bigr)\,
+\bigl(W-\hat e(X)\bigr).
 \]
 
-Operational statistics on $\mathcal{S}_t$:
+DR / AIPW is the efficient sibling; same intuition. Then $\hat\tau(x)$ fits $\varphi$ on $X$, and PO-risk is $\mathbb{E}[\hat\tau(X)^2]$ or $\mathbb{E}[\varphi^2]$.
 
-- **Level.** EWMA of $\varphi_i^2$ or of $\hat\tau(x_i)^2$. This is the current PO-risk.
-- **Change.** CUSUM / Shiryaev–Roberts on the same series. This is “the operating point moved,” not “there is shift in the abstract.”
-- **Where.** Rolling VIMP / LOCO shares on a reservoir of high-$|\varphi|$ rows. This is Layer-1 localization on a sliding window.
-- **Which rows.** Keep the top residual instances (Layer 2). Raw video/audio is optional and expensive; the residual is the memory.
+Read this without causal language:
 
-A sufficient online memory for a multimodal product is this sketch. That is how a statistical method stays in the loop without becoming another foundation-model training run.
+- $\hat\mu$ partials out “what $Y$ looks like as a function of $x$ in the pooled data.”
+- $\hat e$ partials out “how batch membership is already predictable from $x$.”
+- Whatever is left in $\varphi$ is **discrepancy that is not already explained by the pooled outcome surface or by easy propensity**.
+- $\hat\tau(x)$ puts that leftover *back onto $x$*. Coordinates where $\hat\tau$ is sensitive are coordinates where the two batches still disagree.
 
-### 2.3 Delayed labels, missing $Y$, partial information
+So localization is not saliency of the LLM, and it is not “this token caused the answer.” It is: **after you have removed the parts of $Y$ and $W$ that a pooled nuisance already knows, which parts of $x$ still carry the batch gap.** Those are the parts that are worth an intervention, because an intervention anywhere else is, to first order, already in $\mu$ or $e$.
 
-LLM and preference logs are not i.i.d. batches with $Y$ on arrival.
-
-- $W$ and $X$ are often immediate: this session vs last week; this user cluster vs the calibration pool; this prompt vs the trusted corpus.
-- $Y$ may be delayed (thumbs, retention, task success, human rating) or missing.
-- Then $\hat e$ can be updated on $(X,W)$ continuously; $\varphi$ is *completed* when $Y$ shows up. Until then, $\hat\tau(X)$ from the last fitted residual regression is still a **prediction of discrepancy**, which is enough to gate.
-
-This is ordinary two-phase sampling / missing-at-random completion of an AIPW score. It is not a new causal story, and it does not require pretending that delayed thumbs are a CATE.
-
-A useful split in products:
-
-1. **Immediate gate** — $\hat\tau(x_{\text{now}})$ and current EWMA, no $Y$ yet.
-2. **Completed update** — when $Y$ arrives, write $\varphi$, take a SGD step on $\hat\tau$, maybe a slower step on $\hat\mu$.
-3. **Audit** — when the CUSUM fires, or every $K$ windows, run permute-then-refit on a buffer.
-
-The immediate gate is what inference needs. The completed update is what learning needs. The audit is what validity needs. Mixing those three clocks is how people either (a) never ship or (b) ship a $p$-value with no type-I meaning.
-
-### 2.4 Rolling localization on concatenated modalities
-
-Given an MSR-VTT-style matrix $(N\cdot T,\, d)=\mathrm{video}\oplus\mathrm{audio}\oplus\mathrm{text}$, the online object is a sliding window of rows. At each window:
-
-- PO-risk: is this window distinguishable from the reference batch?
-- VIMP shares: is the discrepancy sitting in video, audio, or text?
-- Keep only the salient rows (Layer 2) and, if needed, tokens/boxes (Layer 3).
-
-Because unique CS/CD decomposition is impossible, the online system should publish **shares and localizers**, not “concept drift = 0.6.” The monitor is allowed to say: *this session’s shift is audio-heavy relative to the calibration pool*. That sentence is actionable (re-encode audio, fetch a better transcript, spend CLAP compute). The sentence “the concept has drifted” is not.
-
-### 2.5 Sequential testing vs monitoring (do not confuse them)
-
-Online, two different questions get collapsed:
-
-- **Monitoring.** Has the operating point moved enough that the *policy* should change? EWMA / CUSUM on $\varphi^2$. No type-I claim. This is the inner loop.
-- **Testing.** Can we reject exchangeability of $W$ at level $\alpha$ on this buffer? Permutation / CF-split. Type-I claim. This is the audit.
-
-You can sequentialize the test (alpha-spending, always-valid $p$-values, e-values / betting scores on $\varphi$). That is a real statistical project. It is **not** required to start using the monitor. The mistake is to treat the EWMA as a $p$-value, or to refuse to gate until a batch test has rejected.
-
-Always-valid sequential tests on the orthogonal score are a natural next paper. The product does not have to wait for that paper to use the score as a gate.
-
-### 2.6 What “online-update” is not
-
-It is not “fine-tune the LLM every 100 users.”
-It is not sequential Bayesian causal identification.
-It is not a replacement for the permutation test.
-
-It is **orthogonal score + slow nuisances + fast residual regression**, with the permutation test as an occasional audit. Validity lives in the audit; power and latency live in the monitor. That split is the whole online story.
+Orthogonality is why this is a statistical method rather than a heuristic heatmap. First-order errors in one nuisance do not wreck $\mathbb{E}[\varphi]$ if the other is consistent. That is the only reason you can keep $p_\theta$ frozen and still trust a ranking computed from small, refittable nuisances sitting *beside* the generator.
 
 ---
 
-## 3. Empowering LLM inference: the residual as a control variate
+## 4. Frozen generator + three layers = three scales of “where to adapt”
 
-This is larger than a shift detector. An LLM at inference time is a sequence of decisions under a user/context mixture that is not the pretraining mixture. The industry currently stuffs that problem into prompting, RAG, or RLHF. Those are **function classes**. They are not scores.
-
-PO-risk is a score. The LLM can stay frozen. The statistician owns the gate.
-
-That is the inversion: **do not ask the 70B model to know that it is OOD; compute $\varphi$ and change the policy.** The LLM remains a generator. The residual is the controller. This is where a statistical method occupies the inner loop of inference, which is precisely where it is usually absent.
-
-### 3.1 The interface
+The generator proposes. Localization ranks. A tiny policy spends $B$ on $S^\star$. Nothing in $\theta$ moves.
 
 ```
-reference batch D0          current context Dt
-     |                           |
-     +------ nuisances μ, e -----+
-                     |
-              pseudo-outcome φ
-                     |
-         τ(x), PO-risk, VIMP localization
-                     |
-      ┌--------------┼--------------┐
-      ▼              ▼              ▼
-   route/abstain   reweight       localize
-   (which model,   (decode,       (which
-    RAG, tools)     retrieve)      span / modality)
+frozen p_θ(y | x)
+        │
+        │  call / decode / retrieve if asked
+        ▼
+   current x  vs  reference D0
+        │
+        │  φ, τ̂, VIMP / LOCO
+        ▼
+   S* = most expensive-to-ignore subset
+        │
+        ├── Layer 1  modality / block     (video ⊕ audio ⊕ text)
+        ├── Layer 2  instance / window    (which clip, which turn)
+        └── Layer 3  token / box          (which span to fetch or mask)
+        │
+        ▼
+   spend budget B on S* only
+   (re-encode, retrieve, label, residual-on-S*, extra verify)
+   then call p_θ again — still frozen
 ```
 
-Three control channels, all statistically named:
+**Layer 1 — which block of $x$.**
+On a concat embedding, VIMP shares say whether the gap sits in video, audio, or text. “Audio is the share that moves PO-risk” means: if you can adapt only one encoder, or run only one expensive encoder, or collect only one extra annotation stream, adapt **audio**. It does *not* mean fine-tune the LLM, and it does *not* mean “the concept of the video drifted.”
 
-1. **Scalar gate.** If PO-risk of $(x_{\text{prompt}}, W=\text{now})$ vs $D_0$ exceeds a threshold (or a conformal quantile of $\varphi^2$ on a calibration stream), change the *policy*: bigger model, retrieve, ask a clarifying question, refuse, or spend more test-time compute. The LLM does not have to “know” it is OOD; the residual says so.
-2. **Coordinate gate.** VIMP / LOCO on $\hat\tau$ says *which block of $x$ carries the discrepancy* — image tokens vs transcript vs user metadata. That is Layer-1 modality attribution used as an encoder / attention routing prior: spend ViViT compute on the video block if video share dominates; don’t.
-3. **Span gate.** Layer-3 localization (token / box) on the same residual is a **soft mask** over the prompt or over candidate continuations: downweight spans that look like the shift drivers, or conversely *highlight* them for the user. This is not integrated gradients of the LLM. It is a meta-learner residual mapped back onto the sequence. The two heatmaps will disagree; that disagreement is the point.
+**Layer 2 — which rows.**
+High $|\varphi|$ or high $|\hat\tau(x)|$ rows are the instances that carry the gap. If you can label, retrieve, or inspect only $k$ examples, take those. That is orthogonal-score targeting, not uncertainty sampling of $p_\theta$. The generator’s entropy can be high on a region that is already well represented in $D_0$; $\varphi$ is high where $D_t$ is still distinguishable from $D_0$. Those are different sets. The second set is the one worth adapting to.
 
-The LLM never has to “explain the drift.” The impossibility result already says that explanation is not identifiable. Localization of $\varphi$ is.
+**Layer 3 — which span.**
+Map the same $\hat\tau$ back onto tokens or boxes. The spans that rank are the spans worth a local intervention: retrieve a grounding passage for *that* span, mask *that* span, ask a clarifying question about *that* mention, spend verify compute on *that* continuation. Integrated gradients of $p_\theta$ will generally disagree. They answer “what did the frozen generator use.” Localization answers “what still distinguishes the batches.” You adapt to the second, because the first is a property of $\theta$, which you have chosen not to touch.
 
-### 3.2 Concrete inference jobs where a statistic is the core, not a helper
-
-These are not metaphors. Each one is: define $W$, compute $\varphi$, let a small policy read $(\hat\tau(x), \text{shares})$.
-
-**Mixture / preference shift (the CFPerm $W$).**
-Users are batches. A session is a new $W=1$. Online PO-risk vs a calibration cohort is a *user-mixture detector*. The LLM’s next action (style, verbosity, tool use, safety template, system prompt) should be a function of $(\hat\tau(x), \text{modality shares})$, not of a vibes-based persona vector.
-
-DPO / RLHF already encode preferences as implicit rewards. They answer “what does this user like *on average in the training mixture*.” PO-risk answers a different, statistically sharper question: **has this user’s mixture moved relative to the policy’s training mixture, and along which coordinates?** If it has, you do not need to re-RLHF. You gate, retrieve, or update a residual head.
-
-**Retrieval vs parametric knowledge.**
-Treat retrieved passages and the model’s ungrounded continuation as two batches. High PO-risk localized on the continuation is a hallucination localizer. High PO-risk localized on retrieval is a corpus-mismatch localizer (wrong index, stale docs, query drift). The *fix* is different — generate less vs retrieve better — but the *score* is the same object. Today those two failures are both called “hallucination.” The residual distinguishes them by localization.
-
-**Draft / verify and test-time compute.**
-Speculative decoding and “think longer” are currently heuristics (always verify; verify when the draft is long; verify when entropy is high). A statistically honest rule is: spend extra verify steps when $\varphi^2$ of the draft continuation against the user’s current mixture is large. Cheap draft, expensive verify *conditional on the residual*. Entropy of the LLM is not a discrepancy against $D_0$. $\varphi$ is.
-
-**Tool routing and agents.**
-An agent that always searches is a waste; one that never searches hallucinates. Route to a tool when PO-risk says the current $x$ is distinguishable from the no-tool calibration set. The tool policy can be a small $\hat\tau$-driven classifier — contextual bandits with an orthogonal score as the context — not another LLM-as-router. The LLM-as-router has no orthogonality, no delayed-$Y$ completion, and no audit.
-
-**Calibration of “confidence.”**
-LLM softmax is not a probability of being exchangeable with a trusted batch. $\varphi$ (or a cross-fit DR score of correctness) *is* a residual with an asymptotic expansion. You can conformalize $\varphi^2$ on a stream and get a coverage statement about “this generation is exchangeable with the trusted batch,” which is a weaker and truer claim than “the model is 0.92 sure.” Abstention, refusal, and “ask a clarifying question” should hang off that coverage statement, not off a verbalized confidence token.
-
-**Continual personalization without touching weights.**
-Keep $\hat\mu,\hat e$ global. Let $\hat\tau$ be per-user or per-cohort, updated online. The LLM is a frozen generator; personalization is a residual head. That is the statistical analogue of LoRA, except the object being updated has an influence function, can be sketched, can be audited by permutation, and does not require storing 70B gradients. Multi-turn conversation is a rolling $W$: last $k$ turns vs the user’s calibration history. The residual head is what should move turn-by-turn, not the transformer.
-
-**Evaluation and A/B without lying about causality.**
-When you A/B two prompts or two models, $W$ is the arm. If assignment is randomized, $\varphi$ recovers a causal contrast and you may say so. If assignment is confounded (power users get the new model), CFPerm’s own warning applies: $\varphi$ is still a discrepancy, not an effect. Publishing both sentences is the method. The industry currently publishes only the causal sentence. The statistical contribution is to keep the other one in the room.
-
-**Mixture-of-experts / encoder routing.**
-On concatenated multimodal $x$, Layer-1 shares of $\hat\tau$ are a routing prior over experts (video encoder vs audio encoder vs text). This is cheaper than running every encoder always, and it is not “the LLM decided the video mattered.” It is VIMP of an orthogonal residual. For streaming video, the same shares can turn encoders on and off window-by-window.
-
-**Safety and policy templates.**
-A safety classifier that always fires is unusable; one that never fires is a scandal. Treat “trusted safe batch” vs “current prompt” as $W$. Gate the strict template when PO-risk is high and localized on the spans the safety policy actually cares about. Again: the LLM does not classify the shift; $\varphi$ does, and the template is a policy.
-
-### 3.3 Why the LLM cannot replace the score
-
-People imagine the model will introspect the shift (“I notice this user is different; I should retrieve”). It will not, identifiably.
-
-The impossibility result already says: a given performance drop, a given distributional distance, a given VIMP change, each has infinitely many CS / CD / dependence realizations. Asking GPT to “explain the drift” is asking it to pick a point in that equivalence class. It will pick a fluent one. Fluency is not identification.
-
-The move is the opposite:
-
-- **Do not explain, localize.**
-- **Do not backprop the 70B, update the residual.**
-- **Do not permute every token, monitor $\varphi$ and audit occasionally.**
-- **Do not ask the LLM whether it is OOD; compute a discrepancy against $D_0$.**
-
-That is a statistical method occupying the inner loop of inference. Prompting, RAG, and RLHF remain available as *actions the gate may choose*. They stop being the detector.
-
-### 3.4 What the residual is allowed to say to the LLM
-
-A small, honest API — the whole interface:
-
-```
-gate(x_now) -> {
-  po_risk:          scalar,          # EWMA / τ(x)²
-  alarm:            {none, watch, act},
-  shares:           {video, audio, text, ...},  # Layer 1
-  local_rows:       ids,             # Layer 2
-  local_spans:      token / box ids, # Layer 3
-  exchangeable:     conformal interval for φ² vs D0,
-  causal:           false unless W was randomized
-}
-```
-
-The LLM (or a 10k-parameter policy in front of it) reads this structure. It does not get a paragraph of chain-of-thought about “root cause.” Shares, localizers, a conformal bit, and a flag that this is not a CATE. That is enough to route, retrieve, abstain, or spend compute. It is also all that is identified.
+Across layers the sentence is the same: **$S^\star$ is the cheapest sufficient intervention.** The LLM is the thing you call after you have intervened on $S^\star$.
 
 ---
 
-## 4. Other things the same score can still do
+## 5. What “adapt” is allowed to mean
 
-Once $\varphi$ is in the inner loop, a list that is easy to underestimate:
+Because $p_\theta$ is frozen, “adapt” cannot mean $\theta\leftarrow\theta-\eta\nabla_\theta$. It means an intervention whose support is $S^\star$:
 
-- **Federated / on-device $\hat\tau$.** Nuisances stay on the server; each device updates a local residual head. Communication is sketches of $\varphi$, not raw text.
-- **Replay and debugging.** A production incident is a buffer of high-$|\varphi|$ rows with VIMP shares. That is a statistically named incident report. “The model got worse” is not.
-- **Data valuation / collection.** Collect more labels where $|\varphi|$ is large and localization is unstable. That is orthogonal-score active learning, not uncertainty sampling of the LLM.
-- **Teacher–student / distillation.** Distill only on rows where PO-risk against the teacher batch is small; treat high-PO-risk rows as OOD and do not pretend the student should match them.
-- **Pretrain vs posttrain vs deploy mixtures.** Three batches, three pairwise $\varphi$’s. Localization tells you whether a deploy failure sits in the SFT mixture, the preference mixture, or the live user mixture. Today those are collapsed into “alignment.”
-- **Multilingual / regional routing.** $W$ = locale. Same machinery; shares will sit on script, ASR, or retrieval index rather than on “the model is biased,” which is not a statistical sentence.
-- **Always-valid sequential tests** (e-values on $\varphi$) if a paper-facing type-I guarantee is required in streaming. Optional; the monitor does not depend on it.
+| Budget $B$ | Intervention on $S^\star$ | What you do *not* do |
+|---|---|---|
+| Compute | Run the expensive encoder / verifier only on the localized modality or span | Re-encode everything; extra CoT on every token |
+| Retrieval | Fetch docs / tools targeted at localized spans | Always-on RAG; LLM-as-router with no score |
+| Labels | Annotate high-$\|\varphi\|$ rows, or the localized modality | Uniform relabel; full RLHF on the new user |
+| Parameters | A residual / gate on the coordinates of $S^\star$ only | LoRA / full FT of the generator |
+| Attention of the user | Highlight the localized span (“this is where the session moved”) | Ask the model to narrate a unique root cause |
 
-The pattern is the same every time: **name $W$, form $\varphi$, localize $\hat\tau$, act with a small policy, audit rarely.** The imagination is not in inventing new neural modules. It is in noticing how many product decisions are unnamed discrepancies.
-
----
-
-## 5. Named experiments (for later; not this pass)
-
-These are names of experiments, not an implementation plan. The prototype is intentionally left to a from-scratch pass.
-
-1. **Streaming PO-risk on a concatenated multimodal matrix.** EWMA of $\varphi^2$; alarm vs permutation audit every $K$ windows. Report modality shares over time. Do not report “% concept drift.”
-2. **Delayed-$Y$ completion.** Update $\hat e$ every prompt; complete $\varphi$ when feedback arrives; compare to an oracle that had $Y$ immediately. The gap is the cost of two-phase sampling, which is a statistical quantity.
-3. **Gate a frozen LLM.** Two policies: always-RAG vs RAG-when-PO-risk-high. Metrics: tokens, latency, and a proper scoring rule on a held-out mixture shift. The residual should win on the scoring rule *and* on tokens if the gate is any good.
-4. **Span mask from Layer-3.** Use token-level localization of $\hat\tau$ as a decode constraint; compare to attribution heatmaps of the LLM itself. They will disagree. Report both; do not average them.
-5. **User-mixture routing.** $W$ = cohort. Online $\hat\tau$ selects system prompt / tool set. Keep the LLM frozen. Ablate against an LLM-as-router with the same action set.
-6. **Conformal $\varphi^2$.** Coverage of “exchangeable with $D_0$” on a stream with mixture shifts. Compare to verbalized confidence and to softmax entropy. The statistical method should be calibrated; the LLM internals should not be.
-
-Validity checks that should travel with every prototype: cross-fitting of nuisances, clipped propensity, a permutation or CF-split audit on a slower clock, and an explicit sentence that $\varphi$ is not a CATE unless $W$ is randomized.
+The residual-on-$S^\star$ row is the only place a parameter moves, and it is not the LLM. It is a small regression on an orthogonal target, restricted to the localized coordinates. That is ordinary statistics. Calling it “online learning of the LLM” is a category error: the learning, if any, is of $\hat\tau\mid_{S^\star}$, which is a localization readout, not a new generator.
 
 ---
 
-## 6. What we are willing to claim
+## 6. Why a frozen generator is the point, not a limitation
 
-- PO-risk is an orthogonal, per-example discrepancy that can be updated online and read out as localization.
-- That residual is a legitimate control variate for frozen-LLM inference: routing, retrieval, test-time compute, span/modality gating, and residual-head personalization.
-- Unique source decomposition remains impossible. The product surface is **localization + a monitor + an occasional test**.
-- This is a place where a statistical method is the core: the LLM is a generator; $\varphi$ is the controller.
+If you unfreeze $\theta$, three bad things happen at once.
 
-What we are not claiming: that meta-learners give causal user-level effects under confounding; that an LLM with a residual head “understands” the shift; that online $\varphi$ replaces a properly permutated type-I guarantee; that the model can identifiably explain drift.
+1. **Identification.** The generator can fit any member of the impossibility class. You lose the right to say “we adapted the part that carried the discrepancy.” You adapted *a* interpolating conditional.
+2. **Orthogonality.** Nuisances $\mu,e$ and the generator become entangled. $\varphi$ stops being a score *beside* the model and becomes another training loss. You no longer have a control variate; you have a second optimizer.
+3. **Audit.** Permutation / CF-split type-I control is a statement about a discrepancy given a frozen (or at least cross-fit, not jointly updated) procedure. If $\theta$ is chasing $D_t$ online, the permutation no longer tests the same object.
 
-The statistical method is the inner loop. The LLM is the generator. That split is the whole idea.
+Keeping $p_\theta$ frozen is what makes localization a *statistical* answer to “where to adapt.” The generator is a sampler with a fixed law. The world ($W$, the user mixture, the multimodal $x$) moves. $\varphi$ measures the gap. VIMP names the subset. A small policy spends $B$. That is the whole loop. It looks modest next to continual learning, and it is the one loop in which the CFPerm object is actually used as designed.
+
+---
+
+## 7. Recomputing the score is not online learning
+
+$\varphi$ can be evaluated on a new batch, a new session, a new window. Nuisances can be refit slowly; $\hat\tau$ can be refit on a buffer; a permutation audit can be run rarely. That is **the same batch procedure, applied again**. It is not an online-learning algorithm.
+
+- Online learning: $\theta_t$ is a martingale of losses; the predictor *is* the thing being updated.
+- Here: $\theta$ is constant. What is recomputed is a **diagnostic ranking** of subsets. The predictor you ship is still $p_\theta$, possibly composed with a gate that reads $(S^\star, \hat\tau)$.
+
+If it helps: think of PO-risk localization as influence diagnostics / LOCO for a frozen model against a moving batch label — not as SGD. The “update” is the update of the *map of where the gap is*, so that the next intervention is aimed. The generator does not get a vote.
+
+---
+
+## 8. What we are willing to claim
+
+- Localization of PO-risk is a ranking of subsets by contribution to an orthogonal discrepancy. Under a budget, that ranking is exactly “which part is most worth adapting.”
+- The LLM (or any foundation encoder) stays a frozen generator. Adapting $p_\theta$ is a different, unidentified, non-orthogonal problem.
+- Unique CS/CD explanation remains impossible. The identified product surface is: **name $S^\star$, intervene only there, call $p_\theta$ again.**
+
+What we are not claiming: online learning; causal user-level effects under confounding; that the model “understands” the shift; that a heatmap of $p_\theta$ is a substitute for VIMP of $\hat\tau$.
+
+The generator is frozen. The statistic points at the subset. That is the idea.
