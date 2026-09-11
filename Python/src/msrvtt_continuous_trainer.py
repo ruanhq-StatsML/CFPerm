@@ -3,9 +3,13 @@
   1. Add a linear head for video / audio / text.
   2. Warmup: train each head once (the other heads stay frozen).
   3. Rotate: cycle video → audio → text; only the active head gets SGD.
-     η_m = η0 · π_m from RF-Domain VIMP on B_{t-1} vs B_t.
 
-Heads are summed at inference. Cosine decay is a separate board.
+Locked LR policy is adapt-for-distribution-shift, nothing else:
+  η_m = η0 · π_m^{RF}(B_{t-1}, B_t)
+  π_m large (this modality carries the shift) → larger step
+  π_m shrinks → smaller step; clip-level text has π_t ≈ 0 so η_t ≈ 0.
+
+Heads are summed at inference. Cosine decay is a separate board, not this loop.
 """
 from __future__ import annotations
 
@@ -98,7 +102,12 @@ def run_continuous_trainer(
     seed=SEED,
     equal_lr=False,
 ):
-    """Warmup each head once, then rotate heads with η_m from consecutive-batch RF shares."""
+    """Warmup each head once, then rotate.
+
+    Learning rates follow adapt-for-distribution-shift: ``lrs[m] = eta0 * π_m``,
+    with ``π`` from RF-Domain VIMP on the consecutive-batch pair. A shrinking
+    share shrinks the step; there is no countervailing ``freeze-the-drifter`` rule.
+    """
     X = standardize_columns(bundle.X)
     y_raw = np.asarray(bundle.video_id)
     classes, y = np.unique(y_raw, return_inverse=True)
@@ -223,7 +232,7 @@ def plot_continuous_trainer(summary, path):
         ax.plot(rounds, [h["lr"][g] for h in hist], color=COLORS[g], lw=2.1, marker="o", ms=4.5, label=g.capitalize())
     ax.set_xlabel("round")
     ax.set_ylabel("head LR  η_m")
-    ax.set_title("η_m = η0 · π_m   (one head at a time)", loc="left", fontsize=11, fontweight="bold")
+        ax.set_title("adapt-for-shift  η_m = η0 · π_m   (one head at a time)", loc="left", fontsize=11, fontweight="bold")
     ax.legend(frameon=False, fontsize=8.5)
     ax.grid(True, color=GRID)
     fig.text(

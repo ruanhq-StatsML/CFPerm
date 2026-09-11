@@ -50,3 +50,7 @@ See `msrvtt_batch_ij_cosine_board.png`. Equal-width bins of window index (2 wind
 | 13 | 20 | 0.870 | 0.484 | 0.516 | 0.000 | audio |
 | 14 | 20 | 0.980 | 0.931 | 0.069 | 0.000 | video |
 | 15 | 20 | 0.815 | 0.692 | 0.308 | 0.000 | video |
+
+## Per-head LR (locked)
+
+Adapt-for-distribution-shift, nothing else: $\eta_m = \eta_0 \pi_m^{\mathrm{RF}}$. Larger shift share → larger head step; shrinking share → smaller step. On this $W$, clip-level text has $\pi_t \approx 0$ so $\eta_t \approx 0$. Cosine lag and round-to-round VIMP comparison are separate boards.

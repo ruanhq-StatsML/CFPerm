@@ -17,6 +17,7 @@ A streaming VLM should drop or compress visual (and audio) KV when region-wise $
 A global pooled $d$ is the wrong trigger: signed region effects cancel across videos, so a session-level (video-clustered) monitor matches the sampling unit of the Friedman/Wilcoxon tests.
 \emph{(iii)~Test-time adaptation mask.}
 If continuous inference includes a test-time LoRA or gated residual, the update support should be the vision tower and fusion, then audio, not the language tower against $W$.
+Step sizes follow the same adapt-for-distribution-shift map $\eta_m=\eta_0\pi_m^{\mathrm{RF}}$: more shift mass, larger step; shrinking mass, smaller step.
 A rising text VIMP mid-stream is a leakage diagnostic (the model is fitting the static caption), not a reason to spend test-time compute on text.
 \emph{(iv)~Belief-state and chain-of-thought evidence.}
 For streaming VQA or long-horizon reasoning (``what is happening \emph{now}''), FSDS ranks the evidence that is allowed to revise the belief: visual first, audio second, clip-level subtitle never---unless a window-aligned ASR stream is substituted and re-tested.

@@ -617,9 +617,9 @@ def plot_batch_pair_board(bundle, result, path: Path, pay=None, n_batches=10):
     fig.text(
         0.05,
         0.016,
-        "Joint-embedding shift (RF / MMD / PO-risk VIMP) sets each head's training LR when modalities are trained separately.  "
-        "Heatmaps decide which head to open; VIMP decides how large η_m is.  "
-        "Clip-level text is post-hoc: heatmap flat, η_t = 0.",
+        "Adapt-for-distribution-shift: η_m = η0 · π_m^{RF}.  Larger shift share → larger head step; "
+        "shrinking share → smaller step.  Heatmaps decide which head to open; VIMP sets the scale.  "
+        "Clip-level text is post-hoc: heatmap flat, η_t ≈ 0.",
         fontsize=8.0,
         color=MUTED,
     )
