@@ -1,0 +1,282 @@
+{
+  "dataset": "fancyzhx/yelp_polarity vs fancyzhx/amazon_polarity",
+  "title": "Yelp vs Amazon \u00b7 sentiment label \u00b7 marketplace as batch",
+  "label": "binary sentiment",
+  "batch": "W = marketplace (Yelp vs Amazon); reviews truncated to 50 tokens",
+  "slug": "yelp_amazon",
+  "gt_block": "polarity",
+  "n0": 800,
+  "n1": 800,
+  "modalities": [
+    "text",
+    "style",
+    "polarity"
+  ],
+  "gap": {
+    "full_auc": 0.717,
+    "block_auc": {
+      "text": 0.6915,
+      "style": 0.6436,
+      "polarity": 0.5338
+    },
+    "block_mmd": {
+      "text": 0.008371,
+      "style": 0.008263,
+      "polarity": 0.002627
+    },
+    "lomo_auc_drop": {
+      "text": 0.089,
+      "style": 0.0417,
+      "polarity": 0.0
+    },
+    "vimp_share": {
+      "text": 0.7673,
+      "style": 0.1512,
+      "polarity": 0.0815
+    },
+    "pi_auc": {
+      "text": 0.5191,
+      "style": 0.3893,
+      "polarity": 0.0916
+    },
+    "pi_mmd": {
+      "text": 0.4346,
+      "style": 0.429,
+      "polarity": 0.1364
+    },
+    "pi_lomo": {
+      "text": 0.6812,
+      "style": 0.3188,
+      "polarity": 0.0
+    },
+    "pi_vimp": {
+      "text": 0.7673,
+      "style": 0.1512,
+      "polarity": 0.0815
+    },
+    "pi_instance_mean": {
+      "text": 0.4701,
+      "style": 0.2834,
+      "polarity": 0.2465
+    },
+    "pi_consensus": {
+      "text": 0.5745,
+      "style": 0.3143,
+      "polarity": 0.1112
+    }
+  },
+  "observational_auc": {
+    "domain_auc_raw": 0.7276,
+    "domain_auc_raw_sd": 0.0145,
+    "domain_auc_clever": 0.7068,
+    "domain_auc_clever_sd": 0.0105,
+    "domain_auc_stack_xz": 0.7273,
+    "domain_auc_stack_sd": 0.0339,
+    "domain_auc_pool": 0.7285,
+    "domain_auc_logpool": 0.7283,
+    "domain_auc_delta": -0.0209,
+    "domain_auc_delta_stack": -0.0003,
+    "domain_auc_delta_pool": 0.0009,
+    "vimp_share_raw": {
+      "text": 0.7673,
+      "style": 0.1512,
+      "polarity": 0.0815
+    },
+    "p_raw": 42,
+    "p_clever": 3,
+    "domain_auc_adapt": 0.7092,
+    "domain_auc_adapt_sd": 0.0418,
+    "domain_auc_logit_unif": 0.7092,
+    "domain_auc_logit_unif_sd": 0.0418,
+    "domain_auc_delta_adapt": -0.0185,
+    "domain_auc_delta_adapt_vs_unif": -0.0,
+    "domain_auc_pi_rf": 0.7245,
+    "domain_auc_pi_rf_sd": 0.0324,
+    "domain_auc_delta_pi_rf": -0.0031,
+    "pi_rf_vimp": {
+      "text": 0.6816,
+      "style": 0.2415,
+      "polarity": 0.0769
+    },
+    "z_vimp": {
+      "text": 0.441,
+      "style": 0.3463,
+      "polarity": 0.2126
+    },
+    "z_logit_vimp": {
+      "text": 0.441,
+      "style": 0.3463,
+      "polarity": 0.2126
+    },
+    "z_share_vimp": {
+      "text": 0.441,
+      "style": 0.3463,
+      "polarity": 0.2126
+    },
+    "name": "observational",
+    "gt": null
+  },
+  "comparisons": [
+    {
+      "domain_auc_raw": 0.8209,
+      "domain_auc_raw_sd": 0.0117,
+      "domain_auc_clever": 0.822,
+      "domain_auc_clever_sd": 0.0036,
+      "domain_auc_stack_xz": 0.8337,
+      "domain_auc_stack_sd": 0.0215,
+      "domain_auc_pool": 0.8271,
+      "domain_auc_logpool": 0.8244,
+      "domain_auc_delta": 0.0011,
+      "domain_auc_delta_stack": 0.0128,
+      "domain_auc_delta_pool": 0.0062,
+      "vimp_share_raw": {
+        "text": 0.5543,
+        "style": 0.1036,
+        "polarity": 0.342
+      },
+      "p_raw": 42.0,
+      "p_clever": 3.0,
+      "domain_auc_adapt": 0.7905,
+      "domain_auc_adapt_sd": 0.0051,
+      "domain_auc_logit_unif": 0.7904,
+      "domain_auc_logit_unif_sd": 0.0051,
+      "domain_auc_delta_adapt": -0.0305,
+      "domain_auc_delta_adapt_vs_unif": 0.0001,
+      "domain_auc_pi_rf": 0.8169,
+      "domain_auc_pi_rf_sd": 0.0005,
+      "domain_auc_delta_pi_rf": -0.004,
+      "pi_rf_vimp": {
+        "text": 0.3345,
+        "style": 0.0599,
+        "polarity": 0.6056
+      },
+      "z_vimp": {
+        "text": 0.2161,
+        "style": 0.2352,
+        "polarity": 0.5487
+      },
+      "z_logit_vimp": {
+        "text": 0.2161,
+        "style": 0.2352,
+        "polarity": 0.5487
+      },
+      "z_share_vimp": {
+        "text": 0.2161,
+        "style": 0.2352,
+        "polarity": 0.5487
+      },
+      "selection_auc_raw": 0.9967,
+      "mass_on_gt_raw": 0.3473,
+      "z_share_on_gt": 0.5448,
+      "z_logit_on_gt": 0.5448,
+      "pi_consensus_on_gt": 0.5428,
+      "pi_rf_on_gt": 0.6015,
+      "domain_auc_stack_xz_sd": 0.0031,
+      "domain_auc_pool_sd": 0.0023,
+      "domain_auc_logpool_sd": 0.003,
+      "domain_auc_delta_sd": 0.0153,
+      "domain_auc_delta_stack_sd": 0.0086,
+      "domain_auc_delta_pool_sd": 0.014,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "domain_auc_delta_adapt_sd": 0.0067,
+      "domain_auc_delta_adapt_vs_unif_sd": 0.0,
+      "domain_auc_delta_pi_rf_sd": 0.0122,
+      "selection_auc_raw_sd": 0.0047,
+      "mass_on_gt_raw_sd": 0.0074,
+      "z_share_on_gt_sd": 0.0055,
+      "z_logit_on_gt_sd": 0.0055,
+      "pi_consensus_on_gt_sd": 0.0197,
+      "pi_rf_on_gt_sd": 0.0058,
+      "n_seeds": 2,
+      "name": "inject polarity (\u03b1=0.70)",
+      "gt": "polarity"
+    },
+    {
+      "domain_auc_raw": 0.7936,
+      "domain_auc_raw_sd": 0.0015,
+      "domain_auc_clever": 0.8161,
+      "domain_auc_clever_sd": 0.0034,
+      "domain_auc_stack_xz": 0.8156,
+      "domain_auc_stack_sd": 0.0147,
+      "domain_auc_pool": 0.823,
+      "domain_auc_logpool": 0.8216,
+      "domain_auc_delta": 0.0224,
+      "domain_auc_delta_stack": 0.022,
+      "domain_auc_delta_pool": 0.0292,
+      "vimp_share_raw": {
+        "text": 0.4725,
+        "style": 0.1236,
+        "polarity": 0.4038
+      },
+      "p_raw": 42.0,
+      "p_clever": 3.0,
+      "domain_auc_adapt": 0.7421,
+      "domain_auc_adapt_sd": 0.0148,
+      "domain_auc_logit_unif": 0.7418,
+      "domain_auc_logit_unif_sd": 0.015,
+      "domain_auc_delta_adapt": -0.0516,
+      "domain_auc_delta_adapt_vs_unif": 0.0003,
+      "domain_auc_pi_rf": 0.8098,
+      "domain_auc_pi_rf_sd": 0.0014,
+      "domain_auc_delta_pi_rf": 0.0162,
+      "pi_rf_vimp": {
+        "text": 0.2641,
+        "style": 0.0619,
+        "polarity": 0.674
+      },
+      "z_vimp": {
+        "text": 0.1464,
+        "style": 0.2447,
+        "polarity": 0.609
+      },
+      "z_logit_vimp": {
+        "text": 0.1464,
+        "style": 0.2447,
+        "polarity": 0.609
+      },
+      "z_share_vimp": {
+        "text": 0.1464,
+        "style": 0.2447,
+        "polarity": 0.609
+      },
+      "selection_auc_raw": 1.0,
+      "mass_on_gt_raw": 0.4168,
+      "z_share_on_gt": 0.6247,
+      "z_logit_on_gt": 0.6247,
+      "pi_consensus_on_gt": 0.6598,
+      "pi_rf_on_gt": 0.6905,
+      "domain_auc_stack_xz_sd": 0.0041,
+      "domain_auc_pool_sd": 0.0021,
+      "domain_auc_logpool_sd": 0.0011,
+      "domain_auc_delta_sd": 0.0018,
+      "domain_auc_delta_stack_sd": 0.0026,
+      "domain_auc_delta_pool_sd": 0.0005,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "domain_auc_delta_adapt_sd": 0.0164,
+      "domain_auc_delta_adapt_vs_unif_sd": 0.0001,
+      "domain_auc_delta_pi_rf_sd": 0.0029,
+      "selection_auc_raw_sd": 0.0,
+      "mass_on_gt_raw_sd": 0.0183,
+      "z_share_on_gt_sd": 0.0222,
+      "z_logit_on_gt_sd": 0.0222,
+      "pi_consensus_on_gt_sd": 0.0097,
+      "pi_rf_on_gt_sd": 0.0234,
+      "n_seeds": 2,
+      "name": "text\u22a5 + inject polarity",
+      "gt": "polarity"
+    }
+  ],
+  "protocol": {
+    "rf": "max_depth=8, min_samples_leaf=5, n_estimators=80",
+    "auc": "5-fold stratified CV",
+    "stage2": "\u03c0-weighted RF; opinion pool; X+Z; adaptive logit",
+    "gt_seeds": 2
+  },
+  "plots": {
+    "gap_shares": "/workspace/results/hf_block_aware/yelp_amazon/yelp_amazon_gap_shares.png",
+    "auc": "/workspace/results/hf_block_aware/yelp_amazon/yelp_amazon_stage2_auc.png",
+    "inject": "/workspace/results/hf_block_aware/yelp_amazon/yelp_amazon_inject_recovery.png"
+  }
+}

@@ -1,0 +1,32 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Chronoberg 1750 vs.\ 1950: modality-specific gap shares and clever-covariate FSDS.}
+\begin{tabular}{lcccc}
+\toprule
+Decomposition & text & valence & arousal & dominance \\
+\midrule
+RF VIMP & 0.570 & 0.172 & 0.102 & 0.156 \\
+block AUC & 0.303 & 0.267 & 0.167 & 0.262 \\
+block MMD & 0.083 & 0.619 & 0.037 & 0.261 \\
+LOMO drop & 0.292 & 0.243 & 0.150 & 0.315 \\
+consensus $\pi$ & 0.311 & 0.307 & 0.131 & 0.250 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\caption{Human blocks $\to$ Stage-1 $\pi$ $\to$ Stage-2. $\pi$-weighted RF replicates columns so sklearn $\mathtt{max\_features}$ samples $p_j\propto\pi_m/|B_m|$.}
+\begin{tabular}{lcccccc}
+\toprule
+Setting & raw RF & $\pi$-RF & pool & $X{+}Z$ & $\Delta_{\pi\mathrm{-RF}}$ & $\pi$-RF on GT \\
+\midrule
+inject valence (α=0.70) & 0.826 & 0.916 & 0.837 & 0.892 & +0.091 & 0.482 \\
+text⊥ + inject valence & 0.855 & 0.941 & 0.865 & 0.911 & +0.085 & 0.572 \\
+synthetic GT=valence & 0.880 & 0.897 & 0.901 & 0.902 & +0.016 & 0.828 \\
+\bottomrule
+\end{tabular}
+\end{table}
+

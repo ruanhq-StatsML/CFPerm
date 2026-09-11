@@ -1,0 +1,282 @@
+{
+  "dataset": "nyu-mll/multi_nli validation_matched",
+  "title": "MultiNLI \u00b7 entailment label \u00b7 fiction vs telephone",
+  "label": "entailment vs rest",
+  "batch": "W = genre (fiction vs telephone)",
+  "slug": "mnli",
+  "gt_block": "overlap",
+  "n0": 800,
+  "n1": 800,
+  "modalities": [
+    "premise",
+    "hypothesis",
+    "overlap"
+  ],
+  "gap": {
+    "full_auc": 0.8232,
+    "block_auc": {
+      "premise": 0.8782,
+      "hypothesis": 0.5626,
+      "overlap": 0.6927
+    },
+    "block_mmd": {
+      "premise": 0.008757,
+      "hypothesis": 0.000706,
+      "overlap": 0.077686
+    },
+    "lomo_auc_drop": {
+      "premise": 0.1367,
+      "hypothesis": 0.0,
+      "overlap": 0.0
+    },
+    "vimp_share": {
+      "premise": 0.6404,
+      "hypothesis": 0.1962,
+      "overlap": 0.1634
+    },
+    "pi_auc": {
+      "premise": 0.5971,
+      "hypothesis": 0.0987,
+      "overlap": 0.3042
+    },
+    "pi_mmd": {
+      "premise": 0.1005,
+      "hypothesis": 0.0081,
+      "overlap": 0.8914
+    },
+    "pi_lomo": {
+      "premise": 1.0,
+      "hypothesis": 0.0,
+      "overlap": 0.0
+    },
+    "pi_vimp": {
+      "premise": 0.6404,
+      "hypothesis": 0.1962,
+      "overlap": 0.1634
+    },
+    "pi_instance_mean": {
+      "premise": 0.4068,
+      "hypothesis": 0.2946,
+      "overlap": 0.2986
+    },
+    "pi_consensus": {
+      "premise": 0.5489,
+      "hypothesis": 0.1195,
+      "overlap": 0.3315
+    }
+  },
+  "observational_auc": {
+    "domain_auc_raw": 0.8364,
+    "domain_auc_raw_sd": 0.0147,
+    "domain_auc_clever": 0.8753,
+    "domain_auc_clever_sd": 0.0213,
+    "domain_auc_stack_xz": 0.8755,
+    "domain_auc_stack_sd": 0.0084,
+    "domain_auc_pool": 0.8477,
+    "domain_auc_logpool": 0.8465,
+    "domain_auc_delta": 0.0389,
+    "domain_auc_delta_stack": 0.0391,
+    "domain_auc_delta_pool": 0.0113,
+    "vimp_share_raw": {
+      "premise": 0.6404,
+      "hypothesis": 0.1962,
+      "overlap": 0.1634
+    },
+    "p_raw": 52,
+    "p_clever": 3,
+    "domain_auc_adapt": 0.768,
+    "domain_auc_adapt_sd": 0.0311,
+    "domain_auc_logit_unif": 0.7676,
+    "domain_auc_logit_unif_sd": 0.0309,
+    "domain_auc_delta_adapt": -0.0685,
+    "domain_auc_delta_adapt_vs_unif": 0.0004,
+    "domain_auc_pi_rf": 0.8181,
+    "domain_auc_pi_rf_sd": 0.007,
+    "domain_auc_delta_pi_rf": -0.0184,
+    "pi_rf_vimp": {
+      "premise": 0.4868,
+      "hypothesis": 0.1859,
+      "overlap": 0.3273
+    },
+    "z_vimp": {
+      "premise": 0.6732,
+      "hypothesis": 0.1103,
+      "overlap": 0.2165
+    },
+    "z_logit_vimp": {
+      "premise": 0.6732,
+      "hypothesis": 0.1103,
+      "overlap": 0.2165
+    },
+    "z_share_vimp": {
+      "premise": 0.6732,
+      "hypothesis": 0.1103,
+      "overlap": 0.2165
+    },
+    "name": "observational",
+    "gt": null
+  },
+  "comparisons": [
+    {
+      "domain_auc_raw": 0.9239,
+      "domain_auc_raw_sd": 0.0054,
+      "domain_auc_clever": 0.9669,
+      "domain_auc_clever_sd": 0.0054,
+      "domain_auc_stack_xz": 0.9765,
+      "domain_auc_stack_sd": 0.0105,
+      "domain_auc_pool": 0.9705,
+      "domain_auc_logpool": 0.9706,
+      "domain_auc_delta": 0.0432,
+      "domain_auc_delta_stack": 0.0527,
+      "domain_auc_delta_pool": 0.0466,
+      "vimp_share_raw": {
+        "premise": 0.4003,
+        "hypothesis": 0.1379,
+        "overlap": 0.4618
+      },
+      "p_raw": 52.0,
+      "p_clever": 3.0,
+      "domain_auc_adapt": 0.9177,
+      "domain_auc_adapt_sd": 0.0004,
+      "domain_auc_logit_unif": 0.9181,
+      "domain_auc_logit_unif_sd": 0.0008,
+      "domain_auc_delta_adapt": -0.0061,
+      "domain_auc_delta_adapt_vs_unif": -0.0004,
+      "domain_auc_pi_rf": 0.9685,
+      "domain_auc_pi_rf_sd": 0.0006,
+      "domain_auc_delta_pi_rf": 0.0447,
+      "pi_rf_vimp": {
+        "premise": 0.116,
+        "hypothesis": 0.0502,
+        "overlap": 0.8338
+      },
+      "z_vimp": {
+        "premise": 0.2474,
+        "hypothesis": 0.0541,
+        "overlap": 0.6985
+      },
+      "z_logit_vimp": {
+        "premise": 0.2474,
+        "hypothesis": 0.0541,
+        "overlap": 0.6985
+      },
+      "z_share_vimp": {
+        "premise": 0.2474,
+        "hypothesis": 0.0541,
+        "overlap": 0.6985
+      },
+      "selection_auc_raw": 1.0,
+      "mass_on_gt_raw": 0.456,
+      "z_share_on_gt": 0.6817,
+      "z_logit_on_gt": 0.6817,
+      "pi_consensus_on_gt": 0.6293,
+      "pi_rf_on_gt": 0.8355,
+      "domain_auc_stack_xz_sd": 0.0043,
+      "domain_auc_pool_sd": 0.0049,
+      "domain_auc_logpool_sd": 0.005,
+      "domain_auc_delta_sd": 0.011,
+      "domain_auc_delta_stack_sd": 0.0098,
+      "domain_auc_delta_pool_sd": 0.0103,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "domain_auc_delta_adapt_sd": 0.0049,
+      "domain_auc_delta_adapt_vs_unif_sd": 0.0004,
+      "domain_auc_delta_pi_rf_sd": 0.0059,
+      "selection_auc_raw_sd": 0.0,
+      "mass_on_gt_raw_sd": 0.0081,
+      "z_share_on_gt_sd": 0.0238,
+      "z_logit_on_gt_sd": 0.0238,
+      "pi_consensus_on_gt_sd": 0.0129,
+      "pi_rf_on_gt_sd": 0.0023,
+      "n_seeds": 2,
+      "name": "inject overlap (\u03b1=0.80)",
+      "gt": "overlap"
+    },
+    {
+      "domain_auc_raw": 0.9024,
+      "domain_auc_raw_sd": 0.002,
+      "domain_auc_clever": 0.9688,
+      "domain_auc_clever_sd": 0.0022,
+      "domain_auc_stack_xz": 0.9671,
+      "domain_auc_stack_sd": 0.0114,
+      "domain_auc_pool": 0.9766,
+      "domain_auc_logpool": 0.9768,
+      "domain_auc_delta": 0.0664,
+      "domain_auc_delta_stack": 0.0648,
+      "domain_auc_delta_pool": 0.0742,
+      "vimp_share_raw": {
+        "premise": 0.2034,
+        "hypothesis": 0.1872,
+        "overlap": 0.6094
+      },
+      "p_raw": 52.0,
+      "p_clever": 3.0,
+      "domain_auc_adapt": 0.861,
+      "domain_auc_adapt_sd": 0.0011,
+      "domain_auc_logit_unif": 0.8621,
+      "domain_auc_logit_unif_sd": 0.0017,
+      "domain_auc_delta_adapt": -0.0414,
+      "domain_auc_delta_adapt_vs_unif": -0.001,
+      "domain_auc_pi_rf": 0.9772,
+      "domain_auc_pi_rf_sd": 0.0007,
+      "domain_auc_delta_pi_rf": 0.0747,
+      "pi_rf_vimp": {
+        "premise": 0.0412,
+        "hypothesis": 0.0387,
+        "overlap": 0.9201
+      },
+      "z_vimp": {
+        "premise": 0.0455,
+        "hypothesis": 0.0567,
+        "overlap": 0.8978
+      },
+      "z_logit_vimp": {
+        "premise": 0.0455,
+        "hypothesis": 0.0567,
+        "overlap": 0.8978
+      },
+      "z_share_vimp": {
+        "premise": 0.0455,
+        "hypothesis": 0.0567,
+        "overlap": 0.8978
+      },
+      "selection_auc_raw": 1.0,
+      "mass_on_gt_raw": 0.6229,
+      "z_share_on_gt": 0.8962,
+      "z_logit_on_gt": 0.8962,
+      "pi_consensus_on_gt": 0.8216,
+      "pi_rf_on_gt": 0.9256,
+      "domain_auc_stack_xz_sd": 0.0037,
+      "domain_auc_pool_sd": 0.0023,
+      "domain_auc_logpool_sd": 0.0024,
+      "domain_auc_delta_sd": 0.0001,
+      "domain_auc_delta_stack_sd": 0.0018,
+      "domain_auc_delta_pool_sd": 0.0003,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "domain_auc_delta_adapt_sd": 0.0031,
+      "domain_auc_delta_adapt_vs_unif_sd": 0.0005,
+      "domain_auc_delta_pi_rf_sd": 0.0012,
+      "selection_auc_raw_sd": 0.0,
+      "mass_on_gt_raw_sd": 0.019,
+      "z_share_on_gt_sd": 0.0023,
+      "z_logit_on_gt_sd": 0.0023,
+      "pi_consensus_on_gt_sd": 0.017,
+      "pi_rf_on_gt_sd": 0.0077,
+      "n_seeds": 2,
+      "name": "premise\u22a5 + inject overlap",
+      "gt": "overlap"
+    }
+  ],
+  "protocol": {
+    "rf": "max_depth=8, min_samples_leaf=5, n_estimators=80",
+    "auc": "5-fold stratified CV",
+    "stage2": "\u03c0-weighted RF; opinion pool; X+Z; adaptive logit",
+    "gt_seeds": 2
+  },
+  "plots": {
+    "gap_shares": "/workspace/results/hf_block_aware/mnli/mnli_gap_shares.png",
+    "auc": "/workspace/results/hf_block_aware/mnli/mnli_stage2_auc.png",
+    "inject": "/workspace/results/hf_block_aware/mnli/mnli_inject_recovery.png"
+  }
+}

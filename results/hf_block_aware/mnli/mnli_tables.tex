@@ -1,0 +1,32 @@
+\begin{table}[t]
+\centering
+\small
+\caption{MultiNLI  --  entailment label  --  fiction vs telephone: Stage-1 block shares. $Y$=entailment vs rest; W = genre (fiction vs telephone).}
+\begin{tabular}{lccc}
+\toprule
+Decomposition & premise & hypothesis & overlap \\
+\midrule
+RF VIMP & 0.640 & 0.196 & 0.163 \\
+block AUC & 0.597 & 0.099 & 0.304 \\
+block MMD & 0.101 & 0.008 & 0.891 \\
+LOMO drop & 1.000 & 0.000 & 0.000 \\
+consensus $\pi$ & 0.549 & 0.119 & 0.332 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\caption{MultiNLI  --  entailment label  --  fiction vs telephone: Stage-2 $\pi$-guided training (5-fold CV AUC).}
+\begin{tabular}{lcccccc}
+\toprule
+Setting & raw RF & $\pi$-RF & pool & $X{+}Z$ & $\Delta_{\pi\mathrm{-RF}}$ & $\pi$-RF on GT \\
+\midrule
+observational & 0.836 & 0.818 & 0.848 & 0.875 & -0.018 & --- \\
+inject overlap ($\alpha$=0.80) & 0.924 & 0.969 & 0.971 & 0.977 & +0.045 & 0.836 \\
+premise$\perp$ + inject overlap & 0.902 & 0.977 & 0.977 & 0.967 & +0.075 & 0.926 \\
+\bottomrule
+\end{tabular}
+\end{table}
+

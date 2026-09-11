@@ -1,0 +1,308 @@
+{
+  "dataset": "scikit-learn/adult-census-income",
+  "title": "Adult census \u00b7 income label \u00b7 sex as batch",
+  "label": "income >50K",
+  "batch": "W = sex (Female vs Male); relationship dropped (Husband/Wife leak)",
+  "slug": "adult",
+  "gt_block": "hours",
+  "n0": 800,
+  "n1": 800,
+  "modalities": [
+    "demography",
+    "work",
+    "hours",
+    "capital"
+  ],
+  "gap": {
+    "full_auc": 0.8553,
+    "block_auc": {
+      "demography": 0.7687,
+      "work": 0.7504,
+      "hours": 0.6597,
+      "capital": 0.5551
+    },
+    "block_mmd": {
+      "demography": 0.071942,
+      "work": 0.020446,
+      "hours": 0.03254,
+      "capital": 0.0
+    },
+    "lomo_auc_drop": {
+      "demography": 0.0731,
+      "work": 0.0547,
+      "hours": 0.0186,
+      "capital": 0.0
+    },
+    "vimp_share": {
+      "demography": 0.514,
+      "work": 0.3058,
+      "hours": 0.1275,
+      "capital": 0.0528
+    },
+    "pi_auc": {
+      "demography": 0.3661,
+      "work": 0.3412,
+      "hours": 0.2176,
+      "capital": 0.0751
+    },
+    "pi_mmd": {
+      "demography": 0.5759,
+      "work": 0.1637,
+      "hours": 0.2605,
+      "capital": 0.0
+    },
+    "pi_lomo": {
+      "demography": 0.4995,
+      "work": 0.3735,
+      "hours": 0.1268,
+      "capital": 0.0001
+    },
+    "pi_vimp": {
+      "demography": 0.514,
+      "work": 0.3058,
+      "hours": 0.1275,
+      "capital": 0.0528
+    },
+    "pi_instance_mean": {
+      "demography": 0.4428,
+      "work": 0.2673,
+      "hours": 0.1726,
+      "capital": 0.1173
+    },
+    "pi_consensus": {
+      "demography": 0.4797,
+      "work": 0.2903,
+      "hours": 0.181,
+      "capital": 0.0491
+    }
+  },
+  "observational_auc": {
+    "domain_auc_raw": 0.8547,
+    "domain_auc_raw_sd": 0.0225,
+    "domain_auc_clever": 0.8466,
+    "domain_auc_clever_sd": 0.0341,
+    "domain_auc_stack_xz": 0.8565,
+    "domain_auc_stack_sd": 0.0122,
+    "domain_auc_pool": 0.8454,
+    "domain_auc_logpool": 0.8458,
+    "domain_auc_delta": -0.008,
+    "domain_auc_delta_stack": 0.0018,
+    "domain_auc_delta_pool": -0.0092,
+    "vimp_share_raw": {
+      "demography": 0.514,
+      "work": 0.3058,
+      "hours": 0.1275,
+      "capital": 0.0528
+    },
+    "p_raw": 37,
+    "p_clever": 4,
+    "domain_auc_adapt": 0.8532,
+    "domain_auc_adapt_sd": 0.0176,
+    "domain_auc_logit_unif": 0.8532,
+    "domain_auc_logit_unif_sd": 0.0175,
+    "domain_auc_delta_adapt": -0.0015,
+    "domain_auc_delta_adapt_vs_unif": 0.0,
+    "domain_auc_pi_rf": 0.8489,
+    "domain_auc_pi_rf_sd": 0.0279,
+    "domain_auc_delta_pi_rf": -0.0058,
+    "pi_rf_vimp": {
+      "demography": 0.4223,
+      "work": 0.2535,
+      "hours": 0.2764,
+      "capital": 0.0478
+    },
+    "z_vimp": {
+      "demography": 0.4577,
+      "work": 0.3258,
+      "hours": 0.1282,
+      "capital": 0.0882
+    },
+    "z_logit_vimp": {
+      "demography": 0.4577,
+      "work": 0.3258,
+      "hours": 0.1282,
+      "capital": 0.0882
+    },
+    "z_share_vimp": {
+      "demography": 0.4577,
+      "work": 0.3258,
+      "hours": 0.1282,
+      "capital": 0.0882
+    },
+    "name": "observational",
+    "gt": null
+  },
+  "comparisons": [
+    {
+      "domain_auc_raw": 0.95,
+      "domain_auc_raw_sd": 0.0012,
+      "domain_auc_clever": 0.9882,
+      "domain_auc_clever_sd": 0.0025,
+      "domain_auc_stack_xz": 0.9873,
+      "domain_auc_stack_sd": 0.0049,
+      "domain_auc_pool": 0.9878,
+      "domain_auc_logpool": 0.9899,
+      "domain_auc_delta": 0.0383,
+      "domain_auc_delta_stack": 0.0374,
+      "domain_auc_delta_pool": 0.0378,
+      "vimp_share_raw": {
+        "demography": 0.2872,
+        "work": 0.1779,
+        "hours": 0.5082,
+        "capital": 0.0267
+      },
+      "p_raw": 37.0,
+      "p_clever": 4.0,
+      "domain_auc_adapt": 0.8843,
+      "domain_auc_adapt_sd": 0.0022,
+      "domain_auc_logit_unif": 0.8842,
+      "domain_auc_logit_unif_sd": 0.002,
+      "domain_auc_delta_adapt": -0.0656,
+      "domain_auc_delta_adapt_vs_unif": 0.0001,
+      "domain_auc_pi_rf": 0.9871,
+      "domain_auc_pi_rf_sd": 0.0004,
+      "domain_auc_delta_pi_rf": 0.0372,
+      "pi_rf_vimp": {
+        "demography": 0.034,
+        "work": 0.0126,
+        "hours": 0.9507,
+        "capital": 0.0027
+      },
+      "z_vimp": {
+        "demography": 0.1194,
+        "work": 0.0747,
+        "hours": 0.7933,
+        "capital": 0.0126
+      },
+      "z_logit_vimp": {
+        "demography": 0.1194,
+        "work": 0.0747,
+        "hours": 0.7933,
+        "capital": 0.0126
+      },
+      "z_share_vimp": {
+        "demography": 0.1194,
+        "work": 0.0747,
+        "hours": 0.7933,
+        "capital": 0.0126
+      },
+      "selection_auc_raw": 1.0,
+      "mass_on_gt_raw": 0.4861,
+      "z_share_on_gt": 0.7971,
+      "z_logit_on_gt": 0.7971,
+      "pi_consensus_on_gt": 0.5339,
+      "pi_rf_on_gt": 0.9473,
+      "domain_auc_stack_xz_sd": 0.0012,
+      "domain_auc_pool_sd": 0.0004,
+      "domain_auc_logpool_sd": 0.0001,
+      "domain_auc_delta_sd": 0.0012,
+      "domain_auc_delta_stack_sd": 0.0001,
+      "domain_auc_delta_pool_sd": 0.0009,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "domain_auc_delta_adapt_sd": 0.0034,
+      "domain_auc_delta_adapt_vs_unif_sd": 0.0003,
+      "domain_auc_delta_pi_rf_sd": 0.0016,
+      "selection_auc_raw_sd": 0.0,
+      "mass_on_gt_raw_sd": 0.0312,
+      "z_share_on_gt_sd": 0.0054,
+      "z_logit_on_gt_sd": 0.0054,
+      "pi_consensus_on_gt_sd": 0.001,
+      "pi_rf_on_gt_sd": 0.0047,
+      "n_seeds": 2,
+      "name": "inject hours (\u03b1=0.40)",
+      "gt": "hours"
+    },
+    {
+      "domain_auc_raw": 0.9449,
+      "domain_auc_raw_sd": 0.0004,
+      "domain_auc_clever": 0.9858,
+      "domain_auc_clever_sd": 0.0001,
+      "domain_auc_stack_xz": 0.9827,
+      "domain_auc_stack_sd": 0.0096,
+      "domain_auc_pool": 0.9862,
+      "domain_auc_logpool": 0.9863,
+      "domain_auc_delta": 0.0409,
+      "domain_auc_delta_stack": 0.0377,
+      "domain_auc_delta_pool": 0.0412,
+      "vimp_share_raw": {
+        "demography": 0.032,
+        "work": 0.2653,
+        "hours": 0.6683,
+        "capital": 0.0344
+      },
+      "p_raw": 37.0,
+      "p_clever": 4.0,
+      "domain_auc_adapt": 0.8426,
+      "domain_auc_adapt_sd": 0.0008,
+      "domain_auc_logit_unif": 0.8418,
+      "domain_auc_logit_unif_sd": 0.0009,
+      "domain_auc_delta_adapt": -0.1024,
+      "domain_auc_delta_adapt_vs_unif": 0.0008,
+      "domain_auc_pi_rf": 0.9869,
+      "domain_auc_pi_rf_sd": 0.0016,
+      "domain_auc_delta_pi_rf": 0.042,
+      "pi_rf_vimp": {
+        "demography": 0.0054,
+        "work": 0.0068,
+        "hours": 0.9857,
+        "capital": 0.0022
+      },
+      "z_vimp": {
+        "demography": 0.0142,
+        "work": 0.111,
+        "hours": 0.8541,
+        "capital": 0.0207
+      },
+      "z_logit_vimp": {
+        "demography": 0.0142,
+        "work": 0.111,
+        "hours": 0.8541,
+        "capital": 0.0207
+      },
+      "z_share_vimp": {
+        "demography": 0.0142,
+        "work": 0.111,
+        "hours": 0.8541,
+        "capital": 0.0207
+      },
+      "selection_auc_raw": 1.0,
+      "mass_on_gt_raw": 0.6635,
+      "z_share_on_gt": 0.8596,
+      "z_logit_on_gt": 0.8596,
+      "pi_consensus_on_gt": 0.73,
+      "pi_rf_on_gt": 0.9843,
+      "domain_auc_stack_xz_sd": 0.0,
+      "domain_auc_pool_sd": 0.0025,
+      "domain_auc_logpool_sd": 0.0025,
+      "domain_auc_delta_sd": 0.0004,
+      "domain_auc_delta_stack_sd": 0.0004,
+      "domain_auc_delta_pool_sd": 0.0029,
+      "p_raw_sd": 0.0,
+      "p_clever_sd": 0.0,
+      "domain_auc_delta_adapt_sd": 0.0011,
+      "domain_auc_delta_adapt_vs_unif_sd": 0.0001,
+      "domain_auc_delta_pi_rf_sd": 0.0013,
+      "selection_auc_raw_sd": 0.0,
+      "mass_on_gt_raw_sd": 0.0068,
+      "z_share_on_gt_sd": 0.0078,
+      "z_logit_on_gt_sd": 0.0078,
+      "pi_consensus_on_gt_sd": 0.0035,
+      "pi_rf_on_gt_sd": 0.002,
+      "n_seeds": 2,
+      "name": "demography\u22a5 + inject hours",
+      "gt": "hours"
+    }
+  ],
+  "protocol": {
+    "rf": "max_depth=8, min_samples_leaf=5, n_estimators=80",
+    "auc": "5-fold stratified CV",
+    "stage2": "\u03c0-weighted RF; opinion pool; X+Z; adaptive logit",
+    "gt_seeds": 2
+  },
+  "plots": {
+    "gap_shares": "/workspace/results/hf_block_aware/adult/adult_gap_shares.png",
+    "auc": "/workspace/results/hf_block_aware/adult/adult_stage2_auc.png",
+    "inject": "/workspace/results/hf_block_aware/adult/adult_inject_recovery.png"
+  }
+}

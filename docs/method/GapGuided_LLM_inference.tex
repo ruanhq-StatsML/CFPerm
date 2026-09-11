@@ -1,0 +1,74 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\graphicspath{{../../results/gap_guided_inference/}}
+\title{Two-sample reading budget: same expert and context packing}
+\author{CFPerm prototype}
+\date{}
+\begin{document}
+\maketitle
+\noindent Not TMLE, not causal, not online learning.
+$W$ is a batch tag; $\hat e\approx P(W{=}1\mid X)$.
+Adaptation: freeze $\pi$ from a domain pair, then feed a \emph{single} reader
+the concatenated \emph{raw} blocks $E=E(\pi)$.
+The reader is not updated from the query stream; $\pi$ is not updated either.
+An opinion pool of $\hat e_m$ is a mixture of scores, not this map.
+
+\section{Raw block + one reader}
+Let $E=E(\pi)$. The observation is
+$\mathrm{pack}(x)=\mathrm{concat}_{m\in E}\mathrm{serialize}(x_{B_m})$.
+Output is $f(\mathrm{pack}(x))$ with one $f$. Dropped blocks are absent.
+This restricts the $\sigma$-algebra of a frozen reader. It is not Hedge,
+not a bandit over specialists, and not a per-query update of $\pi$.
+
+A query updates $E$ only: $r=\lambda\pi+(1-\lambda)s(x)$, then
+$E_{\mathrm{query}}=\mathrm{pack}(r)$. Stage A evaluates block prediction
+$\hat e_m$; Stage B evaluates the adapted read after that update.
+$\lambda=1$ is prior-only; $\lambda=0$ is a hard query gate (often noisier).
+
+\section{Same expert versus packing}
+A \emph{same expert} is $\hat m=\arg\max\pi$, then $f\in\mathcal{G}_{\hat m}$
+(functions of $X_{B_{\hat m}}$ only) for every query. That template does not
+depend on $x$. An instance gate $\hat m(x)=\arg\max s_m(x)$ is a different object.
+
+Context packing is one reader on concatenated raw blocks
+$E=E(\pi)$, not an opinion pool of $\hat e_m$. Disabled channels are omitted,
+not emitted as empty headers. Abstain means the gap is not localized: do not
+drop a block (pack all, or HITL). Forced top-1 on a diffuse shift discards signal.
+
+\section{Specialist $\hat e_m$ (one block, all rows)}
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{budgeted_auc.png}
+\caption{Frozen specialist AUC. $\pi$ picks one $m$ for the whole test set.}
+\end{figure}
+
+\section{Packed reader (one RF on concat $E$)}
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{packed_auc.png}
+\caption{Column-concat of $E(\pi)$. Pack-all is the abstain-from-dropping action.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{gt_hit_rate.png}
+\caption{Localization hit. Same-expert hit is $1\{\hat m=m^\star\}$, not a per-row mix.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\textwidth]{query_update_auc.png}
+\caption{Query update of $E$: prior vs shrinkage vs $s$-only. $\pi$ and $f$ stay frozen.}
+\end{figure}
+
+Inject valence with a wide text block: VIMP hires the wide specialist;
+$\pi$ hires valence and the packed reader matches the GT block.
+Diffuse equal shift: pack-all beats one specialist.
+Shuffle valence: hit collapses.
+
+\end{document}

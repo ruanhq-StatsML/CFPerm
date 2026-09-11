@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+data/chronoberg/*.json
+data/chronoberg/*.csv
+*.egg-info/

@@ -1,0 +1,356 @@
+{
+  "board": {
+    "settings": {
+      "synthetic GT=valence": {
+        "n_seeds": 3,
+        "gt": "valence",
+        "auc": {
+          "unconstrained": 0.9533,
+          "pi_top1": 0.9593,
+          "vimp_top1": 0.9593,
+          "instance_top1": 0.9315,
+          "blend_top1": 0.9573,
+          "random_fixed": 0.4664,
+          "random_row": 0.6416,
+          "pi_pool": 0.9589,
+          "uniform_pool": 0.9348,
+          "oracle_gt": 0.9593
+        },
+        "hit_gt": {
+          "pi_top1": 1.0,
+          "vimp_top1": 1.0,
+          "instance_top1": 0.7491,
+          "blend_top1": 0.9798,
+          "random_fixed": 0.0,
+          "random_row": 0.2308
+        },
+        "pack_auc": {
+          "same_expert_pi": 0.9597,
+          "same_expert_vimp": 0.9597,
+          "same_expert_random": 0.4832,
+          "concat_top2_pi": 0.952,
+          "pack_all": 0.9468,
+          "abstain_policy": 0.9597,
+          "same_expert_oracle": 0.9597
+        },
+        "pi_entropy_last": 0.6866,
+        "population_pack_modes": [
+          "same_expert",
+          "same_expert",
+          "same_expert"
+        ],
+        "pi_last": {
+          "text": 0.1119,
+          "valence": 0.8041,
+          "arousal": 0.0411,
+          "dominance": 0.0429
+        },
+        "pi_vimp_last": {
+          "text": 0.303,
+          "valence": 0.6056,
+          "arousal": 0.0439,
+          "dominance": 0.0475
+        },
+        "selected_last": {
+          "pi_top1": "valence",
+          "vimp_top1": "valence",
+          "random_fixed": "arousal"
+        },
+        "stage_A_last": {
+          "block_auc": {
+            "text": 0.4955,
+            "valence": 0.9536,
+            "arousal": 0.4595,
+            "dominance": 0.5749
+          },
+          "pi": {
+            "text": 0.1119,
+            "valence": 0.8041,
+            "arousal": 0.0411,
+            "dominance": 0.0429
+          },
+          "mean_s": {
+            "text": 0.2153,
+            "valence": 0.4911,
+            "arousal": 0.1502,
+            "dominance": 0.1435
+          }
+        },
+        "stage_B": {
+          "adapt_prior_auc": 0.9593,
+          "adapt_shrink_auc": 0.9573,
+          "adapt_query_only_auc": 0.9315,
+          "adapt_prior_hit": 1.0,
+          "adapt_shrink_hit": 0.9798,
+          "adapt_query_only_hit": 0.7491,
+          "delta_auc_shrink_minus_prior": -0.002,
+          "delta_hit_shrink_minus_prior": -0.0202,
+          "switch_rate": 0.1007
+        }
+      },
+      "inject valence": {
+        "n_seeds": 3,
+        "gt": "valence",
+        "auc": {
+          "unconstrained": 0.755,
+          "pi_top1": 0.7465,
+          "vimp_top1": 0.5997,
+          "instance_top1": 0.6984,
+          "blend_top1": 0.7446,
+          "random_fixed": 0.6639,
+          "random_row": 0.5831,
+          "pi_pool": 0.7582,
+          "uniform_pool": 0.7436,
+          "oracle_gt": 0.7465
+        },
+        "hit_gt": {
+          "pi_top1": 1.0,
+          "vimp_top1": 0.0,
+          "instance_top1": 0.4652,
+          "blend_top1": 0.8242,
+          "random_fixed": 0.6667,
+          "random_row": 0.2454
+        },
+        "pack_auc": {
+          "same_expert_pi": 0.7529,
+          "same_expert_vimp": 0.5998,
+          "same_expert_random": 0.6694,
+          "concat_top2_pi": 0.7546,
+          "pack_all": 0.7674,
+          "abstain_policy": 0.7529,
+          "same_expert_oracle": 0.7529
+        },
+        "pi_entropy_last": 0.9516,
+        "population_pack_modes": [
+          "same_expert",
+          "same_expert",
+          "same_expert"
+        ],
+        "pi_last": {
+          "text": 0.2486,
+          "valence": 0.6407,
+          "arousal": 0.0552,
+          "dominance": 0.0554
+        },
+        "pi_vimp_last": {
+          "text": 0.5631,
+          "valence": 0.3186,
+          "arousal": 0.0602,
+          "dominance": 0.058
+        },
+        "selected_last": {
+          "pi_top1": "valence",
+          "vimp_top1": "text",
+          "random_fixed": "valence"
+        },
+        "stage_A_last": {
+          "block_auc": {
+            "text": 0.681,
+            "valence": 0.751,
+            "arousal": 0.5036,
+            "dominance": 0.5436
+          },
+          "pi": {
+            "text": 0.2486,
+            "valence": 0.6407,
+            "arousal": 0.0552,
+            "dominance": 0.0554
+          },
+          "mean_s": {
+            "text": 0.2732,
+            "valence": 0.3613,
+            "arousal": 0.1833,
+            "dominance": 0.1822
+          }
+        },
+        "stage_B": {
+          "adapt_prior_auc": 0.7465,
+          "adapt_shrink_auc": 0.7446,
+          "adapt_query_only_auc": 0.6984,
+          "adapt_prior_hit": 1.0,
+          "adapt_shrink_hit": 0.8242,
+          "adapt_query_only_hit": 0.4652,
+          "delta_auc_shrink_minus_prior": -0.0018,
+          "delta_hit_shrink_minus_prior": -0.1758,
+          "switch_rate": 0.4139
+        }
+      },
+      "diffuse equal shift": {
+        "n_seeds": 3,
+        "gt": null,
+        "auc": {
+          "unconstrained": 0.8822,
+          "pi_top1": 0.7164,
+          "vimp_top1": 0.698,
+          "instance_top1": 0.6939,
+          "blend_top1": 0.7251,
+          "random_fixed": 0.727,
+          "random_row": 0.6778,
+          "pi_pool": 0.8574,
+          "uniform_pool": 0.8661
+        },
+        "hit_gt": {},
+        "pack_auc": {
+          "same_expert_pi": 0.7095,
+          "same_expert_vimp": 0.6981,
+          "same_expert_random": 0.7328,
+          "concat_top2_pi": 0.7799,
+          "pack_all": 0.8758,
+          "abstain_policy": 0.8758
+        },
+        "pi_entropy_last": 1.384,
+        "population_pack_modes": [
+          "pack_all",
+          "pack_all",
+          "pack_all"
+        ],
+        "pi_last": {
+          "text": 0.2291,
+          "valence": 0.2598,
+          "arousal": 0.2721,
+          "dominance": 0.239
+        },
+        "pi_vimp_last": {
+          "text": 0.5188,
+          "valence": 0.1682,
+          "arousal": 0.1805,
+          "dominance": 0.1325
+        },
+        "selected_last": {
+          "pi_top1": "arousal",
+          "vimp_top1": "text",
+          "random_fixed": "valence"
+        },
+        "stage_A_last": {
+          "block_auc": {
+            "text": 0.7347,
+            "valence": 0.7034,
+            "arousal": 0.6923,
+            "dominance": 0.6506
+          },
+          "pi": {
+            "text": 0.2291,
+            "valence": 0.2598,
+            "arousal": 0.2721,
+            "dominance": 0.239
+          },
+          "mean_s": {
+            "text": 0.324,
+            "valence": 0.2399,
+            "arousal": 0.2296,
+            "dominance": 0.2065
+          }
+        },
+        "stage_B": {
+          "adapt_prior_auc": 0.7164,
+          "adapt_shrink_auc": 0.7251,
+          "adapt_query_only_auc": 0.6939,
+          "adapt_prior_hit": null,
+          "adapt_shrink_hit": null,
+          "adapt_query_only_hit": null,
+          "delta_auc_shrink_minus_prior": 0.0087,
+          "delta_hit_shrink_minus_prior": null,
+          "switch_rate": 0.2857
+        }
+      },
+      "shuffle valence (neg.)": {
+        "n_seeds": 3,
+        "gt": "valence",
+        "auc": {
+          "unconstrained": 0.479,
+          "pi_top1": 0.4742,
+          "vimp_top1": 0.4701,
+          "instance_top1": 0.5009,
+          "blend_top1": 0.4812,
+          "random_fixed": 0.4978,
+          "random_row": 0.5158,
+          "pi_pool": 0.4756,
+          "uniform_pool": 0.492,
+          "oracle_gt": 0.5054
+        },
+        "hit_gt": {
+          "pi_top1": 0.3333,
+          "vimp_top1": 0.0,
+          "instance_top1": 0.1905,
+          "blend_top1": 0.1282,
+          "random_fixed": 0.3333,
+          "random_row": 0.2564
+        },
+        "pack_auc": {
+          "same_expert_pi": 0.4591,
+          "same_expert_vimp": 0.475,
+          "same_expert_random": 0.4927,
+          "concat_top2_pi": 0.4743,
+          "pack_all": 0.4965,
+          "abstain_policy": 0.4785,
+          "same_expert_oracle": 0.5051
+        },
+        "pi_entropy_last": 1.2703,
+        "population_pack_modes": [
+          "same_expert",
+          "pack_all",
+          "concat_k"
+        ],
+        "pi_last": {
+          "text": 0.3054,
+          "valence": 0.3265,
+          "arousal": 0.067,
+          "dominance": 0.3011
+        },
+        "pi_vimp_last": {
+          "text": 0.7063,
+          "valence": 0.0787,
+          "arousal": 0.0963,
+          "dominance": 0.1187
+        },
+        "selected_last": {
+          "pi_top1": "valence",
+          "vimp_top1": "text",
+          "random_fixed": "valence"
+        },
+        "stage_A_last": {
+          "block_auc": {
+            "text": 0.4957,
+            "valence": 0.5078,
+            "arousal": 0.4974,
+            "dominance": 0.476
+          },
+          "pi": {
+            "text": 0.3054,
+            "valence": 0.3265,
+            "arousal": 0.067,
+            "dominance": 0.3011
+          },
+          "mean_s": {
+            "text": 0.2907,
+            "valence": 0.2276,
+            "arousal": 0.2484,
+            "dominance": 0.2332
+          }
+        },
+        "stage_B": {
+          "adapt_prior_auc": 0.4742,
+          "adapt_shrink_auc": 0.4812,
+          "adapt_query_only_auc": 0.5009,
+          "adapt_prior_hit": 0.3333,
+          "adapt_shrink_hit": 0.1282,
+          "adapt_query_only_hit": 0.1905,
+          "delta_auc_shrink_minus_prior": 0.007,
+          "delta_hit_shrink_minus_prior": -0.2051,
+          "switch_rate": 0.641
+        }
+      }
+    }
+  },
+  "example_row": 273,
+  "example_pack_mode": "same_expert",
+  "example_packed_blocks": [
+    "valence"
+  ],
+  "plots": {
+    "auc": "/workspace/results/gap_guided_inference/budgeted_auc.png",
+    "hit": "/workspace/results/gap_guided_inference/gt_hit_rate.png",
+    "pack": "/workspace/results/gap_guided_inference/packed_auc.png",
+    "query": "/workspace/results/gap_guided_inference/query_update_auc.png"
+  }
+}
