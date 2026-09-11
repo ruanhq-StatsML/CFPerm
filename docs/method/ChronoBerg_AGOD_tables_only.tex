@@ -1,0 +1,37 @@
+% ChronoBerg AGOD prototype · RF-domain MSG + dummy-label PO-risk
+% Requires booktabs.
+
+\begin{table}[ht]
+\centering
+\caption{ChronoBerg AGOD prototype. Passages from era test splits; modalities are hashed text plus period-calibrated valence/arousal. PO-risk labels are $Y=\texttt{np.arange}(n)$ (standardized). Distillation uses a fixed step budget routed by $\alpha$. Late valence MSE is the 1900/1950 mean.}
+\label{tab:chronoberg-agod-summary}
+\small
+\begin{tabular}{@{}l cc cc@{}}
+\toprule
+Method & \multicolumn{2}{c}{Observational} & \multicolumn{2}{c}{Valence inject (1900/1950)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+ & Mean MSE & Late val. MSE & Mean MSE & Late val. MSE \\
+\midrule
+B1\_static & $0.631$ & $0.579$ & $0.642$ & $0.432$ \\
+B2\_covariate & $0.630$ & $0.584$ & $0.596$ & $0.372$ \\
+B3\_AGOD & $0.637$ & $0.540$ & $0.638$ & $0.415$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{MSG state and AGOD routing weights on observational ChronoBerg (reference = 1750). $g_m=\mathrm{Normalize}(\mathrm{AUC}_m\cdot\mathrm{VIMP}_m+\gamma\cdot\mathrm{PO}$-$\mathrm{risk}_m)$.}
+\label{tab:chronoberg-agod-msg}
+\small
+\begin{tabular}{@{}l l ccc ccc@{}}
+\toprule
+Year & $W$ vs 1750 & AUC$_t$ & AUC$_v$ & AUC$_a$ & $\alpha_t$ & $\alpha_v$ & $\alpha_a$ \\
+\midrule
+1800 & era window & $0.697$ & $0.658$ & $0.665$ & $0.36$ & $0.33$ & $0.31$ \\
+1850 & era window & $0.624$ & $0.645$ & $0.697$ & $0.35$ & $0.32$ & $0.33$ \\
+1900 & era window & $0.744$ & $0.640$ & $0.817$ & $0.32$ & $0.30$ & $0.37$ \\
+1950 & era window & $0.723$ & $0.651$ & $0.719$ & $0.37$ & $0.30$ & $0.32$ \\
+\bottomrule
+\end{tabular}
+\end{table}
