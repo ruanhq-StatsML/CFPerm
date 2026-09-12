@@ -43,6 +43,10 @@ score_m     = λ_c · z(concept) − λ_v · z(covariate)
 LR_m        = lr0 · (β + (1−β)·α_m·|M|)
 ```
 
+Controllers are in-package (`agod/`); Amazon is only the harness.
+See also [`AGOD_ml_infra_justification.md`](AGOD_ml_infra_justification.md).
+
 ```bash
-python3 scripts/run_agod_amazon_mmd_lr.py
+PYTHONPATH=. python3 tests/test_agod_controller.py
+PYTHONPATH=. python3 scripts/run_agod_amazon_mmd_lr.py
 ```

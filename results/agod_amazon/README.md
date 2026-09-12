@@ -33,34 +33,46 @@ if α_m < θ: zero ∂L/∂θ_m      # adaptation FLOPs ↓
 Category shift from Tools & Home Improvement → Sports/Fashion/… is attributed
 mostly to **image**; AGOD raises image LR and gates text updates.
 
-## Accuracy rule: concept↑ LR / covariate↓ LR
+## System package (ML-infra)
+
+Amazon is a **smoke client**. Controllers live in `agod/`:
+
+| module | role |
+|---|---|
+| `agod.mmd` | bounded-cost MMD² sensor for \(P(X)\) |
+| `agod.shift` | concept / covariate decomposition |
+| `agod.lr_controller` | Softmax α → per-modality LR (actuator + EMA) |
+| `agod.policies` | B1–B5 named policies; **default Acc = B5** |
+
+Harness (IO/model only): `scripts/run_agod_amazon_mmd_lr.py`  
+Infra write-up: [`docs/agod/AGOD_ml_infra_justification.md`](../../docs/agod/AGOD_ml_infra_justification.md)
+
+```bash
+PYTHONPATH=. python3 tests/test_agod_controller.py
+PYTHONPATH=. python3 scripts/run_agod_amazon_mmd_lr.py
+```
+
+### Shipped Acc policy (B5)
 
 ```
-covariate_m = max(AUC_m − 0.5, 0) · (1 + VIMP_m)   # P(X) shift → damp LR
-concept_m   = PO_m                                   # P(Y|X) shift → raise LR
-score_m     = λ_c · concept_m − λ_v · covariate_m
-α           = Softmax(score / τ)   (EMA)
-LR_m        = lr0 · (β + (1−β) · α_m · |M|)
+covariate_m = MMD²(X_m^ref, X_m^cur)     # damp LR
+concept_m   = PO_m                       # raise LR
+score_m     = λ_c·z(concept) − λ_v·z(cov)
+LR_m ∝ Softmax(score / τ)
 ```
 
-Smoke (3 shards, 6 category windows), mean held-out Acc lift:
+| Policy | Mean Acc lift | vs B1 |
+|---|---:|---:|
+| B1 equal | +0.058 | — |
+| B2 RF | +0.072 | +0.014 |
+| B3 pure MMD | +0.058 | ~0 |
+| B4 MMD+gain | +0.037 | −0.021 |
+| **B5 MMD-cov+PO** | **+0.087** | **+0.030** |
 
-| Policy | Rule | Mean Acc lift | Mean Acc post |
-|---|---|---:|---:|
-| B1 | equal LR | +0.058 | 0.539 |
-| B2 | high total shift → high LR | +0.091 | 0.556 |
-| **B3** | **concept↑ / covariate↓** | **+0.072** | **0.549** |
-
-B3 − B1 lift = **+0.014**; B3 − B2 lift = −0.019 on this smoke.
+## Legacy RF concept/cov script
 
 ```bash
 python3 scripts/run_agod_amazon_concept_cov_lr.py
-```
-
-## Run (base modality-LR prototype)
-
-```bash
-# put shards under data/amazon_reviews/shards/ (from HF), then:
 python3 scripts/run_agod_amazon_modality_lr.py
 ```
 
