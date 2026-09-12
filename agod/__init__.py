@@ -38,6 +38,19 @@ from .ensemble_decorr import (
     role_lr_gains,
     soft_decorr_lr,
 )
+from .grad_corr_stat import (
+    characterize_corr,
+    characterize_stat_traj,
+    correlation_from_pairs,
+    effective_ensemble_size,
+    fisher_z_test,
+    gls_weights,
+    partial_uniqueness,
+    shrink_correlation,
+    stat_corr_lr,
+    temporal_gain,
+    variance_stabilizing_scale,
+)
 from .lr_controller import (
     EMARouter,
     SCHEDULER_NAMES,
@@ -110,6 +123,17 @@ __all__ = [
     "role_lr_gains",
     "soft_decorr_lr",
     "characterize_ensemble_traj",
+    "correlation_from_pairs",
+    "shrink_correlation",
+    "effective_ensemble_size",
+    "gls_weights",
+    "partial_uniqueness",
+    "fisher_z_test",
+    "temporal_gain",
+    "variance_stabilizing_scale",
+    "characterize_corr",
+    "stat_corr_lr",
+    "characterize_stat_traj",
 ]
 
 __version__ = "0.1.0"

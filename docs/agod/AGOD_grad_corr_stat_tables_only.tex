@@ -1,0 +1,31 @@
+% Modality-grad correlation → next LR
+\begin{table}[t]\centering
+\caption{Effective ensemble size and variance-stabilising next-step scale as pairwise gradient cosine varies (equal $\alpha$).}
+\label{tab:agod-grad-corr-stat}
+\begin{tabular}{rrrrr}\toprule
+$\rho$ & $N_{\mathrm{eff}}$ & $\eta_{t+1}$ & ambiguity & LR ratio \\
+\midrule
+-0.15 & 4.29 & 1.20 & 1.00 & 1.00 \\
++0.12 & 2.40 & 0.89 & 0.88 & 1.00 \\
++0.40 & 1.67 & 0.75 & 0.60 & 1.00 \\
++0.67 & 1.28 & 0.65 & 0.32 & 1.00 \\
++0.95 & 1.03 & 0.59 & 0.05 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]\centering
+\caption{Replay of Amazon / MSR-VTT grad-cos windows: correlation-guided next LR diagnostics.}
+\label{tab:agod-grad-corr-replay}
+\begin{tabular}{lrrrr}\toprule
+trajectory & $\bar\rho$ & $N_{\mathrm{eff}}$ & $\eta$ & ambiguity \\
+\midrule
+amazon:equal & +0.688 & 1.19 & 0.63 & 0.31 \\
+amazon:soft & +0.669 & 1.20 & 0.61 & 0.33 \\
+amazon:soft\_gradcos & +0.710 & 1.17 & 0.62 & 0.29 \\
+msrvtt:equal & +0.190 & 2.27 & 0.81 & 0.81 \\
+msrvtt:soft & +0.216 & 2.19 & 0.76 & 0.78 \\
+msrvtt:soft\_gradcos & +0.215 & 2.17 & 0.83 & 0.78 \\
+\bottomrule
+\end{tabular}
+\end{table}
