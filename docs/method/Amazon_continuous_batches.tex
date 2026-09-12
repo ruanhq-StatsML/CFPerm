@@ -1,0 +1,21 @@
+% Amazon continuous batches: online MSE and regret. Auto-generated.
+\begin{table}[ht]\centering
+\caption{Amazon Reviews 2023, 9 product-category batches. Linear TF-IDF MSE, predict-then-update.
+TSS is the same next-epoch map as the multimodal probe, on a scalar text head.
+Regret is cumulative online MSE minus the hindsight-best constant $\eta$ inside the TSS box $[0.04,2.5\eta_0]$.
+Entries are mean (s.d.) over seeds.}
+\label{tab:amazon-continuous-batches}
+\small
+\begin{tabular}{@{}l cccc c@{}}\toprule
+Method & online MSE & regret & BWT MSE & $\bar\eta$ & $\bar c$ \\
+\midrule
+constant & $1.607$ ($0.059$) & $0.296$ ($0.108$) & $0.903$ ($0.125$) & $0.1000$ & $0.309$ \\
+cosine & $1.604$ ($0.056$) & $0.275$ ($0.126$) & $0.955$ ($0.125$) & $0.0438$ & $0.309$ \\
+plateau & $1.597$ ($0.055$) & $0.212$ ($0.146$) & $0.879$ ($0.121$) & $0.0578$ & $0.309$ \\
+Polyak & $1.632$ ($0.061$) & $0.492$ ($0.108$) & $0.841$ ($0.138$) & $0.1090$ & $0.309$ \\
+inv-$c$$^{\ast}$ & $1.644$ ($0.060$) & $0.594$ ($0.161$) & $0.784$ ($0.108$) & $0.0340$ & $0.309$ \\
+TSS & $1.634$ ($0.059$) & $0.515$ ($0.173$) & $0.818$ ($0.103$) & $0.0391$ & $0.309$ \\
+\bottomrule
+\end{tabular}\\[0.4em]
+{\footnotesize Wilcoxon signed-rank on regret, TSS $-$ comparator: $^{\ast}$ $p<0.05$ and TSS lower. Mean $\hat c=0.309$, $\hat\delta=0.387$. Hindsight-best constant $\bar\eta=0.250$. Categories: Gift\_Cards, Digital\_Music, All\_Beauty, Software, Subscription\_Boxes, Musical\_Instruments, Magazine\_Subscriptions, Handmade\_Products, Amazon\_Fashion.}
+\end{table}

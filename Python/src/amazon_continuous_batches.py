@@ -62,7 +62,7 @@ HF_JSONL = (
 )
 METHODS = ("constant", "cosine", "plateau", "polyak", "inv_c", "tss")
 TIME_METHODS = ("constant", "cosine", "plateau")
-HINDSIGHT_ETAS = (0.02, 0.04, 0.06, 0.10, 0.16, 0.24, 0.36)
+HINDSIGHT_ETAS = (0.04, 0.06, 0.08, 0.10, 0.16, 0.20, 0.25)
 CACHE_DIR = Path(__file__).resolve().parents[2] / "data" / "amazon" / "heads"
 
 
@@ -340,7 +340,12 @@ def load_amazon_reviews(
 
 
 def featurize_reviews(payload, max_features=128, min_df=2):
-    """TF-IDF frozen on batch 0, then column-standardized on batch 0."""
+    """TF-IDF frozen on batch 0. Rows stay l2-normalized; do not column-scale.
+
+    Column-standardizing rare words inflates the gradient so η0=0.10 (the
+    multimodal default) diverges. The TSS comparison is then just who decayed
+    fast enough. Frozen TF-IDF keeps η0 on the same scale as the probe.
+    """
     texts = list(payload["texts"])
     y = np.asarray(payload["y"], dtype=float)
     batch = np.asarray(payload["batch"], dtype=int)
@@ -354,9 +359,6 @@ def featurize_reviews(payload, max_features=128, min_df=2):
     )
     vec.fit([texts[i] for i in i0])
     X = np.asarray(vec.transform(texts).toarray(), dtype=float)
-    mu = X[i0].mean(axis=0)
-    sd = np.maximum(X[i0].std(axis=0), 1e-3)
-    X = (X - mu) / sd
     meta = dict(payload.get("meta") or {})
     meta.update(
         {
@@ -383,6 +385,8 @@ def _scheduler_eta(method, t, n_batches, eta0, c, delta, plateau_eta, prev, n_it
         return tss_eta_scalar(c, 0.0, eta0=eta0, prev=prev, n_iter=n_iter, beta=0.0)
     if method == "polyak":
         mse = float(1.0 if online_mse is None else online_mse)
+        if not np.isfinite(mse) or mse > 50.0:
+            return float(eta0) * 0.25
         cap = float(eta0) * float(ETA_MAX_MULT)
         return float(min(cap, eta0 * (mse / 1.5)))
     if method == "constant":
@@ -467,6 +471,7 @@ def run_amazon_method(
                 "c": float(c_hat),
                 "delta": float(d_hat),
                 "online_mse": float(online),
+                "null_mse": float(np.mean((y[ic] - y[i0].mean()) ** 2)),
                 "post_mse": float(post),
                 "bwt": float(bwt),
                 "n": int(ic.size),
@@ -495,12 +500,14 @@ def run_amazon_method(
 
     adapt = [h for h in history if h["phase"] == "adapt"]
     online = np.array([h["online_mse"] for h in adapt], dtype=float)
+    null = np.array([h.get("null_mse", np.nan) for h in adapt], dtype=float)
     cum = np.cumsum(online)
     summary = {
         "method": method,
         "n_batches": n_batches,
         "eta0": float(eta0),
         "online_mse": float(online.mean()) if online.size else float("nan"),
+        "null_mse": float(null.mean()) if null.size else float("nan"),
         "cum_mse": float(cum[-1]) if cum.size else float("nan"),
         "last_online_mse": float(online[-1]) if online.size else float("nan"),
         "post_mse": float(np.mean([h["post_mse"] for h in adapt])) if adapt else float("nan"),
@@ -509,6 +516,7 @@ def run_amazon_method(
         "mean_c": float(np.mean([h["c"] for h in adapt])) if adapt else float("nan"),
         "mean_delta": float(np.mean([h["delta"] for h in adapt])) if adapt else float("nan"),
         "online_path": online.tolist(),
+        "null_path": null.tolist(),
         "cum_path": cum.tolist(),
         "history": history,
         "meta": dict(stream.meta),
@@ -517,7 +525,12 @@ def run_amazon_method(
 
 
 def hindsight_constant(stream, etas=HINDSIGHT_ETAS, **kwargs):
-    """Best constant η after seeing the whole stream (not causal)."""
+    """Best constant η in the TSS-feasible box [min etas, η0·ETA_MAX_MULT].
+
+    Unconstrained larger constants can still cut online MSE on this weak
+    linear probe; that is underfit, not a scheduler ranking. Cap the grid
+    at the same 2.5×η0 used by TSS.
+    """
     best = None
     traces = []
     for eta in etas:
@@ -692,46 +705,64 @@ def paired_tests(rows, baseline="tss"):
     return out
 
 
+DIVERGE_MSE = 50.0
+
+
+def _stable_methods(table, methods):
+    out = []
+    for m in methods:
+        mu = table[m]["online_mse"]["mean"]
+        if np.isfinite(mu) and abs(mu) < DIVERGE_MSE:
+            out.append(m)
+    return out
+
+
 def plot_amazon_suite(suite, path):
     import matplotlib.pyplot as plt
     from msrvtt_attribution_plots import GRID, INK, MUTED, _save, _style
 
     _style()
     methods = [m for m in METHODS if m in suite["table"]]
-    colors = {m: METHOD_COLORS.get(m, "#9AA3AE") for m in methods}
+    bars = _stable_methods(suite["table"], methods)
+    colors = {m: METHOD_COLORS.get(m, METHOD_COLORS.get("polyak_m" if m == "polyak" else m, "#9AA3AE")) for m in methods}
     labels = {m: METHOD_LABELS.get(m, m) for m in methods}
     labels["polyak"] = r"Polyak"
     fig, axes = plt.subplots(2, 2, figsize=(10.8, 7.6))
 
     ax = axes[0, 0]
-    x = np.arange(len(methods))
-    means = [suite["table"][m]["online_mse"]["mean"] for m in methods]
-    sds = [suite["table"][m]["online_mse"]["sd"] for m in methods]
-    ax.bar(x, means, yerr=sds, color=[colors[m] for m in methods], ecolor=MUTED, capsize=2.5, width=0.78)
+    x = np.arange(len(bars))
+    means = [suite["table"][m]["online_mse"]["mean"] for m in bars]
+    sds = [suite["table"][m]["online_mse"]["sd"] for m in bars]
+    ax.bar(x, means, yerr=sds, color=[colors[m] for m in bars], ecolor=MUTED, capsize=2.5, width=0.78)
     ax.set_xticks(x)
-    ax.set_xticklabels([labels[m] for m in methods], rotation=35, ha="right")
+    ax.set_xticklabels([labels[m] for m in bars], rotation=35, ha="right")
     ax.set_ylabel("online MSE")
     ax.set_title("Mean online MSE", loc="left", fontsize=12, fontweight="bold")
     ax.grid(True, axis="y", color=GRID)
 
     ax = axes[0, 1]
-    means = [suite["table"][m]["regret"]["mean"] for m in methods]
-    sds = [suite["table"][m]["regret"]["sd"] for m in methods]
-    ax.bar(x, means, yerr=sds, color=[colors[m] for m in methods], ecolor=MUTED, capsize=2.5, width=0.78)
+    means = [suite["table"][m]["regret"]["mean"] for m in bars]
+    sds = [suite["table"][m]["regret"]["sd"] for m in bars]
+    ax.bar(x, means, yerr=sds, color=[colors[m] for m in bars], ecolor=MUTED, capsize=2.5, width=0.78)
     ax.set_xticks(x)
-    ax.set_xticklabels([labels[m] for m in methods], rotation=35, ha="right")
+    ax.set_xticklabels([labels[m] for m in bars], rotation=35, ha="right")
     ax.set_ylabel("cumulative regret")
     ax.set_title("Regret vs hindsight-best constant η", loc="left", fontsize=12, fontweight="bold")
     ax.grid(True, axis="y", color=GRID)
 
     ax = axes[1, 0]
-    for method in methods:
+    for method in bars:
         recs = suite["traces"][method]
         path_mse = np.array([r["online_path"] for r in recs], dtype=float)
         t = np.arange(1, path_mse.shape[1] + 1)
         mu, sd = path_mse.mean(axis=0), path_mse.std(axis=0)
         ax.plot(t, mu, color=colors[method], lw=2.0, label=labels[method])
         ax.fill_between(t, mu - sd, mu + sd, color=colors[method], alpha=0.12, lw=0)
+    recs0 = suite["traces"][bars[0]] if bars else None
+    if recs0 and recs0[0].get("null_path"):
+        null = np.array([r["null_path"] for r in recs0], dtype=float)
+        t = np.arange(1, null.shape[1] + 1)
+        ax.plot(t, null.mean(axis=0), color=MUTED, ls="--", lw=1.2, label="intercept")
     ax.set_xlabel("batch")
     ax.set_ylabel("online MSE")
     ax.set_title("Per-batch online MSE", loc="left", fontsize=12, fontweight="bold")
@@ -751,7 +782,6 @@ def plot_amazon_suite(suite, path):
     ax.set_title("Next-epoch stepsize", loc="left", fontsize=12, fontweight="bold")
     ax.grid(True, color=GRID)
 
-    src = suite["meta"].get("source", "amazon")
     n_b = suite["meta"].get("n_batches", "")
     fig.suptitle(
         "Amazon reviews, %s batches — TSS vs LR clocks" % n_b,
@@ -762,12 +792,16 @@ def plot_amazon_suite(suite, path):
         ha="left",
     )
     cats = suite["meta"].get("categories") or []
+    omitted = [m for m in methods if m not in bars]
+    note = ""
+    if omitted:
+        note = "  Omitted from MSE panels (diverged): %s." % ", ".join(omitted)
     fig.text(
         0.04,
         0.01,
-        "Source: %s.  Batches are product categories%s.  Online MSE is predict-then-update.  "
-        "Regret is cumulative online MSE minus the hindsight-best constant η.  Error bars are seed s.d."
-        % (src, (": " + ", ".join(cats)) if cats else ""),
+        "Amazon Reviews 2023, %d category batches.  Online MSE is predict-then-update.  "
+        "Dashed line is the batch-0 intercept.  Regret vs hindsight-best constant η.%s  Error bars are seed s.d."
+        % (len(cats) or int(n_b or 0), note),
         fontsize=7.8,
         color=MUTED,
     )
@@ -794,7 +828,7 @@ def write_tex_table(suite, path):
         r"\caption{Amazon Reviews 2023, %d product-category batches. Linear TF-IDF MSE, predict-then-update."
         % int(meta.get("n_batches") or len(cats) or 0),
         r"TSS is the same next-epoch map as the multimodal probe, on a scalar text head.",
-        r"Regret is cumulative online MSE minus the hindsight-best constant $\eta$.",
+        r"Regret is cumulative online MSE minus the hindsight-best constant $\eta$ inside the TSS box $[0.04,2.5\eta_0]$.",
         r"Entries are mean (s.d.) over seeds.}",
         r"\label{tab:amazon-continuous-batches}",
         r"\small",
@@ -806,7 +840,10 @@ def write_tex_table(suite, path):
         cell = table[method]
 
         def fmt(k):
-            return r"$%.3f$ ($%.3f$)" % (cell[k]["mean"], cell[k]["sd"])
+            mu, sd = cell[k]["mean"], cell[k]["sd"]
+            if not np.isfinite(mu) or abs(mu) >= DIVERGE_MSE:
+                return r"diverged"
+            return r"$%.3f$ ($%.3f$)" % (mu, sd)
 
         star = ""
         rec = tests.get(method, {}).get("regret", {})

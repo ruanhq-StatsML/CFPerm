@@ -37,9 +37,11 @@ covariate shift).
 inv-$c$ is the covariate half of TSS ($\beta=0$).
 
 The pre-specified metrics are online MSE, BWT (MSE on batch 0 after the
-stream), and regret against the hindsight-best constant $\eta$ on the same
-stream and seed.
+stream), and regret against the hindsight-best constant $\eta$ in the same
+box TSS is allowed to play in, $[0.04,\,2.5\eta_0]$.
+Unconstrained larger constants can still cut online MSE: the linear probe
+is underfitting, which is not a scheduler ranking.
 Category sequence is a domain stream, not a timestamp stream: $\hat c$ is
-expected to be large, so a typed map should not chase $X$.
+expected to be live, so a typed map should not chase $X$.
 Do not read this as a retrieval or ranking evaluation.
 The numerical comparison is Table~\ref{tab:amazon-continuous-batches}.

@@ -63,19 +63,24 @@ def main():
     print("hindsight eta", [r["hindsight_eta"] for r in suite["hindsight"]], flush=True)
     print("identification", suite["identification"][0], flush=True)
     for method, cell in suite["table"].items():
-        print(
-            "  %s  mse=%.3f  regret=%.3f  bwt=%.3f  eta=%.4f  c=%.3f  d=%.3f"
-            % (
-                method,
-                cell["online_mse"]["mean"],
-                cell["regret"]["mean"],
-                cell["bwt"]["mean"],
-                cell["mean_eta"]["mean"],
-                cell["mean_c"]["mean"],
-                cell["mean_delta"]["mean"],
-            ),
-            flush=True,
-        )
+            print(
+                "  %s  mse=%.3f  regret=%.3f  bwt=%.3f  eta=%.4f  c=%.3f  d=%.3f"
+                % (
+                    method,
+                    cell["online_mse"]["mean"],
+                    cell["regret"]["mean"],
+                    cell["bwt"]["mean"],
+                    cell["mean_eta"]["mean"],
+                    cell["mean_c"]["mean"],
+                    cell["mean_delta"]["mean"],
+                ),
+                flush=True,
+            )
+    ident = suite["identification"]
+    if ident:
+        mean_c = sum(r["mean_c"] for r in ident) / len(ident)
+        mean_d = sum(r["mean_delta"] for r in ident) / len(ident)
+        print("mean_c %.3f  mean_delta %.3f" % (mean_c, mean_d), flush=True)
     print("wrote", OUT, flush=True)
 
 
