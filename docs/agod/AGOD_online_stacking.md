@@ -75,7 +75,7 @@ Meta-learners：
 
 1. **Prequential risk** `R_n = n^{-1} Σ_t (π_t·v_t − y_t)²` — 唯一诚实的流风险  
 2. **vs best expert**（离散 oracle）和 **vs best fixed convex combo**（网格上的 Super Learner oracle）  
-3. **Tracking**：半程切换最好 expert，Hedge/OSL 必须把质量搬过去  
+3. **Tracking**：半程切换最好 expert，Hedge/OSL 必须把质量搬过去。share=0 / 离散累加会锁死；Fixed-Share、滑窗、sticky π 是三种 **花 TV** 的方式。展开见 [`AGOD_stack_track.md`](AGOD_stack_track.md)。  
 4. **Clone trap**：两个几乎相同的好 expert + 一个独立 expert；等权把 2/3 砸在同一个因子上，GLS 必须丢掉冗余票  
 5. **Honesty gap**：leaky − honest；leaky 应系统性低估风险  
 6. **N_eff(π)**：stacking 是否还剩多样性  
