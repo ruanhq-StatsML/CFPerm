@@ -2,6 +2,8 @@
 
 静态 `π ∝ R̃^{-1} α` 只是 stacking 的**一张快照**。代码好写；难的是 **online-stacking 的协议**：权重在单纯形上、只用 one-step-ahead 损失更新，而且评估必须对 oracle。这件事是 **modality-agnostic** 的——expert 只是带名字的投票器。
 
+**这不是 MoE。** Jacobs 的门是 `π_m(x)=softmax(Wx)`，专家按 x 的区域分工、和门一起训。这里 `π_m(t)` 是对 **holdout 投票** 的慢组合（OOF Super Learner）。`softmax(s/τ)` 长得像门，但 logits 是专家分数不是 `Wx`。有限步长 / 熵正则 / MGDA / mixloss / 伪 BMA 见 [`AGOD_stack_logics.md`](AGOD_stack_logics.md)。
+
 ## 文献地图（这不是从零发明）
 
 | 传统 | 文献 | 我们把它用在哪 |

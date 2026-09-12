@@ -7,6 +7,11 @@ the current window with frozen weights (prequential / one-step-ahead CV).
 Experts are just names. They may be modalities, towers, seeds, or anything
 that emits a vote and a scalar loss. Nothing here knows about video/text.
 
+This is **not** a mixture of experts (Jacobs et al. 1991). MoE gates
+``π_m(x) = softmax(Wx)_m`` on the *input*; stacking gates ``π_m(t)`` on
+*expert scores* after a holdout vote. Softmax(s/τ) looks like a gate but
+the logits are not a function of x. See ``agod.stack_logics``.
+
 Honesty (the part that is not "easy code"):
     score with π_t *before* ``update``. Training the bases on the same
     window then voting is leaky stacking (in-sample meta-features).

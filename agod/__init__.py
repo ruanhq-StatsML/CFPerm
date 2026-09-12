@@ -86,6 +86,21 @@ from .online_stacking import (
     pi_to_lr,
     prequential_regret,
 )
+from .stack_logics import (
+    LOGIC_NAMES,
+    cauchy_step,
+    entropy_regularized,
+    eta_path,
+    frank_wolfe_linear,
+    mgda_min_norm,
+    mixloss_weights,
+    n_path,
+    pseudo_bma_weights,
+    quadratic_finite_step,
+    rayleigh_gls,
+    tau_path,
+    taylor_remainder_scale,
+)
 from .mmd import rbf_mmd2, whiten_pair
 from .shift import decompose_hybrid, decompose_mmd, decompose_rf
 
@@ -160,6 +175,19 @@ __all__ = [
     "direction_match_weights",
     "mean_variance_pi",
     "linear_gain_is_vertex",
+    "LOGIC_NAMES",
+    "quadratic_finite_step",
+    "entropy_regularized",
+    "mgda_min_norm",
+    "mixloss_weights",
+    "pseudo_bma_weights",
+    "frank_wolfe_linear",
+    "cauchy_step",
+    "rayleigh_gls",
+    "taylor_remainder_scale",
+    "eta_path",
+    "tau_path",
+    "n_path",
 ]
 
 __version__ = "0.1.0"

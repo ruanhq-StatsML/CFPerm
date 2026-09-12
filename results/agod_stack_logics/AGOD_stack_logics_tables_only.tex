@@ -1,0 +1,19 @@
+% Finite-step and other stacking logics (not MoE)
+\begin{table}[t]\centering
+\caption{Same scores and Gram, different combination logics. Not an input-conditional MoE gate. Sequential tiny $\eta$ stays at a vertex; joint $(\eta,\pi)$ recovers GLS.}
+\label{tab:agod-stack-logics}
+\begin{tabular}{lccc}\toprule
+logic & $\pi_a$ & $\pi_b$ & $\pi_c$ \\
+\midrule
+vertex $\eta=0$ & 1.00 & 0.00 & 0.00 \\
+train $\eta=3\times10^{-3}$ & 1.00 & 0.00 & 0.00 \\
+finite-step $\eta=1$ & 0.92 & 0.00 & 0.08 \\
+finite-step $\eta=8$ & 0.41 & 0.16 & 0.43 \\
+joint GLS & 0.98 & 0.00 & 0.02 \\
+entropy $\tau=1$ & 0.47 & 0.31 & 0.22 \\
+MGDA (no target) & 0.26 & 0.26 & 0.47 \\
+pseudo-BMA $n=1$ & 0.47 & 0.31 & 0.22 \\
+pseudo-BMA $n=50$ & 1.00 & 0.00 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
