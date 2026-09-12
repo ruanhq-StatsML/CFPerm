@@ -33,7 +33,31 @@ if α_m < θ: zero ∂L/∂θ_m      # adaptation FLOPs ↓
 Category shift from Tools & Home Improvement → Sports/Fashion/… is attributed
 mostly to **image**; AGOD raises image LR and gates text updates.
 
-## Run
+## Accuracy rule: concept↑ LR / covariate↓ LR
+
+```
+covariate_m = max(AUC_m − 0.5, 0) · (1 + VIMP_m)   # P(X) shift → damp LR
+concept_m   = PO_m                                   # P(Y|X) shift → raise LR
+score_m     = λ_c · concept_m − λ_v · covariate_m
+α           = Softmax(score / τ)   (EMA)
+LR_m        = lr0 · (β + (1−β) · α_m · |M|)
+```
+
+Smoke (3 shards, 6 category windows), mean held-out Acc lift:
+
+| Policy | Rule | Mean Acc lift | Mean Acc post |
+|---|---|---:|---:|
+| B1 | equal LR | +0.058 | 0.539 |
+| B2 | high total shift → high LR | +0.091 | 0.556 |
+| **B3** | **concept↑ / covariate↓** | **+0.072** | **0.549** |
+
+B3 − B1 lift = **+0.014**; B3 − B2 lift = −0.019 on this smoke.
+
+```bash
+python3 scripts/run_agod_amazon_concept_cov_lr.py
+```
+
+## Run (base modality-LR prototype)
 
 ```bash
 # put shards under data/amazon_reviews/shards/ (from HF), then:
