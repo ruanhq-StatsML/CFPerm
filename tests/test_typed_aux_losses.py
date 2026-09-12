@@ -19,8 +19,11 @@ from typed_aux_losses import (  # noqa: E402
     pair_report,
     rank_modalities,
     report_typed_streams,
+    run_typed_with_aux,
     spectrum_psd,
     two_by_two_gram_erank,
+    _corr,
+    _d_rho2_da,
 )
 from typed_shift_stepsize import make_typed_stream  # noqa: E402
 
@@ -114,3 +117,37 @@ def test_amazon_heatmap_ranks_gift_and_hops():
 def test_rank_modalities_stable():
     assert rank_modalities({"video": 0.2, "audio": 0.2, "text": 0.1})[2] == "text"
     assert pair_report is not None
+
+
+def test_d_rho2_matches_finite_diff():
+    rng = np.random.default_rng(0)
+    a = rng.normal(size=24)
+    b = rng.normal(size=24)
+    g, _ = _d_rho2_da(a, b)
+    eps = 1e-5
+    num = np.zeros_like(a)
+    for i in range(len(a)):
+        ap = a.copy()
+        am = a.copy()
+        ap[i] += eps
+        am[i] -= eps
+        num[i] = (_corr(ap, b) ** 2 - _corr(am, b) ** 2) / (2.0 * eps)
+    assert float(np.max(np.abs(g - num))) < 5e-3
+
+
+def test_typed_with_aux_returns_risk_keys():
+    stream = make_typed_stream(n_batches=4, n_per=24, seed=2, cov={"video": 0.12, "audio": 0.04, "text": 0.0})
+    rec = run_typed_with_aux(stream, aux="corr", steps_per_batch=3, warmup_steps=1, seed=2)
+    assert rec["online_mse"] >= 0.0
+    assert rec["bwt"] >= 0.0
+    assert rec["aux"] == "corr"
+
+
+def test_amazon_corr_aux_runs():
+    from amazon_continuous_batches import make_amazon_like_stream, run_amazon_method
+
+    stream = make_amazon_like_stream(n_batches=4, n_per=28, seed=3, cov=0.25)
+    a, _ = run_amazon_method(stream, method="tss", steps_per_batch=2, warmup_steps=1, seed=3, aux="corr")
+    b, _ = run_amazon_method(stream, method="tss", steps_per_batch=2, warmup_steps=1, seed=3, aux=None)
+    assert np.isfinite(a["online_mse"])
+    assert np.isfinite(b["online_mse"])

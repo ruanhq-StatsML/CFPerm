@@ -527,3 +527,436 @@ def plot_aux_comparison(report, path, amazon=None):
     )
     fig.tight_layout(rect=(0, 0.02, 1, 0.91))
     return _save(fig, path)
+
+
+LAM_CORR = 0.40
+LAM_ERANK = 0.80
+
+
+def _brier(logits, y):
+    from msrvtt_continuous_trainer import _softmax
+
+    P = _softmax(logits)
+    y = np.asarray(y, dtype=int)
+    Y = np.zeros_like(P)
+    Y[np.arange(len(y)), np.clip(y, 0, P.shape[1] - 1)] = 1.0
+    return float(np.mean((P - Y) ** 2))
+
+
+def _d_rho2_da(a, b, eps=1e-12):
+    """Gradient of Corr(a,b)^2 with respect to a."""
+    a = np.asarray(a, dtype=float).reshape(-1)
+    b = np.asarray(b, dtype=float).reshape(-1)
+    a = a - a.mean()
+    b = b - b.mean()
+    na = float(np.sqrt(np.dot(a, a))) + eps
+    nb = float(np.sqrt(np.dot(b, b))) + eps
+    rho = float(np.clip(np.dot(a, b) / (na * nb), -1.0, 1.0))
+    drho = (b / nb - rho * a / na) / na
+    return 2.0 * rho * drho, rho
+
+
+def head_mean_scores(probe, Xs):
+    return {g: (Xs[g] @ probe.W[g]).mean(axis=1) for g in GROUP_NAMES}
+
+
+def typed_corr_dW(probe, Xs, c, tau_c=0.25):
+    """d L_corr / d W_m on unimodal mean-logits. Same weights as the scalar loss."""
+    scores = head_mean_scores(probe, Xs)
+    tot = sum(float(c.get(g, 0.0)) for g in GROUP_NAMES) + 1e-12
+    d_s = {g: np.zeros(len(scores[g]), dtype=float) for g in GROUP_NAMES}
+    for m in GROUP_NAMES:
+        cm = float(c.get(m, 0.0))
+        if cm < tau_c:
+            continue
+        for mp in GROUP_NAMES:
+            if m == mp:
+                continue
+            w = cm * (1.0 - float(c.get(mp, 0.0)) / tot)
+            d_m, _ = _d_rho2_da(scores[m], scores[mp])
+            d_mp, _ = _d_rho2_da(scores[mp], scores[m])
+            d_s[m] += w * d_m
+            d_s[mp] += w * d_mp
+    n = max(len(next(iter(d_s.values()))), 1)
+    dW = {}
+    for g in GROUP_NAMES:
+        n_cls = int(probe.W[g].shape[1])
+        col = (Xs[g].T @ d_s[g]) / n
+        dW[g] = np.outer(col, np.ones(n_cls) / max(n_cls, 1))
+    return dW
+
+
+def probe_step_aux(probe, Xs, y, lrs, active, aux, c_hat, X0=None, X1=None, lam_corr=LAM_CORR, lam_erank=LAM_ERANK):
+    """CE step, then optional balance scale / erank shrink / typed-corr extra grad."""
+    lrs = {g: float(lrs[g]) for g in GROUP_NAMES}
+    if aux == "balance":
+        inv = balance_loss(unimodal_ce(probe, Xs, y), kind="inv")["weights"]
+        names = (active,) if active else GROUP_NAMES
+        for g in names:
+            lrs[g] = lrs[g] * 3.0 * float(inv[g])
+    if aux == "erank" and X0 is not None and X1 is not None:
+        gram = pair_mean_gram_erank(X0, X1)
+        for g in GROUP_NAMES:
+            lrs[g] = lrs[g] / (1.0 + float(lam_erank) * max(float(gram[g]) - 1.0, 0.0))
+    probe.step(Xs, y, lrs, active=active)
+    if aux == "corr":
+        dW = typed_corr_dW(probe, Xs, c_hat)
+        names = (active,) if active else GROUP_NAMES
+        for g in names:
+            probe.W[g] = probe.W[g] - lrs[g] * float(lam_corr) * dW[g]
+    return lrs
+
+
+def run_typed_with_aux(
+    stream,
+    method="tss",
+    aux=None,
+    eta0=None,
+    steps_per_batch=6,
+    warmup_steps=4,
+    seed=SEED,
+    lam_corr=LAM_CORR,
+    lam_erank=LAM_ERANK,
+):
+    """Same next-epoch TSS loop as ``run_method``, with an optional aux on the step."""
+    from typed_shift_stepsize import (
+        ETA0,
+        TAU_D,
+        TIME_METHODS,
+        _acc,
+        concept_intensity,
+        scheduler_lrs,
+        tss_lr,
+    )
+    from msrvtt_continuous_trainer import _minibatch
+
+    if eta0 is None:
+        eta0 = ETA0
+    X = np.asarray(stream.X, dtype=float)
+    y = np.asarray(stream.y, dtype=int)
+    batch = np.asarray(stream.batch, dtype=int)
+    n_batches = int(batch.max()) + 1
+    n_classes = int(y.max()) + 1
+    probe = SeparateHeadProbe(n_classes=n_classes, seed=seed)
+    rng = np.random.default_rng(seed)
+    plateau_eta = float(eta0)
+    best_ce = np.inf
+    stall = 0
+    plateau_etas = {g: float(eta0) for g in GROUP_NAMES}
+    best_ce_m = {g: np.inf for g in GROUP_NAMES}
+    stall_m = {g: 0 for g in GROUP_NAMES}
+    clocks = {g: 0 for g in GROUP_NAMES}
+    next_lrs = {g: eta0 / 3.0 for g in GROUP_NAMES}
+    n_iter = int(max(1, warmup_steps)) * len(GROUP_NAMES)
+    i0 = np.flatnonzero(batch == 0)
+    Xs0, y0 = _split_modalities(X[i0]), y[i0]
+    chunk = max(4, i0.size // 2)
+    warm = {g: eta0 / 3.0 for g in GROUP_NAMES}
+    for head in GROUP_NAMES:
+        for _ in range(int(max(1, warmup_steps))):
+            sl = _minibatch(rng, i0.size, chunk)
+            probe.step({g: Xs0[g][sl] for g in GROUP_NAMES}, y0[sl], warm, active=head)
+
+    history = []
+    c_hat = {g: 0.0 for g in GROUP_NAMES}
+    d_hat = {g: 0.0 for g in GROUP_NAMES}
+    share = {g: 1.0 / 3.0 for g in GROUP_NAMES}
+
+    def snapshot(round_id, phase, idx, lrs):
+        Xs = _split_modalities(X[idx])
+        yy = y[idx]
+        logits = probe.logits(Xs)
+        return {
+            "round": int(round_id),
+            "phase": phase,
+            "method": method,
+            "aux": aux,
+            "lr": {g: float(lrs[g]) for g in GROUP_NAMES},
+            "c": {g: float(c_hat[g]) for g in GROUP_NAMES},
+            "acc": _acc(logits, yy),
+            "ce": _ce(logits, yy),
+            "mse": _brier(logits, yy),
+            "bwt": float(_acc(probe.logits(Xs0), y0)),
+            "bwt_mse": float(_brier(probe.logits(Xs0), y0)),
+        }
+
+    history.append(snapshot(0, "warmup", i0, warm))
+
+    for t in range(1, n_batches):
+        ip, ic = np.flatnonzero(batch == t - 1), np.flatnonzero(batch == t)
+        Xp, yp = X[ip], y[ip]
+        Xc, yc = X[ic], y[ic]
+        Xsp, Xsc = _split_modalities(Xp), _split_modalities(Xc)
+        c_hat, share, _ = covariate_intensity(Xp, Xc)
+        d_hat, _ = concept_intensity(probe, Xsp, yp, Xsc, yc)
+        uni_ce = unimodal_ce(probe, Xsc, yc)
+        if method in TIME_METHODS:
+            lrs = scheduler_lrs(method, t, n_batches, eta0, c_hat, share, d_hat, plateau_eta=plateau_eta)
+        else:
+            lrs = dict(next_lrs)
+        n_steps = max(1, int(steps_per_batch) // 3)
+        chunk_t = max(4, ic.size // 2)
+        for head in GROUP_NAMES:
+            for _ in range(n_steps):
+                sl = _minibatch(rng, ic.size, chunk_t)
+                probe_step_aux(
+                    probe,
+                    {g: Xsc[g][sl] for g in GROUP_NAMES},
+                    yc[sl],
+                    lrs,
+                    head,
+                    aux,
+                    c_hat,
+                    X0=Xp,
+                    X1=Xc,
+                    lam_corr=lam_corr,
+                    lam_erank=lam_erank,
+                )
+        row = snapshot(t, "adapt", ic, lrs)
+        history.append(row)
+        uni_ce = unimodal_ce(probe, Xsc, yc)
+        if row["ce"] < best_ce - 1e-4:
+            best_ce = row["ce"]
+            stall = 0
+        else:
+            stall += 1
+            if stall >= 2:
+                plateau_eta *= 0.5
+                stall = 0
+        for g in GROUP_NAMES:
+            if uni_ce[g] < best_ce_m[g] - 1e-4:
+                best_ce_m[g] = uni_ce[g]
+                stall_m[g] = 0
+            else:
+                stall_m[g] += 1
+                if stall_m[g] >= 2:
+                    plateau_etas[g] *= 0.5
+                    stall_m[g] = 0
+            clocks[g] = 0 if d_hat[g] >= TAU_D else clocks[g] + 1
+        n_iter += n_steps * len(GROUP_NAMES)
+        next_lrs = scheduler_lrs(
+            method,
+            t + 1,
+            n_batches,
+            eta0,
+            c_hat,
+            share,
+            d_hat,
+            plateau_eta=plateau_eta,
+            plateau_etas=plateau_etas,
+            clocks=clocks,
+            uni_ce=uni_ce,
+            prev_lrs=lrs,
+            n_iter=n_iter,
+            n_epoch=t,
+        )
+        if method == "tss":
+            next_lrs = tss_lr(c_hat, d_hat, eta0=eta0, prev=lrs, n_iter=n_iter, n_epoch=t)
+
+    adapt = [h for h in history if h["phase"] == "adapt"]
+    split = int(stream.meta.get("concept_at") or max(n_batches // 2, 1))
+    split = int(min(max(split, 1), n_batches - 1))
+    post = [h for h in adapt if h["round"] >= split]
+    return {
+        "method": method,
+        "aux": aux or "none",
+        "n_batches": n_batches,
+        "online_acc": float(np.mean([h["acc"] for h in adapt])) if adapt else float("nan"),
+        "online_ce": float(np.mean([h["ce"] for h in adapt])) if adapt else float("nan"),
+        "online_mse": float(np.mean([h["mse"] for h in adapt])) if adapt else float("nan"),
+        "post_acc": float(np.mean([h["acc"] for h in post])) if post else float("nan"),
+        "bwt": float(history[-1]["bwt"]) if history else float("nan"),
+        "bwt_mse": float(history[-1]["bwt_mse"]) if history else float("nan"),
+        "history": history,
+    }
+
+
+def _mean_sd(vals):
+    a = np.asarray(vals, dtype=float)
+    if a.size == 0:
+        return {"mean": float("nan"), "sd": float("nan")}
+    return {"mean": float(a.mean()), "sd": float(a.std(ddof=1) if a.size > 1 else 0.0)}
+
+
+def run_typed_risk_suite(seeds=None, n_batches=12, n_per=64, steps_per_batch=6):
+    """Identification is Table 1. This is the risk layer: BWT / CE / Brier by regime."""
+    from typed_shift_stepsize import REGIMES
+
+    seeds = list(seeds if seeds is not None else range(SEED, SEED + 4))
+    auxes = (None, "balance", "corr", "erank")
+    regimes = {k: REGIMES[k] for k in ("cov_only", "concept_only") if k in REGIMES}
+    rows = []
+    table = {}
+    for rname, spec in regimes.items():
+        table[rname] = {}
+        for aux in auxes:
+            key = aux or "none"
+            recs = []
+            for s in seeds:
+                stream = make_typed_stream(n_batches=n_batches, n_per=n_per, seed=int(s), **spec)
+                rec = run_typed_with_aux(stream, method="tss", aux=aux, steps_per_batch=steps_per_batch, seed=int(s))
+                recs.append(rec)
+                rows.append({"regime": rname, "aux": key, "seed": int(s), **{k: rec[k] for k in ("online_acc", "online_ce", "online_mse", "post_acc", "bwt", "bwt_mse")}})
+            table[rname][key] = {
+                k: _mean_sd([r[k] for r in recs]) for k in ("online_acc", "online_ce", "online_mse", "post_acc", "bwt", "bwt_mse")
+            }
+    return {"table": table, "rows": rows, "seeds": seeds}
+
+
+def run_amazon_risk_suite(seeds=None, n_per=240, steps_per_batch=8, source="amazon"):
+    """Amazon rating MSE: plateau / TSS vs TSS+corr (don't chase Δμ) vs TSS+erank."""
+    from amazon_continuous_batches import (
+        CATEGORIES,
+        CACHE_DIR,
+        ETA0,
+        featurize_reviews,
+        load_amazon_reviews,
+        make_amazon_like_stream,
+        run_amazon_method,
+    )
+
+    seeds = list(seeds if seeds is not None else range(SEED, SEED + 6))
+    setups = (
+        ("plateau", None),
+        ("tss", None),
+        ("tss", "corr"),
+        ("tss", "erank"),
+    )
+    rows = []
+    traces = {}
+    for s in seeds:
+        if source == "synthetic":
+            stream = make_amazon_like_stream(n_batches=9, n_per=n_per, seed=int(s), cov=0.35)
+        else:
+            raw = load_amazon_reviews(categories=CATEGORIES, n_per=n_per, seed=int(s), cache_dir=CACHE_DIR)
+            stream = featurize_reviews(raw)
+        for method, aux in setups:
+            key = method if aux is None else "%s+%s" % (method, aux)
+            rec, _ = run_amazon_method(
+                stream,
+                method=method,
+                eta0=ETA0,
+                steps_per_batch=steps_per_batch,
+                seed=int(s),
+                aux=aux,
+            )
+            traces.setdefault(key, []).append(rec)
+            rows.append(
+                {
+                    "seed": int(s),
+                    "method": key,
+                    "online_mse": rec["online_mse"],
+                    "bwt": rec["bwt"],
+                    "mean_eta": rec["mean_eta"],
+                }
+            )
+    table = {}
+    for key, recs in traces.items():
+        table[key] = {k: _mean_sd([r[k] for r in recs]) for k in ("online_mse", "bwt", "mean_eta")}
+    return {"table": table, "rows": rows, "seeds": seeds, "source": source}
+
+
+def write_risk_tex(typed, amazon, path):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    def cell(block, key):
+        rec = block[key]
+        return "$%.3f$ $(%.3f)$" % (rec["mean"], rec["sd"])
+
+    lines = [
+        r"% Risk layer: aux on top of TSS. Auto-generated.",
+        r"\begin{table}[ht]\centering",
+        r"\caption{Evaluation is two-layer. Identification (Table~\ref{tab:typed-aux-losses}) asks whether the regularizer types the hop.",
+        r"Risk asks whether that typing moves the pre-specified metric: online CE / Brier on each regime, BWT when it is not at ceiling, Amazon online MSE.",
+        r"Balance is the usual multimodal gradient blender and is allowed to \emph{hurt} BWT.",
+        r"Typed $L_{\mathrm{corr}}$ is an EWC-style leak penalty, not a joint-CE minimizer.",
+        r"Hop-Gram erank is a monotone rewrite of $1-\cos$; extra shrink is stronger TSS, not a new intensity.}",
+        r"\label{tab:typed-aux-risk}",
+        r"\small",
+        r"\begin{tabular}{@{}l cc cc cc@{}}\toprule",
+        r"& \multicolumn{2}{c}{covariate-only BWT / Brier} & \multicolumn{2}{c}{concept post-acc / CE} & \multicolumn{2}{c}{Amazon MSE / BWT} \\",
+        r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}",
+        r"aux on TSS & BWT acc. & Brier & post-acc. & online CE & online MSE & BWT MSE \\",
+        r"\midrule",
+    ]
+    order = ("none", "balance", "corr", "erank")
+    labels = {"none": "TSS (no aux)", "balance": "TSS + inv-CE balance", "corr": r"TSS + typed $L_{\mathrm{corr}}$", "erank": "TSS + hop-Gram erank"}
+    cov = typed["table"]["cov_only"]
+    con = typed["table"]["concept_only"]
+    amazon_map = {
+        "none": "tss",
+        "balance": None,
+        "corr": "tss+corr",
+        "erank": "tss+erank",
+    }
+    at = amazon["table"] if amazon else {}
+    for aux in order:
+        a_on = cell(cov[aux], "bwt")
+        a_br = cell(cov[aux], "bwt_mse")
+        c_ac = cell(con[aux], "post_acc")
+        c_ce = cell(con[aux], "online_ce")
+        key = amazon_map[aux]
+        if key and key in at:
+            am_on = cell(at[key], "online_mse")
+            am_bw = cell(at[key], "bwt")
+        else:
+            am_on, am_bw = r"---", r"---"
+        lines.append("%s & %s & %s & %s & %s & %s & %s \\\\" % (labels[aux], a_on, a_br, c_ac, c_ce, am_on, am_bw))
+    if "plateau" in at:
+        lines.append(
+            r"plateau (Amazon clock) & --- & --- & --- & --- & %s & %s \\"
+            % (cell(at["plateau"], "online_mse"), cell(at["plateau"], "bwt"))
+        )
+    lines += [
+        r"\bottomrule",
+        r"\end{tabular}",
+        r"\end{table}",
+    ]
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def plot_aux_risk(typed, amazon, path):
+    import matplotlib.pyplot as plt
+    from msrvtt_attribution_plots import GRID, INK, VIDEO_C, _save, _style
+
+    _style()
+    fig, axes = plt.subplots(1, 3, figsize=(12.0, 3.7))
+    aux_order = ("none", "balance", "corr", "erank")
+    aux_lab = ("TSS", "+bal", "+corr", "+erank")
+    x = np.arange(len(aux_order))
+    cov = typed["table"]["cov_only"]
+    con = typed["table"]["concept_only"]
+    axes[0].bar(x, [cov[a]["online_ce"]["mean"] for a in aux_order], yerr=[cov[a]["online_ce"]["sd"] for a in aux_order], color=VIDEO_C, capsize=3)
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(aux_lab)
+    axes[0].set_title("covariate-only online CE (lower better)", loc="left", fontsize=10.2, fontweight="bold")
+    axes[0].grid(True, axis="y", color=GRID)
+    axes[1].bar(x, [con[a]["online_ce"]["mean"] for a in aux_order], yerr=[con[a]["online_ce"]["sd"] for a in aux_order], color="#2F6B4F", capsize=3)
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(aux_lab)
+    axes[1].set_title("concept-only online CE (lower better)", loc="left", fontsize=10.2, fontweight="bold")
+    axes[1].grid(True, axis="y", color=GRID)
+    if amazon:
+        keys = ("plateau", "tss", "tss+corr", "tss+erank")
+        labs = ("plateau", "TSS", "+corr", "+erank")
+        at = amazon["table"]
+        xx = np.arange(len(keys))
+        axes[2].bar(xx, [at[k]["online_mse"]["mean"] for k in keys], yerr=[at[k]["online_mse"]["sd"] for k in keys], color="#2C4A6E", capsize=3)
+        axes[2].set_xticks(xx)
+        axes[2].set_xticklabels(labs)
+        axes[2].set_title("Amazon online rating MSE", loc="left", fontsize=10.2, fontweight="bold")
+        axes[2].grid(True, axis="y", color=GRID)
+    else:
+        axes[2].axis("off")
+    fig.suptitle(
+        "Risk layer: type the hop first, then ask BWT / post-change / MSE",
+        fontsize=12.2,
+        fontweight="bold",
+        color=INK,
+        x=0.04,
+        ha="left",
+    )
+    fig.tight_layout(rect=(0, 0.02, 1, 0.90))
+    return _save(fig, path)
