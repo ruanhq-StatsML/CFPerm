@@ -6,7 +6,7 @@ Statistical method scaffold, not a product board. Plug in another labelled strea
 
 - Covariate intensity \(c_m\): \(|d|\) of the modality coordinate-mean under consecutive batches \(W\). Absolute, not a simplex share.
 - Concept intensity \(\delta_m\): two-fold excess 0-1 risk of a unimodal ridge head after mean-aligning \(X\). A location shift in \(P(X)\) is removed; a change in \(P(Y\mid X)\) is not.
-- Signed map: \(\eta_m=\eta_0(1+\beta\hat\delta_m)/(1+\lambda\hat c_m)\) when a channel speaks. Both quiet \(\Rightarrow\) **hold last \(\eta_m\)** (do not retune, do not set 0). Covariate **lowers** the step; concept **raises** it. Do not invert \(\pi_m=c_m/\sum c\).
+- Signed map: \(s=\sqrt{n_{\mathrm{iter}}}\), \(\eta^\star=\eta_0(1+\beta\hat\delta_m/s)/(1+\lambda\hat c_m s)\). Video **缓升** toward the target; drops can be faster. Both quiet \(\Rightarrow\) hold last \(\eta_m\).
 
 ## What to compare
 

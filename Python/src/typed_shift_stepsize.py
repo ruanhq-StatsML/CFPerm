@@ -5,8 +5,10 @@ Estimate (c_m, δ_m) on the current pair of batches, then set η_m for the
 
     c_m  = |Cohen's d| of the modality-mean under W
     δ_m  = two-fold excess 0-1 risk after mean-aligning X
-    η_m  = η0 · (1 + β δ_m) / (1 + λ c_m)   when a channel speaks
-    quiet: both off → do not change η_m (hold last epoch's step)
+    η_m  = η0 · (1 + β δ_m / s) / (1 + λ c_m s)
+    s    = sqrt(n_iter)  (or sqrt(n_epoch))
+    quiet: hold last η_m
+    η_v rises slowly (blend toward the target); drops can be faster
 
 Comparators:
     global clocks (same η on every head): constant, cosine, plateau
@@ -38,6 +40,9 @@ TAU_C = 0.25
 TAU_D = 0.05
 ETA0 = 0.10
 ETA_MAX_MULT = 2.5
+RHO_UP_VIDEO = 0.30
+RHO_UP = 0.55
+RHO_DOWN = 0.85
 METHODS = (
     "constant",
     "cosine",
@@ -218,6 +223,15 @@ def concept_intensity(probe, Xs0, y0, Xs1, y1, k=12, ridge=0.8):
     return out, extras
 
 
+def _progress_scale(n_iter=None, n_epoch=None):
+    """s = sqrt(n_iter), or sqrt(n_epoch) if only epoch count is given."""
+    if n_iter is not None:
+        return float(np.sqrt(max(float(n_iter), 1.0)))
+    if n_epoch is not None:
+        return float(np.sqrt(max(float(n_epoch), 1.0)))
+    return 1.0
+
+
 def tss_lr(
     c,
     delta,
@@ -228,25 +242,39 @@ def tss_lr(
     tau_d=TAU_D,
     eta_max_mult=ETA_MAX_MULT,
     prev=None,
+    n_iter=None,
+    n_epoch=None,
+    rho_up_video=RHO_UP_VIDEO,
+    rho_up=RHO_UP,
+    rho_down=RHO_DOWN,
 ):
     """Signed per-head stepsize for the next epoch.
 
-    η ∝ (1+βδ)/(1+λc): covariate intensity lowers the step, concept intensity
-    raises it. If both channels are quiet, keep the previous η_m (do not
-    retune, and do not slam the step to 0).
+    Intensities are time-scaled with s = sqrt(n_iter) (or sqrt(n_epoch)):
+    c_eff = c_m s,  δ_eff = δ_m / s. Video η approaches its target slowly
+    (缓升); a drop from covariate can be faster. Quiet holds last η_m.
     """
     prev = prev or {}
     default = float(eta0) / 3.0
+    s = _progress_scale(n_iter=n_iter, n_epoch=n_epoch)
     lrs = {}
     cap = float(eta0) * float(eta_max_mult)
     for name in GROUP_NAMES:
         cm = float(c.get(name, 0.0))
         dm = float(delta.get(name, 0.0))
+        old = float(prev.get(name, default))
         if cm < tau_c and dm < tau_d:
-            lrs[name] = float(prev.get(name, default))
+            lrs[name] = old
             continue
-        eta = float(eta0) * (1.0 + float(beta) * dm) / (1.0 + float(lam) * cm)
-        lrs[name] = float(min(max(eta, 0.0), cap))
+        c_eff = cm * s
+        d_eff = dm / s
+        target = float(eta0) * (1.0 + float(beta) * d_eff) / (1.0 + float(lam) * c_eff)
+        target = float(min(max(target, 0.0), cap))
+        if target >= old:
+            rho = float(rho_up_video if name == "video" else rho_up)
+        else:
+            rho = float(rho_down)
+        lrs[name] = float(old + rho * (target - old))
     return lrs
 
 
@@ -275,16 +303,21 @@ def scheduler_lrs(
     clocks=None,
     uni_ce=None,
     prev_lrs=None,
+    n_iter=None,
+    n_epoch=None,
+    lam=LAMBDA,
+    beta=BETA,
 ):
     """Per-head learning rates. Global clocks copy one η onto every head."""
+    typed = dict(eta0=eta0, prev=prev_lrs, n_iter=n_iter, n_epoch=n_epoch, lam=lam, beta=beta)
     if method == "tss":
-        return tss_lr(c, delta, eta0=eta0, prev=prev_lrs)
+        return tss_lr(c, delta, **typed)
     if method == "oracle_tss":
-        return tss_lr(true_c or c, true_delta or delta, eta0=eta0, prev=prev_lrs)
+        return tss_lr(true_c or c, true_delta or delta, **typed)
     if method == "fsds_pi":
         return {g: float(eta0) * float(share[g]) for g in GROUP_NAMES}
     if method == "inv_c":
-        return tss_lr(c, {g: 0.0 for g in GROUP_NAMES}, eta0=eta0, beta=0.0, prev=prev_lrs)
+        return tss_lr(c, {g: 0.0 for g in GROUP_NAMES}, **{**typed, "beta": 0.0})
     if method == "polyak_m":
         uni_ce = uni_ce or {g: 1.0 for g in GROUP_NAMES}
         mean_ce = float(np.mean(list(uni_ce.values())) + 1e-8)
@@ -456,6 +489,7 @@ def run_method(
     stall_m = {g: 0 for g in GROUP_NAMES}
     clocks = {g: 0 for g in GROUP_NAMES}
     next_lrs = {g: eta0 / 3.0 for g in GROUP_NAMES}
+    n_iter = int(max(1, warmup_steps)) * len(GROUP_NAMES)
     i0 = np.flatnonzero(batch == 0)
     Xs0, y0 = _split_modalities(X[i0]), y[i0]
     chunk = max(4, i0.size // 2)
@@ -548,6 +582,7 @@ def run_method(
                 clocks[g] = 0
             else:
                 clocks[g] += 1
+        n_iter += n_steps * len(GROUP_NAMES)
         next_lrs = scheduler_lrs(
             method,
             t + 1,
@@ -563,9 +598,22 @@ def run_method(
             clocks=clocks,
             uni_ce=uni_ce,
             prev_lrs=lrs,
+            n_iter=n_iter,
+            n_epoch=t,
+            lam=lam,
+            beta=beta,
         )
         if method == "tss":
-            next_lrs = tss_lr(c_hat, d_hat, eta0=eta0, lam=lam, beta=beta, prev=lrs)
+            next_lrs = tss_lr(
+                c_hat,
+                d_hat,
+                eta0=eta0,
+                lam=lam,
+                beta=beta,
+                prev=lrs,
+                n_iter=n_iter,
+                n_epoch=t,
+            )
 
     last = np.flatnonzero(batch == n_batches - 1)
     adapt = [h for h in history if h["phase"] == "adapt"]
