@@ -1,0 +1,24 @@
+% AGOD adapter layers + dynamic L3 gate (Amazon / MSR-VTT)
+\begin{table}[t]
+\centering
+\caption{Adapter-layer smoke on Amazon and MSR-VTT: fixed routing prior, vary only L3 hard-gate. L2 soft LR$(\alpha)$ always on. FWD inference always paid.}
+\label{tab:agod-adapter-gate-layers}
+\begin{tabular}{llcccc}
+\toprule
+Dataset & L3 gate & Acc lift & flops\_rel & util & switches/win \\
+\midrule
+amazon & none & +0.114 & 1.000 & +0.114 & 0.00 \\
+amazon & fixed & +0.114 & 0.778 & +0.158 & 0.20 \\
+amazon & quantile & +0.114 & 0.733 & +0.156 & 0.00 \\
+amazon & ema\_theta & +0.114 & 0.778 & +0.158 & 0.20 \\
+amazon & hysteresis & +0.114 & 0.733 & +0.156 & 0.00 \\
+amazon & random & +0.109 & 0.911 & +0.127 & 0.60 \\
+msrvtt & none & +0.016 & 1.000 & +0.016 & 0.00 \\
+msrvtt & fixed & +0.019 & 0.841 & +0.020 & 1.40 \\
+msrvtt & quantile & +0.024 & 0.810 & +0.029 & 1.20 \\
+msrvtt & ema\_theta & +0.009 & 0.873 & +0.007 & 1.00 \\
+msrvtt & hysteresis & +0.009 & 0.841 & +0.005 & 1.00 \\
+msrvtt & random & +0.045 & 0.841 & +0.057 & 1.20 \\
+\bottomrule
+\end{tabular}
+\end{table}
