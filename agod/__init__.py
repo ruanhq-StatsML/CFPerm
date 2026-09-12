@@ -72,6 +72,16 @@ from .lr_controller import (
     softmax_scores,
     z_norm,
 )
+from .online_stacking import (
+    METHODS as STACKING_METHODS,
+    OnlineStacker,
+    best_expert_loss,
+    honest_step,
+    leaky_step,
+    oracle_convex_combo,
+    pi_to_lr,
+    prequential_regret,
+)
 from .mmd import rbf_mmd2, whiten_pair
 from .shift import decompose_hybrid, decompose_mmd, decompose_rf
 
@@ -134,6 +144,14 @@ __all__ = [
     "characterize_corr",
     "stat_corr_lr",
     "characterize_stat_traj",
+    "OnlineStacker",
+    "STACKING_METHODS",
+    "honest_step",
+    "leaky_step",
+    "oracle_convex_combo",
+    "best_expert_loss",
+    "prequential_regret",
+    "pi_to_lr",
 ]
 
 __version__ = "0.1.0"

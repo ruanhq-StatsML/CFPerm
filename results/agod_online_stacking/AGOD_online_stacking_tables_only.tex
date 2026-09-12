@@ -1,0 +1,22 @@
+% Online stacking prequential evaluation
+\begin{table}[t]\centering
+\caption{Honest prequential MSE and regret vs best expert / best convex combo.}
+\label{tab:agod-online-stacking}
+\begin{tabular}{llrrr}\toprule
+stream & method & preq MSE & regret vs best & regret vs combo \\
+\midrule
+switch & equal & 0.226 & -0.302 & +0.000 \\
+switch & hedge & 0.075 & -0.453 & -0.151 \\
+switch & osl\_disc & 0.546 & +0.017 & +0.320 \\
+switch & osl\_sgd & 0.058 & -0.470 & -0.168 \\
+switch & bg & 0.076 & -0.452 & -0.150 \\
+switch & gls\_ewma & 0.097 & -0.431 & -0.129 \\
+clones & equal & 0.136 & +0.029 & +0.055 \\
+clones & hedge & 0.092 & -0.015 & +0.011 \\
+clones & osl\_disc & 0.109 & +0.002 & +0.028 \\
+clones & osl\_sgd & 0.092 & -0.015 & +0.010 \\
+clones & bg & 0.102 & -0.005 & +0.021 \\
+clones & gls\_ewma & 0.092 & -0.015 & +0.011 \\
+\bottomrule
+\end{tabular}
+\end{table}
