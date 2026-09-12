@@ -1,0 +1,80 @@
+% Typed shift stepsize (TSS): a statistical procedure, not a dashboard.
+% Estimators, signed LR map, and the scheduler comparison.
+% Requires amsmath, booktabs. Table~\ref{tab:tss-vs-schedulers} is auto-generated.
+
+\paragraph{Typed shift stepsize.}
+Let $W$ index consecutive batches and let $X=(X^{(v)},X^{(a)},X^{(t)})$ be the concatenated video/audio/text block.
+Covariate shift on modality $m$ is a change in $P(X^{(m)}\mid W)$.
+Concept drift on modality $m$ is a change in $P(Y\mid X^{(m)})$.
+These are different identified objects and they must not share a learning-rate sign.
+
+\emph{Covariate intensity.}
+Let $z_i^{(m)}$ be the coordinate-mean of block $m$ on window $i$.
+The two-sample Cohen statistic
+\begin{equation}
+  \hat c_m
+  =
+  \bigl|\,d\bigl(z^{(m)}\mid W=t-1,\; z^{(m)}\mid W=t\bigr)\bigr|
+\end{equation}
+is an absolute intensity, not a simplex share.
+The share $\pi_m=\hat c_m/\sum_{m'}\hat c_{m'}$ remains a \emph{which-head} budget (open vision, then audio, not clip-level text).
+Using $\eta_m=\eta_0\pi_m$ has the wrong sign whenever the map $P(Y\mid X^{(m)})$ is still valid.
+
+\emph{Concept intensity.}
+Translate the new block to the old mean, $\tilde X_t^{(m)}=X_t^{(m)}-(\bar x_t^{(m)}-\bar x_{t-1}^{(m)})$.
+A pure location shift in $P(X^{(m)})$ is removed by that alignment; a change in $P(Y\mid X^{(m)})$ is not.
+Fit a unimodal ridge head on ANOVA-screened coordinates of one half of batch $t-1$ and evaluate 0-1 risk on the other half ($R_{t-1}$) and on $\tilde X_t^{(m)}$ ($R_t^{\mathrm{al}}$):
+\begin{equation}
+  \hat\delta_m
+  =
+  \bigl(R_t^{\mathrm{al}}-R_{t-1}\bigr)_+.
+\end{equation}
+In-sample CE of a joint SGD probe is not a concept estimator: it confuses generalization gap with a change in $P(Y\mid X)$.
+
+\emph{Signed stepsize.}
+With a quiet hold when both channels are off, and with a progress scale $s=\sqrt{n_{\mathrm{iter}}}$ (or $\sqrt{n_{\mathrm{epoch}}}$),
+\begin{equation}
+  \eta_m^{\star}
+  =
+  \eta_0\,
+  \frac{1+\beta\hat\delta_m/s}{1+\lambda\hat c_m s},
+  \qquad
+  \eta_m^{(t+1)}
+  =
+  \begin{cases}
+    \eta_m^{(t)}
+      & \text{if both quiet,}\\[0.35em]
+    \eta_m^{(t)}+\rho_m\bigl(\eta_m^{\star}-\eta_m^{(t)}\bigr)
+      & \text{otherwise.}
+  \end{cases}
+\end{equation}
+Covariate mass is multiplied by $s$ (more epochs $\Rightarrow$ a stronger penalty against chasing $X$).
+Concept mass is divided by $s$ (the same clock; the raise is milder as $n$ grows).
+For the visual head, $\rho_v$ on an upward step is smaller than on a drop: $\eta_v$ \emph{缓升}.
+Quiet still means do not retune, not $\eta_m=0$.
+
+Refresh / KV invalidation is a different control: it may still follow $\hat c_m$.
+TSS is the SGD map, not a memory schedule, and not a cosine lag board.
+
+\emph{Comparators.}
+Constant, step decay, cosine annealing, inverse-time, and a plateau rule (halve $\eta$ after two non-improving rounds) are scalar schedulers of $t$ or of the loss.
+They cannot type the shift.
+$\eta\propto\pi$ uses the same $\hat c_m$ with the opposite sign.
+Oracle TSS substitutes the known $(c_m,\delta_m)$ of the simulation DGP.
+Table~\ref{tab:tss-vs-schedulers} reports the Monte Carlo comparison.
+On covariate-only streams the target is backward transfer (accuracy on batch~0 after the stream); on concept-only streams it is post-change accuracy.
+
+\emph{Next epoch only.}
+The map is applied to epoch $t+1$.
+Batch $t$ is used to estimate $(\hat c,\hat\delta)$ with the frozen probe; the step taken on batch $t$ still uses $\eta^{(t)}$ from the previous pair.
+Global clocks (cosine, plateau) are functions of $t$ and copy one scalar onto every head.
+
+\emph{Per-head scheduler logic.}
+The same classical clocks can be kept \emph{per modality}: plateau$_m$ halves $\eta_m$ after two non-improving unimodal CE rounds; restart$_m$ is cosine with a per-head SGDR reset when $\hat\delta_m$ jumps; Polyak$_m$ sets $\eta_m$ proportional to unimodal CE.
+inv-$c$ is the covariate half of TSS ($\beta=0$).
+None of these type both channels at once, which is the only thing TSS adds.
+
+\emph{Other opportunities, not claimed here.}
+EWC / SI (raise a quadratic penalty when $\hat c_m$ is large, instead of shrinking $\eta_m$); Fisher-scaled or natural-gradient steps on the same split; Hedge / EXP3 over heads; a two-timescale freeze of high-$\hat c$ towers.
+Those are the next knobs on the same $(c_m,\delta_m)$ pair, not a different product loop.
+A second labelled extract is required before claiming a downstream-task magnitude; the present MSR-VTT windows illustrate $\hat c$ and the quiet text \emph{hold}, not a finished applied study.
