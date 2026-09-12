@@ -187,6 +187,22 @@ def decompose_rf(msg: base.MSG) -> dict:
     }
 
 
+
+
+def decompose_hybrid(msg: base.MSG, mmd_d: dict) -> dict:
+    """FSDS-style: MMD² for covariate (P(X)), PO for concept (P(Y|X))."""
+    cov_raw = dict(mmd_d["cov_raw"])
+    con_raw = {m: max(float(msg.po[m]), 0.0) for m in MODS}
+    cov, con = _z(cov_raw), _z(con_raw)
+    score = {m: LAM_CONCEPT * con[m] - LAM_COV * cov[m] for m in MODS}
+    return {
+        "cov_raw": cov_raw,
+        "con_raw": con_raw,
+        "cov": cov,
+        "con": con,
+        "score": score,
+    }
+
 def alpha_to_lr(alpha: dict, gain: dict | None = None) -> dict:
     inv = float(len(MODS))
     gain = gain or {m: 1.0 for m in MODS}
@@ -260,7 +276,7 @@ def train_window(model, opt, rows, device, tf, *, lr_mult):
 
 
 def run_policy(ctor, stream, device, tf, policy: str):
-    """B1 equal | B2 RF con−cov | B3 MMD con−cov | B4 MMD+intensity."""
+    """B1 equal | B2 RF | B3 MMD | B4 MMD+gain | B5 MMD-cov+PO-concept (FSDS)."""
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     model = ctor().to(device)
@@ -286,9 +302,13 @@ def run_policy(ctor, stream, device, tf, policy: str):
         elif policy == "B3":
             raw = _softmax(mmd_d["score"], TAU)
             decomp, gain = mmd_d, {m: 1.0 for m in MODS}
-        else:
+        elif policy == "B4":
             raw = _softmax(mmd_d["score"], TAU)
             decomp, gain = mmd_d, intensity_gain(mmd_d)
+        else:  # B5 FSDS hybrid: MMD covariate + PO concept
+            hy_d = decompose_hybrid(msg, mmd_d)
+            raw = _softmax(hy_d["score"], TAU)
+            decomp, gain = hy_d, {m: 1.0 for m in MODS}
 
         for m in MODS:
             ema[m] = EMA * ema[m] + (1.0 - EMA) * raw[m]
@@ -363,7 +383,11 @@ def summarize(results):
             "wins_vs_zero": int(sum(1 for x in lifts if x > 0)),
             "n_windows": len(traj),
         }
-    for a, b in [("B3", "B1"), ("B3", "B2"), ("B4", "B1"), ("B4", "B2"), ("B4", "B3")]:
+    for a, b in [
+        ("B3", "B1"), ("B3", "B2"),
+        ("B4", "B1"), ("B4", "B2"), ("B4", "B3"),
+        ("B5", "B1"), ("B5", "B2"), ("B5", "B3"), ("B5", "B4"),
+    ]:
         out[f"{a}_minus_{b}_lift"] = out[a]["mean_acc_lift"] - out[b]["mean_acc_lift"]
         out[f"{a}_minus_{b}_post"] = out[a]["mean_acc_post"] - out[b]["mean_acc_post"]
     return out
@@ -397,9 +421,9 @@ def plot_dash(results, summary, path: Path):
 
     ax = fig.add_subplot(gs[1, 0])
     for pol, c, mk in zip(
-        ["B1", "B2", "B3", "B4"],
-        ["#718096", "#DD6B20", "#2B6CB0", "#C53030"],
-        ["o", "s", "^", "D"],
+        ["B1", "B2", "B3", "B4", "B5"],
+        ["#718096", "#DD6B20", "#2B6CB0", "#C53030", "#805AD5"],
+        ["o", "s", "^", "D", "P"],
     ):
         ax.plot(
             [r["t"] + 1 for r in results[pol]],
@@ -414,18 +438,18 @@ def plot_dash(results, summary, path: Path):
     ax.legend(frameon=False, fontsize=8)
 
     ax = fig.add_subplot(gs[1, 1])
-    xs = np.arange(4)
-    lifts = [summary[p]["mean_acc_lift"] for p in ["B1", "B2", "B3", "B4"]]
-    posts = [summary[p]["mean_acc_post"] for p in ["B1", "B2", "B3", "B4"]]
+    xs = np.arange(5)
+    lifts = [summary[p]["mean_acc_lift"] for p in ["B1", "B2", "B3", "B4", "B5"]]
+    posts = [summary[p]["mean_acc_post"] for p in ["B1", "B2", "B3", "B4", "B5"]]
     ax.bar(xs - 0.15, lifts, 0.3, color="#C53030", label="mean Acc lift")
     ax.bar(xs + 0.15, posts, 0.3, color="#4A5568", label="mean Acc post")
     ax.set_xticks(xs)
-    ax.set_xticklabels(["B1 eq", "B2 RF", "B3 MMD", "B4 MMD+gain"])
+    ax.set_xticklabels(["B1", "B2 RF", "B3 MMD", "B4+gain", "B5 hyb"])
     ax.axhline(0.0, color="#999", ls="--", lw=0.7)
     ax.set_title(
-        f"B4−B1={summary['B4_minus_B1_lift']:+.3f}  "
-        f"B4−B2={summary['B4_minus_B2_lift']:+.3f}  "
-        f"B3−B2={summary['B3_minus_B2_lift']:+.3f}"
+        f"B5−B1={summary['B5_minus_B1_lift']:+.3f}  "
+        f"B5−B2={summary['B5_minus_B2_lift']:+.3f}  "
+        f"B5−B3={summary['B5_minus_B3_lift']:+.3f}"
     )
     ax.legend(frameon=False, fontsize=8)
 
@@ -467,7 +491,7 @@ def main():
     )
 
     results = {}
-    for pol in ["B1", "B2", "B3", "B4"]:
+    for pol in ["B1", "B2", "B3", "B4", "B5"]:
         print(f"\n===== {pol} =====", flush=True)
         results[pol] = run_policy(base.AmazonAGOD, stream, device, tf, pol)
 
@@ -502,7 +526,7 @@ def main():
         "B3": "B3 MMD con$-$cov",
         "B4": "B4 MMD+gain",
     }
-    for pol in ["B1", "B2", "B3", "B4"]:
+    for pol in ["B1", "B2", "B3", "B4", "B5"]:
         s = summary[pol]
         lines.append(
             f"{labels[pol]} & {s['mean_acc_lift']:+.3f} & {s['mean_acc_post']:.3f} & "
@@ -516,6 +540,10 @@ def main():
         f"{summary['B4_minus_B2_post']:+.3f} (post) & & \\\\",
         f"B4$-$B1 lift & {summary['B4_minus_B1_lift']:+.3f} & "
         f"{summary['B4_minus_B1_post']:+.3f} (post) & & \\\\",
+        f"B5$-$B2 lift & {summary['B5_minus_B2_lift']:+.3f} & "
+        f"{summary['B5_minus_B2_post']:+.3f} (post) & & \\\\",
+        f"B5$-$B1 lift & {summary['B5_minus_B1_lift']:+.3f} & "
+        f"{summary['B5_minus_B1_post']:+.3f} (post) & & \\\\",
         r"\bottomrule",
         r"\end{tabular}",
     ]
@@ -553,12 +581,10 @@ def main():
         (ART / Path(p).name).write_bytes(Path(p).read_bytes())
     print("dashboard", dash, flush=True)
     print(
-        "B4-B1",
-        summary["B4_minus_B1_lift"],
-        "B4-B2",
-        summary["B4_minus_B2_lift"],
-        "B3-B2",
-        summary["B3_minus_B2_lift"],
+        "B5-B1", summary["B5_minus_B1_lift"],
+        "B5-B2", summary["B5_minus_B2_lift"],
+        "B3-B2", summary["B3_minus_B2_lift"],
+        "B5-B3", summary["B5_minus_B3_lift"],
         flush=True,
     )
 
