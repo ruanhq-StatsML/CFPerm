@@ -525,6 +525,7 @@ def main():
         "B2": "B2 RF con$-$cov",
         "B3": "B3 MMD con$-$cov",
         "B4": "B4 MMD+gain",
+        "B5": "B5 MMD-cov+PO",
     }
     for pol in ["B1", "B2", "B3", "B4", "B5"]:
         s = summary[pol]
