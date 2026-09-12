@@ -1,0 +1,7 @@
+
+# local amazon shards
+data/amazon_reviews/shards/
+*.tar.gz
+
+__pycache__/
+*.pyc
