@@ -49,16 +49,24 @@ def softmax_tau(d: Mapping[str, float], mods: Sequence[str], tau: float) -> dict
 
 @dataclass
 class DriftNoiseGateConfig:
-    """Thresholds for 'true drift' vs 'noise drifting'."""
+    """Thresholds for 'true drift' vs 'noise drifting'.
+
+    Fisher/VIMP is primarily *relative* across modalities in the window.
+    Absolute ``vimp_floor`` is a soft scale guard (often ~0 on RF mean
+    impurity scales); do not set it above typical dataset VIMP or every
+    high-PO modality will be mislabeled as noise.
+    """
 
     po_high: float = 0.02          # absolute PO-risk floor to even consider boost
     po_quantile: float = 0.55      # also require PO ≥ this cross-mod quantile
     uni_acc_floor: float = 0.52    # unimodal hold Acc must clear this
     uni_drop_tol: float = 0.05     # or Acc drop vs ref ≤ this
-    vimp_floor: float = 0.02       # Fisher/importance proxy floor
-    vimp_quantile: float = 0.35    # and not in the bottom quantile
+    vimp_floor: float = 0.0        # soft absolute floor; relative quantile dominates
+    vimp_quantile: float = 0.35    # not in the bottom cross-mod quantile
+    vimp_spread_eps: float = 1e-4  # if max-min VIMP < this, treat all as equal (pass)
     damp: float = 0.15             # multiply PO by this when gated as noise
     adapter_only_damp: float = 0.05  # even stronger damp → near adapter-only
+    adapter_lr_keep: float = 0.35  # keep this fraction of free LR mass when noise-gated
 
 
 @dataclass
@@ -102,6 +110,9 @@ def drift_vs_noise_gate(
     v_vals = np.array([vim[m] for m in mods], float)
     po_q = float(np.quantile(po_vals, cfg.po_quantile)) if len(po_vals) else 0.0
     v_q = float(np.quantile(v_vals, cfg.vimp_quantile)) if len(v_vals) else 0.0
+    v_spread = float(v_vals.max() - v_vals.min()) if len(v_vals) else 0.0
+    # Flat VIMP across mods → no evidence of "low Fisher"; do not damp on that axis.
+    relative_vimp_informative = v_spread >= float(cfg.vimp_spread_eps)
 
     gated = {}
     is_signal = {}
@@ -112,7 +123,10 @@ def drift_vs_noise_gate(
         uni_ok = uni[m] >= cfg.uni_acc_floor
         if ref is not None:
             uni_ok = uni_ok or ((ref[m] - uni[m]) <= cfg.uni_drop_tol)
-        imp_ok = (vim[m] >= cfg.vimp_floor) and (vim[m] >= v_q)
+        if relative_vimp_informative:
+            imp_ok = (vim[m] >= cfg.vimp_floor) and (vim[m] >= v_q)
+        else:
+            imp_ok = vim[m] >= cfg.vimp_floor  # only soft absolute guard
         sig = bool(high_po and uni_ok and imp_ok)
         is_signal[m] = sig
         if sig:
@@ -140,6 +154,7 @@ def drift_vs_noise_gate(
         "reasons": reasons,
         "po_quantile": po_q,
         "vimp_quantile": v_q,
+        "vimp_spread": v_spread,
         "frac_signal": float(np.mean([1.0 if is_signal[m] else 0.0 for m in mods])),
     }
 
@@ -228,10 +243,12 @@ class SmoothDriftNoiseRouter:
         w = weights_from_alpha(
             self.alpha, self.mods, beta=self.cfg.beta, w0=self.cfg.w0
         )
-        # near-adapter-only: shrink LR further when gated as noise
+        # noise-gated: shrink toward floor but keep a fraction of free LR mass
+        keep = float(self.cfg.gate.adapter_lr_keep)
+        floor = float(self.cfg.beta * self.cfg.w0)
         for m in self.mods:
             if gate["adapter_only"].get(m):
-                w[m] = float(self.cfg.beta * self.cfg.w0)
+                w[m] = float(floor + keep * max(w[m] - floor, 0.0))
         w["shared"] = float(np.mean([w[m] for m in self.mods]))
 
         self.last_gate = gate

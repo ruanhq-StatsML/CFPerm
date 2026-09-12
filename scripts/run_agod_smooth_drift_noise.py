@@ -350,6 +350,11 @@ def write_docs(cells, path: Path):
 Best MSE-drop: **`{best_mse['policy']}`** ({best_mse['mean_mse_drop']:+.4f}).
 Best Acc↑: **`{best_acc['policy']}`** ({best_acc['mean_acc_lift']:+.3f}).
 
+Calibration note: Fisher/VIMP uses **relative** cross-mod quantile first;
+flat VIMP (common on small Amazon RF probes) does not auto-damp high-PO
+modalities. Absolute `vimp_floor` is soft. Noise-gated LR keeps
+`adapter_lr_keep` of free mass above the β floor (not a hard kill).
+
 ```bash
 PYTHONPATH=. python3 scripts/run_agod_smooth_drift_noise.py
 ```
