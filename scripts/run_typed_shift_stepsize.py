@@ -44,7 +44,7 @@ def main():
     n_batches = 8 if args.quick else 12
     n_per = 48 if args.quick else 64
     n_seeds = 3 if args.quick else args.seeds
-    methods = list(METHODS) if not args.quick else ["constant", "cosine", "plateau", "fsds_pi", "tss", "oracle_tss"]
+    methods = list(METHODS) if not args.quick else ["constant", "cosine", "plateau_m", "restart_m", "fsds_pi", "tss", "oracle_tss"]
     seeds = list(range(2026, 2026 + n_seeds))
 
     print("suite", n_seeds, "seeds", n_batches, "batches", methods, flush=True)
