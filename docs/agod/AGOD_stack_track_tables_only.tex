@@ -1,0 +1,15 @@
+% Half-stream switch / OOF / pi variation
+\begin{table}[t]\centering
+\caption{Tracking delay and path total variation after a mid-stream expert switch. Discrete OSL locks; Fixed-Share spends TV after the switch.}
+\label{tab:agod-stack-track}
+\begin{tabular}{lccccc}\toprule
+method & preq & path TV & delay & $\pi_a$ & $\pi_b$ \\
+\midrule
+hedge\_share0 & 0.399 & 1.75 & 35 & 0.04 & 0.96 \\
+hedge\_share & 0.062 & 3.04 & 5 & 0.05 & 0.84 \\
+osl\_disc & 0.546 & 1.67 & inf & 0.00 & 0.00 \\
+osl\_window & 0.157 & 2.67 & 10 & 0.00 & 1.00 \\
+osl\_sgd & 0.060 & 5.61 & 2 & 0.12 & 0.88 \\
+\bottomrule
+\end{tabular}
+\end{table}

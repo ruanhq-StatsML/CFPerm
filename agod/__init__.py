@@ -101,8 +101,22 @@ from .stack_logics import (
     tau_path,
     taylor_remainder_scale,
 )
-from .mmd import rbf_mmd2, whiten_pair
+from .stack_track import (
+    RollingOSL,
+    alignment_leak,
+    disjoint_probe_holdout,
+    kfold_oof_predict,
+    oof_vs_leaky_stack,
+    path_tv,
+    run_switch_methods,
+    sticky_mix,
+    sticky_path,
+    switch_delay,
+    tv,
+    tv_after_frac,
+)
 from .shift import decompose_hybrid, decompose_mmd, decompose_rf
+from .mmd import rbf_mmd2, whiten_pair
 
 __all__ = [
     "ADAPTER_LAYERS",
@@ -188,6 +202,18 @@ __all__ = [
     "eta_path",
     "tau_path",
     "n_path",
+    "RollingOSL",
+    "tv",
+    "path_tv",
+    "tv_after_frac",
+    "sticky_mix",
+    "sticky_path",
+    "switch_delay",
+    "run_switch_methods",
+    "oof_vs_leaky_stack",
+    "kfold_oof_predict",
+    "alignment_leak",
+    "disjoint_probe_holdout",
 ]
 
 __version__ = "0.1.0"
