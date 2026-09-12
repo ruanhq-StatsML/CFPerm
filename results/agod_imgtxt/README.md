@@ -16,3 +16,6 @@
 ```bash
 PYTHONPATH=. python3 scripts/run_agod_imgtxt_mmd_lr.py
 ```
+
+LaTeX tables (Amazon / MSR-VTT / ImgTxt board):
+`docs/agod/AGOD_portable_prototype_tables_only.tex`
