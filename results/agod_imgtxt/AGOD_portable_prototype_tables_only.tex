@@ -1,0 +1,121 @@
+% AGOD portable prototype smoke tables (Amazon / MSR-VTT / Image-Text).
+% Acc lift = mean held-out Acc_post - Acc_pre over T=6 windows.
+% flops_rel = relative projection adapt FLOPs (gate policies; FWD still paid).
+% B5g = α-hard-gate adapt-dropout; B5r = random adapt-shutdown (p_keep=0.67).
+% Compile fragment with booktabs (or paste into a paper preamble that loads it).
+\providecommand{\agodtoprule}{\toprule}
+\providecommand{\agodmidrule}{\midrule}
+\providecommand{\agodbottomrule}{\bottomrule}
+
+% ---------------------------------------------------------------------------
+% Table 1: multi-dataset Acc lift board (+ random shutdown)
+% ---------------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{AGOD portable prototype smoke across datasets.
+Policies: B1 equal LR; B5 MMD-cov+PO; B5g $=$ B5 + $\alpha$-gate;
+B5r $=$ B5 + random adapt-shutdown ($p_{\mathrm{keep}}{=}0.67$).
+Induced $P(Y)$ drift, $T{=}6$ windows. FLOPs are projection-head adapt cost
+(features pre-extracted). FWD inference always runs.}
+\label{tab:agod-portable-smoke-b5r}
+\begin{tabular}{llcccccc}
+\agodtoprule
+Dataset & Mods & B1 & B5 & B5g & B5r & B5g FLOPs & B5r FLOPs \\
+\agodmidrule
+Amazon Reviews      & img, txt            & $+0.058$ & $+0.087$ & ---      & ---      & ---     & --- \\
+MSR-VTT packed      & video, txt, audio   & $+0.070$ & $+0.063$ & $+0.048$ & $+0.057$ & $0.746$ & $0.841$ \\
+COCO outdoor/indoor & img, txt, bbox      & $+0.034$ & $+0.019$ & $+0.031$ & $+0.018$ & $0.810$ & $0.841$ \\
+COCO time order     & img, txt, bbox      & $+0.012$ & $+0.028$ & $+0.007$ & $+0.001$ & $0.778$ & $0.841$ \\
+COCO center split   & img, txt, bbox      & $+0.012$ & $+0.028$ & $+0.007$ & $+0.001$ & $0.778$ & $0.841$ \\
+MM train/test       & img, txt            & $-0.004$ & $-0.022$ & $+0.010$ & $-0.007$ & $0.778$ & $0.911$ \\
+Fashion-IQ          & img, txt            & $-0.004$ & $-0.022$ & $+0.010$ & $-0.007$ & $0.778$ & $0.911$ \\
+Indiana CXR         & img, txt            & $+0.024$ & $+0.016$ & $+0.007$ & $+0.025$ & $0.778$ & $0.911$ \\
+Microscopy CLIP     & img, txt            & $+0.040$ & $+0.027$ & $+0.018$ & $+0.039$ & $0.822$ & $0.911$ \\
+\agodbottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table 2: B5g vs B5r (attribution gate vs random shutdown)
+% ---------------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{Attribution gate (B5g) vs random adapt-shutdown (B5r).
+Positive $\Delta$Acc (B5g$-$B5r) means $\alpha$-gate beats random under similar FLOPs budget.
+Random is a useful cost baseline, but is \emph{not} the same controller as B5g.}
+\label{tab:agod-b5g-vs-b5r}
+\begin{tabular}{lcccc}
+\agodtoprule
+Dataset & B5g Acc$\uparrow$ & B5r Acc$\uparrow$ & $\Delta$Acc & FLOPs (g / r) \\
+\agodmidrule
+MSR-VTT packed      & $+0.048$ & $+0.057$ & $-0.010$ & $0.75$ / $0.84$ \\
+COCO outdoor/indoor & $+0.031$ & $+0.018$ & $+0.013$ & $0.81$ / $0.84$ \\
+COCO time order     & $+0.007$ & $+0.001$ & $+0.006$ & $0.78$ / $0.84$ \\
+COCO center split   & $+0.007$ & $+0.001$ & $+0.006$ & $0.78$ / $0.84$ \\
+MM train/test       & $+0.010$ & $-0.007$ & $+0.018$ & $0.78$ / $0.91$ \\
+Fashion-IQ          & $+0.010$ & $-0.007$ & $+0.018$ & $0.78$ / $0.91$ \\
+Indiana CXR         & $+0.007$ & $+0.025$ & $-0.018$ & $0.78$ / $0.91$ \\
+Microscopy CLIP     & $+0.018$ & $+0.039$ & $-0.021$ & $0.82$ / $0.91$ \\
+\agodbottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table 3: Image/Text detail
+% ---------------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{Image/Text AGOD detail (same control plane as Amazon / MSR-VTT).}
+\label{tab:agod-imgtxt-detail-b5r}
+\begin{tabular}{llccc}
+\agodtoprule
+Dataset & Policy & Acc lift & Acc post & flops\_rel \\
+\agodmidrule
+\multirow{5}{*}{COCO outdoor/indoor}
+ & B1 equal  & $+0.034$ & $0.871$ & $1.000$ \\
+ & B5 MMD+PO & $+0.019$ & $0.863$ & $1.000$ \\
+ & B5g α-gate& $+0.031$ & $0.869$ & $0.810$ \\
+ & B5r random& $+0.018$ & $0.811$ & $0.841$ \\
+\agodmidrule
+\multirow{5}{*}{MM train/test}
+ & B1 equal  & $-0.004$ & $0.879$ & $1.000$ \\
+ & B5 MMD+PO & $-0.022$ & $0.872$ & $1.000$ \\
+ & B5g α-gate& $+0.010$ & $0.850$ & $0.778$ \\
+ & B5r random& $-0.007$ & $0.874$ & $0.911$ \\
+\agodmidrule
+\multirow{5}{*}{Indiana CXR}
+ & B1 equal  & $+0.024$ & $0.921$ & $1.000$ \\
+ & B5 MMD+PO & $+0.016$ & $0.908$ & $1.000$ \\
+ & B5g α-gate& $+0.007$ & $0.882$ & $0.778$ \\
+ & B5r random& $+0.025$ & $0.894$ & $0.911$ \\
+\agodmidrule
+\multirow{5}{*}{Microscopy CLIP}
+ & B1 equal  & $+0.040$ & $0.683$ & $1.000$ \\
+ & B5 MMD+PO & $+0.027$ & $0.664$ & $1.000$ \\
+ & B5g α-gate& $+0.018$ & $0.635$ & $0.822$ \\
+ & B5r random& $+0.039$ & $0.667$ & $0.911$ \\
+\agodbottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table 4: MSR-VTT packed detail
+% ---------------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{MSR-VTT packed AGOD prototype (video/text/audio).
+\texttt{features\_window} pack is too small/easy for Acc-lift smoke (Acc$\approx$1);
+reported here is the packed 5k-clip stream.}
+\label{tab:agod-msrvtt-b5r}
+\begin{tabular}{lccc}
+\agodtoprule
+Policy & Acc lift & Acc post & flops\_rel \\
+\agodmidrule
+B1 equal   & $+0.070$ & $0.671$ & $1.000$ \\
+B2 RF      & $+0.064$ & $0.667$ & $1.000$ \\
+B5 MMD+PO  & $+0.063$ & $0.675$ & $1.000$ \\
+B5g α-gate & $+0.048$ & $0.620$ & $0.746$ \\
+B5r random & $+0.057$ & $0.663$ & $0.841$ \\
+\agodbottomrule
+\end{tabular}
+\end{table}
