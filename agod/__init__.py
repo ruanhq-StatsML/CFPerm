@@ -38,6 +38,18 @@ from .online_stack import (
     probs_mse,
     probs_mse_torch,
 )
+from .smooth_router import (
+    DriftNoiseGateConfig,
+    SmoothDriftNoiseRouter,
+    SmoothRouterConfig,
+    compose_g,
+    drift_vs_noise_gate,
+    fisher_proxy_from_vimp,
+    normalize_nonneg,
+    softmax_tau,
+    weighted_modality_loss,
+    weights_from_alpha,
+)
 from .ensemble_decorr import (
     assign_ensemble_roles,
     characterize_buckets_and_rruns,
@@ -131,6 +143,16 @@ __all__ = [
     "erank_balance_loss",
     "gram_erank_torch",
     "probs_mse",
+    "DriftNoiseGateConfig",
+    "SmoothRouterConfig",
+    "SmoothDriftNoiseRouter",
+    "drift_vs_noise_gate",
+    "fisher_proxy_from_vimp",
+    "compose_g",
+    "normalize_nonneg",
+    "softmax_tau",
+    "weights_from_alpha",
+    "weighted_modality_loss",
 ]
 
 __version__ = "0.1.0"
