@@ -23,6 +23,13 @@ from .adapter import (
     n_star_for_lift,
     soft_lr_dispersion,
 )
+from .compute_ratio import (
+    characterize_compute_ratio,
+    modality_redundancy,
+    predict_flops_from_correlation,
+    predict_keep_set,
+    unique_adapt_mass,
+)
 from .lr_controller import (
     EMARouter,
     SCHEDULER_NAMES,
@@ -84,6 +91,11 @@ __all__ = [
     "common_dim_grad_signature",
     "aligned_cos_sim",
     "modality_grad_cosine",
+    "modality_redundancy",
+    "unique_adapt_mass",
+    "predict_keep_set",
+    "predict_flops_from_correlation",
+    "characterize_compute_ratio",
 ]
 
 __version__ = "0.1.0"
