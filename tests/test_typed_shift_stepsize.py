@@ -88,8 +88,25 @@ def test_run_method_tss_raises_lr_at_concept():
     tss, _ = run_method(stream, method="tss", eta0=0.10, steps_per_batch=3, seed=11)
     cosine, _ = run_method(stream, method="cosine", eta0=0.10, steps_per_batch=3, seed=11)
     pre = [h["lr"]["video"] for h in tss["history"] if h["phase"] == "adapt" and h["round"] < 4]
-    at = [h["lr"]["video"] for h in tss["history"] if h["round"] == 4]
-    assert at[0] > np.mean(pre)
+    post = [h["lr"]["video"] for h in tss["history"] if h["round"] >= 5]
+    assert np.mean(post) > np.mean(pre)
     last_c = cosine["history"][-1]["lr"]["video"]
     assert last_c < tss["eta0"] * 0.35
     assert tss["n_classes"] == 4
+
+
+def test_global_cosine_copies_eta_across_heads():
+    stream = make_typed_stream(n_batches=6, n_per=24, seed=4, cov={"video": 0.12})
+    rec, _ = run_method(stream, method="cosine", eta0=0.10, steps_per_batch=2, seed=4)
+    for row in rec["history"]:
+        assert abs(row["lr"]["video"] - row["lr"]["audio"]) < 1e-12
+        assert abs(row["lr"]["audio"] - row["lr"]["text"]) < 1e-12
+
+
+def test_restart_m_is_per_head():
+    stream = make_typed_stream(
+        n_batches=8, n_per=30, seed=13, concept={"video": 1.0}, concept_at=4
+    )
+    rec, _ = run_method(stream, method="restart_m", eta0=0.10, steps_per_batch=3, seed=13)
+    post = [h for h in rec["history"] if h["round"] >= 5]
+    assert np.mean([h["lr"]["video"] for h in post]) > np.mean([h["lr"]["text"] for h in post])

@@ -62,13 +62,15 @@ def main():
         print("==", regime, flush=True)
         for method, cell in rec.items():
             print(
-                "  %s  acc=%.3f  post=%.3f  bwt=%.3f  eta_v=%.4f"
+                "  %s  acc=%.3f  post=%.3f  bwt=%.3f  eta=(v %.4f a %.4f t %.4f)"
                 % (
                     method,
                     cell["online_acc"]["mean"],
                     cell["post_acc"]["mean"],
                     cell["bwt"]["mean"],
                     cell["mean_lr_video"]["mean"],
+                    cell.get("mean_lr_audio", {"mean": float("nan")})["mean"],
+                    cell.get("mean_lr_text", {"mean": float("nan")})["mean"],
                 ),
                 flush=True,
             )

@@ -10,9 +10,9 @@ Statistical method scaffold, not a product board. Plug in another labelled strea
 
 ## What to compare
 
-Scalar LR schedulers (constant, step, cosine, inv-time, plateau) cannot type the shift. \(\eta\propto\pi\) uses the same \(c_m\) with the wrong sign. Oracle TSS substitutes the known DGP channels.
+Scalar clocks (constant, cosine, plateau) copy one η onto every head. Per-head clocks: `plateau_m`, `restart_m` (SGDR reset on δ_m), `polyak_m` (loss-proportional). Typed maps (`tss`, `inv_c`, `fsds_pi`) set η for the **next** epoch.
 
-Pre-specified metrics: **BWT** (accuracy on batch 0) under covariate-only; **post-change accuracy** under concept-only / both.
+Pre-specified metrics: **BWT** under covariate-only; **post-change accuracy** under concept-only / both. Look at \(\bar\eta_v,\bar\eta_a,\bar\eta_t\) to see whether a method is actually per-head.
 
 ## Run
 

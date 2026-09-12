@@ -1,20 +1,16 @@
-"""Typed shift stepsize (TSS): a statistical LR map, not a product board.
+"""Typed shift stepsize (TSS): next-epoch per-head LR, not a product board.
 
-Two identified channels, opposite signs:
+Estimate (c_m, δ_m) on the current pair of batches, then set η_m for the
+*next* epoch. Nothing else in the loop changes.
 
-    covariate intensity  c_m  = |Cohen's d| of the modality-mean under W
-    concept intensity    δ_m  = two-fold excess 0-1 risk of a unimodal
-                                ridge head after aligning the block mean
+    c_m  = |Cohen's d| of the modality-mean under W
+    δ_m  = two-fold excess 0-1 risk after mean-aligning X
+    η_m  = η0 · (1 + β δ_m) / (1 + λ c_m)   (quiet freeze if both off)
 
-    η_m = η0 · (1 + β δ_m) / (1 + λ c_m)
-    η_m = 0  if both channels are below threshold (quiet freeze)
-
-Large c_m lowers the step; large δ_m raises it. The map is not η ∝ δ,
-which would freeze under pure covariate shift. π_m = c_m / ∑ c is a
-which-head budget only; η ∝ π has the wrong sign for pure covariate shift.
-
-Comparators: constant, step, cosine, inverse-time, plateau, and η ∝ π.
-Oracle TSS substitutes the known (c, δ) of the simulation DGP.
+Comparators:
+    global clocks (same η on every head): constant, cosine, plateau
+    per-head clocks: plateau_m, restart_m (SGDR on δ_m), polyak_m (loss-proportional)
+    typed ablations: inv_c (covariate half), fsds_pi (wrong sign), TSS, oracle TSS
 """
 from __future__ import annotations
 
@@ -43,14 +39,45 @@ ETA0 = 0.10
 ETA_MAX_MULT = 2.5
 METHODS = (
     "constant",
-    "step",
     "cosine",
-    "invtime",
     "plateau",
+    "plateau_m",
+    "restart_m",
+    "polyak_m",
     "fsds_pi",
+    "inv_c",
     "tss",
     "oracle_tss",
 )
+TIME_METHODS = ("constant", "step", "cosine", "invtime", "plateau")
+METHOD_LABELS = {
+    "constant": "constant",
+    "step": "step",
+    "cosine": "cosine",
+    "invtime": "inv-time",
+    "plateau": "plateau",
+    "plateau_m": r"plateau$_m$",
+    "restart_m": r"restart$_m$",
+    "polyak_m": r"Polyak$_m$",
+    "fsds_pi": r"$\eta\propto\pi$",
+    "inv_c": r"inv-$c$",
+    "tss": "TSS",
+    "oracle_tss": "oracle TSS",
+}
+METHOD_COLORS = {
+    "constant": "#9AA3AE",
+    "step": "#6B7C8A",
+    "cosine": "#2C4A6E",
+    "invtime": "#7A8B9A",
+    "plateau": "#8A6A3D",
+    "plateau_m": "#C4892A",
+    "restart_m": "#5B4C9A",
+    "polyak_m": "#3D7A6A",
+    "fsds_pi": "#A33B24",
+    "inv_c": "#6A8BA3",
+    "tss": "#C45C26",
+    "oracle_tss": "#2F6B4F",
+}
 
 
 def _ce(logits, y):
@@ -218,6 +245,16 @@ def tss_lr(
     return lrs
 
 
+def _cosine_eta(eta0, tau, period):
+    period = max(int(period), 1)
+    tau = float(min(max(tau, 0.0), period))
+    return float(eta0) * 0.5 * (1.0 + np.cos(np.pi * tau / period))
+
+
+def _unimodal_ce(probe, Xs, y):
+    return {g: _ce(Xs[g] @ probe.W[g], y) for g in GROUP_NAMES}
+
+
 def scheduler_lrs(
     method,
     t,
@@ -229,20 +266,37 @@ def scheduler_lrs(
     true_c=None,
     true_delta=None,
     plateau_eta=None,
+    plateau_etas=None,
+    clocks=None,
+    uni_ce=None,
 ):
-    """Return a dict of per-head learning rates for one round."""
+    """Per-head learning rates. Global clocks copy one η onto every head."""
     if method == "tss":
         return tss_lr(c, delta, eta0=eta0)
     if method == "oracle_tss":
         return tss_lr(true_c or c, true_delta or delta, eta0=eta0)
     if method == "fsds_pi":
         return {g: float(eta0) * float(share[g]) for g in GROUP_NAMES}
+    if method == "inv_c":
+        return tss_lr(c, {g: 0.0 for g in GROUP_NAMES}, eta0=eta0, beta=0.0)
+    if method == "polyak_m":
+        uni_ce = uni_ce or {g: 1.0 for g in GROUP_NAMES}
+        mean_ce = float(np.mean(list(uni_ce.values())) + 1e-8)
+        cap = float(eta0) * float(ETA_MAX_MULT)
+        return {g: float(min(cap, eta0 * (uni_ce[g] / mean_ce))) for g in GROUP_NAMES}
+    if method == "plateau_m":
+        plateau_etas = plateau_etas or {g: float(eta0) for g in GROUP_NAMES}
+        return {g: float(plateau_etas[g]) for g in GROUP_NAMES}
+    if method == "restart_m":
+        clocks = clocks or {g: int(t) for g in GROUP_NAMES}
+        period = max(n_batches - 1, 1)
+        return {g: _cosine_eta(eta0, clocks[g], period) for g in GROUP_NAMES}
     if method == "constant":
         eta = float(eta0)
     elif method == "step":
         eta = float(eta0) * (0.3 if t >= max(2, n_batches // 2) else 1.0)
     elif method == "cosine":
-        eta = float(eta0) * 0.5 * (1.0 + np.cos(np.pi * t / max(n_batches - 1, 1)))
+        eta = _cosine_eta(eta0, t, max(n_batches - 1, 1))
     elif method == "invtime":
         eta = float(eta0) / (1.0 + 0.45 * t)
     elif method == "plateau":
@@ -380,7 +434,7 @@ def run_method(
     lam=LAMBDA,
     beta=BETA,
 ):
-    """Warmup on B0, then one SGD round per later batch under ``method``."""
+    """Warmup on B0. Typed maps set η for the *next* epoch; global clocks use t."""
     X = np.asarray(stream.X, dtype=float)
     y = np.asarray(stream.y, dtype=int)
     batch = np.asarray(stream.batch, dtype=int)
@@ -391,6 +445,11 @@ def run_method(
     plateau_eta = float(eta0)
     best_ce = np.inf
     stall = 0
+    plateau_etas = {g: float(eta0) for g in GROUP_NAMES}
+    best_ce_m = {g: np.inf for g in GROUP_NAMES}
+    stall_m = {g: 0 for g in GROUP_NAMES}
+    clocks = {g: 0 for g in GROUP_NAMES}
+    next_lrs = {g: eta0 / 3.0 for g in GROUP_NAMES}
     i0 = np.flatnonzero(batch == 0)
     Xs0, y0 = _split_modalities(X[i0]), y[i0]
     chunk = max(4, i0.size // 2)
@@ -405,7 +464,7 @@ def run_method(
     d_hat = {g: 0.0 for g in GROUP_NAMES}
     share = {g: 1.0 / 3.0 for g in GROUP_NAMES}
 
-    def snapshot(round_id, phase, idx, lrs, auc_w=float("nan")):
+    def snapshot(round_id, phase, idx, lrs):
         Xs = _split_modalities(X[idx])
         yy = y[idx]
         logits = probe.logits(Xs)
@@ -433,21 +492,23 @@ def run_method(
         Xsp, Xsc = _split_modalities(Xp), _split_modalities(Xc)
         c_hat, share, _ = covariate_intensity(Xp, Xc)
         d_hat, _ = concept_intensity(probe, Xsp, yp, Xsc, yc)
+        uni_ce = _unimodal_ce(probe, Xsc, yc)
         tc, td = _true_at(stream, t)
-        lrs = scheduler_lrs(
-            method,
-            t,
-            n_batches,
-            eta0,
-            c_hat,
-            share,
-            d_hat,
-            true_c=tc,
-            true_delta=td,
-            plateau_eta=plateau_eta,
-        )
-        if method == "tss":
-            lrs = tss_lr(c_hat, d_hat, eta0=eta0, lam=lam, beta=beta)
+        if method in TIME_METHODS:
+            lrs = scheduler_lrs(
+                method,
+                t,
+                n_batches,
+                eta0,
+                c_hat,
+                share,
+                d_hat,
+                true_c=tc,
+                true_delta=td,
+                plateau_eta=plateau_eta,
+            )
+        else:
+            lrs = dict(next_lrs)
         n_steps = max(1, int(steps_per_batch) // 3)
         chunk_t = max(4, ic.size // 2)
         for head in GROUP_NAMES:
@@ -459,6 +520,7 @@ def run_method(
             row["true_c"] = tc
             row["true_delta"] = td
         history.append(row)
+        uni_ce = _unimodal_ce(probe, Xsc, yc)
         if row["ce"] < best_ce - 1e-4:
             best_ce = row["ce"]
             stall = 0
@@ -467,6 +529,36 @@ def run_method(
             if stall >= 2:
                 plateau_eta *= 0.5
                 stall = 0
+        for g in GROUP_NAMES:
+            if uni_ce[g] < best_ce_m[g] - 1e-4:
+                best_ce_m[g] = uni_ce[g]
+                stall_m[g] = 0
+            else:
+                stall_m[g] += 1
+                if stall_m[g] >= 2:
+                    plateau_etas[g] *= 0.5
+                    stall_m[g] = 0
+            if d_hat[g] >= TAU_D:
+                clocks[g] = 0
+            else:
+                clocks[g] += 1
+        next_lrs = scheduler_lrs(
+            method,
+            t + 1,
+            n_batches,
+            eta0,
+            c_hat,
+            share,
+            d_hat,
+            true_c=tc,
+            true_delta=td,
+            plateau_eta=plateau_eta,
+            plateau_etas=plateau_etas,
+            clocks=clocks,
+            uni_ce=uni_ce,
+        )
+        if method == "tss":
+            next_lrs = tss_lr(c_hat, d_hat, eta0=eta0, lam=lam, beta=beta)
 
     last = np.flatnonzero(batch == n_batches - 1)
     adapt = [h for h in history if h["phase"] == "adapt"]
@@ -561,6 +653,8 @@ def run_suite(
                         "bwt": summary["bwt"],
                         "last_acc": summary["last_acc"],
                         "mean_lr_video": summary["mean_lr"]["video"],
+                        "mean_lr_audio": summary["mean_lr"]["audio"],
+                        "mean_lr_text": summary["mean_lr"]["text"],
                         "mean_c_video": summary["mean_c"]["video"],
                         "mean_delta_video": summary["mean_delta"]["video"],
                     }
@@ -583,7 +677,7 @@ def _summarize_rows(rows):
         for method in methods:
             sub = [r for r in rows if r["regime"] == regime and r["method"] == method]
             cell = {}
-            for key in ("online_acc", "online_ce", "post_acc", "bwt", "last_acc", "mean_lr_video"):
+            for key in ("online_acc", "online_ce", "post_acc", "bwt", "last_acc", "mean_lr_video", "mean_lr_audio", "mean_lr_text"):
                 v = np.array([r[key] for r in sub], dtype=float)
                 cell[key] = {"mean": float(v.mean()), "sd": float(v.std(ddof=1)) if len(v) > 1 else 0.0, "n": int(len(v))}
             table[regime][method] = cell
@@ -673,27 +767,9 @@ def plot_comparison(suite, path):
     table = suite["table"]
     regimes = [r for r in ("cov_only", "concept_only", "both") if r in table]
     methods = [m for m in METHODS if m in table[regimes[0]]]
-    labels = {
-        "constant": "constant",
-        "step": "step",
-        "cosine": "cosine",
-        "invtime": "inv-time",
-        "plateau": "plateau",
-        "fsds_pi": r"$\eta\propto\pi$ (wrong sign)",
-        "tss": "TSS",
-        "oracle_tss": "oracle TSS",
-    }
-    colors = {
-        "constant": "#9AA3AE",
-        "step": "#6B7C8A",
-        "cosine": "#2C4A6E",
-        "invtime": "#7A8B9A",
-        "plateau": "#8A6A3D",
-        "fsds_pi": "#A33B24",
-        "tss": "#C45C26",
-        "oracle_tss": "#2F6B4F",
-    }
-    fig, axes = plt.subplots(2, len(regimes), figsize=(4.1 * len(regimes), 7.2), sharey="row")
+    labels = {m: METHOD_LABELS.get(m, m) for m in methods}
+    colors = {m: METHOD_COLORS.get(m, "#9AA3AE") for m in methods}
+    fig, axes = plt.subplots(2, len(regimes), figsize=(4.4 * len(regimes), 7.4), sharey="row")
     if len(regimes) == 1:
         axes = np.array(axes).reshape(2, 1)
     titles = {"cov_only": "Covariate only", "concept_only": "Concept only", "both": "Both"}
@@ -705,7 +781,7 @@ def plot_comparison(suite, path):
             sds = [table[regime][m][metric]["sd"] for m in methods]
             ax.bar(x, means, yerr=sds, color=[colors[m] for m in methods], ecolor=MUTED, capsize=2.5, width=0.78)
             ax.set_xticks(x)
-            ax.set_xticklabels([labels[m] for m in methods], rotation=55, ha="right", fontsize=8)
+            ax.set_xticklabels([labels[m] for m in methods], rotation=60, ha="right", fontsize=7.2)
             ax.grid(True, axis="y", color=GRID)
             if j == 0:
                 ax.set_ylabel("BWT (acc. on batch 0)" if metric == "bwt" else "post-change accuracy")
@@ -716,8 +792,8 @@ def plot_comparison(suite, path):
     fig.text(
         0.04,
         0.01,
-        "TSS: η_m = η0 (1+β δ_m) / (1+λ c_m).  Covariate c_m lowers the step; concept δ_m raises it.  "
-        "η∝π uses the same c_m as a simplex share with the opposite sign.  Error bars are seed s.d.",
+        "Typed maps set η for the next epoch.  plateau_m / restart_m / Polyak_m have a clock per head; "
+        "cosine and plateau copy one η onto video/audio/text.  Error bars are seed s.d.",
         fontsize=8.2,
         color=MUTED,
     )
@@ -729,27 +805,38 @@ def plot_eta_paths(suite, path):
     from msrvtt_attribution_plots import GRID, INK, MUTED, _save, _style
 
     _style()
-    show = ["cosine", "plateau", "fsds_pi", "tss"]
-    colors = {"cosine": "#2C4A6E", "plateau": "#8A6A3D", "fsds_pi": "#A33B24", "tss": "#C45C26"}
-    fig, axes = plt.subplots(1, 2, figsize=(10.6, 4.0), sharey=True)
-    for ax, regime, title in zip(axes, ("cov_only", "concept_only"), ("Covariate only", "Concept only")):
-        for method in show:
-            recs = suite["traces"][regime][method]
-            rounds = recs[0]["history"]
-            t = [h["round"] for h in rounds]
-            lr = np.array([[h["lr"]["video"] for h in r["history"]] for r in recs], dtype=float)
-            mu, sd = lr.mean(axis=0), lr.std(axis=0)
-            ax.plot(t, mu, color=colors[method], lw=2.1, label=method if method != "fsds_pi" else r"$\eta\propto\pi$")
-            ax.fill_between(t, mu - sd, mu + sd, color=colors[method], alpha=0.14, lw=0)
-        if regime == "concept_only":
-            at = recs[0]["meta"].get("concept_at", 7)
-            ax.axvline(at, color=MUTED, ls="--", lw=0.9)
-        ax.set_title(title, loc="left", fontsize=12, fontweight="bold")
-        ax.set_xlabel("round")
-        ax.grid(True, color=GRID)
-        ax.legend(frameon=False, fontsize=8.5)
-    axes[0].set_ylabel("video-head  η")
-    fig.suptitle("Video-head stepsize paths", fontsize=13.2, fontweight="bold", color=INK, x=0.06, ha="left")
+    show = [m for m in ("cosine", "plateau_m", "restart_m", "polyak_m", "tss") if m in suite["traces"]["cov_only"]]
+    fig, axes = plt.subplots(2, 3, figsize=(11.4, 6.4), sharey=True)
+    for i, (regime, title) in enumerate((("cov_only", "Covariate only"), ("concept_only", "Concept only"))):
+        for j, head in enumerate(GROUP_NAMES):
+            ax = axes[i, j]
+            for method in show:
+                recs = suite["traces"][regime][method]
+                t = [h["round"] for h in recs[0]["history"]]
+                lr = np.array([[h["lr"][head] for h in r["history"]] for r in recs], dtype=float)
+                mu, sd = lr.mean(axis=0), lr.std(axis=0)
+                ax.plot(t, mu, color=METHOD_COLORS[method], lw=2.0, label=METHOD_LABELS[method])
+                ax.fill_between(t, mu - sd, mu + sd, color=METHOD_COLORS[method], alpha=0.12, lw=0)
+            if regime == "concept_only":
+                at = recs[0]["meta"].get("concept_at", 6)
+                ax.axvline(at, color=MUTED, ls="--", lw=0.9)
+            if i == 0:
+                ax.set_title(head, loc="left", fontsize=12, fontweight="bold")
+            if j == 0:
+                ax.set_ylabel(title + "  η")
+            ax.set_xlabel("round")
+            ax.grid(True, color=GRID)
+            if i == 0 and j == 2:
+                ax.legend(frameon=False, fontsize=7.5)
+    fig.suptitle("Per-head next-epoch stepsize", fontsize=13.2, fontweight="bold", color=INK, x=0.04, ha="left")
+    fig.text(
+        0.04,
+        0.01,
+        "Global cosine is the same curve on every head.  restart_m resets only the head whose δ_m jumps.  "
+        "plateau_m halves a head after two non-improving unimodal CE rounds.",
+        fontsize=8.2,
+        color=MUTED,
+    )
     return _save(fig, path)
 
 
@@ -758,31 +845,21 @@ def write_tex_table(suite, path):
     tests = suite["tests"]
     ident = suite["identification"]
     methods = [m for m in METHODS if m in table[next(iter(table))]]
-    labels = {
-        "constant": "constant",
-        "step": "step",
-        "cosine": "cosine",
-        "invtime": "inv-time",
-        "plateau": "plateau",
-        "fsds_pi": r"$\eta\propto\pi$",
-        "tss": "TSS",
-        "oracle_tss": "oracle TSS",
-    }
+    labels = {m: METHOD_LABELS.get(m, m) for m in methods}
     regimes = [r for r in ("cov_only", "concept_only", "both") if r in table]
     rt = {"cov_only": "covariate only", "concept_only": "concept only", "both": "both"}
     lines = [
         r"% Typed shift stepsize vs LR schedulers. Auto-generated.",
         r"\begin{table}[ht]\centering",
-        r"\caption{Typed shift stepsize (TSS) versus standard LR schedulers on an oracle multimodal stream.",
-        r"Covariate intensity $c_m$ is $|d|$ of the modality mean; concept intensity $\delta_m$ is two-fold excess 0-1 risk after mean-alignment of $X$.",
-        r"TSS uses $\eta_m=\eta_0(1+\beta\delta_m)/(1+\lambda c_m)$ with a quiet freeze.",
-        r"$\eta\propto\pi$ uses the same $c_m$ as a simplex share (wrong sign for pure covariate shift).",
+        r"\caption{Next-epoch per-head stepsize. Global clocks (constant, cosine, plateau) copy one $\eta$ onto every head.",
+        r"plateau$_m$ / restart$_m$ / Polyak$_m$ keep a clock per modality. inv-$c$ is the covariate half of TSS; $\eta\propto\pi$ has the wrong sign.",
+        r"TSS uses $\eta_m=\eta_0(1+\beta\delta_m)/(1+\lambda c_m)$ with a quiet freeze, applied to the \emph{next} epoch.",
         r"Entries are mean (s.d.) over seeds. BWT is accuracy on batch 0 after the stream;",
         r"post-change accuracy is the mean on rounds at or after the known concept time.}",
         r"\label{tab:tss-vs-schedulers}",
         r"\small",
-        r"\begin{tabular}{@{}ll cccc@{}}\toprule",
-        r"Regime & Method & online acc. & post-change & BWT & video $\bar\eta$ \\",
+        r"\begin{tabular}{@{}ll ccc ccc@{}}\toprule",
+        r"Regime & Method & post-change & BWT & $\bar\eta_v$ & $\bar\eta_a$ & $\bar\eta_t$ \\",
         r"\midrule",
     ]
     for regime in regimes:
@@ -802,8 +879,17 @@ def write_tex_table(suite, path):
                 if p == p and p < 0.05 and diff == diff and diff > 0:
                     star = r"$^{\ast}$"
             lines.append(
-                r"%s & %s%s & %s & %s & %s & $%.4f$ \\"
-                % (name, labels[method], star, fmt("online_acc"), fmt("post_acc"), fmt("bwt"), cell["mean_lr_video"]["mean"])
+                r"%s & %s%s & %s & %s & $%.4f$ & $%.4f$ & $%.4f$ \\"
+                % (
+                    name,
+                    labels[method],
+                    star,
+                    fmt("post_acc"),
+                    fmt("bwt"),
+                    cell["mean_lr_video"]["mean"],
+                    cell.get("mean_lr_audio", {"mean": float("nan")})["mean"],
+                    cell.get("mean_lr_text", {"mean": float("nan")})["mean"],
+                )
             )
         lines.append(r"\midrule")
     if lines[-1] == r"\midrule":
