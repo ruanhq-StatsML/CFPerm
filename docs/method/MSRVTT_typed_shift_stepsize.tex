@@ -32,23 +32,22 @@ Fit a unimodal ridge head on ANOVA-screened coordinates of one half of batch $t-
 In-sample CE of a joint SGD probe is not a concept estimator: it confuses generalization gap with a change in $P(Y\mid X)$.
 
 \emph{Signed stepsize.}
-With a quiet freeze when both channels are off,
+With a quiet hold when both channels are off,
 \begin{equation}
-  \eta_m
+  \eta_m^{(t+1)}
   =
-  \eta_0\,
-  \frac{1+\beta\hat\delta_m}{1+\lambda\hat c_m},
-  \qquad
-  \eta_m=0
-  \text{ if }
-  \hat c_m<\tau_c
-  \text{ and }
-  \hat\delta_m<\tau_\delta.
+  \begin{cases}
+    \eta_m^{(t)}
+      & \text{if }\hat c_m<\tau_c\text{ and }\hat\delta_m<\tau_\delta,\\[0.35em]
+    \eta_0\dfrac{1+\beta\hat\delta_m}{1+\lambda\hat c_m}
+      & \text{otherwise.}
+  \end{cases}
 \end{equation}
+Quiet means \emph{do not retune} the step, not $\eta_m=0$.
+The weights keep moving at last epoch's rate; the schedule itself is frozen until a channel speaks.
 Large $\hat c_m$ lowers the step (do not chase $X$).
 Large $\hat\delta_m$ raises the step (relearn the map).
-The map is not $\eta\propto\hat\delta$: a numerator of $\hat\delta$ alone would freeze under pure covariate shift, which is stronger than the claimed sign.
-Clip-level text on the MSR-VTT extract is both-quiet, so $\eta_t=0$; inverting $\pi$ would give it the largest step.
+Clip-level text on the MSR-VTT extract is both-quiet, so $\eta_t$ stays at the warmup scale rather than being inverted from $\pi_t\approx 0$.
 
 Refresh / KV invalidation is a different control: it may still follow $\hat c_m$.
 TSS is the SGD map, not a memory schedule, and not a cosine lag board.
@@ -74,4 +73,4 @@ None of these type both channels at once, which is the only thing TSS adds.
 \emph{Other opportunities, not claimed here.}
 EWC / SI (raise a quadratic penalty when $\hat c_m$ is large, instead of shrinking $\eta_m$); Fisher-scaled or natural-gradient steps on the same split; Hedge / EXP3 over heads; a two-timescale freeze of high-$\hat c$ towers.
 Those are the next knobs on the same $(c_m,\delta_m)$ pair, not a different product loop.
-A second labelled extract is required before claiming a downstream-task magnitude; the present MSR-VTT windows illustrate $\hat c$ and the quiet text freeze, not a finished applied study.
+A second labelled extract is required before claiming a downstream-task magnitude; the present MSR-VTT windows illustrate $\hat c$ and the quiet text \emph{hold}, not a finished applied study.

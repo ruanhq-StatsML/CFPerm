@@ -5,7 +5,8 @@ Estimate (c_m, δ_m) on the current pair of batches, then set η_m for the
 
     c_m  = |Cohen's d| of the modality-mean under W
     δ_m  = two-fold excess 0-1 risk after mean-aligning X
-    η_m  = η0 · (1 + β δ_m) / (1 + λ c_m)   (quiet freeze if both off)
+    η_m  = η0 · (1 + β δ_m) / (1 + λ c_m)   when a channel speaks
+    quiet: both off → do not change η_m (hold last epoch's step)
 
 Comparators:
     global clocks (same η on every head): constant, cosine, plateau
@@ -226,19 +227,23 @@ def tss_lr(
     tau_c=TAU_C,
     tau_d=TAU_D,
     eta_max_mult=ETA_MAX_MULT,
+    prev=None,
 ):
-    """Signed per-head stepsize. Quiet freeze when both channels are off.
+    """Signed per-head stepsize for the next epoch.
 
     η ∝ (1+βδ)/(1+λc): covariate intensity lowers the step, concept intensity
-    raises it. A numerator of δ alone would freeze under pure covariate shift.
+    raises it. If both channels are quiet, keep the previous η_m (do not
+    retune, and do not slam the step to 0).
     """
+    prev = prev or {}
+    default = float(eta0) / 3.0
     lrs = {}
     cap = float(eta0) * float(eta_max_mult)
     for name in GROUP_NAMES:
         cm = float(c.get(name, 0.0))
         dm = float(delta.get(name, 0.0))
         if cm < tau_c and dm < tau_d:
-            lrs[name] = 0.0
+            lrs[name] = float(prev.get(name, default))
             continue
         eta = float(eta0) * (1.0 + float(beta) * dm) / (1.0 + float(lam) * cm)
         lrs[name] = float(min(max(eta, 0.0), cap))
@@ -269,16 +274,17 @@ def scheduler_lrs(
     plateau_etas=None,
     clocks=None,
     uni_ce=None,
+    prev_lrs=None,
 ):
     """Per-head learning rates. Global clocks copy one η onto every head."""
     if method == "tss":
-        return tss_lr(c, delta, eta0=eta0)
+        return tss_lr(c, delta, eta0=eta0, prev=prev_lrs)
     if method == "oracle_tss":
-        return tss_lr(true_c or c, true_delta or delta, eta0=eta0)
+        return tss_lr(true_c or c, true_delta or delta, eta0=eta0, prev=prev_lrs)
     if method == "fsds_pi":
         return {g: float(eta0) * float(share[g]) for g in GROUP_NAMES}
     if method == "inv_c":
-        return tss_lr(c, {g: 0.0 for g in GROUP_NAMES}, eta0=eta0, beta=0.0)
+        return tss_lr(c, {g: 0.0 for g in GROUP_NAMES}, eta0=eta0, beta=0.0, prev=prev_lrs)
     if method == "polyak_m":
         uni_ce = uni_ce or {g: 1.0 for g in GROUP_NAMES}
         mean_ce = float(np.mean(list(uni_ce.values())) + 1e-8)
@@ -556,9 +562,10 @@ def run_method(
             plateau_etas=plateau_etas,
             clocks=clocks,
             uni_ce=uni_ce,
+            prev_lrs=lrs,
         )
         if method == "tss":
-            next_lrs = tss_lr(c_hat, d_hat, eta0=eta0, lam=lam, beta=beta)
+            next_lrs = tss_lr(c_hat, d_hat, eta0=eta0, lam=lam, beta=beta, prev=lrs)
 
     last = np.flatnonzero(batch == n_batches - 1)
     adapt = [h for h in history if h["phase"] == "adapt"]

@@ -58,17 +58,28 @@ def test_concept_intensity_jumps_after_rotation():
 
 
 def test_tss_lr_signs_and_quiet_freeze():
-    quiet = tss_lr({"video": 0.02, "audio": 0.01, "text": 0.0}, {"video": 0.0, "audio": 0.0, "text": 0.01})
-    assert quiet["video"] == 0.0
-    assert quiet["text"] == 0.0
-    cov = tss_lr({"video": 1.2, "audio": 0.1, "text": 0.0}, {"video": 0.0, "audio": 0.0, "text": 0.0}, eta0=0.1)
-    concept = tss_lr({"video": 0.0, "audio": 0.0, "text": 0.0}, {"video": 0.8, "audio": 0.0, "text": 0.0}, eta0=0.1)
+    held = {"video": 0.04, "audio": 0.04, "text": 0.04}
+    quiet = tss_lr(
+        {"video": 0.02, "audio": 0.01, "text": 0.0},
+        {"video": 0.0, "audio": 0.0, "text": 0.01},
+        prev=held,
+    )
+    assert quiet["video"] == 0.04
+    assert quiet["text"] == 0.04
+    cov = tss_lr({"video": 1.2, "audio": 0.1, "text": 0.0}, {"video": 0.0, "audio": 0.0, "text": 0.0}, eta0=0.1, prev=held)
+    concept = tss_lr({"video": 0.0, "audio": 0.0, "text": 0.0}, {"video": 0.8, "audio": 0.0, "text": 0.0}, eta0=0.1, prev=held)
     assert concept["video"] > cov["video"]
     assert concept["video"] > 0.1
     assert cov["video"] < 0.1
-    assert concept["video"] > concept["text"]
-    pi = tss_lr({"video": 1.2, "audio": 0.3, "text": 0.0}, {"video": 0.05, "audio": 0.02, "text": 0.0}, eta0=0.1)
-    assert pi["text"] == 0.0
+    assert concept["text"] == 0.04
+    pi = tss_lr(
+        {"video": 1.2, "audio": 0.3, "text": 0.0},
+        {"video": 0.05, "audio": 0.02, "text": 0.0},
+        eta0=0.1,
+        prev=held,
+    )
+    assert pi["text"] == 0.04
+    assert pi["video"] < 0.1
 
 
 def test_run_method_tss_on_cov_only_shrinks_video_lr():
