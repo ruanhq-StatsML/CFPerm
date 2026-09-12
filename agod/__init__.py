@@ -30,6 +30,14 @@ from .compute_ratio import (
     predict_keep_set,
     unique_adapt_mass,
 )
+from .online_stack import (
+    MeanFusion,
+    StackFusion,
+    erank_balance_loss,
+    gram_erank_torch,
+    probs_mse,
+    probs_mse_torch,
+)
 from .ensemble_decorr import (
     assign_ensemble_roles,
     characterize_buckets_and_rruns,
@@ -118,6 +126,11 @@ __all__ = [
     "expand_role_windows",
     "extract_r_runs",
     "characterize_buckets_and_rruns",
+    "MeanFusion",
+    "StackFusion",
+    "erank_balance_loss",
+    "gram_erank_torch",
+    "probs_mse",
 ]
 
 __version__ = "0.1.0"
