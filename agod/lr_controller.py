@@ -70,6 +70,7 @@ SCHEDULER_NAMES = (
     "damp",         # high-α → *lower* LR (covariate damp / inverse)
     "soft_entropy", # blend soft↔equal by α-entropy (uncertain → flatter)
     "soft_gradcos", # soft × gradient-alignment gain (cosine similarity)
+    "soft_decorr",  # soft × ensemble role gains (high-corr decorrelate)
 )
 
 
@@ -343,6 +344,7 @@ def schedule_modality_lr(
     damp_power: float = 2.0,
     align_gain: Mapping[str, float] | None = None,
     lambda_align: float = 0.75,
+    pair_cos: Mapping[str, float] | None = None,
 ) -> dict[str, float]:
     """Dispatch per-modality LR scheduler by name."""
     if name not in SCHEDULER_NAMES:
@@ -372,6 +374,15 @@ def schedule_modality_lr(
             lambda_align=lambda_align,
             gain=gain,
         )
+    if name == "soft_decorr":
+        from .ensemble_decorr import soft_decorr_lr
+
+        pair = pair_cos or {}
+        if not pair:
+            # no geometry → soft fallback
+            return alpha_to_lr(alpha, mods, beta=beta, gain=gain)
+        packed = soft_decorr_lr(alpha, pair, mods, beta=beta, gain=gain)
+        return packed["lr"]
     # soft_entropy
     return soft_entropy_lr(alpha, mods, beta=beta, gain=gain)
 

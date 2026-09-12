@@ -30,6 +30,14 @@ from .compute_ratio import (
     predict_keep_set,
     unique_adapt_mass,
 )
+from .ensemble_decorr import (
+    assign_ensemble_roles,
+    characterize_ensemble_traj,
+    gram_effective_rank,
+    residual_uniqueness,
+    role_lr_gains,
+    soft_decorr_lr,
+)
 from .lr_controller import (
     EMARouter,
     SCHEDULER_NAMES,
@@ -96,6 +104,12 @@ __all__ = [
     "predict_keep_set",
     "predict_flops_from_correlation",
     "characterize_compute_ratio",
+    "gram_effective_rank",
+    "residual_uniqueness",
+    "assign_ensemble_roles",
+    "role_lr_gains",
+    "soft_decorr_lr",
+    "characterize_ensemble_traj",
 ]
 
 __version__ = "0.1.0"
