@@ -218,6 +218,48 @@ def flatten_grads(params) -> np.ndarray:
     return np.concatenate(chunks)
 
 
+def common_dim_grad_signature(params) -> np.ndarray:
+    """Build a common-length grad signature across differently shaped modality towers.
+
+    For each parameter tensor, reduce to a 1-D signature by averaging over all
+    but the leading output dimension (bias kept as-is). Signatures are then
+    L2-normalized and concatenated. This lets cos(g_m, g_m') be well-defined
+    when input dims differ (e.g. video 768 vs audio 512 → shared FUSE).
+    """
+    parts = []
+    for p in params:
+        if p is None:
+            continue
+        g = getattr(p, "grad", None)
+        if g is None:
+            arr = np.zeros(p.shape, dtype=np.float64)
+        else:
+            arr = g.detach().float().cpu().numpy()
+        if arr.ndim == 0:
+            parts.append(np.array([float(arr)], dtype=np.float64))
+        elif arr.ndim == 1:
+            parts.append(arr.astype(np.float64))
+        else:
+            # weight (out, in, ...): mean over non-leading dims → (out,)
+            axes = tuple(range(1, arr.ndim))
+            parts.append(arr.mean(axis=axes).astype(np.float64))
+    if not parts:
+        return np.zeros(1, dtype=np.float64)
+    return np.concatenate(parts)
+
+
+def aligned_cos_sim(a: np.ndarray, b: np.ndarray) -> float:
+    """Cosine sim with zero-pad to equal length (after common-dim signatures)."""
+    a = np.asarray(a, dtype=float).ravel()
+    b = np.asarray(b, dtype=float).ravel()
+    n = max(len(a), len(b))
+    if len(a) < n:
+        a = np.pad(a, (0, n - len(a)))
+    if len(b) < n:
+        b = np.pad(b, (0, n - len(b)))
+    return cos_sim(a, b)
+
+
 def modality_grad_cosine(
     grads: Mapping[str, np.ndarray],
     mods: Sequence[str],
@@ -226,20 +268,16 @@ def modality_grad_cosine(
 ) -> dict:
     """Characterize per-modality gradient geometry via cosine similarity.
 
-    Returns
-    -------
-    pair_cos : dict[(m,m')] mean pairwise cos among modality grads
-    mean_pair_cos : float
-    frac_conflict : fraction of pairs with cos < 0
-    cos_to_shared : dict[m] cos(g_m, g_shared) if shared provided
-    align_gain : dict[m] in [0,1] = 0.5*(1+cos_to_shared) (or mean pair)
+    ``grads[m]`` / ``shared`` should preferably be *common-dim signatures*
+    (see ``common_dim_grad_signature``) so towers with different input sizes
+    remain comparable. Falls back to zero-pad if lengths still differ.
     """
     vecs = {m: np.asarray(grads[m], dtype=float).ravel() for m in mods}
     pair = {}
     vals = []
     for i, mi in enumerate(mods):
         for mj in mods[i + 1 :]:
-            c = cos_sim(vecs[mi], vecs[mj])
+            c = aligned_cos_sim(vecs[mi], vecs[mj])
             pair[f"{mi}|{mj}"] = c
             vals.append(c)
     mean_pair = float(np.mean(vals)) if vals else 0.0
@@ -249,12 +287,11 @@ def modality_grad_cosine(
     if shared is not None:
         sh = np.asarray(shared, dtype=float).ravel()
         for m in mods:
-            cos_shared[m] = cos_sim(vecs[m], sh)
+            cos_shared[m] = aligned_cos_sim(vecs[m], sh)
         align = {m: float(0.5 * (1.0 + cos_shared[m])) for m in mods}
     else:
-        # fallback: alignment = average cos to other mods, mapped to [0,1]
         for m in mods:
-            others = [cos_sim(vecs[m], vecs[o]) for o in mods if o != m]
+            others = [aligned_cos_sim(vecs[m], vecs[o]) for o in mods if o != m]
             cos_shared[m] = float(np.mean(others)) if others else 0.0
         align = {m: float(0.5 * (1.0 + cos_shared[m])) for m in mods}
 

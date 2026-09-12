@@ -40,8 +40,9 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from agod.adapter import soft_lr_dispersion
 from agod.lr_controller import (
     EMARouter,
+    aligned_cos_sim,
+    common_dim_grad_signature,
     cos_sim,
-    flatten_grads,
     modality_grad_cosine,
     schedule_modality_lr,
     softmax_scores,
@@ -209,8 +210,9 @@ def probe_grads(model, feats, y, idx, mods, device):
     loss = nn.CrossEntropyLoss()(model(batch), yy)
     loss.backward()
     groups = model.param_groups()
-    grads = {m: flatten_grads(groups[m]) for m in mods}
-    shared = flatten_grads(groups["shared"])
+    # common-dim signatures so video/text/audio towers remain comparable
+    grads = {m: common_dim_grad_signature(groups[m]) for m in mods}
+    shared = common_dim_grad_signature(groups["shared"])
     return grads, shared, float(loss.item())
 
 
@@ -271,7 +273,7 @@ def run_msrvtt(device, sched: str):
         temporal = {}
         if prev_grads is not None:
             for m in mods:
-                temporal[m] = cos_sim(grads[m], prev_grads[m])
+                temporal[m] = aligned_cos_sim(grads[m], prev_grads[m])
         prev_grads = {m: grads[m].copy() for m in mods}
 
         lr_mult = schedule_modality_lr(
@@ -369,13 +371,8 @@ def _amazon_probe_grads(model, rows, device, image_tf, base, mods):
     loss = nn.CrossEntropyLoss()(model(imgs, txts, return_mods=False), y)
     loss.backward()
     groups = model.param_groups()
-    # AmazonAGOD param_groups: modality keys + shared/head
-    grads = {}
-    for m in mods:
-        key = m if m in groups else ("text" if m == "text" else m)
-        grads[m] = flatten_grads(groups.get(key, groups.get(m, [])))
-    shared_key = "shared" if "shared" in groups else "head"
-    shared = flatten_grads(groups.get(shared_key, groups.get("shared", [])))
+    grads = {m: common_dim_grad_signature(groups[m]) for m in mods}
+    shared = common_dim_grad_signature(groups["shared"])
     return grads, shared, float(loss.item())
 
 
@@ -458,7 +455,7 @@ def run_amazon(device, sched: str, *, samples=None, image_tf=None):
         temporal = {}
         if prev_grads is not None:
             for m in mods:
-                temporal[m] = cos_sim(grads[m], prev_grads[m])
+                temporal[m] = aligned_cos_sim(grads[m], prev_grads[m])
         prev_grads = {m: grads[m].copy() for m in mods}
 
         lr_mult = schedule_modality_lr(
