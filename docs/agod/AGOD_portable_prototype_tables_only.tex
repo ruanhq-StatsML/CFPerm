@@ -1,0 +1,105 @@
+% AGOD portable prototype smoke tables (Amazon / MSR-VTT / Image-Text).
+% Acc lift = mean held-out Acc_post - Acc_pre over T=6 windows.
+% flops_rel = relative projection adapt FLOPs (B5g hard-gate; FWD still paid).
+% Compile fragment with booktabs (or paste into a paper preamble that loads it).
+\providecommand{\agodtoprule}{\toprule}
+\providecommand{\agodmidrule}{\midrule}
+\providecommand{\agodbottomrule}{\bottomrule}
+
+% ---------------------------------------------------------------------------
+% Table 1: multi-dataset Acc lift board (main portable smoke)
+% ---------------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{AGOD portable prototype smoke across datasets.
+Policies: B1 equal LR; B2 RF concept$-$covariate; B5 MMD-cov+PO;
+B5g $=$ B5 + hard-gate adapt-dropout ($\alpha_m<\theta$ skips modality proj BWD; FWD inference still runs).
+Induced $P(Y)$ drift, $T{=}6$ windows. FLOPs units are projection-head adapt cost (features pre-extracted).}
+\label{tab:agod-portable-smoke}
+\begin{tabular}{llcccc}
+\agodtoprule
+Dataset & Mods & B1 Acc$\uparrow$ & B5 Acc$\uparrow$ & B5g Acc$\uparrow$ & B5g FLOPs \\
+\agodmidrule
+Amazon Reviews     & img, txt            & $+0.058$ & $+0.087$ & ---      & --- \\
+MSR-VTT            & video, txt, audio   & $+0.070$ & $+0.063$ & $+0.048$ & $0.746$ \\
+COCO outdoor/indoor& img, txt, bbox      & $+0.034$ & $+0.019$ & $+0.031$ & $0.810$ \\
+MM train/test      & img, txt            & $-0.004$ & $-0.022$ & $+0.010$ & $0.778$ \\
+Indiana CXR        & img, txt            & $+0.024$ & $+0.016$ & $+0.007$ & $0.778$ \\
+\agodbottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table 2: Image/Text detail (Acc lift / Acc post / flops_rel)
+% ---------------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{Image/Text AGOD detail (same control plane as Amazon / MSR-VTT).
+Hard-gate is structured \emph{adapt-dropout}, not skip-inference.}
+\label{tab:agod-imgtxt-detail}
+\begin{tabular}{llccc}
+\agodtoprule
+Dataset & Policy & Acc lift & Acc post & flops\_rel \\
+\agodmidrule
+\multirow{4}{*}{COCO outdoor/indoor}
+ & B1 equal     & $+0.034$ & $0.871$ & $1.000$ \\
+ & B2 RF        & $+0.018$ & $0.859$ & $1.000$ \\
+ & B5 MMD+PO    & $+0.019$ & $0.863$ & $1.000$ \\
+ & B5g +gate    & $+0.031$ & $0.869$ & $0.810$ \\
+\agodmidrule
+\multirow{4}{*}{MM train/test}
+ & B1 equal     & $-0.004$ & $0.879$ & $1.000$ \\
+ & B2 RF        & $-0.012$ & $0.869$ & $1.000$ \\
+ & B5 MMD+PO    & $-0.022$ & $0.872$ & $1.000$ \\
+ & B5g +gate    & $+0.010$ & $0.850$ & $0.778$ \\
+\agodmidrule
+\multirow{4}{*}{Indiana CXR}
+ & B1 equal     & $+0.024$ & $0.921$ & $1.000$ \\
+ & B2 RF        & $+0.010$ & $0.906$ & $1.000$ \\
+ & B5 MMD+PO    & $+0.016$ & $0.908$ & $1.000$ \\
+ & B5g +gate    & $+0.007$ & $0.882$ & $0.778$ \\
+\agodbottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table 3: MSR-VTT portable detail
+% ---------------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{MSR-VTT AGOD portable prototype (video/text/audio packed features).}
+\label{tab:agod-msrvtt-detail}
+\begin{tabular}{lccc}
+\agodtoprule
+Policy & Acc lift & Acc post & flops\_rel \\
+\agodmidrule
+B1 equal  & $+0.070$ & $0.671$ & $1.000$ \\
+B2 RF     & $+0.064$ & $0.667$ & $1.000$ \\
+B5 MMD+PO & $+0.063$ & $0.675$ & $1.000$ \\
+B5g +gate & $+0.048$ & $0.620$ & $0.746$ \\
+\agodbottomrule
+\end{tabular}
+\end{table}
+
+% ---------------------------------------------------------------------------
+% Table 4: Amazon Acc board (B5 ship policy; no hard-gate flops in this smoke)
+% ---------------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{Amazon Reviews AGOD Acc smoke (MMD-cov+PO ship policy B5).
+B5$-$B1 Acc lift $\approx +0.030$.}
+\label{tab:agod-amazon-acc}
+\begin{tabular}{lccc}
+\agodtoprule
+Policy & Acc lift & Acc post & Wins $>0$ \\
+\agodmidrule
+B1 equal        & $+0.058$ & $0.539$ & $3/6$ \\
+B2 RF con$-$cov & $+0.072$ & $0.549$ & $4/6$ \\
+B3 MMD con$-$cov& $+0.058$ & $0.546$ & $3/6$ \\
+B4 MMD+gain     & $+0.037$ & $0.548$ & $2/6$ \\
+B5 MMD-cov+PO   & $+0.087$ & $0.559$ & $4/6$ \\
+\agodmidrule
+B5$-$B1         & $+0.030$ & $+0.021$ & \\
+\agodbottomrule
+\end{tabular}
+\end{table}
