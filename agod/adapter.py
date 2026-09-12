@@ -228,3 +228,100 @@ def characterize_gate_traj(traj: Sequence[Mapping], mods: Sequence[str]) -> dict
         ),
         "n_windows": len(traj),
     }
+
+
+def soft_lr_dispersion(lr_mult: Mapping[str, float], mods: Sequence[str]) -> dict:
+    """Characterize continuous next-stage step sizes (L2 soft LR)."""
+    vals = np.array([float(lr_mult[m]) for m in mods], float)
+    vmin = float(vals.min()) if len(vals) else float("nan")
+    vmax = float(vals.max()) if len(vals) else float("nan")
+    mean = float(vals.mean()) if len(vals) else float("nan")
+    std = float(vals.std()) if len(vals) else float("nan")
+    # relative range vs equal-LR baseline (=1)
+    return {
+        "lr_mean": mean,
+        "lr_std": std,
+        "lr_min": vmin,
+        "lr_max": vmax,
+        "lr_range": float(vmax - vmin) if len(vals) else float("nan"),
+        "lr_ratio": float(vmax / max(vmin, 1e-8)) if len(vals) else float("nan"),
+        "lr_cv": float(std / max(abs(mean), 1e-8)) if len(vals) else float("nan"),
+    }
+
+
+def alpha_entropy(alpha: Mapping[str, float], mods: Sequence[str]) -> float:
+    """Shannon entropy of routing mass (nats). Equal → log|M|."""
+    p = np.array([max(float(alpha[m]), 1e-12) for m in mods], float)
+    p = p / p.sum()
+    return float(-(p * np.log(p)).sum())
+
+
+def characterize_soft_lr_traj(traj: Sequence[Mapping], mods: Sequence[str]) -> dict:
+    """Summarize continuous soft-LR adapter (no gate zoo)."""
+    if not traj:
+        return {}
+    lifts = np.array([float(r["acc_lift"]) for r in traj], float)
+    flops = np.array([float(r.get("flops_rel", 1.0)) for r in traj], float)
+    ents = [alpha_entropy(r["alpha"], mods) for r in traj]
+    disp = [soft_lr_dispersion(r["lr_mult"], mods) for r in traj]
+    n_pos = int(np.sum(lifts > 0))
+    return {
+        "n_windows": len(traj),
+        "mean_acc_lift": float(np.nanmean(lifts)),
+        "median_acc_lift": float(np.nanmedian(lifts)),
+        "frac_windows_positive_lift": float(n_pos / max(len(traj), 1)),
+        "mean_acc_post": float(np.nanmean([float(r["acc_post"]) for r in traj])),
+        "mean_flops_rel": float(np.nanmean(flops)),
+        "mean_cost_utility": float(
+            np.nanmean(
+                [
+                    (float(r["acc_lift"]) / float(r["flops_rel"]))
+                    if float(r.get("flops_rel", 0)) > 0
+                    else np.nan
+                    for r in traj
+                ]
+            )
+        ),
+        "mean_alpha_entropy": float(np.nanmean(ents)),
+        "equal_alpha_entropy": float(np.log(len(mods))),
+        "mean_lr_std": float(np.nanmean([d["lr_std"] for d in disp])),
+        "mean_lr_range": float(np.nanmean([d["lr_range"] for d in disp])),
+        "mean_lr_ratio": float(np.nanmean([d["lr_ratio"] for d in disp])),
+        "mean_lr_cv": float(np.nanmean([d["lr_cv"] for d in disp])),
+    }
+
+
+def n_star_for_lift(
+    curve: Sequence[Mapping],
+    *,
+    n_key: str = "n_adapt",
+    lift_key: str = "mean_acc_lift",
+    eps: float = 0.0,
+) -> dict:
+    """Smallest sample size on an ascending N-curve with mean Acc lift > eps.
+
+    ``curve`` rows must already be sorted by ``n_key`` ascending.
+    Returns n_star / first_positive + full curve diagnostics.
+    """
+    ordered = sorted(curve, key=lambda r: float(r[n_key]))
+    n_star = None
+    first = None
+    for row in ordered:
+        lift = float(row[lift_key])
+        if first is None and lift > eps:
+            first = float(row[n_key])
+        if n_star is None and lift > eps:
+            # require non-decreasing positivity: keep first crossing
+            n_star = float(row[n_key])
+            break
+    return {
+        "eps": float(eps),
+        "n_star": n_star,
+        "first_positive_n": first,
+        "max_lift": float(max((float(r[lift_key]) for r in ordered), default=float("nan"))),
+        "best_n": (
+            float(max(ordered, key=lambda r: float(r[lift_key]))[n_key])
+            if ordered
+            else None
+        ),
+    }

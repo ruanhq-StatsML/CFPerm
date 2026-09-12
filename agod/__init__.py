@@ -15,8 +15,12 @@ from .adapter import (
     AdapterConfig,
     DynamicGate,
     LayeredAdapter,
+    alpha_entropy,
     characterize_gate_traj,
+    characterize_soft_lr_traj,
     flops_rel_proj,
+    n_star_for_lift,
+    soft_lr_dispersion,
 )
 from .lr_controller import EMARouter, alpha_to_lr, intensity_gain, softmax_scores, z_norm
 from .mmd import rbf_mmd2, whiten_pair
@@ -29,6 +33,10 @@ __all__ = [
     "DynamicGate",
     "LayeredAdapter",
     "characterize_gate_traj",
+    "characterize_soft_lr_traj",
+    "soft_lr_dispersion",
+    "alpha_entropy",
+    "n_star_for_lift",
     "flops_rel_proj",
     "rbf_mmd2",
     "whiten_pair",
