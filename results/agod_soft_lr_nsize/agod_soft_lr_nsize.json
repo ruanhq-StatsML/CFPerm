@@ -1,0 +1,4719 @@
+{
+  "agod_version": "0.1.0",
+  "focus": [
+    "continuous_soft_lr_step_sizes",
+    "sample_size_to_positive_lift",
+    "sparse_vs_dense_equal"
+  ],
+  "policies": [
+    "equal",
+    "soft_lr",
+    "soft_sparse"
+  ],
+  "design": {
+    "equal": "dense equal LR (B1); flops_rel=1",
+    "soft_lr": "continuous \u03b1\u2192LR_m; all mods active; characterize via lr_ratio/H(\u03b1)",
+    "soft_sparse": "soft_lr + quantile hard-gate; sparse adapt-BWD",
+    "n_star": "smallest mean N_adapt with mean Acc lift > 0 on ascending curve"
+  },
+  "cells": [
+    {
+      "dataset": "amazon",
+      "policy": "equal",
+      "n_cur": 40,
+      "n_adapt_mean": 24.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.0,
+      "median_acc_lift": 0.0,
+      "frac_windows_positive_lift": 0.16666666666666666,
+      "mean_acc_post": 0.5208333333333334,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.0,
+      "mean_alpha_entropy": 0.34451632635927226,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.0,
+      "mean_lr_range": 0.0,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": 0.0
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_lr",
+      "n_cur": 40,
+      "n_adapt_mean": 24.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.020833333333333332,
+      "median_acc_lift": 0.0,
+      "frac_windows_positive_lift": 0.3333333333333333,
+      "mean_acc_post": 0.5416666666666666,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.020833333333333332,
+      "mean_alpha_entropy": 0.3965916929865771,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.6476245455835862,
+      "mean_lr_range": 1.2952490911671724,
+      "mean_lr_ratio": 4.953220451047579,
+      "mean_lr_cv": 0.6476245455835862
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_sparse",
+      "n_cur": 40,
+      "n_adapt_mean": 24.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.0,
+      "median_acc_lift": 0.0,
+      "frac_windows_positive_lift": 0.16666666666666666,
+      "mean_acc_post": 0.5208333333333334,
+      "mean_flops_rel": 0.7333333333333333,
+      "mean_cost_utility": 0.0,
+      "mean_alpha_entropy": 0.4197747152459395,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.622358062095787,
+      "mean_lr_range": 1.244716124191574,
+      "mean_lr_ratio": 4.6186172488688015,
+      "mean_lr_cv": 0.6223580620957869
+    },
+    {
+      "dataset": "amazon",
+      "policy": "equal",
+      "n_cur": 80,
+      "n_adapt_mean": 44.666666666666664,
+      "n_windows": 6,
+      "mean_acc_lift": 0.060185185185185196,
+      "median_acc_lift": 0.015625,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": 0.5613425925925926,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.060185185185185196,
+      "mean_alpha_entropy": 0.5932728138131802,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.0,
+      "mean_lr_range": 0.0,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": 0.0
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_lr",
+      "n_cur": 80,
+      "n_adapt_mean": 44.666666666666664,
+      "n_windows": 6,
+      "mean_acc_lift": 0.045717592592592594,
+      "median_acc_lift": 0.015625,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": 0.5561342592592592,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.045717592592592594,
+      "mean_alpha_entropy": 0.5556440659037897,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.4511227604162305,
+      "mean_lr_range": 0.902245520832461,
+      "mean_lr_ratio": 2.7332446954915173,
+      "mean_lr_cv": 0.4511227604162305
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_sparse",
+      "n_cur": 80,
+      "n_adapt_mean": 44.666666666666664,
+      "n_windows": 6,
+      "mean_acc_lift": 0.045717592592592594,
+      "median_acc_lift": 0.015625,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": 0.5561342592592592,
+      "mean_flops_rel": 0.7333333333333333,
+      "mean_cost_utility": 0.062342171717171734,
+      "mean_alpha_entropy": 0.5323742030516726,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.4832225395516255,
+      "mean_lr_range": 0.966445079103251,
+      "mean_lr_ratio": 3.0142478864198257,
+      "mean_lr_cv": 0.4832225395516254
+    },
+    {
+      "dataset": "amazon",
+      "policy": "equal",
+      "n_cur": 120,
+      "n_adapt_mean": 67.33333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.05034722222222222,
+      "median_acc_lift": 0.041666666666666685,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": 0.55239898989899,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.05034722222222222,
+      "mean_alpha_entropy": 0.5634193637915557,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.0,
+      "mean_lr_range": 0.0,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": 0.0
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_lr",
+      "n_cur": 120,
+      "n_adapt_mean": 67.33333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.025726010101010083,
+      "median_acc_lift": -0.011363636363636354,
+      "frac_windows_positive_lift": 0.3333333333333333,
+      "mean_acc_post": 0.5347222222222222,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.025726010101010083,
+      "mean_alpha_entropy": 0.517717159870288,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.4793587588921277,
+      "mean_lr_range": 0.9587175177842554,
+      "mean_lr_ratio": 3.2271354045469227,
+      "mean_lr_cv": 0.47935875889212753
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_sparse",
+      "n_cur": 120,
+      "n_adapt_mean": 67.33333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.0014204545454545396,
+      "median_acc_lift": -0.011363636363636354,
+      "frac_windows_positive_lift": 0.16666666666666666,
+      "mean_acc_post": 0.517361111111111,
+      "mean_flops_rel": 0.7333333333333333,
+      "mean_cost_utility": 0.0019369834710743726,
+      "mean_alpha_entropy": 0.5276212215147688,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.4611434866553799,
+      "mean_lr_range": 0.9222869733107596,
+      "mean_lr_ratio": 3.1471982219883894,
+      "mean_lr_cv": 0.4611434866553798
+    },
+    {
+      "dataset": "amazon",
+      "policy": "equal",
+      "n_cur": 160,
+      "n_adapt_mean": 82.83333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.022657414307004475,
+      "median_acc_lift": 0.019176136363636354,
+      "frac_windows_positive_lift": 0.6666666666666666,
+      "mean_acc_post": 0.49499347988077497,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.022657414307004475,
+      "mean_alpha_entropy": 0.5252964887680502,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.0,
+      "mean_lr_range": 0.0,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": 0.0
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_lr",
+      "n_cur": 160,
+      "n_adapt_mean": 82.83333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.030854135618479873,
+      "median_acc_lift": 0.019176136363636354,
+      "frac_windows_positive_lift": 0.6666666666666666,
+      "mean_acc_post": 0.5121864133134625,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.030854135618479873,
+      "mean_alpha_entropy": 0.5779759867346778,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.39449419656163687,
+      "mean_lr_range": 0.7889883931232737,
+      "mean_lr_ratio": 2.5126450600491723,
+      "mean_lr_cv": 0.39449419656163687
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_sparse",
+      "n_cur": 160,
+      "n_adapt_mean": 82.83333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.021473702185792354,
+      "median_acc_lift": 0.0078125,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": 0.5002018132141083,
+      "mean_flops_rel": 0.7333333333333333,
+      "mean_cost_utility": 0.029282321162444124,
+      "mean_alpha_entropy": 0.5173635176373144,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.5085737563891012,
+      "mean_lr_range": 1.0171475127782024,
+      "mean_lr_ratio": 3.198959738305636,
+      "mean_lr_cv": 0.5085737563891011
+    },
+    {
+      "dataset": "amazon",
+      "policy": "equal",
+      "n_cur": 200,
+      "n_adapt_mean": 106.83333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.002083333333333335,
+      "median_acc_lift": 0.0,
+      "frac_windows_positive_lift": 0.3333333333333333,
+      "mean_acc_post": 0.49733606557377047,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.002083333333333335,
+      "mean_alpha_entropy": 0.5701394964925283,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.0,
+      "mean_lr_range": 0.0,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": 0.0
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_lr",
+      "n_cur": 200,
+      "n_adapt_mean": 106.83333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.010416666666666657,
+      "median_acc_lift": 0.0,
+      "frac_windows_positive_lift": 0.3333333333333333,
+      "mean_acc_post": 0.5098360655737705,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.010416666666666657,
+      "mean_alpha_entropy": 0.5291243942723552,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.49519668766281105,
+      "mean_lr_range": 0.9903933753256221,
+      "mean_lr_ratio": 3.035394113502449,
+      "mean_lr_cv": 0.49519668766281105
+    },
+    {
+      "dataset": "amazon",
+      "policy": "soft_sparse",
+      "n_cur": 200,
+      "n_adapt_mean": 106.83333333333333,
+      "n_windows": 6,
+      "mean_acc_lift": 0.002462121212121212,
+      "median_acc_lift": 0.0,
+      "frac_windows_positive_lift": 0.16666666666666666,
+      "mean_acc_post": 0.501881520119225,
+      "mean_flops_rel": 0.7333333333333333,
+      "mean_cost_utility": 0.003357438016528926,
+      "mean_alpha_entropy": 0.5515630972025678,
+      "equal_alpha_entropy": 0.6931471805599453,
+      "mean_lr_std": 0.44472483415403025,
+      "mean_lr_range": 0.8894496683080605,
+      "mean_lr_ratio": 2.793023844061208,
+      "mean_lr_cv": 0.44472483415403025
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "equal",
+      "n_cur": 80,
+      "n_adapt_mean": 52.0,
+      "n_windows": 6,
+      "mean_acc_lift": -0.023666666666666666,
+      "median_acc_lift": 0.018,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": -0.023666666666666666,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "equal",
+      "n_cur": 160,
+      "n_adapt_mean": 104.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.06266666666666666,
+      "median_acc_lift": 0.054,
+      "frac_windows_positive_lift": 0.8333333333333334,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.06266666666666666,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "equal",
+      "n_cur": 240,
+      "n_adapt_mean": 156.0,
+      "n_windows": 6,
+      "mean_acc_lift": -0.0018333333333333372,
+      "median_acc_lift": -0.011500000000000003,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": -0.0018333333333333372,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "equal",
+      "n_cur": 320,
+      "n_adapt_mean": 208.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.05666666666666667,
+      "median_acc_lift": 0.027,
+      "frac_windows_positive_lift": 0.6666666666666666,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.05666666666666667,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "equal",
+      "n_cur": 480,
+      "n_adapt_mean": 312.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.041666666666666664,
+      "median_acc_lift": 0.018,
+      "frac_windows_positive_lift": 0.6666666666666666,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.041666666666666664,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.0,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_lr",
+      "n_cur": 80,
+      "n_adapt_mean": 52.0,
+      "n_windows": 6,
+      "mean_acc_lift": -0.012000000000000002,
+      "median_acc_lift": 0.05349999999999999,
+      "frac_windows_positive_lift": 0.6666666666666666,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": -0.012000000000000002,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 2.228333333333333,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_lr",
+      "n_cur": 160,
+      "n_adapt_mean": 104.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.0595,
+      "median_acc_lift": 0.0715,
+      "frac_windows_positive_lift": 0.8333333333333334,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.0595,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.7466666666666668,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_lr",
+      "n_cur": 240,
+      "n_adapt_mean": 156.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.009833333333333333,
+      "median_acc_lift": 0.005999999999999998,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.009833333333333333,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 2.83,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_lr",
+      "n_cur": 320,
+      "n_adapt_mean": 208.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.058166666666666665,
+      "median_acc_lift": 0.013499999999999998,
+      "frac_windows_positive_lift": 0.6666666666666666,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.058166666666666665,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.7700000000000002,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_lr",
+      "n_cur": 480,
+      "n_adapt_mean": 312.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.0375,
+      "median_acc_lift": 0.006,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 1.0,
+      "mean_cost_utility": 0.0375,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 3.1366666666666667,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_sparse",
+      "n_cur": 80,
+      "n_adapt_mean": 52.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.0059999999999999975,
+      "median_acc_lift": 0.036,
+      "frac_windows_positive_lift": 0.6666666666666666,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 0.8100000000000002,
+      "mean_cost_utility": 0.0074074074074074025,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 2.228333333333333,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_sparse",
+      "n_cur": 160,
+      "n_adapt_mean": 104.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.05966666666666667,
+      "median_acc_lift": 0.045,
+      "frac_windows_positive_lift": 1.0,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 0.8100000000000002,
+      "mean_cost_utility": 0.07366255144032921,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.7466666666666668,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_sparse",
+      "n_cur": 240,
+      "n_adapt_mean": 156.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.004,
+      "median_acc_lift": 0.012,
+      "frac_windows_positive_lift": 0.5,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 0.8100000000000002,
+      "mean_cost_utility": 0.004938271604938271,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 2.83,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_sparse",
+      "n_cur": 320,
+      "n_adapt_mean": 208.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.085,
+      "median_acc_lift": 0.045,
+      "frac_windows_positive_lift": 1.0,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 0.8100000000000002,
+      "mean_cost_utility": 0.10493827160493825,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 1.7700000000000002,
+      "mean_lr_cv": NaN
+    },
+    {
+      "dataset": "msrvtt",
+      "policy": "soft_sparse",
+      "n_cur": 480,
+      "n_adapt_mean": 312.0,
+      "n_windows": 6,
+      "mean_acc_lift": 0.0385,
+      "median_acc_lift": 0.020999999999999998,
+      "frac_windows_positive_lift": 0.6666666666666666,
+      "mean_acc_post": NaN,
+      "mean_flops_rel": 0.8100000000000002,
+      "mean_cost_utility": 0.04753086419753085,
+      "mean_alpha_entropy": NaN,
+      "equal_alpha_entropy": 1.0986122886681098,
+      "mean_lr_std": NaN,
+      "mean_lr_range": NaN,
+      "mean_lr_ratio": 3.1366666666666667,
+      "mean_lr_cv": NaN
+    }
+  ],
+  "n_stars": {
+    "amazon:equal": {
+      "eps": 0.0,
+      "n_star": 44.666666666666664,
+      "first_positive_n": 44.666666666666664,
+      "max_lift": 0.060185185185185196,
+      "best_n": 44.666666666666664
+    },
+    "amazon:soft_lr": {
+      "eps": 0.0,
+      "n_star": 24.0,
+      "first_positive_n": 24.0,
+      "max_lift": 0.045717592592592594,
+      "best_n": 44.666666666666664
+    },
+    "amazon:soft_sparse": {
+      "eps": 0.0,
+      "n_star": 44.666666666666664,
+      "first_positive_n": 44.666666666666664,
+      "max_lift": 0.045717592592592594,
+      "best_n": 44.666666666666664
+    },
+    "msrvtt:equal": {
+      "eps": 0.0,
+      "n_star": 104.0,
+      "first_positive_n": 104.0,
+      "max_lift": 0.06266666666666666,
+      "best_n": 104.0
+    },
+    "msrvtt:soft_lr": {
+      "eps": 0.0,
+      "n_star": 104.0,
+      "first_positive_n": 104.0,
+      "max_lift": 0.0595,
+      "best_n": 104.0
+    },
+    "msrvtt:soft_sparse": {
+      "eps": 0.0,
+      "n_star": 52.0,
+      "first_positive_n": 52.0,
+      "max_lift": 0.085,
+      "best_n": 208.0
+    }
+  },
+  "trajectory": {
+    "amazon:equal:N40": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.24212329693272228,
+          "image": 0.7578767030672777
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 930.9488529979717,
+        "acc_pre": 0.5,
+        "acc_post": 0.4375,
+        "acc_lift": -0.0625,
+        "train_loss": 0.6586026325821877,
+        "alpha_entropy": 0.5535150752406943,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.12480947969516851,
+          "image": 0.8751905203048315
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 907.017513003666,
+        "acc_pre": 0.625,
+        "acc_post": 0.625,
+        "acc_lift": 0.0,
+        "train_loss": 0.7171311303973198,
+        "alpha_entropy": 0.3763992598556949,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.09520677790291696,
+          "image": 0.904793222097083
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 876.6550929867662,
+        "acc_pre": 0.5625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6743114441633224,
+        "alpha_entropy": 0.31442169112993257,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.07919559169787199,
+          "image": 0.9208044083021281
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 864.7984910057858,
+        "acc_pre": 0.625,
+        "acc_post": 0.625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6785121634602547,
+        "alpha_entropy": 0.27680031814114847,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.08333364666543053,
+          "image": 0.9166663533345696
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 840.435136022279,
+        "acc_pre": 0.4375,
+        "acc_post": 0.4375,
+        "acc_lift": 0.0,
+        "train_loss": 0.6876824051141739,
+        "alpha_entropy": 0.2868367343930726,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.07213423109805578,
+          "image": 0.9278657689019443
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 836.598366004182,
+        "acc_pre": 0.375,
+        "acc_post": 0.4375,
+        "acc_lift": 0.0625,
+        "train_loss": 0.7055255770683289,
+        "alpha_entropy": 0.25912487939509043,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      }
+    ],
+    "amazon:soft_lr:N40": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.24212329693272225,
+          "image": 0.7578767030672777
+        },
+        "lr_mult": {
+          "text": 0.5358219344789,
+          "image": 1.4641780655211,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 851.3556839898229,
+        "acc_pre": 0.5,
+        "acc_post": 0.4375,
+        "acc_lift": -0.0625,
+        "train_loss": 0.6439173221588135,
+        "alpha_entropy": 0.5535150752406943,
+        "lr_mean": 1.0,
+        "lr_std": 0.4641780655211,
+        "lr_min": 0.5358219344789,
+        "lr_max": 1.4641780655211,
+        "lr_range": 0.9283561310422,
+        "lr_ratio": 2.7325832917703323,
+        "lr_cv": 0.4641780655211
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.13137918468343573,
+          "image": 0.8686208153165643
+        },
+        "lr_mult": {
+          "text": 0.33648253243018433,
+          "image": 1.6635174675698159,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 856.2552370131016,
+        "acc_pre": 0.625,
+        "acc_post": 0.625,
+        "acc_lift": 0.0,
+        "train_loss": 0.7421730160713196,
+        "alpha_entropy": 0.3890000955004242,
+        "lr_mean": 1.0,
+        "lr_std": 0.6635174675698158,
+        "lr_min": 0.33648253243018433,
+        "lr_max": 1.6635174675698159,
+        "lr_range": 1.3270349351396316,
+        "lr_ratio": 4.943844946587157,
+        "lr_cv": 0.6635174675698158
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.1367872957268209,
+          "image": 0.8632127042731792
+        },
+        "lr_mult": {
+          "text": 0.34621713230827766,
+          "image": 1.6537828676917228,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 883.8547139894217,
+        "acc_pre": 0.5625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6760330572724342,
+        "alpha_entropy": 0.39908835419542044,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.6537828676917226,
+        "lr_min": 0.34621713230827766,
+        "lr_max": 1.6537828676917228,
+        "lr_range": 1.3075657353834451,
+        "lr_ratio": 4.77672163900649,
+        "lr_cv": 0.6537828676917224
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.10676070567044091,
+          "image": 0.8932392943295591
+        },
+        "lr_mult": {
+          "text": 0.2921692702067936,
+          "image": 1.7078307297932065,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 875.0054019910749,
+        "acc_pre": 0.625,
+        "acc_post": 0.625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6797165051102638,
+        "alpha_entropy": 0.339688752537896,
+        "lr_mean": 1.0,
+        "lr_std": 0.7078307297932065,
+        "lr_min": 0.2921692702067936,
+        "lr_max": 1.7078307297932065,
+        "lr_range": 1.415661459586413,
+        "lr_ratio": 5.845346872326532,
+        "lr_cv": 0.7078307297932065
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.1307564193921122,
+          "image": 0.8692435806078879
+        },
+        "lr_mult": {
+          "text": 0.33536155490580194,
+          "image": 1.6646384450941982,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 870.3216770081781,
+        "acc_pre": 0.4375,
+        "acc_post": 0.5625,
+        "acc_lift": 0.125,
+        "train_loss": 0.6881936863064766,
+        "alpha_entropy": 0.3878221030312187,
+        "lr_mean": 1.0,
+        "lr_std": 0.6646384450941981,
+        "lr_min": 0.33536155490580194,
+        "lr_max": 1.6646384450941982,
+        "lr_range": 1.3292768901883962,
+        "lr_ratio": 4.96371280709791,
+        "lr_cv": 0.6646384450941981
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.09344461231584794,
+          "image": 0.9065553876841521
+        },
+        "lr_mult": {
+          "text": 0.2682003021685263,
+          "image": 1.731799697831474,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 884.1379210061859,
+        "acc_pre": 0.375,
+        "acc_post": 0.4375,
+        "acc_lift": 0.0625,
+        "train_loss": 0.7031956911087036,
+        "alpha_entropy": 0.31043577741380873,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.7317996978314739,
+        "lr_min": 0.2682003021685263,
+        "lr_max": 1.731799697831474,
+        "lr_range": 1.4635993956629476,
+        "lr_ratio": 6.457113149497053,
+        "lr_cv": 0.7317996978314738
+      }
+    ],
+    "amazon:soft_sparse:N40": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.24212329693272228,
+          "image": 0.7578767030672777
+        },
+        "lr_mult": {
+          "text": 0.5358219344789001,
+          "image": 1.4641780655211,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4123219209571256,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 892.206779011758,
+        "acc_pre": 0.5,
+        "acc_post": 0.4375,
+        "acc_lift": -0.0625,
+        "train_loss": 0.6438682600855827,
+        "alpha_entropy": 0.5535150752406943,
+        "lr_mean": 1.0,
+        "lr_std": 0.46417806552109997,
+        "lr_min": 0.5358219344789001,
+        "lr_max": 1.4641780655211,
+        "lr_range": 0.9283561310421999,
+        "lr_ratio": 2.732583291770332,
+        "lr_cv": 0.46417806552109997
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.12349870119064829,
+          "image": 0.8765012988093518
+        },
+        "lr_mult": {
+          "text": 0.3222976621431669,
+          "image": 1.6777023378568334,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.37198955840482045,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 906.7005779943429,
+        "acc_pre": 0.625,
+        "acc_post": 0.625,
+        "acc_lift": 0.0,
+        "train_loss": 0.7430211901664734,
+        "alpha_entropy": 0.3738384295563686,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.6777023378568333,
+        "lr_min": 0.3222976621431669,
+        "lr_max": 1.6777023378568334,
+        "lr_range": 1.3554046757136664,
+        "lr_ratio": 5.205443709087738,
+        "lr_cv": 0.6777023378568332
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.0874420170316667,
+          "image": 0.9125579829683333
+        },
+        "lr_mult": {
+          "text": 0.25739563065700005,
+          "image": 1.7426043693430002,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.3597302857907667,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 856.8125849997159,
+        "acc_pre": 0.5625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6760420873761177,
+        "alpha_entropy": 0.29657929159829494,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.7426043693430001,
+        "lr_min": 0.25739563065700005,
+        "lr_max": 1.7426043693430002,
+        "lr_range": 1.4852087386860002,
+        "lr_ratio": 6.77013966746451,
+        "lr_cv": 0.742604369343
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.15254160452520582,
+          "image": 0.8474583954747943
+        },
+        "lr_mult": {
+          "text": 0.37457488814537054,
+          "image": 1.62542511185463,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.38186414553857007,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 877.916155004641,
+        "acc_pre": 0.625,
+        "acc_post": 0.625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6797153949737549,
+        "alpha_entropy": 0.42709254213373316,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.6254251118546297,
+        "lr_min": 0.37457488814537054,
+        "lr_max": 1.62542511185463,
+        "lr_range": 1.2508502237092594,
+        "lr_ratio": 4.339386230354585,
+        "lr_cv": 0.6254251118546296
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.19906742356219193,
+          "image": 0.8009325764378081
+        },
+        "lr_mult": {
+          "text": 0.45832136241194543,
+          "image": 1.5416786375880547,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.3976829240111453,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 887.0700960105751,
+        "acc_pre": 0.4375,
+        "acc_post": 0.4375,
+        "acc_lift": 0.0,
+        "train_loss": 0.6882727965712547,
+        "alpha_entropy": 0.499106877096123,
+        "lr_mean": 1.0,
+        "lr_std": 0.5416786375880546,
+        "lr_min": 0.45832136241194543,
+        "lr_max": 1.5416786375880547,
+        "lr_range": 1.0833572751761094,
+        "lr_ratio": 3.363750337699453,
+        "lr_cv": 0.5416786375880546
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "n_cur": 40,
+        "n_adapt": 24,
+        "n_hold": 16,
+        "alpha": {
+          "text": 0.12080008310494231,
+          "image": 0.8791999168950577
+        },
+        "lr_mult": {
+          "text": 0.31744014958889616,
+          "image": 1.6825598504111041,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.3710720282556804,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 859.5155870134477,
+        "acc_pre": 0.375,
+        "acc_post": 0.4375,
+        "acc_lift": 0.0625,
+        "train_loss": 0.7016744464635849,
+        "alpha_entropy": 0.3685160758504228,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.682559850411104,
+        "lr_min": 0.31744014958889616,
+        "lr_max": 1.6825598504111041,
+        "lr_range": 1.365119700822208,
+        "lr_ratio": 5.300400256836191,
+        "lr_cv": 0.6825598504111039
+      }
+    ],
+    "amazon:equal:N80": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.23931792640239619,
+          "image": 0.7606820735976039
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1197.7842820051592,
+        "acc_pre": 0.375,
+        "acc_post": 0.59375,
+        "acc_lift": 0.21875,
+        "train_loss": 0.6865511611104012,
+        "alpha_entropy": 0.5502924397126318,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.23825267147828852,
+          "image": 0.7617473285217116
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1175.8677339821588,
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "train_loss": 0.6928941681981087,
+        "alpha_entropy": 0.5490574349479269,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.36383066011911497,
+          "image": 0.6361693398808851
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1154.4045470072888,
+        "acc_pre": 0.53125,
+        "acc_post": 0.53125,
+        "acc_lift": 0.0,
+        "train_loss": 0.688267894089222,
+        "alpha_entropy": 0.6555904237175129,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.40841578804927636,
+          "image": 0.5915842119507237
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1207.1345779986586,
+        "acc_pre": 0.5625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6690607443451881,
+        "alpha_entropy": 0.676276758855139,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.20761613552587418,
+          "image": 0.7923838644741259
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1157.0911800081376,
+        "acc_pre": 0.59375,
+        "acc_post": 0.625,
+        "acc_lift": 0.03125,
+        "train_loss": 0.69288769364357,
+        "alpha_entropy": 0.510781052896972,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "n_cur": 46,
+        "n_adapt": 28,
+        "n_hold": 18,
+        "alpha": {
+          "text": 0.30818256815080713,
+          "image": 0.691817431849193
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 953.0073439818807,
+        "acc_pre": 0.4444444444444444,
+        "acc_post": 0.5555555555555556,
+        "acc_lift": 0.11111111111111116,
+        "train_loss": 0.7061169072985649,
+        "alpha_entropy": 0.617638772748899,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      }
+    ],
+    "amazon:soft_lr:N80": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.23931792640239616,
+          "image": 0.7606820735976039
+        },
+        "lr_mult": {
+          "text": 0.5307722675243131,
+          "image": 1.469227732475687,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1123.22641198989,
+        "acc_pre": 0.375,
+        "acc_post": 0.59375,
+        "acc_lift": 0.21875,
+        "train_loss": 0.6846237704157829,
+        "alpha_entropy": 0.5502924397126316,
+        "lr_mean": 1.0,
+        "lr_std": 0.469227732475687,
+        "lr_min": 0.5307722675243131,
+        "lr_max": 1.469227732475687,
+        "lr_range": 0.938455464951374,
+        "lr_ratio": 2.768094383168552,
+        "lr_cv": 0.469227732475687
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.208348338238818,
+          "image": 0.791651661761182
+        },
+        "lr_mult": {
+          "text": 0.47502700882987237,
+          "image": 1.5249729911701277,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1189.345865015639,
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "train_loss": 0.6954222023487091,
+        "alpha_entropy": 0.5117601042996982,
+        "lr_mean": 1.0,
+        "lr_std": 0.5249729911701277,
+        "lr_min": 0.47502700882987237,
+        "lr_max": 1.5249729911701277,
+        "lr_range": 1.0499459823402555,
+        "lr_ratio": 3.2102869159515226,
+        "lr_cv": 0.5249729911701277
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.25575308175901584,
+          "image": 0.7442469182409842
+        },
+        "lr_mult": {
+          "text": 0.5603555471662285,
+          "image": 1.4396444528337717,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1178.734829009045,
+        "acc_pre": 0.53125,
+        "acc_post": 0.5625,
+        "acc_lift": 0.03125,
+        "train_loss": 0.68449866771698,
+        "alpha_entropy": 0.5685677351118121,
+        "lr_mean": 1.0,
+        "lr_std": 0.4396444528337716,
+        "lr_min": 0.5603555471662285,
+        "lr_max": 1.4396444528337717,
+        "lr_range": 0.8792889056675433,
+        "lr_ratio": 2.56916248998371,
+        "lr_cv": 0.4396444528337716
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.3264238860782964,
+          "image": 0.6735761139217036
+        },
+        "lr_mult": {
+          "text": 0.6875629949409335,
+          "image": 1.3124370050590666,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1199.4832530035637,
+        "acc_pre": 0.59375,
+        "acc_post": 0.5625,
+        "acc_lift": -0.03125,
+        "train_loss": 0.6640574634075165,
+        "alpha_entropy": 0.6316171114501322,
+        "lr_mean": 1.0,
+        "lr_std": 0.3124370050590665,
+        "lr_min": 0.6875629949409335,
+        "lr_max": 1.3124370050590666,
+        "lr_range": 0.624874010118133,
+        "lr_ratio": 1.908824376407596,
+        "lr_cv": 0.3124370050590665
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.1822420904911729,
+          "image": 0.8177579095088271
+        },
+        "lr_mult": {
+          "text": 0.42803576288411127,
+          "image": 1.5719642371158888,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1162.639254995156,
+        "acc_pre": 0.5625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6891686022281647,
+        "alpha_entropy": 0.4747763008889791,
+        "lr_mean": 1.0,
+        "lr_std": 0.5719642371158887,
+        "lr_min": 0.42803576288411127,
+        "lr_max": 1.5719642371158888,
+        "lr_range": 1.1439284742317777,
+        "lr_ratio": 3.672506770284732,
+        "lr_cv": 0.5719642371158887
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "n_cur": 46,
+        "n_adapt": 28,
+        "n_hold": 18,
+        "alpha": {
+          "text": 0.28417214230953247,
+          "image": 0.7158278576904675
+        },
+        "lr_mult": {
+          "text": 0.6115098561571585,
+          "image": 1.3884901438428416,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 974.1438580094837,
+        "acc_pre": 0.5,
+        "acc_post": 0.5555555555555556,
+        "acc_lift": 0.05555555555555558,
+        "train_loss": 0.6953549608588219,
+        "alpha_entropy": 0.5968507039594849,
+        "lr_mean": 1.0,
+        "lr_std": 0.3884901438428416,
+        "lr_min": 0.6115098561571585,
+        "lr_max": 1.3884901438428416,
+        "lr_range": 0.7769802876856832,
+        "lr_ratio": 2.27059323715299,
+        "lr_cv": 0.3884901438428416
+      }
+    ],
+    "amazon:soft_sparse:N80": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.23931792640239619,
+          "image": 0.7606820735976039
+        },
+        "lr_mult": {
+          "text": 0.5307722675243132,
+          "image": 1.469227732475687,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.41136809497681476,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1182.795928005362,
+        "acc_pre": 0.375,
+        "acc_post": 0.59375,
+        "acc_lift": 0.21875,
+        "train_loss": 0.684700220823288,
+        "alpha_entropy": 0.5502924397126318,
+        "lr_mean": 1.0,
+        "lr_std": 0.46922773247568694,
+        "lr_min": 0.5307722675243132,
+        "lr_max": 1.469227732475687,
+        "lr_range": 0.9384554649513739,
+        "lr_ratio": 2.7680943831685516,
+        "lr_cv": 0.46922773247568694
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.16675714688465598,
+          "image": 0.8332428531153441
+        },
+        "lr_mult": {
+          "text": 0.4001628643923808,
+          "image": 1.5998371356076195,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.38669742994078304,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1161.8753199873026,
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "train_loss": 0.6963363215327263,
+        "alpha_entropy": 0.45070680169171584,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.5998371356076193,
+        "lr_min": 0.4001628643923808,
+        "lr_max": 1.5998371356076195,
+        "lr_range": 1.1996742712152386,
+        "lr_ratio": 3.9979650236582045,
+        "lr_cv": 0.5998371356076192
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.2044386389556643,
+          "image": 0.7955613610443357
+        },
+        "lr_mult": {
+          "text": 0.4679895501201957,
+          "image": 1.5320104498798044,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.39950913724492587,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1176.431578991469,
+        "acc_pre": 0.53125,
+        "acc_post": 0.5625,
+        "acc_lift": 0.03125,
+        "train_loss": 0.6849806234240532,
+        "alpha_entropy": 0.5064944539965257,
+        "lr_mean": 1.0,
+        "lr_std": 0.5320104498798044,
+        "lr_min": 0.4679895501201957,
+        "lr_max": 1.5320104498798044,
+        "lr_range": 1.0640208997596088,
+        "lr_ratio": 3.273599697870031,
+        "lr_cv": 0.5320104498798044
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.3273541255831809,
+          "image": 0.6726458744168191
+        },
+        "lr_mult": {
+          "text": 0.6892374260497256,
+          "image": 1.3107625739502746,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4413004026982815,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1211.0925349988975,
+        "acc_pre": 0.59375,
+        "acc_post": 0.5625,
+        "acc_lift": -0.03125,
+        "train_loss": 0.6653386801481247,
+        "alpha_entropy": 0.6322890139716917,
+        "lr_mean": 1.0,
+        "lr_std": 0.3107625739502745,
+        "lr_min": 0.6892374260497256,
+        "lr_max": 1.3107625739502746,
+        "lr_range": 0.621525147900549,
+        "lr_ratio": 1.9017576881492628,
+        "lr_cv": 0.3107625739502745
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.1771274381646575,
+          "image": 0.8228725618353425
+        },
+        "lr_mult": {
+          "text": 0.41882938869638353,
+          "image": 1.5811706113036166,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.39022332897598355,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1187.5639130012132,
+        "acc_pre": 0.5625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6877430826425552,
+        "alpha_entropy": 0.4670096152218504,
+        "lr_mean": 1.0,
+        "lr_std": 0.5811706113036165,
+        "lr_min": 0.41882938869638353,
+        "lr_max": 1.5811706113036166,
+        "lr_range": 1.1623412226072332,
+        "lr_ratio": 3.7752140942760675,
+        "lr_cv": 0.5811706113036165
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "n_cur": 46,
+        "n_adapt": 28,
+        "n_hold": 18,
+        "alpha": {
+          "text": 0.2742629255040272,
+          "image": 0.7257370744959729
+        },
+        "lr_mult": {
+          "text": 0.593673265907249,
+          "image": 1.4063267340927514,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4232493946713693,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1013.4664819925092,
+        "acc_pre": 0.5,
+        "acc_post": 0.5555555555555556,
+        "acc_lift": 0.05555555555555558,
+        "train_loss": 0.697809562087059,
+        "alpha_entropy": 0.5874528937156199,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.4063267340927512,
+        "lr_min": 0.593673265907249,
+        "lr_max": 1.4063267340927514,
+        "lr_range": 0.8126534681855024,
+        "lr_ratio": 2.368856431396837,
+        "lr_cv": 0.4063267340927511
+      }
+    ],
+    "amazon:equal:N120": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.23360003320838738,
+          "image": 0.7663999667916126
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1129.6172520087566,
+        "acc_pre": 0.5208333333333334,
+        "acc_post": 0.4583333333333333,
+        "acc_lift": -0.06250000000000006,
+        "train_loss": 0.6916896253824234,
+        "alpha_entropy": 0.5435898445042906,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.13302527804702843,
+          "image": 0.8669747219529716
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1082.4583809881005,
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "train_loss": 0.6846185177564621,
+        "alpha_entropy": 0.3920974377875386,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.19555625586111508,
+          "image": 0.8044437441388849
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1090.7992490101606,
+        "acc_pre": 0.5,
+        "acc_post": 0.625,
+        "acc_lift": 0.125,
+        "train_loss": 0.6920459792017937,
+        "alpha_entropy": 0.49418003019900375,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.5449995713009499,
+          "image": 0.4550004286990501
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1049.3418970145285,
+        "acc_pre": 0.5227272727272727,
+        "acc_post": 0.5227272727272727,
+        "acc_lift": 0.0,
+        "train_loss": 0.6853639334440231,
+        "alpha_entropy": 0.6890917726428112,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.2669922307085061,
+          "image": 0.733007769291494
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1177.6095739915036,
+        "acc_pre": 0.40625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.15625,
+        "train_loss": 0.6882925406098366,
+        "alpha_entropy": 0.5802442413676324,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 5,
+        "category": "Sports & Outdoors",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.4232290211683396,
+          "image": 0.5767709788316604
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1102.4463289941195,
+        "acc_pre": 0.5625,
+        "acc_post": 0.6458333333333334,
+        "acc_lift": 0.08333333333333337,
+        "train_loss": 0.6967517957091331,
+        "alpha_entropy": 0.681312856248057,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      }
+    ],
+    "amazon:soft_lr:N120": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.23359533834832205,
+          "image": 0.766404661651678
+        },
+        "lr_mult": {
+          "text": 0.5204716090269798,
+          "image": 1.4795283909730206,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1113.5515100031625,
+        "acc_pre": 0.5208333333333334,
+        "acc_post": 0.4583333333333333,
+        "acc_lift": -0.06250000000000006,
+        "train_loss": 0.6903953850269318,
+        "alpha_entropy": 0.5435842665086423,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.4795283909730204,
+        "lr_min": 0.5204716090269798,
+        "lr_max": 1.4795283909730206,
+        "lr_range": 0.9590567819460408,
+        "lr_ratio": 2.8426687744582164,
+        "lr_cv": 0.4795283909730203
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.15419703326515966,
+          "image": 0.8458029667348403
+        },
+        "lr_mult": {
+          "text": 0.3775546598772874,
+          "image": 1.6224453401227128,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1090.3580780141056,
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "train_loss": 0.6832195818424225,
+        "alpha_entropy": 0.4299207103657886,
+        "lr_mean": 1.0,
+        "lr_std": 0.6224453401227127,
+        "lr_min": 0.3775546598772874,
+        "lr_max": 1.6224453401227128,
+        "lr_range": 1.2448906802454254,
+        "lr_ratio": 4.29724623356533,
+        "lr_cv": 0.6224453401227127
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.15592109041237295,
+          "image": 0.8440789095876271
+        },
+        "lr_mult": {
+          "text": 0.38065796274227137,
+          "image": 1.619342037257729,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1103.847329999553,
+        "acc_pre": 0.5833333333333334,
+        "acc_post": 0.5416666666666666,
+        "acc_lift": -0.04166666666666674,
+        "train_loss": 0.6892094612121582,
+        "alpha_entropy": 0.43284378998309925,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.6193420372577287,
+        "lr_min": 0.38065796274227137,
+        "lr_max": 1.619342037257729,
+        "lr_range": 1.2386840745154575,
+        "lr_ratio": 4.254060589175491,
+        "lr_cv": 0.6193420372577286
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.2750880129875975,
+          "image": 0.7249119870124026
+        },
+        "lr_mult": {
+          "text": 0.5951584233776755,
+          "image": 1.4048415766223248,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1038.467556994874,
+        "acc_pre": 0.5227272727272727,
+        "acc_post": 0.5,
+        "acc_lift": -0.022727272727272707,
+        "train_loss": 0.6816591545939445,
+        "alpha_entropy": 0.5882540777682711,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.4048415766223246,
+        "lr_min": 0.5951584233776755,
+        "lr_max": 1.4048415766223248,
+        "lr_range": 0.8096831532446492,
+        "lr_ratio": 2.360449791921773,
+        "lr_cv": 0.4048415766223245
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.15328895679958804,
+          "image": 0.846711043200412
+        },
+        "lr_mult": {
+          "text": 0.3759201222392585,
+          "image": 1.6240798777607417,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1181.7796939867549,
+        "acc_pre": 0.40625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.15625,
+        "train_loss": 0.6850280314683914,
+        "alpha_entropy": 0.42837194766690345,
+        "lr_mean": 1.0,
+        "lr_std": 0.6240798777607416,
+        "lr_min": 0.3759201222392585,
+        "lr_max": 1.6240798777607417,
+        "lr_range": 1.2481597555214832,
+        "lr_ratio": 4.320279180817775,
+        "lr_cv": 0.6240798777607416
+      },
+      {
+        "t": 5,
+        "category": "Sports & Outdoors",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.4300470385465346,
+          "image": 0.5699529614534654
+        },
+        "lr_mult": {
+          "text": 0.8740846693837623,
+          "image": 1.125915330616238,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1179.8418579855934,
+        "acc_pre": 0.5208333333333334,
+        "acc_post": 0.6458333333333334,
+        "acc_lift": 0.125,
+        "train_loss": 0.7020342722535133,
+        "alpha_entropy": 0.6833281669290237,
+        "lr_mean": 1.0,
+        "lr_std": 0.12591533061623783,
+        "lr_min": 0.8740846693837623,
+        "lr_max": 1.125915330616238,
+        "lr_range": 0.25183066123247566,
+        "lr_ratio": 1.288107857342949,
+        "lr_cv": 0.12591533061623783
+      }
+    ],
+    "amazon:soft_sparse:N120": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.23360003320838738,
+          "image": 0.7663999667916126
+        },
+        "lr_mult": {
+          "text": 0.5204800597750973,
+          "image": 1.4795199402249029,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4094240112908517,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1112.448255007621,
+        "acc_pre": 0.5208333333333334,
+        "acc_post": 0.4583333333333333,
+        "acc_lift": -0.06250000000000006,
+        "train_loss": 0.6904331669211388,
+        "alpha_entropy": 0.5435898445042906,
+        "lr_mean": 1.0,
+        "lr_std": 0.4795199402249028,
+        "lr_min": 0.5204800597750973,
+        "lr_max": 1.4795199402249029,
+        "lr_range": 0.9590398804498056,
+        "lr_ratio": 2.84260638316137,
+        "lr_cv": 0.4795199402249028
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.12852923741830233,
+          "image": 0.8714707625816978
+        },
+        "lr_mult": {
+          "text": 0.33135262735294424,
+          "image": 1.668647372647056,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.3736999407222228,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1069.179765006993,
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "train_loss": 0.6829129308462143,
+        "alpha_entropy": 0.3835812534546058,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.6686473726470559,
+        "lr_min": 0.33135262735294424,
+        "lr_max": 1.668647372647056,
+        "lr_range": 1.3372947452941117,
+        "lr_ratio": 5.035865826618831,
+        "lr_cv": 0.6686473726470558
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.14683601240176547,
+          "image": 0.8531639875982346
+        },
+        "lr_mult": {
+          "text": 0.36430482232317785,
+          "image": 1.6356951776768225,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.3799242442166003,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1102.8850179864094,
+        "acc_pre": 0.5833333333333334,
+        "acc_post": 0.5208333333333334,
+        "acc_lift": -0.0625,
+        "train_loss": 0.6891020685434341,
+        "alpha_entropy": 0.41718134363473314,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.6356951776768224,
+        "lr_min": 0.36430482232317785,
+        "lr_max": 1.6356951776768225,
+        "lr_range": 1.2713903553536445,
+        "lr_ratio": 4.489908113886518,
+        "lr_cv": 0.6356951776768223
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.3474464206148061,
+          "image": 0.652553579385194
+        },
+        "lr_mult": {
+          "text": 0.7254035571066509,
+          "image": 1.2745964428933494,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4481317830090341,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1066.2150089920033,
+        "acc_pre": 0.5227272727272727,
+        "acc_post": 0.5,
+        "acc_lift": -0.022727272727272707,
+        "train_loss": 0.6800286322832108,
+        "alpha_entropy": 0.6458515257337412,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.2745964428933492,
+        "lr_min": 0.7254035571066509,
+        "lr_max": 1.2745964428933494,
+        "lr_range": 0.5491928857866984,
+        "lr_ratio": 1.757086011512285,
+        "lr_cv": 0.27459644289334917
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.1995870894974464,
+          "image": 0.8004129105025535
+        },
+        "lr_mult": {
+          "text": 0.4592567610954036,
+          "image": 1.5407432389045963,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.39785961042913176,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1159.7125729895197,
+        "acc_pre": 0.40625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.15625,
+        "train_loss": 0.6853730008006096,
+        "alpha_entropy": 0.4998294749644111,
+        "lr_mean": 1.0,
+        "lr_std": 0.5407432389045964,
+        "lr_min": 0.4592567610954036,
+        "lr_max": 1.5407432389045963,
+        "lr_range": 1.0814864778091926,
+        "lr_ratio": 3.354862398170618,
+        "lr_cv": 0.5407432389045964
+      },
+      {
+        "t": 5,
+        "category": "Sports & Outdoors",
+        "n_cur": 120,
+        "n_adapt": 72,
+        "n_hold": 48,
+        "alpha": {
+          "text": 0.40685625134135983,
+          "image": 0.5931437486586402
+        },
+        "lr_mult": {
+          "text": 0.8323412524144477,
+          "image": 1.1676587475855524,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.46833112545606237,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1092.0145669952035,
+        "acc_pre": 0.5625,
+        "acc_post": 0.5625,
+        "acc_lift": 0.0,
+        "train_loss": 0.7003200650215149,
+        "alpha_entropy": 0.6756938867968307,
+        "lr_mean": 1.0,
+        "lr_std": 0.16765874758555238,
+        "lr_min": 0.8323412524144477,
+        "lr_max": 1.1676587475855524,
+        "lr_range": 0.33531749517110476,
+        "lr_ratio": 1.402860598580713,
+        "lr_cv": 0.16765874758555238
+      }
+    ],
+    "amazon:equal:N160": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.24999223303020723,
+          "image": 0.7500077669697929
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1161.9384930236265,
+        "acc_pre": 0.46875,
+        "acc_post": 0.453125,
+        "acc_lift": -0.015625,
+        "train_loss": 0.6922755539417267,
+        "alpha_entropy": 0.5623266115694783,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.1525359287058668,
+          "image": 0.8474640712941331
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1161.104755999986,
+        "acc_pre": 0.515625,
+        "acc_post": 0.515625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6876104027032852,
+        "alpha_entropy": 0.4270828090893154,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 154,
+        "n_adapt": 93,
+        "n_hold": 61,
+        "alpha": {
+          "text": 0.24586965904820252,
+          "image": 0.7541303409517975
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1069.2133190168533,
+        "acc_pre": 0.45901639344262296,
+        "acc_post": 0.5409836065573771,
+        "acc_lift": 0.08196721311475413,
+        "train_loss": 0.6901571452617645,
+        "alpha_entropy": 0.5577518400686361,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.29198324363798384,
+          "image": 0.7080167563620162
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1060.24212698685,
+        "acc_pre": 0.5,
+        "acc_post": 0.5227272727272727,
+        "acc_lift": 0.022727272727272707,
+        "train_loss": 0.6848218813538551,
+        "alpha_entropy": 0.6039179087584121,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.16850659179196084,
+          "image": 0.8314934082080392
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1159.7652130003553,
+        "acc_pre": 0.375,
+        "acc_post": 0.40625,
+        "acc_lift": 0.03125,
+        "train_loss": 0.6847978979349136,
+        "alpha_entropy": 0.4535103026218922,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 5,
+        "category": "Sports & Outdoors",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.23665159754100568,
+          "image": 0.7633484024589944
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1164.9636740039568,
+        "acc_pre": 0.515625,
+        "acc_post": 0.53125,
+        "acc_lift": 0.015625,
+        "train_loss": 0.682872861623764,
+        "alpha_entropy": 0.5471894605005674,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      }
+    ],
+    "amazon:soft_lr:N160": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.24999223303020726,
+          "image": 0.7500077669697928
+        },
+        "lr_mult": {
+          "text": 0.5499860194543731,
+          "image": 1.4500139805456271,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1168.9656869857572,
+        "acc_pre": 0.46875,
+        "acc_post": 0.484375,
+        "acc_lift": 0.015625,
+        "train_loss": 0.6922028586268425,
+        "alpha_entropy": 0.5623266115694783,
+        "lr_mean": 1.0,
+        "lr_std": 0.450013980545627,
+        "lr_min": 0.5499860194543731,
+        "lr_max": 1.4500139805456271,
+        "lr_range": 0.900027961091254,
+        "lr_ratio": 2.636456072072793,
+        "lr_cv": 0.450013980545627
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.16218107545735144,
+          "image": 0.8378189245426485
+        },
+        "lr_mult": {
+          "text": 0.39192593582323265,
+          "image": 1.6080740641767675,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1157.4044630106073,
+        "acc_pre": 0.515625,
+        "acc_post": 0.515625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6847705245018005,
+        "alpha_entropy": 0.4432689670925839,
+        "lr_mean": 1.0,
+        "lr_std": 0.6080740641767675,
+        "lr_min": 0.39192593582323265,
+        "lr_max": 1.6080740641767675,
+        "lr_range": 1.216148128353535,
+        "lr_ratio": 4.103004974138901,
+        "lr_cv": 0.6080740641767675
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 154,
+        "n_adapt": 93,
+        "n_hold": 61,
+        "alpha": {
+          "text": 0.35303769832270687,
+          "image": 0.6469623016772932
+        },
+        "lr_mult": {
+          "text": 0.7354678569808724,
+          "image": 1.2645321430191279,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1071.785373002058,
+        "acc_pre": 0.45901639344262296,
+        "acc_post": 0.5901639344262295,
+        "acc_lift": 0.13114754098360654,
+        "train_loss": 0.6888859942555428,
+        "alpha_entropy": 0.6493068398247206,
+        "lr_mean": 1.0,
+        "lr_std": 0.26453214301912775,
+        "lr_min": 0.7354678569808724,
+        "lr_max": 1.2645321430191279,
+        "lr_range": 0.5290642860382555,
+        "lr_ratio": 1.7193574552803537,
+        "lr_cv": 0.26453214301912775
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.3696215559178026,
+          "image": 0.6303784440821973
+        },
+        "lr_mult": {
+          "text": 0.7653188006520447,
+          "image": 1.2346811993479554,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1057.7751499949954,
+        "acc_pre": 0.5227272727272727,
+        "acc_post": 0.5454545454545454,
+        "acc_lift": 0.022727272727272707,
+        "train_loss": 0.6834732294082642,
+        "alpha_entropy": 0.6587539591291449,
+        "lr_mean": 1.0,
+        "lr_std": 0.23468119934795534,
+        "lr_min": 0.7653188006520447,
+        "lr_max": 1.2346811993479554,
+        "lr_range": 0.4693623986959107,
+        "lr_ratio": 1.6132900410861697,
+        "lr_cv": 0.23468119934795534
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.20863147671149165,
+          "image": 0.7913685232885084
+        },
+        "lr_mult": {
+          "text": 0.475536658080685,
+          "image": 1.5244633419193152,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1156.5953270182945,
+        "acc_pre": 0.4375,
+        "acc_post": 0.40625,
+        "acc_lift": -0.03125,
+        "train_loss": 0.6881127208471298,
+        "alpha_entropy": 0.5121378257644773,
+        "lr_mean": 1.0,
+        "lr_std": 0.5244633419193151,
+        "lr_min": 0.475536658080685,
+        "lr_max": 1.5244633419193152,
+        "lr_range": 1.0489266838386302,
+        "lr_ratio": 3.20577460436427,
+        "lr_cv": 0.5244633419193151
+      },
+      {
+        "t": 5,
+        "category": "Sports & Outdoors",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.3415553053549841,
+          "image": 0.658444694645016
+        },
+        "lr_mult": {
+          "text": 0.7147995496389713,
+          "image": 1.2852004503610288,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1200.0882580177858,
+        "acc_pre": 0.484375,
+        "acc_post": 0.53125,
+        "acc_lift": 0.046875,
+        "train_loss": 0.684100940823555,
+        "alpha_entropy": 0.6420617170276617,
+        "lr_mean": 1.0,
+        "lr_std": 0.28520045036102876,
+        "lr_min": 0.7147995496389713,
+        "lr_max": 1.2852004503610288,
+        "lr_range": 0.5704009007220575,
+        "lr_ratio": 1.7979872133525459,
+        "lr_cv": 0.28520045036102876
+      }
+    ],
+    "amazon:soft_sparse:N160": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.24999223303020723,
+          "image": 0.7500077669697929
+        },
+        "lr_mult": {
+          "text": 0.5499860194543731,
+          "image": 1.4500139805456274,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4149973592302705,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1188.4770529868547,
+        "acc_pre": 0.46875,
+        "acc_post": 0.484375,
+        "acc_lift": 0.015625,
+        "train_loss": 0.6921203210949898,
+        "alpha_entropy": 0.5623266115694783,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.45001398054562713,
+        "lr_min": 0.5499860194543731,
+        "lr_max": 1.4500139805456274,
+        "lr_range": 0.9000279610912543,
+        "lr_ratio": 2.6364560720727934,
+        "lr_cv": 0.450013980545627
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.1647496702069256,
+          "image": 0.8352503297930745
+        },
+        "lr_mult": {
+          "text": 0.39654940637246605,
+          "image": 1.603450593627534,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.38601488787035476,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1195.9289369988255,
+        "acc_pre": 0.515625,
+        "acc_post": 0.515625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6848625466227531,
+        "alpha_entropy": 0.44746265171013655,
+        "lr_mean": 1.0,
+        "lr_std": 0.6034505936275341,
+        "lr_min": 0.39654940637246605,
+        "lr_max": 1.603450593627534,
+        "lr_range": 1.2069011872550681,
+        "lr_ratio": 4.043507739162934,
+        "lr_cv": 0.6034505936275341
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 154,
+        "n_adapt": 93,
+        "n_hold": 61,
+        "alpha": {
+          "text": 0.2521148950863168,
+          "image": 0.7478851049136832
+        },
+        "lr_mult": {
+          "text": 0.5538068111553702,
+          "image": 1.44619318884463,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4157190643293477,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1099.8881090199575,
+        "acc_pre": 0.45901639344262296,
+        "acc_post": 0.5409836065573771,
+        "acc_lift": 0.08196721311475413,
+        "train_loss": 0.6888181865215302,
+        "alpha_entropy": 0.5646466892455904,
+        "lr_mean": 1.0,
+        "lr_std": 0.4461931888446299,
+        "lr_min": 0.5538068111553702,
+        "lr_max": 1.44619318884463,
+        "lr_range": 0.8923863776892598,
+        "lr_ratio": 2.6113676461066513,
+        "lr_cv": 0.4461931888446299
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.22467746752923307,
+          "image": 0.7753225324707669
+        },
+        "lr_mult": {
+          "text": 0.5044194415526195,
+          "image": 1.4955805584473805,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4063903389599392,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1041.5547449956648,
+        "acc_pre": 0.5227272727272727,
+        "acc_post": 0.5227272727272727,
+        "acc_lift": 0.0,
+        "train_loss": 0.6832851618528366,
+        "alpha_entropy": 0.5327646462443185,
+        "lr_mean": 1.0,
+        "lr_std": 0.49558055844738047,
+        "lr_min": 0.5044194415526195,
+        "lr_max": 1.4955805584473805,
+        "lr_range": 0.9911611168947609,
+        "lr_ratio": 2.9649542330167424,
+        "lr_cv": 0.49558055844738047
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "n_cur": 80,
+        "n_adapt": 48,
+        "n_hold": 32,
+        "alpha": {
+          "text": 0.14706454387805218,
+          "image": 0.8529354561219478
+        },
+        "lr_mult": {
+          "text": 0.3647161789804939,
+          "image": 1.6352838210195062,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.3800019449185377,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1138.1657769961748,
+        "acc_pre": 0.40625,
+        "acc_post": 0.40625,
+        "acc_lift": 0.0,
+        "train_loss": 0.6888760179281235,
+        "alpha_entropy": 0.4175832673465131,
+        "lr_mean": 1.0,
+        "lr_std": 0.6352838210195062,
+        "lr_min": 0.3647161789804939,
+        "lr_max": 1.6352838210195062,
+        "lr_range": 1.2705676420390124,
+        "lr_ratio": 4.483716147692384,
+        "lr_cv": 0.6352838210195062
+      },
+      {
+        "t": 5,
+        "category": "Sports & Outdoors",
+        "n_cur": 160,
+        "n_adapt": 96,
+        "n_hold": 64,
+        "alpha": {
+          "text": 0.26615533563892835,
+          "image": 0.7338446643610717
+        },
+        "lr_mult": {
+          "text": 0.5790796041500711,
+          "image": 1.420920395849929,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.42049281411723566,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1178.3149190014228,
+        "acc_pre": 0.5,
+        "acc_post": 0.53125,
+        "acc_lift": 0.03125,
+        "train_loss": 0.6858893930912018,
+        "alpha_entropy": 0.5793972397078495,
+        "lr_mean": 1.0,
+        "lr_std": 0.42092039584992896,
+        "lr_min": 0.5790796041500711,
+        "lr_max": 1.420920395849929,
+        "lr_range": 0.8418407916998579,
+        "lr_ratio": 2.4537565917823123,
+        "lr_cv": 0.42092039584992896
+      }
+    ],
+    "amazon:equal:N200": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.22911514651748077,
+          "image": 0.7708848534825192
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1107.9323400044814,
+        "acc_pre": 0.45,
+        "acc_post": 0.425,
+        "acc_lift": -0.025000000000000022,
+        "train_loss": 0.6971935480833054,
+        "alpha_entropy": 0.5382049506075939,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.151521199100779,
+          "image": 0.848478800899221
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1148.878941021394,
+        "acc_pre": 0.575,
+        "acc_post": 0.575,
+        "acc_lift": 0.0,
+        "train_loss": 0.6802571341395378,
+        "alpha_entropy": 0.42533871180953525,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 154,
+        "n_adapt": 93,
+        "n_hold": 61,
+        "alpha": {
+          "text": 0.25166326072011025,
+          "image": 0.7483367392798898
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1154.3359200004488,
+        "acc_pre": 0.45901639344262296,
+        "acc_post": 0.45901639344262296,
+        "acc_lift": 0.0,
+        "train_loss": 0.6946015283465385,
+        "alpha_entropy": 0.5641550569865469,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.24807016173042182,
+          "image": 0.7519298382695782
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1079.0502449963242,
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "train_loss": 0.6909093633294106,
+        "alpha_entropy": 0.5602050520652179,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 4,
+        "category": "Sports & Outdoors",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.5366289096463518,
+          "image": 0.46337109035364826
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1084.8883550206665,
+        "acc_pre": 0.425,
+        "acc_post": 0.4375,
+        "acc_lift": 0.012500000000000011,
+        "train_loss": 0.6968337744474411,
+        "alpha_entropy": 0.690461421219362,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 5,
+        "category": "Amazon Home",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.3421813849627942,
+          "image": 0.6578186150372058
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1043.5545149957761,
+        "acc_pre": 0.5625,
+        "acc_post": 0.5875,
+        "acc_lift": 0.025000000000000022,
+        "train_loss": 0.693494401872158,
+        "alpha_entropy": 0.6424717862669136,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      }
+    ],
+    "amazon:soft_lr:N200": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.22911514651748077,
+          "image": 0.7708848534825192
+        },
+        "lr_mult": {
+          "text": 0.5124072637314654,
+          "image": 1.4875927362685348,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1107.4822420196142,
+        "acc_pre": 0.45,
+        "acc_post": 0.425,
+        "acc_lift": -0.025000000000000022,
+        "train_loss": 0.6993855834007263,
+        "alpha_entropy": 0.5382049506075939,
+        "lr_mean": 1.0,
+        "lr_std": 0.4875927362685347,
+        "lr_min": 0.5124072637314654,
+        "lr_max": 1.4875927362685348,
+        "lr_range": 0.9751854725370694,
+        "lr_ratio": 2.9031452939124023,
+        "lr_cv": 0.4875927362685347
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.1657739071487682,
+          "image": 0.8342260928512318
+        },
+        "lr_mult": {
+          "text": 0.3983930328677827,
+          "image": 1.6016069671322175,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 2657.2076070006005,
+        "acc_pre": 0.575,
+        "acc_post": 0.575,
+        "acc_lift": 0.0,
+        "train_loss": 0.6800771728157997,
+        "alpha_entropy": 0.44912149447103583,
+        "lr_mean": 1.0,
+        "lr_std": 0.6016069671322174,
+        "lr_min": 0.3983930328677827,
+        "lr_max": 1.6016069671322175,
+        "lr_range": 1.2032139342644348,
+        "lr_ratio": 4.020168112889046,
+        "lr_cv": 0.6016069671322174
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 154,
+        "n_adapt": 93,
+        "n_hold": 61,
+        "alpha": {
+          "text": 0.26619653759410367,
+          "image": 0.7338034624058963
+        },
+        "lr_mult": {
+          "text": 0.5791537676693866,
+          "image": 1.4208462323306135,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 2370.7284170086496,
+        "acc_pre": 0.45901639344262296,
+        "acc_post": 0.45901639344262296,
+        "acc_lift": 0.0,
+        "train_loss": 0.6939124390482903,
+        "alpha_entropy": 0.5794390230967386,
+        "lr_mean": 1.0,
+        "lr_std": 0.4208462323306134,
+        "lr_min": 0.5791537676693866,
+        "lr_max": 1.4208462323306135,
+        "lr_range": 0.8416924646612268,
+        "lr_ratio": 2.4533143210797723,
+        "lr_cv": 0.4208462323306134
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.25768166312545265,
+          "image": 0.7423183368745474
+        },
+        "lr_mult": {
+          "text": 0.5638269936258148,
+          "image": 1.4361730063741855,
+          "shared": 1.0000000000000002
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1993.8354490150232,
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "train_loss": 0.6894401237368584,
+        "alpha_entropy": 0.5706180151095033,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.4361730063741854,
+        "lr_min": 0.5638269936258148,
+        "lr_max": 1.4361730063741855,
+        "lr_range": 0.8723460127483708,
+        "lr_ratio": 2.547187386575013,
+        "lr_cv": 0.43617300637418527
+      },
+      {
+        "t": 4,
+        "category": "Sports & Outdoors",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.24251352773755125,
+          "image": 0.7574864722624488
+        },
+        "lr_mult": {
+          "text": 0.5365243499275922,
+          "image": 1.463475650072408,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 8080.70282600238,
+        "acc_pre": 0.425,
+        "acc_post": 0.5,
+        "acc_lift": 0.07500000000000001,
+        "train_loss": 0.6982606202363968,
+        "alpha_entropy": 0.5539599425378008,
+        "lr_mean": 1.0,
+        "lr_std": 0.4634756500724079,
+        "lr_min": 0.5365243499275922,
+        "lr_max": 1.463475650072408,
+        "lr_range": 0.9269513001448157,
+        "lr_ratio": 2.727696609240409,
+        "lr_cv": 0.4634756500724079
+      },
+      {
+        "t": 5,
+        "category": "Amazon Home",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.18806359233394032,
+          "image": 0.8119364076660597
+        },
+        "lr_mult": {
+          "text": 0.4385144662010926,
+          "image": 1.5614855337989075,
+          "shared": 1.0
+        },
+        "active": {
+          "text": true,
+          "image": true
+        },
+        "theta_used": 0.0,
+        "flops_rel": 1.0,
+        "wall_ms": 1101.6681900073308,
+        "acc_pre": 0.5875,
+        "acc_post": 0.6,
+        "acc_lift": 0.012499999999999956,
+        "train_loss": 0.6916877552866936,
+        "alpha_entropy": 0.4834029398114595,
+        "lr_mean": 1.0,
+        "lr_std": 0.5614855337989075,
+        "lr_min": 0.4385144662010926,
+        "lr_max": 1.5614855337989075,
+        "lr_range": 1.122971067597815,
+        "lr_ratio": 3.560852957318052,
+        "lr_cv": 0.5614855337989075
+      }
+    ],
+    "amazon:soft_sparse:N200": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.22911514651748077,
+          "image": 0.7708848534825192
+        },
+        "lr_mult": {
+          "text": 0.5124072637314654,
+          "image": 1.4875927362685348,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.40789914981594344,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1116.6585120081436,
+        "acc_pre": 0.45,
+        "acc_post": 0.425,
+        "acc_lift": -0.025000000000000022,
+        "train_loss": 0.6994239464402199,
+        "alpha_entropy": 0.5382049506075939,
+        "lr_mean": 1.0,
+        "lr_std": 0.4875927362685347,
+        "lr_min": 0.5124072637314654,
+        "lr_max": 1.4875927362685348,
+        "lr_range": 0.9751854725370694,
+        "lr_ratio": 2.9031452939124023,
+        "lr_cv": 0.4875927362685347
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.15652365696620008,
+          "image": 0.8434763430337999
+        },
+        "lr_mult": {
+          "text": 0.38174258253916016,
+          "image": 1.61825741746084,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.38321804336850807,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1120.3262229973916,
+        "acc_pre": 0.575,
+        "acc_post": 0.575,
+        "acc_lift": 0.0,
+        "train_loss": 0.680281288921833,
+        "alpha_entropy": 0.4338600842269785,
+        "lr_mean": 1.0,
+        "lr_std": 0.6182574174608398,
+        "lr_min": 0.38174258253916016,
+        "lr_max": 1.61825741746084,
+        "lr_range": 1.23651483492168,
+        "lr_ratio": 4.239132576452445,
+        "lr_cv": 0.6182574174608398
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "n_cur": 154,
+        "n_adapt": 93,
+        "n_hold": 61,
+        "alpha": {
+          "text": 0.21779494892828566,
+          "image": 0.7822050510717143
+        },
+        "lr_mult": {
+          "text": 0.4920309080709142,
+          "image": 1.507969091929086,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.40405028263561715,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1128.3037660177797,
+        "acc_pre": 0.45901639344262296,
+        "acc_post": 0.45901639344262296,
+        "acc_lift": 0.0,
+        "train_loss": 0.6936680525541306,
+        "alpha_entropy": 0.5241029008696517,
+        "lr_mean": 1.0,
+        "lr_std": 0.5079690919290859,
+        "lr_min": 0.4920309080709142,
+        "lr_max": 1.507969091929086,
+        "lr_range": 1.0159381838581718,
+        "lr_ratio": 3.0647852953817876,
+        "lr_cv": 0.5079690919290859
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "n_cur": 112,
+        "n_adapt": 68,
+        "n_hold": 44,
+        "alpha": {
+          "text": 0.27432075664352057,
+          "image": 0.7256792433564795
+        },
+        "lr_mult": {
+          "text": 0.5937773619583371,
+          "image": 1.4062226380416631,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.42326905725879704,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1096.8375410011504,
+        "acc_pre": 0.5,
+        "acc_post": 0.4772727272727273,
+        "acc_lift": -0.022727272727272707,
+        "train_loss": 0.6896456852555275,
+        "alpha_entropy": 0.5875091608291608,
+        "lr_mean": 1.0,
+        "lr_std": 0.40622263804166303,
+        "lr_min": 0.5937773619583371,
+        "lr_max": 1.4062226380416631,
+        "lr_range": 0.8124452760833261,
+        "lr_ratio": 2.3682658318326593,
+        "lr_cv": 0.40622263804166303
+      },
+      {
+        "t": 4,
+        "category": "Sports & Outdoors",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.3975463905350095,
+          "image": 0.6024536094649905
+        },
+        "lr_mult": {
+          "text": 0.8155835029630171,
+          "image": 1.184416497036983,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.46516577278190324,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1183.9307209884282,
+        "acc_pre": 0.425,
+        "acc_post": 0.4875,
+        "acc_lift": 0.0625,
+        "train_loss": 0.6974061578512192,
+        "alpha_entropy": 0.6720042632907091,
+        "lr_mean": 1.0,
+        "lr_std": 0.18441649703698298,
+        "lr_min": 0.8155835029630171,
+        "lr_max": 1.184416497036983,
+        "lr_range": 0.36883299407396597,
+        "lr_ratio": 1.4522320433579083,
+        "lr_cv": 0.18441649703698298
+      },
+      {
+        "t": 5,
+        "category": "Amazon Home",
+        "n_cur": 200,
+        "n_adapt": 120,
+        "n_hold": 80,
+        "alpha": {
+          "text": 0.24228298656273606,
+          "image": 0.7577170134372639
+        },
+        "lr_mult": {
+          "text": 0.536109375812925,
+          "image": 1.4638906241870753,
+          "shared": 1.0
+        },
+        "active": {
+          "text": false,
+          "image": true
+        },
+        "theta_used": 0.4123762154313303,
+        "flops_rel": 0.7333333333333333,
+        "wall_ms": 1162.8337209986057,
+        "acc_pre": 0.5875,
+        "acc_post": 0.5875,
+        "acc_lift": 0.0,
+        "train_loss": 0.6920377537608147,
+        "alpha_entropy": 0.5536972233913127,
+        "lr_mean": 1.0,
+        "lr_std": 0.46389062418707516,
+        "lr_min": 0.536109375812925,
+        "lr_max": 1.4638906241870753,
+        "lr_range": 0.9277812483741503,
+        "lr_ratio": 2.7305820234300455,
+        "lr_cv": 0.46389062418707516
+      }
+    ],
+    "msrvtt_from_log": [
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 80,
+        "t": 0,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.179
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 80,
+        "t": 1,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.179
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 80,
+        "t": 2,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 80,
+        "t": 3,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.214
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 80,
+        "t": 4,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.0
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 80,
+        "t": 5,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 80,
+        "t": 0,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 3.05,
+        "acc_lift": 0.143
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 80,
+        "t": 1,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 2.55,
+        "acc_lift": -0.179
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 80,
+        "t": 2,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.38,
+        "acc_lift": 0.071
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 80,
+        "t": 3,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.38,
+        "acc_lift": -0.214
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 80,
+        "t": 4,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 3.38,
+        "acc_lift": 0.071
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 80,
+        "t": 5,
+        "n_adapt": 52,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.63,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 80,
+        "t": 0,
+        "n_adapt": 52,
+        "flops_rel": 0.81,
+        "lr_ratio": 3.05,
+        "acc_lift": 0.179
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 80,
+        "t": 1,
+        "n_adapt": 52,
+        "flops_rel": 0.81,
+        "lr_ratio": 2.55,
+        "acc_lift": -0.107
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 80,
+        "t": 2,
+        "n_adapt": 52,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.38,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 80,
+        "t": 3,
+        "n_adapt": 52,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.38,
+        "acc_lift": -0.179
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 80,
+        "t": 4,
+        "n_adapt": 52,
+        "flops_rel": 0.81,
+        "lr_ratio": 3.38,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 80,
+        "t": 5,
+        "n_adapt": 52,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.63,
+        "acc_lift": 0.071
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 160,
+        "t": 0,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.107
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 160,
+        "t": 1,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 160,
+        "t": 2,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.054
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 160,
+        "t": 3,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.054
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 160,
+        "t": 4,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.179
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 160,
+        "t": 5,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.054
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 160,
+        "t": 0,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.33,
+        "acc_lift": 0.107
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 160,
+        "t": 1,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.62,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 160,
+        "t": 2,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 2.23,
+        "acc_lift": -0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 160,
+        "t": 3,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.89,
+        "acc_lift": 0.089
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 160,
+        "t": 4,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.79,
+        "acc_lift": 0.107
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 160,
+        "t": 5,
+        "n_adapt": 104,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.62,
+        "acc_lift": 0.054
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 160,
+        "t": 0,
+        "n_adapt": 104,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.33,
+        "acc_lift": 0.107
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 160,
+        "t": 1,
+        "n_adapt": 104,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.62,
+        "acc_lift": 0.054
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 160,
+        "t": 2,
+        "n_adapt": 104,
+        "flops_rel": 0.81,
+        "lr_ratio": 2.23,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 160,
+        "t": 3,
+        "n_adapt": 104,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.89,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 160,
+        "t": 4,
+        "n_adapt": 104,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.79,
+        "acc_lift": 0.107
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 160,
+        "t": 5,
+        "n_adapt": 104,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.62,
+        "acc_lift": 0.018
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 240,
+        "t": 0,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.25
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 240,
+        "t": 1,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.167
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 240,
+        "t": 2,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.131
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 240,
+        "t": 3,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.06
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 240,
+        "t": 4,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.06
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 240,
+        "t": 5,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.083
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 240,
+        "t": 0,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 2.71,
+        "acc_lift": 0.25
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 240,
+        "t": 1,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.7,
+        "acc_lift": -0.143
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 240,
+        "t": 2,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 3.82,
+        "acc_lift": -0.131
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 240,
+        "t": 3,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 2.06,
+        "acc_lift": 0.071
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 240,
+        "t": 4,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 4.16,
+        "acc_lift": 0.06
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 240,
+        "t": 5,
+        "n_adapt": 156,
+        "flops_rel": 1.0,
+        "lr_ratio": 2.53,
+        "acc_lift": -0.048
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 240,
+        "t": 0,
+        "n_adapt": 156,
+        "flops_rel": 0.81,
+        "lr_ratio": 2.71,
+        "acc_lift": 0.25
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 240,
+        "t": 1,
+        "n_adapt": 156,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.7,
+        "acc_lift": -0.179
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 240,
+        "t": 2,
+        "n_adapt": 156,
+        "flops_rel": 0.81,
+        "lr_ratio": 3.82,
+        "acc_lift": -0.131
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 240,
+        "t": 3,
+        "n_adapt": 156,
+        "flops_rel": 0.81,
+        "lr_ratio": 2.06,
+        "acc_lift": 0.06
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 240,
+        "t": 4,
+        "n_adapt": 156,
+        "flops_rel": 0.81,
+        "lr_ratio": 4.16,
+        "acc_lift": 0.048
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 240,
+        "t": 5,
+        "n_adapt": 156,
+        "flops_rel": 0.81,
+        "lr_ratio": 2.53,
+        "acc_lift": -0.024
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 320,
+        "t": 0,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.313
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 320,
+        "t": 1,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.027
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 320,
+        "t": 2,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.027
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 320,
+        "t": 3,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 320,
+        "t": 4,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.027
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 320,
+        "t": 5,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 320,
+        "t": 0,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.3,
+        "acc_lift": 0.313
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 320,
+        "t": 1,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 2.03,
+        "acc_lift": 0.018
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 320,
+        "t": 2,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.17,
+        "acc_lift": -0.018
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 320,
+        "t": 3,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 2.41,
+        "acc_lift": -0.027
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 320,
+        "t": 4,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.92,
+        "acc_lift": 0.009
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 320,
+        "t": 5,
+        "n_adapt": 208,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.79,
+        "acc_lift": 0.054
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 320,
+        "t": 0,
+        "n_adapt": 208,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.3,
+        "acc_lift": 0.313
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 320,
+        "t": 1,
+        "n_adapt": 208,
+        "flops_rel": 0.81,
+        "lr_ratio": 2.03,
+        "acc_lift": 0.009
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 320,
+        "t": 2,
+        "n_adapt": 208,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.17,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 320,
+        "t": 3,
+        "n_adapt": 208,
+        "flops_rel": 0.81,
+        "lr_ratio": 2.41,
+        "acc_lift": 0.054
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 320,
+        "t": 4,
+        "n_adapt": 208,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.92,
+        "acc_lift": 0.027
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 320,
+        "t": 5,
+        "n_adapt": 208,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.79,
+        "acc_lift": 0.071
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 480,
+        "t": 0,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.22
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 480,
+        "t": 1,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.03
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 480,
+        "t": 2,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.006
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 480,
+        "t": 3,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.042
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 480,
+        "t": 4,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": 0.03
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "equal",
+        "n_cur": 480,
+        "t": 5,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.0,
+        "acc_lift": -0.018
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 480,
+        "t": 0,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.4,
+        "acc_lift": 0.202
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 480,
+        "t": 1,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 1.58,
+        "acc_lift": -0.042
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 480,
+        "t": 2,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 3.52,
+        "acc_lift": -0.012
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 480,
+        "t": 3,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 6.02,
+        "acc_lift": 0.024
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 480,
+        "t": 4,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 2.07,
+        "acc_lift": 0.065
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_lr",
+        "n_cur": 480,
+        "t": 5,
+        "n_adapt": 312,
+        "flops_rel": 1.0,
+        "lr_ratio": 4.23,
+        "acc_lift": -0.012
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 480,
+        "t": 0,
+        "n_adapt": 312,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.4,
+        "acc_lift": 0.208
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 480,
+        "t": 1,
+        "n_adapt": 312,
+        "flops_rel": 0.81,
+        "lr_ratio": 1.58,
+        "acc_lift": -0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 480,
+        "t": 2,
+        "n_adapt": 312,
+        "flops_rel": 0.81,
+        "lr_ratio": 3.52,
+        "acc_lift": 0.006
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 480,
+        "t": 3,
+        "n_adapt": 312,
+        "flops_rel": 0.81,
+        "lr_ratio": 6.02,
+        "acc_lift": 0.071
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 480,
+        "t": 4,
+        "n_adapt": 312,
+        "flops_rel": 0.81,
+        "lr_ratio": 2.07,
+        "acc_lift": 0.036
+      },
+      {
+        "dataset": "msrvtt",
+        "policy": "soft_sparse",
+        "n_cur": 480,
+        "t": 5,
+        "n_adapt": 312,
+        "flops_rel": 0.81,
+        "lr_ratio": 4.23,
+        "acc_lift": -0.054
+      }
+    ]
+  }
+}

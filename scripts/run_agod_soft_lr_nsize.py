@@ -636,12 +636,14 @@ def write_docs(cells, nstars, path: Path):
         f"{c['mean_lr_ratio']:.2f} | {c['mean_alpha_entropy']:.3f} |"
         for c in sorted(cells, key=lambda r: (r["dataset"], r["policy"], r["n_cur"]))
     ]
-    ns = [
-        f"| {k.split(':')[0]} | {k.split(':')[1]} | "
-        f"{'—' if st.get('n_star') is None else f'{st[\"n_star\"]:.0f}'} | "
-        f"{st.get('max_lift', float('nan')):+.3f} |"
-        for k, st in sorted(nstars.items())
-    ]
+    ns = []
+    for k, st in sorted(nstars.items()):
+        ds, pol = k.split(":", 1)
+        n_star = st.get("n_star")
+        n_txt = "—" if n_star is None else f"{float(n_star):.0f}"
+        ns.append(
+            f"| {ds} | {pol} | {n_txt} | {st.get('max_lift', float('nan')):+.3f} |"
+        )
     md = f"""# Continuous soft-LR · sample size · evaluation
 
 ## Point (fewer switches)
