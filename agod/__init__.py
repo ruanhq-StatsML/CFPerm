@@ -13,6 +13,7 @@ from .adapter import (
     ADAPTER_LAYERS,
     GATE_POLICIES,
     AdapterConfig,
+    AdapterDecision,
     DynamicGate,
     LayeredAdapter,
     alpha_entropy,
@@ -22,7 +23,27 @@ from .adapter import (
     n_star_for_lift,
     soft_lr_dispersion,
 )
-from .lr_controller import EMARouter, alpha_to_lr, intensity_gain, softmax_scores, z_norm
+from .lr_controller import (
+    EMARouter,
+    SCHEDULER_NAMES,
+    aligned_cos_sim,
+    alpha_to_lr,
+    common_dim_grad_signature,
+    cos_sim,
+    damp_lr,
+    equal_lr,
+    flatten_grads,
+    intensity_gain,
+    modality_grad_cosine,
+    schedule_modality_lr,
+    soft_budget_lr,
+    soft_cosine_lr,
+    soft_entropy_lr,
+    soft_gradcos_lr,
+    soft_warmup_lr,
+    softmax_scores,
+    z_norm,
+)
 from .mmd import rbf_mmd2, whiten_pair
 from .shift import decompose_hybrid, decompose_mmd, decompose_rf
 
@@ -30,6 +51,7 @@ __all__ = [
     "ADAPTER_LAYERS",
     "GATE_POLICIES",
     "AdapterConfig",
+    "AdapterDecision",
     "DynamicGate",
     "LayeredAdapter",
     "characterize_gate_traj",
@@ -48,6 +70,20 @@ __all__ = [
     "alpha_to_lr",
     "intensity_gain",
     "EMARouter",
+    "SCHEDULER_NAMES",
+    "schedule_modality_lr",
+    "equal_lr",
+    "soft_cosine_lr",
+    "soft_budget_lr",
+    "soft_warmup_lr",
+    "damp_lr",
+    "soft_entropy_lr",
+    "soft_gradcos_lr",
+    "cos_sim",
+    "flatten_grads",
+    "common_dim_grad_signature",
+    "aligned_cos_sim",
+    "modality_grad_cosine",
 ]
 
 __version__ = "0.1.0"

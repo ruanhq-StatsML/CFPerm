@@ -1,0 +1,16 @@
+% Gradient-cosine × modality LR
+\begin{table}[t]\centering
+\caption{Per-modality LR with gradient cosine alignment on the online-window stream.}
+\label{tab:agod-gradcos-lr}
+\begin{tabular}{llccccc}\toprule
+Dataset & scheduler & Acc lift & pair\_cos & conflict & temporal\_cos & lr\_ratio \\
+\midrule
+amazon & equal & -0.009 & +0.688 & 0.00 & -0.205 & 1.00 \\
+amazon & soft & -0.007 & +0.669 & 0.00 & -0.301 & 3.10 \\
+amazon & soft\\_gradcos & +0.000 & +0.710 & 0.00 & -0.241 & 3.42 \\
+msrvtt & equal & +0.010 & +0.190 & 0.06 & +0.302 & 1.00 \\
+msrvtt & soft & +0.006 & +0.216 & 0.06 & +0.161 & 2.83 \\
+msrvtt & soft\\_gradcos & -0.006 & +0.215 & 0.06 & +0.413 & 2.82 \\
+\bottomrule
+\end{tabular}
+\end{table}
