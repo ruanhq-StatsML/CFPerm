@@ -19,7 +19,30 @@
 | Gradient Blending | Wang, Tran, Feiszli CVPR 2020, arXiv:1905.12681 | **不是 stacking**：按 OGR 混 loss。我们混的是 *expert 的票* |
 | PCGrad / OGM-GE | Yu et al. 2020; Peng et al. 2022 | 冲突投影 / 梯度调制，没有 online CV oracle inequality |
 
-缺口很干净：Gradient Blending / PCGrad 不懂 prequential honesty，OSL / Hedge / Bates–Granger 不懂「票是梯度签名」。把模态塔当成 **online expert**，vote = 探针预测或对齐分数，loss = holdout 残差，π 走 OSL/Hedge/BG，再 `π → LR`。这套对 video/text/audio/tabular **同一段代码**。
+缺口很干净：Gradient Blending / PCGrad 不懂 prequential honesty，OSL / Hedge / Bates–Granger 不懂「票是梯度签名」。把模态塔当成 **online expert**，vote 的构造见下一节，π 走 OSL/Hedge/BG，再 `π → LR`。video/text/audio/tabular **同一段代码**。
+
+## 梯度 expert 的票怎么造（这才是「怎么做」）
+
+预测 stacking 里 `v_m = f_m(x)`、`y` 可观测。梯度 stacking 里 `g_m ∈ R^d`，真更新 `μ = −∇L_pop` **看不见**。holdout 梯度 `g_hold` 是 μ 的 noisy proxy。三种 meta-loss，几何完全不同：
+
+| meta-loss | 公式 | π 的形状 | 文献对应 |
+|---|---|---|---|
+| 一阶 holdout gain | `s_m = ⟨ĝ_m, ĝ_hold⟩`，`max πᵀs` | **顶点**（离散 OSL / winner-take-all） | 线性 Super Learner 退化 |
+| **方向匹配** | `min ||Gπ − ĝ_hold||²` | 内点：`π ∝ R^{−1}s`，`R=GᵀG` | Breiman stacked regressions in `R^d`；就是上一张 GLS 快照 |
+| 均值–方差 | `max πᵀs − (λ/2) πᵀRπ` | λ=0 顶点，λ↑ 缩向 min-var | Markowitz / Bates–Granger |
+| 有限步长 | `L_hold(θ − η Gπ)` | 非线性，η 大才离开线性 | 真 virtual step，贵 |
+
+所以：**不能**把 directional cosine 直接塞进凸 stacking 还指望得到组合权——线性目标在单纯形上必崩到一个 expert。要组合，必须用方向匹配（平方损失）或方差惩罚。`direction_match_weights` 就是这件事：互补的两路单位梯度（轴 0 和轴 1）去拟合 `ĝ_hold = (e0+e1)/√2` 时，π 会拆成约 (0.5, 0.5, 0)，而 `linear_gain_is_vertex` 只会点其中一个。
+
+诚实协议在梯度上还多一条：`g_m` 和 `g_hold` 必须来自 **不同 batch**（probe vs holdout）。同一窗的 holdout 既当票又当靶，就是 leaky stacking。
+
+```
+P_t probe → g_m          # 票（OOF 特征）
+H_t holdout → g_hold     # 靶（one-step-ahead y）
+score ||G π_t − ĝ_hold||²
+train on A_t
+update π_{t+1}
+```
 
 ## 协议（这才是 online-stacking，不是 `R^{-1}α` 一行）
 
@@ -102,7 +125,7 @@ Clone 终盘 π：equal e0+e1 = 0.67；GLS e0+e1 = 0.31（冗余票被拆掉）�
 | msrvtt:soft | audio | 0.34 | 3.00 | 0.253 |
 | msrvtt:soft_gradcos | audio | 0.34 | 3.00 | 0.253 |
 
-Amazon 梯度共线 → stacking 的 `N_eff` 应压低（少独立票）；MSR-VTT 更接近独立选民。下一步 LR 仍是 `pi_to_lr(π)`，FWD 不关。
+下一步 LR 仍是 `pi_to_lr(π)`，FWD 不关。T 短时不要用 replay 的 N_eff 下结论。
 
 ## 和上一张 GLS 快照的关系
 

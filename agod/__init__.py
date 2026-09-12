@@ -76,8 +76,12 @@ from .online_stacking import (
     METHODS as STACKING_METHODS,
     OnlineStacker,
     best_expert_loss,
+    directional_scores,
+    direction_match_weights,
     honest_step,
     leaky_step,
+    linear_gain_is_vertex,
+    mean_variance_pi,
     oracle_convex_combo,
     pi_to_lr,
     prequential_regret,
@@ -152,6 +156,10 @@ __all__ = [
     "best_expert_loss",
     "prequential_regret",
     "pi_to_lr",
+    "directional_scores",
+    "direction_match_weights",
+    "mean_variance_pi",
+    "linear_gain_is_vertex",
 ]
 
 __version__ = "0.1.0"

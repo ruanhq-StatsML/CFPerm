@@ -17,6 +17,9 @@ from agod.online_stacking import (
     pi_to_lr,
     project_simplex,
     best_expert_loss,
+    directional_scores,
+    direction_match_weights,
+    linear_gain_is_vertex,
 )
 
 
@@ -125,6 +128,36 @@ def test_pi_to_lr_positive():
     lr = pi_to_lr({"video": 0.7, "text": 0.2, "audio": 0.1}, ["video", "text", "audio"])
     assert all(lr[m] > 0 for m in ("video", "text", "audio"))
     assert lr["video"] > lr["audio"]
+
+
+def test_linear_holdout_gain_is_a_vertex():
+    scores = {"a": 0.91, "b": 0.40, "c": -0.10}
+    assert linear_gain_is_vertex(scores, scores.keys()) == "a"
+
+
+def test_direction_match_splits_complementary_grads():
+    d = 8
+    ga, gb, gc = np.zeros(d), np.zeros(d), np.zeros(d)
+    ga[0] = 1.0
+    gb[1] = 1.0
+    gc[2] = 1.0
+    hold = np.zeros(d)
+    hold[0] = hold[1] = 1.0 / np.sqrt(2.0)
+    packed = direction_match_weights(
+        {"a": ga, "b": gb, "c": gc}, hold, ["a", "b", "c"]
+    )
+    assert packed["pi"]["a"] > 0.30 and packed["pi"]["b"] > 0.30
+    assert packed["pi"]["c"] < 0.12
+    assert packed["vertex"] in ("a", "b")
+    # linear scores would pick a single axis; match must not be one-hot
+    assert max(packed["pi"].values()) < 0.90
+
+
+def test_directional_scores_cosine():
+    g = {"a": np.array([1.0, 0.0]), "b": np.array([0.0, 1.0])}
+    s = directional_scores(g, np.array([1.0, 0.0]), ["a", "b"])
+    assert s["a"] > 0.99
+    assert abs(s["b"]) < 0.05
 
 
 if __name__ == "__main__":

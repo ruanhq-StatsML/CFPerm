@@ -283,3 +283,110 @@ def pi_to_lr(
     from .lr_controller import alpha_to_lr
 
     return alpha_to_lr(pi, list(experts), beta=beta)
+
+
+def _pad_align(vecs: Sequence[np.ndarray]) -> list[np.ndarray]:
+    out = [np.asarray(v, float).ravel() for v in vecs]
+    n = max((len(v) for v in out), default=1)
+    return [np.pad(v, (0, n - len(v))) if len(v) < n else v for v in out]
+
+
+def _unit(v: np.ndarray) -> np.ndarray:
+    n = float(np.linalg.norm(v))
+    if n < EPS:
+        return np.zeros_like(v)
+    return v / n
+
+
+def directional_scores(
+    grads: Mapping[str, np.ndarray],
+    g_hold: np.ndarray,
+    experts: Sequence[str],
+) -> dict[str, float]:
+    """First-order holdout gain of each expert: s_m = ⟨ĝ_m, ĝ_hold⟩.
+
+    Linear in π, so max_π πᵀs on the simplex is a *vertex* (discrete OSL).
+    Convex interior stacking needs a strictly convex meta-loss — see
+    ``direction_match_weights`` and ``mean_variance_pi``.
+    """
+    experts = list(experts)
+    hold = _unit(np.asarray(g_hold, float).ravel())
+    aligned = _pad_align([np.asarray(grads[e], float).ravel() for e in experts] + [hold])
+    hold = _unit(aligned[-1])
+    scores = {}
+    for e, vec in zip(experts, aligned[:-1]):
+        scores[e] = float(np.dot(_unit(vec), hold))
+    return scores
+
+
+def direction_match_weights(
+    grads: Mapping[str, np.ndarray],
+    g_hold: np.ndarray,
+    experts: Sequence[str],
+    *,
+    clip_negative: bool = True,
+) -> dict:
+    """OLS / GLS stacking of *unit* gradient votes onto the holdout direction.
+
+    min_π ||G π − ĝ_hold||²  (unconstrained)  ⇒  π ∝ (GᵀG)^{−1} Gᵀ ĝ_hold
+    which is ``R^{−1} s`` with R_ij = ⟨ĝ_i, ĝ_j⟩ and s_m = ⟨ĝ_m, ĝ_hold⟩.
+
+    This is why the static GLS snapshot and online vector-stacking are the
+    same object: holdout gradient is the Super Learner target in R^d.
+    """
+    from .grad_corr_stat import gls_weights
+
+    experts = list(experts)
+    hold = np.asarray(g_hold, float).ravel()
+    aligned = _pad_align([np.asarray(grads[e], float).ravel() for e in experts] + [hold])
+    units = [_unit(v) for v in aligned[:-1]]
+    hold_u = _unit(aligned[-1])
+    gmat = np.column_stack(units) if units else np.zeros((1, 1))
+    r = gmat.T @ gmat
+    np.fill_diagonal(r, 1.0)
+    r = np.clip(0.5 * (r + r.T), -1.0, 1.0)
+    np.fill_diagonal(r, 1.0)
+    s = {e: float(np.dot(units[i], hold_u)) for i, e in enumerate(experts)}
+    # shift scores into a simplex-like prior so GLS sees nonnegative mass
+    s_pos = {e: max(s[e], 0.0) for e in experts}
+    if sum(s_pos.values()) <= EPS:
+        s_pos = {e: 1.0 / len(experts) for e in experts}
+    gls = gls_weights(r, s_pos, experts, clip_negative=clip_negative)
+    stacked = gmat @ np.array([gls["pi"][e] for e in experts])
+    match = float(np.linalg.norm(stacked - hold_u) ** 2)
+    linear_gain = float(np.dot(stacked, hold_u))
+    return {
+        "pi": gls["pi"],
+        "scores": s,
+        "R": r,
+        "match_mse": match,
+        "linear_gain": linear_gain,
+        "vertex": max(experts, key=lambda e: s[e]),
+    }
+
+
+def mean_variance_pi(
+    scores: Mapping[str, float],
+    r: np.ndarray,
+    experts: Sequence[str],
+    *,
+    lam: float = 0.35,
+) -> dict[str, float]:
+    """Markowitz mix: max πᵀs − (λ/2) πᵀ R π, then clip to simplex.
+
+    λ=0 → vertex (best directional score). λ↑ → shrink toward min-var / equal.
+    """
+    experts = list(experts)
+    s = np.array([float(scores[e]) for e in experts], float)
+    # unconstrained stationarity: R π = s/λ  ⇒ π ∝ R^{-1} s
+    from .grad_corr_stat import _inv_psd, psd_project
+
+    inv = _inv_psd(psd_project(np.asarray(r, float)))
+    raw = inv @ s / max(float(lam), EPS)
+    w = project_simplex(raw)
+    return {e: float(w[i]) for i, e in enumerate(experts)}
+
+
+def linear_gain_is_vertex(scores: Mapping[str, float], experts: Sequence[str]) -> str:
+    """Argmax of πᵀs on the simplex — the discrete-OSL collapse of linear gain."""
+    return max(list(experts), key=lambda e: float(scores[e]))
