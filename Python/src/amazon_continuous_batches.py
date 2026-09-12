@@ -7,9 +7,11 @@ single text head:
 
     η* = η0 (1 + β δ / s) / (1 + λ c s),   s = sqrt(n_iter)
 
-c is |d| of the TF-IDF coordinate-mean; δ is two-fold excess ridge MSE after
-mean-aligning X. Quiet holds last η. Train batch t with the previous η, then
-set η for t+1.
+c is the hop on the batch-relationship heatmap: 1 − cos(μ_{t-1}, μ_t),
+the same cosine(Bi, Bj) board as the MSR-VTT modality heatmaps (here one
+text head; batches are product categories). δ is two-fold excess ridge MSE
+after mean-aligning X. Quiet holds last η. Train batch t with the previous η,
+then set η for t+1.
 
 Comparators: constant, cosine, plateau, Polyak (loss-proportional, wrong
 covariate sign), inv-c (covariate half of TSS).
@@ -29,7 +31,7 @@ import numpy as np
 from scipy import stats
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from msrvtt_multimodal_attribution import SEED, _cohens_d, write_json
+from msrvtt_multimodal_attribution import SEED, _cohens_d, lag_profile, write_json
 from typed_shift_stepsize import (
     BETA,
     ETA0,
@@ -64,6 +66,17 @@ METHODS = ("constant", "cosine", "plateau", "polyak", "inv_c", "tss")
 TIME_METHODS = ("constant", "cosine", "plateau")
 HINDSIGHT_ETAS = (0.04, 0.06, 0.08, 0.10, 0.16, 0.20, 0.25)
 CACHE_DIR = Path(__file__).resolve().parents[2] / "data" / "amazon" / "heads"
+SHORT_LABELS = {
+    "Gift_Cards": "Gift",
+    "Digital_Music": "Music",
+    "All_Beauty": "Beauty",
+    "Software": "Software",
+    "Subscription_Boxes": "SubBox",
+    "Musical_Instruments": "Instr",
+    "Magazine_Subscriptions": "Mag",
+    "Handmade_Products": "Handmade",
+    "Amazon_Fashion": "Fashion",
+}
 
 
 @dataclass
@@ -120,10 +133,59 @@ def tss_eta_scalar(c, delta, eta0=ETA0, prev=None, n_iter=None, beta=BETA, lam=L
 
 
 def covariate_intensity_text(X0, X1):
-    """|d| of the TF-IDF coordinate-mean, matching the TSS block estimator."""
+    """|d| of the TF-IDF coordinate-mean (diagnostic; TSS ĉ is the heatmap hop)."""
     z0 = np.asarray(X0, dtype=float).mean(axis=1)
     z1 = np.asarray(X1, dtype=float).mean(axis=1)
     return float(abs(_cohens_d(z0, z1)))
+
+
+def batch_mean_cosine(X, batch, n_batches=None):
+    """K×K relationship heatmap: cosine of batch-mean TF-IDF (or Gaussian) vectors.
+
+    Pairwise document cosine is near zero on sparse TF-IDF; the MSR-VTT board
+    used dense window embeddings. Category relationship is the cosine of means.
+    Diagonal is 1.
+    """
+    X = np.asarray(X, dtype=float)
+    batch = np.asarray(batch, dtype=int)
+    k = int(n_batches if n_batches is not None else (int(batch.max()) + 1 if batch.size else 0))
+    mus = np.zeros((k, X.shape[1]))
+    for t in range(k):
+        idx = np.flatnonzero(batch == t)
+        if idx.size:
+            mus[t] = X[idx].mean(axis=0)
+    nrm = np.linalg.norm(mus, axis=1, keepdims=True) + 1e-12
+    z = mus / nrm
+    return z @ z.T
+
+
+def heatmap_hop_c(R, t):
+    """Covariate intensity of the hop t-1 → t: 1 − cosine(μ_{t-1}, μ_t)."""
+    R = np.asarray(R, dtype=float)
+    t = int(t)
+    if t < 1 or t >= R.shape[0]:
+        return 0.0
+    return float(max(0.0, 1.0 - R[t - 1, t]))
+
+
+def relationship_payload(stream):
+    """Amazon analog of ``batch_pair_payload``: one text-head cosine(Bi, Bj) board."""
+    X = np.asarray(stream.X, dtype=float)
+    batch = np.asarray(stream.batch, dtype=int)
+    k = int(batch.max()) + 1 if batch.size else 0
+    R = batch_mean_cosine(X, batch, n_batches=k)
+    lag = lag_profile(R)
+    hops = [heatmap_hop_c(R, t) for t in range(1, k)]
+    cats = [str(c) for c in (stream.categories or tuple("B%d" % i for i in range(k)))]
+    return {
+        "n_batches": k,
+        "cosine": R,
+        "lag_cosine": lag,
+        "hops": hops,
+        "lag0_minus_lagmax": float(lag[0] - lag[-1]) if np.isfinite(lag[0]) and np.isfinite(lag[-1]) else float("nan"),
+        "categories": cats,
+        "labels": [SHORT_LABELS.get(c, c.replace("_", " ")[:10]) for c in cats],
+    }
 
 
 def _corr_screen(X, y, k=16):
@@ -194,12 +256,18 @@ def make_amazon_like_stream(
     rng = np.random.default_rng(seed)
     beta = np.zeros(p)
     beta[: int(rank)] = rng.normal(scale=float(signal), size=int(rank))
+    dirs = rng.normal(size=(int(n_batches), p))
+    dirs /= np.linalg.norm(dirs, axis=1, keepdims=True) + 1e-12
+    shared = rng.normal(size=p)
+    shared /= np.linalg.norm(shared) + 1e-12
     rows, ys, batches = [], [], []
     true_c, true_delta = [], []
     for t in range(int(n_batches)):
         X = rng.normal(size=(n_per, p))
+        X += 0.85 * shared * float(np.sqrt(p))
         if cov:
-            X += float(cov) * float(t)
+            # Category-like hop: a new mean direction on top of the shared mean.
+            X += float(cov) * dirs[t] * float(np.sqrt(p))
         use = beta
         drifted = bool(concept) and t >= int(concept_at)
         if drifted:
@@ -444,10 +512,12 @@ def run_amazon_method(
     stall = 0
     next_eta = float(eta0)
     c_hat, d_hat = 0.0, 0.0
+    R = batch_mean_cosine(X, batch, n_batches=n_batches)
 
     for t in range(1, n_batches):
         ip, ic = np.flatnonzero(batch == t - 1), np.flatnonzero(batch == t)
-        c_hat = covariate_intensity_text(X[ip], X[ic])
+        c_hat = heatmap_hop_c(R, t)
+        c_d = covariate_intensity_text(X[ip], X[ic])
         d_hat, _ = concept_intensity_mse(X[ip], y[ip], X[ic], y[ic])
         if method in TIME_METHODS:
             eta = _scheduler_eta(method, t, n_batches, eta0, c_hat, d_hat, plateau_eta, next_eta, n_iter)
@@ -469,6 +539,8 @@ def run_amazon_method(
                 "method": method,
                 "eta": float(eta),
                 "c": float(c_hat),
+                "c_d": float(c_d),
+                "cosine": float(R[t - 1, t]),
                 "delta": float(d_hat),
                 "online_mse": float(online),
                 "null_mse": float(np.mean((y[ic] - y[i0].mean()) ** 2)),
@@ -514,6 +586,8 @@ def run_amazon_method(
         "bwt": float(history[-1]["bwt"]) if history else float("nan"),
         "mean_eta": float(np.mean([h["eta"] for h in adapt])) if adapt else float("nan"),
         "mean_c": float(np.mean([h["c"] for h in adapt])) if adapt else float("nan"),
+        "mean_c_d": float(np.mean([h.get("c_d", np.nan) for h in adapt])) if adapt else float("nan"),
+        "mean_cosine": float(np.mean([h.get("cosine", np.nan) for h in adapt])) if adapt else float("nan"),
         "mean_delta": float(np.mean([h["delta"] for h in adapt])) if adapt else float("nan"),
         "online_path": online.tolist(),
         "null_path": null.tolist(),
@@ -573,6 +647,7 @@ def run_amazon_suite(
     traces = {m: [] for m in methods}
     hindsight_rows = []
     ident = []
+    rel_pays = []
     for s in seeds:
         if source == "synthetic":
             stream = make_amazon_like_stream(
@@ -586,6 +661,7 @@ def run_amazon_suite(
                 cache_dir=cache_dir,
             )
             stream = featurize_reviews(raw)
+        rel_pays.append(relationship_payload(stream))
         hind = hindsight_constant(
             stream, steps_per_batch=steps_per_batch, seed=int(s)
         )
@@ -618,6 +694,8 @@ def run_amazon_suite(
                     "last_online_mse": summary["last_online_mse"],
                     "mean_eta": summary["mean_eta"],
                     "mean_c": summary["mean_c"],
+                    "mean_c_d": summary.get("mean_c_d", float("nan")),
+                    "mean_cosine": summary.get("mean_cosine", float("nan")),
                     "mean_delta": summary["mean_delta"],
                     "hindsight_eta": summary["hindsight_eta"],
                 }
@@ -626,6 +704,8 @@ def run_amazon_suite(
             {
                 "seed": int(s),
                 "mean_c": traces[methods[0]][-1]["mean_c"],
+                "mean_c_d": traces[methods[0]][-1].get("mean_c_d", float("nan")),
+                "mean_cosine": traces[methods[0]][-1].get("mean_cosine", float("nan")),
                 "mean_delta": traces[methods[0]][-1]["mean_delta"],
                 "n_batches": traces[methods[0]][-1]["n_batches"],
                 "n_features": int(stream.X.shape[1]),
@@ -641,6 +721,7 @@ def run_amazon_suite(
         "tests": tests,
         "hindsight": hindsight_rows,
         "identification": ident,
+        "relationship": _mean_relationship(rel_pays),
         "traces": traces,
         "methods": methods,
         "meta": {
@@ -654,6 +735,24 @@ def run_amazon_suite(
     }
 
 
+def _mean_relationship(pays):
+    if not pays:
+        return {}
+    R = np.mean([np.asarray(p["cosine"], dtype=float) for p in pays], axis=0)
+    hops = np.mean([np.asarray(p["hops"], dtype=float) for p in pays], axis=0)
+    lag = np.mean([np.asarray(p["lag_cosine"], dtype=float) for p in pays], axis=0)
+    return {
+        "n_batches": int(pays[0]["n_batches"]),
+        "cosine": R,
+        "hops": hops.tolist(),
+        "lag_cosine": lag.tolist(),
+        "lag0_minus_lagmax": float(lag[0] - lag[-1]) if lag.size else float("nan"),
+        "categories": list(pays[0]["categories"]),
+        "labels": list(pays[0]["labels"]),
+        "n_seeds": int(len(pays)),
+    }
+
+
 def _summarize_rows(rows):
     methods = []
     for r in rows:
@@ -663,8 +762,8 @@ def _summarize_rows(rows):
     for method in methods:
         sub = [r for r in rows if r["method"] == method]
         cell = {}
-        for key in ("online_mse", "cum_mse", "regret", "bwt", "last_online_mse", "mean_eta", "mean_c", "mean_delta"):
-            v = np.array([r[key] for r in sub], dtype=float)
+        for key in ("online_mse", "cum_mse", "regret", "bwt", "last_online_mse", "mean_eta", "mean_c", "mean_c_d", "mean_delta"):
+            v = np.array([r.get(key, np.nan) for r in sub], dtype=float)
             cell[key] = {
                 "mean": float(v.mean()),
                 "sd": float(v.std(ddof=1)) if len(v) > 1 else 0.0,
@@ -717,6 +816,90 @@ def _stable_methods(table, methods):
     return out
 
 
+def _cat_labels(pay):
+    labels = list(pay.get("labels") or [])
+    cats = list(pay.get("categories") or [])
+    k = int(pay.get("n_batches") or len(labels) or len(cats))
+    if len(labels) < k:
+        labels = [SHORT_LABELS.get(c, str(c)[:8]) for c in cats] or ["B%d" % i for i in range(k)]
+    return labels[:k]
+
+
+def plot_relationship_heatmap(pay, path):
+    """Lead board: cosine(μ_i, μ_j) with the consecutive hops TSS reads as ĉ."""
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    from msrvtt_attribution_plots import GRID, INK, MUTED, TEXT_C, _save, _style
+
+    _style()
+    R = np.asarray(pay["cosine"], dtype=float)
+    k = int(R.shape[0])
+    labels = _cat_labels(pay)
+    hops = np.asarray(pay.get("hops", [heatmap_hop_c(R, t) for t in range(1, k)]), dtype=float)
+    lag = np.asarray(pay.get("lag_cosine", lag_profile(R)), dtype=float)
+
+    fig = plt.figure(figsize=(12.8, 6.4))
+    gs = fig.add_gridspec(2, 2, width_ratios=[1.28, 0.90], wspace=0.32, hspace=0.42, left=0.08, right=0.97, top=0.86, bottom=0.14)
+    ax = fig.add_subplot(gs[:, 0])
+    im = ax.imshow(R, cmap="magma", vmin=0.45, vmax=1.0, origin="upper", interpolation="nearest")
+    ax.set_xticks(np.arange(k))
+    ax.set_yticks(np.arange(k))
+    ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8.0)
+    ax.set_yticklabels(labels, fontsize=8.0)
+    ax.set_xlabel("batch j")
+    ax.set_ylabel("batch i")
+    ax.set_title("cosine($\\mu_i$, $\\mu_j$)  ·  category relationship", loc="left", fontsize=12, fontweight="bold")
+    for i in range(k):
+        for j in range(k):
+            ax.text(j, i, "%.2f" % R[i, j], ha="center", va="center", fontsize=6.4, color="white" if R[i, j] < 0.72 else INK)
+    for t in range(1, k):
+        ax.add_patch(Rectangle((t - 0.5, t - 1.5), 1.0, 1.0, fill=False, edgecolor="#F4E6C3", lw=1.6))
+    div = make_axes_locatable(ax)
+    cax = div.append_axes("right", size="3.6%", pad=0.08)
+    cbar = fig.colorbar(im, cax=cax)
+    cbar.set_label("mean-vector cosine", fontsize=8)
+    cbar.ax.tick_params(labelsize=7.5)
+
+    axl = fig.add_subplot(gs[0, 1])
+    h = np.arange(len(lag))
+    axl.plot(h, lag, color=TEXT_C, lw=2.2, marker="o", ms=5.0)
+    axl.set_xlabel("lag  |i − j|")
+    axl.set_ylabel("mean cosine")
+    axl.set_title("Lag  ·  relationship decay", loc="left", fontsize=11.5, fontweight="bold")
+    axl.set_xticks(h)
+    axl.grid(True, color=GRID)
+    decay = pay.get("lag0_minus_lagmax", float(lag[0] - lag[-1]) if lag.size else float("nan"))
+    axl.text(0.02, 0.08, "lag0 − lag%d  =  %.3f" % (max(k - 1, 0), decay), transform=axl.transAxes, fontsize=8.2, color=MUTED)
+
+    axh = fig.add_subplot(gs[1, 1])
+    axh.bar(np.arange(1, k), hops, color=TEXT_C, width=0.72)
+    axh.axhline(0.25, color=MUTED, ls="--", lw=0.9)
+    axh.set_xlabel("hop  t−1 → t")
+    axh.set_ylabel(r"$\hat c = 1-\cos(\mu_{t-1},\mu_t)$")
+    axh.set_title(r"Heatmap hops  $\to$  TSS $\hat{c}$", loc="left", fontsize=11.5, fontweight="bold")
+    axh.set_xticks(np.arange(1, k))
+    axh.grid(True, axis="y", color=GRID)
+
+    fig.suptitle(
+        "Amazon  ·  batch-relationship heatmap",
+        fontsize=14.2,
+        fontweight="bold",
+        color=INK,
+        x=0.08,
+        ha="left",
+    )
+    fig.text(
+        0.08,
+        0.015,
+        "Same cosine(Bi, Bj) board as MSR-VTT, one text head.  Yellow boxes = consecutive hops into TSS  "
+        r"$\hat c=1-\cos(\mu_{t-1},\mu_t)$.  Relationship is cosine of batch means (pairwise TF-IDF cosine is ~0).",
+        fontsize=7.8,
+        color=MUTED,
+    )
+    return _save(fig, path)
+
+
 def plot_amazon_suite(suite, path):
     import matplotlib.pyplot as plt
     from msrvtt_attribution_plots import GRID, INK, MUTED, _save, _style
@@ -727,9 +910,24 @@ def plot_amazon_suite(suite, path):
     colors = {m: METHOD_COLORS.get(m, METHOD_COLORS.get("polyak_m" if m == "polyak" else m, "#9AA3AE")) for m in methods}
     labels = {m: METHOD_LABELS.get(m, m) for m in methods}
     labels["polyak"] = r"Polyak"
-    fig, axes = plt.subplots(2, 2, figsize=(10.8, 7.6))
+    fig = plt.figure(figsize=(13.6, 7.8))
+    gs = fig.add_gridspec(2, 3, wspace=0.34, hspace=0.42, left=0.06, right=0.98, top=0.88, bottom=0.10)
 
-    ax = axes[0, 0]
+    ax = fig.add_subplot(gs[0, 0])
+    rel = suite.get("relationship") or {}
+    if rel:
+        R = np.asarray(rel["cosine"], dtype=float)
+        labs_r = _cat_labels(rel)
+        ax.imshow(R, cmap="magma", vmin=0.45, vmax=1.0, origin="upper", interpolation="nearest")
+        ax.set_xticks(np.arange(R.shape[0]))
+        ax.set_yticks(np.arange(R.shape[0]))
+        ax.set_xticklabels(labs_r, rotation=55, ha="right", fontsize=6.6)
+        ax.set_yticklabels(labs_r, fontsize=6.6)
+        ax.set_title("Relationship  cosine($\\mu_i$, $\\mu_j$)", loc="left", fontsize=11.2, fontweight="bold")
+    else:
+        ax.axis("off")
+
+    ax = fig.add_subplot(gs[0, 1])
     x = np.arange(len(bars))
     means = [suite["table"][m]["online_mse"]["mean"] for m in bars]
     sds = [suite["table"][m]["online_mse"]["sd"] for m in bars]
@@ -740,7 +938,7 @@ def plot_amazon_suite(suite, path):
     ax.set_title("Mean online MSE", loc="left", fontsize=12, fontweight="bold")
     ax.grid(True, axis="y", color=GRID)
 
-    ax = axes[0, 1]
+    ax = fig.add_subplot(gs[0, 2])
     means = [suite["table"][m]["regret"]["mean"] for m in bars]
     sds = [suite["table"][m]["regret"]["sd"] for m in bars]
     ax.bar(x, means, yerr=sds, color=[colors[m] for m in bars], ecolor=MUTED, capsize=2.5, width=0.78)
@@ -750,7 +948,19 @@ def plot_amazon_suite(suite, path):
     ax.set_title("Regret vs hindsight-best constant η", loc="left", fontsize=12, fontweight="bold")
     ax.grid(True, axis="y", color=GRID)
 
-    ax = axes[1, 0]
+    ax = fig.add_subplot(gs[1, 0])
+    hops = np.asarray((rel or {}).get("hops") or [], dtype=float)
+    if hops.size:
+        ax.bar(np.arange(1, hops.size + 1), hops, color="#2F6B4F", width=0.72)
+        ax.axhline(0.25, color=MUTED, ls="--", lw=0.9)
+        ax.set_xlabel("hop")
+        ax.set_ylabel(r"heatmap $\hat c$")
+        ax.set_title("Hops into TSS", loc="left", fontsize=11.2, fontweight="bold")
+        ax.grid(True, axis="y", color=GRID)
+    else:
+        ax.axis("off")
+
+    ax = fig.add_subplot(gs[1, 1])
     for method in bars:
         recs = suite["traces"][method]
         path_mse = np.array([r["online_path"] for r in recs], dtype=float)
@@ -767,9 +977,9 @@ def plot_amazon_suite(suite, path):
     ax.set_ylabel("online MSE")
     ax.set_title("Per-batch online MSE", loc="left", fontsize=12, fontweight="bold")
     ax.grid(True, color=GRID)
-    ax.legend(frameon=False, fontsize=7.5, ncol=2)
+    ax.legend(frameon=False, fontsize=7.2, ncol=2)
 
-    ax = axes[1, 1]
+    ax = fig.add_subplot(gs[1, 2])
     for method in methods:
         recs = suite["traces"][method]
         t = [h["round"] for h in recs[0]["history"]]
@@ -799,13 +1009,12 @@ def plot_amazon_suite(suite, path):
     fig.text(
         0.04,
         0.01,
-        "Amazon Reviews 2023, %d category batches.  Online MSE is predict-then-update.  "
-        "Dashed line is the batch-0 intercept.  Regret vs hindsight-best constant η.%s  Error bars are seed s.d."
+        "Amazon Reviews 2023, %d category batches.  Left: cosine($\\mu_i$, $\\mu_j$) relationship heatmap; hops feed TSS $\\hat c=1-\\cos$.  "
+        "Online MSE is predict-then-update.  Dashed line is the batch-0 intercept.  Regret vs hindsight-best constant η.%s  Error bars are seed s.d."
         % (len(cats) or int(n_b or 0), note),
         fontsize=7.8,
         color=MUTED,
     )
-    fig.tight_layout(rect=(0, 0.06, 1, 0.94))
     return _save(fig, path)
 
 
@@ -827,7 +1036,7 @@ def write_tex_table(suite, path):
         r"\begin{table}[ht]\centering",
         r"\caption{Amazon Reviews 2023, %d product-category batches. Linear TF-IDF MSE, predict-then-update."
         % int(meta.get("n_batches") or len(cats) or 0),
-        r"TSS is the same next-epoch map as the multimodal probe, on a scalar text head.",
+        r"TSS $\hat c$ is the hop $1-\cos(\mu_{t-1},\mu_t)$ on the batch-relationship heatmap (cosine of category-mean TF-IDF).",
         r"Regret is cumulative online MSE minus the hindsight-best constant $\eta$ inside the TSS box $[0.04,2.5\eta_0]$.",
         r"Entries are mean (s.d.) over seeds.}",
         r"\label{tab:amazon-continuous-batches}",
@@ -869,7 +1078,7 @@ def write_tex_table(suite, path):
     cat_tex = ", ".join(c.replace("_", r"\_") for c in cats)
     lines.append(
         r"{\footnotesize Wilcoxon signed-rank on regret, TSS $-$ comparator: $^{\ast}$ $p<0.05$ and TSS lower."
-        r" Mean $\hat c=%.3f$, $\hat\delta=%.3f$. Hindsight-best constant $\bar\eta=%.3f$. Categories: %s.}"
+        r" Mean heatmap $\hat c=%.3f$, $\hat\delta=%.3f$. Hindsight-best constant $\bar\eta=%.3f$. Categories: %s.}"
         % (mean_c, mean_d, hind_eta, cat_tex)
     )
     lines.append(r"\end{table}")

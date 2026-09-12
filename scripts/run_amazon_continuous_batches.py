@@ -18,6 +18,7 @@ from amazon_continuous_batches import (  # noqa: E402
     CATEGORIES,
     METHODS,
     plot_amazon_suite,
+    plot_relationship_heatmap,
     run_amazon_suite,
     strip_traces,
     write_tex_table,
@@ -57,6 +58,15 @@ def main():
     DOCS.mkdir(parents=True, exist_ok=True)
     write_json(OUT / "amazon_vs_schedulers.json", strip_traces(suite))
     plot_amazon_suite(suite, OUT / "amazon_vs_schedulers.png")
+    if suite.get("relationship"):
+        plot_relationship_heatmap(suite["relationship"], OUT / "amazon_batch_relationship_heatmap.png")
+        write_json(
+            OUT / "amazon_batch_relationship.json",
+            {
+                k: v
+                for k, v in suite["relationship"].items()
+            },
+        )
     write_tex_table(suite, OUT / "Amazon_continuous_batches.tex")
     write_tex_table(suite, DOCS / "Amazon_continuous_batches.tex")
 

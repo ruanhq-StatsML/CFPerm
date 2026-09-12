@@ -10,12 +10,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "Python" / "src"))
 
 from amazon_continuous_batches import (  # noqa: E402
+    batch_mean_cosine,
     concept_intensity_mse,
     covariate_intensity_text,
     featurize_reviews,
+    heatmap_hop_c,
     hindsight_constant,
     make_amazon_like_stream,
     parse_jsonl_records,
+    plot_relationship_heatmap,
+    relationship_payload,
     run_amazon_method,
     tss_eta_scalar,
 )
@@ -73,6 +77,38 @@ def test_tss_shrinks_eta_under_covariate_only():
     const, _ = run_amazon_method(stream, method="constant", eta0=0.10, steps_per_batch=3, seed=9)
     assert tss["mean_c"] > 0.2
     assert tss["mean_eta"] < const["mean_eta"]
+
+
+def test_relationship_heatmap_diag_and_hops():
+    quiet = make_amazon_like_stream(n_batches=6, n_per=50, seed=3, cov=0.0)
+    shifted = make_amazon_like_stream(n_batches=6, n_per=50, seed=3, cov=0.8)
+    R0 = batch_mean_cosine(quiet.X, quiet.batch)
+    R1 = batch_mean_cosine(shifted.X, shifted.batch)
+    assert np.allclose(np.diag(R0), 1.0, atol=1e-6)
+    assert np.allclose(np.diag(R1), 1.0, atol=1e-6)
+    hops0 = [heatmap_hop_c(R0, t) for t in range(1, 6)]
+    hops1 = [heatmap_hop_c(R1, t) for t in range(1, 6)]
+    assert np.mean(hops1) > np.mean(hops0) + 0.15
+    pay = relationship_payload(shifted)
+    assert pay["cosine"].shape == (6, 6)
+    assert pay["lag0_minus_lagmax"] > 0.05
+
+
+def test_tss_reads_heatmap_hop_as_c():
+    stream = make_amazon_like_stream(n_batches=6, n_per=40, seed=8, cov=0.7, concept=0.0)
+    rec, _ = run_amazon_method(stream, method="tss", eta0=0.10, steps_per_batch=2, seed=8)
+    adapt = [h for h in rec["history"] if h["phase"] == "adapt"]
+    R = batch_mean_cosine(stream.X, stream.batch)
+    for h in adapt:
+        assert abs(h["c"] - heatmap_hop_c(R, h["round"])) < 1e-9
+        assert "cosine" in h
+
+
+def test_relationship_plot_writes(tmp_path):
+    stream = make_amazon_like_stream(n_batches=5, n_per=30, seed=2, cov=0.5)
+    out = plot_relationship_heatmap(relationship_payload(stream), tmp_path / "heat.png")
+    assert out.exists()
+    assert out.stat().st_size > 2000
 
 
 def test_featurize_keeps_nonnegative_tfidf():

@@ -6,16 +6,25 @@ The typed shift stepsize does not require three modality heads.
 Take Amazon Reviews 2023 and treat nine product categories as consecutive
 batches $W=0,\ldots,8$ (gift cards, digital music, beauty, software,
 subscription boxes, musical instruments, magazines, handmade, fashion).
-$X$ is a TF-IDF of title plus body, with the vocabulary frozen on batch 0
-and columns standardized on that same batch.
+$X$ is a TF-IDF of title plus body, with the vocabulary frozen on batch 0.
 $Y$ is the 1--5 star rating.
 A linear MSE probe is trained online: predict the arriving batch, then take
 SGD steps with the current $\eta$.
 
-The estimators are the scalar versions of the multimodal map.
-Covariate intensity $\hat c$ is $|d|$ of the TF-IDF coordinate-mean under
-consecutive categories.
-Concept intensity $\hat\delta$ is two-fold excess ridge MSE after
+The batch-relationship heatmap is the same $\mathrm{cosine}(B_i,B_j)$ object as
+the MSR-VTT modality boards, on one text head.
+Sparse TF-IDF pairwise cosine is near zero; the relationship is the cosine of
+category-mean vectors, $R_{ij}=\cos(\bar x_i,\bar x_j)$.
+Covariate intensity on the hop the trainer actually walks is read off that
+heatmap,
+\begin{equation}
+  \hat c_t
+  =
+  1-R_{t-1,t}
+  =
+  1-\cos(\bar x_{t-1},\bar x_t).
+\end{equation}
+Concept intensity $\hat\delta$ remains two-fold excess ridge MSE after
 mean-aligning $X$ (a location shift in $P(X)$ is removed; a change in
 $P(Y\mid X)$ is not).
 The next-epoch stepsize is the same formula as on MSR-VTT,
