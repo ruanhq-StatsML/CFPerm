@@ -32,7 +32,11 @@ from .compute_ratio import (
 )
 from .ensemble_decorr import (
     assign_ensemble_roles,
+    characterize_buckets_and_rruns,
     characterize_ensemble_traj,
+    corr_bucket,
+    expand_role_windows,
+    extract_r_runs,
     gram_effective_rank,
     residual_uniqueness,
     role_lr_gains,
@@ -110,6 +114,10 @@ __all__ = [
     "role_lr_gains",
     "soft_decorr_lr",
     "characterize_ensemble_traj",
+    "corr_bucket",
+    "expand_role_windows",
+    "extract_r_runs",
+    "characterize_buckets_and_rruns",
 ]
 
 __version__ = "0.1.0"

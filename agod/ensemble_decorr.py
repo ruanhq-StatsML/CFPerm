@@ -292,3 +292,340 @@ def characterize_ensemble_traj(
         "residual_div": float(residual_div),
         "eta": float(eta),
     }
+
+
+# ---------------------------------------------------------------------------
+# Correlation buckets + R-run trajectory diagnostics (online decorr eval)
+# ---------------------------------------------------------------------------
+
+BUCKET_NAMES = ("low", "mid", "high")
+
+
+def corr_bucket(
+    mean_rho: float,
+    effective_rank: float,
+    *,
+    rho_high: float = 0.55,
+    rho_mid: float = 0.35,
+    erank_collinear: float = 1.55,
+    erank_mid: float = 2.20,
+) -> str:
+    """Map a window's (ρ̄, erank) → low / mid / high correlation bucket.
+
+    high: trigger-aligned (ρ̄≥ρ_high OR erank≤erank_collinear)
+    low:  clearly independent (ρ̄<ρ_mid AND erank>erank_mid)
+    mid:  everything else (borderline / mixed)
+    """
+    if float(mean_rho) >= float(rho_high) or float(effective_rank) <= float(erank_collinear):
+        return "high"
+    if float(mean_rho) < float(rho_mid) and float(effective_rank) > float(erank_mid):
+        return "low"
+    return "mid"
+
+
+def _pair_from_row(row: Mapping, mods: Sequence[str]) -> dict[str, float]:
+    mods = list(mods)
+    pair = dict(row.get("pair_cos") or {})
+    if pair:
+        return {k: float(v) for k, v in pair.items()}
+    mpc = float(row.get("mean_pair_cos", row.get("mean_redundancy", 0.0)) or 0.0)
+    return {
+        f"{a}|{b}": mpc
+        for i, a in enumerate(mods)
+        for b in mods[i + 1 :]
+    }
+
+
+def expand_role_windows(
+    traj: Sequence[Mapping],
+    mods: Sequence[str],
+    *,
+    eta: float = 0.75,
+    rho_high: float = 0.55,
+    residual_div: float = 0.25,
+    erank_collinear: float = 1.55,
+) -> list[dict]:
+    """Per-window role / bucket / LR expansion (for R-run & swap stats)."""
+    mods = list(mods)
+    out = []
+    for i, row in enumerate(traj):
+        alpha = {m: float((row.get("alpha") or {}).get(m, 0.0)) for m in mods}
+        # tolerate missing α → uniform
+        s = sum(alpha.values())
+        if s <= 1e-12:
+            alpha = {m: 1.0 / len(mods) for m in mods}
+        pair = _pair_from_row(row, mods)
+        packed = soft_decorr_lr(
+            alpha,
+            pair,
+            mods,
+            eta=eta,
+            rho_high=rho_high,
+            residual_div=residual_div,
+        )
+        d = packed["decomp"]
+        erank = float(d["spectral"]["effective_rank"])
+        mean_rho = float(d["mean_redundancy"])
+        bucket = corr_bucket(
+            mean_rho,
+            erank,
+            rho_high=rho_high,
+            erank_collinear=erank_collinear,
+        )
+        leader_alpha = max(mods, key=lambda m: alpha[m])
+        leader_u = d["leader"]
+        lr = packed["lr"]
+        lr_vals = [float(lr[m]) for m in mods]
+        out.append(
+            {
+                "t": int(row.get("t", i)),
+                "bucket": bucket,
+                "decorr_active": bool(d["decorr_active"]),
+                "mean_redundancy": mean_rho,
+                "effective_rank": erank,
+                "top_frac": float(d["spectral"].get("top_frac", float("nan"))),
+                "alpha": alpha,
+                "unique_mass": d["unique_mass"],
+                "residual": d["residual"],
+                "roles": d["roles"],
+                "leader_alpha": leader_alpha,
+                "leader_u": leader_u,
+                "leader_swap": bool(leader_alpha != leader_u),
+                "role_gain": packed["role_gain"],
+                "lr": {m: float(lr[m]) for m in mods},
+                "lr_ratio": float(max(lr_vals) / max(min(lr_vals), 1e-9)),
+                "acc_lift": (
+                    float(row["acc_lift"])
+                    if row.get("acc_lift") is not None
+                    else None
+                ),
+            }
+        )
+    return out
+
+
+def extract_r_runs(
+    windows: Sequence[Mapping],
+    mods: Sequence[str],
+    *,
+    min_streak: int = 2,
+) -> list[dict]:
+    """Extract redundant streaks (R-runs) per modality.
+
+    An R-run is a contiguous span where role==redundant AND decorr_active,
+    of length ≥ min_streak. Low-corr windows (decorr off) break streaks.
+    """
+    mods = list(mods)
+    runs: list[dict] = []
+    for m in mods:
+        start = None
+        length = 0
+        for i, w in enumerate(windows):
+            is_r = bool(w.get("decorr_active")) and (w.get("roles") or {}).get(m) == "redundant"
+            if is_r:
+                if start is None:
+                    start = i
+                    length = 1
+                else:
+                    length += 1
+            else:
+                if start is not None and length >= int(min_streak):
+                    span = list(windows[start : start + length])
+                    lifts = [x["acc_lift"] for x in span if x.get("acc_lift") is not None]
+                    runs.append(
+                        {
+                            "modality": m,
+                            "t_start": int(span[0]["t"]),
+                            "t_end": int(span[-1]["t"]),
+                            "length": int(length),
+                            "mean_rho": float(np.mean([x["mean_redundancy"] for x in span])),
+                            "mean_erank": float(np.mean([x["effective_rank"] for x in span])),
+                            "mean_lr": float(np.mean([x["lr"][m] for x in span])),
+                            "mean_residual": float(np.mean([x["residual"][m] for x in span])),
+                            "mean_acc_lift": float(np.mean(lifts)) if lifts else None,
+                            "buckets": [x["bucket"] for x in span],
+                        }
+                    )
+                start = None
+                length = 0
+        if start is not None and length >= int(min_streak):
+            span = list(windows[start : start + length])
+            lifts = [x["acc_lift"] for x in span if x.get("acc_lift") is not None]
+            runs.append(
+                {
+                    "modality": m,
+                    "t_start": int(span[0]["t"]),
+                    "t_end": int(span[-1]["t"]),
+                    "length": int(length),
+                    "mean_rho": float(np.mean([x["mean_redundancy"] for x in span])),
+                    "mean_erank": float(np.mean([x["effective_rank"] for x in span])),
+                    "mean_lr": float(np.mean([x["lr"][m] for x in span])),
+                    "mean_residual": float(np.mean([x["residual"][m] for x in span])),
+                    "mean_acc_lift": float(np.mean(lifts)) if lifts else None,
+                    "buckets": [x["bucket"] for x in span],
+                }
+            )
+    return runs
+
+
+def _role_transition_matrix(windows: Sequence[Mapping], mods: Sequence[str]) -> dict:
+    """P(role_{t+1}|role_t) pooled over modalities (decorr-on steps only)."""
+    labels = list(ROLE_NAMES)
+    counts = {a: {b: 0 for b in labels} for a in labels}
+    for m in mods:
+        prev = None
+        for w in windows:
+            if not w.get("decorr_active"):
+                prev = None
+                continue
+            cur = (w.get("roles") or {}).get(m)
+            if cur not in counts:
+                prev = None
+                continue
+            if prev in counts:
+                counts[prev][cur] += 1
+            prev = cur
+    out = {}
+    for a in labels:
+        tot = sum(counts[a].values())
+        out[a] = {
+            b: (float(counts[a][b]) / tot if tot else 0.0) for b in labels
+        }
+        out[a]["_n"] = int(tot)
+    return out
+
+
+def characterize_buckets_and_rruns(
+    traj: Sequence[Mapping],
+    mods: Sequence[str],
+    *,
+    eta: float = 0.75,
+    rho_high: float = 0.55,
+    residual_div: float = 0.25,
+    erank_collinear: float = 1.55,
+    min_streak: int = 2,
+) -> dict:
+    """Bucket windows by correlation regime + R-run / leader-swap diagnostics.
+
+    Evaluation protocol:
+      - low bucket: soft_decorr should match soft (γ=1); R-run freq ≈ 0
+      - high bucket: decorr on; report R-run rate, swap rate, LR_L/LR_R
+      - mid bucket: borderline — report separately, do not pool into high
+    """
+    mods = list(mods)
+    windows = expand_role_windows(
+        traj,
+        mods,
+        eta=eta,
+        rho_high=rho_high,
+        residual_div=residual_div,
+        erank_collinear=erank_collinear,
+    )
+    if not windows:
+        return {}
+
+    buckets: dict[str, list] = {b: [] for b in BUCKET_NAMES}
+    for w in windows:
+        buckets[w["bucket"]].append(w)
+
+    def _bucket_stats(rows: list[dict]) -> dict:
+        if not rows:
+            return {
+                "n_windows": 0,
+                "frac_windows": 0.0,
+                "mean_rho": float("nan"),
+                "mean_erank": float("nan"),
+                "frac_decorr_active": float("nan"),
+                "frac_leader_swap": float("nan"),
+                "role_frac": {r: float("nan") for r in ROLE_NAMES},
+                "mean_lr_ratio": float("nan"),
+                "mean_acc_lift": float("nan"),
+            }
+        n = len(rows)
+        role_counts = {r: 0 for r in ROLE_NAMES}
+        for w in rows:
+            for m in mods:
+                role_counts[w["roles"][m]] += 1
+        lifts = [w["acc_lift"] for w in rows if w.get("acc_lift") is not None]
+        return {
+            "n_windows": n,
+            "frac_windows": float(n / len(windows)),
+            "mean_rho": float(np.mean([w["mean_redundancy"] for w in rows])),
+            "mean_erank": float(np.mean([w["effective_rank"] for w in rows])),
+            "frac_decorr_active": float(np.mean([1.0 if w["decorr_active"] else 0.0 for w in rows])),
+            "frac_leader_swap": float(np.mean([1.0 if w["leader_swap"] else 0.0 for w in rows])),
+            "role_frac": {
+                r: float(role_counts[r]) / (n * len(mods)) for r in ROLE_NAMES
+            },
+            "mean_lr_ratio": float(np.mean([w["lr_ratio"] for w in rows])),
+            "mean_acc_lift": float(np.mean(lifts)) if lifts else float("nan"),
+        }
+
+    bucket_stats = {b: _bucket_stats(buckets[b]) for b in BUCKET_NAMES}
+    r_runs = extract_r_runs(windows, mods, min_streak=min_streak)
+
+    # R-run frequency: runs per decorr-on window (and per high-bucket window)
+    n_decorr = sum(1 for w in windows if w["decorr_active"])
+    n_high = len(buckets["high"])
+    n_r_windows = 0
+    for w in windows:
+        if not w["decorr_active"]:
+            continue
+        if any(w["roles"][m] == "redundant" for m in mods):
+            n_r_windows += 1
+
+    run_lengths = [r["length"] for r in r_runs]
+    rrun_stats = {
+        "min_streak": int(min_streak),
+        "n_runs": len(r_runs),
+        "runs_per_window": float(len(r_runs) / max(len(windows), 1)),
+        "runs_per_decorr_window": float(len(r_runs) / max(n_decorr, 1)),
+        "runs_per_high_bucket_window": float(len(r_runs) / max(n_high, 1)),
+        "frac_windows_with_any_R": float(n_r_windows / max(n_decorr, 1)) if n_decorr else 0.0,
+        "mean_run_length": float(np.mean(run_lengths)) if run_lengths else 0.0,
+        "max_run_length": int(max(run_lengths)) if run_lengths else 0,
+        "by_modality": {
+            m: {
+                "n_runs": sum(1 for r in r_runs if r["modality"] == m),
+                "mean_length": float(
+                    np.mean([r["length"] for r in r_runs if r["modality"] == m])
+                    if any(r["modality"] == m for r in r_runs)
+                    else 0.0
+                ),
+            }
+            for m in mods
+        },
+        "runs": r_runs,
+    }
+
+    # length≥1 R events (single-window hits) vs sticky runs (length≥min_streak)
+    hits = extract_r_runs(windows, mods, min_streak=1)
+    sticky = [s for s in hits if s["length"] >= min_streak]
+    rrun_stats["n_r_events_len1"] = len(hits)
+    rrun_stats["n_r_mod_windows"] = int(sum(h["length"] for h in hits))
+
+    return {
+        "n_windows": len(windows),
+        "mods": mods,
+        "bucket_edges": {
+            "rho_high": float(rho_high),
+            "rho_mid": 0.35,
+            "erank_collinear": float(erank_collinear),
+            "erank_mid": 2.20,
+        },
+        "buckets": bucket_stats,
+        "r_runs": rrun_stats,
+        "n_sticky_r_runs": len(sticky),
+        "role_transitions_decorr_on": _role_transition_matrix(windows, mods),
+        "overall": {
+            "mean_rho": float(np.mean([w["mean_redundancy"] for w in windows])),
+            "mean_erank": float(np.mean([w["effective_rank"] for w in windows])),
+            "frac_decorr_active": float(
+                np.mean([1.0 if w["decorr_active"] else 0.0 for w in windows])
+            ),
+            "frac_leader_swap": float(
+                np.mean([1.0 if w["leader_swap"] else 0.0 for w in windows])
+            ),
+        },
+        "windows": windows,
+    }

@@ -1,0 +1,16 @@
+% Correlation buckets + R-run frequency
+\begin{table}[t]\centering
+\caption{Amazon (high-corr) vs MSR-VTT (low-corr) buckets and R-run rates under soft\_decorr role geometry.}
+\label{tab:agod-decorr-buckets}
+\begin{tabular}{llrrrrr}\toprule
+dataset & source & mean $\rho$ & erank & frac high & frac any-R & sticky $n$ & LR ratio \\
+\midrule
+amazon & equal & 0.688 & 1.538 & 1.000 & 0.167 & 0 & 7.127 \\
+amazon & soft & 0.669 & 1.563 & 1.000 & 0.167 & 0 & 6.904 \\
+amazon & soft\_gradcos & 0.710 & 1.511 & 1.000 & 0.333 & 0 & 8.332 \\
+msrvtt & equal & 0.192 & 2.853 & 0.000 & 0.000 & 0 & — \\
+msrvtt & soft & 0.217 & 2.823 & 0.000 & 0.000 & 0 & — \\
+msrvtt & soft\_gradcos & 0.215 & 2.829 & 0.000 & 0.000 & 0 & — \\
+\bottomrule
+\end{tabular}
+\end{table}
