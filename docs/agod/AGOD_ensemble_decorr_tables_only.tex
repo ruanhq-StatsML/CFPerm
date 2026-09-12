@@ -1,0 +1,28 @@
+% Ensemble decorrelation vs modality gradient correlation
+\begin{table}[t]\centering
+\caption{High correlation triggers ensemble role split (leader / diversifier / redundant) and soft\_decorr LR.}
+\label{tab:agod-ensemble-decorr}
+\begin{tabular}{rrrlrl}\toprule
+pair\_cos & mean $\rho$ & erank & decorr & leader & LR ratio \\
+\midrule
++0.01 & 0.01 & 3.00 & N & video & 1.00 \\
++0.53 & 0.53 & 2.31 & N & video & 1.00 \\
++0.74 & 0.74 & 1.79 & Y & video & 1.19 \\
++0.90 & 0.90 & 1.35 & Y & video & 5.40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]\centering
+\caption{Asymmetric geometries: residual diversifier vs full collinear.}
+\label{tab:agod-ensemble-decorr-asym}
+\begin{tabular}{lrrll}\toprule
+case & mean $\rho$ & erank & leader & roles (v/t/a) \\
+\midrule
+low\_corr & 0.15 & 2.94 & video & d/d/d \\
+high\_iso & 0.80 & 1.62 & video & l/r/r \\
+leader\_plus\_residual & 0.63 & 1.77 & text & r/l/d \\
+full\_collinear & 0.92 & 1.28 & video & l/r/r \\
+\bottomrule
+\end{tabular}
+\end{table}
