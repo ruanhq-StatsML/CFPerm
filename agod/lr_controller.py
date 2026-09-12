@@ -71,6 +71,8 @@ SCHEDULER_NAMES = (
     "soft_entropy", # blend soft↔equal by α-entropy (uncertain → flatter)
     "soft_gradcos", # soft × gradient-alignment gain (cosine similarity)
     "soft_decorr",  # soft × ensemble role gains (high-corr decorrelate)
+    "soft_gls",     # GLS / matched-filter π* ∝ R^{-1} α
+    "soft_stat",    # GLS π* × variance-stabilising η × temporal/conflict
 )
 
 
@@ -345,6 +347,9 @@ def schedule_modality_lr(
     align_gain: Mapping[str, float] | None = None,
     lambda_align: float = 0.75,
     pair_cos: Mapping[str, float] | None = None,
+    temporal_cos: Mapping[str, float] | None = None,
+    cos_to_shared: Mapping[str, float] | None = None,
+    n_obs: float = 32.0,
 ) -> dict[str, float]:
     """Dispatch per-modality LR scheduler by name."""
     if name not in SCHEDULER_NAMES:
@@ -382,6 +387,24 @@ def schedule_modality_lr(
             # no geometry → soft fallback
             return alpha_to_lr(alpha, mods, beta=beta, gain=gain)
         packed = soft_decorr_lr(alpha, pair, mods, beta=beta, gain=gain)
+        return packed["lr"]
+    if name in ("soft_gls", "soft_stat"):
+        from .grad_corr_stat import stat_corr_lr
+
+        pair = pair_cos or {}
+        if not pair:
+            return alpha_to_lr(alpha, mods, beta=beta, gain=gain)
+        packed = stat_corr_lr(
+            alpha,
+            pair,
+            mods,
+            beta=beta,
+            n_obs=n_obs,
+            temporal_cos=temporal_cos,
+            cos_to_shared=cos_to_shared,
+            gain=gain,
+            gls_only=(name == "soft_gls"),
+        )
         return packed["lr"]
     # soft_entropy
     return soft_entropy_lr(alpha, mods, beta=beta, gain=gain)
