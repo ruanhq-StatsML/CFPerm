@@ -1,0 +1,45 @@
+% Amazon Reviews 2023 as a scalar-text TSS illustration.
+% Table~\ref{tab:amazon-continuous-batches} is auto-generated.
+
+\paragraph{Amazon continuous batches.}
+The typed shift stepsize does not require three modality heads.
+Take Amazon Reviews 2023 and treat nine product categories as consecutive
+batches $W=0,\ldots,8$ (gift cards, digital music, beauty, software,
+subscription boxes, musical instruments, magazines, handmade, fashion).
+$X$ is a TF-IDF of title plus body, with the vocabulary frozen on batch 0
+and columns standardized on that same batch.
+$Y$ is the 1--5 star rating.
+A linear MSE probe is trained online: predict the arriving batch, then take
+SGD steps with the current $\eta$.
+
+The estimators are the scalar versions of the multimodal map.
+Covariate intensity $\hat c$ is $|d|$ of the TF-IDF coordinate-mean under
+consecutive categories.
+Concept intensity $\hat\delta$ is two-fold excess ridge MSE after
+mean-aligning $X$ (a location shift in $P(X)$ is removed; a change in
+$P(Y\mid X)$ is not).
+The next-epoch stepsize is the same formula as on MSR-VTT,
+\begin{equation}
+  \eta^{\star}
+  =
+  \eta_0\,
+  \frac{1+\beta\hat\delta/s}{1+\lambda\hat c\, s},
+  \qquad
+  s=\sqrt{n_{\mathrm{iter}}},
+\end{equation}
+with a quiet hold when both channels are off.
+Train batch $t$ with $\eta^{(t)}$; then set $\eta^{(t+1)}$.
+
+Comparators are scalar clocks of $t$ or of the loss: constant, cosine,
+plateau (halve after two non-improving online-MSE rounds), and Polyak
+($\eta$ proportional to the current MSE --- the wrong sign under pure
+covariate shift).
+inv-$c$ is the covariate half of TSS ($\beta=0$).
+
+The pre-specified metrics are online MSE, BWT (MSE on batch 0 after the
+stream), and regret against the hindsight-best constant $\eta$ on the same
+stream and seed.
+Category sequence is a domain stream, not a timestamp stream: $\hat c$ is
+expected to be large, so a typed map should not chase $X$.
+Do not read this as a retrieval or ranking evaluation.
+The numerical comparison is Table~\ref{tab:amazon-continuous-batches}.

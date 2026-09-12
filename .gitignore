@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 data/raw/
+data/amazon/
 data/msrvtt/raw/
 data/msrvtt/features_window/.unzipped_from
 *.mp4
