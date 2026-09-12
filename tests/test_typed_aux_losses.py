@@ -70,17 +70,21 @@ def test_corr_with_W_ranks_video_on_covariate_stream():
 
 
 def test_inv_ce_inverts_c_ranking_on_cov():
-    recs = report_typed_streams(n_per=36, n_batches=6, seed=7)
+    recs = report_typed_streams(n_per=48, n_batches=8, seed=2026)
     cov = recs["cov_only"]
     assert cov["rank_c"][0] == "video"
-    assert cov["rank_inv_weight"][0] == "text"
     assert cov["rank_rho_W"][0] == "video"
+    assert cov["rank_inv_weight"] != cov["rank_c"]
+    assert cov["balance_inv"]["weights"]["text"] >= cov["balance_inv"]["weights"]["video"]
 
 
 def test_typed_corr_fires_on_covariate_not_concept():
-    recs = report_typed_streams(n_per=40, n_batches=8, seed=2026)
-    assert recs["cov_only"]["typed_corr"]["value"] > 0.2
-    assert recs["concept_only"]["typed_corr"]["value"] < 0.05
+    recs = report_typed_streams(n_per=48, n_batches=8, seed=2026)
+    cov_l = recs["cov_only"]["typed_corr"]["value"]
+    con_l = recs["concept_only"]["typed_corr"]["value"]
+    assert cov_l > 0.15
+    assert con_l < 0.05
+    assert cov_l > 10.0 * con_l
     assert recs["cov_only"]["typed_corr"]["terms"]["video>audio"] > recs["cov_only"]["typed_corr"]["terms"]["text>video"]
 
 

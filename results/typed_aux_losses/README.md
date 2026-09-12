@@ -12,7 +12,7 @@ Not a scheduler board. Three objects next to TSS, on the same \((\hat c,\hat\del
 ## Run
 
 ```
-python3 tests/test_typed_aux_losses.py
+python3 -m pytest tests/test_typed_aux_losses.py
 python3 scripts/run_typed_aux_losses.py
 ```
 

@@ -1,0 +1,29 @@
+% Conventional balance vs typed correlation vs effective-rank. Auto-generated.
+\begin{table}[ht]\centering
+\caption{Unimodal CE balance is conventional and symmetric: the lagging head gets the largest inverse-CE weight.
+On a covariate-only hop that is the wrong sign for clip-level text.
+$\mathrm{Corr}(z^{(m)},W)$ duplicates $\hat c_m$.
+Typed correlation penalizes $C_{mm'}^2$ only when $m$ is moving and $m'$ is quiet.
+$\Delta\mathrm{erank}(\mathrm{Cov}\,X^{(m)})$ is location-invariant and does not rank the mean hop.
+Amazon leave-one-out $\Delta\mathrm{erank}(R)$ ranks domains; a $2\times 2$ hop Gram is a monotone rewrite of $1-\cos$.}
+\label{tab:typed-aux-losses}
+\small
+\begin{tabular}{@{}ll cc@{}}\toprule
+& & covariate-only hop & concept hop \\
+\midrule
+$\hat c_{v/a/t}$ & & 3.211 / 0.928 / 0.264 & 0.128 / 0.045 / 0.264 \\
+unimodal CE & & 1.284 / 1.279 / 1.354 & 1.398 / 1.279 / 1.354 \\
+balance gap $L_m-\bar L$ & & -0.022 / -0.027 / 0.048 & 0.055 / -0.065 / 0.010 \\
+inv-CE weights & & 0.326 / 0.324 / 0.350 & 0.352 / 0.312 / 0.336 \\
+$|\mathrm{Corr}(z^{(m)},W)|$ & & 0.851 / 0.425 / 0.132 & 0.065 / 0.023 / 0.132 \\
+typed corr $L$ & & $0.491$ & $0.004$ \\
+$\Delta\mathrm{erank}(\mathrm{Cov})_{v/a/t}$ & & -0.116 / 0.836 / 0.976 & -0.116 / 0.836 / 0.976 \\
+erank $2\times2$ mean-Gram & & 1.236 / 1.731 / 1.968 & 1.978 / 1.951 / 1.968 \\
+rank by $\hat c$ & & video $>$ audio $>$ text & text $>$ video $>$ audio \\
+rank by inv-CE & & text $>$ video $>$ audio & video $>$ text $>$ audio \\
+rank by $\Delta\mathrm{erank}(\mathrm{Cov})$ & & text $>$ audio $>$ video & text $>$ audio $>$ video \\
+rank by $2\times 2$ mean-Gram erank & & text $>$ audio $>$ video & video $>$ text $>$ audio \\
+\bottomrule
+\end{tabular}\\[0.4em]
+{\footnotesize Amazon heatmap $\mathrm{erank}(R)=2.74$ of $K=9$. Leave-one-out $\Delta\mathrm{erank}$ leaders: Gift ($0.389$), SubBox ($0.324$), Handmade ($0.108$). Largest hops $1-\cos$: Gift$\to$Music ($0.438$), Software$\to$SubBox ($0.391$), SubBox$\to$Instr ($0.376$).}
+\end{table}

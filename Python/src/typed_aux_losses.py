@@ -424,7 +424,7 @@ def write_tex(report, amazon, path):
 
 def plot_aux_comparison(report, path, amazon=None):
     import matplotlib.pyplot as plt
-    from msrvtt_attribution_plots import GRID, INK, MUTED, VIDEO_C, _save, _style
+    from msrvtt_attribution_plots import AUDIO_C, GRID, INK, MUTED, TEXT_C, VIDEO_C, _save, _style
 
     _style()
     colors = {"video": VIDEO_C, "audio": AUDIO_C, "text": TEXT_C}
