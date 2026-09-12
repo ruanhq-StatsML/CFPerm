@@ -2,7 +2,7 @@
 """Image/Text AGOD portable prototype (same control plane as Amazon / MSR-VTT).
 
 Datasets under data/img_txt/<name>/ with packed img_feats + txt_feats (+ optional bbox).
-Policies: B1 equal | B2 RF con-cov | B5 MMD-cov+PO | B5g B5+hard-gate.
+Policies: B1 equal | B2 RF con-cov | B5 MMD-cov+PO | B5g α-gate | B5r random-shutdown.
 
 Hard-gate semantics (important):
   α_m < θ → skip modality proj *BWD / adapt* (structured adapt-dropout).
@@ -55,14 +55,31 @@ GATE_TH = 0.30
 FUSE = 128
 C_PF, C_PB, C_SF, C_SB = 1.0, 2.0, 0.5, 1.0
 
-DEFAULT_DATASETS = ("coco_outdoor_indoor", "mm_train_test", "indiana_cxr")
+DEFAULT_DATASETS = (
+    "coco_outdoor_indoor",
+    "coco_time_order",
+    "coco_center_split",
+    "mm_train_test",
+    "fashion_iq",
+    "indiana_cxr",
+    "microscopy_clip",
+)
+POLICIES = ("B1", "B2", "B5", "B5g", "B5r")
+P_KEEP_RAND = 0.67  # random adapt-shutdown keep prob; FWD always on
 
 
 def load_dataset(name: str):
     d = DATA_ROOT / name
     img = np.load(d / "img_feats.npy").astype(np.float32)
     txt = np.load(d / "txt_feats.npy").astype(np.float32)
-    y_raw = np.load(d / "labels.npy").astype(np.int64)
+    if (d / "labels.npy").exists():
+        y_raw = np.load(d / "labels.npy").astype(np.int64)
+    else:
+        import pandas as pd
+        meta = pd.read_csv(d / "df_metadata.csv")
+        if "label" not in meta.columns:
+            raise FileNotFoundError(f"{name}: need labels.npy or df_metadata.label")
+        y_raw = meta["label"].to_numpy().astype(np.int64)
     mode = int(np.bincount(y_raw).argmax())
     y = (y_raw == mode).astype(np.int64)
     feats = {"image": img, "text": txt}
@@ -297,6 +314,11 @@ def run_policy(feats, y, stream, mods, device, policy: str):
             if not any(active.values()):
                 mstar = max(mods, key=lambda m: alpha[m])
                 active = {m: m == mstar for m in mods}
+        elif policy == "B5r":
+            rng_g = np.random.default_rng(SEED + 101 * int(w["t"]) + 17)
+            active = {m: bool(rng_g.random() < P_KEEP_RAND) for m in mods}
+            if not any(active.values()):
+                active[mods[int(rng_g.integers(0, len(mods)))]] = True
         else:
             active = {m: True for m in mods}
 
@@ -358,14 +380,22 @@ def summarize(results, mods):
             **{f"mean_lr_{m}": float(np.mean([r["lr_mult"][m] for r in traj])) for m in mods},
             **{f"frac_{m}_sel": float(np.mean([r["selected"][m] for r in traj])) for m in mods},
         }
-    for a, b in [("B5", "B1"), ("B5", "B2"), ("B5g", "B1"), ("B5g", "B5")]:
+    for a, b in [
+        ("B5", "B1"),
+        ("B5", "B2"),
+        ("B5g", "B1"),
+        ("B5g", "B5"),
+        ("B5r", "B1"),
+        ("B5r", "B5"),
+        ("B5g", "B5r"),
+    ]:
         out[f"{a}_minus_{b}_lift"] = out[a]["mean_acc_lift"] - out[b]["mean_acc_lift"]
         out[f"{a}_minus_{b}_flops"] = out[a]["mean_flops_rel"] - out[b]["mean_flops_rel"]
     return out
 
 
 def plot_dataset(name, results, summary, mods, path: Path):
-    pols = ["B1", "B2", "B5", "B5g"]
+    pols = list(POLICIES)
     colors = ["#C53030", "#2B6CB0", "#38A169", "#805AD5", "#DD6B20"]
     fig = plt.figure(figsize=(14.0, 9.0), facecolor="#f7f5f1")
     gs = fig.add_gridspec(2, 2, hspace=0.36, wspace=0.28)
@@ -392,7 +422,7 @@ def plot_dataset(name, results, summary, mods, path: Path):
     ax.legend(frameon=False, fontsize=7)
 
     ax = fig.add_subplot(gs[1, 0])
-    for pol, c, mk in zip(pols, ["#718096", "#DD6B20", "#805AD5", "#C53030"], ["o", "s", "D", "P"]):
+    for pol, c, mk in zip(pols, ["#718096", "#DD6B20", "#805AD5", "#C53030", "#2B6CB0"], ["o", "s", "D", "P", "^"]):
         ax.plot(
             [r["t"] + 1 for r in results[pol]],
             [r["acc_lift"] for r in results[pol]],
@@ -433,7 +463,7 @@ def plot_dataset(name, results, summary, mods, path: Path):
 
 def plot_board(all_summary: dict, path: Path):
     names = list(all_summary.keys())
-    pols = ["B1", "B2", "B5", "B5g"]
+    pols = list(POLICIES)
     fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.8), facecolor="#f7f5f1")
     fig.suptitle(
         "AGOD img/txt multi-dataset smoke · Acc lift vs adapt FLOPs",
@@ -441,16 +471,16 @@ def plot_board(all_summary: dict, path: Path):
         fontweight="bold",
     )
     x = np.arange(len(names))
-    w = 0.18
+    w = 0.15
     for i, pol in enumerate(pols):
         axes[0].bar(
-            x + (i - 1.5) * w,
+            x + (i - 2.0) * w,
             [all_summary[n][pol]["mean_acc_lift"] for n in names],
             w,
             label=pol,
         )
         axes[1].bar(
-            x + (i - 1.5) * w,
+            x + (i - 2.0) * w,
             [all_summary[n][pol]["mean_flops_rel"] for n in names],
             w,
             label=pol,
@@ -465,7 +495,7 @@ def plot_board(all_summary: dict, path: Path):
     fig.text(
         0.5,
         0.02,
-        "gate ≈ structured adapt-dropout · not skip-inference",
+        "B5g=α-gate · B5r=random-shutdown · FWD always on",
         ha="center",
         fontsize=9,
     )
@@ -483,7 +513,7 @@ def run_one(name: str, device):
         flush=True,
     )
     results = {}
-    for pol in ["B1", "B2", "B5", "B5g"]:
+    for pol in POLICIES:
         print(f"\n===== {name}/{pol} =====", flush=True)
         results[pol] = run_policy(feats, y, make_stream(y), mods, device, pol)
 
@@ -533,8 +563,10 @@ def main():
             f"{summary['B1']['mean_acc_lift']:+.3f} | "
             f"{summary['B5']['mean_acc_lift']:+.3f} | "
             f"{summary['B5g']['mean_acc_lift']:+.3f} | "
+            f"{summary['B5r']['mean_acc_lift']:+.3f} | "
             f"{summary['B5g']['mean_flops_rel']:.3f} | "
-            f"{summary['B5_minus_B1_lift']:+.3f} |"
+            f"{summary['B5r']['mean_flops_rel']:.3f} | "
+            f"{summary['B5g_minus_B5r_lift']:+.3f} |"
         )
         for p in [dash, jp]:
             (ART / f"{name}_{Path(p).name}").write_bytes(Path(p).read_bytes())
@@ -561,8 +593,8 @@ def main():
         "BWD for low-α modalities is skipped. High covariate often lowers α "
         "(Acc rule: cov↑ → LR↓), so gate fires more often under strong OOD.\n\n"
         "## Smoke board\n\n"
-        "| Dataset | mods | B1 lift | B5 lift | B5g lift | B5g flops | B5−B1 |\n"
-        "|---|---|---:|---:|---:|---:|---:|\n"
+        "| Dataset | mods | B1 | B5 | B5g | B5r | B5g flops | B5r flops | B5g−B5r |\n"
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|\n"
         + "\n".join(board_rows)
         + "\n\n"
         "```bash\nPYTHONPATH=. python3 scripts/run_agod_imgtxt_mmd_lr.py\n```\n"

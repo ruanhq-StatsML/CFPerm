@@ -7,12 +7,13 @@ Packed feats: video/text/audio + binary labels.
   actuator: AdamW param-group LR_m(alpha)
   adaptor : hard-gate modality proj BWD if alpha_m < theta (B5g)
 
-Policies: B1 equal | B2 RF con-cov | B5 MMD-cov+PO | B5g B5+gate
+Policies: B1 equal | B2 RF con-cov | B5 MMD-cov+PO | B5g α-gate | B5r random-shutdown
 
   PYTHONPATH=. python3 scripts/run_agod_msrvtt_mmd_lr.py
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -34,7 +35,7 @@ import agod
 from agod.lr_controller import EMARouter, alpha_to_lr, softmax_scores, z_norm
 from agod.shift import decompose_hybrid, decompose_mmd, decompose_rf, residual_concept
 
-DATA = ROOT / "data" / "msrvtt" / "packed"
+DATA_ROOT = ROOT / "data" / "msrvtt"
 OUT = ROOT / "results" / "agod_msrvtt"
 DOCS = ROOT / "docs" / "agod"
 ART = Path("/opt/cursor/artifacts/agod_msrvtt")
@@ -52,18 +53,37 @@ EMA = 0.40
 TAU = 0.30
 BETA = 0.10
 GATE_TH = 0.28
+P_KEEP_RAND = 0.67
+POLICIES = ("B1", "B2", "B5", "B5g", "B5r")
 FUSE = 128
 C_PF, C_PB, C_SF, C_SB = 1.0, 2.0, 0.5, 1.0
 
 
-def load_pack():
-    feats = {
-        "video": np.load(DATA / "video_feat.npy").astype(np.float32),
-        "text": np.load(DATA / "text_feat.npy").astype(np.float32),
-        "audio": np.load(DATA / "audio_feat.npy").astype(np.float32),
-    }
-    y = np.load(DATA / "labelsmsr.npy").astype(np.int64)
-    return feats, y
+def load_pack(pack: str = "packed"):
+    d = DATA_ROOT / pack
+    if pack == "features_window":
+        feats = {
+            "video": np.load(d / "video_feat.npy").astype(np.float32),
+            "text": np.load(d / "text_feat.npy").astype(np.float32),
+            "audio": np.load(d / "audio_feat.npy").astype(np.float32),
+        }
+        y = np.load(d / "video_labels.npy").astype(np.int64)
+    else:
+        feats = {
+            "video": np.load(d / "video_feat.npy").astype(np.float32),
+            "text": np.load(d / "text_feat.npy").astype(np.float32),
+            "audio": np.load(d / "audio_feat.npy").astype(np.float32),
+        }
+        y = np.load(d / "labelsmsr.npy").astype(np.int64)
+    # binary if needed
+    if y.ndim > 1:
+        y = y.reshape(len(y), -1)[:, 0]
+    if len(np.unique(y)) > 2:
+        mode = int(np.bincount(y.astype(int)).argmax())
+        y = (y == mode).astype(np.int64)
+    else:
+        y = y.astype(np.int64)
+    return feats, y, d
 
 
 def make_stream(y):
@@ -297,6 +317,11 @@ def run_policy(feats, y, stream, device, policy: str):
             if not any(active.values()):
                 mstar = max(MODS, key=lambda m: alpha[m])
                 active = {m: m == mstar for m in MODS}
+        elif policy == "B5r":
+            rng_g = np.random.default_rng(SEED + 101 * int(w["t"]) + 17)
+            active = {m: bool(rng_g.random() < P_KEEP_RAND) for m in MODS}
+            if not any(active.values()):
+                active[MODS[int(rng_g.integers(0, len(MODS)))]] = True
         else:
             active = {m: True for m in MODS}
 
@@ -369,14 +394,22 @@ def summarize(results):
             "wins_vs_zero": int(sum(1 for x in lifts if x > 0)),
             "n_windows": len(traj),
         }
-    for a, b in [("B5", "B1"), ("B5", "B2"), ("B5g", "B1"), ("B5g", "B5")]:
+    for a, b in [
+        ("B5", "B1"),
+        ("B5", "B2"),
+        ("B5g", "B1"),
+        ("B5g", "B5"),
+        ("B5r", "B1"),
+        ("B5r", "B5"),
+        ("B5g", "B5r"),
+    ]:
         out[f"{a}_minus_{b}_lift"] = out[a]["mean_acc_lift"] - out[b]["mean_acc_lift"]
         out[f"{a}_minus_{b}_flops"] = out[a]["mean_flops_rel"] - out[b]["mean_flops_rel"]
     return out
 
 
 def plot_dash(results, summary, path: Path):
-    pols = ["B1", "B2", "B5", "B5g"]
+    pols = list(POLICIES)
     fig = plt.figure(figsize=(14.0, 9.0), facecolor="#f7f5f1")
     gs = fig.add_gridspec(2, 2, hspace=0.36, wspace=0.28)
     fig.suptitle(
@@ -444,21 +477,30 @@ def plot_dash(results, summary, path: Path):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--pack", default="packed", choices=["packed", "features_pack", "features_window"])
+    args = ap.parse_args()
+
     OUT.mkdir(parents=True, exist_ok=True)
     DOCS.mkdir(parents=True, exist_ok=True)
     ART.mkdir(parents=True, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"device={device} agod={agod.__version__}", flush=True)
-    feats, y = load_pack()
+    print(f"device={device} agod={agod.__version__} pack={args.pack}", flush=True)
+    feats, y, data_dir = load_pack(args.pack)
     print(
         f"n={len(y)} dims=video{feats['video'].shape[1]}/"
         f"text{feats['text'].shape[1]}/audio{feats['audio'].shape[1]}",
         flush=True,
     )
+    global N_REF, N_CUR
+    if len(y) < N_REF + N_CUR:
+        N_REF = min(N_REF, max(80, len(y)//5))
+        N_CUR = min(N_CUR, max(60, len(y)//6))
+        print(f"small pack: N_REF={N_REF} N_CUR={N_CUR}", flush=True)
 
     results = {}
-    for pol in ["B1", "B2", "B5", "B5g"]:
+    for pol in POLICIES:
         print(f"\n===== {pol} =====", flush=True)
         stream = make_stream(y)
         results[pol] = run_policy(feats, y, stream, device, pol)
@@ -468,7 +510,7 @@ def main():
     print(json.dumps(summary, indent=2), flush=True)
 
     payload = {
-        "dataset": "MSR-VTT packed multimodal features",
+        "dataset": f"MSR-VTT {args.pack} multimodal features",
         "agod_version": agod.__version__,
         "control_plane": {
             "sensor": "MMD2 cov + PO/residual concept",
@@ -479,9 +521,9 @@ def main():
         "summary": summary,
         "trajectory": results,
     }
-    jp = OUT / "agod_msrvtt_mmd_lr.json"
+    jp = OUT / f"agod_msrvtt_{args.pack}_mmd_lr.json"
     jp.write_text(json.dumps(payload, indent=2, default=float))
-    dash = OUT / "AGOD_MSRVTT_MMD_LR_Acc_Dashboard.png"
+    dash = OUT / f"AGOD_MSRVTT_{args.pack}_MMD_LR_Acc_Dashboard.png"
     plot_dash(results, summary, dash)
 
     note = DOCS / "AGOD_msrvtt_mmd_lr_prototype.md"
@@ -489,7 +531,7 @@ def main():
         f"| {p} | {summary[p]['mean_acc_lift']:+.3f} | "
         f"{summary[p]['mean_flops_rel']:.3f} | "
         f"{summary[p]['mean_cost_utility']:+.3f} |"
-        for p in ["B1", "B2", "B5", "B5g"]
+        for p in POLICIES
     )
     note.write_text(
         "# MSR-VTT AGOD portable prototype\n\n"
