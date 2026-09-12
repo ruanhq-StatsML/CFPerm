@@ -9,11 +9,27 @@ Reusable control-plane pieces for multimodal online LR routing:
 Amazon smoke CLI: ``python3 scripts/run_agod_amazon_mmd_lr.py``
 """
 
+from .adapter import (
+    ADAPTER_LAYERS,
+    GATE_POLICIES,
+    AdapterConfig,
+    DynamicGate,
+    LayeredAdapter,
+    characterize_gate_traj,
+    flops_rel_proj,
+)
 from .lr_controller import EMARouter, alpha_to_lr, intensity_gain, softmax_scores, z_norm
 from .mmd import rbf_mmd2, whiten_pair
 from .shift import decompose_hybrid, decompose_mmd, decompose_rf
 
 __all__ = [
+    "ADAPTER_LAYERS",
+    "GATE_POLICIES",
+    "AdapterConfig",
+    "DynamicGate",
+    "LayeredAdapter",
+    "characterize_gate_traj",
+    "flops_rel_proj",
     "rbf_mmd2",
     "whiten_pair",
     "decompose_mmd",

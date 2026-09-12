@@ -1,0 +1,981 @@
+{
+  "agod_version": "0.1.0",
+  "adapter_layers": [
+    "L0_sensor",
+    "L1_state_alpha",
+    "L2_soft_lr",
+    "L3_hard_gate"
+  ],
+  "gate_policies": [
+    "none",
+    "fixed",
+    "quantile",
+    "ema_theta",
+    "hysteresis",
+    "random"
+  ],
+  "design": {
+    "L0": "shift sensors (MMD/PO on MSR-VTT; MSG on Amazon)",
+    "L1": "EMA Softmax alpha state",
+    "L2": "soft LR adapter",
+    "L3": "hard adapt-gate on proj BWD; FWD always on"
+  },
+  "summary": {
+    "msrvtt": {
+      "none": {
+        "mean_acc_lift": 0.016,
+        "mean_flops_rel": 1.0,
+        "mean_cost_utility": 0.016,
+        "switches_per_window": 0.0
+      },
+      "fixed": {
+        "mean_acc_lift": 0.019,
+        "mean_flops_rel": 0.841,
+        "mean_cost_utility": 0.02,
+        "switches_per_window": 1.4
+      },
+      "quantile": {
+        "mean_acc_lift": 0.024,
+        "mean_flops_rel": 0.81,
+        "mean_cost_utility": 0.029,
+        "switches_per_window": 1.2
+      },
+      "ema_theta": {
+        "mean_acc_lift": 0.009,
+        "mean_flops_rel": 0.873,
+        "mean_cost_utility": 0.007,
+        "switches_per_window": 1.0
+      },
+      "hysteresis": {
+        "mean_acc_lift": 0.009,
+        "mean_flops_rel": 0.841,
+        "mean_cost_utility": 0.005,
+        "switches_per_window": 1.0
+      },
+      "random": {
+        "mean_acc_lift": 0.045,
+        "mean_flops_rel": 0.841,
+        "mean_cost_utility": 0.057,
+        "switches_per_window": 1.2
+      }
+    },
+    "amazon": {
+      "none": {
+        "mean_acc_lift": 0.114,
+        "mean_flops_rel": 1.0,
+        "mean_cost_utility": 0.114,
+        "switches_per_window": 0.0
+      },
+      "fixed": {
+        "mean_acc_lift": 0.114,
+        "mean_flops_rel": 0.778,
+        "mean_cost_utility": 0.158,
+        "switches_per_window": 0.2
+      },
+      "quantile": {
+        "mean_acc_lift": 0.114,
+        "mean_flops_rel": 0.733,
+        "mean_cost_utility": 0.156,
+        "switches_per_window": 0.0
+      },
+      "ema_theta": {
+        "mean_acc_lift": 0.114,
+        "mean_flops_rel": 0.778,
+        "mean_cost_utility": 0.158,
+        "switches_per_window": 0.2
+      },
+      "hysteresis": {
+        "mean_acc_lift": 0.114,
+        "mean_flops_rel": 0.733,
+        "mean_cost_utility": 0.156,
+        "switches_per_window": 0.0
+      },
+      "random": {
+        "mean_acc_lift": 0.109,
+        "mean_flops_rel": 0.911,
+        "mean_cost_utility": 0.127,
+        "switches_per_window": 0.6
+      }
+    }
+  },
+  "trajectory": {
+    "amazon": {
+      "none": [
+        {
+          "t": 0,
+          "category": "Sports & Outdoors",
+          "alpha": {
+            "text": 0.23106643970475946,
+            "image": 0.7689335602952405
+          },
+          "lr_mult": {
+            "text": 0.515919591468567,
+            "image": 1.484080408531433,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.0,
+          "flops_rel": 1.0,
+          "wall_ms": 1140.1506630063523,
+          "acc_pre": 0.3541666666666667,
+          "acc_post": 0.6666666666666666,
+          "acc_lift": 0.31249999999999994,
+          "train_loss": 0.6773276403546333
+        },
+        {
+          "t": 1,
+          "category": "Amazon Home",
+          "alpha": {
+            "text": 0.15436953612808213,
+            "image": 0.8456304638719179
+          },
+          "lr_mult": {
+            "text": 0.3778651650305479,
+            "image": 1.6221348349694522,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.0,
+          "flops_rel": 1.0,
+          "wall_ms": 1145.8243519882672,
+          "acc_pre": 0.5,
+          "acc_post": 0.5,
+          "acc_lift": 0.0,
+          "train_loss": 0.7089424729347229
+        },
+        {
+          "t": 2,
+          "category": "AMAZON FASHION",
+          "alpha": {
+            "text": 0.13265805202375472,
+            "image": 0.8673419479762452
+          },
+          "lr_mult": {
+            "text": 0.33878449364275853,
+            "image": 1.6612155063572416,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.0,
+          "flops_rel": 1.0,
+          "wall_ms": 1096.9923720113002,
+          "acc_pre": 0.5208333333333334,
+          "acc_post": 0.625,
+          "acc_lift": 0.10416666666666663,
+          "train_loss": 0.7017952799797058
+        },
+        {
+          "t": 3,
+          "category": "Industrial & Scientific",
+          "alpha": {
+            "text": 0.09009267935985094,
+            "image": 0.9099073206401491
+          },
+          "lr_mult": {
+            "text": 0.2621668228477317,
+            "image": 1.7378331771522686,
+            "shared": 1.0000000000000002
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.0,
+          "flops_rel": 1.0,
+          "wall_ms": 1021.9023509998806,
+          "acc_pre": 0.5227272727272727,
+          "acc_post": 0.6136363636363636,
+          "acc_lift": 0.09090909090909094,
+          "train_loss": 0.6957498863339424
+        },
+        {
+          "t": 4,
+          "category": "Automotive",
+          "alpha": {
+            "text": 0.06444234578827304,
+            "image": 0.935557654211727
+          },
+          "lr_mult": {
+            "text": 0.2159962224188915,
+            "image": 1.7840037775811086,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.0,
+          "flops_rel": 1.0,
+          "wall_ms": 1209.2515349795576,
+          "acc_pre": 0.4375,
+          "acc_post": 0.65625,
+          "acc_lift": 0.21875,
+          "train_loss": 0.6922631040215492
+        },
+        {
+          "t": 5,
+          "category": "All Electronics",
+          "alpha": {
+            "text": 0.3639833466192682,
+            "image": 0.6360166533807319
+          },
+          "lr_mult": {
+            "text": 0.7551700239146827,
+            "image": 1.2448299760853174,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.0,
+          "flops_rel": 1.0,
+          "wall_ms": 743.934974016156,
+          "acc_pre": 0.6666666666666666,
+          "acc_post": 0.625,
+          "acc_lift": -0.04166666666666663,
+          "train_loss": 0.6886050701141357
+        }
+      ],
+      "fixed": [
+        {
+          "t": 0,
+          "category": "Sports & Outdoors",
+          "alpha": {
+            "text": 0.23106643970475943,
+            "image": 0.7689335602952405
+          },
+          "lr_mult": {
+            "text": 0.515919591468567,
+            "image": 1.484080408531433,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1143.0647019878961,
+          "acc_pre": 0.3541666666666667,
+          "acc_post": 0.6666666666666666,
+          "acc_lift": 0.31249999999999994,
+          "train_loss": 0.6773816049098969
+        },
+        {
+          "t": 1,
+          "category": "Amazon Home",
+          "alpha": {
+            "text": 0.13268144422070022,
+            "image": 0.8673185557792997
+          },
+          "lr_mult": {
+            "text": 0.3388265995972604,
+            "image": 1.6611734004027396,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1094.8518229997717,
+          "acc_pre": 0.5,
+          "acc_post": 0.5,
+          "acc_lift": 0.0,
+          "train_loss": 0.7090308964252472
+        },
+        {
+          "t": 2,
+          "category": "AMAZON FASHION",
+          "alpha": {
+            "text": 0.1033219148759054,
+            "image": 0.8966780851240946
+          },
+          "lr_mult": {
+            "text": 0.28597944677662973,
+            "image": 1.7140205532233705,
+            "shared": 1.0000000000000002
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1116.3803359959275,
+          "acc_pre": 0.5208333333333334,
+          "acc_post": 0.625,
+          "acc_lift": 0.10416666666666663,
+          "train_loss": 0.7014701515436172
+        },
+        {
+          "t": 3,
+          "category": "Industrial & Scientific",
+          "alpha": {
+            "text": 0.10500274481606915,
+            "image": 0.8949972551839308
+          },
+          "lr_mult": {
+            "text": 0.28900494066892446,
+            "image": 1.7109950593310757,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1047.7837270009331,
+          "acc_pre": 0.5227272727272727,
+          "acc_post": 0.6136363636363636,
+          "acc_lift": 0.09090909090909094,
+          "train_loss": 0.697259433567524
+        },
+        {
+          "t": 4,
+          "category": "Automotive",
+          "alpha": {
+            "text": 0.09430749172693849,
+            "image": 0.9056925082730615
+          },
+          "lr_mult": {
+            "text": 0.2697534851084893,
+            "image": 1.7302465148915107,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1181.509720016038,
+          "acc_pre": 0.4375,
+          "acc_post": 0.65625,
+          "acc_lift": 0.21875,
+          "train_loss": 0.6926791742444038
+        },
+        {
+          "t": 5,
+          "category": "All Electronics",
+          "alpha": {
+            "text": 0.421747278866903,
+            "image": 0.578252721133097
+          },
+          "lr_mult": {
+            "text": 0.8591451019604254,
+            "image": 1.1408548980395747,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 1.0,
+          "wall_ms": 784.4898749899585,
+          "acc_pre": 0.6666666666666666,
+          "acc_post": 0.625,
+          "acc_lift": -0.04166666666666663,
+          "train_loss": 0.6902338489890099
+        }
+      ],
+      "quantile": [
+        {
+          "t": 0,
+          "category": "Sports & Outdoors",
+          "alpha": {
+            "text": 0.23106643970475943,
+            "image": 0.7689335602952405
+          },
+          "lr_mult": {
+            "text": 0.515919591468567,
+            "image": 1.484080408531433,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4085625894996182,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1112.634185992647,
+          "acc_pre": 0.3541666666666667,
+          "acc_post": 0.6666666666666666,
+          "acc_lift": 0.31249999999999994,
+          "train_loss": 0.6773816049098969
+        },
+        {
+          "t": 1,
+          "category": "Amazon Home",
+          "alpha": {
+            "text": 0.13268144422070022,
+            "image": 0.8673185557792997
+          },
+          "lr_mult": {
+            "text": 0.3388265995972604,
+            "image": 1.6611734004027396,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.37511169103503805,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1159.7337640123442,
+          "acc_pre": 0.5,
+          "acc_post": 0.5,
+          "acc_lift": 0.0,
+          "train_loss": 0.7090308964252472
+        },
+        {
+          "t": 2,
+          "category": "AMAZON FASHION",
+          "alpha": {
+            "text": 0.10332191487590538,
+            "image": 0.8966780851240946
+          },
+          "lr_mult": {
+            "text": 0.2859794467766297,
+            "image": 1.7140205532233705,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.36512945105780786,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1167.3555030138232,
+          "acc_pre": 0.5208333333333334,
+          "acc_post": 0.625,
+          "acc_lift": 0.10416666666666663,
+          "train_loss": 0.7014701515436172
+        },
+        {
+          "t": 3,
+          "category": "Industrial & Scientific",
+          "alpha": {
+            "text": 0.10500274481606921,
+            "image": 0.8949972551839308
+          },
+          "lr_mult": {
+            "text": 0.28900494066892457,
+            "image": 1.7109950593310757,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.36570093323746355,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1163.6017349956091,
+          "acc_pre": 0.5227272727272727,
+          "acc_post": 0.6136363636363636,
+          "acc_lift": 0.09090909090909094,
+          "train_loss": 0.697259433567524
+        },
+        {
+          "t": 4,
+          "category": "Automotive",
+          "alpha": {
+            "text": 0.0943074917269385,
+            "image": 0.9056925082730615
+          },
+          "lr_mult": {
+            "text": 0.2697534851084893,
+            "image": 1.7302465148915107,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.3620645471871591,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1149.944527016487,
+          "acc_pre": 0.4375,
+          "acc_post": 0.65625,
+          "acc_lift": 0.21875,
+          "train_loss": 0.6926791742444038
+        },
+        {
+          "t": 5,
+          "category": "All Electronics",
+          "alpha": {
+            "text": 0.421747278866903,
+            "image": 0.578252721133097
+          },
+          "lr_mult": {
+            "text": 0.8591451019604254,
+            "image": 1.1408548980395747,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.47339407481474705,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 761.5137880202383,
+          "acc_pre": 0.6666666666666666,
+          "acc_post": 0.625,
+          "acc_lift": -0.04166666666666663,
+          "train_loss": 0.6908399313688278
+        }
+      ],
+      "ema_theta": [
+        {
+          "t": 0,
+          "category": "Sports & Outdoors",
+          "alpha": {
+            "text": 0.2310664397047594,
+            "image": 0.7689335602952406
+          },
+          "lr_mult": {
+            "text": 0.5159195914685669,
+            "image": 1.4840804085314332,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.36549999999999994,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1106.842768000206,
+          "acc_pre": 0.3541666666666667,
+          "acc_post": 0.6666666666666666,
+          "acc_lift": 0.31249999999999994,
+          "train_loss": 0.6773816049098969
+        },
+        {
+          "t": 1,
+          "category": "Amazon Home",
+          "alpha": {
+            "text": 0.13268144422070022,
+            "image": 0.8673185557792997
+          },
+          "lr_mult": {
+            "text": 0.3388265995972604,
+            "image": 1.6611734004027396,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.38334999999999997,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1153.72770401882,
+          "acc_pre": 0.5,
+          "acc_post": 0.5,
+          "acc_lift": 0.0,
+          "train_loss": 0.7090308964252472
+        },
+        {
+          "t": 2,
+          "category": "AMAZON FASHION",
+          "alpha": {
+            "text": 0.10332191487590543,
+            "image": 0.8966780851240946
+          },
+          "lr_mult": {
+            "text": 0.2859794467766298,
+            "image": 1.7140205532233705,
+            "shared": 1.0000000000000002
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.3958449999999999,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1085.337010998046,
+          "acc_pre": 0.5208333333333334,
+          "acc_post": 0.625,
+          "acc_lift": 0.10416666666666663,
+          "train_loss": 0.7014701515436172
+        },
+        {
+          "t": 3,
+          "category": "Industrial & Scientific",
+          "alpha": {
+            "text": 0.10500274481606922,
+            "image": 0.8949972551839308
+          },
+          "lr_mult": {
+            "text": 0.28900494066892457,
+            "image": 1.7109950593310757,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.40459149999999994,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1075.1999409985729,
+          "acc_pre": 0.5227272727272727,
+          "acc_post": 0.6136363636363636,
+          "acc_lift": 0.09090909090909094,
+          "train_loss": 0.697259433567524
+        },
+        {
+          "t": 4,
+          "category": "Automotive",
+          "alpha": {
+            "text": 0.09430749172693846,
+            "image": 0.9056925082730616
+          },
+          "lr_mult": {
+            "text": 0.26975348510848923,
+            "image": 1.730246514891511,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4107140499999999,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1134.06347198179,
+          "acc_pre": 0.4375,
+          "acc_post": 0.65625,
+          "acc_lift": 0.21875,
+          "train_loss": 0.6926791742444038
+        },
+        {
+          "t": 5,
+          "category": "All Electronics",
+          "alpha": {
+            "text": 0.42174727886690316,
+            "image": 0.5782527211330969
+          },
+          "lr_mult": {
+            "text": 0.8591451019604257,
+            "image": 1.1408548980395745,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.41499983499999993,
+          "flops_rel": 1.0,
+          "wall_ms": 894.0855089749675,
+          "acc_pre": 0.6666666666666666,
+          "acc_post": 0.625,
+          "acc_lift": -0.04166666666666663,
+          "train_loss": 0.6902338489890099
+        }
+      ],
+      "hysteresis": [
+        {
+          "t": 0,
+          "category": "Sports & Outdoors",
+          "alpha": {
+            "text": 0.23106643970475946,
+            "image": 0.7689335602952405
+          },
+          "lr_mult": {
+            "text": 0.515919591468567,
+            "image": 1.484080408531433,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 994.0548340091482,
+          "acc_pre": 0.3541666666666667,
+          "acc_post": 0.6666666666666666,
+          "acc_lift": 0.31249999999999994,
+          "train_loss": 0.6773816049098969
+        },
+        {
+          "t": 1,
+          "category": "Amazon Home",
+          "alpha": {
+            "text": 0.13268144422070022,
+            "image": 0.8673185557792997
+          },
+          "lr_mult": {
+            "text": 0.3388265995972604,
+            "image": 1.6611734004027396,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1102.4983079987578,
+          "acc_pre": 0.5,
+          "acc_post": 0.5,
+          "acc_lift": 0.0,
+          "train_loss": 0.7090308964252472
+        },
+        {
+          "t": 2,
+          "category": "AMAZON FASHION",
+          "alpha": {
+            "text": 0.1033219148759054,
+            "image": 0.8966780851240946
+          },
+          "lr_mult": {
+            "text": 0.28597944677662973,
+            "image": 1.7140205532233705,
+            "shared": 1.0000000000000002
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1188.0733110010624,
+          "acc_pre": 0.5208333333333334,
+          "acc_post": 0.625,
+          "acc_lift": 0.10416666666666663,
+          "train_loss": 0.7014701515436172
+        },
+        {
+          "t": 3,
+          "category": "Industrial & Scientific",
+          "alpha": {
+            "text": 0.10500274481606918,
+            "image": 0.8949972551839308
+          },
+          "lr_mult": {
+            "text": 0.28900494066892457,
+            "image": 1.7109950593310757,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1072.9476060078014,
+          "acc_pre": 0.5227272727272727,
+          "acc_post": 0.6136363636363636,
+          "acc_lift": 0.09090909090909094,
+          "train_loss": 0.697259433567524
+        },
+        {
+          "t": 4,
+          "category": "Automotive",
+          "alpha": {
+            "text": 0.0943074917269385,
+            "image": 0.9056925082730615
+          },
+          "lr_mult": {
+            "text": 0.2697534851084893,
+            "image": 1.7302465148915107,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1253.0451790080406,
+          "acc_pre": 0.4375,
+          "acc_post": 0.65625,
+          "acc_lift": 0.21875,
+          "train_loss": 0.6926791742444038
+        },
+        {
+          "t": 5,
+          "category": "All Electronics",
+          "alpha": {
+            "text": 0.421747278866903,
+            "image": 0.578252721133097
+          },
+          "lr_mult": {
+            "text": 0.8591451019604254,
+            "image": 1.1408548980395747,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.4,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 770.0580249947961,
+          "acc_pre": 0.6666666666666666,
+          "acc_post": 0.625,
+          "acc_lift": -0.04166666666666663,
+          "train_loss": 0.6908399313688278
+        }
+      ],
+      "random": [
+        {
+          "t": 0,
+          "category": "Sports & Outdoors",
+          "alpha": {
+            "text": 0.23106643970475946,
+            "image": 0.7689335602952405
+          },
+          "lr_mult": {
+            "text": 0.515919591468567,
+            "image": 1.484080408531433,
+            "shared": 1.0
+          },
+          "active": {
+            "text": false,
+            "image": true
+          },
+          "theta_used": 0.67,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1146.0927170119248,
+          "acc_pre": 0.3541666666666667,
+          "acc_post": 0.6666666666666666,
+          "acc_lift": 0.31249999999999994,
+          "train_loss": 0.6773816049098969
+        },
+        {
+          "t": 1,
+          "category": "Amazon Home",
+          "alpha": {
+            "text": 0.13268144422070022,
+            "image": 0.8673185557792998
+          },
+          "lr_mult": {
+            "text": 0.3388265995972604,
+            "image": 1.6611734004027399,
+            "shared": 1.0000000000000002
+          },
+          "active": {
+            "text": true,
+            "image": false
+          },
+          "theta_used": 0.67,
+          "flops_rel": 0.7333333333333333,
+          "wall_ms": 1107.0424130011816,
+          "acc_pre": 0.5,
+          "acc_post": 0.4791666666666667,
+          "acc_lift": -0.020833333333333315,
+          "train_loss": 0.7210143133997917
+        },
+        {
+          "t": 2,
+          "category": "AMAZON FASHION",
+          "alpha": {
+            "text": 0.10544088099370029,
+            "image": 0.8945591190062997
+          },
+          "lr_mult": {
+            "text": 0.28979358578866055,
+            "image": 1.7102064142113396,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.67,
+          "flops_rel": 1.0,
+          "wall_ms": 1170.3268070123158,
+          "acc_pre": 0.4583333333333333,
+          "acc_post": 0.4583333333333333,
+          "acc_lift": 0.0,
+          "train_loss": 0.6585126519203186
+        },
+        {
+          "t": 3,
+          "category": "Industrial & Scientific",
+          "alpha": {
+            "text": 0.09143429723030644,
+            "image": 0.9085657027696935
+          },
+          "lr_mult": {
+            "text": 0.2645817350145516,
+            "image": 1.7354182649854484,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.67,
+          "flops_rel": 1.0,
+          "wall_ms": 1130.9570759767666,
+          "acc_pre": 0.5,
+          "acc_post": 0.6136363636363636,
+          "acc_lift": 0.11363636363636365,
+          "train_loss": 0.7211263924837112
+        },
+        {
+          "t": 4,
+          "category": "Automotive",
+          "alpha": {
+            "text": 0.06960533135179597,
+            "image": 0.930394668648204
+          },
+          "lr_mult": {
+            "text": 0.22528959643323276,
+            "image": 1.7747104035667673,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.67,
+          "flops_rel": 1.0,
+          "wall_ms": 1258.7377289892174,
+          "acc_pre": 0.1875,
+          "acc_post": 0.4375,
+          "acc_lift": 0.25,
+          "train_loss": 0.7013662531971931
+        },
+        {
+          "t": 5,
+          "category": "All Electronics",
+          "alpha": {
+            "text": 0.19259822341225025,
+            "image": 0.8074017765877497
+          },
+          "lr_mult": {
+            "text": 0.4466768021420504,
+            "image": 1.5533231978579496,
+            "shared": 1.0
+          },
+          "active": {
+            "text": true,
+            "image": true
+          },
+          "theta_used": 0.67,
+          "flops_rel": 1.0,
+          "wall_ms": 827.7125659806188,
+          "acc_pre": 0.625,
+          "acc_post": 0.625,
+          "acc_lift": 0.0,
+          "train_loss": 0.6765735596418381
+        }
+      ]
+    }
+  }
+}
