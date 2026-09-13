@@ -1,0 +1,271 @@
+{
+  "n_seq_rows": 8000,
+  "n_samples": 7989,
+  "n_user_feat": 7989,
+  "n_item_feat": 235484,
+  "n_events": 768724,
+  "seq_len": {
+    "min": 1,
+    "median": 100.0,
+    "mean": 96.0905,
+    "p05": 69.0,
+    "p95": 100.0,
+    "max": 100,
+    "frac_len_100": 0.926625
+  },
+  "unique_items_per_user": {
+    "mean": 95.8985,
+    "median": 100.0
+  },
+  "actions_all_events": {
+    "n": 768724,
+    "exposure_0": 727086,
+    "click_1": 22111,
+    "conversion_2": 19527,
+    "other": 0,
+    "click_or_conv_rate": 0.05416508395731107
+  },
+  "actions_first_event": {
+    "n": 8000,
+    "exposure_0": 7453,
+    "click_1": 241,
+    "conversion_2": 306,
+    "other": 0,
+    "click_or_conv_rate": 0.068375
+  },
+  "actions_last_event": {
+    "n": 8000,
+    "exposure_0": 7958,
+    "click_1": 23,
+    "conversion_2": 19,
+    "other": 0,
+    "click_or_conv_rate": 0.00525
+  },
+  "sample_target_action": {
+    "n": 7989,
+    "exposure_0": 7948,
+    "click_1": 23,
+    "conversion_2": 18,
+    "other": 0,
+    "click_or_conv_rate": 0.005132056577794467
+  },
+  "sample_history_len": {
+    "mean": 48.88596820628364,
+    "median": 50.0
+  },
+  "any_click_rate": 0.5483790211540869,
+  "action_rate_mean": 0.06024230592591739,
+  "click_position_from_start_mean": 0.4264284625375233,
+  "position_from_end_click_rate": [
+    {
+      "k_from_end": 1,
+      "n": 8000,
+      "click_or_conv_rate": 0.00525,
+      "conversion_rate": 0.002375
+    },
+    {
+      "k_from_end": 2,
+      "n": 7989,
+      "click_or_conv_rate": 0.009638252597321317,
+      "conversion_rate": 0.002753786456377519
+    },
+    {
+      "k_from_end": 3,
+      "n": 7975,
+      "click_or_conv_rate": 0.013793103448275862,
+      "conversion_rate": 0.004263322884012539
+    },
+    {
+      "k_from_end": 4,
+      "n": 7966,
+      "click_or_conv_rate": 0.01744915892543309,
+      "conversion_rate": 0.006527742907356264
+    },
+    {
+      "k_from_end": 5,
+      "n": 7953,
+      "click_or_conv_rate": 0.022632968691059976,
+      "conversion_rate": 0.007544322897019992
+    },
+    {
+      "k_from_end": 6,
+      "n": 7934,
+      "click_or_conv_rate": 0.022183009831106628,
+      "conversion_rate": 0.006680110915049156
+    },
+    {
+      "k_from_end": 7,
+      "n": 7928,
+      "click_or_conv_rate": 0.025731584258324926,
+      "conversion_rate": 0.0073158425832492435
+    },
+    {
+      "k_from_end": 8,
+      "n": 7922,
+      "click_or_conv_rate": 0.02663468821004797,
+      "conversion_rate": 0.008583690987124463
+    },
+    {
+      "k_from_end": 9,
+      "n": 7912,
+      "click_or_conv_rate": 0.03008088978766431,
+      "conversion_rate": 0.010111223458038422
+    },
+    {
+      "k_from_end": 10,
+      "n": 7905,
+      "click_or_conv_rate": 0.03263757115749526,
+      "conversion_rate": 0.009361163820366857
+    },
+    {
+      "k_from_end": 11,
+      "n": 7896,
+      "click_or_conv_rate": 0.03584093211752786,
+      "conversion_rate": 0.012284701114488348
+    },
+    {
+      "k_from_end": 12,
+      "n": 7886,
+      "click_or_conv_rate": 0.036013187927973624,
+      "conversion_rate": 0.011032208977935581
+    },
+    {
+      "k_from_end": 13,
+      "n": 7877,
+      "click_or_conv_rate": 0.04075155516059414,
+      "conversion_rate": 0.015107274343023993
+    },
+    {
+      "k_from_end": 14,
+      "n": 7870,
+      "click_or_conv_rate": 0.03545108005082592,
+      "conversion_rate": 0.012452350698856416
+    },
+    {
+      "k_from_end": 15,
+      "n": 7861,
+      "click_or_conv_rate": 0.03689098079124793,
+      "conversion_rate": 0.012593817580460501
+    },
+    {
+      "k_from_end": 16,
+      "n": 7857,
+      "click_or_conv_rate": 0.0407280132366043,
+      "conversion_rate": 0.01310932926053201
+    },
+    {
+      "k_from_end": 17,
+      "n": 7850,
+      "click_or_conv_rate": 0.04,
+      "conversion_rate": 0.012229299363057325
+    },
+    {
+      "k_from_end": 18,
+      "n": 7846,
+      "click_or_conv_rate": 0.04269691562579658,
+      "conversion_rate": 0.016186591893958706
+    },
+    {
+      "k_from_end": 19,
+      "n": 7844,
+      "click_or_conv_rate": 0.04449260581336053,
+      "conversion_rate": 0.015425803161652218
+    },
+    {
+      "k_from_end": 20,
+      "n": 7839,
+      "click_or_conv_rate": 0.045031253986477865,
+      "conversion_rate": 0.016456180635285114
+    }
+  ],
+  "timestamp": {
+    "min": 1728921805,
+    "max": 1754303157,
+    "span_sec_mean": 5200459.266375,
+    "span_day_mean": 60.190500768229164,
+    "span_day_median": 46.00233796296296
+  },
+  "early_vs_late": {
+    "median_last_ts": 1749373045.0,
+    "n_early": 3994,
+    "n_late": 3995,
+    "any_click_early": 0.7906860290435653,
+    "any_click_late": 0.3061326658322904,
+    "action_rate_early": 0.09718284256528563,
+    "action_rate_late": 0.02331101597907463
+  },
+  "mm_coverage": {
+    "unique_seq_items": 417231,
+    "unique_with_mm": 214976,
+    "frac_unique_with_mm": 0.5152445527777179,
+    "hist_item_has_mm_mean": 0.9129520976767291,
+    "target_has_mm_mean": 0.9198898485417449
+  },
+  "item_popularity": {
+    "n_item_mentions": 768724,
+    "n_unique_items": 417231,
+    "top1_share": 0.0004344862395346054,
+    "top10_share": 0.0031610825211649436,
+    "top100_share": 0.016273721127478782,
+    "median_item_freq": 1.0,
+    "p95_item_freq": 5.0
+  },
+  "user_feat_missing": {
+    "103": {
+      "null_rate": 0.0008762047815746651,
+      "list_len_mean": null
+    },
+    "104": {
+      "null_rate": 0.0030041306796845663,
+      "list_len_mean": null
+    },
+    "105": {
+      "null_rate": 0.1464513706346226,
+      "list_len_mean": null
+    },
+    "106": {
+      "null_rate": 0.11678558017273752,
+      "list_len_mean": 1.727249968706972
+    },
+    "107": {
+      "null_rate": 0.6372512204280886,
+      "list_len_mean": 0.3627487795719114
+    },
+    "108": {
+      "null_rate": 0.8452872699962448,
+      "list_len_mean": 0.15558893478532984
+    },
+    "109": {
+      "null_rate": 0.00025034422330704717,
+      "list_len_mean": null
+    },
+    "110": {
+      "null_rate": 0.594567530354237,
+      "list_len_mean": 0.6382525973213168
+    }
+  },
+  "item_feat_null_rate": {
+    "100": 0.00036095870632399656,
+    "101": 0.00036095870632399656,
+    "102": 0.0054908189091403235,
+    "112": 0.0033760255473832615,
+    "114": 0.00018684921268536292,
+    "115": 0.7109187885376501,
+    "116": 0.00019534235871651576,
+    "117": 0.0033760255473832615,
+    "118": 0.0033930118394455673,
+    "119": 0.0034015049854767203,
+    "120": 0.003507669310866131,
+    "121": 0.0036138336362555416,
+    "122": 6.794516824922288e-05
+  },
+  "mm_norms_sample": {
+    "n_mm": 214976,
+    "emb_dim": 1056,
+    "head1024_l2_mean": 7.271956443786621,
+    "tail32_l2_mean": 0.901199996471405,
+    "head1024_zero_frac": 0.4806,
+    "tail32_zero_frac": 0.0988
+  },
+  "note": "Probe only. Last event is almost always exposure; clicks sit earlier in the window. Early vs late is a timestamp split, not a treatment."
+}
