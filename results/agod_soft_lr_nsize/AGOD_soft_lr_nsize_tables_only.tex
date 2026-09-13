@@ -1,0 +1,60 @@
+% Continuous soft-LR sample-size curves (Amazon / MSR-VTT)
+\begin{table}[t]
+\centering
+\caption{Acc lift vs adapt sample size. Continuous next-stage step sizes characterized by lr\_ratio $=\max_m\mathrm{LR}_m/\min_m\mathrm{LR}_m$ and $\alpha$-entropy.}
+\label{tab:agod-soft-lr-nsize}
+\begin{tabular}{llrrrrrr}
+\toprule
+Dataset & policy & $N_{\mathrm{cur}}$ & $N_{\mathrm{adapt}}$ & Acc lift & flops\_rel & lr\_ratio & $H(\alpha)$ \\
+\midrule
+amazon & equal & 40 & 24 & +0.000 & 1.000 & 1.00 & 0.345 \\
+amazon & equal & 80 & 45 & +0.060 & 1.000 & 1.00 & 0.593 \\
+amazon & equal & 120 & 67 & +0.050 & 1.000 & 1.00 & 0.563 \\
+amazon & equal & 160 & 83 & +0.023 & 1.000 & 1.00 & 0.525 \\
+amazon & equal & 200 & 107 & +0.002 & 1.000 & 1.00 & 0.570 \\
+amazon & soft\_lr & 40 & 24 & +0.021 & 1.000 & 4.95 & 0.397 \\
+amazon & soft\_lr & 80 & 45 & +0.046 & 1.000 & 2.73 & 0.556 \\
+amazon & soft\_lr & 120 & 67 & +0.026 & 1.000 & 3.23 & 0.518 \\
+amazon & soft\_lr & 160 & 83 & +0.031 & 1.000 & 2.51 & 0.578 \\
+amazon & soft\_lr & 200 & 107 & +0.010 & 1.000 & 3.04 & 0.529 \\
+amazon & soft\_sparse & 40 & 24 & +0.000 & 0.733 & 4.62 & 0.420 \\
+amazon & soft\_sparse & 80 & 45 & +0.046 & 0.733 & 3.01 & 0.532 \\
+amazon & soft\_sparse & 120 & 67 & +0.001 & 0.733 & 3.15 & 0.528 \\
+amazon & soft\_sparse & 160 & 83 & +0.021 & 0.733 & 3.20 & 0.517 \\
+amazon & soft\_sparse & 200 & 107 & +0.002 & 0.733 & 2.79 & 0.552 \\
+msrvtt & equal & 80 & 52 & -0.024 & 1.000 & 1.00 & nan \\
+msrvtt & equal & 160 & 104 & +0.063 & 1.000 & 1.00 & nan \\
+msrvtt & equal & 240 & 156 & -0.002 & 1.000 & 1.00 & nan \\
+msrvtt & equal & 320 & 208 & +0.057 & 1.000 & 1.00 & nan \\
+msrvtt & equal & 480 & 312 & +0.042 & 1.000 & 1.00 & nan \\
+msrvtt & soft\_lr & 80 & 52 & -0.012 & 1.000 & 2.23 & nan \\
+msrvtt & soft\_lr & 160 & 104 & +0.059 & 1.000 & 1.75 & nan \\
+msrvtt & soft\_lr & 240 & 156 & +0.010 & 1.000 & 2.83 & nan \\
+msrvtt & soft\_lr & 320 & 208 & +0.058 & 1.000 & 1.77 & nan \\
+msrvtt & soft\_lr & 480 & 312 & +0.037 & 1.000 & 3.14 & nan \\
+msrvtt & soft\_sparse & 80 & 52 & +0.006 & 0.810 & 2.23 & nan \\
+msrvtt & soft\_sparse & 160 & 104 & +0.060 & 0.810 & 1.75 & nan \\
+msrvtt & soft\_sparse & 240 & 156 & +0.004 & 0.810 & 2.83 & nan \\
+msrvtt & soft\_sparse & 320 & 208 & +0.085 & 0.810 & 1.77 & nan \\
+msrvtt & soft\_sparse & 480 & 312 & +0.038 & 0.810 & 3.14 & nan \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{$N^\star$: smallest mean adapt-sample size with mean Acc lift $>0$.}
+\label{tab:agod-soft-lr-nstar}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & policy & $N^\star$ & max lift & best $N$ \\
+\midrule
+amazon & equal & 45 & +0.060 & 44.666666666666664 \\
+amazon & soft\_lr & 24 & +0.046 & 44.666666666666664 \\
+amazon & soft\_sparse & 45 & +0.046 & 44.666666666666664 \\
+msrvtt & equal & 104 & +0.063 & 104.0 \\
+msrvtt & soft\_lr & 104 & +0.059 & 104.0 \\
+msrvtt & soft\_sparse & 52 & +0.085 & 208.0 \\
+\bottomrule
+\end{tabular}
+\end{table}

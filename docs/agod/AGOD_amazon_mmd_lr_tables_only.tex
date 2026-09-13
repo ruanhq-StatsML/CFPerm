@@ -1,0 +1,15 @@
+\begin{tabular}{lcccc}
+\toprule
+Policy & Mean Acc lift & Mean Acc post & Mean AUC lift & Wins $>0$ \\
+\midrule
+B1 equal & +0.058 & 0.539 & -0.041 & 3/6 \\
+B2 RF con$-$cov & +0.072 & 0.549 & -0.062 & 4/6 \\
+B3 MMD con$-$cov & +0.058 & 0.546 & -0.029 & 3/6 \\
+B4 MMD+gain & +0.037 & 0.548 & -0.039 & 2/6 \\
+B5 MMD-cov+PO & +0.087 & 0.559 & -0.058 & 4/6 \\
+\midrule
+B5$-$B1 lift & +0.030 & +0.021 (post) & & \\
+B5$-$B2 lift & +0.016 & +0.010 (post) & & \\
+B5$-$B3 lift & +0.030 & +0.014 (post) & & \\
+\bottomrule
+\end{tabular}

@@ -1,0 +1,14 @@
+% Computational ratio vs modality gradient correlation
+\begin{table}[t]\centering
+\caption{Predicted adapt FLOPs ratio from pairwise gradient cosine. FWD always on; high correlation justifies skipping redundant proj-BWD.}
+\label{tab:agod-compute-ratio-corr}
+\begin{tabular}{rrrrr}\toprule
+pair\_cos & mean $\rho$ & flops\_proxy & flops\_pred & $n_{\mathrm{keep}}$ \\
+\midrule
+-0.03 & 0.00 & 1.000 & 1.000 & 3 \\
++0.49 & 0.49 & 0.720 & 1.000 & 3 \\
++0.72 & 0.72 & 0.589 & 0.619 & 1 \\
++0.89 & 0.89 & 0.490 & 0.619 & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}

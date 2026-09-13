@@ -1,0 +1,14 @@
+name: base
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - numpy
+  - scipy
+  - scikit-learn
+  - matplotlib
+  - pytest
+  - flake8
+  - pip
+  - pip:
+      - torch --index-url https://download.pytorch.org/whl/cpu
