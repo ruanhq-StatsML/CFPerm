@@ -52,7 +52,7 @@ SCALE_COLS: tuple[str, ...] = (
     "mean_item_log_freq",
 )
 
-# Features that are *not* a direct rewrite of any_click / n_click.
+# Features that are *not* a rewrite of any_click (no click counts, no exp→click).
 STRUCTURAL_COLS: tuple[str, ...] = (
     "n_events",
     "n_unique_items",
@@ -60,11 +60,12 @@ STRUCTURAL_COLS: tuple[str, ...] = (
     "span_days",
     "mean_gap_hours",
     "median_gap_hours",
-    "recency_to_end_days",
     "n_item_format",
     "mean_item_log_freq",
-    "n_exp_to_click",
 )
+
+# recency_to_end_days is a monotone function of tmax, which *defines* time_late.
+TIME_LABEL_LEAK_COLS: tuple[str, ...] = ("recency_to_end_days",)
 
 
 def explode_seq(seq_df: pd.DataFrame) -> pd.DataFrame:

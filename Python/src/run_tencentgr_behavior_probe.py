@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT))
 
 from tencentgr.behavior_features import (  # noqa: E402
     STRUCTURAL_COLS,
+    TIME_LABEL_LEAK_COLS,
     explode_seq,
     rank_against_binary,
     standard_scale_behavior,
@@ -103,6 +104,8 @@ def main() -> None:
     users = synthesize_user_behavior(events, user_feat=user_feat, item_feat=item_feat)
     scaled, scaler, cols = standard_scale_behavior(users)
     Z = z_matrix(scaled, cols)
+    cols_time = [c for c in cols if c not in TIME_LABEL_LEAK_COLS]
+    Z_time = z_matrix(scaled, cols_time)
 
     events_path = Path(args.events_out) if args.events_out else cache / "events.parquet"
     events_path.parent.mkdir(parents=True, exist_ok=True)
@@ -147,7 +150,7 @@ def main() -> None:
     _savefig(fig, out / "box_nclick_by_time.png")
 
     pca = PCA(n_components=2, random_state=0)
-    xy = pca.fit_transform(Z)
+    xy = pca.fit_transform(Z_time)
     fig, axes = plt.subplots(1, 2, figsize=(10, 4.2))
     for ax, color_by, title in (
         (axes[0], users["any_click"].to_numpy(), "any_click in window"),
@@ -173,8 +176,8 @@ def main() -> None:
     _savefig(fig, out / "corr_scaled.png")
 
     iso = IsolationForest(n_estimators=200, contamination=0.05, random_state=0)
-    iso_pred = iso.fit_predict(Z)
-    iso_score = iso.decision_function(Z)
+    iso_pred = iso.fit_predict(Z_time)
+    iso_score = iso.decision_function(Z_time)
     scaled["iso_outlier"] = (iso_pred == -1).astype(np.int8)
     scaled["iso_score"] = iso_score
     users["iso_outlier"] = scaled["iso_outlier"]
@@ -188,8 +191,8 @@ def main() -> None:
     _savefig(fig, out / "pca_isoforest.png")
 
     y_time = users["time_late"].to_numpy()
-    aucs_time, clf_time = _cv_auc(Z, y_time)
-    coef = {c: float(v) for c, v in zip(cols, clf_time.coef_.ravel())}
+    aucs_time, clf_time = _cv_auc(Z_time, y_time)
+    coef = {c: float(v) for c, v in zip(cols_time, clf_time.coef_.ravel())}
     top = sorted(coef.items(), key=lambda kv: abs(kv[1]), reverse=True)[:12]
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -200,25 +203,32 @@ def main() -> None:
     ax.set_title("which counts move with the time batch")
     _savefig(fig, out / "logit_time_late_coefs.png")
 
-    perm = permutation_importance(clf_time, Z, y_time, n_repeats=10, random_state=0, scoring="roc_auc")
+    perm = permutation_importance(clf_time, Z_time, y_time, n_repeats=10, random_state=0, scoring="roc_auc")
     perm_rows = [
         {"feature": c, "import_mean": float(m), "import_std": float(s)}
-        for c, m, s in zip(cols, perm.importances_mean, perm.importances_std)
+        for c, m, s in zip(cols_time, perm.importances_mean, perm.importances_std)
     ]
     perm_tbl = pd.DataFrame(perm_rows).sort_values("import_mean", ascending=False)
     perm_tbl.to_csv(out / "perm_importance_time_late.csv", index=False)
     _rank_bar(out / "perm_importance_time_late.png", perm_tbl, "permutation importance → time_late (AUC drop)", "import_mean")
 
     rank_time = rank_against_binary(scaled, cols, y_time)
+    rank_time_noleak = rank_against_binary(scaled, cols_time, y_time)
     rank_click = rank_against_binary(scaled, cols, users["any_click"].to_numpy())
     struct_cols = [c for c in STRUCTURAL_COLS if c in cols]
     Z_struct = z_matrix(scaled, struct_cols)
     aucs_click_struct, clf_struct = _cv_auc(Z_struct, users["any_click"].to_numpy())
     rank_click_struct = rank_against_binary(scaled, struct_cols, users["any_click"].to_numpy())
     rank_time.to_csv(out / "rank_vs_time_late.csv", index=False)
+    rank_time_noleak.to_csv(out / "rank_vs_time_late_noleak.csv", index=False)
     rank_click.to_csv(out / "rank_vs_any_click.csv", index=False)
     rank_click_struct.to_csv(out / "rank_structural_vs_any_click.csv", index=False)
-    _rank_bar(out / "rank_auc_time_late.png", rank_time, "univariate |AUC| vs time_late (ranking, not CS/CD)", "auc_abs")
+    _rank_bar(
+        out / "rank_auc_time_late.png",
+        rank_time_noleak,
+        "univariate |AUC| vs time_late (drop recency leak; ranking, not CS/CD)",
+        "auc_abs",
+    )
     _rank_bar(
         out / "rank_auc_click_structural.png",
         rank_click_struct,
@@ -226,8 +236,9 @@ def main() -> None:
         "auc_abs",
     )
 
-    mean_z_early = scaled.loc[late == 0, z_names].mean()
-    mean_z_late = scaled.loc[late == 1, z_names].mean()
+    z_time_names = [f"z_{c}" for c in cols_time]
+    mean_z_early = scaled.loc[late == 0, z_time_names].mean()
+    mean_z_late = scaled.loc[late == 1, z_time_names].mean()
     delta = (mean_z_late - mean_z_early).sort_values(key=np.abs, ascending=False)
     fig, ax = plt.subplots(figsize=(7.2, 5.2))
     names = list(reversed([c[2:] if c.startswith("z_") else c for c in delta.head(14).index]))
@@ -235,7 +246,7 @@ def main() -> None:
     ax.barh(names, vals, color="#4C78A8")
     ax.axvline(0.0, color="black", linewidth=0.8)
     ax.set_xlabel("mean z (late) − mean z (early)")
-    ax.set_title("batch shift in scaled sequence summaries")
+    ax.set_title("batch shift in scaled summaries (recency dropped)")
     _savefig(fig, out / "mean_z_shift_time.png")
 
     scaled.to_parquet(out / "user_behavior_scaled.parquet", index=False)
@@ -261,9 +272,11 @@ def main() -> None:
         "n_click_late": float(users.loc[users["time_late"] == 1, "n_click"].mean()),
         "time_late_cv_auc": aucs_time,
         "time_late_cv_auc_mean": float(np.mean(aucs_time)),
+        "time_late_excluded_leak": list(TIME_LABEL_LEAK_COLS),
         "time_late_logit_top": [{"feature": k, "coef": v} for k, v in top],
         "perm_importance_top": perm_tbl.head(8).to_dict(orient="records"),
-        "rank_time_late_top": rank_time.head(8).to_dict(orient="records"),
+        "rank_time_late_top": rank_time_noleak.head(8).to_dict(orient="records"),
+        "rank_time_late_with_recency_top": rank_time.head(3).to_dict(orient="records"),
         "any_click_structural_cv_auc": aucs_click_struct,
         "any_click_structural_cv_auc_mean": float(np.mean(aucs_click_struct)),
         "featuretools_available": bool(featuretools_ok),
@@ -278,10 +291,12 @@ def main() -> None:
         ],
         "note": (
             "Counts/rates StandardScaled for tabular/DR. IsolationForest flags unusual "
-            "sequences. Logistic AUC and permutation importance are a batch-shift probe "
-            "(time_late from counts), not CATE. Rank tables localize sequence summaries; "
-            "they are not a unique CS/CD decomposition. featuretools is optional: the "
-            "default path is pandas DFS (COUNT/NUM_UNIQUE/MEAN/LAST/window/decay)."
+            "sequences. recency_to_end_days is a monotone function of tmax and is dropped "
+            "from the time_late classifier (otherwise AUC is 1). Logistic AUC and "
+            "permutation importance are a batch-shift probe, not CATE. Rank tables "
+            "localize sequence summaries; they are not a unique CS/CD decomposition. "
+            "featuretools is optional: the default path is pandas DFS "
+            "(COUNT/NUM_UNIQUE/MEAN/LAST/window/decay)."
         ),
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
