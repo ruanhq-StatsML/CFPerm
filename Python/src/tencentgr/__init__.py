@@ -1,6 +1,11 @@
 """TencentGR-10M subset: dataset dump, three-tower, DR pseudo-outcome learner."""
 
-from .behavior_features import explode_seq, standard_scale_behavior, synthesize_user_behavior
+from .behavior_features import (
+    explode_seq,
+    rank_against_binary,
+    standard_scale_behavior,
+    synthesize_user_behavior,
+)
 from .config import DEFAULT_CFG, mm_emb_dirname
 from .dataset import TencentGRDataset
 from .dr_po_learner import fit_dr_pseudo_outcome
@@ -16,4 +21,5 @@ __all__ = [
     "explode_seq",
     "synthesize_user_behavior",
     "standard_scale_behavior",
+    "rank_against_binary",
 ]

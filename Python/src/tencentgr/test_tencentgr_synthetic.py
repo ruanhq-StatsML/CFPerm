@@ -113,6 +113,13 @@ def test_behavior_explode_and_scale():
     assert "z_n_click" in scaled.columns
     assert abs(float(np.mean(scaled["z_n_click"]))) < 1e-9
     assert float(scaler.scale_[cols.index("n_click")]) > 0
+    assert int(u1["n_exp_to_click"]) == 1
+    assert float(u1["decay_engage"]) > 0.0
+    from tencentgr.behavior_features import rank_against_binary
+
+    rank = rank_against_binary(scaled, ["n_click", "n_exposure"], users["any_click"].to_numpy())
+    assert list(rank["feature"])
+    assert float(rank.loc[rank["feature"] == "n_click", "auc_abs"].iloc[0]) >= 0.5
 
 
 if __name__ == "__main__":
