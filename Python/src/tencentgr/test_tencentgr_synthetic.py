@@ -150,6 +150,8 @@ def test_event_stream_gap_fatigue_labels():
     assert int(clk10["y_cvr"]) == 1
     assert int(clk10["item_exp_1d"]) == 1
     assert int(clk10["gap_sec"]) == 300
+    assert int(exp10["y_next_is_click"]) == 1
+    assert int(clk10["y_next_is_conv"]) == 1
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ ACTION_CONVERSION = 2
 HOUR = 3600
 DAY = 86400
 WEEK = 7 * DAY
-DEFAULT_SESSION_GAP = 30 * 60  # 30 min silent → new session
+DEFAULT_SESSION_GAP = 6 * 3600  # ads logs are sparse; 30min is a feed-scroll default
 CTR_WINDOW = DAY
 CVR_WINDOW = 7 * DAY
 
@@ -199,6 +199,10 @@ def add_multitask_labels(
     d["y_ctr"] = ((dc > 0) & (dc <= ctr_window_sec)).astype(np.int8)
     d["y_cvr"] = ((dv > 0) & (dv <= cvr_window_sec)).astype(np.int8)
     d["y_cvr_on_click"] = np.where(d["is_click"] == 1, d["y_cvr"], np.nan)
+    d = d.sort_values(["user_id", "timestamp", "event_id"], kind="mergesort")
+    d["next_action"] = d.groupby("user_id", sort=False)["action_type"].shift(-1)
+    d["y_next_is_click"] = (d["next_action"] == ACTION_CLICK).astype(np.int8)
+    d["y_next_is_conv"] = (d["next_action"] == ACTION_CONVERSION).astype(np.int8)
     return d
 
 
@@ -234,6 +238,6 @@ def exposure_rank_table(ev: pd.DataFrame) -> pd.DataFrame:
         "user_id", "item_id", "timestamp", "time", "hour", "dow", "item_format",
         "gap_sec", "session_id", "pos_in_session", "session_len",
         "sec_since_click", "sec_since_conv", "sec_since_same_item",
-        "y_ctr", "y_cvr",
+        "y_ctr", "y_cvr", "y_next_is_click", "y_next_is_conv",
     }]
     return ev.loc[ev["is_exposure"] == 1, cols].copy()

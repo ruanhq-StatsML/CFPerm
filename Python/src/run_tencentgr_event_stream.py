@@ -72,6 +72,7 @@ def main() -> None:
         "mean_session_len": float(ev.drop_duplicates(["user_id", "session_id"])["session_len"].mean()),
         "y_ctr_on_exposure": float(rank["y_ctr"].mean()) if len(rank) else None,
         "y_cvr_on_exposure": float(rank["y_cvr"].mean()) if len(rank) else None,
+        "y_next_is_click_on_exposure": float(rank["y_next_is_click"].mean()) if len(rank) else None,
         "y_cvr_on_click": float(ev.loc[ev["is_click"] == 1, "y_cvr"].mean()) if (ev["is_click"] == 1).any() else None,
         "frac_item_exp_1d_gt0": float((ev["item_exp_1d"] > 0).mean()),
         "mean_user_exp_1d": float(ev["user_exp_1d"].mean()),
@@ -89,7 +90,7 @@ def main() -> None:
     cols = [
         "user_id", "item_id", "action_type", "timestamp", "time", "gap_sec",
         "session_id", "pos_in_session", "item_exp_1h", "item_exp_1d", "user_exp_1d",
-        "sec_since_click", "y_ctr", "y_cvr",
+        "y_ctr", "y_cvr", "y_next_is_click",
     ]
     cols = [c for c in cols if c in ex.columns]
     ex[cols].to_csv(out / "example_user.csv", index=False)
