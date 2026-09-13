@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Attribution-guided online stacking vs baselines (Amazon + MSR-VTT).
+"""Attribution-guided online stacking vs baselines.
+
+Datasets: Amazon, MSR-VTT, COCO ImgTxt, Affec, Fashion-IQ, Food-101 (HF CLIP pack).
 
 Variants (same towers / steps / holdout; only the weight socket changes):
-  mean_ce     — mean-pool fusion + CE
-  stack_ce    — online stacking w=softmax(psi) + CE
-  stack_alpha — stacking + CE + lambda * KL(w || alpha)   # FSDS/MSG socket
+  mean_ce / stack_ce / stack_alpha / stack_uniform / stack_fixed / stack_temp / stack_erank
+  (see agod.online_stack.WEIGHT_MODES)
 
-alpha = EMA of attribution (Amazon MSG-B3 / MSR-VTT B5 hybrid).
+alpha = EMA of attribution (MSG-B3 / B5 hybrid / ImgTxt hybrid / Affec VIMP).
 Primary metrics: holdout Brier/MSE drop and Acc lift.
 
   PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py
+  PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py \\
+      --datasets food101 fashion_iq --merge-existing
 """
 from __future__ import annotations
 
@@ -33,18 +36,35 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_agod_amazon_modality_lr as amazon
 import run_agod_gradcos_lr as msrvtt
+import run_agod_imgtxt_mmd_lr as imgtxt
 from agod.lr_controller import EMARouter
-from agod.online_stack import MeanFusion, StackFusion, alpha_stack_kl, probs_mse
+from agod.online_stack import (
+    MeanFusion,
+    StackFusion,
+    WEIGHT_MODES,
+    freezes_stack_psi,
+    probs_mse,
+    stack_temperature_for,
+    stack_weight_aux,
+    uses_stack_fusion,
+)
 
 OUT = ROOT / "results" / "agod_online_stack_compare"
 DOCS = ROOT / "docs" / "agod"
 ART = Path("/opt/cursor/artifacts/agod_online_stack_compare")
+AFFEC_CACHE = ROOT / "results" / "affec_fsds" / "affec_fsds_xyw_cache.npz"
 
 SEED = 2026
-VARIANTS = ("mean_ce", "stack_ce", "stack_alpha")
+VARIANTS = WEIGHT_MODES
 LAMBDA_KL = 0.50
 FUSE = 128
 HOLD = 0.35
+DATASETS_ALL = ("msrvtt", "amazon", "coco", "affec", "fashion_iq", "food101")
+IMGTXT_PACKS = {
+    "coco": "coco_outdoor_indoor",
+    "fashion_iq": "fashion_iq",
+    "food101": "food101",
+}
 
 
 def split_hold(idx, seed):
@@ -112,13 +132,26 @@ def train_window(
             loss = crit(logits, yy)
             kl_v = float("nan")
         else:
-            logits, _h, _lm, stack_w = model(batch, return_parts=True)
+            fixed = alpha if kind == "stack_fixed" and alpha is not None else None
+            logits, hiddens, _lm, stack_w = model(
+                batch, return_parts=True, fixed_w=fixed
+            )
             loss = crit(logits, yy)
-            kl_v = float("nan")
-            if kind == "stack_alpha" and alpha is not None:
-                pack = alpha_stack_kl(stack_w, alpha, mods, lambda_kl=LAMBDA_KL)
-                loss = loss + pack["loss"]
-                kl_v = float(pack["kl"].detach().cpu())
+            pack = stack_weight_aux(
+                kind,
+                stack_w=stack_w,
+                alpha=alpha,
+                mods=mods,
+                hiddens=hiddens,
+                lambda_kl=LAMBDA_KL,
+            )
+            loss = loss + pack["loss"]
+            kl_raw = pack.get("kl", float("nan"))
+            kl_v = (
+                float(kl_raw.detach().cpu())
+                if hasattr(kl_raw, "detach")
+                else float(kl_raw)
+            )
         opt.zero_grad(set_to_none=True)
         loss.backward()
         opt.step()
@@ -155,6 +188,24 @@ def alpha_amazon(feats, y, ref_idx, adapt_idx, mods, *, seed):
         return {m: float(msg.alpha["B3"][m]) for m in mods}
     except Exception:
         return {m: 1.0 / len(mods) for m in mods}
+
+
+def alpha_imgtxt(feats, y, ref_idx, adapt_idx, mods, *, seed):
+    b0 = {m: feats[m][ref_idx] for m in mods}
+    b1 = {m: feats[m][adapt_idx] for m in mods}
+    y0 = y[ref_idx].astype(float)
+    y1 = y[adapt_idx].astype(float)
+    try:
+        msg = imgtxt.domain_msg(b0, b1, y0, y1, mods, seed=seed)
+        raw, _ = imgtxt.select_raw("B5", msg, b0, b1, y0, y1, mods, seed=seed)
+        return {m: float(raw[m]) for m in mods}
+    except Exception:
+        return {m: 1.0 / len(mods) for m in mods}
+
+
+def alpha_affec(feats, y, ref_idx, adapt_idx, mods, *, seed):
+    """Per-modality RF domain VIMP → softmax alpha (same spirit as ImgTxt B5)."""
+    return alpha_imgtxt(feats, y, ref_idx, adapt_idx, mods, seed=seed)
 
 
 def load_msrvtt_pack():
@@ -251,17 +302,110 @@ def load_amazon_pack(device):
     }
 
 
+def load_imgtxt_pack(alias: str):
+    """Generic image+text pack under data/img_txt/<folder>/."""
+    folder = IMGTXT_PACKS[alias]
+    feats, y, meta = imgtxt.load_dataset(folder)
+    # Food-101 has ~101 balanced classes: mode-vs-rest is tiny-pos.
+    # Use coarse even/odd class split so the CE socket is well-posed.
+    if alias == "food101":
+        y_raw = np.load(imgtxt.DATA_ROOT / folder / "labels.npy").astype(np.int64)
+        y = (y_raw % 2 == 0).astype(np.int64)
+        meta = {
+            **meta,
+            "pos_rate": float(y.mean()),
+            "mode_label": "even_class_id",
+            "label_rule": "y = 1{class_id % 2 == 0}",
+        }
+    # image+text only (bbox optional; keep two-mod stack comparable to Amazon)
+    mods = ["image", "text"]
+    feats = {m: feats[m] for m in mods}
+    stream = imgtxt.make_stream(y)
+    windows = [
+        {"t": int(w["t"]), "idx": np.asarray(w["idx"])} for w in stream["windows"]
+    ]
+    print(
+        f"{alias}: folder={folder} n={meta['n']} pos_rate={meta['pos_rate']:.3f} "
+        f"mode_label={meta['mode_label']}",
+        flush=True,
+    )
+    return {
+        "name": alias,
+        "mods": mods,
+        "feats": feats,
+        "y": y.astype(int),
+        "ref_idx": np.asarray(stream["ref_idx"]),
+        "windows": windows,
+        "batch": int(imgtxt.BATCH),
+        "steps": int(imgtxt.STEPS),
+        "lr": float(imgtxt.LR0),
+        "ema": float(imgtxt.EMA),
+        "alpha_fn": alpha_imgtxt,
+        "n_ref_keep": int(imgtxt.N_REF // 2),
+    }
+
+
+def load_coco_pack():
+    return load_imgtxt_pack("coco")
+
+
+def load_affec_pack():
+    if not AFFEC_CACHE.exists():
+        raise FileNotFoundError(f"missing Affec cache: {AFFEC_CACHE}")
+    z = np.load(AFFEC_CACHE, allow_pickle=True)
+    X = z["X"].astype(np.float32)
+    y_cont = z["Y"].astype(np.float64)
+    block_slices = z["block_slices"].item()
+    mods = [str(m) for m in z["mods"].tolist()]
+    # classification socket: median split of continuous affect score
+    thr = float(np.median(y_cont))
+    y = (y_cont >= thr).astype(np.int64)
+    feats = {}
+    for m in mods:
+        a, b = block_slices[m]
+        feats[m] = X[:, int(a) : int(b)]
+    stream = imgtxt.make_stream(y)
+    windows = [
+        {"t": int(w["t"]), "idx": np.asarray(w["idx"])} for w in stream["windows"]
+    ]
+    print(
+        f"affec: n={len(y)} mods={mods} thr={thr:.3f} pos_rate={y.mean():.3f}",
+        flush=True,
+    )
+    return {
+        "name": "affec",
+        "mods": mods,
+        "feats": feats,
+        "y": y,
+        "ref_idx": np.asarray(stream["ref_idx"]),
+        "windows": windows,
+        "batch": 64,
+        "steps": 28,
+        "lr": 3e-3,
+        "ema": 0.40,
+        "alpha_fn": alpha_affec,
+        "n_ref_keep": int(imgtxt.N_REF // 2),
+    }
+
+
 def run_variant(pack, device, kind):
     mods = list(pack["mods"])
     feats, y = pack["feats"], pack["y"]
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     dims = {m: int(feats[m].shape[1]) for m in mods}
-    if kind == "mean_ce":
+    if not uses_stack_fusion(kind):
         model = MeanFusion(dims, mods, fuse=FUSE).to(device)
+        opt = torch.optim.Adam(model.parameters(), lr=pack["lr"])
     else:
-        model = StackFusion(dims, mods, fuse=FUSE).to(device)
-    opt = torch.optim.Adam(model.parameters(), lr=pack["lr"])
+        tau = stack_temperature_for(kind, temp=0.5)
+        model = StackFusion(dims, mods, fuse=FUSE, temperature=tau).to(device)
+        if freezes_stack_psi(kind):
+            # towers only — fusion weights locked to attribution alpha
+            params = [p for n, p in model.named_parameters() if "stack_logits" not in n]
+            opt = torch.optim.Adam(params, lr=pack["lr"])
+        else:
+            opt = torch.optim.Adam(model.parameters(), lr=pack["lr"])
     router = EMARouter(mods, ema=pack["ema"])
     ref_idx = pack["ref_idx"].copy()
     warm, _ = split_hold(ref_idx, SEED)
@@ -313,7 +457,7 @@ def run_variant(pack, device, kind):
             kind=kind,
             steps=pack["steps"],
             batch_size=pack["batch"],
-            alpha=alpha if kind == "stack_alpha" else None,
+            alpha=alpha if kind in ("stack_alpha", "stack_uniform", "stack_fixed", "stack_erank") else None,
             seed=SEED + 7 * win["t"],
         )
         post = eval_hold(model, feats, y, hold, mods, device, pack["batch"])
@@ -370,12 +514,19 @@ def summarize(traj, *, dataset, kind, mods):
 
 def plot_board(cells_by_ds, path: Path):
     datasets = list(cells_by_ds.keys())
+    n = len(datasets)
+    if n <= 2:
+        nrows, ncols = 1, max(n, 1)
+        figsize = (5.2 * ncols, 4.0)
+    else:
+        ncols = 2
+        nrows = int(np.ceil(n / 2))
+        figsize = (10.5, 3.6 * nrows)
     fig, axes = plt.subplots(
-        1, len(datasets), figsize=(5.2 * len(datasets), 4.0), facecolor="#f7f5f1"
+        nrows, ncols, figsize=figsize, facecolor="#f7f5f1", squeeze=False
     )
-    if len(datasets) == 1:
-        axes = [axes]
-    for ax, ds in zip(axes, datasets):
+    flat = axes.ravel()
+    for ax, ds in zip(flat, datasets):
         cells = cells_by_ds[ds]
         names = [c["variant"] for c in cells]
         x = np.arange(len(names))
@@ -398,6 +549,8 @@ def plot_board(cells_by_ds, path: Path):
         ax.axhline(0, color="#999", ls=":", lw=0.9)
         ax.set_title(f"{ds}: stacking vs baselines")
         ax.legend(frameon=False, fontsize=8)
+    for ax in flat[n:]:
+        ax.axis("off")
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=140, bbox_inches="tight")
@@ -414,13 +567,13 @@ def write_docs(cells, path: Path):
             f"{c['mean_prop_mae']:.3f} | {sw} |"
         )
     best = max(cells, key=lambda c: (c["mean_mse_drop"], c["mean_acc_lift"]))
-    md = f"""# Attribution-guided online stacking (Amazon + MSR-VTT)
+    md = f"""# Attribution-guided online stacking
 
 ## Method
 
 Online stacking learns fusion weights `w = softmax(psi)` over modality logits.
 
-Weight socket: attribution alpha (Amazon MSG-B3 / MSR-VTT B5 hybrid, EMA) plugs in as
+Weight socket: attribution alpha (MSG-B3 / B5 hybrid / ImgTxt hybrid / Affec VIMP, EMA) plugs in as
 
 ```
 L = CE(stack_w · logits, y) + lambda * KL(stack_w || alpha)
@@ -447,10 +600,27 @@ Best (MSE drop, Acc lift): **`{best['dataset']}/{best['variant']}`**
 
 ```bash
 PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py
+PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py --datasets coco affec
 ```
 """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(md)
+
+
+def _merge_cells(old_cells, new_cells):
+    """Keep previous dataset rows; overwrite matching dataset/variant."""
+    key = lambda c: (c["dataset"], c["variant"])
+    by = {key(c): c for c in old_cells}
+    for c in new_cells:
+        by[key(c)] = c
+    order = []
+    for ds in DATASETS_ALL:
+        for v in VARIANTS:
+            k = (ds, v)
+            if k in by:
+                order.append(by.pop(k))
+    order.extend(by.values())
+    return order
 
 
 def main():
@@ -460,13 +630,18 @@ def main():
         "--datasets",
         nargs="+",
         default=["msrvtt", "amazon"],
-        choices=["msrvtt", "amazon"],
+        choices=list(DATASETS_ALL),
     )
     ap.add_argument(
         "--variants",
         nargs="+",
         default=list(VARIANTS),
         choices=list(VARIANTS),
+    )
+    ap.add_argument(
+        "--merge-existing",
+        action="store_true",
+        help="merge new cells into existing JSON (keep other datasets)",
     )
     args = ap.parse_args()
 
@@ -481,6 +656,18 @@ def main():
     if "amazon" in args.datasets:
         print("loading Amazon...", flush=True)
         packs["amazon"] = load_amazon_pack(device)
+    if "coco" in args.datasets:
+        print("loading COCO ImgTxt...", flush=True)
+        packs["coco"] = load_coco_pack()
+    if "fashion_iq" in args.datasets:
+        print("loading Fashion-IQ ImgTxt...", flush=True)
+        packs["fashion_iq"] = load_imgtxt_pack("fashion_iq")
+    if "food101" in args.datasets:
+        print("loading Food-101 ImgTxt (HF CLIP pack)...", flush=True)
+        packs["food101"] = load_imgtxt_pack("food101")
+    if "affec" in args.datasets:
+        print("loading Affec...", flush=True)
+        packs["affec"] = load_affec_pack()
 
     cells, trajs, cells_by_ds = [], {}, {}
     for ds, pack in packs.items():
@@ -495,16 +682,28 @@ def main():
             cells.append(cell)
             cells_by_ds[ds].append(cell)
 
+    out_json = OUT / "agod_online_stack_compare.json"
+    if args.merge_existing and out_json.exists():
+        prev = json.loads(out_json.read_text())
+        cells = _merge_cells(prev.get("cells", []), cells)
+        old_traj = prev.get("trajectory", {})
+        old_traj.update(trajs)
+        trajs = old_traj
+        cells_by_ds = {}
+        for c in cells:
+            cells_by_ds.setdefault(c["dataset"], []).append(c)
+
     payload = {
         "agod_version": "0.1.0",
         "method": "attribution-guided online stacking",
         "rule": "L = CE(stack(w), y) + lambda KL(w || alpha); alpha = EMA(FSDS/MSG)",
         "lambda_kl": LAMBDA_KL,
-        "variants": list(args.variants),
+        "variants": list(VARIANTS),
+        "datasets_run": list(args.datasets),
         "cells": cells,
         "trajectory": trajs,
     }
-    (OUT / "agod_online_stack_compare.json").write_text(json.dumps(payload, indent=2))
+    out_json.write_text(json.dumps(payload, indent=2))
     plot_board(cells_by_ds, OUT / "AGOD_Online_Stack_Compare_Board.png")
     write_docs(cells, OUT / "README.md")
     write_docs(cells, DOCS / "AGOD_online_stack_compare.md")

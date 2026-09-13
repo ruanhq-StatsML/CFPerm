@@ -1,0 +1,276 @@
+% =============================================================================
+% AGOD naive weight socket: ~20 lines, multimodal lift
+% Standalone note / paper subsection. Needs: amsmath, booktabs, listings (opt).
+%   pdflatex AGOD_naive_stack_socket.tex
+% Or \input{} into a larger paper.
+% =============================================================================
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,xcolor,listings,microtype}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{gray!60!black},
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{black!20},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  xleftmargin=2em,
+}
+
+\title{\textbf{A Twenty-Line Weight Socket}\\
+\large Attribution-Guided Online Stacking for Multimodal Streams}
+\author{AGOD note \\ \texttt{attributor $\to$ $\alpha$ $\to$ stack\_w}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+We report a deliberately \emph{naive} use-case for attribution-guided online
+adaptation: keep the towers fixed, keep the online protocol fixed, and change
+only a simplex fusion weight $w$ via a $\sim$20-line loss socket
+\[
+  L \;=\; \mathrm{CE}\!\big(\textstyle\sum_m w_m z_m,\, y\big)
+        \;+\; \lambda\,\mathrm{KL}(w\Vert\alpha),
+\]
+where $\alpha$ is an EMA of an external attributor (FSDS / MSG / VIMP),
+not an MoE load-balance statistic.
+On Affec (5 physio modalities) this socket turns a mean-fusion
+\emph{collapse} into a clear gain
+($\Delta$MSE $\approx{+}0.09$, $\Delta$Acc $\approx{+}0.09$ vs.\ mean;
+another ${+}0.02$ vs.\ free stacking).
+Temperature-sharpened stacking ($\tau{=}0.5$) is even stronger.
+On COCO ImgTxt the baseline is already strong; soft sockets add little
+accuracy but tighten $\|w-\alpha\|$.
+The point is portability: any multimodal online learner with an
+attribution score and a simplex fusion weight can reuse the same socket.
+\end{abstract}
+
+% ---------------------------------------------------------------------------
+\section{The naive use-case}
+\label{sec:naive}
+
+\textbf{Setup.}
+Per window $t$, modality towers emit logits $\{z_m\}_{m\in M}$.
+A stacking weight $w=\mathrm{softmax}(\psi)\in\Delta^{|M|-1}$ fuses
+$\hat z=\sum_m w_m z_m$.
+An external attributor (FSDS / MSG / VIMP) yields a simplex prior
+$\alpha_t$, EMA-smoothed across windows.
+
+\textbf{What we do \emph{not} change.}
+Tower architecture, step budget, holdout split, learning rate, or the
+attribution sensor. Only the \emph{weight socket} changes.
+
+\textbf{Variants (same towers / windows).}
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Name & Fusion weight & Extra loss \\
+\midrule
+\texttt{mean\_ce}      & mean-pool hiddens (no $w$) & --- \\
+\texttt{stack\_ce}     & free $w=\mathrm{softmax}(\psi)$ & --- \\
+\texttt{stack\_alpha}  & free $w$ & $\lambda\mathrm{KL}(w\Vert\alpha)$ \\
+\texttt{stack\_uniform}& free $w$ & $\lambda\mathrm{KL}(w\Vert U)$ \\
+\texttt{stack\_fixed}  & freeze $w:=\alpha$ & --- \\
+\texttt{stack\_temp}   & $w=\mathrm{softmax}(\psi/\tau)$, $\tau{=}0.5$ & --- \\
+\texttt{stack\_erank}  & free $w$ & erank / align (+$\alpha$ if collapsed) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Why this is not MoE aux.}
+Classical MoE balance pushes gates toward \emph{internal} uniformity /
+load. Here $\alpha$ is an \emph{external} attributor: who carries concept
+drift mass. The socket is classical online stacking plus that prior
+\cite{wolpert1992stacked}-style fusion with an FSDS/MSG plug.
+
+% ---------------------------------------------------------------------------
+\section{The twenty-line socket}
+\label{sec:code}
+
+The entire actuator (beyond an existing CE on stacked logits) is:
+
+\begin{lstlisting}[language=Python,caption={Attribution prior on stacking weights ($\sim$20 LOC).}]
+def alpha_stack_kl(stack_w, alpha, mods, *, lambda_kl=0.5):
+    w = stack_w.clamp_min(1e-8); w = w / w.sum()
+    prior = torch.tensor([max(float(alpha[m]), 1e-8) for m in mods],
+                         device=w.device, dtype=w.dtype)
+    prior = prior / prior.sum()
+    kl = (w * (w.log() - prior.log())).sum()   # KL(w || alpha)
+    return lambda_kl * kl
+
+# in the online window loop:
+logits, h, logits_m, w = model(batch, return_parts=True)
+loss = CE(logits, y) + alpha_stack_kl(w, alpha_ema, mods)
+\end{lstlisting}
+
+Alternate sockets (\texttt{uniform}, \texttt{temp}, \texttt{erank},
+\texttt{fixed}) swap only the prior / temperature line; towers stay put.
+Code: \texttt{agod/online\_stack.py} (\texttt{WEIGHT\_MODES},
+\texttt{stack\_weight\_aux}).
+
+% ---------------------------------------------------------------------------
+\section{Results}
+\label{sec:results}
+
+Protocol: induced label-shift windows, holdout Brier/MSE drop ($\uparrow$)
+and Acc lift ($\uparrow$), same seed/towers across variants.
+$\lambda{=}0.5$. Datasets: MSR-VTT (V/T/A), Amazon (txt/img),
+COCO outdoor/indoor ImgTxt (img/txt), Affec
+(eye / pupil / cursor / GSR / EEG; affect median-split).
+
+\subsection{Core socket: mean vs.\ free stack vs.\ $\alpha$-KL}
+\begin{table}[t]
+\centering
+\caption{Attribution-guided online stacking.
+\texttt{stack\_alpha} $= \mathrm{CE}+\lambda\mathrm{KL}(w\Vert\alpha)$.}
+\label{tab:naive-core}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Variant & MSE drop $\uparrow$ & Acc $\uparrow$ & Acc post \\
+\midrule
+MSR-VTT & mean\_ce     & $-0.0080$ & $+0.000$ & $0.651$ \\
+MSR-VTT & stack\_ce    & $+0.0076$ & $+0.008$ & $0.655$ \\
+MSR-VTT & stack\_alpha & $+0.0097$ & $+0.008$ & $0.655$ \\
+\midrule
+Amazon  & mean\_ce     & $+0.0339$ & $+0.049$ & $0.543$ \\
+Amazon  & stack\_ce    & $+0.0357$ & $+0.033$ & $0.539$ \\
+Amazon  & stack\_alpha & $+0.0383$ & $+0.069$ & $0.571$ \\
+\midrule
+COCO    & mean\_ce     & $+0.0236$ & $+0.034$ & $0.860$ \\
+COCO    & stack\_ce    & $+0.0251$ & $+0.033$ & $0.865$ \\
+COCO    & stack\_alpha & $+0.0240$ & $+0.036$ & $0.860$ \\
+\midrule
+Affec   & mean\_ce     & $-0.0501$ & $-0.055$ & $0.560$ \\
+Affec   & stack\_ce    & $+0.0180$ & $+0.019$ & $0.629$ \\
+Affec   & stack\_alpha & $+0.0369$ & $+0.039$ & $0.622$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Lift of \texttt{stack\_alpha} over baselines (same towers/windows).}
+\label{tab:naive-core-lift}
+\begin{tabular}{llrr}
+\toprule
+Dataset & vs.\ baseline & $\Delta$MSE drop & $\Delta$Acc \\
+\midrule
+MSR-VTT & mean\_ce  & $+0.0177$ & $+0.008$ \\
+MSR-VTT & stack\_ce & $+0.0021$ & $+0.000$ \\
+Amazon  & mean\_ce  & $+0.0044$ & $+0.020$ \\
+Amazon  & stack\_ce & $+0.0026$ & $+0.036$ \\
+COCO    & mean\_ce  & $+0.0004$ & $+0.002$ \\
+COCO    & stack\_ce & $-0.0011$ & $+0.003$ \\
+\textbf{Affec} & \textbf{mean\_ce}  & $\mathbf{+0.0870}$ & $\mathbf{+0.094}$ \\
+\textbf{Affec} & \textbf{stack\_ce} & $\mathbf{+0.0189}$ & $\mathbf{+0.020}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Reading.}
+Affec is the stress test: mean fusion \emph{loses} Acc under drift;
+free stacking already recovers ($\Delta$Acc ${+}0.07$ vs.\ mean);
+plugging $\alpha$ adds another ${+}0.02$ Acc / ${+}0.019$ MSE.
+Amazon gains Acc mainly from the $\alpha$ prior (${+}0.036$ over free stack).
+COCO is near-saturated under mean; $\alpha$ still shrinks $\|w-\alpha\|$
+($0.135\to 0.060$).
+
+\subsection{Weight-mode sweep (COCO + Affec)}
+\begin{table}[t]
+\centering
+\caption{Alternate weight sockets. Same towers; only the prior / temperature changes.}
+\label{tab:naive-sweep}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Variant & MSE drop $\uparrow$ & Acc $\uparrow$ & Acc post \\
+\midrule
+COCO  & mean\_ce       & $+0.0236$ & $+0.034$ & $0.860$ \\
+COCO  & stack\_ce      & $+0.0251$ & $+0.033$ & $0.865$ \\
+COCO  & stack\_alpha   & $+0.0240$ & $+0.036$ & $0.860$ \\
+COCO  & stack\_uniform & $+0.0247$ & $+0.036$ & $0.862$ \\
+COCO  & stack\_fixed   & $+0.0213$ & $+0.025$ & $0.857$ \\
+COCO  & stack\_temp    & $+0.0251$ & $+0.037$ & $0.872$ \\
+COCO  & stack\_erank   & $+0.0246$ & $+0.037$ & $0.854$ \\
+\midrule
+Affec & mean\_ce       & $-0.0501$ & $-0.055$ & $0.560$ \\
+Affec & stack\_ce      & $+0.0180$ & $+0.019$ & $0.629$ \\
+Affec & stack\_alpha   & $+0.0369$ & $+0.039$ & $0.622$ \\
+Affec & stack\_uniform & $+0.0225$ & $+0.024$ & $0.652$ \\
+Affec & stack\_fixed   & $+0.0093$ & $+0.009$ & $0.634$ \\
+Affec & \textbf{stack\_temp} & $\mathbf{+0.0742}$ & $\mathbf{+0.071}$ & $0.625$ \\
+Affec & stack\_erank   & $+0.0379$ & $+0.037$ & $0.626$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Lift vs.\ \texttt{mean\_ce} / \texttt{stack\_ce} on Affec
+(the informative stream).}
+\label{tab:naive-sweep-lift-affec}
+\begin{tabular}{lrrrr}
+\toprule
+Variant & $\Delta$MSE vs mean & $\Delta$Acc vs mean & $\Delta$MSE vs stack & $\Delta$Acc vs stack \\
+\midrule
+stack\_ce      & $+0.0681$ & $+0.074$ & ---       & --- \\
+stack\_alpha   & $+0.0870$ & $+0.094$ & $+0.0190$ & $+0.019$ \\
+stack\_uniform & $+0.0726$ & $+0.079$ & $+0.0045$ & $+0.004$ \\
+stack\_fixed   & $+0.0594$ & $+0.064$ & $-0.0087$ & $-0.010$ \\
+\textbf{stack\_temp} & $\mathbf{+0.1243}$ & $\mathbf{+0.126}$ & $\mathbf{+0.0563}$ & $\mathbf{+0.052}$ \\
+stack\_erank   & $+0.0880$ & $+0.092$ & $+0.0199$ & $+0.018$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Reading.}
+On Affec, \emph{every} soft stacking socket beats mean by a large margin.
+Attribution KL and erank sit in a similar band (${+}\!\sim\!0.09$ Acc vs.\ mean).
+Temperature-sharpened free stacking is the strongest single knob here.
+Hard $w:=\alpha$ helps vs.\ mean but loses to free stack---the prior is a
+\emph{guide}, not a hard clamp.
+On COCO, deltas are small; Acc post peaks at \texttt{stack\_temp} ($0.872$).
+
+% ---------------------------------------------------------------------------
+\section{Takeaway}
+\label{sec:takeaway}
+
+\begin{enumerate}
+  \item \textbf{Naive is enough.} A KL (or temperature) on simplex fusion
+        weights---tens of lines, no new backbone---moves holdout metrics
+        when mean fusion fails under multimodal drift.
+  \item \textbf{External prior $\neq$ MoE balance.} $\alpha$ comes from an
+        attributor (FSDS/MSG/VIMP), not from uniform/load stats.
+  \item \textbf{Portable socket.} Pattern:
+        \[
+          \underbrace{\text{attributor}}_{\text{sensor}}
+          \;\to\;
+          \underbrace{\alpha}_{\text{EMA}}
+          \;\to\;
+          \underbrace{\mathrm{KL}(w\Vert\alpha)\ \text{or}\ \tau\text{-softmax}}_{\text{actuator}}.
+        \]
+        Drop into any multimodal online stacker.
+\end{enumerate}
+
+\vspace{0.5em}
+\noindent\textit{Reproduce:}
+\begin{verbatim}
+PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py \
+  --datasets coco affec --merge-existing
+\end{verbatim}
+
+\begin{thebibliography}{9}
+\bibitem{wolpert1992stacked}
+D.~H.~Wolpert.
+\newblock Stacked generalization.
+\newblock \emph{Neural Networks}, 5(2):241--259, 1992.
+\end{thebibliography}
+
+\end{document}

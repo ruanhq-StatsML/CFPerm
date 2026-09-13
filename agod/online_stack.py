@@ -165,10 +165,12 @@ class StackFusion(nn.Module):
         *,
         fuse: int = 128,
         n_class: int = 2,
+        temperature: float = 1.0,
     ):
         super().__init__()
         self.mods = list(mods)
         self.n_class = int(n_class)
+        self.temperature = float(temperature)
         self.projs = nn.ModuleDict(
             {
                 m: nn.Sequential(
@@ -192,8 +194,26 @@ class StackFusion(nn.Module):
     ) -> dict[str, torch.Tensor]:
         return {m: self.heads[m](hiddens[m]) for m in self.mods}
 
-    def stack_weights(self) -> torch.Tensor:
-        return F.softmax(self.stack_logits, dim=0)
+    def stack_weights(self, temperature: float | None = None) -> torch.Tensor:
+        tau = float(self.temperature if temperature is None else temperature)
+        tau = max(tau, 1e-4)
+        return F.softmax(self.stack_logits / tau, dim=0)
+
+    def alpha_tensor(
+        self,
+        alpha: Mapping[str, float],
+        *,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
+    ) -> torch.Tensor:
+        device = device or self.stack_logits.device
+        dtype = dtype or self.stack_logits.dtype
+        w = torch.tensor(
+            [max(float(alpha.get(m, 0.0)), 1e-8) for m in self.mods],
+            device=device,
+            dtype=dtype,
+        )
+        return w / w.sum()
 
     def fuse_logits(
         self,
@@ -208,10 +228,22 @@ class StackFusion(nn.Module):
         assert out is not None
         return out
 
-    def forward(self, batch: Mapping[str, torch.Tensor], *, return_parts: bool = False):
+    def forward(
+        self,
+        batch: Mapping[str, torch.Tensor],
+        *,
+        return_parts: bool = False,
+        fixed_w: Mapping[str, float] | torch.Tensor | None = None,
+    ):
         h = self.encode(batch)
         logits_m = self.modality_logits(h)
-        w = self.stack_weights()
+        if fixed_w is None:
+            w = self.stack_weights()
+        elif torch.is_tensor(fixed_w):
+            w = fixed_w.clamp_min(1e-8)
+            w = w / w.sum()
+        else:
+            w = self.alpha_tensor(fixed_w)
         logits = self.fuse_logits(logits_m, w)
         if return_parts:
             return logits, h, logits_m, w
@@ -249,3 +281,96 @@ class MeanFusion(nn.Module):
         if return_h:
             return logits, hs
         return logits
+
+
+# ---------------------------------------------------------------------------
+# Weight socket (prediction-side): plug different priors into online stacking.
+# ---------------------------------------------------------------------------
+
+WEIGHT_MODES = (
+    "mean_ce",       # mean-pool fusion (no stack_w)
+    "stack_ce",      # free w = softmax(psi)
+    "stack_alpha",   # CE + λ KL(w || alpha)          attribution prior
+    "stack_uniform", # CE + λ KL(w || U)               MoE-style balance
+    "stack_fixed",   # freeze w := alpha (towers only)
+    "stack_temp",    # sharper softmax(psi / tau), no KL
+    "stack_erank",   # erank + align + conditional KL
+)
+
+STACK_LEARN_PSI = {
+    "stack_ce",
+    "stack_alpha",
+    "stack_uniform",
+    "stack_temp",
+    "stack_erank",
+}
+
+
+def uniform_alpha(mods: Sequence[str]) -> dict[str, float]:
+    mods = list(mods)
+    return {m: 1.0 / len(mods) for m in mods}
+
+
+def stack_weight_aux(
+    mode: str,
+    *,
+    stack_w: torch.Tensor | None,
+    alpha: Mapping[str, float] | None,
+    mods: Sequence[str],
+    hiddens: Mapping[str, torch.Tensor] | None = None,
+    lambda_kl: float = 0.50,
+    lambda_bal: float = 0.25,
+) -> dict[str, torch.Tensor | float]:
+    """Auxiliary loss for a stacking weight mode.
+
+    Returns ``loss`` (0 for modes without aux) and optional diagnostics.
+    """
+    mods = list(mods)
+    zero = (
+        stack_w.new_zeros(())
+        if isinstance(stack_w, torch.Tensor)
+        else torch.tensor(0.0)
+    )
+    if mode in ("mean_ce", "stack_ce", "stack_fixed", "stack_temp"):
+        return {"loss": zero, "kl": float("nan"), "mode": mode}
+    if mode == "stack_alpha":
+        if stack_w is None or alpha is None:
+            return {"loss": zero, "kl": float("nan"), "mode": mode}
+        pack = alpha_stack_kl(stack_w, alpha, mods, lambda_kl=lambda_kl)
+        return {**pack, "mode": mode}
+    if mode == "stack_uniform":
+        if stack_w is None:
+            return {"loss": zero, "kl": float("nan"), "mode": mode}
+        pack = alpha_stack_kl(
+            stack_w, uniform_alpha(mods), mods, lambda_kl=lambda_kl
+        )
+        return {**pack, "mode": mode}
+    if mode == "stack_erank":
+        if hiddens is None or stack_w is None:
+            return {"loss": zero, "kl": float("nan"), "mode": mode}
+        pack = erank_balance_loss(
+            hiddens,
+            mods,
+            stack_w=stack_w,
+            alpha=alpha,
+            lambda_bal=lambda_bal,
+        )
+        return {
+            "loss": pack["loss"],
+            "kl": pack["l_bal"],
+            "erank": pack["erank"],
+            "mode": mode,
+        }
+    raise ValueError(f"unknown weight mode: {mode}")
+
+
+def uses_stack_fusion(mode: str) -> bool:
+    return mode != "mean_ce"
+
+
+def freezes_stack_psi(mode: str) -> bool:
+    return mode == "stack_fixed"
+
+
+def stack_temperature_for(mode: str, *, default: float = 1.0, temp: float = 0.5) -> float:
+    return float(temp) if mode == "stack_temp" else float(default)

@@ -31,13 +31,19 @@ from .compute_ratio import (
     unique_adapt_mass,
 )
 from .online_stack import (
+    WEIGHT_MODES,
     alpha_stack_kl,
     MeanFusion,
     StackFusion,
     erank_balance_loss,
+    freezes_stack_psi,
     gram_erank_torch,
     probs_mse,
     probs_mse_torch,
+    stack_temperature_for,
+    stack_weight_aux,
+    uniform_alpha,
+    uses_stack_fusion,
 )
 from .smooth_router import (
     DriftNoiseGateConfig,
@@ -152,6 +158,12 @@ __all__ = [
     "erank_balance_loss",
     "gram_erank_torch",
     "probs_mse",
+    "uniform_alpha",
+    "stack_temperature_for",
+    "freezes_stack_psi",
+    "uses_stack_fusion",
+    "stack_weight_aux",
+    "WEIGHT_MODES",
     "DriftNoiseGateConfig",
     "SmoothRouterConfig",
     "SmoothDriftNoiseRouter",
