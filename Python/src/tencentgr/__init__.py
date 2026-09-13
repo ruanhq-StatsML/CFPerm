@@ -1,5 +1,6 @@
 """TencentGR-10M subset: dataset dump, three-tower, DR pseudo-outcome learner."""
 
+from .event_stream_features import annotate_event_stream, exposure_rank_table
 from .behavior_features import (
     explode_seq,
     rank_against_binary,
@@ -22,4 +23,6 @@ __all__ = [
     "synthesize_user_behavior",
     "standard_scale_behavior",
     "rank_against_binary",
+    "annotate_event_stream",
+    "exposure_rank_table",
 ]

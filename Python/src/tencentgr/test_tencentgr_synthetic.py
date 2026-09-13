@@ -122,10 +122,41 @@ def test_behavior_explode_and_scale():
     assert float(rank.loc[rank["feature"] == "n_click", "auc_abs"].iloc[0]) >= 0.5
 
 
+def test_event_stream_gap_fatigue_labels():
+    from tencentgr.event_stream_features import annotate_event_stream
+
+    # Matches the pasted user-1 prefix: consecutive exposures, growing gaps.
+    df = pd.DataFrame(
+        [
+            {"user_id": 1, "item_id": 15707217, "action_type": 0, "timestamp": 1746917176},
+            {"user_id": 1, "item_id": 6001475, "action_type": 0, "timestamp": 1746920445},
+            {"user_id": 1, "item_id": 13633300, "action_type": 0, "timestamp": 1746929690},
+            {"user_id": 2, "item_id": 10, "action_type": 0, "timestamp": 100},
+            {"user_id": 2, "item_id": 10, "action_type": 1, "timestamp": 400},
+            {"user_id": 2, "item_id": 10, "action_type": 2, "timestamp": 900},
+        ]
+    )
+    ev = annotate_event_stream(df)
+    u = ev[ev["item_id"] == 15707217].iloc[0]
+    assert pd.isna(u["gap_sec"])
+    second = ev[ev["item_id"] == 6001475].iloc[0]
+    assert int(second["gap_sec"]) == 1746920445 - 1746917176
+    assert int(second["item_exp_1d"]) == 0
+    # same item: second exposure would count the first; here click follows exposure
+    exp10 = ev[(ev["user_id"] == 2) & (ev["item_id"] == 10) & (ev["action_type"] == 0)].iloc[0]
+    clk10 = ev[(ev["user_id"] == 2) & (ev["item_id"] == 10) & (ev["action_type"] == 1)].iloc[0]
+    assert int(exp10["y_ctr"]) == 1
+    assert int(exp10["y_cvr"]) == 1
+    assert int(clk10["y_cvr"]) == 1
+    assert int(clk10["item_exp_1d"]) == 1
+    assert int(clk10["gap_sec"]) == 300
+
+
 if __name__ == "__main__":
     test_parse_string_embedding()
     test_user_missing_policy()
     test_three_tower_forward()
     test_dr_po_recovers_mean_shift()
     test_behavior_explode_and_scale()
+    test_event_stream_gap_fatigue_labels()
     print("synthetic tests ok")
