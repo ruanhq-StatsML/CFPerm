@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Continuous-batch PO-risk IPTW: prop vs inv vs uniform → MSE @ 10 batches.
+"""Continuous-batch PO-risk IPTW: uniform / prop / sqrt / inv → MSE @ 10 batches.
 
 Green (no DRE/DGA):
   uniform : w = 1
   prop    : w ∝ PO
+  sqrt    : w ∝ √PO     # soft upweight — w_i = sqrt(PO(X_i,Y_i,T_i=1))
   inv     : w ∝ 1/PO
 
 Eval: fit batch t with weights → MSE on batch t+1.
@@ -182,8 +183,9 @@ def report_md(results: Dict[str, dict]) -> str:
         f"**Best next-batch MSE mean:** `{best}`",
         "",
         "```python",
-        "w = po / po.mean()           # prop",
-        "w = (1/po) / (1/po).mean()   # inv",
+        "w = po / po.mean()              # prop",
+        "w = np.sqrt(po) / mean          # sqrt  ← soft high-PO upweight",
+        "w = (1/po) / (1/po).mean()      # inv",
         "rf.fit(X, y, sample_weight=w)",
         "```",
         "",
@@ -223,7 +225,7 @@ def main() -> None:
     print(f"dataset={ds} batches={len(stream)} bs={args.batch_size} model={args.model}")
 
     results: Dict[str, dict] = {}
-    for mode in ("uniform", "prop", "inv"):
+    for mode in ("uniform", "prop", "sqrt", "inv"):
         print(f"  [{mode}] ...", flush=True)
         results[mode] = run_mode(stream, mode, args.model, args.seed)
         n = results[mode]["mse_next"]

@@ -2,14 +2,16 @@
 
 | mode | MSE_next mean | std | p50 | p90 | MSE_cur mean |
 |---|---:|---:|---:|---:|---:|
-| `uniform` | 1522.9567 | 1014.7202 | 1489.6241 | 2786.4544 | 574.0128 |
-| `prop` | 7154.5548 | 11279.5158 | 2382.6280 | 18141.8068 | 1096.0886 |
-| `inv` | 2807.8169 | 2251.6389 | 1696.8640 | 5747.6041 | 941.8731 |
+| `uniform` | 3.5242 | 1.2434 | 3.4737 | 5.0107 | 0.7561 |
+| `prop` | 4.0115 | 1.7046 | 3.5730 | 6.1364 | 0.7647 |
+| `sqrt` | 3.7390 | 1.4974 | 3.4982 | 5.6240 | 0.6034 |
+| `inv` | 3.4237 | 1.1270 | 3.4679 | 4.8196 | 2.2811 |
 
-**Best next-batch MSE mean:** `uniform`
+**Best next-batch MSE mean:** `inv`
 
 ```python
-w = po / po.mean()           # prop
-w = (1/po) / (1/po).mean()   # inv
+w = po / po.mean()              # prop
+w = np.sqrt(po) / mean          # sqrt  ← soft high-PO upweight
+w = (1/po) / (1/po).mean()      # inv
 rf.fit(X, y, sample_weight=w)
 ```
