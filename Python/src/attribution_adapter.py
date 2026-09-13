@@ -13,7 +13,7 @@ Existing pieces only:
 
 Locked recipe:
   Amazon (scalar text)  → hop_ridge (uniform heatmap IW) — best MSE so far
-  Multimodal (MSR-VTT)  → modality-π hop weights (π_m from PO⊕RF shares)
+  Multimodal (MSR-VTT)  → modality-π hop; π_m via ``benchmark_feature_selection``
   PO-risk VIMP          → mask drill-down attribution, not feature reweighting
 
 Locked signs (unchanged):
@@ -40,7 +40,11 @@ from amazon_continuous_batches import (
     run_amazon_method,
 )
 from amazon_mse_prototype import _mse, _nw_predict, describe_shapes, run_bank_mse
-from msrvtt_multimodal_attribution import SEED
+from msrvtt_multimodal_attribution import (
+    SEED,
+    benchmark_feature_selection,
+    modality_mass,
+)
 
 METHODS = (
     "plateau",
@@ -114,9 +118,9 @@ def block_means(X, batch, groups):
 def modality_hop_weights(block_mus, batch, t, shares, gamma=4.0):
     """Modality-specific hop IW: exp(γ Σ_m π_m (cos(μ_s^m, μ_{t-1}^m) − 1)).
 
-    π_m is the modality contribution (PO-risk VIMP mass and/or RF-Domain share).
-    Causal reference is still μ_{t-1}. With one modality this equals
-    ``hop_sample_weights``.
+    π_m is the modality contribution (from ``modality_pi_shares`` /
+    ``benchmark_feature_selection``). Causal reference is still μ_{t-1}.
+    With one modality this equals ``hop_sample_weights``.
     """
     batch = np.asarray(batch, dtype=int)
     w = np.zeros(batch.shape[0], dtype=float)
@@ -135,6 +139,35 @@ def modality_hop_weights(block_mus, batch, t, shares, gamma=4.0):
             score += float(pi[j]) * float(np.dot(a, b) / (na * nb))
         w[batch == s] = float(np.exp(float(gamma) * (score - 1.0)))
     return np.maximum(w, 1e-3)
+
+
+def modality_pi_shares(
+    X0,
+    X1,
+    seed=SEED,
+    n_estimators=40,
+    selector=None,
+    prev_shares=None,
+    ewma=0.0,
+):
+    """π_m for modality-π hop via ``benchmark_feature_selection``.
+
+    Drop-in: pass another ``selector(X0, X1, seed=, n_estimators=) -> (vimp, meta)``
+    (default is RF-Domain VIMP). Shares come from ``modality_mass(vimp)``.
+    Optional EWMA with ``prev_shares`` (``ewma`` in [0,1], weight on previous).
+    """
+    sel = selector or benchmark_feature_selection
+    vimp, meta = sel(X0, X1, seed=seed, n_estimators=n_estimators)
+    _, shares = modality_mass(vimp)
+    if prev_shares is not None and float(ewma) > 0:
+        a = float(np.clip(ewma, 0.0, 1.0))
+        shares = {
+            g: (1.0 - a) * float(shares.get(g, 0.0)) + a * float(prev_shares.get(g, 0.0))
+            for g in shares
+        }
+        tot = sum(shares.values()) + 1e-12
+        shares = {g: shares[g] / tot for g in shares}
+    return shares, vimp, meta
 
 
 def _ridge_predict(Xtr, ytr, Xte, sample_weight=None, alpha=3.0):

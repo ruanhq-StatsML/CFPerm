@@ -1,16 +1,15 @@
 """PO-risk mask attribution + modality-π hop (on top of heatmap hop-ridge).
 
-Locked recipe (from the Amazon / MSR-VTT iteration):
-  Amazon          → hop_ridge (heatmap IW) — best online MSE
-  Multimodal      → modality-π hop weights from attribution_adapter
-  PO-risk VIMP    → select tokens/patches to *mask* (zero / noise / missing);
-                    do **not** reweight features by PO VIMP (hurts MSE)
+Locked recipe:
+  Amazon          → hop_ridge (heatmap IW)
+  Multimodal      → modality-π hop; π_m from ``benchmark_feature_selection``
+                    via ``attribution_adapter.modality_pi_shares``
+  PO-risk VIMP    → mask tokens/patches only (zero / noise / missing)
 
-Modality-π hop (first-class in attribution_adapter):
   w_s = exp(γ Σ_m π_m (cos(μ_s^m, μ_{t-1}^m) − 1))
-  π_m = PO-risk VIMP block mass ⊕ RF-Domain share on the causal hop.
 
-No new loss. Locked TSS signs unchanged: ĉ large → bank; δ̂ large → Ridge.
+Swap the body of ``benchmark_feature_selection`` to change the selector;
+shares still come from ``modality_mass(vimp)``. No new loss.
 """
 from __future__ import annotations
 
@@ -26,6 +25,7 @@ from attribution_adapter import (
     hop_sample_weights,
     load_amazon_stream,
     modality_hop_weights,
+    modality_pi_shares,
     rolling_hop_stats,
     run_hop_ridge,
     run_ridge_past,
@@ -38,9 +38,7 @@ from msrvtt_multimodal_attribution import (
     crossfit_po,
     load_window_bundle,
     make_synthetic_bundle,
-    modality_mass,
     po_tau_vimp,
-    rf_domain,
     standardize_columns,
 )
 
@@ -149,7 +147,7 @@ def run_hop_po_ridge(
     history = []
     feat_w = np.ones(X.shape[1], dtype=float)
     shares = {g: 1.0 / max(len(groups), 1) for g in groups}
-    block_mus = block_means(X, batch, groups=groups)
+    block_mus = block_means(X, batch, groups)
 
     for t in range(1, k):
         tr, ic = batch < t, batch == t
@@ -164,19 +162,17 @@ def run_hop_po_ridge(
         if use_feat:
             feat_w = feature_weights_from_vimp(vimp, invert=invert_feat)
 
-        if use_mod and len(groups) > 1:
-            shares = modality_shares_from_vimp(vimp, groups=groups)
-            if t >= 2 and len(X0) >= 8 and len(X1) >= 8:
-                rf_v, _ = rf_domain(
-                    X0, X1, seed=seed + 17 + t, n_estimators=max(20, n_estimators // 2)
-                )
-                full_p = int(max(sl.stop for sl in GROUPS.values()))
-                if int(rf_v.shape[0]) == full_p:
-                    _, rf_share = modality_mass(rf_v)
-                    shares = {
-                        g: 0.5 * shares.get(g, 0.0) + 0.5 * float(rf_share.get(g, 0.0))
-                        for g in groups
-                    }
+        if use_mod and len(groups) > 1 and t >= 2 and len(X0) >= 8 and len(X1) >= 8:
+            # π_m from benchmark_feature_selection (drop-in selector hook)
+            shares, fs_vimp, _ = modality_pi_shares(
+                X0,
+                X1,
+                seed=seed + 17 + t,
+                n_estimators=n_estimators,
+                prev_shares=shares,
+                ewma=0.3,
+            )
+            vimp = fs_vimp
             w = modality_hop_weights(block_mus, batch, t, shares, gamma=gamma)
         else:
             w = hop_sample_weights(stats["mus"], batch, t, gamma=gamma)
@@ -308,8 +304,13 @@ def run_msrvtt_hop_po(
     seed=SEED,
     n_estimators=40,
     target="text",
+    ewma_pi=0.3,
 ):
-    """Online cross-modal Ridge: other modalities → target block."""
+    """Online cross-modal Ridge: other modalities → target block.
+
+    π_m from ``modality_pi_shares`` → ``benchmark_feature_selection`` (swap
+    that hook to change the selector). Optional EWMA on π across hops.
+    """
     X, batch = stream["X"], stream["batch"]
     groups = stream["groups"]
     if target not in groups:
@@ -318,7 +319,7 @@ def run_msrvtt_hop_po(
     Y = X[:, groups[target]]
     Xin = X[:, in_idx]
     k = int(batch.max()) + 1
-    block_mus = block_means(X, batch, groups=groups)
+    block_mus = block_means(X, batch, groups)
     mus = np.stack([X[batch == t].mean(0) for t in range(k)])
     history = []
     shares = {g: 1.0 / 3.0 for g in GROUP_NAMES}
@@ -326,26 +327,16 @@ def run_msrvtt_hop_po(
     for t in range(1, k):
         tr, ic = batch < t, batch == t
         if t >= 2:
-            vimp = po_feature_vimp_safe(
+            shares, vimp, _meta = modality_pi_shares(
                 X[batch == t - 2],
                 X[batch == t - 1],
-                stream["y_id"][batch == t - 2],
-                stream["y_id"][batch == t - 1],
                 seed=seed + t,
                 n_estimators=n_estimators,
+                prev_shares=shares,
+                ewma=ewma_pi,
             )
-            shares = modality_shares_from_vimp(vimp, groups=groups)
-            rf_v, _ = rf_domain(
-                X[batch == t - 2],
-                X[batch == t - 1],
-                seed=seed + 17 + t,
-                n_estimators=max(20, n_estimators // 2),
-            )
-            _, rf_share = modality_mass(rf_v)
-            shares = {
-                g: 0.5 * float(shares.get(g, 0.0)) + 0.5 * float(rf_share.get(g, 0.0))
-                for g in GROUP_NAMES
-            }
+        else:
+            vimp = None
         if use_mod:
             w = modality_hop_weights(block_mus, batch, t, shares, gamma=gamma)
         else:
@@ -358,17 +349,20 @@ def run_msrvtt_hop_po(
                 "round": int(t),
                 "online_mse": _multi_mse(pred, Y[ic]),
                 "shares": {g: float(shares[g]) for g in GROUP_NAMES},
+                "topk": [] if vimp is None else [int(i) for i in topk_from_vimp(vimp, k=8)],
             }
         )
 
     online = np.array([h["online_mse"] for h in history], dtype=float)
     return {
-        "method": "msrvtt_hop_po_mod" if use_mod else "msrvtt_hop",
+        "method": "msrvtt_hop_pi" if use_mod else "msrvtt_hop",
         "target": target,
         "online_mse": float(online.mean()) if online.size else float("nan"),
         "online_path": online.tolist(),
         "history": history,
         "meta": stream["meta"],
+        "ewma_pi": float(ewma_pi),
+        "gamma": float(gamma),
     }
 
 

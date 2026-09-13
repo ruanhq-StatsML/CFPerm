@@ -30,5 +30,5 @@ PYTHONPATH=Python/src python3 scripts/run_po_hop_attribution.py
 PYTHONPATH=Python/src python3 scripts/run_attribution_adapter.py
 ```
 
-API: `attribution_adapter.modality_hop_weights`, `block_means`  
-PO masks: `po_hop_attribution.run_mask_ablation` / `run_msrvtt_patch_mask`
+API: `attribution_adapter.modality_pi_shares` → `benchmark_feature_selection`  
+Tuning: see [`TUNING.md`](TUNING.md)
