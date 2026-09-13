@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import torch
 
+from tencentgr.behavior_features import explode_seq, standard_scale_behavior, synthesize_user_behavior
 from tencentgr.dataset import USER_FEAT_DIM, _as_emb, user_row_to_vec
 from tencentgr.dr_po_learner import dr_pseudo_outcome, fit_dr_pseudo_outcome
 from tencentgr.three_tower import ThreeTowerModel
@@ -77,9 +79,46 @@ def test_dr_po_recovers_mean_shift():
     assert phi.shape == (n,)
 
 
+def test_behavior_explode_and_scale():
+    seq_df = pd.DataFrame(
+        [
+            {
+                "user_id": 1,
+                "seq": [
+                    {"item_id": 10, "action_type": 0, "timestamp": 100},
+                    {"item_id": 11, "action_type": 1, "timestamp": 200},
+                    {"item_id": 11, "action_type": 2, "timestamp": 300},
+                ],
+            },
+            {
+                "user_id": 2,
+                "seq": [
+                    {"item_id": 20, "action_type": 0, "timestamp": 50},
+                    {"item_id": 21, "action_type": 0, "timestamp": 60},
+                ],
+            },
+        ]
+    )
+    events = explode_seq(seq_df)
+    assert len(events) == 5
+    assert set(events["user_id"]) == {1, 2}
+    users = synthesize_user_behavior(events)
+    assert len(users) == 2
+    u1 = users.set_index("user_id").loc[1]
+    assert int(u1["n_click"]) == 1
+    assert int(u1["n_conversion"]) == 1
+    assert abs(float(u1["engage_rate"]) - 2.0 / 3.0) < 1e-9
+    scaled, scaler, cols = standard_scale_behavior(users)
+    assert "n_click" in cols
+    assert "z_n_click" in scaled.columns
+    assert abs(float(np.mean(scaled["z_n_click"]))) < 1e-9
+    assert float(scaler.scale_[cols.index("n_click")]) > 0
+
+
 if __name__ == "__main__":
     test_parse_string_embedding()
     test_user_missing_policy()
     test_three_tower_forward()
     test_dr_po_recovers_mean_shift()
+    test_behavior_explode_and_scale()
     print("synthetic tests ok")
