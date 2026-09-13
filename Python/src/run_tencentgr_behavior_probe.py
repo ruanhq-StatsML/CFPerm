@@ -103,7 +103,6 @@ def main() -> None:
     events = explode_seq(seq)
     users = synthesize_user_behavior(events, user_feat=user_feat, item_feat=item_feat)
     scaled, scaler, cols = standard_scale_behavior(users)
-    Z = z_matrix(scaled, cols)
     cols_time = [c for c in cols if c not in TIME_LABEL_LEAK_COLS]
     Z_time = z_matrix(scaled, cols_time)
 
