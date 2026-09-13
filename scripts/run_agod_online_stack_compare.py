@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Attribution-guided online stacking vs baselines (Amazon + MSR-VTT).
+"""Attribution-guided online stacking vs baselines.
+
+Datasets: Amazon, MSR-VTT, COCO ImgTxt, Affec (5 physio modalities).
 
 Variants (same towers / steps / holdout; only the weight socket changes):
   mean_ce     — mean-pool fusion + CE
   stack_ce    — online stacking w=softmax(psi) + CE
   stack_alpha — stacking + CE + lambda * KL(w || alpha)   # FSDS/MSG socket
 
-alpha = EMA of attribution (Amazon MSG-B3 / MSR-VTT B5 hybrid).
+alpha = EMA of attribution (MSG-B3 / B5 hybrid / ImgTxt hybrid / Affec VIMP).
 Primary metrics: holdout Brier/MSE drop and Acc lift.
 
   PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py
+  PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py \\
+      --datasets coco affec
 """
 from __future__ import annotations
 
@@ -33,18 +37,21 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_agod_amazon_modality_lr as amazon
 import run_agod_gradcos_lr as msrvtt
+import run_agod_imgtxt_mmd_lr as imgtxt
 from agod.lr_controller import EMARouter
 from agod.online_stack import MeanFusion, StackFusion, alpha_stack_kl, probs_mse
 
 OUT = ROOT / "results" / "agod_online_stack_compare"
 DOCS = ROOT / "docs" / "agod"
 ART = Path("/opt/cursor/artifacts/agod_online_stack_compare")
+AFFEC_CACHE = ROOT / "results" / "affec_fsds" / "affec_fsds_xyw_cache.npz"
 
 SEED = 2026
 VARIANTS = ("mean_ce", "stack_ce", "stack_alpha")
 LAMBDA_KL = 0.50
 FUSE = 128
 HOLD = 0.35
+DATASETS_ALL = ("msrvtt", "amazon", "coco", "affec")
 
 
 def split_hold(idx, seed):
@@ -157,6 +164,24 @@ def alpha_amazon(feats, y, ref_idx, adapt_idx, mods, *, seed):
         return {m: 1.0 / len(mods) for m in mods}
 
 
+def alpha_imgtxt(feats, y, ref_idx, adapt_idx, mods, *, seed):
+    b0 = {m: feats[m][ref_idx] for m in mods}
+    b1 = {m: feats[m][adapt_idx] for m in mods}
+    y0 = y[ref_idx].astype(float)
+    y1 = y[adapt_idx].astype(float)
+    try:
+        msg = imgtxt.domain_msg(b0, b1, y0, y1, mods, seed=seed)
+        raw, _ = imgtxt.select_raw("B5", msg, b0, b1, y0, y1, mods, seed=seed)
+        return {m: float(raw[m]) for m in mods}
+    except Exception:
+        return {m: 1.0 / len(mods) for m in mods}
+
+
+def alpha_affec(feats, y, ref_idx, adapt_idx, mods, *, seed):
+    """Per-modality RF domain VIMP → softmax alpha (same spirit as ImgTxt B5)."""
+    return alpha_imgtxt(feats, y, ref_idx, adapt_idx, mods, seed=seed)
+
+
 def load_msrvtt_pack():
     feats, y = msrvtt.load_msrvtt()
     mods = list(msrvtt.MSRVTT_MODS)
@@ -248,6 +273,75 @@ def load_amazon_pack(device):
         "ema": 0.40,
         "alpha_fn": alpha_amazon,
         "n_ref_keep": int(amazon.N_REF // 2),
+    }
+
+
+def load_coco_pack():
+    feats, y, meta = imgtxt.load_dataset("coco_outdoor_indoor")
+    # image+text only (bbox optional; keep two-mod stack comparable to Amazon)
+    mods = ["image", "text"]
+    feats = {m: feats[m] for m in mods}
+    stream = imgtxt.make_stream(y)
+    windows = [
+        {"t": int(w["t"]), "idx": np.asarray(w["idx"])} for w in stream["windows"]
+    ]
+    print(
+        f"coco: n={meta['n']} pos_rate={meta['pos_rate']:.3f} "
+        f"mode_label={meta['mode_label']}",
+        flush=True,
+    )
+    return {
+        "name": "coco",
+        "mods": mods,
+        "feats": feats,
+        "y": y.astype(int),
+        "ref_idx": np.asarray(stream["ref_idx"]),
+        "windows": windows,
+        "batch": int(imgtxt.BATCH),
+        "steps": int(imgtxt.STEPS),
+        "lr": float(imgtxt.LR0),
+        "ema": float(imgtxt.EMA),
+        "alpha_fn": alpha_imgtxt,
+        "n_ref_keep": int(imgtxt.N_REF // 2),
+    }
+
+
+def load_affec_pack():
+    if not AFFEC_CACHE.exists():
+        raise FileNotFoundError(f"missing Affec cache: {AFFEC_CACHE}")
+    z = np.load(AFFEC_CACHE, allow_pickle=True)
+    X = z["X"].astype(np.float32)
+    y_cont = z["Y"].astype(np.float64)
+    block_slices = z["block_slices"].item()
+    mods = [str(m) for m in z["mods"].tolist()]
+    # classification socket: median split of continuous affect score
+    thr = float(np.median(y_cont))
+    y = (y_cont >= thr).astype(np.int64)
+    feats = {}
+    for m in mods:
+        a, b = block_slices[m]
+        feats[m] = X[:, int(a) : int(b)]
+    stream = imgtxt.make_stream(y)
+    windows = [
+        {"t": int(w["t"]), "idx": np.asarray(w["idx"])} for w in stream["windows"]
+    ]
+    print(
+        f"affec: n={len(y)} mods={mods} thr={thr:.3f} pos_rate={y.mean():.3f}",
+        flush=True,
+    )
+    return {
+        "name": "affec",
+        "mods": mods,
+        "feats": feats,
+        "y": y,
+        "ref_idx": np.asarray(stream["ref_idx"]),
+        "windows": windows,
+        "batch": 64,
+        "steps": 28,
+        "lr": 3e-3,
+        "ema": 0.40,
+        "alpha_fn": alpha_affec,
+        "n_ref_keep": int(imgtxt.N_REF // 2),
     }
 
 
@@ -414,13 +508,13 @@ def write_docs(cells, path: Path):
             f"{c['mean_prop_mae']:.3f} | {sw} |"
         )
     best = max(cells, key=lambda c: (c["mean_mse_drop"], c["mean_acc_lift"]))
-    md = f"""# Attribution-guided online stacking (Amazon + MSR-VTT)
+    md = f"""# Attribution-guided online stacking
 
 ## Method
 
 Online stacking learns fusion weights `w = softmax(psi)` over modality logits.
 
-Weight socket: attribution alpha (Amazon MSG-B3 / MSR-VTT B5 hybrid, EMA) plugs in as
+Weight socket: attribution alpha (MSG-B3 / B5 hybrid / ImgTxt hybrid / Affec VIMP, EMA) plugs in as
 
 ```
 L = CE(stack_w · logits, y) + lambda * KL(stack_w || alpha)
@@ -447,10 +541,27 @@ Best (MSE drop, Acc lift): **`{best['dataset']}/{best['variant']}`**
 
 ```bash
 PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py
+PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py --datasets coco affec
 ```
 """
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(md)
+
+
+def _merge_cells(old_cells, new_cells):
+    """Keep previous dataset rows; overwrite matching dataset/variant."""
+    key = lambda c: (c["dataset"], c["variant"])
+    by = {key(c): c for c in old_cells}
+    for c in new_cells:
+        by[key(c)] = c
+    order = []
+    for ds in DATASETS_ALL:
+        for v in VARIANTS:
+            k = (ds, v)
+            if k in by:
+                order.append(by.pop(k))
+    order.extend(by.values())
+    return order
 
 
 def main():
@@ -460,13 +571,18 @@ def main():
         "--datasets",
         nargs="+",
         default=["msrvtt", "amazon"],
-        choices=["msrvtt", "amazon"],
+        choices=list(DATASETS_ALL),
     )
     ap.add_argument(
         "--variants",
         nargs="+",
         default=list(VARIANTS),
         choices=list(VARIANTS),
+    )
+    ap.add_argument(
+        "--merge-existing",
+        action="store_true",
+        help="merge new cells into existing JSON (keep other datasets)",
     )
     args = ap.parse_args()
 
@@ -481,6 +597,12 @@ def main():
     if "amazon" in args.datasets:
         print("loading Amazon...", flush=True)
         packs["amazon"] = load_amazon_pack(device)
+    if "coco" in args.datasets:
+        print("loading COCO ImgTxt...", flush=True)
+        packs["coco"] = load_coco_pack()
+    if "affec" in args.datasets:
+        print("loading Affec...", flush=True)
+        packs["affec"] = load_affec_pack()
 
     cells, trajs, cells_by_ds = [], {}, {}
     for ds, pack in packs.items():
@@ -495,16 +617,28 @@ def main():
             cells.append(cell)
             cells_by_ds[ds].append(cell)
 
+    out_json = OUT / "agod_online_stack_compare.json"
+    if args.merge_existing and out_json.exists():
+        prev = json.loads(out_json.read_text())
+        cells = _merge_cells(prev.get("cells", []), cells)
+        old_traj = prev.get("trajectory", {})
+        old_traj.update(trajs)
+        trajs = old_traj
+        cells_by_ds = {}
+        for c in cells:
+            cells_by_ds.setdefault(c["dataset"], []).append(c)
+
     payload = {
         "agod_version": "0.1.0",
         "method": "attribution-guided online stacking",
         "rule": "L = CE(stack(w), y) + lambda KL(w || alpha); alpha = EMA(FSDS/MSG)",
         "lambda_kl": LAMBDA_KL,
-        "variants": list(args.variants),
+        "variants": list(VARIANTS),
+        "datasets_run": list(args.datasets),
         "cells": cells,
         "trajectory": trajs,
     }
-    (OUT / "agod_online_stack_compare.json").write_text(json.dumps(payload, indent=2))
+    out_json.write_text(json.dumps(payload, indent=2))
     plot_board(cells_by_ds, OUT / "AGOD_Online_Stack_Compare_Board.png")
     write_docs(cells, OUT / "README.md")
     write_docs(cells, DOCS / "AGOD_online_stack_compare.md")
