@@ -1,4 +1,4 @@
-% Conventional modality balance vs a typed correlation loss vs effective-rank ranking.
+% Identification only. Not TSS. Parked; not a claimed method.
 % Table~\ref{tab:typed-aux-losses} is auto-generated.
 
 \paragraph{Balance is conventional; it is the wrong symmetric target.}
@@ -38,105 +38,14 @@ The typed replacement weights the off-diagonal by the covariate intensities alre
   C_{mm'}^{2}.
 \end{equation}
 A moving head pays for correlating with a quiet head; two concept-active heads are not penalized; two quiet heads stay off (hold).
-This is an EWC-style representation penalty on the same $(\hat c,\hat\delta)$ pair, not a second product loop and not $\eta\propto\pi$.
 On the recorded covariate hop $L_{\mathrm{corr}}=0.491$ (the video${}\to{}$audio leak dominates); on the concept hop it is $0.004$ because $\hat c$ is quiet.
 
 \paragraph{Effective rank is a ranking, not a loss type.}
-Roy--Vetterli
-$\mathrm{erank}(A)=\exp H(\tilde\sigma)$
-turns a spectrum into a scalar between $1$ and $\mathrm{rank}(A)$.
+Roy--Vetterli $\mathrm{erank}(A)=\exp H(\tilde\sigma)$ turns a spectrum into a scalar between $1$ and $\mathrm{rank}(A)$.
 It does \emph{not} sit next to $(\hat c,\hat\delta)$ as a third intensity.
+$\Delta\mathrm{erank}(\mathrm{Cov}\,X^{(m)})$ is location-invariant and does not rank the synthetic mean hop.
+erank of a $2\times 2$ cosine Gram is a monotone rewrite of $1-\cos$.
+Leave-one-out $\Delta\mathrm{erank}(R)$ of the Amazon $K\times K$ cosine Gram ranks Gift Cards and Subscription Boxes with the large $1-\cos$ hops ($\mathrm{erank}(R)=2.74$ of $K=9$).
 
-Three places people reach for it, and only one of them is new.
-
-\emph{(i)~$\mathrm{erank}(\widehat{\mathrm{Cov}} X^{(m)})$ and $\Delta\mathrm{erank}_m$.}
-Centered covariance is location-invariant: $X\mapsto X+a1^{\top}$ does not change the spectrum.
-The oracle covariate hop is exactly that location shift (an all-ones drift on the block).
-$\Delta\mathrm{erank}(\mathrm{Cov})$ is then sampling noise, and on the recorded pair it ranks text $>$ audio $>$ video --- the opposite of $\hat c$.
-A concept hop that only permutes $P(Y\mid X)$ inside a balanced mixture does not change $\mathrm{Cov}\,X$ either.
-Do not read $\Delta\mathrm{erank}(\mathrm{Cov})$ as the covariate sign.
-
-\emph{(ii)~erank of a $2\times 2$ cosine Gram of consecutive batch means.}
-Eigenvalues of
-$\bigl(\begin{smallmatrix}1&\rho\\ \rho&1\end{smallmatrix}\bigr)$
-are $1\pm\rho$, so $\mathrm{erank}$ is a monotone function of $|\rho|$.
-Ranking hops by that scalar is ranking hops by $1-\cos(\bar x_{t-1},\bar x_t)$, already the Amazon heatmap $\hat c$.
-On the oracle DGP consecutive drifted means stay collinear, cosine stays near $1$, and this ranking does \emph{not} put video first.
-The $2\times 2$ Gram is a shared language with the heatmap, not a new hop score.
-
-\emph{(iii)~$\mathrm{erank}(R)$ of the $K\times K$ cosine$(B_i,B_j)$ Gram, with leave-one-out $\Delta\mathrm{erank}$.}
-This is the ranking that is not already $\hat c$.
-$R$ is one kernel, not a hop.
-$\mathrm{erank}(R)$ says how many independent domains the stream has ($2.74$ of $K=9$ on Amazon).
-Leave-one-out $\Delta\mathrm{erank}$ ranks which category is the extra direction: Gift Cards and Subscription Boxes collapse the spectrum; Music / Mag / Beauty barely move it.
-That order agrees with the two large $1-\cos$ hops (Gift$\to$Music, Software$\to$SubBox) without being a rewrite of a single hop.
-Use it to order which domain the existing $(\hat c,\hat\delta)$ map is allowed to touch.
-Do not add $\mathrm{erank}$ as a third intensity.
-
-% Conventional modality balance vs a typed correlation loss vs effective-rank ranking.
-% Table~\ref{tab:typed-aux-losses} is identification. Table~\ref{tab:typed-aux-risk} is the risk layer.
-
-\paragraph{How this is evaluated.}
-The object is a \emph{typed} multimodal regularizer, not a new VQA number.
-Evaluation is therefore two-layer, and the layers are not interchangeable.
-
-\emph{Layer 1 --- identification, pre-specified.}
-On an oracle hop whose type is known, does the regularizer fire on the right head and stay off on the wrong hop?
-Covariate-only (video mean drift, clip-level text a structural null) and concept-only (video label-map rotation, $P(X)$ fixed) are the two probes.
-The claims are signed:
-inverse-CE / OGM-GE must \emph{not} match $\hat c$ on a covariate hop (it is allowed to put text first);
-$\mathrm{Corr}(z^{(m)},W)$ must match $\hat c$ (it is the same intensity);
-typed $L_{\mathrm{corr}}$ must be large on covariate and near zero on concept;
-$\Delta\mathrm{erank}(\mathrm{Cov})$ must \emph{fail} to rank the mean hop (location-invariant);
-leave-one-out $\Delta\mathrm{erank}(R)$ on the Amazon cosine Gram must rank Gift Cards and Subscription Boxes with the $1-\cos$ hops.
-Table~\ref{tab:typed-aux-losses} is this layer.
-A regularizer that cannot type the hop is not entered into the risk comparison as a typed method --- it is a conventional blender.
-
-\emph{Layer 2 --- risk, also pre-specified, not a leaderboard.}
-If the hop is typed, does the step move the metric that hop is supposed to move?
-Covariate-only: backward transfer (accuracy and Brier on batch~0 after the stream) --- do not chase $X$.
-Concept-only: post-change accuracy / CE --- relearn $P(Y\mid X)$.
-Amazon 9-category rating stream: online MSE and BWT MSE, with plateau as the clock that already won that board.
-Brier $\mathbb{E}\|P-e_Y\|_2^2$ is the MSE of the multimodal probe; Amazon is scalar rating MSE.
-Do not pool them into one ``multimodal score'': a method that helps concept post-change by chasing $X$ is a failure on the covariate hop.
-Table~\ref{tab:typed-aux-risk} is this layer.
-Balance is allowed to \emph{hurt} BWT. Typed $L_{\mathrm{corr}}$ is an EWC-style leak penalty, not a joint-CE minimizer, so a small online-MSE cost is acceptable if BWT holds. Hop-Gram erank extra-shrink is stronger TSS, not a third intensity; it should not be sold as a new win if plateau still has lower Amazon MSE.
-
-No ImageNet-scale fusion claim. MSR-VTT windows remain an illustration of $\hat c$ and the quiet-text hold.
-
-\paragraph{Why this is a promising multimodal-learning direction.}
-Static multimodal learning has two mature poles, and typed shift sits in the gap between them.
-
-The first pole is \emph{modality competition / imbalance}.
-Gradient blending, OGM-GE, PMR, QMF, and MMPareto all treat a lagging unimodal CE (or gradient energy) as a bug: the next unit of capacity should go to the weak head so that fusion uses every modality.
-That is the right instinct on an i.i.d.\ fusion problem in which every block is supposed to contribute.
-It is the wrong map once $W$ indexes a domain hop.
-A visual CE rise can be $P(X^{(v)}\mid W)$ moving while $P(Y\mid X^{(v)})$ is still valid; inverse-CE then raises $\eta_v$ (Polyak$_m$).
-Clip-level text has high $L_t$ because the caption does not see $W$; the same blender up-weights the structural null.
-The promising move is not another softmax on $L_m$.
-It is to \emph{type} the imbalance with $(\hat c_m,\hat\delta_m)$ before choosing a sign: covariate $\Rightarrow$ shrink the moving head; concept $\Rightarrow$ raise it; both quiet $\Rightarrow$ hold.
-Conventional balance becomes a signed ablation, not the method.
-
-The second pole is \emph{cross-modal agreement}: CLIP, CCA, Barlow, and pair losses \emph{maximize} $C_{mm'}$.
-Under a covariate hop that is leakage: a moving visual mean drags a quiet caption head into encoding $W$.
-Typed
-$L_{\mathrm{corr}}=\sum_{m\neq m'}\hat c_m(1-\hat c_{m'}/\sum_k\hat c_k)C_{mm'}^{2}$
-is the missing opposite sign --- an alignment penalty gated by the same intensities TSS already estimates.
-It is closer to EWC on the off-diagonal than to a contrastive objective, which is why it belongs next to the stepsize rather than as a second product loop.
-
-Leave-one-out $\mathrm{erank}(R)$ of the batch-relationship Gram is the dataset diagnostic those two poles usually skip.
-Multimodal papers report one number on a mixed test set.
-$\mathrm{erank}(R)=2.74$ of $K=9$ says the Amazon stream is a few domains, not nine independent tasks; Gift and SubBox are the extra directions.
-Evaluation should stratify by hop, which is Layer 2 above.
-Ranking domains is how the existing $(\hat c,\hat\delta)$ map chooses what to touch; it is not a third loss.
-
-\emph{Risk numbers, not oversold.}
-On the linear probe the covariate BWT accuracy is at ceiling ($1.0$): a global mean hop does not destroy class means in the first $r$ coordinates, so BWT acc is not the sensitive metric --- online CE / Brier is.
-TSS online CE $0.641$ (Brier $0.046$); inv-CE balance $0.653$ / $0.048$ (slightly worse on covariate, slightly better on concept: CE $0.329$ vs $0.362$); typed $L_{\mathrm{corr}}$ on mean-logits matches TSS (the learned heads are already weakly correlated, so the extra gradient is nearly inactive); hop-Gram erank extra-shrink \emph{raises} CE to $0.909$ / $0.640$ because on this DGP the $2\times 2$ Gram ranks the quiet head first.
-Amazon rating MSE: plateau $1.597$, TSS $1.631$, TSS$+L_{\mathrm{corr}}$ $1.631$ (no cut), TSS$+$erank $1.651$ online but BWT MSE $0.841$ vs $0.883$ (stronger freeze, the expected trade).
-These auxiliaries do not beat plateau on Amazon MSE.
-That is not a failure of the direction: Layer 1 already shows conventional balance has the wrong sign, and Layer 2 shows that using erank as a second intensity hurts.
-The promising claim is the typed evaluation protocol, not a new lowest MSE.
-
-The numbers, the identification figure, and both tables live in
-\texttt{results/typed\_aux\_losses/}.
+This note is identification only. It is not TSS and not a claimed method.
+Numbers and Table~\ref{tab:typed-aux-losses} live in \texttt{results/typed\_aux\_losses/}.

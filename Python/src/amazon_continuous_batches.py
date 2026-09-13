@@ -46,7 +46,6 @@ from typed_shift_stepsize import (
     _cosine_eta,
     tss_lr,
 )
-from typed_aux_losses import two_by_two_gram_erank
 
 CATEGORIES = (
     "Gift_Cards",
@@ -107,18 +106,12 @@ class RidgeSGD:
         err = self.predict(X) - y
         return float(np.mean(err**2))
 
-    def step(self, X, y, eta, ridge=1e-3, hop=None, hop_c=0.0, lam_hop=0.0):
+    def step(self, X, y, eta, ridge=1e-3):
         X = np.asarray(X, dtype=float)
         y = np.asarray(y, dtype=float)
         n = max(len(y), 1)
         err = self.predict(X) - y
-        gw = (X.T @ err) / n + float(ridge) * self.w
-        if hop is not None and float(lam_hop) * float(hop_c) > 0:
-            u = np.asarray(hop, dtype=float).reshape(-1)
-            nrm = float(np.linalg.norm(u) + 1e-12)
-            u = u / nrm
-            gw = gw - float(lam_hop) * float(hop_c) * u * float(np.dot(u, gw))
-        self.w -= float(eta) * gw
+        self.w -= float(eta) * ((X.T @ err) / n + float(ridge) * self.w)
         self.b -= float(eta) * float(err.mean())
 
 
@@ -482,16 +475,8 @@ def run_amazon_method(
     seed=SEED,
     ridge=1e-3,
     batch_size=32,
-    aux=None,
-    lam_aux=1.0,
 ):
-    """Warmup on B0. Typed maps set η for the next epoch; clocks use t.
-
-    ``aux='corr'``: do not chase the hop direction Δμ (Amazon analogue of typed
-    L_corr — one text head, so the off-diagonal is the mean hop).
-    ``aux='erank'``: extra shrink of η by the 2×2 hop-Gram erank (monotone in
-    1−cos; a stronger TSS, not a new intensity).
-    """
+    """Warmup on B0. Typed maps set η for the next epoch; clocks use t."""
     X = np.asarray(stream.X, dtype=float)
     y = np.asarray(stream.y, dtype=float)
     batch = np.asarray(stream.batch, dtype=int)
@@ -541,26 +526,9 @@ def run_amazon_method(
         online = probe.mse(X[ic], y[ic])
         chunk_t = min(int(batch_size), max(4, ic.size))
         n_steps = max(1, int(steps_per_batch))
-        hop = X[ic].mean(axis=0) - X[ip].mean(axis=0)
-        eta_use = float(eta)
-        if aux == "erank":
-            rho = float(R[t - 1, t])
-            er = two_by_two_gram_erank(rho)
-            eta_use = float(eta) / (1.0 + float(lam_aux) * max(er - 1.0, 0.0))
         for _ in range(n_steps):
             sl = rng.choice(ic.size, size=chunk_t, replace=False)
-            if aux == "corr":
-                probe.step(
-                    X[ic][sl],
-                    y[ic][sl],
-                    eta_use,
-                    ridge=ridge,
-                    hop=hop,
-                    hop_c=c_hat,
-                    lam_hop=float(lam_aux),
-                )
-            else:
-                probe.step(X[ic][sl], y[ic][sl], eta_use, ridge=ridge)
+            probe.step(X[ic][sl], y[ic][sl], eta, ridge=ridge)
             n_iter += 1
         post = probe.mse(X[ic], y[ic])
         bwt = probe.mse(X[i0], y[i0])
@@ -621,7 +589,6 @@ def run_amazon_method(
         "mean_c_d": float(np.mean([h.get("c_d", np.nan) for h in adapt])) if adapt else float("nan"),
         "mean_cosine": float(np.mean([h.get("cosine", np.nan) for h in adapt])) if adapt else float("nan"),
         "mean_delta": float(np.mean([h["delta"] for h in adapt])) if adapt else float("nan"),
-        "aux": aux,
         "online_path": online.tolist(),
         "null_path": null.tolist(),
         "cum_path": cum.tolist(),
