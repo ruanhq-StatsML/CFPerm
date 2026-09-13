@@ -1,0 +1,2640 @@
+{
+  "agod_version": "0.1.0",
+  "focus": "high correlation \u2192 ensemble decorrelation \u2192 soft_decorr LR",
+  "roles": [
+    "leader",
+    "diversifier",
+    "redundant"
+  ],
+  "design": {
+    "trigger": "mean_rho >= rho_high OR effective_rank <= erank_collinear",
+    "leader": "argmax unique mass after redundancy discount",
+    "diversifier": "residual uniqueness after removing leader direction",
+    "redundant": "collinear with leader \u2192 damp LR (FWD on)",
+    "scheduler": "soft_decorr"
+  },
+  "synthetic_isotropic": [
+    {
+      "pair_cos": -0.1,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.0,
+      "effective_rank": 2.96899378899835,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": -0.0475,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.0,
+      "effective_rank": 2.99312394446953,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.0050000000000000044,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.0050000000000000044,
+      "effective_rank": 2.999925125001546,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.05750000000000002,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.05750000000000002,
+      "effective_rank": 2.9902716391660453,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.11000000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.11000000000000003,
+      "effective_rank": 2.965037471829451,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.1625,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.1625,
+      "effective_rank": 2.92511348322764,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.21500000000000005,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.21500000000000005,
+      "effective_rank": 2.871414945335956,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.26750000000000007,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.26750000000000007,
+      "effective_rank": 2.8048829437042047,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.32000000000000006,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.32000000000000006,
+      "effective_rank": 2.726481639034203,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.37250000000000005,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.37250000000000005,
+      "effective_rank": 2.637192518824967,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.42500000000000004,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.42500000000000004,
+      "effective_rank": 2.5380062178735394,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.47750000000000004,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.47750000000000004,
+      "effective_rank": 2.429912055194746,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.5300000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.5300000000000001,
+      "effective_rank": 2.313884984979487,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr_decorr": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.0
+    },
+    {
+      "pair_cos": 0.5825000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.5825000000000001,
+      "effective_rank": 2.1908690296466413,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 1.20875,
+        "audio": 1.20875
+      },
+      "lr_decorr": {
+        "video": 1.3499999999999999,
+        "text": 1.2087499999999998,
+        "audio": 1.2087499999999998
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.1168562564632887
+    },
+    {
+      "pair_cos": 0.6350000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.6350000000000001,
+      "effective_rank": 2.0617551707808293,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 1.1824999999999999,
+        "audio": 1.1824999999999999
+      },
+      "lr_decorr": {
+        "video": 1.3499999999999999,
+        "text": 1.1824999999999997,
+        "audio": 1.1824999999999997
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.141649048625793
+    },
+    {
+      "pair_cos": 0.6875000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.6875000000000001,
+      "effective_rank": 1.9273494865898815,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 1.15625,
+        "audio": 1.15625
+      },
+      "lr_decorr": {
+        "video": 1.3499999999999999,
+        "text": 1.1562499999999998,
+        "audio": 1.1562499999999998
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.1675675675675676
+    },
+    {
+      "pair_cos": 0.7400000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.7400000000000001,
+      "effective_rank": 1.7883224075231177,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 1.13,
+        "audio": 1.13
+      },
+      "lr_decorr": {
+        "video": 1.3499999999999999,
+        "text": 1.1299999999999997,
+        "audio": 1.1299999999999997
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 1.194690265486726
+    },
+    {
+      "pair_cos": 0.7925000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.7925000000000001,
+      "effective_rank": 1.6451174627256644,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "redundant",
+        "audio": "redundant"
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 0.25,
+        "audio": 0.25
+      },
+      "lr_decorr": {
+        "video": 1.3499999999999999,
+        "text": 0.24999999999999997,
+        "audio": 0.24999999999999997
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 5.4
+    },
+    {
+      "pair_cos": 0.8450000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.8450000000000001,
+      "effective_rank": 1.4977607136822852,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "redundant",
+        "audio": "redundant"
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 0.25,
+        "audio": 0.25
+      },
+      "lr_decorr": {
+        "video": 1.3499999999999999,
+        "text": 0.24999999999999997,
+        "audio": 0.24999999999999997
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 5.4
+    },
+    {
+      "pair_cos": 0.8975000000000001,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.8975000000000001,
+      "effective_rank": 1.345373086301109,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "redundant",
+        "audio": "redundant"
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 0.25,
+        "audio": 0.25
+      },
+      "lr_decorr": {
+        "video": 1.3499999999999999,
+        "text": 0.24999999999999997,
+        "audio": 0.24999999999999997
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 5.4
+    },
+    {
+      "pair_cos": 0.95,
+      "geometry": "isotropic",
+      "mean_redundancy": 0.9499999999999998,
+      "effective_rank": 1.1844157938210214,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "redundant",
+        "audio": "redundant"
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 0.25,
+        "audio": 0.25
+      },
+      "lr_decorr": {
+        "video": 1.3499999999999999,
+        "text": 0.24999999999999997,
+        "audio": 0.24999999999999997
+      },
+      "lr_soft": {
+        "video": 0.9999999999999999,
+        "text": 0.9999999999999999,
+        "audio": 0.9999999999999999
+      },
+      "lr_ratio_decorr": 5.4
+    }
+  ],
+  "synthetic_asymmetric": [
+    {
+      "case": "low_corr",
+      "pair_cos": {
+        "video|text": 0.15,
+        "video|audio": 0.15,
+        "text|audio": 0.15
+      },
+      "alpha": {
+        "video": 0.45,
+        "text": 0.35,
+        "audio": 0.2
+      },
+      "mean_redundancy": 0.15,
+      "effective_rank": 2.9359032800506455,
+      "decorr_active": false,
+      "leader": "video",
+      "roles": {
+        "video": "diversifier",
+        "text": "diversifier",
+        "audio": "diversifier"
+      },
+      "residual": {
+        "video": 0.0,
+        "text": 0.85,
+        "audio": 0.85
+      },
+      "role_gain": {
+        "video": 1.0,
+        "text": 1.0,
+        "audio": 1.0
+      },
+      "lr": {
+        "video": 1.3150000000000002,
+        "text": 1.0450000000000002,
+        "audio": 0.64
+      }
+    },
+    {
+      "case": "high_iso",
+      "pair_cos": {
+        "video|text": 0.8,
+        "video|audio": 0.8,
+        "text|audio": 0.8
+      },
+      "alpha": {
+        "video": 0.45,
+        "text": 0.35,
+        "audio": 0.2
+      },
+      "mean_redundancy": 0.8000000000000002,
+      "effective_rank": 1.6243278367756073,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "redundant",
+        "audio": "redundant"
+      },
+      "residual": {
+        "video": 0.0,
+        "text": 0.19999999999999996,
+        "audio": 0.19999999999999996
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 0.25,
+        "audio": 0.25
+      },
+      "lr": {
+        "video": 1.7752500000000004,
+        "text": 0.26125000000000004,
+        "audio": 0.16
+      }
+    },
+    {
+      "case": "leader_plus_residual",
+      "pair_cos": {
+        "video|text": 0.85,
+        "video|audio": 0.85,
+        "text|audio": 0.2
+      },
+      "alpha": {
+        "video": 0.45,
+        "text": 0.35,
+        "audio": 0.2
+      },
+      "mean_redundancy": 0.6333333333333333,
+      "effective_rank": 1.7691073165104225,
+      "decorr_active": true,
+      "leader": "text",
+      "roles": {
+        "text": "leader",
+        "video": "redundant",
+        "audio": "diversifier"
+      },
+      "residual": {
+        "video": 0.15000000000000002,
+        "text": 0.0,
+        "audio": 0.8
+      },
+      "role_gain": {
+        "video": 0.25,
+        "text": 1.35,
+        "audio": 1.4
+      },
+      "lr": {
+        "video": 0.32875000000000004,
+        "text": 1.4107500000000004,
+        "audio": 0.8959999999999999
+      }
+    },
+    {
+      "case": "full_collinear",
+      "pair_cos": {
+        "video|text": 0.92,
+        "video|audio": 0.92,
+        "text|audio": 0.92
+      },
+      "alpha": {
+        "video": 0.45,
+        "text": 0.35,
+        "audio": 0.2
+      },
+      "mean_redundancy": 0.92,
+      "effective_rank": 1.2778555400870406,
+      "decorr_active": true,
+      "leader": "video",
+      "roles": {
+        "video": "leader",
+        "text": "redundant",
+        "audio": "redundant"
+      },
+      "residual": {
+        "video": 0.0,
+        "text": 0.07999999999999996,
+        "audio": 0.07999999999999996
+      },
+      "role_gain": {
+        "video": 1.35,
+        "text": 0.25,
+        "audio": 0.25
+      },
+      "lr": {
+        "video": 1.7752500000000004,
+        "text": 0.26125000000000004,
+        "audio": 0.16
+      }
+    }
+  ],
+  "from_gradcos": {
+    "msrvtt:equal": {
+      "n_windows": 6,
+      "mean_redundancy": 0.1918959456990219,
+      "mean_effective_rank": 2.852946920229177,
+      "frac_decorr_active": 0.0,
+      "leader_counts": {
+        "video": 5,
+        "text": 1
+      },
+      "role_counts": {
+        "leader": 0,
+        "diversifier": 18,
+        "redundant": 0
+      },
+      "role_frac": {
+        "leader": 0.0,
+        "diversifier": 1.0,
+        "redundant": 0.0
+      },
+      "rho_high": 0.55,
+      "residual_div": 0.25,
+      "eta": 0.75,
+      "dataset": "msrvtt",
+      "source_scheduler": "equal",
+      "mean_acc_lift_source": 0.00992063492063495
+    },
+    "msrvtt:soft": {
+      "n_windows": 6,
+      "mean_redundancy": 0.2174557808311146,
+      "mean_effective_rank": 2.8226584206786143,
+      "frac_decorr_active": 0.0,
+      "leader_counts": {
+        "video": 5,
+        "text": 1
+      },
+      "role_counts": {
+        "leader": 0,
+        "diversifier": 18,
+        "redundant": 0
+      },
+      "role_frac": {
+        "leader": 0.0,
+        "diversifier": 1.0,
+        "redundant": 0.0
+      },
+      "rho_high": 0.55,
+      "residual_div": 0.25,
+      "eta": 0.75,
+      "dataset": "msrvtt",
+      "source_scheduler": "soft",
+      "mean_acc_lift_source": 0.0059523809523809494
+    },
+    "msrvtt:soft_gradcos": {
+      "n_windows": 6,
+      "mean_redundancy": 0.21547731923643468,
+      "mean_effective_rank": 2.8290781682989596,
+      "frac_decorr_active": 0.0,
+      "leader_counts": {
+        "video": 5,
+        "text": 1
+      },
+      "role_counts": {
+        "leader": 0,
+        "diversifier": 18,
+        "redundant": 0
+      },
+      "role_frac": {
+        "leader": 0.0,
+        "diversifier": 1.0,
+        "redundant": 0.0
+      },
+      "rho_high": 0.55,
+      "residual_div": 0.25,
+      "eta": 0.75,
+      "dataset": "msrvtt",
+      "source_scheduler": "soft_gradcos",
+      "mean_acc_lift_source": -0.005952380952380941
+    },
+    "amazon:equal": {
+      "n_windows": 6,
+      "mean_redundancy": 0.6881612992935082,
+      "mean_effective_rank": 1.5378015410601782,
+      "frac_decorr_active": 1.0,
+      "leader_counts": {
+        "image": 6
+      },
+      "role_counts": {
+        "leader": 6,
+        "diversifier": 5,
+        "redundant": 1
+      },
+      "role_frac": {
+        "leader": 0.5,
+        "diversifier": 0.4166666666666667,
+        "redundant": 0.08333333333333333
+      },
+      "rho_high": 0.55,
+      "residual_div": 0.25,
+      "eta": 0.75,
+      "dataset": "amazon",
+      "source_scheduler": "equal",
+      "mean_acc_lift_source": -0.008996212121212127
+    },
+    "amazon:soft": {
+      "n_windows": 6,
+      "mean_redundancy": 0.6687464180214934,
+      "mean_effective_rank": 1.5634354894197615,
+      "frac_decorr_active": 1.0,
+      "leader_counts": {
+        "image": 5,
+        "text": 1
+      },
+      "role_counts": {
+        "leader": 6,
+        "diversifier": 5,
+        "redundant": 1
+      },
+      "role_frac": {
+        "leader": 0.5,
+        "diversifier": 0.4166666666666667,
+        "redundant": 0.08333333333333333
+      },
+      "rho_high": 0.55,
+      "residual_div": 0.25,
+      "eta": 0.75,
+      "dataset": "amazon",
+      "source_scheduler": "soft",
+      "mean_acc_lift_source": -0.006628787878787901
+    },
+    "amazon:soft_gradcos": {
+      "n_windows": 6,
+      "mean_redundancy": 0.7095976666043132,
+      "mean_effective_rank": 1.5111827135242848,
+      "frac_decorr_active": 1.0,
+      "leader_counts": {
+        "image": 6
+      },
+      "role_counts": {
+        "leader": 6,
+        "diversifier": 4,
+        "redundant": 2
+      },
+      "role_frac": {
+        "leader": 0.5,
+        "diversifier": 0.3333333333333333,
+        "redundant": 0.16666666666666666
+      },
+      "rho_high": 0.55,
+      "residual_div": 0.25,
+      "eta": 0.75,
+      "dataset": "amazon",
+      "source_scheduler": "soft_gradcos",
+      "mean_acc_lift_source": 0.00015782828282827807
+    }
+  },
+  "from_gradcos_windows": {
+    "msrvtt:equal": [
+      {
+        "t": 0,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.534202367101643,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.3097383934426803,
+          "text": 1.2063216033733672,
+          "audio": 0.4839400031839526
+        },
+        "lr_logged": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": 0.25000000000000006
+      },
+      {
+        "t": 1,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.781263470425946,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.1861212852710437,
+          "text": 1.1152062102215927,
+          "audio": 0.6986725045073637
+        },
+        "lr_logged": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.1785714285714285
+      },
+      {
+        "t": 2,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.999516523667465,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.2741051650236401,
+          "text": 1.367858420750753,
+          "audio": 0.3580364142256073
+        },
+        "lr_logged": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.11904761904761907
+      },
+      {
+        "t": 3,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.9744952891709686,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.2755640093922564,
+          "text": 1.1064271225024176,
+          "audio": 0.6180088681053263
+        },
+        "lr_logged": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": 0.09523809523809523
+      },
+      {
+        "t": 4,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.8945579991297934,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.3480714576831647,
+          "text": 1.327686663240701,
+          "audio": 0.32424187907613455
+        },
+        "lr_logged": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": 0.03571428571428581
+      },
+      {
+        "t": 5,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.9336458718792477,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.578860906885684,
+          "text": 0.62387977868842,
+          "audio": 0.7972593144258958
+        },
+        "lr_logged": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.023809523809523836
+      }
+    ],
+    "msrvtt:soft": [
+      {
+        "t": 0,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.534202367101643,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.3097383934426803,
+          "text": 1.2063216033733672,
+          "audio": 0.4839400031839526
+        },
+        "lr_logged": {
+          "video": 1.3097383934426803,
+          "text": 1.2063216033733672,
+          "audio": 0.4839400031839526,
+          "shared": 1.0000000000000002
+        },
+        "acc_lift_logged": 0.25000000000000006
+      },
+      {
+        "t": 1,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.710589601549619,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.1861212852710437,
+          "text": 1.1152062102215927,
+          "audio": 0.6986725045073637
+        },
+        "lr_logged": {
+          "video": 1.1861212852710437,
+          "text": 1.1152062102215927,
+          "audio": 0.6986725045073637,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.22619047619047616
+      },
+      {
+        "t": 2,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.9997343456089887,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.2741051650236401,
+          "text": 1.367858420750753,
+          "audio": 0.3580364142256073
+        },
+        "lr_logged": {
+          "video": 1.2741051650236401,
+          "text": 1.367858420750753,
+          "audio": 0.3580364142256073,
+          "shared": 1.0000000000000002
+        },
+        "acc_lift_logged": -0.13095238095238104
+      },
+      {
+        "t": 3,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.971714473086569,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.2755640093922564,
+          "text": 1.1064271225024176,
+          "audio": 0.6180088681053263
+        },
+        "lr_logged": {
+          "video": 1.2755640093922564,
+          "text": 1.1064271225024176,
+          "audio": 0.6180088681053263,
+          "shared": 1.0000000000000002
+        },
+        "acc_lift_logged": 0.11904761904761901
+      },
+      {
+        "t": 4,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.8733052302661,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.3480714576831647,
+          "text": 1.327686663240701,
+          "audio": 0.32424187907613455
+        },
+        "lr_logged": {
+          "video": 1.3480714576831647,
+          "text": 1.327686663240701,
+          "audio": 0.32424187907613455,
+          "shared": 1.0
+        },
+        "acc_lift_logged": 0.059523809523809534
+      },
+      {
+        "t": 5,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.8464045064587657,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.578860906885684,
+          "text": 0.62387977868842,
+          "audio": 0.7972593144258958
+        },
+        "lr_logged": {
+          "video": 1.578860906885684,
+          "text": 0.62387977868842,
+          "audio": 0.7972593144258958,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.0357142857142857
+      }
+    ],
+    "msrvtt:soft_gradcos": [
+      {
+        "t": 0,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.534202367101643,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.3097383934426803,
+          "text": 1.2063216033733672,
+          "audio": 0.4839400031839526
+        },
+        "lr_logged": {
+          "video": 0.8174000380002769,
+          "text": 0.7581208892075559,
+          "audio": 0.3024517709060764,
+          "shared": 0.625990899371303
+        },
+        "acc_lift_logged": 0.23809523809523808
+      },
+      {
+        "t": 1,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.7023739909410818,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.1861212852710437,
+          "text": 1.1152062102215927,
+          "audio": 0.6986725045073637
+        },
+        "lr_logged": {
+          "video": 0.7407965981820236,
+          "text": 0.6852051192450419,
+          "audio": 0.4366609810966702,
+          "shared": 0.6208875661745786
+        },
+        "acc_lift_logged": -0.16666666666666663
+      },
+      {
+        "t": 2,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.9991351615551545,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.2741051650236401,
+          "text": 1.367858420750753,
+          "audio": 0.3580364142256073
+        },
+        "lr_logged": {
+          "video": 0.7969310859736896,
+          "text": 0.8409182094503882,
+          "audio": 0.22376697126691608,
+          "shared": 0.6205387555636647
+        },
+        "acc_lift_logged": -0.13095238095238104
+      },
+      {
+        "t": 3,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.9421006351991625,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.2755640093922564,
+          "text": 1.1064271225024176,
+          "audio": 0.6180088681053263
+        },
+        "lr_logged": {
+          "video": 0.7972757254193867,
+          "text": 0.6869558408640764,
+          "audio": 0.3862290226379885,
+          "shared": 0.6234868629738172
+        },
+        "acc_lift_logged": 0.04761904761904767
+      },
+      {
+        "t": 4,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.854798491790668,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.3480714576831647,
+          "text": 1.327686663240701,
+          "audio": 0.32424187907613455
+        },
+        "lr_logged": {
+          "video": 0.8415715047702931,
+          "text": 0.8108318313278978,
+          "audio": 0.20263532692113606,
+          "shared": 0.6183462210064423
+        },
+        "acc_lift_logged": 0.03571428571428581
+      },
+      {
+        "t": 5,
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.941858363206049,
+        "role_gain": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0
+        },
+        "lr_decorr": {
+          "video": 1.578860906885684,
+          "text": 0.62387977868842,
+          "audio": 0.7972593144258958
+        },
+        "lr_logged": {
+          "video": 0.9868598480461424,
+          "text": 0.38809191290717887,
+          "audio": 0.4982668331431248,
+          "shared": 0.6244061980321487
+        },
+        "acc_lift_logged": -0.059523809523809534
+      }
+    ],
+    "amazon:equal": [
+      {
+        "t": 0,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.5058000666135454,
+        "role_gain": {
+          "text": 1.142415588721233,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.5946045339056303,
+          "image": 1.9973519193036193
+        },
+        "lr_logged": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.06250000000000006
+      },
+      {
+        "t": 1,
+        "roles": {
+          "image": "leader",
+          "text": "redundant"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.3820525229052762,
+        "role_gain": {
+          "text": 0.25,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.08427029339193223,
+          "image": 2.2449404156835664
+        },
+        "lr_logged": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": 0.0
+      },
+      {
+        "t": 2,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.5789854006447197,
+        "role_gain": {
+          "text": 1.1705659654980551,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.40216736769682737,
+          "image": 2.2361850913205807
+        },
+        "lr_logged": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": 0.125
+      },
+      {
+        "t": 3,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.6390041908650916,
+        "role_gain": {
+          "text": 1.195491799889798,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.8756860783712065,
+          "image": 1.7111381726665937
+        },
+        "lr_logged": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.022727272727272707
+      },
+      {
+        "t": 4,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.6140235475937834,
+        "role_gain": {
+          "text": 1.1848914640225066,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.5484239817623748,
+          "image": 2.075155954904286
+        },
+        "lr_logged": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.03125
+      },
+      {
+        "t": 5,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.5069435177386539,
+        "role_gain": {
+          "text": 1.1428387933483968,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 1.0196580302659068,
+          "image": 1.4955096126673633
+        },
+        "lr_logged": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.0625
+      }
+    ],
+    "amazon:soft": [
+      {
+        "t": 0,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.5058000666135454,
+        "role_gain": {
+          "text": 1.142415588721233,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.5946141889942066,
+          "image": 1.9973405098220727
+        },
+        "lr_logged": {
+          "text": 0.5204885112429095,
+          "image": 1.4795114887570908,
+          "shared": 1.0000000000000002
+        },
+        "acc_lift_logged": -0.06250000000000006
+      },
+      {
+        "t": 1,
+        "roles": {
+          "image": "leader",
+          "text": "redundant"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.4376852810154812,
+        "role_gain": {
+          "text": 0.25,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.08731932778849606,
+          "image": 2.228475629942122
+        },
+        "lr_logged": {
+          "text": 0.34927731115398425,
+          "image": 1.650722688846016,
+          "shared": 1.0000000000000002
+        },
+        "acc_lift_logged": 0.020833333333333315
+      },
+      {
+        "t": 2,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.5858850590159004,
+        "role_gain": {
+          "text": 1.173339851051492,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.3959626342231889,
+          "image": 2.2444205225602234
+        },
+        "lr_logged": {
+          "text": 0.3374662795850203,
+          "image": 1.6625337204149802,
+          "shared": 1.0000000000000002
+        },
+        "acc_lift_logged": 0.0
+      },
+      {
+        "t": 3,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.627194569693355,
+        "role_gain": {
+          "text": 1.1904379743550906,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.8956264442024012,
+          "image": 1.684327007605534
+        },
+        "lr_logged": {
+          "text": 0.7523503647366416,
+          "image": 1.2476496352633586,
+          "shared": 1.0
+        },
+        "acc_lift_logged": 0.022727272727272707
+      },
+      {
+        "t": 4,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.6638108745678897,
+        "role_gain": {
+          "text": 1.2063725023067802,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.5473456491093716,
+          "image": 2.0874888354262695
+        },
+        "lr_logged": {
+          "text": 0.45371197375831906,
+          "image": 1.5462880262416812,
+          "shared": 1.0
+        },
+        "acc_lift_logged": -0.0625
+      },
+      {
+        "t": 5,
+        "roles": {
+          "text": "leader",
+          "image": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": true,
+        "effective_rank": 1.5602370856123955,
+        "role_gain": {
+          "text": 1.35,
+          "image": 1.1631385076284075
+        },
+        "lr_decorr": {
+          "text": 1.3617141852906576,
+          "image": 1.1530457520750312
+        },
+        "lr_logged": {
+          "text": 1.0086771742893759,
+          "image": 0.9913228257106241,
+          "shared": 1.0
+        },
+        "acc_lift_logged": 0.04166666666666663
+      }
+    ],
+    "amazon:soft_gradcos": [
+      {
+        "t": 0,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.5058000666135454,
+        "role_gain": {
+          "text": 1.142415588721233,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.5946141889942066,
+          "image": 1.9973405098220727
+        },
+        "lr_logged": {
+          "text": 0.3231458348107204,
+          "image": 0.9460024780846255,
+          "shared": 0.6345741564476729
+        },
+        "acc_lift_logged": -0.06250000000000006
+      },
+      {
+        "t": 1,
+        "roles": {
+          "image": "leader",
+          "text": "redundant"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.4176207996756112,
+        "role_gain": {
+          "text": 0.25,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.08494653875361355,
+          "image": 2.2412886907304874
+        },
+        "lr_logged": {
+          "text": 0.2108205467687207,
+          "image": 1.067251323561427,
+          "shared": 0.6390359351650738
+        },
+        "acc_lift_logged": 0.0
+      },
+      {
+        "t": 2,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.600281475163416,
+        "role_gain": {
+          "text": 1.1792008526011069,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.3542665066511747,
+          "image": 2.294420422166309
+        },
+        "lr_logged": {
+          "text": 0.18523066667201737,
+          "image": 1.0973937866722412,
+          "shared": 0.6413122266721293
+        },
+        "acc_lift_logged": 0.14583333333333337
+      },
+      {
+        "t": 3,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.575835430701259,
+        "role_gain": {
+          "text": 1.1693069334520187,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.9368076361649826,
+          "image": 1.6184274268441072
+        },
+        "lr_logged": {
+          "text": 0.5000061599461624,
+          "image": 0.7660561712395911,
+          "shared": 0.6330311655928768
+        },
+        "acc_lift_logged": -0.11363636363636365
+      },
+      {
+        "t": 4,
+        "roles": {
+          "image": "leader",
+          "text": "diversifier"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.5162618126381415,
+        "role_gain": {
+          "text": 1.146306214969361,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.5044281258766634,
+          "image": 2.1059371213025333
+        },
+        "lr_logged": {
+          "text": 0.2714438103269667,
+          "image": 0.9834134489807599,
+          "shared": 0.6274286296538633
+        },
+        "acc_lift_logged": 0.03125
+      },
+      {
+        "t": 5,
+        "roles": {
+          "image": "leader",
+          "text": "redundant"
+        },
+        "leader": "image",
+        "decorr_active": true,
+        "effective_rank": 1.4512966963537355,
+        "role_gain": {
+          "text": 0.25,
+          "image": 1.35
+        },
+        "lr_decorr": {
+          "text": 0.2034943236234423,
+          "image": 1.601130652433412
+        },
+        "lr_logged": {
+          "text": 0.5181951312962442,
+          "image": 0.7544062716087786,
+          "shared": 0.6363007014525114
+        },
+        "acc_lift_logged": 0.0
+      }
+    ]
+  },
+  "online_cells": {
+    "msrvtt:equal": {
+      "dataset": "msrvtt",
+      "scheduler": "equal",
+      "mean_pair_cos": 0.18978459372503909,
+      "frac_decorr_active": 0.0,
+      "mean_acc_lift": 0.00992063492063495,
+      "mean_lr_ratio": 1.0,
+      "mean_effective_rank": 2.8097587871572167
+    },
+    "msrvtt:soft": {
+      "dataset": "msrvtt",
+      "scheduler": "soft",
+      "mean_pair_cos": 0.21588986798633122,
+      "frac_decorr_active": 0.0,
+      "mean_acc_lift": 0.0059523809523809494,
+      "mean_lr_ratio": 2.8294739620529037,
+      "mean_effective_rank": 2.781935741376811
+    },
+    "msrvtt:soft_decorr": {
+      "dataset": "msrvtt",
+      "scheduler": "soft_decorr",
+      "mean_pair_cos": 0.21588986798633122,
+      "frac_decorr_active": 0.0,
+      "mean_acc_lift": 0.0059523809523809494,
+      "mean_lr_ratio": 2.8294739620529037,
+      "mean_effective_rank": 2.781935741376811
+    }
+  },
+  "online_trajectory": {
+    "msrvtt:equal": [
+      {
+        "t": 0,
+        "alpha": {
+          "video": 0.4480512568306223,
+          "text": 0.409748741990136,
+          "audio": 0.1422000011792417
+        },
+        "lr_mult": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_pre": 0.4880952380952381,
+        "acc_post": 0.7380952380952381,
+        "acc_lift": 0.25000000000000006,
+        "train_loss": 0.36462893464735574,
+        "wall_ms": 50.71217499789782,
+        "mean_pair_cos": 0.4269208203966673,
+        "pair_cos": {
+          "video|text": 0.5629455854384026,
+          "video|audio": 0.5008803635548055,
+          "text|audio": 0.2169365121967939
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.446460338476194,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 1,
+        "alpha": {
+          "video": 0.4022671426929791,
+          "text": 0.37600230008207136,
+          "audio": 0.22173055722494955
+        },
+        "lr_mult": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_pre": 0.7023809523809523,
+        "acc_post": 0.5238095238095238,
+        "acc_lift": -0.1785714285714285,
+        "train_loss": 0.3471146984824112,
+        "wall_ms": 48.908487980952486,
+        "mean_pair_cos": 0.2841458096398112,
+        "pair_cos": {
+          "video|text": 0.45175769273807787,
+          "video|audio": 0.2987977977830525,
+          "text|audio": 0.10188193839830322
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.7099024904481825,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 2,
+        "alpha": {
+          "video": 0.43485376482357035,
+          "text": 0.4695771928706492,
+          "audio": 0.09556904230578049
+        },
+        "lr_mult": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_pre": 0.6309523809523809,
+        "acc_post": 0.5119047619047619,
+        "acc_lift": -0.11904761904761907,
+        "train_loss": 0.30997467280498575,
+        "wall_ms": 49.83606899622828,
+        "mean_pair_cos": -0.01266811184389706,
+        "pair_cos": {
+          "video|text": 0.019665372138119603,
+          "video|audio": -0.11532514624045762,
+          "text|audio": 0.05765543857064683
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.9828579482878608,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 3,
+        "alpha": {
+          "video": 0.43539407755268755,
+          "text": 0.37275078611200646,
+          "audio": 0.19185513633530604
+        },
+        "lr_mult": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_pre": 0.47619047619047616,
+        "acc_post": 0.5714285714285714,
+        "acc_lift": 0.09523809523809523,
+        "train_loss": 0.2514290027320385,
+        "wall_ms": 49.301683000521734,
+        "mean_pair_cos": 0.09368374517209692,
+        "pair_cos": {
+          "video|text": 0.12389984640610371,
+          "video|audio": 0.12860011389975956,
+          "text|audio": 0.028551275210427413
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.9677520426498,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 4,
+        "alpha": {
+          "video": 0.4622486880308017,
+          "text": 0.4546987641632225,
+          "audio": 0.08305254780597575
+        },
+        "lr_mult": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_pre": 0.7619047619047619,
+        "acc_post": 0.7976190476190477,
+        "acc_lift": 0.03571428571428581,
+        "train_loss": 0.20246726237237453,
+        "wall_ms": 50.45146599877626,
+        "mean_pair_cos": 0.1939329059723207,
+        "pair_cos": {
+          "video|text": 0.37882831272216944,
+          "video|audio": 0.1425789206795025,
+          "text|audio": 0.060391484515290215
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.8357266676246473,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      },
+      {
+        "t": 5,
+        "alpha": {
+          "video": 0.5477262618095126,
+          "text": 0.1940295476623778,
+          "audio": 0.2582441905281096
+        },
+        "lr_mult": {
+          "video": 1.0,
+          "text": 1.0,
+          "audio": 1.0,
+          "shared": 1.0
+        },
+        "acc_pre": 0.8095238095238095,
+        "acc_post": 0.7857142857142857,
+        "acc_lift": -0.023809523809523836,
+        "train_loss": 0.12653363347053528,
+        "wall_ms": 49.54392698709853,
+        "mean_pair_cos": 0.15269239301323545,
+        "pair_cos": {
+          "video|text": 0.2274731679065956,
+          "video|audio": 0.178334239698505,
+          "text|audio": 0.05226977143460573
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.9158532354566153,
+        "lr_mean": 1.0,
+        "lr_std": 0.0,
+        "lr_min": 1.0,
+        "lr_max": 1.0,
+        "lr_range": 0.0,
+        "lr_ratio": 1.0,
+        "lr_cv": 0.0
+      }
+    ],
+    "msrvtt:soft": [
+      {
+        "t": 0,
+        "alpha": {
+          "video": 0.4480512568306223,
+          "text": 0.409748741990136,
+          "audio": 0.1422000011792417
+        },
+        "lr_mult": {
+          "video": 1.3097383934426803,
+          "text": 1.2063216033733672,
+          "audio": 0.4839400031839526,
+          "shared": 1.0000000000000002
+        },
+        "acc_pre": 0.4880952380952381,
+        "acc_post": 0.7380952380952381,
+        "acc_lift": 0.25000000000000006,
+        "train_loss": 0.3254786682980401,
+        "wall_ms": 50.04310799995437,
+        "mean_pair_cos": 0.4269208203966673,
+        "pair_cos": {
+          "video|text": 0.5629455854384026,
+          "video|audio": 0.5008803635548055,
+          "text|audio": 0.2169365121967939
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.446460338476194,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.3673437975089042,
+        "lr_min": 0.4839400031839526,
+        "lr_max": 1.3097383934426803,
+        "lr_range": 0.8257983902587277,
+        "lr_ratio": 2.7064065479720836,
+        "lr_cv": 0.36734379750890417
+      },
+      {
+        "t": 1,
+        "alpha": {
+          "video": 0.4022671426929791,
+          "text": 0.37600230008207136,
+          "audio": 0.22173055722494955
+        },
+        "lr_mult": {
+          "video": 1.1861212852710437,
+          "text": 1.1152062102215927,
+          "audio": 0.6986725045073637,
+          "shared": 1.0
+        },
+        "acc_pre": 0.7023809523809523,
+        "acc_post": 0.47619047619047616,
+        "acc_lift": -0.22619047619047616,
+        "train_loss": 0.3389108307659626,
+        "wall_ms": 50.69388000993058,
+        "mean_pair_cos": 0.32981316004694167,
+        "pair_cos": {
+          "video|text": 0.4768685719339682,
+          "video|audio": 0.3758195052493155,
+          "text|audio": 0.13675140295754143
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.637136940357928,
+        "lr_mean": 1.0,
+        "lr_std": 0.21502857425966418,
+        "lr_min": 0.6986725045073637,
+        "lr_max": 1.1861212852710437,
+        "lr_range": 0.4874487807636799,
+        "lr_ratio": 1.6976784940283025,
+        "lr_cv": 0.21502857425966418
+      },
+      {
+        "t": 2,
+        "alpha": {
+          "video": 0.43485376482357035,
+          "text": 0.4695771928706492,
+          "audio": 0.09556904230578049
+        },
+        "lr_mult": {
+          "video": 1.2741051650236401,
+          "text": 1.367858420750753,
+          "audio": 0.3580364142256073,
+          "shared": 1.0000000000000002
+        },
+        "acc_pre": 0.6428571428571429,
+        "acc_post": 0.5119047619047619,
+        "acc_lift": -0.13095238095238104,
+        "train_loss": 0.2895807083696127,
+        "wall_ms": 53.98747100844048,
+        "mean_pair_cos": -0.009395477068700347,
+        "pair_cos": {
+          "video|text": -0.06585539538335673,
+          "video|audio": 0.007758362631010692,
+          "text|audio": 0.029910601546245
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.994692930389976,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.45554754770868544,
+        "lr_min": 0.3580364142256073,
+        "lr_max": 1.367858420750753,
+        "lr_range": 1.0098220065251455,
+        "lr_ratio": 3.820444978227362,
+        "lr_cv": 0.45554754770868533
+      },
+      {
+        "t": 3,
+        "alpha": {
+          "video": 0.43539407755268755,
+          "text": 0.37275078611200646,
+          "audio": 0.19185513633530604
+        },
+        "lr_mult": {
+          "video": 1.2755640093922564,
+          "text": 1.1064271225024176,
+          "audio": 0.6180088681053263,
+          "shared": 1.0000000000000002
+        },
+        "acc_pre": 0.4523809523809524,
+        "acc_post": 0.5714285714285714,
+        "acc_lift": 0.11904761904761901,
+        "train_loss": 0.252704140331064,
+        "wall_ms": 51.15844000829384,
+        "mean_pair_cos": 0.09874584829889027,
+        "pair_cos": {
+          "video|text": 0.18354695512982727,
+          "video|audio": 0.09895337734192497,
+          "text|audio": 0.013737212424918592
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.956578889649123,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.2787947157095188,
+        "lr_min": 0.6180088681053263,
+        "lr_max": 1.2755640093922564,
+        "lr_range": 0.6575551412869302,
+        "lr_ratio": 2.063989815069877,
+        "lr_cv": 0.27879471570951875
+      },
+      {
+        "t": 4,
+        "alpha": {
+          "video": 0.4622486880308017,
+          "text": 0.4546987641632225,
+          "audio": 0.08305254780597575
+        },
+        "lr_mult": {
+          "video": 1.3480714576831647,
+          "text": 1.327686663240701,
+          "audio": 0.32424187907613455,
+          "shared": 1.0
+        },
+        "acc_pre": 0.7380952380952381,
+        "acc_post": 0.7976190476190477,
+        "acc_lift": 0.059523809523809534,
+        "train_loss": 0.1899755177221128,
+        "wall_ms": 67.04953999724239,
+        "mean_pair_cos": 0.2133479854288627,
+        "pair_cos": {
+          "video|text": 0.36184817737753555,
+          "video|audio": 0.15546346884631002,
+          "text|audio": 0.1227323100627425
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.8367962482077873,
+        "lr_mean": 1.0,
+        "lr_std": 0.47790561373352836,
+        "lr_min": 0.32424187907613455,
+        "lr_max": 1.3480714576831647,
+        "lr_range": 1.0238295786070302,
+        "lr_ratio": 4.157610551493957,
+        "lr_cv": 0.47790561373352836
+      },
+      {
+        "t": 5,
+        "alpha": {
+          "video": 0.5477262618095126,
+          "text": 0.1940295476623778,
+          "audio": 0.2582441905281096
+        },
+        "lr_mult": {
+          "video": 1.578860906885684,
+          "text": 0.62387977868842,
+          "audio": 0.7972593144258958,
+          "shared": 1.0
+        },
+        "acc_pre": 0.8333333333333334,
+        "acc_post": 0.7976190476190477,
+        "acc_lift": -0.0357142857142857,
+        "train_loss": 0.1206541077366897,
+        "wall_ms": 60.42744897422381,
+        "mean_pair_cos": 0.23590687081532571,
+        "pair_cos": {
+          "video|text": 0.362065010776074,
+          "video|audio": 0.16389857052545082,
+          "text|audio": 0.18175703114445224
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.819949101179858,
+        "lr_mean": 1.0,
+        "lr_std": 0.4153914442976433,
+        "lr_min": 0.62387977868842,
+        "lr_max": 1.578860906885684,
+        "lr_range": 0.954981128197264,
+        "lr_ratio": 2.530713385525841,
+        "lr_cv": 0.4153914442976433
+      }
+    ],
+    "msrvtt:soft_decorr": [
+      {
+        "t": 0,
+        "alpha": {
+          "video": 0.4480512568306223,
+          "text": 0.409748741990136,
+          "audio": 0.1422000011792417
+        },
+        "lr_mult": {
+          "video": 1.3097383934426803,
+          "text": 1.2063216033733672,
+          "audio": 0.4839400031839526,
+          "shared": 1.0000000000000002
+        },
+        "acc_pre": 0.4880952380952381,
+        "acc_post": 0.7380952380952381,
+        "acc_lift": 0.25000000000000006,
+        "train_loss": 0.3254786682980401,
+        "wall_ms": 60.723066999344155,
+        "mean_pair_cos": 0.4269208203966673,
+        "pair_cos": {
+          "video|text": 0.5629455854384026,
+          "video|audio": 0.5008803635548055,
+          "text|audio": 0.2169365121967939
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.446460338476194,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.3673437975089042,
+        "lr_min": 0.4839400031839526,
+        "lr_max": 1.3097383934426803,
+        "lr_range": 0.8257983902587277,
+        "lr_ratio": 2.7064065479720836,
+        "lr_cv": 0.36734379750890417
+      },
+      {
+        "t": 1,
+        "alpha": {
+          "video": 0.4022671426929791,
+          "text": 0.37600230008207136,
+          "audio": 0.22173055722494955
+        },
+        "lr_mult": {
+          "video": 1.1861212852710437,
+          "text": 1.1152062102215927,
+          "audio": 0.6986725045073637,
+          "shared": 1.0
+        },
+        "acc_pre": 0.7023809523809523,
+        "acc_post": 0.47619047619047616,
+        "acc_lift": -0.22619047619047616,
+        "train_loss": 0.3389108307659626,
+        "wall_ms": 60.618971998337656,
+        "mean_pair_cos": 0.32981316004694167,
+        "pair_cos": {
+          "video|text": 0.4768685719339682,
+          "video|audio": 0.3758195052493155,
+          "text|audio": 0.13675140295754143
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.637136940357928,
+        "lr_mean": 1.0,
+        "lr_std": 0.21502857425966418,
+        "lr_min": 0.6986725045073637,
+        "lr_max": 1.1861212852710437,
+        "lr_range": 0.4874487807636799,
+        "lr_ratio": 1.6976784940283025,
+        "lr_cv": 0.21502857425966418
+      },
+      {
+        "t": 2,
+        "alpha": {
+          "video": 0.43485376482357035,
+          "text": 0.4695771928706492,
+          "audio": 0.09556904230578049
+        },
+        "lr_mult": {
+          "video": 1.2741051650236401,
+          "text": 1.367858420750753,
+          "audio": 0.3580364142256073,
+          "shared": 1.0000000000000002
+        },
+        "acc_pre": 0.6428571428571429,
+        "acc_post": 0.5119047619047619,
+        "acc_lift": -0.13095238095238104,
+        "train_loss": 0.2895807083696127,
+        "wall_ms": 60.51991498679854,
+        "mean_pair_cos": -0.009395477068700347,
+        "pair_cos": {
+          "video|text": -0.06585539538335673,
+          "video|audio": 0.007758362631010692,
+          "text|audio": 0.029910601546245
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "text",
+        "decorr_active": false,
+        "effective_rank": 2.994692930389976,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.45554754770868544,
+        "lr_min": 0.3580364142256073,
+        "lr_max": 1.367858420750753,
+        "lr_range": 1.0098220065251455,
+        "lr_ratio": 3.820444978227362,
+        "lr_cv": 0.45554754770868533
+      },
+      {
+        "t": 3,
+        "alpha": {
+          "video": 0.43539407755268755,
+          "text": 0.37275078611200646,
+          "audio": 0.19185513633530604
+        },
+        "lr_mult": {
+          "video": 1.2755640093922564,
+          "text": 1.1064271225024176,
+          "audio": 0.6180088681053263,
+          "shared": 1.0000000000000002
+        },
+        "acc_pre": 0.4523809523809524,
+        "acc_post": 0.5714285714285714,
+        "acc_lift": 0.11904761904761901,
+        "train_loss": 0.252704140331064,
+        "wall_ms": 60.80993599607609,
+        "mean_pair_cos": 0.09874584829889027,
+        "pair_cos": {
+          "video|text": 0.18354695512982727,
+          "video|audio": 0.09895337734192497,
+          "text|audio": 0.013737212424918592
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.956578889649123,
+        "lr_mean": 1.0000000000000002,
+        "lr_std": 0.2787947157095188,
+        "lr_min": 0.6180088681053263,
+        "lr_max": 1.2755640093922564,
+        "lr_range": 0.6575551412869302,
+        "lr_ratio": 2.063989815069877,
+        "lr_cv": 0.27879471570951875
+      },
+      {
+        "t": 4,
+        "alpha": {
+          "video": 0.4622486880308017,
+          "text": 0.4546987641632225,
+          "audio": 0.08305254780597575
+        },
+        "lr_mult": {
+          "video": 1.3480714576831647,
+          "text": 1.327686663240701,
+          "audio": 0.32424187907613455,
+          "shared": 1.0
+        },
+        "acc_pre": 0.7380952380952381,
+        "acc_post": 0.7976190476190477,
+        "acc_lift": 0.059523809523809534,
+        "train_loss": 0.1899755177221128,
+        "wall_ms": 60.77034102054313,
+        "mean_pair_cos": 0.2133479854288627,
+        "pair_cos": {
+          "video|text": 0.36184817737753555,
+          "video|audio": 0.15546346884631002,
+          "text|audio": 0.1227323100627425
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.8367962482077873,
+        "lr_mean": 1.0,
+        "lr_std": 0.47790561373352836,
+        "lr_min": 0.32424187907613455,
+        "lr_max": 1.3480714576831647,
+        "lr_range": 1.0238295786070302,
+        "lr_ratio": 4.157610551493957,
+        "lr_cv": 0.47790561373352836
+      },
+      {
+        "t": 5,
+        "alpha": {
+          "video": 0.5477262618095126,
+          "text": 0.1940295476623778,
+          "audio": 0.2582441905281096
+        },
+        "lr_mult": {
+          "video": 1.578860906885684,
+          "text": 0.62387977868842,
+          "audio": 0.7972593144258958,
+          "shared": 1.0
+        },
+        "acc_pre": 0.8333333333333334,
+        "acc_post": 0.7976190476190477,
+        "acc_lift": -0.0357142857142857,
+        "train_loss": 0.1206541077366897,
+        "wall_ms": 60.17754098866135,
+        "mean_pair_cos": 0.23590687081532571,
+        "pair_cos": {
+          "video|text": 0.362065010776074,
+          "video|audio": 0.16389857052545082,
+          "text|audio": 0.18175703114445224
+        },
+        "roles": {
+          "video": "diversifier",
+          "text": "diversifier",
+          "audio": "diversifier"
+        },
+        "leader": "video",
+        "decorr_active": false,
+        "effective_rank": 2.819949101179858,
+        "lr_mean": 1.0,
+        "lr_std": 0.4153914442976433,
+        "lr_min": 0.62387977868842,
+        "lr_max": 1.578860906885684,
+        "lr_range": 0.954981128197264,
+        "lr_ratio": 2.530713385525841,
+        "lr_cv": 0.4153914442976433
+      }
+    ]
+  }
+}

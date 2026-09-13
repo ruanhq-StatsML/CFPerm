@@ -1,0 +1,1451 @@
+{
+  "agod_version": "0.1.0",
+  "focus": "combine concept\u2212cov with drift-vs-noise gate + smooth EMA on Amazon",
+  "rule": {
+    "gate": "PO high + uni Acc ok + VIMP/Fisher ok \u2192 boost; else damp/adapter-only",
+    "control_additive": "g=norm(w1 POg+w2 MMD+w3 VIMP); \u03b1=EMA(softmax(g/\u03c4)); w=w0(\u03b2+(1-\u03b2)\u03b1|M|)",
+    "control_combine": "score=norm(POg)-norm(MMD*(1+VIMP)); \u03b1=EMA(softmax(score/\u03c4)); same w bound + gate"
+  },
+  "cells": [
+    {
+      "dataset": "amazon",
+      "policy": "equal",
+      "n_windows": 6,
+      "mean_mse_pre": 0.2579510410626729,
+      "mean_mse_post": 0.24961829682191214,
+      "mean_mse_drop": 0.008332744240760803,
+      "frac_mse_drop_pos": 0.6666666666666666,
+      "mean_acc_lift": 0.06944444444444443,
+      "mean_acc_post": 0.4935290404040404,
+      "mean_frac_signal": NaN
+    },
+    {
+      "dataset": "amazon",
+      "policy": "msg_softmax",
+      "n_windows": 6,
+      "mean_mse_pre": 0.25882421930631,
+      "mean_mse_post": 0.24843471000591913,
+      "mean_mse_drop": 0.010389509300390879,
+      "frac_mse_drop_pos": 0.6666666666666666,
+      "mean_acc_lift": 0.05902777777777776,
+      "mean_acc_post": 0.4935290404040404,
+      "mean_frac_signal": NaN
+    },
+    {
+      "dataset": "amazon",
+      "policy": "concept_minus_cov",
+      "n_windows": 6,
+      "mean_mse_pre": 0.25869179020325345,
+      "mean_mse_post": 0.2480695421497027,
+      "mean_mse_drop": 0.01062224805355072,
+      "frac_mse_drop_pos": 0.6666666666666666,
+      "mean_acc_lift": 0.06249999999999999,
+      "mean_acc_post": 0.4935290404040404,
+      "mean_frac_signal": NaN
+    },
+    {
+      "dataset": "amazon",
+      "policy": "smooth_drift_noise",
+      "n_windows": 6,
+      "mean_mse_pre": 0.25814870993296307,
+      "mean_mse_post": 0.24871565649906793,
+      "mean_mse_drop": 0.009433053433895111,
+      "frac_mse_drop_pos": 0.8333333333333334,
+      "mean_acc_lift": 0.06597222222222221,
+      "mean_acc_post": 0.4900568181818181,
+      "mean_frac_signal": 0.16666666666666666
+    },
+    {
+      "dataset": "amazon",
+      "policy": "smooth_concept_cov",
+      "n_windows": 6,
+      "mean_mse_pre": 0.2568770895401637,
+      "mean_mse_post": 0.24764134734869003,
+      "mean_mse_drop": 0.009235742191473642,
+      "frac_mse_drop_pos": 0.8333333333333334,
+      "mean_acc_lift": 0.06597222222222221,
+      "mean_acc_post": 0.4900568181818181,
+      "mean_frac_signal": 0.3333333333333333
+    }
+  ],
+  "trajectory": {
+    "equal": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "alpha": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.0030630423223997408,
+          "image": 0.07736441943192024
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.21272727272727276,
+          "image": 0.380909090909091
+        },
+        "uni_acc": {
+          "text": 0.625,
+          "image": 0.7083333333333334
+        },
+        "acc_pre": 0.3541666666666667,
+        "acc_post": 0.6666666666666666,
+        "acc_lift": 0.31249999999999994,
+        "mse_pre": 0.2516266107559204,
+        "mse_post": 0.22501127421855927,
+        "mse_drop": 0.026615336537361145,
+        "train_loss": 0.6745497047901153,
+        "wall_ms": 1270.477835991187,
+        "gate": {}
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "alpha": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.00037737320755812376,
+          "image": 0.05395153219800748
+        },
+        "vimp": {
+          "text": 0.007812499999999998,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5416666666666666,
+          "image": 0.4375
+        },
+        "acc_pre": 0.4166666666666667,
+        "acc_post": 0.4375,
+        "acc_lift": 0.020833333333333315,
+        "mse_pre": 0.26366791129112244,
+        "mse_post": 0.2578635513782501,
+        "mse_drop": 0.0058043599128723145,
+        "train_loss": 0.7004910171031952,
+        "wall_ms": 1266.4419790089596,
+        "gate": {}
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "alpha": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.0024102683565739025,
+          "image": 0.01581170237435464
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5416666666666666,
+          "image": 0.4375
+        },
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "mse_pre": 0.25056567788124084,
+        "mse_post": 0.25231674313545227,
+        "mse_drop": -0.0017510652542114258,
+        "train_loss": 0.6846087098121643,
+        "wall_ms": 1297.941693017492,
+        "gate": {}
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "alpha": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.0016065064704022386,
+          "image": 0.0011864669426535218
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.49183673469387756,
+          "image": 0.4765306122448979
+        },
+        "uni_acc": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "acc_pre": 0.4090909090909091,
+        "acc_post": 0.4090909090909091,
+        "acc_lift": 0.0,
+        "mse_pre": 0.25464245676994324,
+        "mse_post": 0.260090172290802,
+        "mse_drop": -0.005447715520858765,
+        "train_loss": 0.6910839915275574,
+        "wall_ms": 1291.889929008903,
+        "gate": {}
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "alpha": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.004142507503681482,
+          "image": 0.049542722024451744
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.5,
+          "image": 0.4910714285714286
+        },
+        "uni_acc": {
+          "text": 0.59375,
+          "image": 0.5625
+        },
+        "acc_pre": 0.40625,
+        "acc_post": 0.40625,
+        "acc_lift": 0.0,
+        "mse_pre": 0.26369279623031616,
+        "mse_post": 0.2547118067741394,
+        "mse_drop": 0.008980989456176758,
+        "train_loss": 0.6729541420936584,
+        "wall_ms": 1420.6935740076005,
+        "gate": {}
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "alpha": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "lr_mult": {
+          "text": 1.0,
+          "image": 1.0,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.01161272347814607,
+          "image": 0.02181106066916029
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.5,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.625,
+          "image": 0.5833333333333334
+        },
+        "acc_pre": 0.4583333333333333,
+        "acc_post": 0.5416666666666666,
+        "acc_lift": 0.08333333333333331,
+        "mse_pre": 0.2635107934474945,
+        "mse_post": 0.24771623313426971,
+        "mse_drop": 0.015794560313224792,
+        "train_loss": 0.6992913603782653,
+        "wall_ms": 929.3337510025594,
+        "gate": {}
+      }
+    ],
+    "msg_softmax": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "alpha": {
+          "text": 0.23106643970475943,
+          "image": 0.7689335602952405
+        },
+        "lr_mult": {
+          "text": 0.515919591468567,
+          "image": 1.484080408531433,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.003063042322399727,
+          "image": 0.07736441943192027
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.21272727272727276,
+          "image": 0.380909090909091
+        },
+        "uni_acc": {
+          "text": 0.625,
+          "image": 0.7083333333333334
+        },
+        "acc_pre": 0.3541666666666667,
+        "acc_post": 0.6666666666666666,
+        "acc_lift": 0.31249999999999994,
+        "mse_pre": 0.2516266107559204,
+        "mse_post": 0.2186785787343979,
+        "mse_drop": 0.03294803202152252,
+        "train_loss": 0.6707117795944214,
+        "wall_ms": 1200.632938009221,
+        "gate": {}
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "alpha": {
+          "text": 0.13797239549761015,
+          "image": 0.8620276045023898
+        },
+        "lr_mult": {
+          "text": 0.34835031189569826,
+          "image": 1.6516496881043017,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.002500170345130656,
+          "image": 0.05008644183211
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.4888682745825603,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5416666666666666,
+          "image": 0.3958333333333333
+        },
+        "acc_pre": 0.4166666666666667,
+        "acc_post": 0.4375,
+        "acc_lift": 0.020833333333333315,
+        "mse_pre": 0.27293071150779724,
+        "mse_post": 0.2542404234409332,
+        "mse_drop": 0.018690288066864014,
+        "train_loss": 0.7043339252471924,
+        "wall_ms": 1189.4183730182704,
+        "gate": {}
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "alpha": {
+          "text": 0.13217338503341441,
+          "image": 0.8678266149665856
+        },
+        "lr_mult": {
+          "text": 0.33791209306014597,
+          "image": 1.6620879069398542,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.001824993473507272,
+          "image": 0.0232212627203902
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.46474953617810766,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5625,
+          "image": 0.5625
+        },
+        "acc_pre": 0.5625,
+        "acc_post": 0.5,
+        "acc_lift": -0.0625,
+        "mse_pre": 0.24882793426513672,
+        "mse_post": 0.25275054574012756,
+        "mse_drop": -0.003922611474990845,
+        "train_loss": 0.687589454650879,
+        "wall_ms": 1272.725867020199,
+        "gate": {}
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "alpha": {
+          "text": 0.5535075264656777,
+          "image": 0.4464924735343223
+        },
+        "lr_mult": {
+          "text": 1.09631354763822,
+          "image": 0.9036864523617801,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.014684306666609144,
+          "image": 0.0003998941544467588
+        },
+        "vimp": {
+          "text": 0.007812500000000002,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.4112244897959184,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5454545454545454,
+          "image": 0.5227272727272727
+        },
+        "acc_pre": 0.4090909090909091,
+        "acc_post": 0.4090909090909091,
+        "acc_lift": 0.0,
+        "mse_pre": 0.2560124695301056,
+        "mse_post": 0.26149797439575195,
+        "mse_drop": -0.005485504865646362,
+        "train_loss": 0.6885175943374634,
+        "wall_ms": 1231.537624989869,
+        "gate": {}
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "alpha": {
+          "text": 0.30086449632936374,
+          "image": 0.6991355036706363
+        },
+        "lr_mult": {
+          "text": 0.6415560933928547,
+          "image": 1.3584439066071454,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.009572386303544747,
+          "image": 0.04820078920932487
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.4999999999999999,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.46875,
+          "image": 0.5625
+        },
+        "acc_pre": 0.40625,
+        "acc_post": 0.40625,
+        "acc_lift": 0.0,
+        "mse_pre": 0.26120275259017944,
+        "mse_post": 0.254921555519104,
+        "mse_drop": 0.0062811970710754395,
+        "train_loss": 0.6710851430892945,
+        "wall_ms": 1490.823870000895,
+        "gate": {}
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "alpha": {
+          "text": 0.19070834917100624,
+          "image": 0.8092916508289938
+        },
+        "lr_mult": {
+          "text": 0.4432750285078112,
+          "image": 1.556724971492189,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.0011189001155222852,
+          "image": 0.023749912191832867
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.4790940766550522,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5833333333333334,
+          "image": 0.5833333333333334
+        },
+        "acc_pre": 0.4583333333333333,
+        "acc_post": 0.5416666666666666,
+        "acc_lift": 0.08333333333333331,
+        "mse_pre": 0.2623448371887207,
+        "mse_post": 0.2485191822052002,
+        "mse_drop": 0.013825654983520508,
+        "train_loss": 0.7037626206874847,
+        "wall_ms": 961.1207919951994,
+        "gate": {}
+      }
+    ],
+    "concept_minus_cov": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "alpha": {
+          "text": 0.26344038208804127,
+          "image": 0.7365596179119587
+        },
+        "lr_mult": {
+          "text": 0.5741926877584743,
+          "image": 1.4258073122415258,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.0030630423223997408,
+          "image": 0.07736441943192024
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.21272727272727276,
+          "image": 0.380909090909091
+        },
+        "uni_acc": {
+          "text": 0.625,
+          "image": 0.7083333333333334
+        },
+        "acc_pre": 0.3541666666666667,
+        "acc_post": 0.6666666666666666,
+        "acc_lift": 0.31249999999999994,
+        "mse_pre": 0.2516266107559204,
+        "mse_post": 0.21925199031829834,
+        "mse_drop": 0.03237462043762207,
+        "train_loss": 0.6709565281867981,
+        "wall_ms": 1272.5880139914807,
+        "gate": {}
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "alpha": {
+          "text": 0.13359333680284413,
+          "image": 0.8664066631971559
+        },
+        "lr_mult": {
+          "text": 0.3404680062451194,
+          "image": 1.6595319937548807,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.002540300599256126,
+          "image": 0.051723867528047945
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.49628942486085337,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.4166666666666667,
+          "image": 0.3958333333333333
+        },
+        "acc_pre": 0.4166666666666667,
+        "acc_post": 0.4375,
+        "acc_lift": 0.020833333333333315,
+        "mse_pre": 0.27156275510787964,
+        "mse_post": 0.25293201208114624,
+        "mse_drop": 0.0186307430267334,
+        "train_loss": 0.7037336468696594,
+        "wall_ms": 1260.3298949834425,
+        "gate": {}
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "alpha": {
+          "text": 0.10043399517243076,
+          "image": 0.8995660048275693
+        },
+        "lr_mult": {
+          "text": 0.2807811913103754,
+          "image": 1.719218808689625,
+          "shared": 1.0000000000000002
+        },
+        "po": {
+          "text": 0.002503775354249657,
+          "image": 0.018741763897587305
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.47588126159554733,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5833333333333334,
+          "image": 0.4791666666666667
+        },
+        "acc_pre": 0.5416666666666666,
+        "acc_post": 0.5,
+        "acc_lift": -0.04166666666666663,
+        "mse_pre": 0.24857760965824127,
+        "mse_post": 0.2515678107738495,
+        "mse_drop": -0.0029902011156082153,
+        "train_loss": 0.6896084487438202,
+        "wall_ms": 1282.0529879827518,
+        "gate": {}
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "alpha": {
+          "text": 0.5540710998791003,
+          "image": 0.4459289001208997
+        },
+        "lr_mult": {
+          "text": 1.0973279797823805,
+          "image": 0.9026720202176195,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.00902884269710423,
+          "image": 0.0037012864143885355
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.39489795918367343,
+          "image": 0.4999999999999999
+        },
+        "uni_acc": {
+          "text": 0.4772727272727273,
+          "image": 0.5227272727272727
+        },
+        "acc_pre": 0.4090909090909091,
+        "acc_post": 0.4090909090909091,
+        "acc_lift": 0.0,
+        "mse_pre": 0.2545109987258911,
+        "mse_post": 0.2615283131599426,
+        "mse_drop": -0.007017314434051514,
+        "train_loss": 0.6866904497146606,
+        "wall_ms": 1202.0179200044367,
+        "gate": {}
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "alpha": {
+          "text": 0.30283592755407907,
+          "image": 0.6971640724459209
+        },
+        "lr_mult": {
+          "text": 0.6451046695973424,
+          "image": 1.3548953304026579,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.014307860839827609,
+          "image": 0.04890894467103689
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.5,
+          "image": 0.4910714285714285
+        },
+        "uni_acc": {
+          "text": 0.3125,
+          "image": 0.5625
+        },
+        "acc_pre": 0.40625,
+        "acc_post": 0.40625,
+        "acc_lift": 0.0,
+        "mse_pre": 0.2621949017047882,
+        "mse_post": 0.2549806237220764,
+        "mse_drop": 0.007214277982711792,
+        "train_loss": 0.6690633296966553,
+        "wall_ms": 1414.549712993903,
+        "gate": {}
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "alpha": {
+          "text": 0.1847055288498754,
+          "image": 0.8152944711501247
+        },
+        "lr_mult": {
+          "text": 0.4324699519297758,
+          "image": 1.5675300480702246,
+          "shared": 1.0000000000000002
+        },
+        "po": {
+          "text": 0.004623252901235872,
+          "image": 0.021825228991611517
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.4895470383275261,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.625,
+          "image": 0.625
+        },
+        "acc_pre": 0.4583333333333333,
+        "acc_post": 0.5416666666666666,
+        "acc_lift": 0.08333333333333331,
+        "mse_pre": 0.2636778652667999,
+        "mse_post": 0.24815650284290314,
+        "mse_drop": 0.01552136242389679,
+        "train_loss": 0.703923088312149,
+        "wall_ms": 938.7280570226721,
+        "gate": {}
+      }
+    ],
+    "smooth_drift_noise": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "alpha": {
+          "text": 0.3333687543691367,
+          "image": 0.6666312456308633
+        },
+        "lr_mult": {
+          "text": 0.7000637578644461,
+          "image": 1.299936242135554,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.003063042322399727,
+          "image": 0.07736441943192021
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.21272727272727276,
+          "image": 0.380909090909091
+        },
+        "uni_acc": {
+          "text": 0.625,
+          "image": 0.7083333333333334
+        },
+        "acc_pre": 0.3541666666666667,
+        "acc_post": 0.6666666666666666,
+        "acc_lift": 0.31249999999999994,
+        "mse_pre": 0.2516266107559204,
+        "mse_post": 0.2205207347869873,
+        "mse_drop": 0.031105875968933105,
+        "train_loss": 0.6716856956481934,
+        "wall_ms": 1271.5859280142467,
+        "gate": {
+          "frac_signal": 0.5,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "signal_drift"
+          },
+          "is_signal": {
+            "text": false,
+            "image": true
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": 0.31213678386390176,
+            "image": 0.6878632161360982
+          },
+          "mode": "smooth_drift_noise"
+        }
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "alpha": {
+          "text": 0.4322871859610981,
+          "image": 0.5677128140389018
+        },
+        "lr_mult": {
+          "text": 0.8781169347299765,
+          "image": 0.45765907284450813,
+          "shared": 0.6678880037872423
+        },
+        "po": {
+          "text": 0.0024424436072516265,
+          "image": 0.0533181582814945
+        },
+        "vimp": {
+          "text": 0.007812500000000002,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.4981447124304267,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.4791666666666667,
+          "image": 0.4583333333333333
+        },
+        "acc_pre": 0.4166666666666667,
+        "acc_post": 0.4166666666666667,
+        "acc_lift": 0.0,
+        "mse_pre": 0.2701549828052521,
+        "mse_post": 0.2627579867839813,
+        "mse_drop": 0.007396996021270752,
+        "train_loss": 0.7115859150886535,
+        "wall_ms": 1281.7189959750976,
+        "gate": {
+          "frac_signal": 0.0,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "noise_po_weak_uni"
+          },
+          "is_signal": {
+            "text": false,
+            "image": false
+          },
+          "adapter_only": {
+            "text": false,
+            "image": true
+          },
+          "g": {
+            "text": 0.49893967979829634,
+            "image": 0.5010603202017037
+          },
+          "mode": "smooth_drift_noise"
+        }
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "alpha": {
+          "text": 0.484206252031193,
+          "image": 0.515793747968807
+        },
+        "lr_mult": {
+          "text": 0.9715712536561474,
+          "image": 0.4249500612203484,
+          "shared": 0.698260657438248
+        },
+        "po": {
+          "text": 0.002355512718753651,
+          "image": 0.020589170151535455
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.49350649350649345,
+          "image": 0.4730983302411873
+        },
+        "uni_acc": {
+          "text": 0.5833333333333334,
+          "image": 0.4791666666666667
+        },
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "mse_pre": 0.25299277901649475,
+        "mse_post": 0.25156915187835693,
+        "mse_drop": 0.0014236271381378174,
+        "train_loss": 0.6827963352203369,
+        "wall_ms": 1270.1583500020206,
+        "gate": {
+          "frac_signal": 0.0,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "noise_po_weak_uni"
+          },
+          "is_signal": {
+            "text": false,
+            "image": false
+          },
+          "adapter_only": {
+            "text": false,
+            "image": true
+          },
+          "g": {
+            "text": 0.5112967140223292,
+            "image": 0.48870328597767076
+          },
+          "mode": "smooth_drift_noise"
+        }
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "alpha": {
+          "text": 0.622164154094174,
+          "image": 0.3778358459058261
+        },
+        "lr_mult": {
+          "text": 1.2198954773695134,
+          "image": 0.7801045226304869,
+          "shared": 1.0000000000000002
+        },
+        "po": {
+          "text": 0.012795544926752112,
+          "image": 0.0016652005628243483
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.48571428571428577,
+          "image": 0.2816326530612244
+        },
+        "uni_acc": {
+          "text": 0.5681818181818182,
+          "image": 0.5
+        },
+        "acc_pre": 0.4090909090909091,
+        "acc_post": 0.4090909090909091,
+        "acc_lift": 0.0,
+        "mse_pre": 0.2553076446056366,
+        "mse_post": 0.2556169331073761,
+        "mse_drop": -0.00030928850173950195,
+        "train_loss": 0.6885964095592498,
+        "wall_ms": 1217.4199699948076,
+        "gate": {
+          "frac_signal": 0.0,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "low_po_pass"
+          },
+          "is_signal": {
+            "text": false,
+            "image": false
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": 0.637333652321337,
+            "image": 0.36266634767866307
+          },
+          "mode": "smooth_drift_noise"
+        }
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "alpha": {
+          "text": 0.5269951001533641,
+          "image": 0.47300489984663596
+        },
+        "lr_mult": {
+          "text": 1.0485911802760555,
+          "image": 0.9514088197239448,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.007762301621687014,
+          "image": 0.04655019330082989
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.5,
+          "image": 0.4955357142857143
+        },
+        "uni_acc": {
+          "text": 0.46875,
+          "image": 0.53125
+        },
+        "acc_pre": 0.40625,
+        "acc_post": 0.40625,
+        "acc_lift": 0.0,
+        "mse_pre": 0.2598806619644165,
+        "mse_post": 0.2540472149848938,
+        "mse_drop": 0.005833446979522705,
+        "train_loss": 0.681837660074234,
+        "wall_ms": 1426.814951992128,
+        "gate": {
+          "frac_signal": 0.5,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "signal_drift"
+          },
+          "is_signal": {
+            "text": false,
+            "image": true
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": 0.47809056946125195,
+            "image": 0.521909430538748
+          },
+          "mode": "smooth_drift_noise"
+        }
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "alpha": {
+          "text": 0.4966131460105994,
+          "image": 0.5033868539894006
+        },
+        "lr_mult": {
+          "text": 0.9939036628190789,
+          "image": 1.0060963371809213,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.0004195860876203758,
+          "image": 0.01982185023292303
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.49651567944250874,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5416666666666666,
+          "image": 0.625
+        },
+        "acc_pre": 0.4583333333333333,
+        "acc_post": 0.5416666666666666,
+        "acc_lift": 0.08333333333333331,
+        "mse_pre": 0.258929580450058,
+        "mse_post": 0.2477819174528122,
+        "mse_drop": 0.011147662997245789,
+        "train_loss": 0.7047130525112152,
+        "wall_ms": 969.4702969864011,
+        "gate": {
+          "frac_signal": 0.0,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "low_po_pass"
+          },
+          "is_signal": {
+            "text": false,
+            "image": false
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": 0.4858045207842746,
+            "image": 0.5141954792157255
+          },
+          "mode": "smooth_drift_noise"
+        }
+      }
+    ],
+    "smooth_concept_cov": [
+      {
+        "t": 0,
+        "category": "Sports & Outdoors",
+        "alpha": {
+          "text": 0.26344038208804127,
+          "image": 0.7365596179119588
+        },
+        "lr_mult": {
+          "text": 0.5741926877584743,
+          "image": 1.425807312241526,
+          "shared": 1.0000000000000002
+        },
+        "po": {
+          "text": 0.003063042322399727,
+          "image": 0.07736441943192024
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.21272727272727276,
+          "image": 0.380909090909091
+        },
+        "uni_acc": {
+          "text": 0.625,
+          "image": 0.7083333333333334
+        },
+        "acc_pre": 0.3541666666666667,
+        "acc_post": 0.6666666666666666,
+        "acc_lift": 0.31249999999999994,
+        "mse_pre": 0.2516266107559204,
+        "mse_post": 0.21925199031829834,
+        "mse_drop": 0.03237462043762207,
+        "train_loss": 0.6709565281867981,
+        "wall_ms": 1243.9127250108868,
+        "gate": {
+          "frac_signal": 0.5,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "signal_drift"
+          },
+          "is_signal": {
+            "text": false,
+            "image": true
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": -0.3202615619325864,
+            "image": 0.32026156193258637
+          },
+          "mode": "smooth_concept_cov"
+        }
+      },
+      {
+        "t": 1,
+        "category": "Amazon Home",
+        "alpha": {
+          "text": 0.40276237705461004,
+          "image": 0.59723762294539
+        },
+        "lr_mult": {
+          "text": 0.824972278698298,
+          "image": 0.4762597024555957,
+          "shared": 0.6506159905769469
+        },
+        "po": {
+          "text": 0.002540300599256126,
+          "image": 0.051723867528047945
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.49628942486085337,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.4166666666666667,
+          "image": 0.3958333333333333
+        },
+        "acc_pre": 0.4166666666666667,
+        "acc_post": 0.4166666666666667,
+        "acc_lift": 0.0,
+        "mse_pre": 0.27156275510787964,
+        "mse_post": 0.261686235666275,
+        "mse_drop": 0.009876519441604614,
+        "train_loss": 0.7120617866516114,
+        "wall_ms": 1251.472661999287,
+        "gate": {
+          "frac_signal": 0.0,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "noise_po_weak_uni"
+          },
+          "is_signal": {
+            "text": false,
+            "image": false
+          },
+          "adapter_only": {
+            "text": false,
+            "image": true
+          },
+          "g": {
+            "text": -0.002613841920121318,
+            "image": 0.0026138419201212626
+          },
+          "mode": "smooth_concept_cov"
+        }
+      },
+      {
+        "t": 2,
+        "category": "AMAZON FASHION",
+        "alpha": {
+          "text": 0.190041909479607,
+          "image": 0.809958090520393
+        },
+        "lr_mult": {
+          "text": 0.44207543706329266,
+          "image": 1.5579245629367076,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.0015357382553943394,
+          "image": 0.0205656287398521
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.007812500000000002
+        },
+        "mmd_proxy": {
+          "text": 0.4981447124304267,
+          "image": 0.46567717996289426
+        },
+        "uni_acc": {
+          "text": 0.5833333333333334,
+          "image": 0.5416666666666666
+        },
+        "acc_pre": 0.5,
+        "acc_post": 0.5,
+        "acc_lift": 0.0,
+        "mse_pre": 0.2524641752243042,
+        "mse_post": 0.25026512145996094,
+        "mse_drop": 0.0021990537643432617,
+        "train_loss": 0.6895315051078796,
+        "wall_ms": 1241.5433510032017,
+        "gate": {
+          "frac_signal": 0.5,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "signal_drift"
+          },
+          "is_signal": {
+            "text": false,
+            "image": true
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": -0.44735699765013726,
+            "image": 0.44735699765013737
+          },
+          "mode": "smooth_concept_cov"
+        }
+      },
+      {
+        "t": 3,
+        "category": "Industrial & Scientific",
+        "alpha": {
+          "text": 0.6546876786453694,
+          "image": 0.3453123213546307
+        },
+        "lr_mult": {
+          "text": 1.278437821561665,
+          "image": 0.7215621784383353,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.01886881942384651,
+          "image": 0.0004416508405752778
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.007812500000000002
+        },
+        "mmd_proxy": {
+          "text": 0.4653061224489795,
+          "image": 0.5
+        },
+        "uni_acc": {
+          "text": 0.5909090909090909,
+          "image": 0.5
+        },
+        "acc_pre": 0.4090909090909091,
+        "acc_post": 0.4090909090909091,
+        "acc_lift": 0.0,
+        "mse_pre": 0.25190532207489014,
+        "mse_post": 0.2548340857028961,
+        "mse_drop": -0.0029287636280059814,
+        "train_loss": 0.6893821120262146,
+        "wall_ms": 1189.4703670113813,
+        "gate": {
+          "frac_signal": 0.0,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "low_po_pass"
+          },
+          "is_signal": {
+            "text": false,
+            "image": false
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": 0.49509934601388494,
+            "image": -0.4950993460138848
+          },
+          "mode": "smooth_concept_cov"
+        }
+      },
+      {
+        "t": 4,
+        "category": "Automotive",
+        "alpha": {
+          "text": 0.33535339628545247,
+          "image": 0.6646466037145475
+        },
+        "lr_mult": {
+          "text": 0.7036361133138145,
+          "image": 1.2963638866861857,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.013413093799987341,
+          "image": 0.047462093517307596
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.5,
+          "image": 0.46949404761904756
+        },
+        "uni_acc": {
+          "text": 0.46875,
+          "image": 0.5625
+        },
+        "acc_pre": 0.40625,
+        "acc_post": 0.40625,
+        "acc_lift": 0.0,
+        "mse_pre": 0.25517040491104126,
+        "mse_post": 0.2520601749420166,
+        "mse_drop": 0.003110229969024658,
+        "train_loss": 0.681184059381485,
+        "wall_ms": 1424.5982019929215,
+        "gate": {
+          "frac_signal": 0.5,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "signal_drift"
+          },
+          "is_signal": {
+            "text": false,
+            "image": true
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": -0.29539530550911647,
+            "image": 0.2953953055091166
+          },
+          "mode": "smooth_concept_cov"
+        }
+      },
+      {
+        "t": 5,
+        "category": "All Electronics",
+        "alpha": {
+          "text": 0.155811159532164,
+          "image": 0.8441888404678359
+        },
+        "lr_mult": {
+          "text": 0.38046008715789525,
+          "image": 1.6195399128421049,
+          "shared": 1.0
+        },
+        "po": {
+          "text": 0.00016739459134734735,
+          "image": 0.022557300821963458
+        },
+        "vimp": {
+          "text": 0.0078125,
+          "image": 0.0078125
+        },
+        "mmd_proxy": {
+          "text": 0.5,
+          "image": 0.4999999999999999
+        },
+        "uni_acc": {
+          "text": 0.5416666666666666,
+          "image": 0.625
+        },
+        "acc_pre": 0.4583333333333333,
+        "acc_post": 0.5416666666666666,
+        "acc_lift": 0.08333333333333331,
+        "mse_pre": 0.2585332691669464,
+        "mse_post": 0.24775047600269318,
+        "mse_drop": 0.010782793164253235,
+        "train_loss": 0.7015617907047271,
+        "wall_ms": 924.7232519846875,
+        "gate": {
+          "frac_signal": 0.5,
+          "reasons": {
+            "text": "low_po_pass",
+            "image": "signal_drift"
+          },
+          "is_signal": {
+            "text": false,
+            "image": true
+          },
+          "adapter_only": {
+            "text": false,
+            "image": false
+          },
+          "g": {
+            "text": -0.4926338026405715,
+            "image": 0.49263380264057155
+          },
+          "mode": "smooth_concept_cov"
+        }
+      }
+    ]
+  }
+}

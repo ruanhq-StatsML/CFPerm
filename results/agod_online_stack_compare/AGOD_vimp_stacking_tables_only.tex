@@ -1,0 +1,159 @@
+% Attribution-guided online stacking (portable use-case)
+% L = CE(stack(w), y) + lambda KL(w || alpha), alpha = EMA(FSDS/MSG/VIMP)
+\begin{table}[t]
+\centering
+\caption{Attribution-guided online stacking vs.\ mean fusion and pure stacking.
+Holdout Brier/MSE drop ($\uparrow$) and Acc lift ($\uparrow$) on MSR-VTT (video/text/audio),
+Amazon reviews (text/image), COCO outdoor/indoor ImgTxt (image/text), and Affec
+(eye/pupil/cursor/GSR/EEG; affect median-split). $\alpha$ is an EMA of FSDS/MSG/VIMP
+attribution; \texttt{stack\_alpha} uses $L=\mathrm{CE}+\lambda\mathrm{KL}(w\Vert\alpha)$
+with $\lambda=0.5$.}
+\label{tab:agod-vimp-stacking}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Variant & MSE drop $\uparrow$ & Acc $\uparrow$ & Acc post \\
+\midrule
+MSR-VTT & mean\_ce     & $-0.0080$ & $+0.000$ & $0.651$ \\
+MSR-VTT & stack\_ce    & $+0.0076$ & $+0.008$ & $0.655$ \\
+MSR-VTT & stack\_alpha & $+0.0097$ & $+0.008$ & $0.655$ \\
+\midrule
+Amazon  & mean\_ce     & $+0.0339$ & $+0.049$ & $0.543$ \\
+Amazon  & stack\_ce    & $+0.0357$ & $+0.033$ & $0.539$ \\
+Amazon  & stack\_alpha & $+0.0383$ & $+0.069$ & $0.571$ \\
+\midrule
+COCO    & mean\_ce     & $+0.0236$ & $+0.034$ & $0.860$ \\
+COCO    & stack\_ce    & $+0.0251$ & $+0.033$ & $0.865$ \\
+COCO    & stack\_alpha & $+0.0240$ & $+0.036$ & $0.860$ \\
+\midrule
+Affec   & mean\_ce     & $-0.0501$ & $-0.055$ & $0.560$ \\
+Affec   & stack\_ce    & $+0.0180$ & $+0.019$ & $0.629$ \\
+Affec   & stack\_alpha & $+0.0369$ & $+0.039$ & $0.622$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Lift of \texttt{stack\_alpha} over baselines (same towers/windows).
+$\Delta$MSE / $\Delta$Acc $=$ stack\_alpha $-$ baseline.}
+\label{tab:agod-vimp-stacking-lift}
+\begin{tabular}{llrr}
+\toprule
+Dataset & vs.\ baseline & $\Delta$MSE drop & $\Delta$Acc \\
+\midrule
+MSR-VTT & mean\_ce  & $+0.0177$ & $+0.008$ \\
+MSR-VTT & stack\_ce & $+0.0021$ & $+0.000$ \\
+Amazon  & mean\_ce  & $+0.0044$ & $+0.020$ \\
+Amazon  & stack\_ce & $+0.0026$ & $+0.036$ \\
+COCO    & mean\_ce  & $+0.0004$ & $+0.002$ \\
+COCO    & stack\_ce & $-0.0011$ & $+0.003$ \\
+Affec   & mean\_ce  & $+0.0870$ & $+0.094$ \\
+Affec   & stack\_ce & $+0.0189$ & $+0.020$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Stacking mass $w$ vs.\ attribution prior $\alpha$: mean $\|w-\alpha\|_1/|M|$
+(lower = prior is followed) and mean $w$ by modality.}
+\label{tab:agod-vimp-stacking-weights}
+\begin{tabular}{llrl}
+\toprule
+Dataset & Variant & $\|w-\alpha\|$ & mean $w$ \\
+\midrule
+MSR-VTT & stack\_ce    & $0.124$ & $v{:}0.37,\; t{:}0.29,\; a{:}0.34$ \\
+MSR-VTT & stack\_alpha & $0.096$ & $v{:}0.39,\; t{:}0.33,\; a{:}0.27$ \\
+Amazon  & stack\_ce    & $0.224$ & $\mathrm{txt}{:}0.47,\; \mathrm{img}{:}0.53$ \\
+Amazon  & stack\_alpha & $0.155$ & $\mathrm{txt}{:}0.39,\; \mathrm{img}{:}0.61$ \\
+COCO    & stack\_ce    & $0.135$ & $\mathrm{img}{:}0.39,\; \mathrm{txt}{:}0.61$ \\
+COCO    & stack\_alpha & $0.060$ & $\mathrm{img}{:}0.47,\; \mathrm{txt}{:}0.53$ \\
+Affec   & stack\_ce    & $0.084$ & eye$0.21$, pupil$0.21$, cur$0.21$, gsr$0.15$, eeg$0.21$ \\
+Affec   & stack\_alpha & $0.084$ & eye$0.21$, pupil$0.21$, cur$0.21$, gsr$0.15$, eeg$0.21$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Weight-socket sweep (COCO + Affec)
+% Attribution-guided online stacking weight sweep
+% L = CE(stack(w), y) + optional prior on w
+\begin{table}[t]
+\centering
+\caption{Weight-socket sweep on COCO ImgTxt and Affec.
+Holdout Brier/MSE drop ($\uparrow$) and Acc lift ($\uparrow$).
+\texttt{stack\_alpha}: $KL(w\Vert\alpha)$;
+\texttt{stack\_uniform}: $KL(w\Vert U)$;
+\texttt{stack\_fixed}: $w:=\alpha$;
+\texttt{stack\_temp}: $\mathrm{softmax}(\psi/\tau)$, $\tau=0.5$;
+\texttt{stack\_erank}: erank/align balance.}
+\label{tab:agod-weight-sweep}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Variant & MSE drop $\uparrow$ & Acc $\uparrow$ & Acc post \\
+\midrule
+COCO  & mean\_ce         & $+0.0236$ & $+0.034$ & $0.860$ \\
+COCO  & stack\_ce        & $+0.0251$ & $+0.033$ & $0.865$ \\
+COCO  & stack\_alpha     & $+0.0240$ & $+0.036$ & $0.860$ \\
+COCO  & stack\_uniform   & $+0.0247$ & $+0.036$ & $0.862$ \\
+COCO  & stack\_fixed     & $+0.0213$ & $+0.025$ & $0.857$ \\
+COCO  & stack\_temp      & $+0.0251$ & $+0.037$ & $0.872$ \\
+COCO  & stack\_erank     & $+0.0246$ & $+0.037$ & $0.854$ \\
+\midrule
+Affec & mean\_ce         & $-0.0501$ & $-0.055$ & $0.560$ \\
+Affec & stack\_ce        & $+0.0180$ & $+0.019$ & $0.629$ \\
+Affec & stack\_alpha     & $+0.0369$ & $+0.039$ & $0.622$ \\
+Affec & stack\_uniform   & $+0.0225$ & $+0.024$ & $0.652$ \\
+Affec & stack\_fixed     & $+0.0093$ & $+0.009$ & $0.634$ \\
+Affec & stack\_temp      & $+0.0742$ & $+0.071$ & $0.625$ \\
+Affec & stack\_erank     & $+0.0379$ & $+0.037$ & $0.626$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Lift of each weight mode over \texttt{mean\_ce} / \texttt{stack\_ce}.}
+\label{tab:agod-weight-sweep-lift}
+\begin{tabular}{llrrrr}
+\toprule
+Dataset & Variant & $\Delta$MSE vs mean & $\Delta$Acc vs mean & $\Delta$MSE vs stack & $\Delta$Acc vs stack \\
+\midrule
+COCO  & stack\_ce        & $+0.0015$ & $-0.001$ & $+0.0000$ & $+0.000$ \\
+COCO  & stack\_alpha     & $+0.0004$ & $+0.001$ & $-0.0012$ & $+0.003$ \\
+COCO  & stack\_uniform   & $+0.0011$ & $+0.001$ & $-0.0005$ & $+0.003$ \\
+COCO  & stack\_fixed     & $-0.0023$ & $-0.009$ & $-0.0038$ & $-0.007$ \\
+COCO  & stack\_temp      & $+0.0015$ & $+0.003$ & $-0.0001$ & $+0.004$ \\
+COCO  & stack\_erank     & $+0.0010$ & $+0.003$ & $-0.0005$ & $+0.004$ \\
+\midrule
+Affec & stack\_ce        & $+0.0681$ & $+0.074$ & $+0.0000$ & $+0.000$ \\
+Affec & stack\_alpha     & $+0.0870$ & $+0.094$ & $+0.0190$ & $+0.019$ \\
+Affec & stack\_uniform   & $+0.0726$ & $+0.079$ & $+0.0045$ & $+0.004$ \\
+Affec & stack\_fixed     & $+0.0594$ & $+0.064$ & $-0.0087$ & $-0.010$ \\
+Affec & stack\_temp      & $+0.1243$ & $+0.126$ & $+0.0563$ & $+0.052$ \\
+Affec & stack\_erank     & $+0.0880$ & $+0.092$ & $+0.0199$ & $+0.018$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ---- Food-101 (HF CLIP pack) + Fashion-IQ ----
+\begin{table}[t]
+\centering
+\caption{Online stacking on newly packed Food-101 (HF \texttt{ethz/food101} CLIP img/txt;
+even/odd class binary) and Fashion-IQ. Towers fixed; weight socket only.}
+\label{tab:agod-food101-fashion}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Variant & MSE drop $\uparrow$ & Acc $\uparrow$ & Acc post \\
+\midrule
+Food-101 & mean\_ce & $+0.0243$ & $+0.040$ & $0.958$ \\
+Food-101 & stack\_ce & $+0.0289$ & $+0.037$ & $0.975$ \\
+Food-101 & stack\_alpha & $+0.0239$ & $+0.036$ & $0.961$ \\
+Food-101 & stack\_temp & $+0.0295$ & $+0.037$ & $0.981$ \\
+\midrule
+Fashion-IQ & mean\_ce & $+0.0050$ & $+0.012$ & $0.888$ \\
+Fashion-IQ & stack\_ce & $+0.0025$ & $+0.010$ & $0.888$ \\
+Fashion-IQ & stack\_alpha & $+0.0023$ & $+0.012$ & $0.887$ \\
+Fashion-IQ & stack\_temp & $+0.0020$ & $+0.010$ & $0.891$ \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,48 @@
+% AGOD PO-risk → next-step train tables
+\begin{table}[t]
+\centering
+\small
+\caption{PO-risk metric versions $\rightarrow$ next-window training actuators (causal: $\alpha_t$ actuates window $t{+}1$).}
+\label{tab:agod-po-risk-train}
+\begin{tabular}{llrrrrr}
+\toprule
+Dataset & Version & Acc & MSE & $\Delta$Acc & FLOPs & $H(\alpha)$ \\
+\midrule
+affec & \texttt{equal} & 0.508 & 0.492 & +0.000 & 1.00 & 1.00 \\
+ & \texttt{po\_soft} & 0.506 & 0.494 & -0.002 & 0.83 & 0.97 \\
+ & \texttt{po\_minus\_cov} & 0.504 & 0.496 & -0.004 & 0.83 & 0.97 \\
+ & \texttt{po\_gated} & 0.504 & 0.496 & -0.004 & 0.70 & 0.97 \\
+ & \texttt{po\_proto} & 0.510 & 0.490 & +0.002 & 0.83 & 0.96 \\
+ & \texttt{po\_delta} & 0.504 & 0.496 & -0.004 & 0.78 & 0.97 \\
+ & \texttt{po\_budget} & 0.506 & 0.494 & -0.002 & 1.00 & 1.00 \\
+ & \texttt{po\_next} & 0.506 & 0.494 & -0.002 & 0.93 & 0.99 \\
+\midrule
+food101 & \texttt{equal} & 0.518 & 0.482 & +0.000 & 1.00 & 1.00 \\
+ & \texttt{po\_soft} & 0.518 & 0.482 & +0.000 & 1.00 & 0.97 \\
+ & \texttt{po\_minus\_cov} & 0.518 & 0.482 & +0.000 & 1.00 & 0.97 \\
+ & \texttt{po\_gated} & 0.518 & 0.482 & +0.000 & 1.00 & 0.97 \\
+ & \texttt{po\_proto} & 0.518 & 0.482 & +0.000 & 1.00 & 0.97 \\
+ & \texttt{po\_delta} & 0.518 & 0.482 & +0.000 & 1.00 & 0.98 \\
+ & \texttt{po\_budget} & 0.518 & 0.482 & +0.000 & 1.00 & 0.98 \\
+ & \texttt{po\_next} & 0.518 & 0.482 & +0.000 & 1.00 & 1.00 \\
+\midrule
+fashion\_iq & \texttt{equal} & 0.643 & 0.357 & +0.000 & 1.00 & 1.00 \\
+ & \texttt{po\_soft} & 0.643 & 0.357 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_minus\_cov} & 0.643 & 0.357 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_gated} & 0.643 & 0.357 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_proto} & 0.643 & 0.357 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_delta} & 0.643 & 0.357 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_budget} & 0.643 & 0.357 & +0.000 & 1.00 & 1.00 \\
+ & \texttt{po\_next} & 0.643 & 0.357 & +0.000 & 1.00 & 1.00 \\
+\midrule
+coco & \texttt{equal} & 0.902 & 0.098 & +0.000 & 1.00 & 1.00 \\
+ & \texttt{po\_soft} & 0.902 & 0.098 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_minus\_cov} & 0.902 & 0.098 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_gated} & 0.902 & 0.098 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_proto} & 0.902 & 0.098 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_delta} & 0.902 & 0.098 & +0.000 & 1.00 & 0.99 \\
+ & \texttt{po\_budget} & 0.902 & 0.098 & +0.000 & 1.00 & 1.00 \\
+ & \texttt{po\_next} & 0.902 & 0.098 & +0.000 & 1.00 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
