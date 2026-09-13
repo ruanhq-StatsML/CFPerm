@@ -464,12 +464,19 @@ def summarize(traj, *, dataset, kind, mods):
 
 def plot_board(cells_by_ds, path: Path):
     datasets = list(cells_by_ds.keys())
+    n = len(datasets)
+    if n <= 2:
+        nrows, ncols = 1, max(n, 1)
+        figsize = (5.2 * ncols, 4.0)
+    else:
+        ncols = 2
+        nrows = int(np.ceil(n / 2))
+        figsize = (10.5, 3.6 * nrows)
     fig, axes = plt.subplots(
-        1, len(datasets), figsize=(5.2 * len(datasets), 4.0), facecolor="#f7f5f1"
+        nrows, ncols, figsize=figsize, facecolor="#f7f5f1", squeeze=False
     )
-    if len(datasets) == 1:
-        axes = [axes]
-    for ax, ds in zip(axes, datasets):
+    flat = axes.ravel()
+    for ax, ds in zip(flat, datasets):
         cells = cells_by_ds[ds]
         names = [c["variant"] for c in cells]
         x = np.arange(len(names))
@@ -492,6 +499,8 @@ def plot_board(cells_by_ds, path: Path):
         ax.axhline(0, color="#999", ls=":", lw=0.9)
         ax.set_title(f"{ds}: stacking vs baselines")
         ax.legend(frameon=False, fontsize=8)
+    for ax in flat[n:]:
+        ax.axis("off")
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=140, bbox_inches="tight")
