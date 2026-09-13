@@ -1,0 +1,29 @@
+% What FSDS does for continuous inference of multimodal LMs.
+% Sits after Table~\ref{tab:msrvtt-mm-shift-contrib}.
+
+\paragraph{What FSDS justifies in continuous multimodal inference.}
+Continuous inference for a video--audio--language model is a streaming decision problem: at each window $t$ the system must choose which tokens to re-encode, which KV entries to invalidate, which towers to adapt, and which evidence to write into the belief state.
+FSDS does not attribute next-token gradients of a frozen LLM; it attributes nonstationarity in the \emph{input measure} $P(X\mid W)$ on the same $768$/$512$/$768$ blocks that become those tokens (Table~\ref{tab:msrvtt-mm-shift-contrib}).
+That is the right object for scheduling continuous inference.
+If a modality is stationary across $W$, re-encoding it every window is wasted compute and a shortcut the language head can latch onto.
+If it is nonstationary, the KV cache and the reasoner's working memory are stale unless that stream is refreshed.
+
+Concretely, the estimated shares $\pi_{\mathrm{v}}\approx 0.77$--$0.90$, $\pi_{\mathrm{a}}\approx 0.10$--$0.19$, $\pi_{\mathrm{t}}\approx 0$ imply four inference-time controls.
+\emph{(i)~Encode-once versus encode-every-window.}
+Clip-level text is window-invariant on this extract (mean $|d|=0$), so caption tokens should be encoded once per clip and reused.
+Visual tokens, and secondarily audio tokens, must be re-encoded on each window: that is where $P(X\mid W)$ actually moves.
+\emph{(ii)~KV invalidation and memory writes.}
+A streaming VLM should drop or compress visual (and audio) KV when region-wise $|d|$ or RF-Domain AUC on $W$ crosses a video-clustered threshold, and should \emph{not} refresh caption KV on the same trigger.
+A global pooled $d$ is the wrong trigger: signed region effects cancel across videos, so a session-level (video-clustered) monitor matches the sampling unit of the Friedman/Wilcoxon tests.
+\emph{(iii)~Test-time adaptation mask.}
+If continuous inference includes a test-time LoRA or gated residual, the update \emph{support} should be the vision tower and fusion, then audio, not the language tower against $W$.
+The \emph{step} has the opposite sign on covariate intensity: large $c_m^{\mathrm{cov}}$ lowers $\eta_m$; large concept drift $\delta_m^{\mathrm{concept}}$ raises it.
+Clip-level text is both-quiet, so $\eta_{\mathrm{t}}\approx 0$.
+A rising text VIMP mid-stream is a leakage diagnostic (the model is fitting the static caption), not a reason to spend test-time compute on text.
+\emph{(iv)~Belief-state and chain-of-thought evidence.}
+For streaming VQA or long-horizon reasoning (``what is happening \emph{now}''), FSDS ranks the evidence that is allowed to revise the belief: visual first, audio second, clip-level subtitle never---unless a window-aligned ASR stream is substituted and re-tested.
+Video~13 being audio-dominant further implies that fusion gates must be session-adaptive rather than a frozen $(\pi_{\mathrm{v}},\pi_{\mathrm{a}},\pi_{\mathrm{t}})$.
+
+The justified claim is therefore operational, not metaphysical: FSDS supplies the \emph{nonstationarity budget} of the multimodal stream.
+Continuous inference should spend that budget on vision and audio, keep clip-level text as a control variate, and trigger refreshes at video granularity.
+What FSDS does \emph{not} yet justify is a claim about which LLM layers implement that budget; that is the next-round streaming result the shares are designed to prioritize.
