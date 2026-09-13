@@ -20,6 +20,20 @@ from .config import DEFAULT_CFG, mm_emb_dirname, resolve_root
 
 USER_SCALAR_COLS = ["103", "104", "105", "109"]
 USER_LIST_COLS = ["106", "107", "108", "110"]
+# 4 scalars × (value, missing) + 4 lists × (len, mean, first, last, missing)
+USER_FEAT_DIM = 4 * 2 + 4 * 5
+MM_L2_EPS = 1e-8
+
+
+def _is_missing(v: Any) -> bool:
+    if v is None:
+        return True
+    try:
+        if isinstance(v, float) and np.isnan(v):
+            return True
+    except TypeError:
+        pass
+    return False
 
 
 def _as_int(x: Any, default: int = 0) -> int:
@@ -40,16 +54,24 @@ def _as_float(x: Any, default: float = 0.0) -> float:
         return default
 
 
-def user_row_to_vec(row: Any, dim: int) -> np.ndarray:
-    """Turn encrypted user columns into a fixed vector (scalars + list summaries)."""
+def user_row_to_vec(row: Any, dim: int = USER_FEAT_DIM) -> np.ndarray:
+    """User vector: zero-fill plus an explicit missing bit per field.
+
+    Missing scalars/lists → value 0 and missing=1. Observed empty lists keep
+    missing=0 with zero summaries. Do not impute from other users.
+    """
     get = row.get if isinstance(row, dict) else lambda c, default=None: row[c] if c in row else default
     vals: List[float] = []
     for c in USER_SCALAR_COLS:
-        vals.append(_as_float(get(c)))
+        v = get(c)
+        miss = _is_missing(v)
+        vals.append(0.0 if miss else _as_float(v))
+        vals.append(1.0 if miss else 0.0)
     for c in USER_LIST_COLS:
         v = get(c)
-        if v is None or (isinstance(v, float) and np.isnan(v)):
-            vals.extend([0.0, 0.0, 0.0, 0.0])
+        miss = _is_missing(v)
+        if miss:
+            vals.extend([0.0, 0.0, 0.0, 0.0, 1.0])
             continue
         arr = np.asarray(v).reshape(-1)
         if arr.dtype == object:
@@ -60,6 +82,7 @@ def user_row_to_vec(row: Any, dim: int) -> np.ndarray:
         vals.append(float(arr.mean()) if arr.size else 0.0)
         vals.append(float(arr[0]) if arr.size else 0.0)
         vals.append(float(arr[-1]) if arr.size else 0.0)
+        vals.append(0.0)
     vec = np.asarray(vals, dtype=np.float32)
     out = np.zeros(dim, dtype=np.float32)
     n = min(dim, vec.size)
@@ -180,7 +203,8 @@ class TencentGRDataset(Dataset):
         self.root = resolve_root(self.cfg)
         self.emb_dim = int(self.cfg["emb_dim"])
         self.max_seq_len = int(self.cfg["max_seq_len"])
-        self.user_feat_dim = int(self.cfg["user_feat_dim"])
+        self.user_feat_dim = USER_FEAT_DIM
+        self.cfg["user_feat_dim"] = USER_FEAT_DIM
         self.pad_id = int(self.cfg.get("pad_id", 0))
         self.seq_df = pd.DataFrame()
         self.item_feat = pd.DataFrame()
@@ -451,7 +475,8 @@ class TencentGRDataset(Dataset):
             meta = json.loads(meta_path.read_text())
             self.cfg.update(meta.get("cfg") or {})
             self.emb_dim = int(meta.get("emb_dim", self.emb_dim))
-            self.user_feat_dim = int(meta.get("user_feat_dim", self.user_feat_dim))
+        self.user_feat_dim = USER_FEAT_DIM
+        self.cfg["user_feat_dim"] = USER_FEAT_DIM
         self._index_user_vectors()
         self._rebuild_emb_matrix()
         print(
@@ -484,15 +509,25 @@ class TencentGRDataset(Dataset):
             for i, iid in enumerate(hist_items):
                 embs[-t + i] = self._emb_of(iid)
         target_item = int(s["target_item"])
+        target_emb = self._emb_of(target_item)
+        hist_obs = (np.linalg.norm(embs, axis=-1) > MM_L2_EPS).astype(np.float32) * mask
+        target_obs = np.float32(float(np.linalg.norm(target_emb) > MM_L2_EPS))
+        window_acts = [int(a) for a in (s.get("history_actions") or [])] + [int(s["target_action"])]
+        any_click = 1.0 if any(a >= 1 for a in window_acts) else 0.0
+        any_conv = 1.0 if any(a == 2 for a in window_acts) else 0.0
         return {
             "user_features": torch.tensor(user_vec, dtype=torch.float32),
             "history_items": torch.tensor(items_pad, dtype=torch.long),
             "history_actions": torch.tensor(acts_pad, dtype=torch.long),
             "history_embs": torch.tensor(embs, dtype=torch.float32),
             "history_mask": torch.tensor(mask, dtype=torch.float32),
+            "history_emb_obs": torch.tensor(hist_obs, dtype=torch.float32),
             "target_item": torch.tensor(target_item, dtype=torch.long),
             "target_action": torch.tensor(int(s["target_action"]), dtype=torch.long),
-            "target_emb": torch.tensor(self._emb_of(target_item), dtype=torch.float32),
+            "target_emb": torch.tensor(target_emb, dtype=torch.float32),
+            "target_emb_obs": torch.tensor(target_obs, dtype=torch.float32),
+            "any_click": torch.tensor(any_click, dtype=torch.float32),
+            "any_conversion": torch.tensor(any_conv, dtype=torch.float32),
             "last_timestamp": torch.tensor(int(s.get("last_timestamp", 0)), dtype=torch.long),
             "user_id": torch.tensor(int(s["user_id"]), dtype=torch.long),
         }

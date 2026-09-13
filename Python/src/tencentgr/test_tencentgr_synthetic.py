@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from tencentgr.dataset import _as_emb
+from tencentgr.dataset import USER_FEAT_DIM, _as_emb, user_row_to_vec
 from tencentgr.dr_po_learner import dr_pseudo_outcome, fit_dr_pseudo_outcome
 from tencentgr.three_tower import ThreeTowerModel
 
@@ -17,9 +17,13 @@ def synthetic_batch(n: int = 8, t: int = 6, d_user: int = 20, d_emb: int = 64):
         "history_actions": torch.randint(0, 3, (n, t)),
         "history_embs": torch.randn(n, t, d_emb),
         "history_mask": torch.ones(n, t),
+        "history_emb_obs": torch.ones(n, t),
         "target_item": torch.randint(1, 50, (n,)),
         "target_action": torch.randint(0, 3, (n,)),
         "target_emb": torch.randn(n, d_emb),
+        "target_emb_obs": torch.ones(n),
+        "any_click": torch.randint(0, 2, (n,)).float(),
+        "any_conversion": torch.randint(0, 2, (n,)).float(),
     }
 
 
@@ -32,12 +36,23 @@ def test_parse_string_embedding():
     assert float(pad[3]) == 0.0
 
 
+def test_user_missing_policy():
+    observed = user_row_to_vec({"103": 1, "104": 2, "105": 3, "109": 4, "106": [1], "107": [2], "108": [3], "110": [4]})
+    missing = user_row_to_vec({})
+    assert observed.shape == (USER_FEAT_DIM,)
+    assert missing.shape == (USER_FEAT_DIM,)
+    assert float(missing[1]) == 1.0
+    assert float(observed[1]) == 0.0
+
+
 def test_three_tower_forward():
     batch = synthetic_batch()
     model = ThreeTowerModel(user_dim=20, emb_dim=64, hidden_dim=32, tower_dim=16)
     out = model(batch)
     assert out["loss"].ndim == 0
     assert out["logits"].shape == (8, 8)
+    assert "click_loss" in out and "conv_loss" in out
+    assert "act_loss" not in out
     out["loss"].backward()
 
 
@@ -64,6 +79,7 @@ def test_dr_po_recovers_mean_shift():
 
 if __name__ == "__main__":
     test_parse_string_embedding()
+    test_user_missing_policy()
     test_three_tower_forward()
     test_dr_po_recovers_mean_shift()
     print("synthetic tests ok")

@@ -21,7 +21,7 @@ DEFAULT_CFG: Dict[str, Any] = {
     "epochs": 5,
     "device": "cpu",
     "max_users": 8000,
-    "user_feat_dim": 20,
+    "user_feat_dim": 28,
     "tower_dim": 64,
     "hidden_dim": 128,
     "pad_id": 0,

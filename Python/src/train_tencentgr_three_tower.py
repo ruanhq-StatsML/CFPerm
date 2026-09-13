@@ -58,7 +58,11 @@ def main() -> None:
     if args.dry_run:
         batch = move_batch(next(iter(loader)), device)
         out = model(batch)
-        print(json.dumps({k: float(v.detach().cpu()) for k, v in out.items() if k != "logits"}, indent=2))
+        skip = {"logits", "click_logit", "conversion_logit"}
+        print(json.dumps(
+            {k: float(v.detach().cpu()) for k, v in out.items() if k not in skip and torch.is_tensor(v) and v.ndim == 0},
+            indent=2,
+        ))
         print("dry-run ok; not training.")
         return
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -79,7 +83,15 @@ def main() -> None:
             n_step += 1
             if args.max_steps and step >= args.max_steps:
                 break
-        row = {"epoch": epoch + 1, "loss": running / max(n_step, 1), "steps": n_step, "n_train": len(train_ds), "n_test": len(test_ds)}
+        row = {
+            "epoch": epoch + 1,
+            "loss": running / max(n_step, 1),
+            "steps": n_step,
+            "n_train": len(train_ds),
+            "n_test": len(test_ds),
+            "heads": "retrieval+click+conversion",
+            "last_action": "dropped",
+        }
         history.append(row)
         print(json.dumps(row))
         ckpt = {

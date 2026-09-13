@@ -97,9 +97,11 @@ def main() -> None:
             }[args.y_mode],
             "y_mode": args.y_mode,
             "w_definition": "1{last_timestamp >= median}",
+            "last_action": "dropped",
+            "missingness_policy": "zero-fill plus per-field missing bits; mm zeros get a learned missing token",
+            "split_note": "Early vs late timestamp split is kept. It is a batch index, not a treatment.",
             "last_click_note": (
-                "On this slice the last seq event is almost always exposure (action=0), "
-                "so last_click is near-degenerate. Default Y is any_click."
+                "Last-action is not used. Default Y is window click-or-conversion (any_click)."
             ),
         }
     )
