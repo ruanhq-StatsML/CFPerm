@@ -3,6 +3,8 @@
 \caption{Multimodal / batch attribution as a next-batch training adapter on Amazon Reviews 2023.
 Online rating MSE (predict the arriving category, then update). Hop-weighted Ridge reuses the
 batch-relationship heatmap as sample weights $w_s=\exp(\gamma(\cos(\bar x_s,\bar x_{t-1})-1))$.
+DGA-weighted Ridge (Fan--Grangier--Ablin 2024) replaces that density-ratio surrogate by
+mirror-descent domain weights from gradient alignment with $D_{\mathrm{spe}}=B_{t-1}$.
 The typed adapter mixes the Wu instance bank with hop Ridge using the locked TSS signs on $(\hat c,\hat\delta)$.}
 \label{tab:attr-adapter-amazon}
 \small
@@ -13,7 +15,8 @@ plateau RidgeSGD & $1.590$ ($0.068$) & $-0.024$ \\
 instance bank (Wu NW) & $1.566$ ($0.063$) & $+0.000$ \\
 Ridge on all past & $1.402$ ($0.052$) & $+0.164$ \\
 hop-weighted Ridge & $1.378$ ($0.043$) & $+0.188$ \\
-attr.\ adapter (bank$\oplus$hop) & $1.447$ ($0.058$) & $+0.119$ \\
+DGA-weighted Ridge & $1.417$ ($0.054$) & $+0.150$ \\
+attr.\ adapter (bank$\oplus$hop) & $1.447$ ($0.058$) & $+0.120$ \\
 river PARegressor & $2.462$ ($0.084$) & $-0.896$ \\
 \bottomrule
 \end{tabular}
