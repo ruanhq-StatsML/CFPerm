@@ -1,0 +1,26 @@
+% Next-batch embeddings. Auto-generated.
+\begin{table}[ht]\centering
+\caption{Wu instance-discrimination memory bank, Yu SDC prototypes, and GPM gated by FSDS/TSS $(\hat c,\hat\delta)$.
+Entries are mean (s.d.) over seeds. Collision is off-diagonal cosine of the current batch (instances collapse under a location hop).
+SDC prototype cosine is compensated old class means vs the true new means. GPM modes: no projection, always project, typed gate.}
+\label{tab:next-batch-embeddings}
+\small
+\begin{tabular}{@{}ll ccc ccc@{}}\toprule
+Regime & Head / mode & InstDisc coll. & SDC proto-cos & GPM residual & BWT & post-acc \\
+\midrule
+covariate only & video & $0.290$ ($0.003$) & $0.838$ ($0.006$) & $0.663$ ($0.002$) & --- & --- \\
+ & audio & $0.045$ ($0.002$) & $0.593$ ($0.018$) & $0.893$ ($0.006$) & --- & --- \\
+ & text & $0.005$ ($0.002$) & $0.419$ ($0.025$) & $0.949$ ($0.003$) & --- & --- \\
+ & GPM none & --- & --- & --- & $1.000$ ($0.000$) & $0.555$ ($0.125$) \\
+ & GPM always & --- & --- & --- & $0.995$ ($0.010$) & $0.990$ ($0.009$) \\
+ & GPM typed & --- & --- & --- & $1.000$ ($0.000$) & $0.930$ ($0.127$) \\
+\midrule
+concept only & video & $0.005$ ($0.002$) & $0.374$ ($0.025$) & $0.951$ ($0.003$) & --- & --- \\
+ & audio & $0.007$ ($0.002$) & $0.456$ ($0.032$) & $0.924$ ($0.006$) & --- & --- \\
+ & text & $0.005$ ($0.002$) & $0.419$ ($0.025$) & $0.949$ ($0.003$) & --- & --- \\
+ & GPM none & --- & --- & --- & $1.000$ ($0.000$) & $0.960$ ($0.036$) \\
+ & GPM always & --- & --- & --- & $0.990$ ($0.021$) & $0.940$ ($0.028$) \\
+ & GPM typed & --- & --- & --- & $1.000$ ($0.000$) & $0.961$ ($0.033$) \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,69 @@
+% Next-batch embeddings: Wu InstDisc, Yu SDC, typed GPM. Not a TSS rewrite.
+% Table~\ref{tab:next-batch-embeddings} is auto-generated.
+
+\paragraph{Next-batch embeddings, existing methods.}
+Batch $t$ yields a finite-dimensional object (a memory bank, a set of class
+prototypes, or a representation subspace) that batch $t{+}1$ is allowed to
+use. Nothing below invents a loss. TSS still sets $\eta_m$ from
+$(\hat c_m,\hat\delta_m)$; these objects sit beside that map.
+
+\emph{Nonparametric instance discrimination (Wu et al., CVPR 2018).}
+On frozen FSDS blocks the encoder is $X^{(m)}$. A linear projector
+$g_m:X^{(m)}\mapsto S^{k}$ is trained with a memory bank $V^{(m)}$ of one
+unit vector per window. The nonparametric softmax
+\begin{equation}
+  P(i\mid f)
+  =
+  \frac{\exp(f^\top v_i/\tau)}{\sum_j\exp(f^\top v_j/\tau)}
+\end{equation}
+is the training criterion; $V$ is stop-grad and momentum-updated after the
+step. Keys from batch $t{-}1$ are concatenated as extra negatives (He et al.,
+MoCo), so the assembled embedding of this batch is the negative dictionary
+of the next. Own-slot accuracy reads instance separability of $P(X^{(m)})$.
+Off-diagonal cosine (collision) rises when a location hop collapses the
+cloud onto one direction; clip-level text is the structural control.
+This is not $P(Y\mid X)$ and is not a stepsize.
+
+\emph{Prototypes and semantic drift (Rebuffi iCaRL; Yu et al., CVPR 2020).}
+A prototype $\mu_c^{(m)}$ is the class mean of block $m$. iCaRL's NCM
+classifier on batch $t{+}1$ is nearest $\mu_c$ in cosine. When $P(X)$ takes a
+location hop, stale $\mu_c$ are in the wrong place. SDC estimates the
+unknown drift of an old prototype from the observed drift of current-batch
+points,
+\begin{equation}
+  \widehat{\Delta}_c
+  =
+  \sum_i w_{ic}\,(z_i^{(t)}-z_i^{(t-1)})
+  \Big/
+  \sum_i w_{ic},
+  \qquad
+  w_{ic}\propto\exp\bigl(-\|z_i^{(t-1)}-\mu_c\|^2/(2\sigma^2)\bigr),
+\end{equation}
+and writes $\hat\mu_c\leftarrow\mu_c+\widehat{\Delta}_c$ for the next NCM.
+A pure mean shift is a constant vector field; SDC recovers the new class
+means without old exemplars. A concept change $P(Y\mid X)$ is a different
+object: interpolating current-point motion cannot undo a label permutation,
+which is why $\hat\delta_m$ (not SDC) raises $\eta_m$.
+
+\emph{GPM composed with FSDS, not rewritten.}
+Saha et al.\ (ICLR 2021) store the leading SVD bases of the layer input as
+the core gradient space and take the next task's step in the orthogonal
+complement, $\Delta W\leftarrow(I-MM^\top)\Delta W$. On this probe the layer
+input \emph{is} the FSDS block $X^{(m)}$. Residual energy
+$\|X_t(I-MM^\top)\|_F^2/\|X_t\|_F^2$ is the mass of the next batch outside
+the previous CGS: a covariance/support change, not Cohen's $|d|$ on the
+mean. FSDS $\hat c_m$ already types the location hop; GPM types the span.
+The locked signs then decide whether the projection is allowed:
+\begin{equation}
+  \text{project head }m
+  \iff
+  \hat c_m\ge\tau_c
+  \text{ and }
+  \hat\delta_m<\tau_d.
+\end{equation}
+Covariate-loud / concept-quiet: protect the old span (same sign as shrinking
+$\eta_m$). Concept-loud: GPM as written would freeze a stale $P(Y\mid X)$
+inside CGS, so the gate is off and TSS still raises $\eta_m$. Both quiet:
+hold. Always-on GPM is the untyped ablation. Table~\ref{tab:next-batch-embeddings}
+reports the three objects on the same typed streams as TSS; they are not
+plugged into the TSS loop.
