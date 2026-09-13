@@ -23,7 +23,12 @@ Hop-weighted Ridge is the win. Typed bank⊕Ridge mix still beats bank/plateau; 
 3. **Rolling hop stats**: per hop log `(ĉ, δ̂, w_mean, predictor MSE)` — the online window statistics that drive the gate.
 4. **Modality / VIMP (MSR-VTT path)**: same gate reads per-block heatmap hops and RF-Domain shares as *which-head budget*; Amazon is the scalar-text MSE board for the weight logic.
 
-Follow-up: PO-risk feature weights do **not** beat `hop_ridge` on Amazon; use PO for token/patch **mask attribution** and modality-π hop on MSR-VTT — see `results/po_hop_attribution/`.
+Follow-up locked recipe: Amazon stays **`hop_ridge`**. Multimodal uses
+**modality-π hop**
+(`w_s=exp(γ Σ_m π_m (cos(μ_s^m,μ_{t-1}^m)-1))`, API
+`attribution_adapter.modality_hop_weights`). PO-risk VIMP is for **mask
+attribution** only (zero/noise/missing), not feature reweighting — see
+`results/po_hop_attribution/`.
 
 ## Run
 

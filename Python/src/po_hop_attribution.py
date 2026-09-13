@@ -1,13 +1,14 @@
-"""PO-risk feature selection + heatmap hop-ridge, with token/patch mask drill-down.
+"""PO-risk mask attribution + modality-π hop (on top of heatmap hop-ridge).
 
-Best Amazon recipe so far is hop-weighted Ridge (heatmap IW). This module:
-  1. Estimates PO-risk feature VIMP on the causal hop and turns it into feature
-     weights (default: *downweight* high-PO / domain coords — TSS-aligned).
-  2. Adds modality-specific hop weights:
-       w_s ∝ exp(γ Σ_m π_m (cos(μ_s^m, μ_{t-1}^m) − 1))
-     with π_m from PO-risk VIMP mass ⊕ RF-Domain shares.
-  3. Drills down by masking top-PO tokens (Amazon) or patches (MSR-VTT blocks)
-     to 0 / Gaussian noise / column-mean ("missing"), and reading ΔMSE.
+Locked recipe (from the Amazon / MSR-VTT iteration):
+  Amazon          → hop_ridge (heatmap IW) — best online MSE
+  Multimodal      → modality-π hop weights from attribution_adapter
+  PO-risk VIMP    → select tokens/patches to *mask* (zero / noise / missing);
+                    do **not** reweight features by PO VIMP (hurts MSE)
+
+Modality-π hop (first-class in attribution_adapter):
+  w_s = exp(γ Σ_m π_m (cos(μ_s^m, μ_{t-1}^m) − 1))
+  π_m = PO-risk VIMP block mass ⊕ RF-Domain share on the causal hop.
 
 No new loss. Locked TSS signs unchanged: ĉ large → bank; δ̂ large → Ridge.
 """
@@ -21,8 +22,10 @@ from sklearn.linear_model import Ridge
 from amazon_continuous_batches import make_amazon_like_stream
 from amazon_mse_prototype import _mse, describe_shapes
 from attribution_adapter import (
+    block_means,
     hop_sample_weights,
     load_amazon_stream,
+    modality_hop_weights,
     rolling_hop_stats,
     run_hop_ridge,
     run_ridge_past,
@@ -93,41 +96,6 @@ def modality_shares_from_vimp(vimp, groups=None):
     mass = {g: float(np.maximum(v[sl], 0.0).sum()) for g, sl in groups.items()}
     tot = sum(mass.values()) + 1e-12
     return {g: mass[g] / tot for g in mass}
-
-
-def block_means(X, batch, groups=None):
-    groups = groups or {"text": slice(0, X.shape[1])}
-    batch = np.asarray(batch, dtype=int)
-    k = int(batch.max()) + 1
-    out = {g: np.zeros((k, sl.stop - sl.start)) for g, sl in groups.items()}
-    for t in range(k):
-        idx = batch == t
-        if not np.any(idx):
-            continue
-        Xt = X[idx]
-        for g, sl in groups.items():
-            out[g][t] = Xt[:, sl].mean(axis=0)
-    return out
-
-
-def modality_hop_weights(block_mus, batch, t, shares, gamma=4.0):
-    """Sample weights: exp(γ Σ_m π_m (cos(μ_s^m, μ_{t-1}^m) − 1))."""
-    batch = np.asarray(batch, dtype=int)
-    w = np.zeros(batch.shape[0], dtype=float)
-    names = [g for g in shares if g in block_mus]
-    if not names:
-        return np.ones(batch.shape[0], dtype=float)
-    pi = np.asarray([max(float(shares[g]), 1e-6) for g in names], dtype=float)
-    pi = pi / pi.sum()
-    for s in range(t):
-        score = 0.0
-        for j, g in enumerate(names):
-            a = block_mus[g][s]
-            b = block_mus[g][t - 1]
-            na, nb = np.linalg.norm(a) + 1e-12, np.linalg.norm(b) + 1e-12
-            score += float(pi[j]) * float(np.dot(a, b) / (na * nb))
-        w[batch == s] = float(np.exp(float(gamma) * (score - 1.0)))
-    return np.maximum(w, 1e-3)
 
 
 def apply_mask(X, cols, mode="zero", seed=SEED, missing_fill="mean"):

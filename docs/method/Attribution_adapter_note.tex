@@ -49,9 +49,24 @@ the same stream; on sparse TF-IDF it does not beat closed-form ridge.
 The gain is from \emph{attribution-weighted} batch reuse, not from a new
 optimizer.
 
-\emph{Multimodal extension.}
-On MSR-VTT the same adapter reads per-block heatmap hops and RF-Domain /
-PO-risk VIMP shares as modality budgets (which head to open), while the
-signed $(\hat c_m,\hat\delta_m)$ map still sets $\eta_m$.
-Amazon is the scalar-text MSE board for the weight logic.
+\emph{Multimodal extension --- modality-$\pi$ hop.}
+On MSR-VTT the heatmap hop is modality-aware. Let $\bar x_s^{(m)}$ be the
+mean of modality block $m\in\{\mathrm{video},\mathrm{audio},\mathrm{text}\}$
+in batch $s$, and let $\pi_m$ be that modality's share on the causal hop
+(PO-risk VIMP mass blended with RF-Domain share). Sample weights become
+\begin{equation}
+  w_s
+  =
+  \exp\Bigl(
+    \gamma\sum_m \pi_m\bigl(\cos(\bar x_s^{(m)},\bar x_{t-1}^{(m)})-1\bigr)
+  \Bigr).
+\end{equation}
+With a single text modality this collapses to the Amazon hop ridge.
+$\pi_m$ is the \emph{contribution} of modality $m$ to the hop: it tells the
+adapter which past batches to trust when the hop is video-driven vs
+text-driven. PO-risk VIMP is \emph{not} used to reweight coordinates for
+prediction (that raises Amazon MSE); it is used to form $\pi_m$ and to
+choose tokens/patches for zero/noise/missing mask attribution
+(Table~\ref{tab:po-hop-ridge}).
+Amazon remains the scalar-text MSE board for the weight logic;
 Table~\ref{tab:attr-adapter-amazon} is the Amazon score.

@@ -6,9 +6,15 @@ FSDS / TSS already estimates the hop (ĉ from the batch-relationship heatmap,
 
 Existing pieces only:
   - heatmap hop cosine → sample weights for closed-form Ridge (domain proximity IW)
+  - modality-π hop: w ∝ exp(γ Σ_m π_m (cos(μ_s^m, μ_{t-1}^m)−1)) for multimodal
   - δ̂ / ĉ → gate between instance bank (Wu NW) and hop-weighted Ridge (TSS signs)
   - rolling EWMA of per-predictor MSE → online stacking weight
   - river.PARegressor as an off-the-shelf online baseline
+
+Locked recipe:
+  Amazon (scalar text)  → hop_ridge (uniform heatmap IW) — best MSE so far
+  Multimodal (MSR-VTT)  → modality-π hop weights (π_m from PO⊕RF shares)
+  PO-risk VIMP          → mask drill-down attribution, not feature reweighting
 
 Locked signs (unchanged):
   ĉ large  → prefer bank / shrink SGD step (do not chase P(X|W))
@@ -87,6 +93,47 @@ def hop_sample_weights(mus, batch, t, gamma=4.0):
         mu = mus[s] / (np.linalg.norm(mus[s]) + 1e-12)
         cos = float(np.dot(mu, ref))
         w[batch == s] = float(np.exp(float(gamma) * (cos - 1.0)))
+    return np.maximum(w, 1e-3)
+
+
+def block_means(X, batch, groups):
+    """Per-batch, per-modality mean vectors for modality-π hop."""
+    batch = np.asarray(batch, dtype=int)
+    k = int(batch.max()) + 1
+    out = {g: np.zeros((k, sl.stop - sl.start)) for g, sl in groups.items()}
+    for t in range(k):
+        idx = batch == t
+        if not np.any(idx):
+            continue
+        Xt = X[idx]
+        for g, sl in groups.items():
+            out[g][t] = Xt[:, sl].mean(axis=0)
+    return out
+
+
+def modality_hop_weights(block_mus, batch, t, shares, gamma=4.0):
+    """Modality-specific hop IW: exp(γ Σ_m π_m (cos(μ_s^m, μ_{t-1}^m) − 1)).
+
+    π_m is the modality contribution (PO-risk VIMP mass and/or RF-Domain share).
+    Causal reference is still μ_{t-1}. With one modality this equals
+    ``hop_sample_weights``.
+    """
+    batch = np.asarray(batch, dtype=int)
+    w = np.zeros(batch.shape[0], dtype=float)
+    names = [g for g in shares if g in block_mus]
+    if not names:
+        return np.ones(batch.shape[0], dtype=float)
+    pi = np.asarray([max(float(shares[g]), 1e-6) for g in names], dtype=float)
+    pi = pi / pi.sum()
+    for s in range(t):
+        score = 0.0
+        for j, g in enumerate(names):
+            a = block_mus[g][s]
+            b = block_mus[g][t - 1]
+            na = np.linalg.norm(a) + 1e-12
+            nb = np.linalg.norm(b) + 1e-12
+            score += float(pi[j]) * float(np.dot(a, b) / (na * nb))
+        w[batch == s] = float(np.exp(float(gamma) * (score - 1.0)))
     return np.maximum(w, 1e-3)
 
 
