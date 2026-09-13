@@ -1,11 +1,12 @@
 """Green IPTW-style sample weights from continuous-batch PO-risk.
 
-No density-ratio / DGA — just:
+PO-risk as OOD score (preferred empirically vs DRE):
 
   w = 1              # uniform
   w ∝ PO             # prop  — hard upweight high-risk
-  w ∝ sqrt(PO)       # soft  — the interesting one: w_i = √PO(X_i,Y_i,T_i=1)
+  w ∝ sqrt(PO)       # soft  — w_i = √PO(X_i,Y_i,T_i=1)
   w ∝ 1 / PO         # inv
+  w ∝ p/(1-p)        # dre  — logistic density-ratio baseline
 
 Normalize to mean 1 so RF / LR scales stay comparable.
 """
@@ -15,7 +16,7 @@ from typing import Literal
 
 import numpy as np
 
-WeightMode = Literal["uniform", "prop", "sqrt", "inv"]
+WeightMode = Literal["uniform", "prop", "sqrt", "inv", "dre"]
 
 
 def po_iptw_weights(
@@ -42,11 +43,39 @@ def po_iptw_weights(
         w = np.sqrt(po)
     elif mode == "inv":
         w = 1.0 / po
+    elif mode == "dre":
+        raise ValueError("mode='dre' needs dre_weights(X_ref, X_cur), not PO")
     else:
         raise ValueError(f"unknown mode {mode!r}")
     if treated is not None:
         t = np.asarray(treated, dtype=float).ravel()
         w = np.where(t > 0.5, w, 1.0)
+    w = w / (w.mean() + eps)
+    lo, hi = clip
+    return np.clip(w, lo, hi)
+
+
+def dre_weights(
+    X_ref: np.ndarray,
+    X_cur: np.ndarray,
+    *,
+    eps: float = 1e-6,
+    clip: tuple[float, float] = (0.05, 20.0),
+    seed: int = 0,
+) -> np.ndarray:
+    """Logistic density-ratio baseline: w ∝ p(cur|x) / p(ref|x)."""
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.preprocessing import StandardScaler
+
+    Xr = np.asarray(X_ref, float)
+    Xc = np.asarray(X_cur, float)
+    X = np.vstack([Xr, Xc])
+    Xs = StandardScaler().fit_transform(X)
+    y = np.concatenate([np.zeros(len(Xr)), np.ones(len(Xc))])
+    clf = LogisticRegression(max_iter=400, random_state=seed)
+    clf.fit(Xs, y)
+    p = clf.predict_proba(Xs[len(Xr) :])[:, 1]
+    w = p / np.maximum(1.0 - p, eps)
     w = w / (w.mean() + eps)
     lo, hi = clip
     return np.clip(w, lo, hi)
