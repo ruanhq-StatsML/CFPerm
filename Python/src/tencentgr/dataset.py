@@ -126,6 +126,22 @@ def _cid_to_oid(cid: Any) -> Optional[int]:
         return None
 
 
+def _as_emb(emb: Any, dim: int = 0) -> np.ndarray:
+    """emb_82 is list<double>; some emb_84 shards store a JSON float list as string."""
+    if isinstance(emb, str):
+        parsed = json.loads(emb)
+        vec = np.asarray(parsed, dtype=np.float32).reshape(-1)
+    else:
+        vec = np.asarray(emb, dtype=np.float32).reshape(-1)
+    if dim and vec.size != dim:
+        fixed = np.zeros(dim, dtype=np.float32)
+        n = min(dim, int(vec.size))
+        if n:
+            fixed[:n] = vec[:n]
+        return fixed
+    return vec.astype(np.float32, copy=False)
+
+
 def _events_from_row(seq_val: Any) -> List[dict]:
     if seq_val is None:
         return []
@@ -297,13 +313,7 @@ class TencentGRDataset(Dataset):
                     rid = oid_to_rid.get(int(oid))
                     if rid is None:
                         continue
-                    vec = np.asarray(emb, dtype=np.float32).reshape(-1)
-                    if dim and vec.size != dim:
-                        fixed = np.zeros(dim, dtype=np.float32)
-                        n = min(dim, vec.size)
-                        fixed[:n] = vec[:n]
-                        vec = fixed
-                    rid_parts.setdefault(int(rid), {})[cfg_name] = vec
+                    rid_parts.setdefault(int(rid), {})[cfg_name] = _as_emb(emb, dim)
                     n_hit += 1
                 if fi == 1 or fi % 10 == 0 or fi == len(files):
                     print(f"[tencentgr]   {cfg_name} {fi}/{len(files)} file_rows={filt.num_rows} total_hits={n_hit}", flush=True)
