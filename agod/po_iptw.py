@@ -65,14 +65,16 @@ def dre_weights(
 ) -> np.ndarray:
     """Logistic density-ratio baseline: w ∝ p(cur|x) / p(ref|x)."""
     from sklearn.linear_model import LogisticRegression
+    from sklearn.preprocessing import StandardScaler
 
     Xr = np.asarray(X_ref, float)
     Xc = np.asarray(X_cur, float)
     X = np.vstack([Xr, Xc])
+    Xs = StandardScaler().fit_transform(X)
     y = np.concatenate([np.zeros(len(Xr)), np.ones(len(Xc))])
-    clf = LogisticRegression(max_iter=200, random_state=seed)
-    clf.fit(X, y)
-    p = clf.predict_proba(Xc)[:, 1]
+    clf = LogisticRegression(max_iter=400, random_state=seed)
+    clf.fit(Xs, y)
+    p = clf.predict_proba(Xs[len(Xr) :])[:, 1]
     w = p / np.maximum(1.0 - p, eps)
     w = w / (w.mean() + eps)
     lo, hi = clip

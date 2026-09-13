@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Streaming multi-dataset: PO-risk OOD (√PO) vs DRE vs uniform/prop/inv.
+"""Streaming real-data: PO-risk as OOD score (√PO) vs logistic DRE.
 
-Batch size 100. Fit on batch t with weights → MSE on t+1.
+batch_size=100, preserve gradual order, no synth.
 
   PYTHONPATH=. python3 scripts/run_agod_po_ood_stream_multi.py \\
     --batch-size 100 --n-batches 20
@@ -10,31 +10,42 @@ from __future__ import annotations
 
 import argparse
 import json
+import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from sklearn.decomposition import PCA
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.metrics import accuracy_score, mean_squared_error
 
 from agod.po_iptw import dre_weights, instance_po_risk, po_iptw_weights
 
+warnings.filterwarnings("ignore", category=UserWarning)
+
 MODES = ("uniform", "prop", "sqrt", "inv", "dre")
-DATASETS = (
-    "affec",
-    "msrvtt",
-    "coco_time",
-    "fashion_iq",
-    "indiana_cxr",
-    "tencent",
-    "synth",
-)
+# real only — continuous=mse, discrete=acc
+DATASETS = {
+    "affec": "mse",
+    "tencent": "mse",
+    "msrvtt": "acc",
+    "coco_time": "acc",
+    "fashion_iq": "acc",
+    "indiana_cxr": "acc",
+}
 
 
-def batch_po_risk(X0, y0, X1, y1, *, seed: int) -> float:
+def batch_po_risk(X0, y0, X1, y1, *, seed: int, task: str) -> float:
     if len(X0) < 16 or len(X1) < 16:
         return 0.0
+    if task == "acc":
+        clf = RandomForestClassifier(
+            n_estimators=20, max_depth=4, min_samples_leaf=2, random_state=seed, n_jobs=1
+        )
+        clf.fit(X0, y0.astype(int))
+        e0 = 1.0 - float(accuracy_score(y0.astype(int), clf.predict(X0)))
+        e1 = 1.0 - float(accuracy_score(y1.astype(int), clf.predict(X1)))
+        return max(e1 - e0, 0.0)
     rf = RandomForestRegressor(
         n_estimators=20, max_depth=4, min_samples_leaf=3, random_state=seed, n_jobs=1
     )
@@ -50,6 +61,19 @@ def _pca(X: np.ndarray, d: int, seed: int) -> np.ndarray:
     return PCA(n_components=d, random_state=seed).fit_transform(X).astype(np.float32)
 
 
+def _coarse_labels(y: np.ndarray, top_k: int = 4) -> np.ndarray:
+    """Map rare classes → other so Acc is measurable in bs=100 streams."""
+    y = np.asarray(y).ravel().astype(int)
+    u, c = np.unique(y, return_counts=True)
+    keep = set(u[np.argsort(-c)[:top_k]].tolist())
+    other = top_k
+    out = np.empty_like(y)
+    remap = {lab: i for i, lab in enumerate(sorted(keep))}
+    for i, lab in enumerate(y):
+        out[i] = remap[lab] if lab in keep else other
+    return out
+
+
 def load_affec(root: Path, max_n: int, seed: int, pca_d: int):
     cache = root / "results/affec_fsds/affec_fsds_xyw_cache.npz"
     if not cache.is_file():
@@ -57,21 +81,28 @@ def load_affec(root: Path, max_n: int, seed: int, pca_d: int):
     z = np.load(cache, allow_pickle=True)
     X, y = z["X"].astype(np.float32), z["Y"].astype(np.float64)
     n = min(max_n, len(X))
-    idx = np.random.default_rng(seed).choice(len(X), size=n, replace=False)
-    return _pca(X[idx], pca_d, seed), y[idx]
+    return _pca(X[:n], pca_d, seed), y[:n]
 
 
 def load_msrvtt(root: Path, max_n: int, seed: int, pca_d: int):
     d = root / "data/msrvtt/packed"
     if not (d / "video_feat.npy").is_file():
         return None
-    V = np.load(d / "video_feat.npy")
-    A = np.load(d / "audio_feat.npy")
-    T = np.load(d / "text_feat.npy")
-    y = np.load(d / "labelsmsr.npy").astype(np.float64)
-    X = np.concatenate([V, A, T], axis=1)
-    n = min(max_n, len(X))
-    return _pca(X[:n], pca_d, seed), y[:n]
+    X = np.concatenate(
+        [
+            np.load(d / "video_feat.npy"),
+            np.load(d / "audio_feat.npy"),
+            np.load(d / "text_feat.npy"),
+        ],
+        axis=1,
+    )
+    y = np.load(d / "labelsmsr.npy").astype(np.int64)
+    Xp = _pca(X, pca_d, seed)
+    # raw pack is class-sorted; PC1 order → gradual feature drift + mixed labels
+    order = np.argsort(Xp[:, 0])
+    Xp, y = Xp[order], y[order]
+    n = min(max_n, len(Xp))
+    return Xp[:n], y[:n]
 
 
 def load_img_txt(root: Path, name: str, max_n: int, seed: int, pca_d: int):
@@ -81,8 +112,9 @@ def load_img_txt(root: Path, name: str, max_n: int, seed: int, pca_d: int):
     X = np.concatenate(
         [np.load(d / "img_feats.npy"), np.load(d / "txt_feats.npy")], axis=1
     )
-    y = np.load(d / "labels.npy").astype(np.float64)
+    y = _coarse_labels(np.load(d / "labels.npy"), top_k=4)
     n = min(max_n, len(X))
+    # keep file order (coco_time_order = temporal gradual shift)
     return _pca(X[:n], pca_d, seed), y[:n]
 
 
@@ -102,24 +134,6 @@ def load_tencent(root: Path, max_n: int, seed: int, pca_d: int):
     return _pca(X[:n], pca_d, seed), y[:n]
 
 
-def load_synth(n: int, d: int, seed: int):
-    """Gradual concept rotate — PO √ soft-upweight regime."""
-    rng = np.random.default_rng(seed)
-    X = rng.normal(size=(n, d)).astype(np.float32)
-    y = np.zeros(n, float)
-    chunk = max(n // 20, 1)
-    for b in range(20):
-        lo, hi = b * chunk, n if b == 19 else (b + 1) * chunk
-        w = rng.normal(size=d)
-        w /= np.linalg.norm(w) + 1e-9
-        # slow rotate + mild noise ramp
-        ang = 0.08 * b
-        w = w * np.cos(ang) + rng.normal(size=d) * np.sin(ang)
-        w /= np.linalg.norm(w) + 1e-9
-        y[lo:hi] = X[lo:hi] @ w * (1.0 + 0.05 * b) + rng.normal(0, 0.25 + 0.02 * b, hi - lo)
-    return X, y
-
-
 def load_dataset(name: str, root: Path, max_n: int, seed: int, pca_d: int):
     if name == "affec":
         return load_affec(root, max_n, seed, pca_d)
@@ -133,8 +147,6 @@ def load_dataset(name: str, root: Path, max_n: int, seed: int, pca_d: int):
         return load_img_txt(root, "indiana_cxr", max_n, seed, pca_d)
     if name == "tencent":
         return load_tencent(root, max_n, seed, pca_d)
-    if name == "synth":
-        return load_synth(max_n, min(pca_d, 32), seed)
     raise ValueError(name)
 
 
@@ -142,12 +154,44 @@ def make_stream(X, y, batch: int):
     return [(X[i : i + batch], y[i : i + batch]) for i in range(0, len(X) - batch + 1, batch)]
 
 
-def fit_rf(X, y, w, seed):
-    rf = RandomForestRegressor(
+def fit_model(X, y, w, seed, task: str):
+    if task == "acc":
+        m = RandomForestClassifier(
+            n_estimators=40, max_depth=8, min_samples_leaf=2, random_state=seed, n_jobs=1
+        )
+        m.fit(X, y.astype(int), sample_weight=w)
+        return m
+    m = RandomForestRegressor(
         n_estimators=30, max_depth=6, min_samples_leaf=3, random_state=seed, n_jobs=1
     )
-    rf.fit(X, y, sample_weight=w)
-    return rf
+    m.fit(X, y, sample_weight=w)
+    return m
+
+
+def eval_next(model, X, y, task: str) -> float:
+    if task == "acc":
+        return float(accuracy_score(y.astype(int), model.predict(X)))
+    return float(mean_squared_error(y, model.predict(X)))
+
+
+def instance_score(model, X, y, *, batch_po: float, task: str) -> np.ndarray:
+    """PO-risk OOD score from prev probe on current batch."""
+    if task == "acc":
+        y = np.asarray(y).ravel().astype(int)
+        if hasattr(model, "predict_proba"):
+            proba = model.predict_proba(X)
+            classes = list(model.classes_)
+            p_true = np.zeros(len(y), float)
+            for i, yi in enumerate(y):
+                if yi in classes:
+                    p_true[i] = float(proba[i, classes.index(yi)])
+            po = 1.0 - p_true  # high PO = OOD / hard under probe
+        else:
+            wrong = (y != model.predict(X).astype(int)).astype(float)
+            po = 0.25 + wrong
+        return instance_po_risk(po, np.zeros_like(po), batch_po=batch_po, mix=0.5)
+    pred = model.predict(X)
+    return instance_po_risk(y, pred, batch_po=batch_po, mix=0.5)
 
 
 def _pack(xs: List[float]) -> dict:
@@ -161,71 +205,93 @@ def _pack(xs: List[float]) -> dict:
     }
 
 
-def run_mode(stream, mode: str, seed: int) -> dict:
-    mse_cur: List[float] = []
-    mse_next: List[float] = []
+def run_mode(stream, mode: str, seed: int, task: str) -> dict:
+    cur_m: List[float] = []
+    next_m: List[float] = []
     batch_po: List[float] = []
     X0, y0 = stream[0]
-    probe = fit_rf(X0, y0, np.ones(len(y0)), seed)
+    probe = fit_model(X0, y0, np.ones(len(y0)), seed, task)
 
     for t in range(1, len(stream)):
         Xp, yp = stream[t - 1]
         Xc, yc = stream[t]
-        po_b = batch_po_risk(Xp, yp, Xc, yc, seed=seed + t)
+        po_b = batch_po_risk(Xp, yp, Xc, yc, seed=seed + t, task=task)
         batch_po.append(po_b)
 
         if mode == "dre":
             w = dre_weights(Xp, Xc, seed=seed + t)
         else:
-            po_row = instance_po_risk(yc, probe.predict(Xc), batch_po=po_b, mix=0.5)
+            po_row = instance_score(probe, Xc, yc, batch_po=po_b, task=task)
             w = po_iptw_weights(po_row, mode=mode)  # type: ignore[arg-type]
 
-        model = fit_rf(Xc, yc, w, seed + 17 * t)
-        mse_cur.append(float(mean_squared_error(yc, model.predict(Xc))))
+        model = fit_model(Xc, yc, w, seed + 17 * t, task)
+        cur_m.append(eval_next(model, Xc, yc, task))
         if t + 1 < len(stream):
             Xn, yn = stream[t + 1]
-            mse_next.append(float(mean_squared_error(yn, model.predict(Xn))))
-        probe = fit_rf(Xc, yc, w, seed + 31 * t)
+            next_m.append(eval_next(model, Xn, yn, task))
+        probe = fit_model(Xc, yc, w, seed + 31 * t, task)
 
-    return {"mode": mode, "batch_po": batch_po, "mse_cur": _pack(mse_cur), "mse_next": _pack(mse_next)}
+    key = "acc" if task == "acc" else "mse"
+    return {
+        "mode": mode,
+        "task": task,
+        "metric": key,
+        "batch_po": batch_po,
+        "cur": _pack(cur_m),
+        "next": _pack(next_m),
+    }
 
 
-def table_md(all_res: Dict[str, Dict[str, dict]]) -> str:
+def table_md(all_res: Dict[str, Dict[str, dict]], tasks: Dict[str, str]) -> str:
     lines = [
-        "# PO-risk as OOD score — streaming multi-dataset (bs=100)",
+        "# PO-risk as OOD score — streaming real-data (bs=100)",
         "",
-        "PO √ soft-upweight vs logistic DRE vs uniform/prop/inv. Metric: next-batch MSE.",
+        "No synth. Continuous → next **MSE** (↓); discrete → next **Acc** (↑).",
+        "PO-√ soft IPTW vs logistic density-ratio (DRE).",
         "",
-        "| dataset | uniform | prop | **sqrt** | inv | dre | best |",
-        "|---|---:|---:|---:|---:|---:|---|",
+        "| dataset | task | uniform | prop | sqrt | inv | dre | best | √PO vs DRE |",
+        "|---|---|---:|---:|---:|---:|---:|---|---|",
     ]
     wins = {m: 0 for m in MODES}
+    sqrt_beats_dre = 0
+    n_cmp = 0
     for ds, results in all_res.items():
-        cells = []
-        means = {}
-        for m in MODES:
-            mu = results[m]["mse_next"]["mean"]
-            means[m] = mu
-            cells.append(f"{mu:.4f}")
-        best = min(means, key=means.get)
+        task = tasks[ds]
+        means = {m: results[m]["next"]["mean"] for m in MODES}
+        if task == "acc":
+            best = max(means, key=means.get)
+            beat = means["sqrt"] > means["dre"]
+            gap = means["sqrt"] - means["dre"]
+            gap_s = f"+{gap:.4f} Acc" if beat else f"{gap:.4f} Acc"
+        else:
+            best = min(means, key=means.get)
+            beat = means["sqrt"] < means["dre"]
+            gap = means["dre"] - means["sqrt"]
+            gap_s = f"−{gap:.4f} MSE" if beat else f"+{-gap:.4f} MSE"
+        if beat:
+            sqrt_beats_dre += 1
+        n_cmp += 1
         wins[best] += 1
-        mark = cells[:]
+        cells = [f"{means[m]:.4f}" for m in MODES]
         for i, m in enumerate(MODES):
             if m == best:
-                mark[i] = f"**{cells[i]}**"
-            if m == "sqrt":
-                mark[i] = f"**{cells[i]}**" if m == best else f"*{cells[i]}*"
-        lines.append(f"| `{ds}` | " + " | ".join(mark) + f" | `{best}` |")
+                cells[i] = f"**{cells[i]}**"
+            elif m == "sqrt":
+                cells[i] = f"*{cells[i]}*"
+        lines.append(
+            f"| `{ds}` | {task} | " + " | ".join(cells) + f" | `{best}` | {gap_s} |"
+        )
     lines += [
         "",
-        f"**Wins (lowest next-MSE):** " + ", ".join(f"`{m}`={wins[m]}" for m in MODES),
+        f"**Wins:** " + ", ".join(f"`{m}`={wins[m]}" for m in MODES),
+        f"**sqrt vs dre (head-to-head):** `{sqrt_beats_dre}/{n_cmp}` favor PO-√ OOD over DRE.",
         "",
         "```python",
         "w_i = np.sqrt(PO-risk(X_i, Y_i, T_i=1))  # OOD score → soft IPTW",
-        "rf.fit(X, y, sample_weight=w / w.mean())",
+        "model.fit(X, y, sample_weight=w / w.mean())",
         "```",
         "",
-        "Claim: on gradual-shift streams, PO-risk OOD (`sqrt`) beats density-ratio (`dre`) empirically.",
+        "DRE baseline: logistic `w ∝ p(cur|x)/p(ref|x)` on X only — ignores label risk.",
         "",
     ]
     return "\n".join(lines)
@@ -234,7 +300,7 @@ def table_md(all_res: Dict[str, Dict[str, dict]]) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", type=Path, default=Path("."))
-    ap.add_argument("--datasets", nargs="+", default=list(DATASETS))
+    ap.add_argument("--datasets", nargs="+", default=list(DATASETS.keys()))
     ap.add_argument("--n-batches", type=int, default=20)
     ap.add_argument("--batch-size", type=int, default=100)
     ap.add_argument("--max-n", type=int, default=2500)
@@ -245,9 +311,19 @@ def main() -> None:
 
     need = args.n_batches * args.batch_size
     all_res: Dict[str, Dict[str, dict]] = {}
+    tasks: Dict[str, str] = {}
     skipped: List[str] = []
 
     for name in args.datasets:
+        if name == "synth":
+            print("[skip] synth: real-data only")
+            skipped.append(name)
+            continue
+        task = DATASETS.get(name)
+        if task is None:
+            print(f"[skip] {name}: unknown")
+            skipped.append(name)
+            continue
         packed = load_dataset(name, args.root, max(need, args.max_n), args.seed, args.pca_d)
         if packed is None:
             print(f"[skip] {name}: missing data")
@@ -258,15 +334,24 @@ def main() -> None:
             print(f"[skip] {name}: need>={need}, got {len(X)}")
             skipped.append(name)
             continue
+        if task == "acc" and len(np.unique(y[:need])) < 2:
+            print(f"[skip] {name}: <2 classes")
+            skipped.append(name)
+            continue
         stream = make_stream(X[:need], y[:need], args.batch_size)
-        print(f"=== {name} batches={len(stream)} bs={args.batch_size} d={X.shape[1]} ===", flush=True)
+        print(
+            f"=== {name} task={task} batches={len(stream)} bs={args.batch_size} "
+            f"d={X.shape[1]} nuniq={len(np.unique(y[:need]))} ===",
+            flush=True,
+        )
         results = {}
         for mode in MODES:
             print(f"  [{mode}] ...", flush=True)
-            results[mode] = run_mode(stream, mode, args.seed)
-            n = results[mode]["mse_next"]
-            print(f"    next MSE mean={n['mean']:.4f} std={n['std']:.4f}")
+            results[mode] = run_mode(stream, mode, args.seed, task)
+            n = results[mode]["next"]
+            print(f"    next {results[mode]['metric']} mean={n['mean']:.4f} std={n['std']:.4f}")
         all_res[name] = results
+        tasks[name] = task
 
     args.out.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -274,10 +359,11 @@ def main() -> None:
         "n_batches": args.n_batches,
         "modes": list(MODES),
         "skipped": skipped,
+        "tasks": tasks,
         "results": all_res,
     }
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    md = table_md(all_res)
+    md = table_md(all_res, tasks)
     (args.out / "PO_OOD_STREAM_REPORT.md").write_text(md, encoding="utf-8")
     Path("docs/agod").mkdir(parents=True, exist_ok=True)
     Path("docs/agod/AGOD_po_ood_stream_multi.md").write_text(md, encoding="utf-8")
