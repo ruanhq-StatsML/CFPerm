@@ -1,22 +1,23 @@
-# PO-risk as OOD score — streaming multi-dataset (bs=100)
+# PO-risk as OOD score — streaming real-data (bs=100)
 
-PO √ soft-upweight vs logistic DRE vs uniform/prop/inv. Metric: next-batch MSE.
+No synth. Continuous → next **MSE** (↓); discrete → next **Acc** (↑).
+PO-√ soft IPTW vs logistic density-ratio (DRE).
 
-| dataset | uniform | prop | **sqrt** | inv | dre | best |
-|---|---:|---:|---:|---:|---:|---|
-| `affec` | **4.9027** | 6.2612 | *5.4558* | 9.4819 | 21.7733 | `uniform` |
-| `msrvtt` | **0.0000** | 0.0000 | *0.0000* | 0.0000 | 0.0000 | `uniform` |
-| `coco_time` | 808.8178 | 1031.1609 | *919.8179* | 814.4531 | **803.1976** | `dre` |
-| `fashion_iq` | 1183.2311 | 1448.6814 | *1342.5351* | **1107.8642** | 1190.0198 | `inv` |
-| `indiana_cxr` | 1031.2220 | 1119.6047 | *1083.8672* | 1072.0408 | **1015.4889** | `dre` |
-| `tencent` | **0.0007** | 0.0014 | *0.0014* | 0.0024 | 0.0011 | `uniform` |
-| `synth` | 2.3118 | 2.4488 | *2.4111* | **2.2616** | 2.3779 | `inv` |
+| dataset | task | uniform | prop | sqrt | inv | dre | best | √PO vs DRE |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| `affec` | mse | **3.8743** | 4.8779 | *4.1471* | 7.0848 | 11.7758 | `uniform` | −7.6286 MSE |
+| `tencent` | mse | **0.0007** | 0.0014 | *0.0014* | 0.0024 | 0.0010 | `uniform` | +0.0004 MSE |
+| `msrvtt` | acc | 0.4872 | 0.4633 | *0.4944* | 0.4917 | **0.4967** | `dre` | -0.0022 Acc |
+| `coco_time` | acc | 0.6361 | 0.6306 | *0.6311* | **0.6422** | 0.6283 | `inv` | +0.0028 Acc |
+| `fashion_iq` | acc | **0.6033** | 0.5989 | *0.6017* | 0.5939 | 0.5811 | `uniform` | +0.0206 Acc |
+| `indiana_cxr` | acc | **0.5256** | 0.5056 | *0.5244* | 0.5217 | 0.4439 | `uniform` | +0.0806 Acc |
 
-**Wins (lowest next-MSE):** `uniform`=3, `prop`=0, `sqrt`=0, `inv`=2, `dre`=2
+**Wins:** `uniform`=4, `prop`=0, `sqrt`=0, `inv`=1, `dre`=1
+**sqrt vs dre (head-to-head):** `4/6` favor PO-√ OOD over DRE.
 
 ```python
 w_i = np.sqrt(PO-risk(X_i, Y_i, T_i=1))  # OOD score → soft IPTW
-rf.fit(X, y, sample_weight=w / w.mean())
+model.fit(X, y, sample_weight=w / w.mean())
 ```
 
-Claim: on gradual-shift streams, PO-risk OOD (`sqrt`) beats density-ratio (`dre`) empirically.
+DRE baseline: logistic `w ∝ p(cur|x)/p(ref|x)` on X only — ignores label risk.
