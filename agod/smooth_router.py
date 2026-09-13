@@ -10,6 +10,7 @@ Gate (per modality, per window):
 Smooth control law (estimator has variance — do not hard-step):
 
   g_m     = normalize(w1·PO_gated_m + w2·MMD_m + w3·VIMP_m)
+         or score_m = normalize(PO_gated) − normalize(MMD·(1+VIMP))  # combined
   α_raw   = Softmax(g / τ)
   α       = EMA(α_raw)
   w_m     = w0 · (β + (1-β) · α_m · |M|)     # bounded
@@ -78,6 +79,9 @@ class SmoothRouterConfig:
     ema: float = 0.40
     beta: float = 0.10          # LR / loss-weight floor mix
     w0: float = 1.0
+    # "additive" = norm(w1 PO_g + w2 MMD + w3 VIMP)
+    # "concept_minus_cov" = normalize(PO_g) − normalize(MMD·(1+VIMP))
+    mode: str = "additive"
     gate: DriftNoiseGateConfig = field(default_factory=DriftNoiseGateConfig)
 
 
@@ -180,6 +184,36 @@ def compose_g(
     return normalize_nonneg(raw, mods)
 
 
+
+def compose_concept_minus_cov(
+    po_gated: Mapping[str, float],
+    mmd: Mapping[str, float],
+    vimp: Mapping[str, float],
+    mods: Sequence[str],
+    *,
+    w_vimp_in_cov: float = 1.0,
+) -> dict[str, float]:
+    """Combine gate with concept−cov scoring.
+
+    concept_m = normalize(PO_gated)_m
+    cov_m     = normalize(MMD_m · (1 + w·VIMP_m))_m
+    score_m   = concept_m − cov_m
+
+    Then Softmax(score/τ) + EMA (caller). High PO alone does not boost if the
+    gate damped it; covariate pressure still suppresses redundant spend.
+    """
+    mods = list(mods)
+    con = {m: max(float(po_gated.get(m, 0.0)), 0.0) for m in mods}
+    cov = {
+        m: max(float(mmd.get(m, 0.0)), 0.0)
+        * (1.0 + float(w_vimp_in_cov) * max(float(vimp.get(m, 0.0)), 0.0))
+        for m in mods
+    }
+    con_n = normalize_nonneg(con, mods)
+    cov_n = normalize_nonneg(cov, mods)
+    return {m: float(con_n[m] - cov_n[m]) for m in mods}
+
+
 def weights_from_alpha(
     alpha: Mapping[str, float],
     mods: Sequence[str],
@@ -225,15 +259,24 @@ class SmoothDriftNoiseRouter:
             uni_acc_ref=uni_acc_ref,
             cfg=self.cfg.gate,
         )
-        g = compose_g(
-            gate["po_gated"],
-            mmd,
-            vimp,
-            self.mods,
-            w_po=self.cfg.w_po,
-            w_mmd=self.cfg.w_mmd,
-            w_vimp=self.cfg.w_vimp,
-        )
+        if str(self.cfg.mode) == "concept_minus_cov":
+            g = compose_concept_minus_cov(
+                gate["po_gated"],
+                mmd,
+                vimp,
+                self.mods,
+                w_vimp_in_cov=self.cfg.w_vimp,
+            )
+        else:
+            g = compose_g(
+                gate["po_gated"],
+                mmd,
+                vimp,
+                self.mods,
+                w_po=self.cfg.w_po,
+                w_mmd=self.cfg.w_mmd,
+                w_vimp=self.cfg.w_vimp,
+            )
         raw = softmax_tau(g, self.mods, self.cfg.tau)
         ema = float(self.cfg.ema)
         for m in self.mods:

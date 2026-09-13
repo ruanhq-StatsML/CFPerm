@@ -9,6 +9,9 @@ Policies
                         g=norm(w1·PO_g + w2·MMD + w3·VIMP),
                         α=EMA(softmax(g/τ)),
                         w=w0(β+(1-β)α|M|)
+  smooth_concept_cov  — COMBINE: drift-vs-noise gate on PO, then
+                        score=normalize(PO_g)−normalize(MMD·(1+VIMP)),
+                        α=EMA(softmax(score/τ)), bounded w (same law)
 
 Reports holdout Acc↑ and Brier/MSE.
 
@@ -51,7 +54,7 @@ ART = Path("/opt/cursor/artifacts/agod_smooth_drift_noise")
 
 SEED = base.SEED
 MODS = list(base.MODS)
-POLICIES = ("equal", "msg_softmax", "concept_minus_cov", "smooth_drift_noise")
+POLICIES = ("equal", "msg_softmax", "concept_minus_cov", "smooth_drift_noise", "smooth_concept_cov")
 EMA, TAU, BETA = 0.40, 0.30, 0.10
 HOLD = 0.40
 STEPS = 10  # CPU-friendly; base uses STEPS_PER_WIN=8
@@ -171,7 +174,13 @@ def run_policy(stream, device, image_tf, policy: str):
     uni_ref = measure_uni_acc(b_tr, y_tr, b_te, y_te, MODS, seed=SEED)
 
     ema = alpha_equal()
-    router = SmoothDriftNoiseRouter(MODS, SmoothRouterConfig(tau=TAU, ema=EMA, beta=BETA))
+    router = SmoothDriftNoiseRouter(
+        MODS, SmoothRouterConfig(tau=TAU, ema=EMA, beta=BETA, mode="additive")
+    )
+    router_combine = SmoothDriftNoiseRouter(
+        MODS,
+        SmoothRouterConfig(tau=TAU, ema=EMA, beta=BETA, mode="concept_minus_cov"),
+    )
     traj = []
 
     for w in stream["windows"]:
@@ -207,8 +216,9 @@ def run_policy(stream, device, image_tf, policy: str):
             s = sum(ema.values())
             alpha = {m: ema[m] / s for m in MODS}
             lr_mult = weights_from_alpha(alpha, MODS, beta=BETA)
-        else:
-            packed = router.update(
+        elif policy in ("smooth_drift_noise", "smooth_concept_cov"):
+            active = router if policy == "smooth_drift_noise" else router_combine
+            packed = active.update(
                 po=msg.po,
                 mmd=mmd,
                 vimp=msg.vimp,
@@ -223,7 +233,10 @@ def run_policy(stream, device, image_tf, policy: str):
                 "is_signal": packed["gate"]["is_signal"],
                 "adapter_only": packed["gate"]["adapter_only"],
                 "g": packed["g"],
+                "mode": policy,
             }
+        else:
+            raise ValueError(f"unknown policy: {policy}")
 
         pre = eval_hold(model, hold, device, image_tf)
         loss, wall = train_window(model, opt, adapt, device, image_tf, lr_mult=lr_mult)
@@ -337,6 +350,7 @@ def write_docs(cells, path: Path):
 2. **Smooth control law**:
    ```
    g = normalize(w1·PO_gated + w2·MMD + w3·VIMP)
+   # combine: score = normalize(PO_gated) − normalize(MMD·(1+VIMP))
    α = EMA(Softmax(g / τ))
    w = w0 · (β + (1-β)·α·|M|)
    ```
@@ -418,10 +432,11 @@ def main():
 
     payload = {
         "agod_version": "0.1.0",
-        "focus": "drift-vs-noise gate + smooth EMA routing on Amazon",
+        "focus": "combine concept−cov with drift-vs-noise gate + smooth EMA on Amazon",
         "rule": {
             "gate": "PO high + uni Acc ok + VIMP/Fisher ok → boost; else damp/adapter-only",
-            "control": "g=norm(w1 POg+w2 MMD+w3 VIMP); α=EMA(softmax(g/τ)); w=w0(β+(1-β)α|M|)",
+            "control_additive": "g=norm(w1 POg+w2 MMD+w3 VIMP); α=EMA(softmax(g/τ)); w=w0(β+(1-β)α|M|)",
+            "control_combine": "score=norm(POg)-norm(MMD*(1+VIMP)); α=EMA(softmax(score/τ)); same w bound + gate",
         },
         "cells": cells,
         "trajectory": trajs,
