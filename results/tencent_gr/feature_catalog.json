@@ -1,0 +1,692 @@
+[
+  {
+    "name": "life_n_tot",
+    "family": "life",
+    "justification": "全序列漏斗。"
+  },
+  {
+    "name": "life_n_exp",
+    "family": "life",
+    "justification": "全序列漏斗。"
+  },
+  {
+    "name": "life_n_clk",
+    "family": "life",
+    "justification": "全序列漏斗。"
+  },
+  {
+    "name": "life_n_cnv",
+    "family": "life",
+    "justification": "全序列漏斗。"
+  },
+  {
+    "name": "life_n_uniq_item",
+    "family": "life",
+    "justification": "全序列漏斗。"
+  },
+  {
+    "name": "life_ctr",
+    "family": "life",
+    "justification": "全序列漏斗。"
+  },
+  {
+    "name": "life_cvr",
+    "family": "life",
+    "justification": "全序列漏斗。"
+  },
+  {
+    "name": "life_ctcvr",
+    "family": "life",
+    "justification": "全序列漏斗。"
+  },
+  {
+    "name": "1d_n_tot",
+    "family": "1d",
+    "justification": "近1天漏斗=即时意图。"
+  },
+  {
+    "name": "1d_n_exp",
+    "family": "1d",
+    "justification": "近1天漏斗=即时意图。"
+  },
+  {
+    "name": "1d_n_clk",
+    "family": "1d",
+    "justification": "近1天漏斗=即时意图。"
+  },
+  {
+    "name": "1d_n_cnv",
+    "family": "1d",
+    "justification": "近1天漏斗=即时意图。"
+  },
+  {
+    "name": "1d_n_uniq_item",
+    "family": "1d",
+    "justification": "近1天漏斗=即时意图。"
+  },
+  {
+    "name": "1d_ctr",
+    "family": "1d",
+    "justification": "近1天漏斗=即时意图。"
+  },
+  {
+    "name": "1d_cvr",
+    "family": "1d",
+    "justification": "近1天漏斗=即时意图。"
+  },
+  {
+    "name": "1d_ctcvr",
+    "family": "1d",
+    "justification": "近1天漏斗=即时意图。"
+  },
+  {
+    "name": "3d_n_tot",
+    "family": "3d",
+    "justification": "近3天漏斗。"
+  },
+  {
+    "name": "3d_n_exp",
+    "family": "3d",
+    "justification": "近3天漏斗。"
+  },
+  {
+    "name": "3d_n_clk",
+    "family": "3d",
+    "justification": "近3天漏斗。"
+  },
+  {
+    "name": "3d_n_cnv",
+    "family": "3d",
+    "justification": "近3天漏斗。"
+  },
+  {
+    "name": "3d_n_uniq_item",
+    "family": "3d",
+    "justification": "近3天漏斗。"
+  },
+  {
+    "name": "3d_ctr",
+    "family": "3d",
+    "justification": "近3天漏斗。"
+  },
+  {
+    "name": "3d_cvr",
+    "family": "3d",
+    "justification": "近3天漏斗。"
+  },
+  {
+    "name": "3d_ctcvr",
+    "family": "3d",
+    "justification": "近3天漏斗。"
+  },
+  {
+    "name": "7d_n_tot",
+    "family": "7d",
+    "justification": "近7天漏斗=短期偏好。"
+  },
+  {
+    "name": "7d_n_exp",
+    "family": "7d",
+    "justification": "近7天漏斗=短期偏好。"
+  },
+  {
+    "name": "7d_n_clk",
+    "family": "7d",
+    "justification": "近7天漏斗=短期偏好。"
+  },
+  {
+    "name": "7d_n_cnv",
+    "family": "7d",
+    "justification": "近7天漏斗=短期偏好。"
+  },
+  {
+    "name": "7d_n_uniq_item",
+    "family": "7d",
+    "justification": "近7天漏斗=短期偏好。"
+  },
+  {
+    "name": "7d_ctr",
+    "family": "7d",
+    "justification": "近7天漏斗=短期偏好。"
+  },
+  {
+    "name": "7d_cvr",
+    "family": "7d",
+    "justification": "近7天漏斗=短期偏好。"
+  },
+  {
+    "name": "7d_ctcvr",
+    "family": "7d",
+    "justification": "近7天漏斗=短期偏好。"
+  },
+  {
+    "name": "30d_n_tot",
+    "family": "30d",
+    "justification": "近30天漏斗=稳定画像。"
+  },
+  {
+    "name": "30d_n_exp",
+    "family": "30d",
+    "justification": "近30天漏斗=稳定画像。"
+  },
+  {
+    "name": "30d_n_clk",
+    "family": "30d",
+    "justification": "近30天漏斗=稳定画像。"
+  },
+  {
+    "name": "30d_n_cnv",
+    "family": "30d",
+    "justification": "近30天漏斗=稳定画像。"
+  },
+  {
+    "name": "30d_n_uniq_item",
+    "family": "30d",
+    "justification": "近30天漏斗=稳定画像。"
+  },
+  {
+    "name": "30d_ctr",
+    "family": "30d",
+    "justification": "近30天漏斗=稳定画像。"
+  },
+  {
+    "name": "30d_cvr",
+    "family": "30d",
+    "justification": "近30天漏斗=稳定画像。"
+  },
+  {
+    "name": "30d_ctcvr",
+    "family": "30d",
+    "justification": "近30天漏斗=稳定画像。"
+  },
+  {
+    "name": "trend_ctr_1d_minus_7d",
+    "family": "trend",
+    "justification": "短窗相对长窗趋势。"
+  },
+  {
+    "name": "trend_cvr_1d_minus_7d",
+    "family": "trend",
+    "justification": "短窗相对长窗趋势。"
+  },
+  {
+    "name": "trend_cnv_7d_vs_30d_daily",
+    "family": "trend",
+    "justification": "短窗相对长窗趋势。"
+  },
+  {
+    "name": "sess_n",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_len_mean",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_len_p50",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_len_max",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_dur_min_mean",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_depth_clk_mean",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_bounce_rate",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_last_len",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_last_dur_min",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "sess_last_has_cnv",
+    "family": "sess",
+    "justification": "30min session：当下注意力。"
+  },
+  {
+    "name": "hist_len",
+    "family": "hist",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "span_day",
+    "family": "span",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "active_days",
+    "family": "active",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "item_entropy_clk",
+    "family": "item",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "top1_item_clk_share",
+    "family": "top1",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "hours_since_last_exp",
+    "family": "hours",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "hours_since_last_clk",
+    "family": "hours",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "hours_since_last_cnv",
+    "family": "hours",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "reexpose_rate",
+    "family": "reexpose",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "repeat_clk_rate",
+    "family": "repeat",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "gap_sec_p50",
+    "family": "gap",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "gap_sec_mean",
+    "family": "gap",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "attr_exp2clk_min_n",
+    "family": "attr",
+    "justification": "曝光→点击分钟数。"
+  },
+  {
+    "name": "attr_exp2clk_min_min",
+    "family": "attr",
+    "justification": "曝光→点击分钟数。"
+  },
+  {
+    "name": "attr_exp2clk_min_p50",
+    "family": "attr",
+    "justification": "曝光→点击分钟数。"
+  },
+  {
+    "name": "attr_exp2clk_min_mean",
+    "family": "attr",
+    "justification": "曝光→点击分钟数。"
+  },
+  {
+    "name": "attr_exp2clk_min_p90",
+    "family": "attr",
+    "justification": "曝光→点击分钟数。"
+  },
+  {
+    "name": "attr_clk2cnv_min_n",
+    "family": "attr",
+    "justification": "同 item 点击→转化分钟数（归因时长）。"
+  },
+  {
+    "name": "attr_clk2cnv_min_min",
+    "family": "attr",
+    "justification": "同 item 点击→转化分钟数（归因时长）。"
+  },
+  {
+    "name": "attr_clk2cnv_min_p50",
+    "family": "attr",
+    "justification": "同 item 点击→转化分钟数（归因时长）。"
+  },
+  {
+    "name": "attr_clk2cnv_min_mean",
+    "family": "attr",
+    "justification": "同 item 点击→转化分钟数（归因时长）。"
+  },
+  {
+    "name": "attr_clk2cnv_min_p90",
+    "family": "attr",
+    "justification": "同 item 点击→转化分钟数（归因时长）。"
+  },
+  {
+    "name": "attr_firstclk2cnv_min_n",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_firstclk2cnv_min_min",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_firstclk2cnv_min_p50",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_firstclk2cnv_min_mean",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_firstclk2cnv_min_p90",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_exp2cnv_min_n",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_exp2cnv_min_min",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_exp2cnv_min_p50",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_exp2cnv_min_mean",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_exp2cnv_min_p90",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_anyclk2cnv_min_n",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_anyclk2cnv_min_min",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_anyclk2cnv_min_p50",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_anyclk2cnv_min_mean",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_anyclk2cnv_min_p90",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_cnv_wo_prior_clk_cnt",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_cnv_wo_prior_clk_rate",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "attr_exp_before_cnv_mean",
+    "family": "attr",
+    "justification": "漏斗归因时延与无点击转化率。"
+  },
+  {
+    "name": "pay_cnt",
+    "family": "pay",
+    "justification": "付费次数/是否付费用户：conversion(action=2) 强度。"
+  },
+  {
+    "name": "pay_user",
+    "family": "pay",
+    "justification": "付费次数/是否付费用户：conversion(action=2) 强度。"
+  },
+  {
+    "name": "arpu_sum_proxy",
+    "family": "arpu",
+    "justification": "ARPU proxy：转化上 item.115 的 sum/mean/p50；日均 / active_days。"
+  },
+  {
+    "name": "arpu_mean_proxy",
+    "family": "arpu",
+    "justification": "ARPU proxy：转化上 item.115 的 sum/mean/p50；日均 / active_days。"
+  },
+  {
+    "name": "arpu_p50_proxy",
+    "family": "arpu",
+    "justification": "ARPU proxy：转化上 item.115 的 sum/mean/p50；日均 / active_days。"
+  },
+  {
+    "name": "deal_cheap_cnv_share",
+    "family": "deal",
+    "justification": "优惠敏感：低价成交占比、相对自身更便宜、成交前曝光犹豫、浏览-成交价差。"
+  },
+  {
+    "name": "deal_vs_self_price_share",
+    "family": "deal",
+    "justification": "优惠敏感：低价成交占比、相对自身更便宜、成交前曝光犹豫、浏览-成交价差。"
+  },
+  {
+    "name": "deal_price_gap_view_minus_pay",
+    "family": "deal",
+    "justification": "优惠敏感：低价成交占比、相对自身更便宜、成交前曝光犹豫、浏览-成交价差。"
+  },
+  {
+    "name": "cvr_pay_per_click",
+    "family": "cvr",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "ctvr_pay_per_expose",
+    "family": "ctvr",
+    "justification": "seq-derived automated funnel/session stat"
+  },
+  {
+    "name": "pay_price_known_rate",
+    "family": "pay",
+    "justification": "付费次数/是否付费用户：conversion(action=2) 强度。"
+  },
+  {
+    "name": "arpu_per_active_day_proxy",
+    "family": "arpu",
+    "justification": "ARPU proxy：转化上 item.115 的 sum/mean/p50；日均 / active_days。"
+  },
+  {
+    "name": "deal_hesitation_exp_before_cnv",
+    "family": "deal",
+    "justification": "优惠敏感：低价成交占比、相对自身更便宜、成交前曝光犹豫、浏览-成交价差。"
+  },
+  {
+    "name": "ui_n_items_touched",
+    "family": "ui",
+    "justification": "U×I 汇总与 pair 归因。"
+  },
+  {
+    "name": "ui_exp_per_item_mean",
+    "family": "ui",
+    "justification": "U×I 汇总与 pair 归因。"
+  },
+  {
+    "name": "ui_pair_ctr_mean",
+    "family": "ui",
+    "justification": "U×I 汇总与 pair 归因。"
+  },
+  {
+    "name": "ui_pair_cvr_mean",
+    "family": "ui",
+    "justification": "U×I 汇总与 pair 归因。"
+  },
+  {
+    "name": "ui_multitouch_cnv_items",
+    "family": "ui",
+    "justification": "U×I 汇总与 pair 归因。"
+  },
+  {
+    "name": "ui_pair_clk2cnv_min_p50",
+    "family": "ui",
+    "justification": "U×I 汇总与 pair 归因。"
+  },
+  {
+    "name": "ui_pair_clk2cnv_min_mean",
+    "family": "ui",
+    "justification": "U×I 汇总与 pair 归因。"
+  },
+  {
+    "name": "trans_exp_to_exp",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "trans_exp_to_clk",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "trans_exp_to_cnv",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "trans_clk_to_exp",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "trans_clk_to_clk",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "trans_clk_to_cnv",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "trans_cnv_to_exp",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "trans_cnv_to_clk",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "trans_cnv_to_cnv",
+    "family": "trans",
+    "justification": "曝/点/转 bigram 路径偏好。"
+  },
+  {
+    "name": "u_side_103",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_103_known",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_104",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_104_known",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_105",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_105_known",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_109",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_109_known",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_106_len",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_106_ent",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_107_len",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_107_ent",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_108_len",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_108_ent",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_110_len",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  },
+  {
+    "name": "u_side_110_ent",
+    "family": "u",
+    "justification": "官方加密用户侧：桶+list长度/熵；missingness 入模。"
+  }
+]
