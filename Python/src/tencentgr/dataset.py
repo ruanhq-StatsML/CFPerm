@@ -510,8 +510,15 @@ def design_matrix_from_dataset(
     ds: TencentGRDataset,
     *,
     max_n: Optional[int] = None,
+    y_mode: str = "any_click",
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """X = user ⊕ mean(history_emb) ⊕ target_emb; Y = click; W = late vs early timestamp."""
+    """X = user ⊕ mean(history_emb) ⊕ target_emb; W = late vs early timestamp.
+
+    y_mode:
+      last_click  — 1{target_action >= 1} (almost all zeros on this slice)
+      any_click   — 1{any action in history+target >= 1}
+      action_rate — mean action id over history+target
+    """
     n = len(ds.samples) if max_n is None else min(len(ds.samples), int(max_n))
     d_user = ds.user_feat_dim
     d = d_user + 2 * ds.emb_dim
@@ -529,7 +536,13 @@ def design_matrix_from_dataset(
         X[i, :d_user] = uvec
         X[i, d_user : d_user + ds.emb_dim] = hist
         X[i, d_user + ds.emb_dim :] = tgt
-        Y[i] = 1.0 if int(s["target_action"]) >= 1 else 0.0
+        acts = [int(a) for a in (s.get("history_actions") or [])] + [int(s["target_action"])]
+        if y_mode == "last_click":
+            Y[i] = 1.0 if int(s["target_action"]) >= 1 else 0.0
+        elif y_mode == "action_rate":
+            Y[i] = float(np.mean(acts)) if acts else 0.0
+        else:
+            Y[i] = 1.0 if (max(acts) if acts else 0) >= 1 else 0.0
         ts[i] = int(s.get("last_timestamp", 0))
     med = np.median(ts) if n else 0
     W = (ts >= med).astype(np.int64)

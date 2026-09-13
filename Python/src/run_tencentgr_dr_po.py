@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fit a DR pseudo-outcome learner on the dumped TencentGR cache.
 
-Y = 1{target_action >= 1} (click or conversion vs exposure).
+Y = 1{any action in the window is click/conversion} by default.
 W = 1{last_timestamp >= median} (late vs early batch).
 X = user_vec ⊕ mean(history_emb) ⊕ target_emb, optionally compacted.
 
@@ -37,6 +37,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--ridge-alpha", type=float, default=1.0)
     p.add_argument("--clip-e", type=float, default=0.01)
+    p.add_argument("--y-mode", default="any_click", choices=["any_click", "last_click", "action_rate"])
     return p.parse_args()
 
 
@@ -56,7 +57,7 @@ def _jsonable(d: dict) -> dict:
 def main() -> None:
     args = parse_args()
     ds = TencentGRDataset.from_cache(args.cache_dir, split="all")
-    X, Y, W, user_ids = design_matrix_from_dataset(ds, max_n=args.max_n)
+    X, Y, W, user_ids = design_matrix_from_dataset(ds, max_n=args.max_n, y_mode=args.y_mode)
     use_compact = args.compact and not args.full_x
     if use_compact:
         X = compact_blocks(X, ds.user_feat_dim, ds.emb_dim, keep=args.keep)
@@ -89,8 +90,17 @@ def main() -> None:
             "user_feat_dim": int(ds.user_feat_dim),
             "emb_dim": int(ds.emb_dim),
             "n_cache_samples": int(len(ds.samples)),
-            "y_definition": "1{target_action >= 1}",
+            "y_definition": {
+                "any_click": "1{any action in history+target >= 1}",
+                "last_click": "1{target_action >= 1}",
+                "action_rate": "mean(action_id over history+target)",
+            }[args.y_mode],
+            "y_mode": args.y_mode,
             "w_definition": "1{last_timestamp >= median}",
+            "last_click_note": (
+                "On this slice the last seq event is almost always exposure (action=0), "
+                "so last_click is near-degenerate. Default Y is any_click."
+            ),
         }
     )
     path = out_dir / "dr_po_subset.json"
