@@ -1,0 +1,40 @@
+% Attribution-guided online stacking (portable use-case)
+% L = CE(stack(w), y) + lambda KL(w || alpha), alpha = EMA(FSDS/MSG/VIMP)
+\begin{table}[t]
+\centering
+\caption{Attribution-guided online stacking vs.\ mean fusion and pure stacking.
+Holdout Brier/MSE drop ($\uparrow$) and Acc lift ($\uparrow$) on MSR-VTT (video/text/audio)
+and Amazon reviews (text/image). $\alpha$ is an EMA of FSDS/MSG attribution;
+\texttt{stack\_alpha} uses $L=\mathrm{CE}+\lambda\mathrm{KL}(w\Vert\alpha)$ with $\lambda=0.5$.}
+\label{tab:agod-vimp-stacking}
+\begin{tabular}{llrrr}
+\toprule
+Dataset & Variant & MSE drop $\uparrow$ & Acc $\uparrow$ & Acc post \\
+\midrule
+MSR-VTT & mean\_ce     & $-0.0080$ & $+0.000$ & $0.651$ \\
+MSR-VTT & stack\_ce    & $+0.0076$ & $+0.008$ & $0.655$ \\
+MSR-VTT & stack\_alpha & $+0.0097$ & $+0.008$ & $0.655$ \\
+\midrule
+Amazon  & mean\_ce     & $+0.0339$ & $+0.049$ & $0.543$ \\
+Amazon  & stack\_ce    & $+0.0357$ & $+0.033$ & $0.539$ \\
+Amazon  & stack\_alpha & $+0.0383$ & $+0.069$ & $0.571$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Stacking mass $w$ vs.\ attribution prior $\alpha$: mean $\|w-\alpha\|_1/|M|$
+(lower = prior is followed) and mean $w$ by modality.}
+\label{tab:agod-vimp-stacking-weights}
+\begin{tabular}{llrl}
+\toprule
+Dataset & Variant & $\|w-\alpha\|$ & mean $w$ \\
+\midrule
+MSR-VTT & stack\_ce    & $0.124$ & $v{:}0.37,\; t{:}0.29,\; a{:}0.34$ \\
+MSR-VTT & stack\_alpha & $0.096$ & $v{:}0.39,\; t{:}0.33,\; a{:}0.27$ \\
+Amazon  & stack\_ce    & $0.224$ & $\mathrm{txt}{:}0.47,\; \mathrm{img}{:}0.53$ \\
+Amazon  & stack\_alpha & $0.155$ & $\mathrm{txt}{:}0.39,\; \mathrm{img}{:}0.61$ \\
+\bottomrule
+\end{tabular}
+\end{table}
