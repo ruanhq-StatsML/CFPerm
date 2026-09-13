@@ -1,0 +1,56 @@
+% Dynamic Gradient Alignment (Fan, Grangier, Ablin 2024) as hop domain weights.
+% Replaces density-ratio / embedding importance sampling when those overfit.
+
+\paragraph{DGA instead of density-ratio hop weights.}
+Density-ratio IW (Shimodaira; KLIEP / uLSIF / LogReg; embedding nearest-domain
+IS of Grangier et al.) sets
+$w(x)\approx p_{\mathrm{te}}(x)/p_{\mathrm{tr}}(x)$.
+That estimate is brittle when the specialized pocket is small or a generic
+domain has few tokens --- exactly the failure modes reported for IS in
+Fan--Grangier--Ablin (arXiv:2410.02498).
+
+\emph{Dynamic Gradient Alignment} (DGA) never forms a density ratio.
+It solves the bilevel mixing problem: find simplex weights $\alpha$ over
+generic domains $\{D_i\}$ so that one training step on
+$L_{\mathrm{gen}}(\theta,\alpha)=\sum_i\alpha_i L_i(\theta)$ most reduces
+the specialized loss $L_{\mathrm{spe}}$.
+A first-order expansion yields the \emph{gradient alignment}
+\begin{equation}
+  a_i
+  =
+  \bigl\langle
+    \nabla_\theta \ell(\theta,D_i),\,
+    \nabla_\theta \ell(\theta,D_{\mathrm{spe}})
+  \bigr\rangle,
+\end{equation}
+and a mirror-descent update on the simplex
+\begin{equation}
+  \alpha
+  \leftarrow
+  \mathrm{normalize}\bigl(\alpha\odot\exp(\eta a)\bigr),
+\end{equation}
+optionally EMA-smoothed:
+$\alpha_{\mathrm{EMA}}\leftarrow(1-\beta)\alpha_{\mathrm{EMA}}+\beta\alpha$.
+(Domains whose gradient currently aligns with $D_{\mathrm{spe}}$ are upweighted;
+once a domain is fit, $\|\nabla L_i\|$ drops and DGA explores elsewhere ---
+the paper's fix for IS overfitting.)
+
+\paragraph{Amazon hop mapping (no new loss).}
+Past rating categories are the generic domains; the causal specialized set is
+the last observed batch $B_{t-1}$.
+Sample weights for closed-form Ridge are the broadcast $\alpha_{\mathrm{EMA}}$
+($w_{\mathrm{row}}=\alpha_{\mathrm{batch(row)}}$).
+When the number of past batches grows, each hop takes one mirror step from the
+uniform prior on the current simplex (softmax of tempered alignments); EMA
+carries temporal memory without freezing mass on early batches.
+This is the same ``attribution $\to$ next-batch training weights'' adapter
+slot as heatmap hop IW --- only the weight estimator changes.
+
+\paragraph{Relation to hop cosine IW.}
+Heatmap hop $w_s=\exp(\gamma(\cos(\mu_s,\mu_{t-1})-1))$ is a
+\emph{feature-space} proximity surrogate for $p_{\mathrm{te}}/p_{\mathrm{tr}}$.
+DGA is a \emph{loss-gradient} proximity surrogate for the same bilevel target.
+Use hop IW when category means are stable predictors of transfer; use DGA when
+density-ratio / embedding IS is unstable or domains overfit under limited $n$.
+Locked TSS signs $(\hat c,\hat\delta)$ still gate bank$\oplus$Ridge and the
+ensemble EWMA rate; DGA only replaces the Ridge sample-weight channel.
