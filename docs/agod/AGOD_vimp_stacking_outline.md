@@ -31,9 +31,14 @@ Online stacking then spends fusion mass `w` on that attributor.
 
 **Output:** holdout Brier/MSE drop, Acc lift, `‖w−α‖`.
 
-## Portable use-case
+## Portable / naive use-case
 
 Any multimodal online learner with (i) an attribution score and (ii) a
 simplex fusion weight can reuse the same socket: **attributor → α → KL to `w`**.
-Code: `agod/online_stack.py` (`alpha_stack_kl`),
+The actuator is ~20 LOC on top of CE stacking — no new backbone.
+
+Paper-ready note (tables + code listing):
+`docs/agod/AGOD_naive_stack_socket.tex`
+
+Code: `agod/online_stack.py` (`alpha_stack_kl`, `WEIGHT_MODES`, `stack_weight_aux`),
 `scripts/run_agod_online_stack_compare.py`.
