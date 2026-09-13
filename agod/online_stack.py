@@ -78,6 +78,34 @@ def gram_erank_torch(
     return erank, align
 
 
+def alpha_stack_kl(
+    stack_w: torch.Tensor,
+    alpha: Mapping[str, float],
+    mods: Sequence[str],
+    *,
+    lambda_kl: float = 0.50,
+) -> dict[str, torch.Tensor]:
+    """Attribution-guided stacking: always pull ``stack_w`` toward α.
+
+    This is the weight-socket into online stacking:
+      L_kl = KL(stack_w ‖ α)   with α from FSDS / MSG / VIMP routing.
+    Unlike erank-triggered balance, the prior is applied every step.
+    """
+    mods = list(mods)
+    w = stack_w.clamp_min(1e-8)
+    w = w / w.sum()
+    prior = torch.tensor(
+        [max(float(alpha.get(m, 0.0)), 1e-8) for m in mods],
+        device=w.device,
+        dtype=w.dtype,
+    )
+    prior = prior / prior.sum()
+    # KL(w || α) — stack mass tracks attribution proportions
+    kl = (w * (torch.log(w) - torch.log(prior))).sum()
+    loss = float(lambda_kl) * kl
+    return {"loss": loss, "kl": kl, "prior": prior.detach(), "w": w.detach()}
+
+
 def erank_balance_loss(
     hiddens: Mapping[str, torch.Tensor],
     mods: Sequence[str],

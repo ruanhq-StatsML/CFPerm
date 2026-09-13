@@ -31,6 +31,7 @@ from .compute_ratio import (
     unique_adapt_mass,
 )
 from .online_stack import (
+    alpha_stack_kl,
     MeanFusion,
     StackFusion,
     erank_balance_loss,
@@ -146,6 +147,7 @@ __all__ = [
     "extract_r_runs",
     "characterize_buckets_and_rruns",
     "MeanFusion",
+    "alpha_stack_kl",
     "StackFusion",
     "erank_balance_loss",
     "gram_erank_torch",
