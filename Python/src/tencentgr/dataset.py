@@ -277,19 +277,24 @@ class TencentGRDataset(Dataset):
             dim = int(dims.get(cfg_name, 0))
             folder = self.root / "mm_emb" / mm_emb_dirname(cfg_name)
             files = sorted(glob.glob(str(folder / "*.parquet")))
-            print(f"[tencentgr] mm {cfg_name} files={len(files)} dir={folder}")
+            print(f"[tencentgr] mm {cfg_name} files={len(files)} dir={folder}", flush=True)
             n_hit = 0
-            for path in files:
+            for fi, path in enumerate(files, start=1):
                 table = pq.read_table(path, columns=["anonymous_cid", "emb"])
                 filt = table.filter(pc.is_in(table["anonymous_cid"], value_set=needed_cids))
                 if filt.num_rows == 0:
+                    if fi == 1 or fi % 10 == 0 or fi == len(files):
+                        print(f"[tencentgr]   {cfg_name} {fi}/{len(files)} hits=0", flush=True)
                     continue
                 pdf = filt.to_pandas()
-                for cid, emb in zip(pdf["anonymous_cid"].tolist(), pdf["emb"].tolist()):
-                    oid = _cid_to_oid(cid)
-                    if oid is None:
-                        continue
-                    rid = oid_to_rid.get(oid)
+                oids = pd.to_numeric(pdf["anonymous_cid"], errors="coerce")
+                keep = oids.notna()
+                if not bool(keep.any()):
+                    continue
+                oids_i = oids.loc[keep].astype(np.int64).to_numpy()
+                embs = pdf.loc[keep, "emb"].to_numpy()
+                for oid, emb in zip(oids_i, embs):
+                    rid = oid_to_rid.get(int(oid))
                     if rid is None:
                         continue
                     vec = np.asarray(emb, dtype=np.float32).reshape(-1)
@@ -298,9 +303,11 @@ class TencentGRDataset(Dataset):
                         n = min(dim, vec.size)
                         fixed[:n] = vec[:n]
                         vec = fixed
-                    rid_parts.setdefault(rid, {})[cfg_name] = vec
+                    rid_parts.setdefault(int(rid), {})[cfg_name] = vec
                     n_hit += 1
-            print(f"[tencentgr] mm {cfg_name} matched_rows={n_hit}")
+                if fi == 1 or fi % 10 == 0 or fi == len(files):
+                    print(f"[tencentgr]   {cfg_name} {fi}/{len(files)} file_rows={filt.num_rows} total_hits={n_hit}", flush=True)
+            print(f"[tencentgr] mm {cfg_name} matched_rows={n_hit}", flush=True)
         return self._concat_mm_parts(rid_parts, dims)
 
     def _concat_mm_parts(self, rid_parts: Dict[int, Dict[str, np.ndarray]], dims: Dict[str, int]) -> Dict[int, np.ndarray]:
