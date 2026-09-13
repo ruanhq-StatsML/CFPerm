@@ -1,0 +1,13 @@
+% Online stacking + erank balance — MSE
+\begin{table}[t]\centering
+\caption{MSR-VTT online windows: holdout Brier/MSE under mean fusion, online stacking, and stacking+erank/modality balance.}
+\label{tab:agod-online-stack-mse}
+\begin{tabular}{lrrr}\toprule
+variant & MSE pre & MSE post & MSE drop & Acc$\uparrow$ \\
+\midrule
+mean\_ce & 0.2477 & 0.2576 & -0.0099 & +0.010 \\
+stack\_ce & 0.2618 & 0.2648 & -0.0030 & -0.004 \\
+stack\_erank\_bal & 0.2607 & 0.2718 & -0.0111 & -0.012 \\
+\bottomrule
+\end{tabular}
+\end{table}

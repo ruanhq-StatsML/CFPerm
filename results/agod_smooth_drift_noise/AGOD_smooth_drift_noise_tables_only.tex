@@ -1,0 +1,15 @@
+% Smooth drift-vs-noise router
+\begin{table}[t]\centering
+\caption{Amazon online: smooth drift-vs-noise gate + EMA routing vs equal / MSG / concept$-$cov (holdout Brier/MSE and Acc).}
+\label{tab:agod-smooth-drift-noise}
+\begin{tabular}{lrrr}\toprule
+policy & MSE pre & MSE post & MSE drop & Acc$\uparrow$ \\
+\midrule
+equal & 0.2580 & 0.2496 & +0.0083 & +0.069 \\
+msg\_softmax & 0.2588 & 0.2484 & +0.0104 & +0.059 \\
+concept\_minus\_cov & 0.2587 & 0.2481 & +0.0106 & +0.062 \\
+smooth\_drift\_noise & 0.2581 & 0.2487 & +0.0094 & +0.066 \\
+smooth\_concept\_cov & 0.2569 & 0.2476 & +0.0092 & +0.066 \\
+\bottomrule
+\end{tabular}
+\end{table}
