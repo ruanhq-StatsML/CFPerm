@@ -99,6 +99,15 @@ from .instance_disc import disc_as_concept, nn_discrimination_scores, nn_domain_
 from .proto_drift import ModalityPrototypeBank, compose_proto_fsds
 from .grad_memory import GradProjMemory, landscape_adapt_gain
 from .next_step import next_step_lr, predict_next_alpha, proportion_report
+from .po_risk_train import (
+    ACTUATORS,
+    METRIC_VERSIONS,
+    NextStepActuatorConfig,
+    PORiskMetricConfig,
+    metric_to_alpha,
+    next_step_actuators,
+    opportunity_rank,
+)
 
 __all__ = [
     "ADAPTER_LAYERS",
@@ -185,6 +194,13 @@ __all__ = [
     "predict_next_alpha",
     "next_step_lr",
     "proportion_report",
+    "METRIC_VERSIONS",
+    "ACTUATORS",
+    "PORiskMetricConfig",
+    "NextStepActuatorConfig",
+    "metric_to_alpha",
+    "next_step_actuators",
+    "opportunity_rank",
 ]
 
 __version__ = "0.1.0"
