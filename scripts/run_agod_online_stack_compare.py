@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Attribution-guided online stacking vs baselines.
 
-Datasets: Amazon, MSR-VTT, COCO ImgTxt, Affec (5 physio modalities).
+Datasets: Amazon, MSR-VTT, COCO ImgTxt, Affec, Fashion-IQ, Food-101 (HF CLIP pack).
 
 Variants (same towers / steps / holdout; only the weight socket changes):
   mean_ce / stack_ce / stack_alpha / stack_uniform / stack_fixed / stack_temp / stack_erank
@@ -12,7 +12,7 @@ Primary metrics: holdout Brier/MSE drop and Acc lift.
 
   PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py
   PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py \\
-      --datasets coco affec
+      --datasets food101 fashion_iq --merge-existing
 """
 from __future__ import annotations
 
@@ -59,7 +59,12 @@ VARIANTS = WEIGHT_MODES
 LAMBDA_KL = 0.50
 FUSE = 128
 HOLD = 0.35
-DATASETS_ALL = ("msrvtt", "amazon", "coco", "affec")
+DATASETS_ALL = ("msrvtt", "amazon", "coco", "affec", "fashion_iq", "food101")
+IMGTXT_PACKS = {
+    "coco": "coco_outdoor_indoor",
+    "fashion_iq": "fashion_iq",
+    "food101": "food101",
+}
 
 
 def split_hold(idx, seed):
@@ -297,8 +302,21 @@ def load_amazon_pack(device):
     }
 
 
-def load_coco_pack():
-    feats, y, meta = imgtxt.load_dataset("coco_outdoor_indoor")
+def load_imgtxt_pack(alias: str):
+    """Generic image+text pack under data/img_txt/<folder>/."""
+    folder = IMGTXT_PACKS[alias]
+    feats, y, meta = imgtxt.load_dataset(folder)
+    # Food-101 has ~101 balanced classes: mode-vs-rest is tiny-pos.
+    # Use coarse even/odd class split so the CE socket is well-posed.
+    if alias == "food101":
+        y_raw = np.load(imgtxt.DATA_ROOT / folder / "labels.npy").astype(np.int64)
+        y = (y_raw % 2 == 0).astype(np.int64)
+        meta = {
+            **meta,
+            "pos_rate": float(y.mean()),
+            "mode_label": "even_class_id",
+            "label_rule": "y = 1{class_id % 2 == 0}",
+        }
     # image+text only (bbox optional; keep two-mod stack comparable to Amazon)
     mods = ["image", "text"]
     feats = {m: feats[m] for m in mods}
@@ -307,12 +325,12 @@ def load_coco_pack():
         {"t": int(w["t"]), "idx": np.asarray(w["idx"])} for w in stream["windows"]
     ]
     print(
-        f"coco: n={meta['n']} pos_rate={meta['pos_rate']:.3f} "
+        f"{alias}: folder={folder} n={meta['n']} pos_rate={meta['pos_rate']:.3f} "
         f"mode_label={meta['mode_label']}",
         flush=True,
     )
     return {
-        "name": "coco",
+        "name": alias,
         "mods": mods,
         "feats": feats,
         "y": y.astype(int),
@@ -325,6 +343,10 @@ def load_coco_pack():
         "alpha_fn": alpha_imgtxt,
         "n_ref_keep": int(imgtxt.N_REF // 2),
     }
+
+
+def load_coco_pack():
+    return load_imgtxt_pack("coco")
 
 
 def load_affec_pack():
@@ -637,6 +659,12 @@ def main():
     if "coco" in args.datasets:
         print("loading COCO ImgTxt...", flush=True)
         packs["coco"] = load_coco_pack()
+    if "fashion_iq" in args.datasets:
+        print("loading Fashion-IQ ImgTxt...", flush=True)
+        packs["fashion_iq"] = load_imgtxt_pack("fashion_iq")
+    if "food101" in args.datasets:
+        print("loading Food-101 ImgTxt (HF CLIP pack)...", flush=True)
+        packs["food101"] = load_imgtxt_pack("food101")
     if "affec" in args.datasets:
         print("loading Affec...", flush=True)
         packs["affec"] = load_affec_pack()

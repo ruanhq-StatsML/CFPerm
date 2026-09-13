@@ -1,0 +1,8 @@
+{
+  "source": "ethz/food101",
+  "split": "validation",
+  "n": 5000,
+  "clip": "openai/clip-vit-base-patch32",
+  "text_template": "a photo of {label}, a type of food",
+  "n_class_raw": 101
+}

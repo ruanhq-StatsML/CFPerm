@@ -44,6 +44,14 @@ Classical online stacking + an FSDS/MSG attribution prior — not a new fusion a
 | `affec` | `stack_fixed` | +0.0093 | +0.009 | 0.634 | 0.078 | eye_tracking:0.20 / pupil:0.20 / cursor:0.20 / gsr_eda:0.20 / eeg:0.20 |
 | `affec` | `stack_temp` | +0.0742 | +0.071 | 0.625 | 0.088 | eye_tracking:0.22 / pupil:0.21 / cursor:0.23 / gsr_eda:0.12 / eeg:0.23 |
 | `affec` | `stack_erank` | +0.0379 | +0.037 | 0.626 | 0.084 | eye_tracking:0.21 / pupil:0.21 / cursor:0.21 / gsr_eda:0.15 / eeg:0.21 |
+| `fashion_iq` | `mean_ce` | +0.0050 | +0.012 | 0.888 | 0.000 | image:0.50 / text:0.50 |
+| `fashion_iq` | `stack_ce` | +0.0025 | +0.010 | 0.888 | 0.421 | image:0.37 / text:0.63 |
+| `fashion_iq` | `stack_alpha` | +0.0023 | +0.012 | 0.887 | 0.247 | image:0.57 / text:0.43 |
+| `fashion_iq` | `stack_temp` | +0.0020 | +0.010 | 0.891 | 0.508 | image:0.29 / text:0.71 |
+| `food101` | `mean_ce` | +0.0243 | +0.040 | 0.958 | 0.000 | image:0.50 / text:0.50 |
+| `food101` | `stack_ce` | +0.0289 | +0.037 | 0.975 | 0.438 | image:0.33 / text:0.67 |
+| `food101` | `stack_alpha` | +0.0239 | +0.036 | 0.961 | 0.270 | image:0.54 / text:0.46 |
+| `food101` | `stack_temp` | +0.0295 | +0.037 | 0.981 | 0.542 | image:0.22 / text:0.78 |
 
 Best (MSE drop, Acc lift): **`affec/stack_temp`**
 (MSE drop=+0.0742, Acc lift=+0.071).
@@ -51,44 +59,4 @@ Best (MSE drop, Acc lift): **`affec/stack_temp`**
 ```bash
 PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py
 PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py --datasets coco affec
-```
-
-## Weight-mode sweep (COCO + Affec)
-
-Integrated into `agod.online_stack.WEIGHT_MODES` / `stack_weight_aux`:
-
-| mode | fusion weight | prior |
-|---|---|---|
-| `mean_ce` | mean-pool | — |
-| `stack_ce` | free `softmax(ψ)` | — |
-| `stack_alpha` | free + `KL(w‖α)` | attribution α |
-| `stack_uniform` | free + `KL(w‖U)` | MoE-style balance |
-| `stack_fixed` | freeze `w:=α` | hard attribution |
-| `stack_temp` | `softmax(ψ/τ)`, τ=0.5 | sharper stack |
-| `stack_erank` | free + erank/align balance | α if collapsed else U |
-
-### Holdout summary
-
-| dataset | variant | MSE drop | Acc lift | Acc post | vs mean ΔMSE/ΔAcc | vs stack_ce ΔMSE/ΔAcc |
-|---|---|---:|---:|---:|---|---|
-| coco | mean_ce | +0.0236 | +0.034 | 0.860 | — | — |
-| coco | stack_ce | +0.0251 | +0.033 | 0.865 | +0.0015 / −0.001 | — |
-| coco | stack_alpha | +0.0240 | +0.036 | 0.860 | +0.0004 / +0.001 | −0.0012 / +0.003 |
-| coco | stack_uniform | +0.0247 | +0.036 | 0.862 | +0.0011 / +0.001 | −0.0005 / +0.003 |
-| coco | stack_fixed | +0.0213 | +0.025 | 0.857 | −0.0023 / −0.009 | −0.0038 / −0.007 |
-| coco | **stack_temp** | **+0.0251** | **+0.037** | **0.872** | +0.0015 / +0.003 | ~0 / +0.004 |
-| coco | stack_erank | +0.0246 | +0.037 | 0.854 | +0.0010 / +0.003 | −0.0005 / +0.004 |
-| affec | mean_ce | −0.0501 | −0.055 | 0.560 | — | — |
-| affec | stack_ce | +0.0180 | +0.019 | 0.629 | +0.068 / +0.074 | — |
-| affec | stack_alpha | +0.0369 | +0.039 | 0.622 | +0.087 / +0.094 | +0.019 / +0.019 |
-| affec | stack_uniform | +0.0225 | +0.024 | 0.652 | +0.073 / +0.079 | +0.005 / +0.004 |
-| affec | stack_fixed | +0.0093 | +0.009 | 0.634 | +0.059 / +0.064 | −0.009 / −0.010 |
-| affec | **stack_temp** | **+0.0742** | **+0.071** | 0.625 | **+0.124 / +0.126** | **+0.056 / +0.052** |
-| affec | stack_erank | +0.0379 | +0.037 | 0.626 | +0.088 / +0.092 | +0.020 / +0.018 |
-
-Takeaway: on Affec, sharper stacking (`stack_temp`) and attribution KL (`stack_alpha` / `stack_erank`) both help a lot vs mean; hard `w:=α` underperforms free stacking. On COCO gains are small (mean already strong).
-
-```bash
-PYTHONPATH=. python3 scripts/run_agod_online_stack_compare.py \
-  --datasets coco affec --merge-existing
 ```
