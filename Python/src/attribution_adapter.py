@@ -243,12 +243,39 @@ def typed_bank_weight(c, delta, ewma_bank=None, ewma_ridge=None):
     return float(np.clip(0.5 * w_cd + 0.5 * w_err, 0.05, 0.70))
 
 
+def attribution_ewma_rate(c, delta, pi_change=0.0):
+    """How much *new* hop MSE enters the ensemble EWMA (λ_new ∈ [0.15, 0.75]).
+
+    Attribution guides next-batch memory:
+      ĉ large / δ̂ quiet (covariate hop) → small λ_new → keep past ensemble
+      δ̂ large (concept hop)             → large λ_new → forget fast, track Ridge
+      π_m jumps                          → bump λ_new (modality mix moved)
+
+    Locked TSS signs only — no new loss. ``pi_change`` = L1(|π_t − π_{t-1}|)/2 ∈ [0,1].
+    """
+    c = float(c)
+    d = float(delta)
+    react = (1.0 + 4.0 * d) / (1.0 + 2.0 * c + 4.0 * d)
+    react = react + 0.5 * float(np.clip(pi_change, 0.0, 1.0))
+    return float(np.clip(0.15 + 0.60 * react, 0.15, 0.75))
+
+
+def pi_l1_change(prev, curr):
+    """Half L1 distance between modality share dicts (∈ [0,1])."""
+    if not prev or not curr:
+        return 0.0
+    keys = set(prev) | set(curr)
+    return 0.5 * float(sum(abs(float(curr.get(g, 0.0)) - float(prev.get(g, 0.0))) for g in keys))
+
+
 def run_attr_adapter(stream, alpha=3.0, gamma=4.0, tau=0.20, cap=800):
     """Next-batch adapter: typed mix of Wu bank and hop-weighted Ridge.
 
     Predict the arriving batch with
         ŷ = w · bank_NW + (1−w) · Ridge_hop(past),
-    w from (ĉ, δ̂) and rolling predictor EWMA, then enqueue the batch.
+    w from (ĉ, δ̂) and rolling predictor EWMA. The EWMA *rate* λ_new is set by
+    ``attribution_ewma_rate(ĉ, δ̂)`` so attribution guides next-hop ensemble
+    memory (concept shift → react; covariate shift → remember).
     """
     X = np.asarray(stream.X, dtype=float)
     y = np.asarray(stream.y, dtype=float)
@@ -269,8 +296,10 @@ def run_attr_adapter(stream, alpha=3.0, gamma=4.0, tau=0.20, cap=800):
         pr = _ridge_predict(X[tr], y[tr], Xt, sample_weight=sw[tr], alpha=alpha)
         pred = w * pb + (1.0 - w) * pr
         mb, mr = _mse(pb, yt), _mse(pr, yt)
-        ewma_bank = mb if ewma_bank is None else 0.6 * ewma_bank + 0.4 * mb
-        ewma_ridge = mr if ewma_ridge is None else 0.6 * ewma_ridge + 0.4 * mr
+        # attribution → next-hop ensemble memory
+        lam = attribution_ewma_rate(c, d)
+        ewma_bank = mb if ewma_bank is None else (1.0 - lam) * ewma_bank + lam * mb
+        ewma_ridge = mr if ewma_ridge is None else (1.0 - lam) * ewma_ridge + lam * mr
         history.append(
             {
                 "round": int(t),
@@ -278,6 +307,7 @@ def run_attr_adapter(stream, alpha=3.0, gamma=4.0, tau=0.20, cap=800):
                 "mse_bank": mb,
                 "mse_ridge": mr,
                 "w_bank": w,
+                "ewma_rate": lam,
                 "c": c,
                 "delta": d,
                 "n": int(ic.size),
@@ -297,6 +327,7 @@ def run_attr_adapter(stream, alpha=3.0, gamma=4.0, tau=0.20, cap=800):
             "alpha": alpha,
             "gamma": gamma,
             "mean_w_bank": float(np.mean([h["w_bank"] for h in history])),
+            "mean_ewma_rate": float(np.mean([h["ewma_rate"] for h in history])),
         },
     )
 

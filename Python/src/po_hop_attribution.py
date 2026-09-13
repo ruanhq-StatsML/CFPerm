@@ -21,11 +21,13 @@ from sklearn.linear_model import Ridge
 from amazon_continuous_batches import make_amazon_like_stream
 from amazon_mse_prototype import _mse, describe_shapes
 from attribution_adapter import (
+    attribution_ewma_rate,
     block_means,
     hop_sample_weights,
     load_amazon_stream,
     modality_hop_weights,
     modality_pi_shares,
+    pi_l1_change,
     rolling_hop_stats,
     run_hop_ridge,
     run_ridge_past,
@@ -304,13 +306,23 @@ def run_msrvtt_hop_po(
     seed=SEED,
     n_estimators=40,
     target="text",
-    ewma_pi=0.3,
+    ewma_pi="auto",
 ):
     """Online cross-modal Ridge: other modalities → target block.
 
-    π_m from ``modality_pi_shares`` → ``benchmark_feature_selection`` (swap
-    that hook to change the selector). Optional EWMA on π across hops.
+    π_m from ``modality_pi_shares`` → ``benchmark_feature_selection``.
+    ``ewma_pi``:
+      - float in [0,1]: fixed persistence on previous π
+      - ``"auto"`` (default): attribution sets λ_new via
+        ``attribution_ewma_rate(ĉ, δ̂, Δπ)``; persistence = 1−λ_new
+        so concept / π jumps → forget fast; stable hops → keep ensemble π
     """
+    from amazon_continuous_batches import (
+        batch_mean_cosine,
+        concept_intensity_mse,
+        heatmap_hop_c,
+    )
+
     X, batch = stream["X"], stream["batch"]
     groups = stream["groups"]
     if target not in groups:
@@ -321,19 +333,44 @@ def run_msrvtt_hop_po(
     k = int(batch.max()) + 1
     block_mus = block_means(X, batch, groups)
     mus = np.stack([X[batch == t].mean(0) for t in range(k)])
+    R = batch_mean_cosine(X, batch, n_batches=k)
     history = []
     shares = {g: 1.0 / 3.0 for g in GROUP_NAMES}
+    auto_pi = isinstance(ewma_pi, str) and ewma_pi.lower() == "auto"
 
     for t in range(1, k):
         tr, ic = batch < t, batch == t
+        lam = None
+        c_t = d_t = 0.0
         if t >= 2:
+            c_t = float(heatmap_hop_c(R, t - 1))
+            d_t, _ = concept_intensity_mse(
+                X[batch == t - 2],
+                stream["y_id"][batch == t - 2].astype(float),
+                X[batch == t - 1],
+                stream["y_id"][batch == t - 1].astype(float),
+            )
+            raw, vimp, _meta = modality_pi_shares(
+                X[batch == t - 2],
+                X[batch == t - 1],
+                seed=seed + t,
+                n_estimators=n_estimators,
+                ewma=0.0,
+            )
+            dpi = pi_l1_change(shares, raw)
+            if auto_pi:
+                lam = attribution_ewma_rate(c_t, d_t, pi_change=dpi)
+                persist = 1.0 - lam
+            else:
+                persist = float(ewma_pi)
+                lam = 1.0 - persist
             shares, vimp, _meta = modality_pi_shares(
                 X[batch == t - 2],
                 X[batch == t - 1],
                 seed=seed + t,
                 n_estimators=n_estimators,
                 prev_shares=shares,
-                ewma=ewma_pi,
+                ewma=persist,
             )
         else:
             vimp = None
@@ -350,10 +387,15 @@ def run_msrvtt_hop_po(
                 "online_mse": _multi_mse(pred, Y[ic]),
                 "shares": {g: float(shares[g]) for g in GROUP_NAMES},
                 "topk": [] if vimp is None else [int(i) for i in topk_from_vimp(vimp, k=8)],
+                "c": c_t,
+                "delta": float(d_t),
+                "ewma_rate": None if lam is None else float(lam),
+                "ewma_pi_persist": None if lam is None else float(1.0 - lam),
             }
         )
 
     online = np.array([h["online_mse"] for h in history], dtype=float)
+    rates = [h["ewma_rate"] for h in history if h["ewma_rate"] is not None]
     return {
         "method": "msrvtt_hop_pi" if use_mod else "msrvtt_hop",
         "target": target,
@@ -361,9 +403,11 @@ def run_msrvtt_hop_po(
         "online_path": online.tolist(),
         "history": history,
         "meta": stream["meta"],
-        "ewma_pi": float(ewma_pi),
+        "ewma_pi": "auto" if auto_pi else float(ewma_pi),
+        "mean_ewma_rate": float(np.mean(rates)) if rates else float("nan"),
         "gamma": float(gamma),
     }
+
 
 
 def run_msrvtt_patch_mask(

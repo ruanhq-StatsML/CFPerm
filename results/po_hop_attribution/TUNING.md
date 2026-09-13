@@ -1,27 +1,39 @@
 # How to tune (after embedding `benchmark_feature_selection`)
 
-Code path is fixed. Tuning = 4 knobs + one swap hook.
+Code path is fixed. Tuning = knobs below + selector swap.
 
 ## Pipeline (locked)
 
 ```
 hop t-2 → t-1
-   └─ benchmark_feature_selection(X0,X1)  → vimp
-         └─ modality_mass(vimp)           → π_m
-               └─ modality_hop_weights(π, γ) → sample weights for Ridge
-PO / same vimp top-k                      → mask (zero|noise|missing) → ΔMSE
+   ├─ (ĉ, δ̂) from heatmap / concept intensity
+   ├─ benchmark_feature_selection → vimp → modality_mass → π_m
+   │     └─ attribution_ewma_rate(ĉ, δ̂, Δπ) → λ_new
+   │           └─ EWMA persistence = 1−λ_new  (next-batch ensemble memory)
+   └─ modality_hop_weights(π, γ) → sample weights for Ridge
+PO / same vimp top-k → mask (zero|noise|missing) → ΔMSE
 ```
 
-Amazon stays **uniform** `hop_ridge` (one modality ⇒ π collapses).
+**Attribution → next-batch ensemble EWMA** (the useful bit):
+
+| signal | λ_new (weight on *new* hop) | ensemble effect |
+| --- | --- | --- |
+| ĉ large / δ̂ quiet (covariate) | ↓ | remember past bank⊕Ridge mix |
+| δ̂ large (concept) | ↑ | forget fast, track Ridge |
+| π_m jumps | ↑ bump | modality mix moved → refresh |
+
+Amazon `attr_adapter` and MSR-VTT `ewma_pi="auto"` both use `attribution_ewma_rate`.
+
+Amazon training MSE still prefers uniform **`hop_ridge`**; `attr_adapter` is the ensemble path that *uses* this guide.
 
 ## Knobs (tune in this order)
 
 | # | knob | where | start | what it does |
 | --- | --- | --- | --- | --- |
-| 1 | **γ** | `modality_hop_weights(..., gamma=)` | `4` | sharper IW → more weight on π-aligned past batches. Try `{2,4,8}` |
-| 2 | **ewma_pi** | `modality_pi_shares(..., ewma=)` / `run_msrvtt_hop_po(ewma_pi=)` | `0.3` | smooth π across hops. `0` = raw each hop; `0.5–0.7` if π jumps |
-| 3 | **α** | Ridge `alpha` | `3` | only if under/overfit on reconstruction MSE |
-| 4 | **k_mask** | `run_mask_ablation(k_tokens=)` / `k_per_mod` | `16` / `32` | attribution resolution, not training MSE |
+| 1 | **γ** | `modality_hop_weights(..., gamma=)` | `4` | IW sharpness. Try `{2,4,8}` |
+| 2 | **ewma_pi** | `run_msrvtt_hop_po(ewma_pi=)` | `"auto"` | `"auto"` = attribution-guided; or fix `{0,0.3,0.6}` |
+| 3 | **α** | Ridge `alpha` | `3` | only if under/overfit |
+| 4 | **k_mask** | mask top-k | `16` / `32` | attribution resolution |
 
 Do **not** tune feature reweighting by VIMP — already lost to `hop_ridge`.
 
@@ -35,28 +47,18 @@ def benchmark_feature_selection(X0, X1, seed=SEED, n_estimators=40):
     return rf_domain(X0, X1, seed=seed, n_estimators=n_estimators)
 ```
 
-Swap candidates (same return `(vimp, meta)`):
+Swap candidates (same return `(vimp, meta)`): RF-Domain / PO-τ / MMD-LOCO.
+Or pass `selector=` into `modality_pi_shares(...)`.
 
-1. **RF-Domain** (current) — covariate hop, fast
-2. **PO-risk `po_tau_vimp`** — if you care about treatment/outcome-linked shift
-3. **MMD / group LOCO** (`group_mmd_loco` block scores → expand to coord VIMP) — when RF is noisy
-4. Pass `selector=` into `modality_pi_shares(...)` without editing the default
-
-Judge by: (a) online cross-modal MSE lift vs uniform hop, (b) π_m path stability, (c) mask ΔMSE that matches intuition (video vs audio).
+Judge by: (a) online MSE vs uniform hop, (b) π path + λ_new stability, (c) mask ΔMSE.
 
 ## Suggested sweep (MSR-VTT)
 
 ```text
 for γ in {2,4,8}:
-  for ewma_pi in {0.0, 0.3, 0.6}:
-      run_msrvtt_hop_po(use_mod=True, gamma=γ, ewma_pi=ewma_pi)
-# pick by online MSE; then freeze and report mask ΔMSE once
+  run_msrvtt_hop_po(use_mod=True, gamma=γ, ewma_pi="auto")
+# optional ablate auto vs fixed:
+for ewma_pi in {0.0, 0.3, 0.6, "auto"}: ...
 ```
 
-Amazon: leave γ=4 on `hop_ridge`; only re-check if TF-IDF dim / n_per changes.
-
-## What “good” looks like
-
-- Multimodal: hop+π ≤ hop (uniform), π_m not collapsing to 1/3 forever
-- Mask: top-π modality’s zero/noise ΔMSE > 0 and larger than low-π modality
-- Amazon: hop_ridge still ≈ 1.38; no regression from selector experiments
+Amazon: keep `hop_ridge` for scoreboard; inspect `attr_adapter` history `ewma_rate` to see the guide working.

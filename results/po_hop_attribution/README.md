@@ -12,7 +12,9 @@ Do **not** scale features by PO VIMP for training (amplify or downweight both lo
 
 ## Modality-π (contribution)
 
-\(\pi_m\) = PO-risk VIMP mass on block \(m\), blended 50/50 with RF-Domain share on the same causal hop. Causal reference is still \(\mu_{t-1}\).
+\(\pi_m\) from ``benchmark_feature_selection`` → ``modality_mass(vimp)``
+(default = RF-Domain VIMP; swap the hook body to change selector).
+Optional EWMA across hops (`ewma_pi≈0.3`). Causal reference is still \(\mu_{t-1}\).
 
 Live MSR-VTT (video+audio → text): hop 0.0898 → hop+π_m **0.0896**; shares video≈0.71, audio≈0.26.
 
@@ -23,6 +25,16 @@ Live MSR-VTT (video+audio → text): hop 0.0898 → hop+π_m **0.0896**; shares 
 | zero / missing | +0.126 |
 | noise | +0.144 |
 
+## Attribution → next-batch ensemble EWMA
+
+`(ĉ, δ̂, Δπ)` → `attribution_ewma_rate` → λ_new for bank⊕Ridge (Amazon
+`attr_adapter`) and for π persistence (MSR-VTT `ewma_pi="auto"`).
+
+- covariate hop → small λ_new → keep past ensemble
+- concept hop / π jump → large λ_new → refresh mix
+
+See [`TUNING.md`](TUNING.md).
+
 ## Run
 
 ```bash
@@ -30,5 +42,5 @@ PYTHONPATH=Python/src python3 scripts/run_po_hop_attribution.py
 PYTHONPATH=Python/src python3 scripts/run_attribution_adapter.py
 ```
 
-API: `attribution_adapter.modality_pi_shares` → `benchmark_feature_selection`  
-Tuning: see [`TUNING.md`](TUNING.md)
+API: `attribution_adapter.attribution_ewma_rate`, `modality_pi_shares`  
+Tuning: [`TUNING.md`](TUNING.md)
