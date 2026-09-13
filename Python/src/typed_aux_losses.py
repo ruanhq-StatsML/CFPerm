@@ -875,9 +875,9 @@ def write_risk_tex(typed, amazon, path):
         r"\label{tab:typed-aux-risk}",
         r"\small",
         r"\begin{tabular}{@{}l cc cc cc@{}}\toprule",
-        r"& \multicolumn{2}{c}{covariate-only BWT / Brier} & \multicolumn{2}{c}{concept post-acc / CE} & \multicolumn{2}{c}{Amazon MSE / BWT} \\",
+        r"& \multicolumn{2}{c}{covariate-only online CE / Brier} & \multicolumn{2}{c}{concept post-acc / CE} & \multicolumn{2}{c}{Amazon MSE / BWT} \\",
         r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}",
-        r"aux on TSS & BWT acc. & Brier & post-acc. & online CE & online MSE & BWT MSE \\",
+        r"aux on TSS & online CE & Brier & post-acc. & online CE & online MSE & BWT MSE \\",
         r"\midrule",
     ]
     order = ("none", "balance", "corr", "erank")
@@ -892,8 +892,8 @@ def write_risk_tex(typed, amazon, path):
     }
     at = amazon["table"] if amazon else {}
     for aux in order:
-        a_on = cell(cov[aux], "bwt")
-        a_br = cell(cov[aux], "bwt_mse")
+        a_on = cell(cov[aux], "online_ce")
+        a_br = cell(cov[aux], "online_mse")
         c_ac = cell(con[aux], "post_acc")
         c_ce = cell(con[aux], "online_ce")
         key = amazon_map[aux]
