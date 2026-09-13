@@ -87,6 +87,12 @@ from .lr_controller import (
 from .mmd import rbf_mmd2, whiten_pair
 from .shift import decompose_hybrid, decompose_mmd, decompose_rf
 
+
+from .instance_disc import disc_as_concept, nn_discrimination_scores, nn_domain_purity
+from .proto_drift import ModalityPrototypeBank, compose_proto_fsds
+from .grad_memory import GradProjMemory, landscape_adapt_gain
+from .next_step import next_step_lr, predict_next_alpha, proportion_report
+
 __all__ = [
     "ADAPTER_LAYERS",
     "GATE_POLICIES",
@@ -155,6 +161,16 @@ __all__ = [
     "softmax_tau",
     "weights_from_alpha",
     "weighted_modality_loss",
+    "disc_as_concept",
+    "nn_discrimination_scores",
+    "nn_domain_purity",
+    "ModalityPrototypeBank",
+    "compose_proto_fsds",
+    "GradProjMemory",
+    "landscape_adapt_gain",
+    "predict_next_alpha",
+    "next_step_lr",
+    "proportion_report",
 ]
 
 __version__ = "0.1.0"
