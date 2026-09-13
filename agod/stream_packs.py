@@ -132,7 +132,13 @@ def ensure_waymo_proxy(root: Path, n: int = 12000, seed: int = 0) -> Path:
     """Kinematics proxy if real Waymo dump is absent."""
     out = root / "data/stream_packs/waymo_proxy/waymo_proxy_xy.npz"
     if out.is_file():
-        return out
+        import numpy as _np
+        try:
+            z = _np.load(out)
+            if len(z["X"]) >= n:
+                return out
+        except Exception:
+            pass
     out.parent.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
     t = np.arange(n)
