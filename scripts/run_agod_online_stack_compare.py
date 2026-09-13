@@ -4,9 +4,8 @@
 Datasets: Amazon, MSR-VTT, COCO ImgTxt, Affec (5 physio modalities).
 
 Variants (same towers / steps / holdout; only the weight socket changes):
-  mean_ce     — mean-pool fusion + CE
-  stack_ce    — online stacking w=softmax(psi) + CE
-  stack_alpha — stacking + CE + lambda * KL(w || alpha)   # FSDS/MSG socket
+  mean_ce / stack_ce / stack_alpha / stack_uniform / stack_fixed / stack_temp / stack_erank
+  (see agod.online_stack.WEIGHT_MODES)
 
 alpha = EMA of attribution (MSG-B3 / B5 hybrid / ImgTxt hybrid / Affec VIMP).
 Primary metrics: holdout Brier/MSE drop and Acc lift.
@@ -39,7 +38,16 @@ import run_agod_amazon_modality_lr as amazon
 import run_agod_gradcos_lr as msrvtt
 import run_agod_imgtxt_mmd_lr as imgtxt
 from agod.lr_controller import EMARouter
-from agod.online_stack import MeanFusion, StackFusion, alpha_stack_kl, probs_mse
+from agod.online_stack import (
+    MeanFusion,
+    StackFusion,
+    WEIGHT_MODES,
+    freezes_stack_psi,
+    probs_mse,
+    stack_temperature_for,
+    stack_weight_aux,
+    uses_stack_fusion,
+)
 
 OUT = ROOT / "results" / "agod_online_stack_compare"
 DOCS = ROOT / "docs" / "agod"
@@ -47,7 +55,7 @@ ART = Path("/opt/cursor/artifacts/agod_online_stack_compare")
 AFFEC_CACHE = ROOT / "results" / "affec_fsds" / "affec_fsds_xyw_cache.npz"
 
 SEED = 2026
-VARIANTS = ("mean_ce", "stack_ce", "stack_alpha")
+VARIANTS = WEIGHT_MODES
 LAMBDA_KL = 0.50
 FUSE = 128
 HOLD = 0.35
@@ -119,13 +127,26 @@ def train_window(
             loss = crit(logits, yy)
             kl_v = float("nan")
         else:
-            logits, _h, _lm, stack_w = model(batch, return_parts=True)
+            fixed = alpha if kind == "stack_fixed" and alpha is not None else None
+            logits, hiddens, _lm, stack_w = model(
+                batch, return_parts=True, fixed_w=fixed
+            )
             loss = crit(logits, yy)
-            kl_v = float("nan")
-            if kind == "stack_alpha" and alpha is not None:
-                pack = alpha_stack_kl(stack_w, alpha, mods, lambda_kl=LAMBDA_KL)
-                loss = loss + pack["loss"]
-                kl_v = float(pack["kl"].detach().cpu())
+            pack = stack_weight_aux(
+                kind,
+                stack_w=stack_w,
+                alpha=alpha,
+                mods=mods,
+                hiddens=hiddens,
+                lambda_kl=LAMBDA_KL,
+            )
+            loss = loss + pack["loss"]
+            kl_raw = pack.get("kl", float("nan"))
+            kl_v = (
+                float(kl_raw.detach().cpu())
+                if hasattr(kl_raw, "detach")
+                else float(kl_raw)
+            )
         opt.zero_grad(set_to_none=True)
         loss.backward()
         opt.step()
@@ -351,11 +372,18 @@ def run_variant(pack, device, kind):
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     dims = {m: int(feats[m].shape[1]) for m in mods}
-    if kind == "mean_ce":
+    if not uses_stack_fusion(kind):
         model = MeanFusion(dims, mods, fuse=FUSE).to(device)
+        opt = torch.optim.Adam(model.parameters(), lr=pack["lr"])
     else:
-        model = StackFusion(dims, mods, fuse=FUSE).to(device)
-    opt = torch.optim.Adam(model.parameters(), lr=pack["lr"])
+        tau = stack_temperature_for(kind, temp=0.5)
+        model = StackFusion(dims, mods, fuse=FUSE, temperature=tau).to(device)
+        if freezes_stack_psi(kind):
+            # towers only — fusion weights locked to attribution alpha
+            params = [p for n, p in model.named_parameters() if "stack_logits" not in n]
+            opt = torch.optim.Adam(params, lr=pack["lr"])
+        else:
+            opt = torch.optim.Adam(model.parameters(), lr=pack["lr"])
     router = EMARouter(mods, ema=pack["ema"])
     ref_idx = pack["ref_idx"].copy()
     warm, _ = split_hold(ref_idx, SEED)
@@ -407,7 +435,7 @@ def run_variant(pack, device, kind):
             kind=kind,
             steps=pack["steps"],
             batch_size=pack["batch"],
-            alpha=alpha if kind == "stack_alpha" else None,
+            alpha=alpha if kind in ("stack_alpha", "stack_uniform", "stack_fixed", "stack_erank") else None,
             seed=SEED + 7 * win["t"],
         )
         post = eval_hold(model, feats, y, hold, mods, device, pack["batch"])
