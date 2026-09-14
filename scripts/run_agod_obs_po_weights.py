@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Obs-PO hard-reweight v4: hard-support + beijing-class packMSE gate.
+"""Obs-PO hard-reweight v5: hard-support + beijing-class packMSE gate.
 
 Logic we buy
 ------------
@@ -8,6 +8,7 @@ Logic we buy
 2. **Pack MSE only under beijing-class drift** — chase all-row next-MSE
    only when drift ≫ mild (gate≈0.45). Calm rejects stay uniform for packMSE.
 3. Primary claim metric = **hard-subset next-MSE**; packMSE is conditional.
+4. **v5**: CV-MSE picks PO^power × temper (or family) per reject; add log1p map.
 
   PYTHONPATH=. python3 scripts/run_agod_obs_po_weights.py \\
     --datasets metro_interstate beijing_pm25 stocks_AAPL stocks_MSFT stocks_IWM waymo_proxy
@@ -28,6 +29,7 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor
 
 from agod.hard_rank_metrics import hard_rank_metrics
+from agod.obs_po_cv import cv_select_family, cv_select_power
 from agod.obs_po_weights import (
     BEIJING_DRIFT_GATE,
     adaptive_temper,
@@ -44,17 +46,21 @@ from agod.stream_packs import LOADERS, load_stocks
 # v4 modes: hard-claim path + beijing packMSE path + v3 baselines
 MODES: Tuple[str, ...] = (
     "uniform",
-    "gated_qrt_adapt",       # v3 soft qrt, mild gate 0.2
-    "gated_qrt_hi",          # soft qrt, beijing gate 0.45 (packMSE path)
-    "gated_hard_adapt",      # hard_support, mild gate 0.2 (hard claim)
-    "gated_hard_hi",         # hard_support, beijing gate 0.45
+    "gated_hard_adapt",      # v4 hard claim
+    "gated_qrt_hi",          # v4 beijing packMSE
+    "gated_log1p_hi",        # new soft map, beijing gate
+    "cv_power",              # CV over power × temper
+    "cv_power_cap",          # CV with temper ≤ beijing adaptive λ
+    "cv_family",             # CV over discrete families
 )
 COLORS = {
     "uniform": "#4C566A",
-    "gated_qrt_adapt": "#A3BE8C",
-    "gated_qrt_hi": "#EBCB8B",
     "gated_hard_adapt": "#88C0D0",
-    "gated_hard_hi": "#5E81AC",
+    "gated_qrt_hi": "#EBCB8B",
+    "gated_log1p_hi": "#D08770",
+    "cv_power": "#A3BE8C",
+    "cv_power_cap": "#B48EAD",
+    "cv_family": "#5E81AC",
 }
 
 
@@ -95,32 +101,44 @@ def fit_rf(X, y, w, seed):
 
 
 def mode_spec(mode: str) -> dict:
-    """obs map / drift gate / n_recent."""
+    """kind / obs map / drift gate / n_recent."""
     if mode == "uniform":
-        return {"obs": "uniform", "adapt": False, "drift_gate": 0.0, "n_recent": None}
-    if mode == "gated_qrt_adapt":
-        return {"obs": "qrt", "adapt": True, "drift_gate": 0.20, "n_recent": None}
-    if mode == "gated_qrt_hi":
-        return {
-            "obs": "qrt",
-            "adapt": True,
-            "drift_gate": BEIJING_DRIFT_GATE,
-            "n_recent": None,
-        }
+        return {"kind": "fixed", "obs": "uniform", "adapt": False, "drift_gate": 0.0, "n_recent": None}
     if mode == "gated_hard_adapt":
         return {
+            "kind": "fixed",
             "obs": "hard_support",
             "adapt": True,
             "drift_gate": 0.20,
             "n_recent": None,
         }
-    if mode == "gated_hard_hi":
+    if mode == "gated_qrt_hi":
         return {
-            "obs": "hard_support",
+            "kind": "fixed",
+            "obs": "qrt",
             "adapt": True,
             "drift_gate": BEIJING_DRIFT_GATE,
             "n_recent": None,
         }
+    if mode == "gated_log1p_hi":
+        return {
+            "kind": "fixed",
+            "obs": "log1p",
+            "adapt": True,
+            "drift_gate": BEIJING_DRIFT_GATE,
+            "n_recent": None,
+        }
+    if mode == "cv_power":
+        return {"kind": "cv_power", "temper_cap": False, "n_recent": None}
+    if mode == "cv_power_cap":
+        return {
+            "kind": "cv_power",
+            "temper_cap": True,
+            "drift_gate": BEIJING_DRIFT_GATE,
+            "n_recent": None,
+        }
+    if mode == "cv_family":
+        return {"kind": "cv_family", "drift_gate": 0.20, "n_recent": None}
     raise KeyError(mode)
 
 
@@ -133,6 +151,7 @@ def run_mode(
     alpha: float,
     n_recent_default: int,
     hard_frac: float = 0.2,
+    cv_folds: int = 3,
 ) -> dict:
     spec = mode_spec(mode)
     mse_next: List[float] = []
@@ -141,6 +160,8 @@ def run_mode(
     gate_on: List[int] = []
     drifts: List[float] = []
     lams: List[float] = []
+    powers: List[float] = []
+    families: List[str] = []
     beijing_on: List[int] = []
     hard_rows: List[dict] = []
 
@@ -161,6 +182,8 @@ def run_mode(
         po = None
         lam_used = 0.0
         drift = 0.0
+        power_used = 0.0
+        fam_used = "uniform"
 
         if mode == "uniform" or not rejected:
             w = np.ones(len(yc), float)
@@ -182,26 +205,96 @@ def run_mode(
                 T=float(step.get("T", 0.0)),
                 alpha=alpha,
             )
-            if spec["adapt"]:
+            drifts.append(drift)
+            beijing_on.append(int(is_beijing_class_drift(drift)))
+            power_used = 0.0
+            fam_used = "uniform"
+            kind = spec.get("kind", "fixed")
+
+            if kind == "fixed":
+                if spec["adapt"]:
+                    lam_used = adaptive_temper(
+                        drift, lam_max=0.75, drift_gate=float(spec["drift_gate"])
+                    )
+                else:
+                    lam_used = 0.0
+                w = gated_obs_po_weights(
+                    po,
+                    reject=True,
+                    mode=spec["obs"],  # type: ignore[arg-type]
+                    soft=False,
+                    p=float(step["p"]),
+                    alpha=alpha,
+                    temper=lam_used,
+                    topk_frac=hard_frac,
+                    boost_max=3.0,
+                )
+                fam_used = str(spec["obs"])
+                power_used = 0.25 if spec["obs"] == "qrt" else 0.0
+
+            elif kind == "cv_power":
+                cap = None
+                if spec.get("temper_cap"):
+                    cap = adaptive_temper(
+                        drift,
+                        lam_max=0.75,
+                        drift_gate=float(spec.get("drift_gate", BEIJING_DRIFT_GATE)),
+                    )
+                    if cap <= 0.0:
+                        w = np.ones(len(yc), float)
+                        lam_used = 0.0
+                        power_used = 0.0
+                        fam_used = "uniform"
+                        lams.append(lam_used)
+                        powers.append(power_used)
+                        families.append(fam_used)
+                        # fall through to fit below
+                        model = fit_rf(Xc, yc, w, seed + t)
+                        if t + 1 < len(stream):
+                            Xn, yn = stream[t + 1]
+                            pred = model.predict(Xn)
+                            err2 = (yn - pred) ** 2
+                            mse_next.append(float(np.mean(err2)))
+                            Xp, yp = stream[t - 1]
+                            mu0 = fit_rf(Xp, yp, np.ones(len(yp)), seed + 99 + t)
+                            po_next = np.abs(yn - mu0.predict(Xn))
+                            hard_m = hard_subset_mask(po_next, frac=hard_frac)
+                            mse_next_hard.append(float(np.mean(err2[hard_m])))
+                            mse_next_easy.append(float(np.mean(err2[~hard_m])))
+                        continue
+                sel = cv_select_power(
+                    Xc, yc, po, n_folds=cv_folds, seed=seed + t, temper_cap=cap
+                )
+                w = np.asarray(sel["weights"], float)
+                lam_used = float(sel["temper"])
+                power_used = float(sel["power"])
+                fam_used = f"PO^{power_used:g}"
+
+            elif kind == "cv_family":
                 lam_used = adaptive_temper(
                     drift, lam_max=0.75, drift_gate=float(spec["drift_gate"])
                 )
+                if lam_used <= 0.0:
+                    w = np.ones(len(yc), float)
+                    fam_used = "uniform"
+                else:
+                    sel = cv_select_family(
+                        Xc,
+                        yc,
+                        po,
+                        temper=lam_used,
+                        n_folds=cv_folds,
+                        seed=seed + t,
+                        topk_frac=hard_frac,
+                    )
+                    w = np.asarray(sel["weights"], float)
+                    fam_used = str(sel["family"])
             else:
-                lam_used = 0.0
-            drifts.append(drift)
+                raise RuntimeError(kind)
+
             lams.append(lam_used)
-            beijing_on.append(int(is_beijing_class_drift(drift)))
-            w = gated_obs_po_weights(
-                po,
-                reject=True,
-                mode=spec["obs"],  # type: ignore[arg-type]
-                soft=False,
-                p=float(step["p"]),
-                alpha=alpha,
-                temper=lam_used,
-                topk_frac=hard_frac,
-                boost_max=3.0,
-            )
+            powers.append(power_used)
+            families.append(fam_used)
 
         model = fit_rf(Xc, yc, w, seed + t)
 
@@ -231,7 +324,15 @@ def run_mode(
             yr = np.concatenate([windows.y_recent, windows.y_ood])
             mu_o = fit_rf(Xr, yr, np.ones(len(yr)), seed + 11 + t)
             truth = np.abs(yc - mu_o.predict(Xc))
-            hard_rows.append({"po": hard_rank_metrics(po, truth), "drift": drift, "lam": lam_used})
+            hard_rows.append(
+                {
+                    "po": hard_rank_metrics(po, truth),
+                    "drift": drift,
+                    "lam": lam_used,
+                    "power": power_used if rejected else 0.0,
+                    "family": fam_used if rejected else "uniform",
+                }
+            )
 
     def _avg(xs: List[float]) -> float:
         return float(np.mean(xs)) if xs else float("nan")
@@ -264,6 +365,14 @@ def run_mode(
         "duty": float(np.mean(gate_on)) if gate_on else 0.0,
         "drift_mean": _avg(drifts),
         "lam_mean": _avg(lams),
+        "power_mean": _avg(powers),
+        "family_mode": (
+            (lambda vals, counts: str(vals[int(np.argmax(counts))]))(
+                *np.unique(np.asarray(families), return_counts=True)
+            )
+            if families
+            else "—"
+        ),
         "beijing_frac": _avg([float(x) for x in beijing_on]),
     }
 
@@ -279,6 +388,7 @@ def run_dataset(
     n_burn: int,
     alpha: float,
     n_recent: int,
+    cv_folds: int = 3,
 ) -> dict:
     X, y = load_xy(name, root)
     X = pca_fit(X, pca_d, seed)
@@ -292,20 +402,23 @@ def run_dataset(
             n_burn=n_burn,
             alpha=alpha,
             n_recent_default=n_recent,
+            cv_folds=cv_folds,
         )
     annotate_results_with_sig(
         results,
         preferred_gate_modes=(
-            "gated_qrt_adapt",
-            "gated_qrt_hi",
             "gated_hard_adapt",
-            "gated_hard_hi",
+            "gated_qrt_hi",
+            "gated_log1p_hi",
+            "cv_power",
+            "cv_power_cap",
+            "cv_family",
         ),
     )
     gate = None
     for m in (
-        "gated_qrt_adapt",
         "gated_hard_adapt",
+        "cv_power",
         "gated_qrt_hi",
         "uniform",
     ):
@@ -324,9 +437,9 @@ def run_dataset(
         "dataset": name,
         "n_batches": len(stream),
         "results": results,
-        "drift_mean_adapt": results["gated_qrt_adapt"].get("drift_mean"),
+        "drift_mean": results["gated_hard_adapt"].get("drift_mean"),
         "beijing_class": is_beijing_class_drift(
-            float(results["gated_qrt_adapt"].get("drift_mean") or 0.0)
+            float(results["gated_hard_adapt"].get("drift_mean") or 0.0)
         ),
     }
 
@@ -335,7 +448,7 @@ def _bars(all_ds: dict, out: Path):
     packs = list(all_ds.keys())
     fig, axes = plt.subplots(1, 2, figsize=(max(11, 1.8 * len(packs)), 4.6))
     x = np.arange(len(packs))
-    w = 0.15
+    w = 0.11
     mid = (len(MODES) - 1) / 2.0
 
     for ax, key, title in [
@@ -355,7 +468,7 @@ def _bars(all_ds: dict, out: Path):
         ax.grid(True, axis="y", alpha=0.3)
     axes[0].legend(ncol=2, fontsize=6)
     fig.tight_layout()
-    path = out / "obs_po_v4_mse.png"
+    path = out / "obs_po_v5_mse.png"
     fig.savefig(path, dpi=140)
     plt.close(fig)
     return path
@@ -367,51 +480,36 @@ def report(all_ds: dict) -> str:
             return "—"
         return f"{100*v:+.1f}%" if pct else f"{v:.4g}"
 
-    short = {
-        "uniform": "uniform",
-        "gated_qrt_adapt": "qrt_mild",
-        "gated_qrt_hi": "qrt_bj",
-        "gated_hard_adapt": "hard_mild",
-        "gated_hard_hi": "hard_bj",
-    }
+    short = {m: short_name(m) for m in MODES}
     lines = [
-        "# Observation-level PO hard-reweight v4",
+        "# Observation-level PO hard-reweight v5 (CV-MSE + new maps)",
         "",
-        "## Do we buy hard / beijing-drift / packMSE?",
+        "## What changed",
         "",
-        "**Yes, with a clean split (this is the locked thesis):**",
+        "- New soft map: `log1p` (beijing-gated); `softmax` via `cv_family`.",
+        "- **CV-MSE** picks `(power, temper)` per rejected batch (`cv_power`),",
+        "  or with beijing temper cap (`cv_power_cap`),",
+        "  or among discrete families (`cv_family`).",
+        "- Thesis unchanged: 认 hard; packMSE only under beijing-class drift.",
         "",
-        "1. **认 hard** — obs PO is a hardness score. Spearman ~0.5–0.8, P@20% ≫ random.",
-        "   The matching mechanism is **hard_support** (boost only the hard top-k),",
-        "   not diffuse soft IPTW. Primary metric = **hard-subset next-MSE**.",
-        "2. **条件认 beijing类漂移 → packMSE** — all-row pack MSE is only a fair",
-        "   claim when hard-tail ≈ shift signal (drift ≫ mild, gate≈0.45).",
-        "   On calm packs, hard ≈ noise → uniform wins packMSE; do not force lift.",
-        "3. **不认** chasing packMSE on every RFPerm reject, or treating PO as an",
-        "   image-OOD detector. Reject gate stays OnlineRFPerm; PO is post-hoc reweight.",
+        "## Drift / CV diagnostics",
         "",
-        f"v4: hard_support λ via mild gate (0.2) vs beijing gate ({BEIJING_DRIFT_GATE});",
-        "soft qrt kept as the packMSE-oriented comparator under the same gates.",
-        "",
-        "## Drift intensity (mean on reject batches)",
-        "",
-        "| dataset | drift_mean | beijing_class? | lam qrt_mild | lam qrt_bj | lam hard_mild |",
-        "|---|---:|:---:|---:|---:|---:|",
+        "| dataset | drift | beijing? | cv_p power̄ | cv_p λ̄ | cv_cap power̄ | cv_fam mode |",
+        "|---|---:|:---:|---:|---:|---:|---|",
     ]
     for ds, blob in all_ds.items():
         r = blob["results"]
         bj = "yes" if blob.get("beijing_class") else "no"
         lines.append(
-            f"| `{ds}` | {f(r['gated_qrt_adapt'].get('drift_mean'))} | {bj} | "
-            f"{f(r['gated_qrt_adapt'].get('lam_mean'))} | "
-            f"{f(r['gated_qrt_hi'].get('lam_mean'))} | "
-            f"{f(r['gated_hard_adapt'].get('lam_mean'))} |"
+            f"| `{ds}` | {f(blob.get('drift_mean'))} | {bj} | "
+            f"{f(r['cv_power'].get('power_mean'))} | {f(r['cv_power'].get('lam_mean'))} | "
+            f"{f(r['cv_power_cap'].get('power_mean'))} | `{r['cv_family'].get('family_mode')}` |"
         )
 
     hdr = " | ".join(short[m] for m in MODES)
     lines += [
         "",
-        "## Sig-only next MSE — hard top-20% (↓)  ← primary claim (认 hard)",
+        "## Sig-only hard top-20% next-MSE (↓)  ← primary",
         "",
         f"| dataset | {hdr} | best |",
         "|" + "---|---:" * len(MODES) + "|---|",
@@ -420,7 +518,7 @@ def report(all_ds: dict) -> str:
     for ds, blob in all_ds.items():
         r = blob["results"]
 
-        def score_h(m):
+        def score_h(m, r=r):
             v = r[m].get("mse_hard_mean_sig", r[m].get("mse_hard_mean"))
             return v if v == v else 1e99
 
@@ -430,9 +528,9 @@ def report(all_ds: dict) -> str:
         lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` |")
     lines += [
         "",
-        "**Wins (hard-subset):** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins_h.items()),
+        "**Wins (hard):** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins_h.items()),
         "",
-        "## Sig-only next MSE — all rows / pack (↓)  ← only claim under beijing drift",
+        "## Sig-only pack next-MSE (↓)  ← beijing-conditional",
         "",
         f"| dataset | {hdr} | best | beijing? |",
         "|" + "---|---:" * len(MODES) + "|---|:---:|",
@@ -444,7 +542,7 @@ def report(all_ds: dict) -> str:
         r = blob["results"]
         bj = bool(blob.get("beijing_class"))
 
-        def score(m):
+        def score(m, r=r):
             v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
             return v if v == v else 1e99
 
@@ -459,33 +557,33 @@ def report(all_ds: dict) -> str:
         )
     lines += [
         "",
-        "**Wins (all packs):** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins.items()),
-        f"**Wins among beijing-class packs only (n={n_bj}):** "
+        "**Wins (all):** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins.items()),
+        f"**Wins (beijing only, n={n_bj}):** "
         + ", ".join(f"`{short[k]}`={v}" for k, v in wins_bj.items()),
         "",
-        "## Rel. pack MSE vs uniform (soft qrt paths)",
+        "## Rel. pack MSE vs uniform",
         "",
-        "| dataset | qrt_mild | qrt_bj | hard_mild | hard_bj | drift | beijing? |",
-        "|---|---:|---:|---:|---:|---:|:---:|",
+        "| dataset | hard_m | qrt_bj | log_bj | cv_p | cv_cap | cv_fam | drift |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for ds, blob in all_ds.items():
         r = blob["results"]
         u = r["uniform"].get("mse_mean_sig", r["uniform"]["mse_mean"])
-        bj = "yes" if blob.get("beijing_class") else "no"
 
-        def rel(m):
+        def rel(m, r=r, u=u):
             v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
             return (v / u - 1.0) if u == u and u > 0 else float("nan")
 
         lines.append(
-            f"| `{ds}` | {f(rel('gated_qrt_adapt'), pct=True)} | {f(rel('gated_qrt_hi'), pct=True)} | "
-            f"{f(rel('gated_hard_adapt'), pct=True)} | {f(rel('gated_hard_hi'), pct=True)} | "
-            f"{f(r['gated_qrt_adapt'].get('drift_mean'))} | {bj} |"
+            f"| `{ds}` | {f(rel('gated_hard_adapt'), pct=True)} | "
+            f"{f(rel('gated_qrt_hi'), pct=True)} | {f(rel('gated_log1p_hi'), pct=True)} | "
+            f"{f(rel('cv_power'), pct=True)} | {f(rel('cv_power_cap'), pct=True)} | "
+            f"{f(rel('cv_family'), pct=True)} | {f(blob.get('drift_mean'))} |"
         )
 
     lines += [
         "",
-        "## Hard-rank (认 hard — unchanged)",
+        "## Hard-rank",
         "",
         "| dataset | spearman | P@20% | n_reject |",
         "|---|---:|---:|---:|",
@@ -499,10 +597,9 @@ def report(all_ds: dict) -> str:
         "",
         "### Takeaway",
         "",
-        "- **认 hard**: use PO to find / boost hard support; judge by hard-subset MSE + rank.",
-        "- **条件认 packMSE**: only advertise all-row lift on beijing-class drift packs;",
-        "  prefer `qrt_bj` / `hard_bj` (high gate) so calm rejects stay near uniform.",
-        "- Mild-gate soft qrt remains a useful ablation, not the default packMSE claim.",
+        "- CV-MSE auto-tunes power/temper per reject; calm packs often pick ≈uniform.",
+        "- Prefer `cv_power_cap` / `qrt_bj` / `log_bj` for packMSE under beijing drift;",
+        "  prefer `gated_hard_adapt` / CV-family for the hard claim.",
         "",
         "See `docs/agod/AGOD_obs_po_weights.md`.",
         "",
@@ -531,6 +628,7 @@ def main() -> None:
     ap.add_argument("--n-burn", type=int, default=5)
     ap.add_argument("--alpha", type=float, default=0.05)
     ap.add_argument("--n-recent", type=int, default=1)
+    ap.add_argument("--cv-folds", type=int, default=3)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=Path, default=Path("results/agod_obs_po_weights"))
     args = ap.parse_args()
@@ -550,6 +648,7 @@ def main() -> None:
                 n_burn=args.n_burn,
                 alpha=args.alpha,
                 n_recent=args.n_recent,
+                cv_folds=args.cv_folds,
             )
         except Exception as e:
             print(f"[skip] {name}: {e}", flush=True)
@@ -558,9 +657,11 @@ def main() -> None:
         r = blob["results"]
         bj = "BJ" if blob.get("beijing_class") else "calm"
         print(
-            "  drift={:.3f} ({}) | sigPack ".format(
-                r["gated_qrt_adapt"].get("drift_mean") or float("nan"),
+            "  drift={:.3f} ({}) cv_p={:.3g}@{:.2f} | sigPack ".format(
+                float(blob.get("drift_mean") or float("nan")),
                 bj,
+                float(r["cv_power"].get("power_mean") or 0.0),
+                float(r["cv_power"].get("lam_mean") or 0.0),
             )
             + " ".join(
                 f"{short_name(m)}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4g}" for m in MODES
@@ -574,13 +675,14 @@ def main() -> None:
         )
 
     payload = {
-        "version": 4,
+        "version": 5,
         "batch_size": args.batch_size,
         "n_batches": args.n_batches,
+        "cv_folds": args.cv_folds,
         "modes": list(MODES),
         "beijing_drift_gate": BEIJING_DRIFT_GATE,
         "datasets": all_ds,
-        "note": "v4 hard_support + beijing-class packMSE gate",
+        "note": "v5 CV-MSE power/family + log1p map",
     }
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     md = report(all_ds)
@@ -595,10 +697,12 @@ def main() -> None:
 def short_name(m: str) -> str:
     return {
         "uniform": "uni",
-        "gated_qrt_adapt": "qrt_m",
+        "gated_hard_adapt": "hard_m",
         "gated_qrt_hi": "qrt_bj",
-        "gated_hard_adapt": "h_m",
-        "gated_hard_hi": "h_bj",
+        "gated_log1p_hi": "log_bj",
+        "cv_power": "cv_p",
+        "cv_power_cap": "cv_cap",
+        "cv_family": "cv_fam",
     }.get(m, m)
 
 

@@ -35,6 +35,8 @@ ObsWeightMode = Literal[
     "sqrt",
     "cbrt",
     "qrt",  # PO^{1/4} — softer than cbrt
+    "log1p",  # w ∝ log1p(PO)
+    "softmax",  # soft attention on standardized PO
     "quantile",
     "hybrid",
     "topk",  # boost only top-q hard rows
@@ -110,6 +112,33 @@ def hard_support_weights(
     return topk_boost_weights(po, frac=frac, boost=boost, clip=clip, eps=eps)
 
 
+def log1p_weights(
+    po: np.ndarray,
+    *,
+    clip: tuple[float, float] = (0.05, 20.0),
+    eps: float = 1e-6,
+) -> np.ndarray:
+    """Soft map: w ∝ log(1 + PO). Milder than any positive power of PO."""
+    po = np.maximum(np.asarray(po, float).ravel(), 0.0)
+    return _mean1_clip(np.log1p(po), clip, eps)
+
+
+def softmax_weights(
+    po: np.ndarray,
+    *,
+    temperature: float = 1.0,
+    clip: tuple[float, float] = (0.05, 20.0),
+    eps: float = 1e-6,
+) -> np.ndarray:
+    """Soft attention on z-scored PO: w ∝ exp(z / T), mean-1 clipped."""
+    po = np.asarray(po, float).ravel()
+    z = (po - po.mean()) / (po.std() + eps)
+    t = max(float(temperature), eps)
+    z = np.clip(z / t, -20.0, 20.0)
+    w = np.exp(z)
+    return _mean1_clip(w, clip, eps)
+
+
 def is_beijing_class_drift(drift: float, *, gate: float = BEIJING_DRIFT_GATE) -> bool:
     """True when drift looks like shift-signal (beijing-class), not mild noise."""
     return float(drift) > float(gate)
@@ -128,6 +157,7 @@ def obs_po_to_weights(
     topk_frac: float = 0.2,
     topk_boost: float = 2.0,
     boost_max: float = 3.0,
+    softmax_T: float = 1.0,
     clip: tuple[float, float] = (0.05, 20.0),
     eps: float = 1e-6,
 ) -> np.ndarray:
@@ -140,6 +170,8 @@ def obs_po_to_weights(
     sqrt         : w ∝ √PO
     cbrt         : w ∝ PO^{1/3}
     qrt          : w ∝ PO^{1/4}
+    log1p        : w ∝ log1p(PO)
+    softmax      : w ∝ exp(z-score(PO) / T)
     quantile     : within-batch CDF rank (soft, bounded)
     hybrid       : F̂(PO)^{q_power} · PO^{hybrid_power}
     topk         : only top-``topk_frac`` hard rows get ``topk_boost``
@@ -156,7 +188,11 @@ def obs_po_to_weights(
         return hard_support_weights(
             po, frac=topk_frac, boost_max=boost_max, lam=temper, clip=clip, eps=eps
         )
-    if mode == "qrt":
+    if mode == "log1p":
+        w = log1p_weights(po, clip=clip, eps=eps)
+    elif mode == "softmax":
+        w = softmax_weights(po, temperature=softmax_T, clip=clip, eps=eps)
+    elif mode == "qrt":
         w = po_iptw_weights(po, mode="sqrt", power=0.25 if power is None else power, clip=clip, eps=eps)
     elif mode in ("prop", "sqrt", "cbrt"):
         w = po_iptw_weights(po, mode=mode, power=power, clip=clip, eps=eps)  # type: ignore[arg-type]
