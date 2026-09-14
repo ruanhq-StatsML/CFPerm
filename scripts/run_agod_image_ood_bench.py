@@ -85,20 +85,40 @@ def run_pack(root: Path, pack: str, *, pca_d: int, seed: int, extract_max_n: int
         "dre": score_dre_domain(split.X_id_train, X_eval, seed=seed),
     }
 
+    # Class-holdout has no true OOD labels for residual regression — blank resid AUROC
+    class_holdout = split.meta.get("protocol") == "class_holdout"
+
     metrics = eval_scores_on_split(split, scores)
+    if class_holdout:
+        metrics["po_resid"] = {
+            "auroc": float("nan"),
+            "aupr": float("nan"),
+            "fpr95": float("nan"),
+            "score_mean_id": metrics["po_resid"]["score_mean_id"],
+            "score_mean_ood": float("nan"),
+            "note": "undefined under class-holdout (no OOD labels for μ_reg)",
+        }
 
     # Hard-rank diagnostic:
     # - class-holdout: truth = binary OOD indicator (far-OOD ranking)
-    # - domain-shift: truth = residual hardness (resid self-rank is tautological → still shown)
-    if split.meta.get("protocol") == "class_holdout":
+    # - domain-shift: truth = residual hardness
+    if class_holdout:
         truth = np.concatenate(
             [np.zeros(len(split.X_id_test), float), np.ones(len(split.X_ood), float)]
         )
-        rank_names = ("po_msp", "po_nll", "po_resid", "po_energy")
+        rank_names = ("po_msp", "po_nll", "po_energy")
     else:
         truth = score_po_resid(reg, X_eval, y_eval)
         rank_names = ("po_msp", "po_nll", "po_energy", "po_resid")
     hard = {name: hard_rank_metrics(scores[name], truth) for name in rank_names}
+    if class_holdout:
+        hard["po_resid"] = {
+            "spearman": float("nan"),
+            "precision_at_k": float("nan"),
+            "lift_at_k": float("nan"),
+            "ndcg_at_k": float("nan"),
+            "auroc_topk": float("nan"),
+        }
 
     return {
         "pack": pack,
@@ -145,12 +165,17 @@ def _bar(all_res: dict, out_dir: Path, key: str, ylabel: str, title: str, fname:
 
 
 def report(all_res: dict) -> str:
+    def _fmt(v):
+        if v is None or (isinstance(v, float) and (v != v)):  # NaN
+            return "—"
+        return f"{v:.3f}"
+
     lines = [
         "# Image-OOD: ViT / CLIP embedding + pseudo-outcome PO-risk",
         "",
         "Benchmark redesign: **freeze backbone → embedding → pseudo-outcome μ → PO-risk**.",
         "",
-        "- `food101_vit`: frozen ViT embeddings + **class-holdout** (far-OOD).",
+        "- `food101_vit`: frozen ViT embeddings + **class-holdout** (far-OOD) — primary.",
         "- CLIP packs: cached img embeddings + **domain shift** (near-OOD).",
         "",
         "### Scores",
@@ -159,29 +184,34 @@ def report(all_res: dict) -> str:
         "|---|---|---|",
         "| `po_msp` | `1 − max_c p_μ(c\\|x)` | no |",
         "| `po_energy` | Shannon entropy of μ (RF has no logits) | no |",
-        "| `po_nll` | `1 − p_μ(y\\|x)` | yes |",
-        "| `po_resid` | `|y − μ_reg(x)|` | yes |",
+        "| `po_nll` | `1 − p_μ(y\\|x)` (MSP fallback if y unseen) | yes* |",
+        "| `po_resid` | `|y − μ_reg(x)|` (n/a on class-holdout OOD) | yes |",
         "| `dre` | logistic domain score | no (mix) |",
         "",
         "## AUROC (ID vs OOD)",
         "",
-        "| pack | shift | po_msp | po_nll | **po_resid** | po_energy | dre | best |",
+        "| pack | shift | po_msp | po_nll | po_resid | po_energy | dre | best PO |",
         "|---|---|---:|---:|---:|---:|---:|---|",
     ]
-    wins = {m: 0 for m in METHODS}
+    wins = {m: 0 for m in ("po_msp", "po_nll", "po_resid", "po_energy")}
     for pack, blob in all_res.items():
         m = blob["metrics"]
-        best = max(METHODS, key=lambda k: m[k]["auroc"])
-        wins[best] += 1
+        po_methods = ("po_msp", "po_nll", "po_resid", "po_energy")
+        best = max(
+            po_methods,
+            key=lambda k: (m[k]["auroc"] if m[k]["auroc"] == m[k]["auroc"] else -1.0),
+        )
+        if m[best]["auroc"] == m[best]["auroc"]:
+            wins[best] += 1
         shift = f"{blob['id_domain']}→{blob['ood_domain']}"
         lines.append(
-            f"| `{pack}` | {shift} | {m['po_msp']['auroc']:.3f} | {m['po_nll']['auroc']:.3f} | "
-            f"**{m['po_resid']['auroc']:.3f}** | {m['po_energy']['auroc']:.3f} | "
-            f"{m['dre']['auroc']:.3f} | `{best}` |"
+            f"| `{pack}` | {shift} | {_fmt(m['po_msp']['auroc'])} | {_fmt(m['po_nll']['auroc'])} | "
+            f"{_fmt(m['po_resid']['auroc'])} | {_fmt(m['po_energy']['auroc'])} | "
+            f"{_fmt(m['dre']['auroc'])} | `{best}` |"
         )
     lines += [
         "",
-        f"**AUROC wins:** " + ", ".join(f"`{k}`={v}" for k, v in wins.items()),
+        f"**PO AUROC wins (excl. dre):** " + ", ".join(f"`{k}`={v}" for k, v in wins.items()),
         "",
         "## FPR95 (↓ better)",
         "",
@@ -191,12 +221,14 @@ def report(all_res: dict) -> str:
     for pack, blob in all_res.items():
         m = blob["metrics"]
         lines.append(
-            f"| `{pack}` | {m['po_msp']['fpr95']:.3f} | {m['po_nll']['fpr95']:.3f} | "
-            f"{m['po_resid']['fpr95']:.3f} | {m['po_energy']['fpr95']:.3f} | {m['dre']['fpr95']:.3f} |"
+            f"| `{pack}` | {_fmt(m['po_msp']['fpr95'])} | {_fmt(m['po_nll']['fpr95'])} | "
+            f"{_fmt(m['po_resid']['fpr95'])} | {_fmt(m['po_energy']['fpr95'])} | {_fmt(m['dre']['fpr95'])} |"
         )
     lines += [
         "",
-        "## Hard-rank (vs residual truth) — label-free scores",
+        "## Hard-rank",
+        "",
+        "Class-holdout truth = binary OOD; domain-shift truth = residual hardness.",
         "",
         "| pack | spearman msp / energy / resid | P@20% msp / energy / resid |",
         "|---|---|---|",
@@ -205,18 +237,17 @@ def report(all_res: dict) -> str:
         h = blob["hard_rank"]
         lines.append(
             f"| `{pack}` | "
-            f"{h['po_msp']['spearman']:.2f} / {h['po_energy']['spearman']:.2f} / {h['po_resid']['spearman']:.2f} | "
-            f"{h['po_msp']['precision_at_k']:.2f} / {h['po_energy']['precision_at_k']:.2f} / {h['po_resid']['precision_at_k']:.2f} |"
+            f"{_fmt(h['po_msp']['spearman'])} / {_fmt(h['po_energy']['spearman'])} / {_fmt(h['po_resid']['spearman'])} | "
+            f"{_fmt(h['po_msp']['precision_at_k'])} / {_fmt(h['po_energy']['precision_at_k'])} / {_fmt(h['po_resid']['precision_at_k'])} |"
         )
     lines += [
         "",
         "### Takeaway",
         "",
         "PO-risk on a **frozen ViT embedding** is enough for an image-OOD bench:",
-        "no generative model, no fine-tune — just μ on embeddings, then residual / MSP.",
-        "On **Food101 class-holdout** (far-OOD), prefer label-free `po_msp` / `po_energy`;",
-        "DRE is a domain-separability upper bound on near-OOD packs, not a PO-risk substitute.",
-        "`po_resid` / `po_nll` need labels (or label-free fallbacks on held-out classes).",
+        "no generative model, no fine-tune — just μ on embeddings, then MSP / entropy.",
+        "On **Food101 class-holdout** (far-OOD), label-free `po_msp` / `po_energy` are the PO scores;",
+        "`dre` is a domain-separability upper bound on near-OOD packs, not a PO-risk substitute.",
         "",
         "See `docs/agod/AGOD_image_ood_bench.md`.",
         "",
