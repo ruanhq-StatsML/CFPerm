@@ -1,58 +1,55 @@
-# 连续归因逻辑链
+# 多层漏斗归因
 
-时钟是事件 unix 秒，不是自然日。相邻 `Δt > 30min` 切断一场。
-归因是 asof 近邻，没有 GT，不是 CATE。任意点击 vs 同品是两问。
-
-## 时间顺序（不能倒）
+不是 DFS，不是图谱。一层漏斗一问，时间不能倒。
 
 ```
-上架  item → merchant
-  → 曝光
-  → 点击（任意 / 同品）
-  → 转化 此刻发 order  order → item → merchant
-  → 买后点击  当场续逛 (dt≤30min) 或 跨场回访
+曝光  →  点击  →  转化  →  买后点击
+ CTR      CVR     路径      续逛 ≠ 转化
 ```
 
-货先挂在店上，行为才走得进店。单只在 `cnv_ts` 存在。不要先画图谱再补时间。
+时钟 unix 秒。相邻 `Δt > 30min` 切断一场。同一 W：`(t−W, t]` 是 X，`(t, t+W]` 是 Y。跟不满不当 0。空 asof 不填 0。
 
-## 向后：这笔成交怎么点过来
+## 1. 曝光 → 点击
 
-对每笔 CNV：
+Y = 这次曝光之后有没有点（或窗内 CTR = n_clk/n_exp，分母太小丢弃）。
+X = 此前漏斗量 / 点率惯性 / 点击半衰期 / 场碎。
+任意点击。还没有货、没有单。
 
-- 任意 last-click：`dt_any`，空 = 没点过就买，**不填 0**
-- 同品 last-click：`dt_item`，空 = `wo_prior_clk`
-- 同秒先 CLK 后 CNV
+## 2. 点击 → 转化
 
-同品漏斗闭合在这批数上几乎不发生（约 0.1%）。当日报 mix，闸在 1%，不要当模型主路径。
+Y = 点了之后有没有买（CVR），或看见会不会买（CTCVR）。
+X = 点率、买占轨迹、成交半衰期。
+`pay_cnt` 是量，`cnv_share` 是结构，不要混。
 
-## 向前：买完还逛不逛（≠ 转化）
+## 3. 转化路径（这笔单怎么点过来）
 
-同一把尺子 W：
+粒 = 一笔 CNV。向后 asof，同秒 CLK 在 CNV 前。
+
+- 任意 last-click：`dt_any`。空 = 没点过就买。
+- 同品 last-click：`dt_item`。空 = `wo_prior_clk`。
+两问，不是「多模态」。同品闭合在这批数上约 0.1%，当 mix 闸（1%），不当主路径。
+转化当下才有 order；货此时已在店上。
+
+## 4. 转化 → 买后点击
+
+粒仍是这笔 CNV。向前 asof。续逛，不是第二笔转化。
 
 ```
-n_before = #{clk in (t−W, t]}
-n_after  = #{clk in (t, t+W]}     # 跟不满 W → NaN，不当 0
-next_clk = min {clk.ts | ts > t}  # 严格晚于
-y_W      = 1{dt≤W}；follow≥W 没点到 → 0；否则 NaN
+next_clk = min {clk.ts | ts > t}
+y_W      = 1{dt≤W}；follow≥W 没点 → 0；否则 NaN
+当场     = dt ≤ 30min
+跨场     = dt > 30min
 ```
 
-`dt≤30min` 是当场续逛，否则跨场。续逛不是转化。
+`n_before` / `n_after` 同长窗。跟不满 W 的 after / lift = NaN。
 
-## 特征（one-pass / rolling / Spark UDF 同构）
+## 扫一遍
 
-一条用户序列按 ts 扫一遍，同时积：漏斗窗、半衰期、场、last-touch、买后 pending、Markov。
-过完再算比率。user/item 计数按进店人聚到 merchant。不做 DFS，不把店名 TF-IDF 进 X。
+一条序列按 ts 走：漏斗窗、半衰期、场、向后 last-touch、向前 pending。
+Spark UDF 或 sort 后 rolling 同构。过完再算比率，不再扫，更不要 DFS 笛卡尔。
 
-## 分解（两层，不是预报榜）
+## 分解（每层自己的 Y）
 
-1. **RF-domain**：P(W|X)，谁来了（人 / tenure）。
-2. **PO-risk** `φ=(Y−μ)(W−e)`：早/晚对这个 Y 的差。R 不当检验。
-3. **LOGO**：整跳拿掉（user / order / merchant）。
-4. **LOCO**：一列拿掉。impurity ≠ 漂移源。
-5. **单位**：店 mix vs 店内。SKU 份额碎 → 停在店/人，不要点名 item。
-
-这批订单粒：Y 缺口几乎全是店内（晚来的人 `n_prior_cnv` 更浅），不是换了一批店，更不是某件货。
-
-## 实现
-
-状态机 = `onepass_feats` + `onepass_post`。表上等价于 sort `(user, ts)` 后 rolling / merge_asof。Spark 同一套 UDF，不必上图。
+RF-domain = 这层样本谁来了。  
+PO-risk `φ=(Y−μ)(W−e)` + 列 LOCO = 这层早/晚差钉在哪列。R 不当检验。  
+层与层不要共用一个 Y 去「总归因」。
