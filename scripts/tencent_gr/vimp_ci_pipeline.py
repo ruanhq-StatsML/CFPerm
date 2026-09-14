@@ -275,6 +275,55 @@ def insights(mix_rows: list[dict], by_y: dict) -> list[str]:
     return cards
 
 
+def rank_map(rows: list[dict]) -> dict:
+    return {r["name"]: r for r in rows}
+
+
+def ctr_concept_md(mix_rows: list[dict], by_y: dict) -> list[str]:
+    """Concept-drift 主表：CTR PO-VIMP 序，对照 mixture 名次。"""
+    ctr = by_y.get("ctr", {}).get("rows") or []
+    nclk = rank_map(by_y.get("n_clk", {}).get("rows") or [])
+    mix = rank_map(mix_rows)
+    lines = [
+        "## CTR concept-drift ranking（主结果）",
+        "",
+        "Y = 右窗 CTR = n_clk/n_exp。PO-VIMP 序 = 早/晚对 **点击图** 差在哪几列。",
+        "mixture 名次是 P(W|X)，不是点图。名次上移 = 更像 CTR pattern 变动，不是谁来了。",
+        "",
+        "| CTR rank | feat | CTR VIMP [CI] | mix rank | n_clk rank | 读法 |",
+        "|---|---|---|---:|---:|---|",
+    ]
+    for r in ctr:
+        m = mix.get(r["name"], {})
+        k = nclk.get(r["name"], {})
+        mr = m.get("rank", "")
+        kr = k.get("rank", "")
+        delta = (mr - r["rank"]) if mr != "" else ""
+        if r["name"] == "dec_hl7d_dec_clk":
+            gloss = "点击热度：CTR 头名，mixture 未选中 → pattern 在漂"
+        elif r["name"] == "life_clk_share":
+            gloss = "点占轨迹多大：CTR 升、mixture 末段"
+        elif r["name"] == "sess_bounce_rate":
+            gloss = "场碎：CTR 选中，mixture 未选中"
+        elif r["name"] == "ui_only_exp_share":
+            gloss = "两板都在：队列没从点图里拆干净"
+        elif r["name"] == "life_ctr":
+            gloss = "左窗点率 → 右窗点率（惯性）"
+        elif r["name"] in ("pay_cnt", "life_cnv_share", "dec_hl7d_dec_cnv"):
+            gloss = "买的量/结构/成交热度：CTR 图里往后掉"
+        elif r["name"] in ("active_days", "life_n_exp", "hist_len"):
+            gloss = "tenure/曝光量：mixture 更靠前"
+        else:
+            gloss = f"相对 mixture 名次差 {delta:+d}" if delta != "" else ""
+        sel = "✓" if r["selected"] else ""
+        lines.append(
+            f"| {r['rank']}{sel} | `{r['name']}` | {r['vimp']:.3f} [{r['lo']:.3f}, {r['hi']:.3f}] | "
+            f"{mr} | {kr} | {gloss} |"
+        )
+    lines += ["", "选中且相对 mixture **升到前面** 的，才是 CTR pattern 变动要讲的列。", ""]
+    return lines
+
+
 def fmt_table(rows: list[dict]) -> str:
     lines = ["| rank | feat | 逻辑 | VIMP | 95% CI | 选中 |", "|---|---|---|---:|---|:---:|"]
     for r in rows:
@@ -346,6 +395,9 @@ def main() -> None:
         f"左窗 X、右窗 Y（prefix 内时间 {SPLIT:.0%} 切开）。W=用户 t_end 中位。CTR 分母 `n_exp≥{MIN_EXP}`，缺测丢掉。",
         f"RF-domain AUC **{auc:.3f}**（P(X) 谁来了）。选中规则：CI 下界 ≥ {VIMP_FLOOR}。B={B}。",
         "",
+    ]
+    md += ctr_concept_md(mix_rows, by_y)
+    md += [
         "## 自动 insights",
         "",
     ]

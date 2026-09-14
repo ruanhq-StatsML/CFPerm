@@ -4,6 +4,30 @@ R 不当检验。用户簇 bootstrap 给的是 **VIMP 的分位区间**。
 左窗 X、右窗 Y（prefix 内时间 50% 切开）。W=用户 t_end 中位。CTR 分母 `n_exp≥3`，缺测丢掉。
 RF-domain AUC **0.715**（P(X) 谁来了）。选中规则：CI 下界 ≥ 0.03。B=25。
 
+## CTR concept-drift ranking（主结果）
+
+Y = 右窗 CTR = n_clk/n_exp。PO-VIMP 序 = 早/晚对 **点击图** 差在哪几列。
+mixture 名次是 P(W|X)，不是点图。名次上移 = 更像 CTR pattern 变动，不是谁来了。
+
+| CTR rank | feat | CTR VIMP [CI] | mix rank | n_clk rank | 读法 |
+|---|---|---|---:|---:|---|
+| 1✓ | `dec_hl7d_dec_clk` | 0.349 [0.121, 0.491] | 9 | 1 | 点击热度：CTR 头名，mixture 未选中 → pattern 在漂 |
+| 2✓ | `life_clk_share` | 0.121 [0.065, 0.195] | 12 | 2 | 点占轨迹多大：CTR 升、mixture 末段 |
+| 3✓ | `ui_only_exp_share` | 0.101 [0.031, 0.138] | 4 | 9 | 两板都在：队列没从点图里拆干净 |
+| 4✓ | `sess_bounce_rate` | 0.077 [0.047, 0.170] | 13 | 3 | 场碎：CTR 选中，mixture 未选中 |
+| 5 | `active_days` | 0.066 [0.022, 0.126] | 1 | 5 | tenure/曝光量：mixture 更靠前 |
+| 6✓ | `life_ctr` | 0.063 [0.037, 0.138] | 8 | 4 | 左窗点率 → 右窗点率（惯性） |
+| 7 | `life_n_exp` | 0.039 [0.014, 0.079] | 10 | 6 | tenure/曝光量：mixture 更靠前 |
+| 8 | `dec_hl7d_dec_cnv` | 0.038 [0.020, 0.086] | 6 | 7 | 买的量/结构/成交热度：CTR 图里往后掉 |
+| 9 | `hist_len` | 0.032 [0.018, 0.088] | 11 | 8 | tenure/曝光量：mixture 更靠前 |
+| 10 | `pay_cnt` | 0.031 [0.003, 0.069] | 7 | 10 | 买的量/结构/成交热度：CTR 图里往后掉 |
+| 11 | `life_cnv_share` | 0.029 [0.012, 0.069] | 5 | 12 | 买的量/结构/成交热度：CTR 图里往后掉 |
+| 12 | `sess_depth_cnv_mean` | 0.024 [0.007, 0.049] | 3 | 14 | 相对 mixture 名次差 -9 |
+| 13 | `sess_cnv_sess_rate` | 0.021 [0.006, 0.076] | 2 | 11 | 相对 mixture 名次差 -11 |
+| 14 | `life_n_clk` | 0.009 [0.002, 0.064] | 14 | 13 | 相对 mixture 名次差 +0 |
+
+选中且相对 mixture **升到前面** 的，才是 CTR pattern 变动要讲的列。
+
 ## 自动 insights
 
 - mixture∩CTR 选中 = `life_ctr`, `ui_only_exp_share`；只在 mixture = `active_days`, `dec_hl7d_dec_cnv`, `life_cnv_share`, `life_n_exp`, `sess_cnv_sess_rate`, `sess_depth_cnv_mean`；只在 CTR = `dec_hl7d_dec_clk`, `life_clk_share`, `sess_bounce_rate`。
