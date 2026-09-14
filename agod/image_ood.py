@@ -361,6 +361,78 @@ def score_knn(X_id: np.ndarray, X_eval: np.ndarray, *, k: int = 5) -> np.ndarray
     return dists.mean(axis=1)
 
 
+def fit_rf_binary(
+    X_id: np.ndarray,
+    X_ood: np.ndarray,
+    *,
+    seed: int = 0,
+    ood_train_frac: float = 0.5,
+) -> tuple[RandomForestClassifier, np.ndarray, np.ndarray]:
+    """Oracle RF binary ID vs OOD (needs OOD labels at train — detection ceiling).
+
+    Returns ``(clf, ood_train_idx, ood_eval_idx)`` so callers evaluate only on
+    held-out OOD rows (plus full ID-test).
+    """
+    X_id = np.asarray(X_id, float)
+    X_ood = np.asarray(X_ood, float)
+    rng = np.random.default_rng(seed)
+    n_ood = len(X_ood)
+    n_tr = max(1, int(round(n_ood * ood_train_frac)))
+    perm = rng.permutation(n_ood)
+    ood_tr_idx, ood_te_idx = perm[:n_tr], perm[n_tr:]
+    # match ID train size to OOD train for balance
+    n_id_tr = min(len(X_id), max(n_tr, 1))
+    id_tr_idx = rng.choice(len(X_id), n_id_tr, replace=False)
+    X_tr = np.vstack([X_id[id_tr_idx], X_ood[ood_tr_idx]])
+    y_tr = np.concatenate([np.zeros(n_id_tr, int), np.ones(len(ood_tr_idx), int)])
+    clf = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=14,
+        min_samples_leaf=2,
+        random_state=seed,
+        n_jobs=1,
+    )
+    clf.fit(X_tr, y_tr)
+    return clf, ood_tr_idx, ood_te_idx
+
+
+def score_rf_binary(clf: RandomForestClassifier, X: np.ndarray) -> np.ndarray:
+    """P(OOD | x) from oracle RF binary."""
+    return clf.predict_proba(X)[:, 1]
+
+
+def batch_aggregate_scores(
+    score: np.ndarray,
+    y_ood: np.ndarray,
+    *,
+    batch_size: int = 32,
+    seed: int = 0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Mean-pool obs scores into fixed-size batches → (batch_score, batch_label).
+
+    Observation-level PO-risk is noisy; batch means are the AGOD-relevant unit
+    (OnlineRFPerm rejects *batches*, then PO reweights inside).
+    """
+    score = np.asarray(score, float).ravel()
+    y = np.asarray(y_ood, int).ravel()
+    rng = np.random.default_rng(seed)
+    batch_scores: list[float] = []
+    batch_labels: list[int] = []
+    for lab in (0, 1):
+        idx = np.where(y == lab)[0]
+        if len(idx) == 0:
+            continue
+        idx = rng.permutation(idx)
+        # drop remainder so every batch is pure-label and full-size
+        n = (len(idx) // batch_size) * batch_size
+        idx = idx[:n]
+        for start in range(0, n, batch_size):
+            sl = idx[start : start + batch_size]
+            batch_scores.append(float(np.mean(score[sl])))
+            batch_labels.append(lab)
+    return np.asarray(batch_scores, float), np.asarray(batch_labels, int)
+
+
 def fpr_at_tpr(y_true, score, *, tpr_level: float = 0.95) -> float:
     y = np.asarray(y_true).astype(int).ravel()
     s = np.asarray(score, float).ravel()

@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Image-OOD: PO-risk μ vs classical embedding OOD scores (no DRE).
+"""Image-OOD bench: PO-risk is NOT an obs-level detector.
+
+Obs-level PO-risk AUROC is too noisy — if you want binary OOD detection,
+an RF binary classifier (oracle ID vs OOD) is the right tool.
+
+This bench therefore:
+  1. Primary: **batch-mean** AUROC (OnlineRFPerm unit) + **hard-rank**
+  2. Secondary: obs-level AUROC only as a noisy diagnostic
+  3. Ceiling: oracle RF-binary (trained with OOD labels) — not a fair PO rival
 
   PYTHONPATH=. python3 scripts/run_agod_image_ood_bench.py \\
     --packs food101_vit coco_outdoor_indoor coco_time_order indiana_cxr fashion_iq
@@ -9,7 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Tuple
 
 import matplotlib
 
@@ -19,10 +27,13 @@ import numpy as np
 
 from agod.hard_rank_metrics import hard_rank_metrics
 from agod.image_ood import (
+    batch_aggregate_scores,
+    binary_ood_metrics,
     eval_scores_on_split,
     fit_mahalanobis,
     fit_po_classifier,
     fit_po_regressor,
+    fit_rf_binary,
     list_available_packs,
     load_image_ood_pack,
     score_centroid,
@@ -32,20 +43,44 @@ from agod.image_ood import (
     score_po_msp,
     score_po_nll,
     score_po_resid,
+    score_rf_binary,
 )
 
-METHODS = ("po_msp", "po_energy", "po_nll", "maha", "knn", "centroid")
+# Methods we compare as *deployable* (no OOD labels at train)
+DEPLOY = ("po_msp", "po_energy", "maha", "knn", "centroid")
+# Oracle ceiling (needs OOD labels)
+ORACLE = ("rf_binary",)
 SCORE_COLORS = {
     "po_msp": "#5E81AC",
     "po_energy": "#EBCB8B",
-    "po_nll": "#88C0D0",
     "maha": "#B48EAD",
     "knn": "#A3BE8C",
     "centroid": "#D08770",
+    "rf_binary": "#BF616A",
 }
 
 
-def run_pack(root: Path, pack: str, *, pca_d: int, seed: int, extract_max_n: int) -> dict:
+def _batch_metrics(scores: Dict[str, np.ndarray], y: np.ndarray, *, batch_size: int, seed: int):
+    out = {}
+    for name, sc in scores.items():
+        bs, by = batch_aggregate_scores(sc, y, batch_size=batch_size, seed=seed)
+        out[name] = {
+            **binary_ood_metrics(by, bs),
+            "n_batches": int(len(by)),
+            "batch_size": int(batch_size),
+        }
+    return out
+
+
+def run_pack(
+    root: Path,
+    pack: str,
+    *,
+    pca_d: int,
+    seed: int,
+    extract_max_n: int,
+    batch_size: int,
+) -> dict:
     kwargs = {"pca_d": pca_d, "seed": seed}
     if pack == "food101_vit":
         kwargs["extract_max_n"] = extract_max_n
@@ -56,6 +91,9 @@ def run_pack(root: Path, pack: str, *, pca_d: int, seed: int, extract_max_n: int
     maha = fit_mahalanobis(split.X_id_train, split.y_id_train)
 
     X_eval = np.vstack([split.X_id_test, split.X_ood])
+    y_bin = np.concatenate(
+        [np.zeros(len(split.X_id_test), int), np.ones(len(split.X_ood), int)]
+    )
     y_eval = np.concatenate([split.y_id_test, split.y_ood])
 
     scores = {
@@ -71,12 +109,6 @@ def run_pack(root: Path, pack: str, *, pca_d: int, seed: int, extract_max_n: int
                 score_po_nll(clf, split.X_ood, split.y_ood),
             ]
         ),
-        "po_resid": np.concatenate(
-            [
-                score_po_resid(reg, split.X_id_test, split.y_id_test),
-                score_po_resid(reg, split.X_ood, split.y_ood),
-            ]
-        ),
         "maha": np.concatenate(
             [
                 score_mahalanobis(maha, split.X_id_test),
@@ -87,34 +119,71 @@ def run_pack(root: Path, pack: str, *, pca_d: int, seed: int, extract_max_n: int
         "centroid": score_centroid(split.X_id_train, X_eval, split.y_id_train),
     }
 
-    class_holdout = split.meta.get("protocol") == "class_holdout"
-    metrics = eval_scores_on_split(split, scores)
-    if class_holdout:
-        metrics["po_resid"] = {
-            "auroc": float("nan"),
-            "aupr": float("nan"),
-            "fpr95": float("nan"),
-            "score_mean_id": metrics["po_resid"]["score_mean_id"],
-            "score_mean_ood": float("nan"),
-            "note": "undefined under class-holdout",
-        }
+    # Oracle RF-binary ceiling: train on ID-train + half OOD, eval on ID-test + held-out OOD
+    rf_bin, ood_tr_idx, ood_te_idx = fit_rf_binary(
+        split.X_id_train, split.X_ood, seed=seed, ood_train_frac=0.5
+    )
+    # Build eval slice that excludes OOD rows used for RF training
+    X_ood_te = split.X_ood[ood_te_idx]
+    y_ood_te = split.y_ood[ood_te_idx]
+    X_rf_eval = np.vstack([split.X_id_test, X_ood_te])
+    y_rf_bin = np.concatenate(
+        [np.zeros(len(split.X_id_test), int), np.ones(len(X_ood_te), int)]
+    )
+    rf_score = score_rf_binary(rf_bin, X_rf_eval)
 
+    # Obs-level (noisy diagnostic) — deployable methods on full eval
+    obs_metrics = eval_scores_on_split(split, {k: scores[k] for k in DEPLOY})
+    # RF-binary obs metrics on its held-out eval
+    obs_metrics["rf_binary"] = binary_ood_metrics(y_rf_bin, rf_score)
+    obs_metrics["rf_binary"]["note"] = "oracle: trained with OOD labels"
+
+    # Batch-level (primary for PO / OnlineRFPerm)
+    batch_metrics = _batch_metrics(
+        {k: scores[k] for k in DEPLOY}, y_bin, batch_size=batch_size, seed=seed
+    )
+    # RF-binary batches on its own eval slice
+    bs, by = batch_aggregate_scores(rf_score, y_rf_bin, batch_size=batch_size, seed=seed)
+    batch_metrics["rf_binary"] = {
+        **binary_ood_metrics(by, bs),
+        "n_batches": int(len(by)),
+        "batch_size": int(batch_size),
+        "note": "oracle: trained with OOD labels",
+    }
+
+    class_holdout = split.meta.get("protocol") == "class_holdout"
     if class_holdout:
-        truth = np.concatenate(
-            [np.zeros(len(split.X_id_test), float), np.ones(len(split.X_ood), float)]
-        )
-        rank_names = ("po_msp", "po_energy", "maha", "knn", "centroid")
+        truth = y_bin.astype(float)
+        rank_names = DEPLOY
     else:
         truth = score_po_resid(reg, X_eval, y_eval)
-        rank_names = METHODS
+        rank_names = DEPLOY
     hard = {name: hard_rank_metrics(scores[name], truth) for name in rank_names}
+    hard["rf_binary"] = hard_rank_metrics(
+        rf_score,
+        np.concatenate(
+            [np.zeros(len(split.X_id_test), float), np.ones(len(X_ood_te), float)]
+        )
+        if class_holdout
+        else score_po_resid(
+            reg,
+            X_rf_eval,
+            np.concatenate([split.y_id_test, y_ood_te]),
+        ),
+    )
 
     return {
         "pack": pack,
         "id_domain": split.id_domain,
         "ood_domain": split.ood_domain,
-        "meta": split.meta,
-        "metrics": metrics,
+        "meta": {
+            **split.meta,
+            "n_ood_rf_train": int(len(ood_tr_idx)),
+            "n_ood_rf_eval": int(len(ood_te_idx)),
+            "batch_size": int(batch_size),
+        },
+        "obs_metrics": obs_metrics,
+        "batch_metrics": batch_metrics,
         "hard_rank": {
             k: {
                 "spearman": v.get("spearman"),
@@ -128,15 +197,25 @@ def run_pack(root: Path, pack: str, *, pca_d: int, seed: int, extract_max_n: int
     }
 
 
-def _bar(all_res: dict, out_dir: Path, key: str, ylabel: str, title: str, fname: str, ylim=None):
+def _bar(
+    all_res: dict,
+    out_dir: Path,
+    section: str,
+    key: str,
+    ylabel: str,
+    title: str,
+    fname: str,
+    methods: Tuple[str, ...],
+    ylim=None,
+):
     packs = list(all_res.keys())
     fig, ax = plt.subplots(figsize=(max(9, 1.8 * len(packs)), 4.8))
     x = np.arange(len(packs))
-    w = 0.13
-    mid = (len(METHODS) - 1) / 2.0
-    for i, m in enumerate(METHODS):
-        vals = [all_res[p]["metrics"][m][key] for p in packs]
-        ax.bar(x + (i - mid) * w, vals, w, label=m, color=SCORE_COLORS[m])
+    w = 0.12
+    mid = (len(methods) - 1) / 2.0
+    for i, m in enumerate(methods):
+        vals = [all_res[p][section][m][key] for p in packs]
+        ax.bar(x + (i - mid) * w, vals, w, label=m, color=SCORE_COLORS.get(m, "#888"))
     if key == "auroc":
         ax.axhline(0.5, color="k", ls="--", lw=0.8)
     ax.set_xticks(x)
@@ -160,67 +239,75 @@ def report(all_res: dict) -> str:
             return "—"
         return f"{v:.3f}"
 
+    methods = DEPLOY + ORACLE
     lines = [
-        "# Image-OOD: PO-risk μ vs classical embedding scores (no DRE)",
+        "# Image-OOD: PO-risk is batch / hard-rank — not obs-level detection",
         "",
-        "Freeze backbone → embedding → **pseudo-outcome μ** (PO-risk) vs Mahalanobis / kNN / centroid.",
+        "**Point:** observation-level PO-risk AUROC is too noisy for detection.",
+        "If you want a binary OOD detector, use an **RF binary classifier** (oracle ceiling).",
+        "PO-risk belongs to AGOD as a **batch / hard-sample** score after OnlineRFPerm.",
         "",
-        "- `food101_vit`: frozen ViT + **class-holdout** (far-OOD) — primary.",
-        "- CLIP packs: cached img embeddings + domain shift (near-OOD).",
+        "- `food101_vit`: frozen ViT + class-holdout (far-OOD) — primary.",
+        "- CLIP packs: cached embeddings + domain shift.",
+        "- `rf_binary`: oracle ID vs OOD RF (**uses OOD labels at train**) — ceiling, not a fair PO rival.",
         "",
-        "### Scores",
+        "## Primary: batch-mean AUROC (batch_size=32)",
         "",
-        "| score | definition |",
-        "|---|---|",
-        "| `po_msp` | `1 − max_c p_μ(c\\|x)` — PO-risk (label-free) |",
-        "| `po_energy` | Shannon entropy of μ — PO-risk (label-free) |",
-        "| `po_nll` | `1 − p_μ(y\\|x)` (MSP fallback if y unseen) |",
-        "| `maha` | min class-conditional Mahalanobis (Lee et al.) |",
-        "| `knn` | mean L2 to 5-NN in ID-train (Sun et al.) |",
-        "| `centroid` | L2 to nearest ID class centroid |",
-        "",
-        "## AUROC (ID vs OOD)",
-        "",
-        "| pack | shift | po_msp | po_energy | po_nll | maha | knn | centroid | best |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---|",
+        "| pack | po_msp | po_energy | maha | knn | centroid | rf_binary† | best deploy |",
+        "|---|---:|---:|---:|---:|---:|---:|---|",
     ]
-    wins = {m: 0 for m in METHODS}
+    wins = {m: 0 for m in DEPLOY}
     for pack, blob in all_res.items():
-        m = blob["metrics"]
-        best = max(
-            METHODS,
-            key=lambda k: (m[k]["auroc"] if m[k]["auroc"] == m[k]["auroc"] else -1.0),
-        )
+        m = blob["batch_metrics"]
+        best = max(DEPLOY, key=lambda k: m[k]["auroc"] if m[k]["auroc"] == m[k]["auroc"] else -1)
         if m[best]["auroc"] == m[best]["auroc"]:
             wins[best] += 1
-        shift = f"{blob['id_domain']}→{blob['ood_domain']}"
         lines.append(
-            f"| `{pack}` | {shift} | {_fmt(m['po_msp']['auroc'])} | {_fmt(m['po_energy']['auroc'])} | "
-            f"{_fmt(m['po_nll']['auroc'])} | {_fmt(m['maha']['auroc'])} | {_fmt(m['knn']['auroc'])} | "
-            f"{_fmt(m['centroid']['auroc'])} | `{best}` |"
+            f"| `{pack}` | {_fmt(m['po_msp']['auroc'])} | {_fmt(m['po_energy']['auroc'])} | "
+            f"{_fmt(m['maha']['auroc'])} | {_fmt(m['knn']['auroc'])} | {_fmt(m['centroid']['auroc'])} | "
+            f"{_fmt(m['rf_binary']['auroc'])} | `{best}` |"
         )
     lines += [
         "",
-        "**AUROC wins:** " + ", ".join(f"`{k}`={v}" for k, v in wins.items()),
+        f"**Deployable batch-AUROC wins:** " + ", ".join(f"`{k}`={v}" for k, v in wins.items()),
         "",
-        "## FPR95 (↓ better)",
+        "† `rf_binary` = oracle ceiling (OOD labels at train).",
         "",
-        "| pack | po_msp | po_energy | po_nll | maha | knn | centroid |",
+        "## Diagnostic: obs-level AUROC (noisy — do not prefer)",
+        "",
+        "| pack | po_msp | po_energy | maha | knn | centroid | rf_binary† |",
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for pack, blob in all_res.items():
-        m = blob["metrics"]
+        m = blob["obs_metrics"]
         lines.append(
-            f"| `{pack}` | {_fmt(m['po_msp']['fpr95'])} | {_fmt(m['po_energy']['fpr95'])} | "
-            f"{_fmt(m['po_nll']['fpr95'])} | {_fmt(m['maha']['fpr95'])} | {_fmt(m['knn']['fpr95'])} | "
-            f"{_fmt(m['centroid']['fpr95'])} |"
+            f"| `{pack}` | {_fmt(m['po_msp']['auroc'])} | {_fmt(m['po_energy']['auroc'])} | "
+            f"{_fmt(m['maha']['auroc'])} | {_fmt(m['knn']['auroc'])} | {_fmt(m['centroid']['auroc'])} | "
+            f"{_fmt(m['rf_binary']['auroc'])} |"
         )
+    lines += [
+        "",
+        "## Hard-rank (PO job): spearman / P@20%",
+        "",
+        "| pack | po_msp | po_energy | maha | knn | centroid | rf_binary† |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for pack, blob in all_res.items():
+        h = blob["hard_rank"]
+        cells = []
+        for name in methods:
+            if name not in h:
+                cells.append("—")
+                continue
+            cells.append(f"{_fmt(h[name]['spearman'])}/{_fmt(h[name]['precision_at_k'])}")
+        lines.append(f"| `{pack}` | " + " | ".join(cells) + " |")
     lines += [
         "",
         "### Takeaway",
         "",
-        "Compare **PO-risk on a frozen embedding** to standard embedding OOD detectors.",
-        "No DRE — domain classifiers are not part of this comparison.",
+        "1. Obs-level PO-risk AUROC is a bad primary — too noisy; RF-binary dominates if OOD labels exist.",
+        "2. Batch-mean AUROC is closer to the OnlineRFPerm reject unit.",
+        "3. Hard-rank is the AGOD-native PO question: does μ-risk surface the hard rows?",
         "",
         "See `docs/agod/AGOD_image_ood_bench.md`.",
         "",
@@ -235,6 +322,7 @@ def main() -> None:
     ap.add_argument("--pca-d", type=int, default=64)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--extract-max-n", type=int, default=8000)
+    ap.add_argument("--batch-size", type=int, default=32)
     ap.add_argument("--out", type=Path, default=Path("results/agod_image_ood"))
     args = ap.parse_args()
 
@@ -242,7 +330,7 @@ def main() -> None:
     packs = args.packs or available
     packs = [p for p in packs if p in available or p == "food101_vit"]
     if not packs:
-        raise SystemExit(f"no packs available under {args.root}; found {available}")
+        raise SystemExit(f"no packs under {args.root}; found {available}")
 
     args.out.mkdir(parents=True, exist_ok=True)
     all_res: Dict[str, dict] = {}
@@ -255,27 +343,29 @@ def main() -> None:
                 pca_d=args.pca_d,
                 seed=args.seed,
                 extract_max_n=args.extract_max_n,
+                batch_size=args.batch_size,
             )
         except Exception as e:
             print(f"[skip] {pack}: {e}", flush=True)
             continue
         all_res[pack] = blob
-        m = blob["metrics"]
+        b, o = blob["batch_metrics"], blob["obs_metrics"]
         print(
-            f"  AUROC po_msp={m['po_msp']['auroc']:.3f} po_energy={m['po_energy']['auroc']:.3f} "
-            f"maha={m['maha']['auroc']:.3f} knn={m['knn']['auroc']:.3f} "
-            f"centroid={m['centroid']['auroc']:.3f}",
+            f"  batch AUROC po_msp={b['po_msp']['auroc']:.3f} knn={b['knn']['auroc']:.3f} "
+            f"rf_binary†={b['rf_binary']['auroc']:.3f} | "
+            f"obs po_msp={o['po_msp']['auroc']:.3f} rf_binary†={o['rf_binary']['auroc']:.3f}",
             flush=True,
         )
 
     payload = {
         "pca_d": args.pca_d,
         "seed": args.seed,
-        "extract_max_n": args.extract_max_n,
-        "methods": list(METHODS),
+        "batch_size": args.batch_size,
+        "deploy_methods": list(DEPLOY),
+        "oracle_methods": list(ORACLE),
         "packs": list(all_res.keys()),
         "results": all_res,
-        "note": "PO-risk vs maha/knn/centroid — no DRE",
+        "note": "Primary=batch AUROC + hard-rank; obs AUROC diagnostic; rf_binary=oracle ceiling",
     }
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     md = report(all_res)
@@ -284,14 +374,17 @@ def main() -> None:
     Path("docs/agod/AGOD_image_ood_bench.md").write_text(md, encoding="utf-8")
     plots = []
     if all_res:
+        methods_plot = DEPLOY + ORACLE
         plots.append(
             _bar(
                 all_res,
                 args.out,
+                "batch_metrics",
                 "auroc",
-                "AUROC",
-                "Image-OOD AUROC: PO-risk vs maha / knn / centroid (no DRE)",
-                "image_ood_auroc.png",
+                "batch AUROC",
+                "Primary: batch-mean AUROC (PO vs classical vs oracle RF-binary)",
+                "image_ood_batch_auroc.png",
+                methods_plot,
                 ylim=(0.35, 1.02),
             )
         )
@@ -299,10 +392,13 @@ def main() -> None:
             _bar(
                 all_res,
                 args.out,
-                "fpr95",
-                "FPR95 (↓)",
-                "Image-OOD FPR95 (no DRE)",
-                "image_ood_fpr95.png",
+                "obs_metrics",
+                "auroc",
+                "obs AUROC (noisy)",
+                "Diagnostic: obs-level AUROC (prefer batch / hard-rank)",
+                "image_ood_obs_auroc.png",
+                methods_plot,
+                ylim=(0.35, 1.02),
             )
         )
     print(md)
