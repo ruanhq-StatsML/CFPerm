@@ -70,6 +70,36 @@ def test_concept_stream_rfperm_fires_at_cut():
     assert abs(hop3["mean_w"] - 1.0) < 0.08
 
 
+def test_observation_weights_rank_po_on_treated():
+    jumped = make_batch_stream(
+        n_batches=6, n_per=80, p=8, seed=4, cov=0.0, concept_at=3, concept=1.0
+    )
+    rec = run_rfperm_stream(jumped, gate=1.5, detail=True)
+    hop = next(h for h in rec["history"] if h["fired"])
+    po = np.asarray(hop["po_risk0"], float)
+    w = np.asarray(hop["w"], float)
+    treated = np.asarray(hop["treated"], int) == 1
+    assert po.shape == w.shape
+    assert np.isfinite(po).all() and np.isfinite(w).all()
+    assert np.all(w > 0)
+    # T=1: √PO is rank-preserving before clip; after mean-1 still monotone
+    order = np.argsort(po[treated])
+    assert np.all(np.diff(w[treated][order]) >= -1e-9)
+    assert hop["po_t1"]["p90"] >= hop["po_t1"]["p50"]
+    assert hop["w_t1"]["p90"] >= hop["w_t1"]["p50"]
+
+
+def test_quiet_observations_have_unit_weights():
+    stream = make_batch_stream(n_batches=6, n_per=80, p=8, seed=0, cov=0.0)
+    rec = run_rfperm_stream(stream, gate=1.5, detail=True)
+    quiet = [h for h in rec["history"] if not h["fired"]]
+    assert quiet
+    for h in quiet:
+        w = np.asarray(h["w"], float)
+        assert np.allclose(w, 1.0)
+        assert np.isfinite(np.asarray(h["po_risk0"], float)).all()
+
+
 def test_reweight_keeps_last_two_rows_when_fired():
     jumped = make_batch_stream(
         n_batches=6, n_per=80, p=8, seed=4, cov=0.0, concept_at=3, concept=1.0
@@ -81,6 +111,7 @@ def test_reweight_keeps_last_two_rows_when_fired():
     fired = [h for h in rec["history"] if h["fired"]]
     assert fired
     assert all(abs(h["mean_w"] - 1.0) < 0.08 for h in fired)
+    assert all("po_t1" in h and "w_t1" in h for h in rec["history"])
 
 
 def test_fit_predict_single_class_does_not_crash():

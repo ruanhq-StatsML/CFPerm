@@ -36,7 +36,9 @@ Fire iff \(e_{\mathrm{now}} / e_{\mathrm{prev}} \ge \gamma\) (default
 - **Quiet** — last two batches, \(w=1\). This is the default.
 - **Fire** — same rows. \(T=0\) stays \(1\); \(T=1\) gets
   \(w=\sqrt{\texttt{po\_risk0}}\) (mean \(1\)). Reweight, do not
-  subset, do not drop the old batch.
+  subset, do not drop the old batch. **Every observation** on the
+  last two batches has its own `po_risk0_i` and `w_i`
+  (`quantify_last_two`; hop history stores p10–p90).
 
 Two levers, not one:
 

@@ -176,6 +176,8 @@ def main():
                                 "fired": h["fired"],
                                 "ratio": h.get("ratio"),
                                 "n_train": h.get("n_train"),
+                                "po_t1": h.get("po_t1"),
+                                "w_t1": h.get("w_t1"),
                             }
                             for h in rec["history"]
                         ],

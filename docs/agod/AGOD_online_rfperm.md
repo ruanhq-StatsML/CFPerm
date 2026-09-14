@@ -3,12 +3,34 @@
 This is the AGOD stream method. Not DRE. Not always-on IPTW. Not
 PO-tail subset.
 
-```python
-from agod import run_online_rfperm, instance_po_risk, po_iptw_weights
+Every observation on the last two batches is scored:
 
-rec = run_online_rfperm(stream, gate=1.5, learner="rf")
-# rec["online_mse"]  next-batch score
-# rec["fire_rate"]   fraction of hops that heated
+\[
+\texttt{po\_risk0}_i = |Y_i - \mu_0(X_i)|
+\quad\text{(mix \(0.5\) with the batch gap)}
+\]
+
+\[
+w_i =
+\begin{cases}
+1 & \text{quiet, or } T_i=0 \\
+\sqrt{\texttt{po\_risk0}_i} & \text{fire and } T_i=1
+\end{cases}
+\quad\text{then mean 1, clip \((0.05,20)\).}
+\]
+
+That instance map is the quantification — not a batch scalar.
+`quantify_last_two(...)` returns `po_risk0` and `w` for every row,
+plus p10–p90. `run_online_rfperm(..., detail=True)` keeps the
+vectors on each hop.
+
+```python
+from agod import run_online_rfperm, instance_po_risk, po_iptw_weights, quantify_last_two
+
+rec = run_online_rfperm(stream, gate=1.5, learner="rf", detail=True)
+hop = rec["history"][k]
+# hop["po_risk0"][i], hop["w"][i]  — one number per observation
+# hop["po_t1"]["p50"], hop["w_t1"]["p90"]  — hop summary
 ```
 
 1. **Probe** — same shallow RF as the IPTW stream (`n_estimators=20`,

@@ -107,6 +107,79 @@ def shift_ratio(e_now, e_prev):
     return float(e_now) / (float(e_prev) + 1e-8)
 
 
+def _quantiles(x):
+    """Per-vector quantification: mean / spread / tails."""
+    a = np.asarray(x, dtype=float).ravel()
+    a = a[np.isfinite(a)]
+    if a.size == 0:
+        return {
+            "n": 0,
+            "mean": float("nan"),
+            "std": float("nan"),
+            "min": float("nan"),
+            "p10": float("nan"),
+            "p25": float("nan"),
+            "p50": float("nan"),
+            "p75": float("nan"),
+            "p90": float("nan"),
+            "max": float("nan"),
+        }
+    qs = np.quantile(a, [0.10, 0.25, 0.50, 0.75, 0.90])
+    return {
+        "n": int(a.size),
+        "mean": float(a.mean()),
+        "std": float(a.std()),
+        "min": float(a.min()),
+        "p10": float(qs[0]),
+        "p25": float(qs[1]),
+        "p50": float(qs[2]),
+        "p75": float(qs[3]),
+        "p90": float(qs[4]),
+        "max": float(a.max()),
+    }
+
+
+def quantify_last_two(
+    probe,
+    X,
+    y,
+    batch,
+    t,
+    *,
+    task="mse",
+    batch_po=0.0,
+    fired=False,
+):
+    """Per-observation PO-risk and IPTW weight on B_{t-1} ∪ B_t.
+
+    Every row gets ``po_risk0_i`` vs the T=0 probe. Quiet → ``w_i=1``.
+    Fire → T=0 stays 1, T=1 gets ``w_i = √po_risk0`` (mean 1).
+    """
+    batch = np.asarray(batch, dtype=int)
+    tr = (batch == int(t) - 1) | (batch == int(t))
+    idx = np.flatnonzero(tr)
+    treated = (batch[tr] == int(t)).astype(float)
+    po = po_risk0_rows(probe, X[tr], y[tr], batch_po=batch_po, task=task)
+    if fired:
+        w = po_iptw_weights(po, mode="sqrt", treated=treated)
+    else:
+        w = np.ones(idx.size, dtype=float)
+    t1 = treated > 0.5
+    return {
+        "index": idx,
+        "batch": batch[tr],
+        "treated": t1.astype(int),
+        "po_risk0": np.asarray(po, dtype=float),
+        "w": np.asarray(w, dtype=float),
+        "fired": bool(fired),
+        "po_t1": _quantiles(po[t1]),
+        "po_t0": _quantiles(po[~t1]),
+        "w_t1": _quantiles(w[t1]),
+        "w_t0": _quantiles(w[~t1]),
+        "w_all": _quantiles(w),
+    }
+
+
 def last_two_sqrt_weights(batch, t, po1):
     """Last two batches: T=0 w=1, T=1 w=√po_risk0, mean 1."""
     batch = np.asarray(batch, dtype=int)
@@ -124,8 +197,13 @@ def run_rfperm_stream(
     gate=1.5,
     learner="rf",
     seed=0,
+    detail=False,
 ):
-    """Online RFPerm + PO-risk. Last two batches; √po_risk0 on T=1 iff gated."""
+    """Online RFPerm + PO-risk. Last two batches; √po_risk0 on T=1 iff gated.
+
+    Every hop records per-observation PO/weight *quantiles*. ``detail=True``
+    also keeps the full ``po_risk0`` and ``w`` vectors on last-two rows.
+    """
     task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
     y = np.asarray(stream.y).ravel()
@@ -146,29 +224,35 @@ def run_rfperm_stream(
         else:
             ratio = shift_ratio(e_now, e_prev)
             po_b = max(float(e_now) - float(e_prev), 0.0)
-        po0 = po_risk0_rows(probe, X[t1], y[t1], batch_po=po_b, task=task)
+        q = quantify_last_two(
+            probe, X, y, batch, t, task=task, batch_po=po_b, fired=fired
+        )
         tr = (batch == (t - 1)) | (batch == t)
-        w_tr = None
-        if fired:
-            tr, w_tr = last_two_sqrt_weights(batch, t, po0)
+        w_tr = q["w"] if fired else None
         pred = fit_predict(
             X[tr], y[tr], X[te], w=w_tr, learner=learner, seed=int(seed) + t, task=task
         )
         mse = hop_score(y[te], pred, task=task)
-        history.append(
-            {
-                "t": int(t),
-                "next_mse": mse,
-                "fired": bool(fired),
-                "ratio": float(ratio),
-                "lambda": 1.0 if fired else 0.0,
-                "mean_r0": float("nan") if e_prev is None else float(e_prev),
-                "mean_r1": float(e_now),
-                "n_train": int(tr.sum()),
-                "n_test": int(te.sum()),
-                "mean_w": 1.0 if w_tr is None else float(np.mean(w_tr)),
-            }
-        )
+        rec = {
+            "t": int(t),
+            "next_mse": mse,
+            "fired": bool(fired),
+            "ratio": float(ratio),
+            "lambda": 1.0 if fired else 0.0,
+            "mean_r0": float("nan") if e_prev is None else float(e_prev),
+            "mean_r1": float(e_now),
+            "n_train": int(tr.sum()),
+            "n_test": int(te.sum()),
+            "mean_w": float(q["w_all"]["mean"]),
+            "po_t1": q["po_t1"],
+            "w_t1": q["w_t1"],
+        }
+        if detail:
+            rec["po_risk0"] = q["po_risk0"].tolist()
+            rec["w"] = q["w"].tolist()
+            rec["treated"] = q["treated"].tolist()
+            rec["index"] = q["index"].tolist()
+        history.append(rec)
         e_prev = e_now
     return _pack_stream(
         history,
