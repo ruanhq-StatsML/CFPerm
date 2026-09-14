@@ -182,9 +182,13 @@ def _fit(est, X, y, w=None):
 
 
 def fit_predict(Xtr, ytr, Xte, w=None, *, learner="rf", seed=0, task="mse"):
-    est = make_regressor(learner, seed=seed, task=task)
     ytr = np.asarray(ytr)
     ytr = ytr.ravel().astype(int) if str(task) == "acc" else ytr.ravel().astype(float)
+    n_te = int(np.asarray(Xte).shape[0])
+    if str(task) == "acc" and np.unique(ytr).size < 2:
+        fill = int(ytr[0]) if ytr.size else 0
+        return np.full(n_te, fill, dtype=float)
+    est = make_regressor(learner, seed=seed, task=task)
     _fit(est, Xtr, ytr, w)
     return np.asarray(est.predict(np.asarray(Xte, dtype=float))).ravel()
 

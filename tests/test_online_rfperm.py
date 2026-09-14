@@ -58,6 +58,18 @@ def test_concept_stream_rfperm_fires_at_cut():
     assert hop3["mean_r1"] > hop3["mean_r0"] * 1.5
 
 
+def test_fit_predict_single_class_does_not_crash():
+    from agod.po_refit import fit_predict
+
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(20, 4))
+    y = np.ones(20, dtype=int)
+    for kind in ("rf", "xgb"):
+        pred = fit_predict(X, y, X[:5], learner=kind, seed=0, task="acc")
+        assert pred.shape == (5,)
+        assert np.all(pred == 1)
+
+
 def test_local_tail_trains_fewer_rows_when_fired():
     jumped = make_batch_stream(
         n_batches=6, n_per=80, p=8, seed=4, cov=0.0, concept_at=3, concept=1.0

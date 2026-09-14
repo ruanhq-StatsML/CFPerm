@@ -160,6 +160,9 @@ def run_rfperm_stream(
                 tail = po_tail_mask(po0, q=q)
                 tr = np.zeros(t1.shape[0], dtype=bool)
                 tr[np.flatnonzero(t1)[tail]] = True
+                if str(task) == "acc" and np.unique(y[tr]).size < 2:
+                    # one-class tail: keep the hop (drop old batch) but don't subset
+                    tr = t1
                 w_tr = None
             else:
                 tr = t1
