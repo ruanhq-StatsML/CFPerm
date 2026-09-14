@@ -66,7 +66,7 @@ def write_md(rows, path):
         "",
         "Streams are time- or space-ordered: Metro Interstate traffic,",
         "NYC green taxi, California latitude, diabetes readmission",
-        "source→target. MSE ↓ for continuous, Acc ↑ for discrete.",
+        "source→target. Continuous tasks report **RMSE** (↓); discrete report **Acc** (↑).",
         "",
     ]
     learners = sorted({r["learner"] for r in rows})
@@ -89,13 +89,16 @@ def write_md(rows, path):
             nb = sub[0]["n_batches"]
 
             def sc(m):
-                return by_m[m]["online_score"]
+                v = by_m[m]["online_score"]
+                if task == "mse":
+                    return float(v) ** 0.5
+                return float(v)
 
             lines.append(
                 "| `%s` | %s | %d | %.4f | %.4f | %.4f | %.4f | %.4f | %.4f | %.4f | %.2f |"
                 % (
                     ds,
-                    task,
+                    "RMSE" if task == "mse" else "acc",
                     nb,
                     sc("uniform_pair"),
                     sc("gated_pair"),

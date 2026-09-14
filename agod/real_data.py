@@ -200,7 +200,12 @@ def load_diabetes_readmit(root: Path, max_n: int, seed: int, pca_d: int):
     y = df[ycol].to_numpy(np.int64)
     X = _as_numeric(df.drop(columns=[ycol]))
     n = min(int(max_n), len(X))
-    return X[:n], y[:n], "acc"
+    # Keep the source→target cut inside the window (not a source-only prefix).
+    n_src = len(src)
+    half = n // 2
+    start = max(0, n_src - half)
+    end = min(len(X), start + n)
+    return X[start:end], y[start:end], "acc"
 
 
 def load_california():

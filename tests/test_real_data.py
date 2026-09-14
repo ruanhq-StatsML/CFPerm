@@ -38,6 +38,8 @@ def test_diabetes_readmit_concatenates_source_then_target():
     assert task == "acc"
     assert set(np.unique(y).tolist()) <= {0, 1}
     assert len(y) == 300
+    # Window is centered on the source→target cut, not a source-only prefix.
+    assert abs(float(y[:150].mean()) - float(y[-150:].mean())) > 0.02
 
 
 def test_iter_real_streams_includes_interstate_and_taxi():
