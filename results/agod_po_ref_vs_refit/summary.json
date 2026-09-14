@@ -33,18 +33,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.3021250696498221,
+              "pearson": 0.2560402121757001,
+              "precision_at_k": 0.2857142857142857,
               "topk_overlap": 0.2857142857142857,
-              "po_mean": 1244.309644731844
+              "lift_at_k": 1.4285714285714286,
+              "ndcg_at_k": 0.5142419116582159,
+              "auroc_topk": 0.6376785714285714,
+              "precision_at_10pct": 0.28571428571428575,
+              "precision_at_20pct": 0.2857142857142857,
+              "precision_at_30pct": 0.3952380952380952,
+              "po_mean": 1244.309644731844,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.3155681282413955,
+              "pearson": 0.32160011587368814,
+              "precision_at_k": 0.3642857142857143,
               "topk_overlap": 0.3642857142857143,
-              "po_mean": 1005.8680096031042
+              "lift_at_k": 1.8214285714285714,
+              "ndcg_at_k": 0.5540719315111865,
+              "auroc_topk": 0.6689285714285714,
+              "precision_at_10pct": 0.22857142857142862,
+              "precision_at_20pct": 0.3642857142857143,
+              "precision_at_30pct": 0.42857142857142855,
+              "po_mean": 1005.8680096031042,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.3197085422827997,
+              "pearson": 0.3057856395832765,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 978.0411821707743
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.5367904397699663,
+              "auroc_topk": 0.6686607142857143,
+              "precision_at_10pct": 0.24285714285714288,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.4238095238095239,
+              "po_mean": 978.0411821707743,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 860205.952072517,
@@ -64,18 +91,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.3021250696498221,
+              "pearson": 0.2560402121757001,
+              "precision_at_k": 0.2857142857142857,
               "topk_overlap": 0.2857142857142857,
-              "po_mean": 1244.309644731844
+              "lift_at_k": 1.4285714285714286,
+              "ndcg_at_k": 0.5142419116582159,
+              "auroc_topk": 0.6376785714285714,
+              "precision_at_10pct": 0.28571428571428575,
+              "precision_at_20pct": 0.2857142857142857,
+              "precision_at_30pct": 0.3952380952380952,
+              "po_mean": 1244.309644731844,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.3155681282413955,
+              "pearson": 0.32160011587368814,
+              "precision_at_k": 0.3642857142857143,
               "topk_overlap": 0.3642857142857143,
-              "po_mean": 1005.8680096031042
+              "lift_at_k": 1.8214285714285714,
+              "ndcg_at_k": 0.5540719315111865,
+              "auroc_topk": 0.6689285714285714,
+              "precision_at_10pct": 0.22857142857142862,
+              "precision_at_20pct": 0.3642857142857143,
+              "precision_at_30pct": 0.42857142857142855,
+              "po_mean": 1005.8680096031042,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.3197085422827997,
+              "pearson": 0.3057856395832765,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 978.0411821707743
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.5367904397699663,
+              "auroc_topk": 0.6686607142857143,
+              "precision_at_10pct": 0.24285714285714288,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.4238095238095239,
+              "po_mean": 978.0411821707743,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 792540.6365625584,
@@ -95,18 +149,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.3021250696498221,
+              "pearson": 0.2560402121757001,
+              "precision_at_k": 0.2857142857142857,
               "topk_overlap": 0.2857142857142857,
-              "po_mean": 1244.309644731844
+              "lift_at_k": 1.4285714285714286,
+              "ndcg_at_k": 0.5142419116582159,
+              "auroc_topk": 0.6376785714285714,
+              "precision_at_10pct": 0.28571428571428575,
+              "precision_at_20pct": 0.2857142857142857,
+              "precision_at_30pct": 0.3952380952380952,
+              "po_mean": 1244.309644731844,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.3155681282413955,
+              "pearson": 0.32160011587368814,
+              "precision_at_k": 0.3642857142857143,
               "topk_overlap": 0.3642857142857143,
-              "po_mean": 1005.8680096031042
+              "lift_at_k": 1.8214285714285714,
+              "ndcg_at_k": 0.5540719315111865,
+              "auroc_topk": 0.6689285714285714,
+              "precision_at_10pct": 0.22857142857142862,
+              "precision_at_20pct": 0.3642857142857143,
+              "precision_at_30pct": 0.42857142857142855,
+              "po_mean": 1005.8680096031042,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.3197085422827997,
+              "pearson": 0.3057856395832765,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 978.0411821707743
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.5367904397699663,
+              "auroc_topk": 0.6686607142857143,
+              "precision_at_10pct": 0.24285714285714288,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.4238095238095239,
+              "po_mean": 978.0411821707743,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 783883.1006945927,
@@ -126,18 +207,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.3021250696498221,
+              "pearson": 0.2560402121757001,
+              "precision_at_k": 0.2857142857142857,
               "topk_overlap": 0.2857142857142857,
-              "po_mean": 1244.309644731844
+              "lift_at_k": 1.4285714285714286,
+              "ndcg_at_k": 0.5142419116582159,
+              "auroc_topk": 0.6376785714285714,
+              "precision_at_10pct": 0.28571428571428575,
+              "precision_at_20pct": 0.2857142857142857,
+              "precision_at_30pct": 0.3952380952380952,
+              "po_mean": 1244.309644731844,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.3155681282413955,
+              "pearson": 0.32160011587368814,
+              "precision_at_k": 0.3642857142857143,
               "topk_overlap": 0.3642857142857143,
-              "po_mean": 1005.8680096031042
+              "lift_at_k": 1.8214285714285714,
+              "ndcg_at_k": 0.5540719315111865,
+              "auroc_topk": 0.6689285714285714,
+              "precision_at_10pct": 0.22857142857142862,
+              "precision_at_20pct": 0.3642857142857143,
+              "precision_at_30pct": 0.42857142857142855,
+              "po_mean": 1005.8680096031042,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.3197085422827997,
+              "pearson": 0.3057856395832765,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 978.0411821707743
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.5367904397699663,
+              "auroc_topk": 0.6686607142857143,
+              "precision_at_10pct": 0.24285714285714288,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.4238095238095239,
+              "po_mean": 978.0411821707743,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 756988.4097522553,
@@ -157,18 +265,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.3021250696498221,
+              "pearson": 0.2560402121757001,
+              "precision_at_k": 0.2857142857142857,
               "topk_overlap": 0.2857142857142857,
-              "po_mean": 1244.309644731844
+              "lift_at_k": 1.4285714285714286,
+              "ndcg_at_k": 0.5142419116582159,
+              "auroc_topk": 0.6376785714285714,
+              "precision_at_10pct": 0.28571428571428575,
+              "precision_at_20pct": 0.2857142857142857,
+              "precision_at_30pct": 0.3952380952380952,
+              "po_mean": 1244.309644731844,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.3155681282413955,
+              "pearson": 0.32160011587368814,
+              "precision_at_k": 0.3642857142857143,
               "topk_overlap": 0.3642857142857143,
-              "po_mean": 1005.8680096031042
+              "lift_at_k": 1.8214285714285714,
+              "ndcg_at_k": 0.5540719315111865,
+              "auroc_topk": 0.6689285714285714,
+              "precision_at_10pct": 0.22857142857142862,
+              "precision_at_20pct": 0.3642857142857143,
+              "precision_at_30pct": 0.42857142857142855,
+              "po_mean": 1005.8680096031042,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.3197085422827997,
+              "pearson": 0.3057856395832765,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 978.0411821707743
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.5367904397699663,
+              "auroc_topk": 0.6686607142857143,
+              "precision_at_10pct": 0.24285714285714288,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.4238095238095239,
+              "po_mean": 978.0411821707743,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 1642190.682348755,
@@ -200,18 +335,45 @@
             "n_reject": 5,
             "ref": {
               "spearman": 0.08437323732373236,
+              "pearson": 0.5714189773076122,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 55.51144746364747
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.6713522083903205,
+              "auroc_topk": 0.5876250000000001,
+              "precision_at_10pct": 0.36,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.36,
+              "po_mean": 55.51144746364747,
+              "n_batches": 5.0
             },
             "probe": {
               "spearman": 0.393072907290729,
+              "pearson": 0.6698353572694762,
+              "precision_at_k": 0.52,
               "topk_overlap": 0.52,
-              "po_mean": 35.16446573828948
+              "lift_at_k": 2.6,
+              "ndcg_at_k": 0.7609174122172245,
+              "auroc_topk": 0.7725000000000001,
+              "precision_at_10pct": 0.5,
+              "precision_at_20pct": 0.52,
+              "precision_at_30pct": 0.52,
+              "po_mean": 35.16446573828948,
+              "n_batches": 5.0
             },
             "refit": {
               "spearman": 0.39925112511251115,
+              "pearson": 0.6465019767068831,
+              "precision_at_k": 0.4699999999999999,
               "topk_overlap": 0.4699999999999999,
-              "po_mean": 34.53672929549295
+              "lift_at_k": 2.35,
+              "ndcg_at_k": 0.7409320882181476,
+              "auroc_topk": 0.7656250000000001,
+              "precision_at_10pct": 0.48,
+              "precision_at_20pct": 0.4699999999999999,
+              "precision_at_30pct": 0.5,
+              "po_mean": 34.53672929549295,
+              "n_batches": 5.0
             }
           },
           "mse_mean_sig": 2363.608926241626,
@@ -231,18 +393,45 @@
             "n_reject": 5,
             "ref": {
               "spearman": 0.08437323732373236,
+              "pearson": 0.5714189773076122,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 55.51144746364747
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.6713522083903205,
+              "auroc_topk": 0.5876250000000001,
+              "precision_at_10pct": 0.36,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.36,
+              "po_mean": 55.51144746364747,
+              "n_batches": 5.0
             },
             "probe": {
               "spearman": 0.393072907290729,
+              "pearson": 0.6698353572694762,
+              "precision_at_k": 0.52,
               "topk_overlap": 0.52,
-              "po_mean": 35.16446573828948
+              "lift_at_k": 2.6,
+              "ndcg_at_k": 0.7609174122172245,
+              "auroc_topk": 0.7725000000000001,
+              "precision_at_10pct": 0.5,
+              "precision_at_20pct": 0.52,
+              "precision_at_30pct": 0.52,
+              "po_mean": 35.16446573828948,
+              "n_batches": 5.0
             },
             "refit": {
               "spearman": 0.39925112511251115,
+              "pearson": 0.6465019767068831,
+              "precision_at_k": 0.4699999999999999,
               "topk_overlap": 0.4699999999999999,
-              "po_mean": 34.53672929549295
+              "lift_at_k": 2.35,
+              "ndcg_at_k": 0.7409320882181476,
+              "auroc_topk": 0.7656250000000001,
+              "precision_at_10pct": 0.48,
+              "precision_at_20pct": 0.4699999999999999,
+              "precision_at_30pct": 0.5,
+              "po_mean": 34.53672929549295,
+              "n_batches": 5.0
             }
           },
           "mse_mean_sig": 2261.33100145185,
@@ -262,18 +451,45 @@
             "n_reject": 5,
             "ref": {
               "spearman": 0.08437323732373236,
+              "pearson": 0.5714189773076122,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 55.51144746364747
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.6713522083903205,
+              "auroc_topk": 0.5876250000000001,
+              "precision_at_10pct": 0.36,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.36,
+              "po_mean": 55.51144746364747,
+              "n_batches": 5.0
             },
             "probe": {
               "spearman": 0.393072907290729,
+              "pearson": 0.6698353572694762,
+              "precision_at_k": 0.52,
               "topk_overlap": 0.52,
-              "po_mean": 35.16446573828948
+              "lift_at_k": 2.6,
+              "ndcg_at_k": 0.7609174122172245,
+              "auroc_topk": 0.7725000000000001,
+              "precision_at_10pct": 0.5,
+              "precision_at_20pct": 0.52,
+              "precision_at_30pct": 0.52,
+              "po_mean": 35.16446573828948,
+              "n_batches": 5.0
             },
             "refit": {
               "spearman": 0.39925112511251115,
+              "pearson": 0.6465019767068831,
+              "precision_at_k": 0.4699999999999999,
               "topk_overlap": 0.4699999999999999,
-              "po_mean": 34.53672929549295
+              "lift_at_k": 2.35,
+              "ndcg_at_k": 0.7409320882181476,
+              "auroc_topk": 0.7656250000000001,
+              "precision_at_10pct": 0.48,
+              "precision_at_20pct": 0.4699999999999999,
+              "precision_at_30pct": 0.5,
+              "po_mean": 34.53672929549295,
+              "n_batches": 5.0
             }
           },
           "mse_mean_sig": 2639.0067552637333,
@@ -293,18 +509,45 @@
             "n_reject": 5,
             "ref": {
               "spearman": 0.08437323732373236,
+              "pearson": 0.5714189773076122,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 55.51144746364747
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.6713522083903205,
+              "auroc_topk": 0.5876250000000001,
+              "precision_at_10pct": 0.36,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.36,
+              "po_mean": 55.51144746364747,
+              "n_batches": 5.0
             },
             "probe": {
               "spearman": 0.393072907290729,
+              "pearson": 0.6698353572694762,
+              "precision_at_k": 0.52,
               "topk_overlap": 0.52,
-              "po_mean": 35.16446573828948
+              "lift_at_k": 2.6,
+              "ndcg_at_k": 0.7609174122172245,
+              "auroc_topk": 0.7725000000000001,
+              "precision_at_10pct": 0.5,
+              "precision_at_20pct": 0.52,
+              "precision_at_30pct": 0.52,
+              "po_mean": 35.16446573828948,
+              "n_batches": 5.0
             },
             "refit": {
               "spearman": 0.39925112511251115,
+              "pearson": 0.6465019767068831,
+              "precision_at_k": 0.4699999999999999,
               "topk_overlap": 0.4699999999999999,
-              "po_mean": 34.53672929549295
+              "lift_at_k": 2.35,
+              "ndcg_at_k": 0.7409320882181476,
+              "auroc_topk": 0.7656250000000001,
+              "precision_at_10pct": 0.48,
+              "precision_at_20pct": 0.4699999999999999,
+              "precision_at_30pct": 0.5,
+              "po_mean": 34.53672929549295,
+              "n_batches": 5.0
             }
           },
           "mse_mean_sig": 2677.555409268521,
@@ -324,18 +567,45 @@
             "n_reject": 5,
             "ref": {
               "spearman": 0.08437323732373236,
+              "pearson": 0.5714189773076122,
+              "precision_at_k": 0.35,
               "topk_overlap": 0.35,
-              "po_mean": 55.51144746364747
+              "lift_at_k": 1.75,
+              "ndcg_at_k": 0.6713522083903205,
+              "auroc_topk": 0.5876250000000001,
+              "precision_at_10pct": 0.36,
+              "precision_at_20pct": 0.35,
+              "precision_at_30pct": 0.36,
+              "po_mean": 55.51144746364747,
+              "n_batches": 5.0
             },
             "probe": {
               "spearman": 0.393072907290729,
+              "pearson": 0.6698353572694762,
+              "precision_at_k": 0.52,
               "topk_overlap": 0.52,
-              "po_mean": 35.16446573828948
+              "lift_at_k": 2.6,
+              "ndcg_at_k": 0.7609174122172245,
+              "auroc_topk": 0.7725000000000001,
+              "precision_at_10pct": 0.5,
+              "precision_at_20pct": 0.52,
+              "precision_at_30pct": 0.52,
+              "po_mean": 35.16446573828948,
+              "n_batches": 5.0
             },
             "refit": {
               "spearman": 0.39925112511251115,
+              "pearson": 0.6465019767068831,
+              "precision_at_k": 0.4699999999999999,
               "topk_overlap": 0.4699999999999999,
-              "po_mean": 34.53672929549295
+              "lift_at_k": 2.35,
+              "ndcg_at_k": 0.7409320882181476,
+              "auroc_topk": 0.7656250000000001,
+              "precision_at_10pct": 0.48,
+              "precision_at_20pct": 0.4699999999999999,
+              "precision_at_30pct": 0.5,
+              "po_mean": 34.53672929549295,
+              "n_batches": 5.0
             }
           },
           "mse_mean_sig": 3577.092687761303,
@@ -367,18 +637,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.2865475118940465,
+              "pearson": 0.5142503365790553,
+              "precision_at_k": 0.5214285714285715,
               "topk_overlap": 0.5214285714285715,
-              "po_mean": 0.030730733604728427
+              "lift_at_k": 2.607142857142857,
+              "ndcg_at_k": 0.787539021124331,
+              "auroc_topk": 0.7206250000000001,
+              "precision_at_10pct": 0.5142857142857143,
+              "precision_at_20pct": 0.5214285714285715,
+              "precision_at_30pct": 0.5047619047619047,
+              "po_mean": 0.030730733604728427,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.6704521880759504,
+              "pearson": 0.8203993096410646,
+              "precision_at_k": 0.7071428571428572,
               "topk_overlap": 0.7071428571428572,
-              "po_mean": 0.021428609212649892
+              "lift_at_k": 3.5357142857142856,
+              "ndcg_at_k": 0.9056045661125857,
+              "auroc_topk": 0.9297321428571428,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7071428571428572,
+              "precision_at_30pct": 0.7047619047619048,
+              "po_mean": 0.021428609212649892,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6654682611118253,
+              "pearson": 0.811424923334214,
+              "precision_at_k": 0.692857142857143,
               "topk_overlap": 0.692857142857143,
-              "po_mean": 0.01928385170362734
+              "lift_at_k": 3.4642857142857144,
+              "ndcg_at_k": 0.8972714784106992,
+              "auroc_topk": 0.9213392857142857,
+              "precision_at_10pct": 0.7,
+              "precision_at_20pct": 0.692857142857143,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.01928385170362734,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0007783584023255707,
@@ -398,18 +695,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.2865475118940465,
+              "pearson": 0.5142503365790553,
+              "precision_at_k": 0.5214285714285715,
               "topk_overlap": 0.5214285714285715,
-              "po_mean": 0.030730733604728427
+              "lift_at_k": 2.607142857142857,
+              "ndcg_at_k": 0.787539021124331,
+              "auroc_topk": 0.7206250000000001,
+              "precision_at_10pct": 0.5142857142857143,
+              "precision_at_20pct": 0.5214285714285715,
+              "precision_at_30pct": 0.5047619047619047,
+              "po_mean": 0.030730733604728427,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.6704521880759504,
+              "pearson": 0.8203993096410646,
+              "precision_at_k": 0.7071428571428572,
               "topk_overlap": 0.7071428571428572,
-              "po_mean": 0.021428609212649892
+              "lift_at_k": 3.5357142857142856,
+              "ndcg_at_k": 0.9056045661125857,
+              "auroc_topk": 0.9297321428571428,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7071428571428572,
+              "precision_at_30pct": 0.7047619047619048,
+              "po_mean": 0.021428609212649892,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6654682611118253,
+              "pearson": 0.811424923334214,
+              "precision_at_k": 0.692857142857143,
               "topk_overlap": 0.692857142857143,
-              "po_mean": 0.01928385170362734
+              "lift_at_k": 3.4642857142857144,
+              "ndcg_at_k": 0.8972714784106992,
+              "auroc_topk": 0.9213392857142857,
+              "precision_at_10pct": 0.7,
+              "precision_at_20pct": 0.692857142857143,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.01928385170362734,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0008489297977674945,
@@ -429,18 +753,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.2865475118940465,
+              "pearson": 0.5142503365790553,
+              "precision_at_k": 0.5214285714285715,
               "topk_overlap": 0.5214285714285715,
-              "po_mean": 0.030730733604728427
+              "lift_at_k": 2.607142857142857,
+              "ndcg_at_k": 0.787539021124331,
+              "auroc_topk": 0.7206250000000001,
+              "precision_at_10pct": 0.5142857142857143,
+              "precision_at_20pct": 0.5214285714285715,
+              "precision_at_30pct": 0.5047619047619047,
+              "po_mean": 0.030730733604728427,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.6704521880759504,
+              "pearson": 0.8203993096410646,
+              "precision_at_k": 0.7071428571428572,
               "topk_overlap": 0.7071428571428572,
-              "po_mean": 0.021428609212649892
+              "lift_at_k": 3.5357142857142856,
+              "ndcg_at_k": 0.9056045661125857,
+              "auroc_topk": 0.9297321428571428,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7071428571428572,
+              "precision_at_30pct": 0.7047619047619048,
+              "po_mean": 0.021428609212649892,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6654682611118253,
+              "pearson": 0.811424923334214,
+              "precision_at_k": 0.692857142857143,
               "topk_overlap": 0.692857142857143,
-              "po_mean": 0.01928385170362734
+              "lift_at_k": 3.4642857142857144,
+              "ndcg_at_k": 0.8972714784106992,
+              "auroc_topk": 0.9213392857142857,
+              "precision_at_10pct": 0.7,
+              "precision_at_20pct": 0.692857142857143,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.01928385170362734,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0008778965663208633,
@@ -460,18 +811,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.2865475118940465,
+              "pearson": 0.5142503365790553,
+              "precision_at_k": 0.5214285714285715,
               "topk_overlap": 0.5214285714285715,
-              "po_mean": 0.030730733604728427
+              "lift_at_k": 2.607142857142857,
+              "ndcg_at_k": 0.787539021124331,
+              "auroc_topk": 0.7206250000000001,
+              "precision_at_10pct": 0.5142857142857143,
+              "precision_at_20pct": 0.5214285714285715,
+              "precision_at_30pct": 0.5047619047619047,
+              "po_mean": 0.030730733604728427,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.6704521880759504,
+              "pearson": 0.8203993096410646,
+              "precision_at_k": 0.7071428571428572,
               "topk_overlap": 0.7071428571428572,
-              "po_mean": 0.021428609212649892
+              "lift_at_k": 3.5357142857142856,
+              "ndcg_at_k": 0.9056045661125857,
+              "auroc_topk": 0.9297321428571428,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7071428571428572,
+              "precision_at_30pct": 0.7047619047619048,
+              "po_mean": 0.021428609212649892,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6654682611118253,
+              "pearson": 0.811424923334214,
+              "precision_at_k": 0.692857142857143,
               "topk_overlap": 0.692857142857143,
-              "po_mean": 0.01928385170362734
+              "lift_at_k": 3.4642857142857144,
+              "ndcg_at_k": 0.8972714784106992,
+              "auroc_topk": 0.9213392857142857,
+              "precision_at_10pct": 0.7,
+              "precision_at_20pct": 0.692857142857143,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.01928385170362734,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0009023188855573528,
@@ -491,18 +869,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.2865475118940465,
+              "pearson": 0.5142503365790553,
+              "precision_at_k": 0.5214285714285715,
               "topk_overlap": 0.5214285714285715,
-              "po_mean": 0.030730733604728427
+              "lift_at_k": 2.607142857142857,
+              "ndcg_at_k": 0.787539021124331,
+              "auroc_topk": 0.7206250000000001,
+              "precision_at_10pct": 0.5142857142857143,
+              "precision_at_20pct": 0.5214285714285715,
+              "precision_at_30pct": 0.5047619047619047,
+              "po_mean": 0.030730733604728427,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.6704521880759504,
+              "pearson": 0.8203993096410646,
+              "precision_at_k": 0.7071428571428572,
               "topk_overlap": 0.7071428571428572,
-              "po_mean": 0.021428609212649892
+              "lift_at_k": 3.5357142857142856,
+              "ndcg_at_k": 0.9056045661125857,
+              "auroc_topk": 0.9297321428571428,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7071428571428572,
+              "precision_at_30pct": 0.7047619047619048,
+              "po_mean": 0.021428609212649892,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6654682611118253,
+              "pearson": 0.811424923334214,
+              "precision_at_k": 0.692857142857143,
               "topk_overlap": 0.692857142857143,
-              "po_mean": 0.01928385170362734
+              "lift_at_k": 3.4642857142857144,
+              "ndcg_at_k": 0.8972714784106992,
+              "auroc_topk": 0.9213392857142857,
+              "precision_at_10pct": 0.7,
+              "precision_at_20pct": 0.692857142857143,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.01928385170362734,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0008401376988030413,
@@ -534,18 +939,45 @@
             "n_reject": 22,
             "ref": {
               "spearman": 0.11491967378556037,
+              "pearson": 0.13879000803081631,
+              "precision_at_k": 0.25909090909090904,
               "topk_overlap": 0.25909090909090904,
-              "po_mean": 0.2905412735144875
+              "lift_at_k": 1.2954545454545454,
+              "ndcg_at_k": 0.522082174462959,
+              "auroc_topk": 0.5685227272727272,
+              "precision_at_10pct": 0.21818181818181814,
+              "precision_at_20pct": 0.25909090909090904,
+              "precision_at_30pct": 0.3787878787878789,
+              "po_mean": 0.2905412735144875,
+              "n_batches": 22.0
             },
             "probe": {
               "spearman": 0.549404031312222,
+              "pearson": 0.6597479606462832,
+              "precision_at_k": 0.5954545454545455,
               "topk_overlap": 0.5954545454545455,
-              "po_mean": 0.08189155905895736
+              "lift_at_k": 2.977272727272727,
+              "ndcg_at_k": 0.8264825792558418,
+              "auroc_topk": 0.8382102272727274,
+              "precision_at_10pct": 0.5590909090909091,
+              "precision_at_20pct": 0.5954545454545455,
+              "precision_at_30pct": 0.6409090909090908,
+              "po_mean": 0.08189155905895736,
+              "n_batches": 22.0
             },
             "refit": {
               "spearman": 0.5292343779832528,
+              "pearson": 0.619420712441452,
+              "precision_at_k": 0.5659090909090909,
               "topk_overlap": 0.5659090909090909,
-              "po_mean": 0.07616203747215843
+              "lift_at_k": 2.8295454545454546,
+              "ndcg_at_k": 0.7877990594493993,
+              "auroc_topk": 0.8305965909090908,
+              "precision_at_10pct": 0.4863636363636364,
+              "precision_at_20pct": 0.5659090909090909,
+              "precision_at_30pct": 0.6121212121212122,
+              "po_mean": 0.07616203747215843,
+              "n_batches": 22.0
             }
           },
           "mse_mean_sig": 0.009992141707669138,
@@ -565,18 +997,45 @@
             "n_reject": 22,
             "ref": {
               "spearman": 0.11491967378556037,
+              "pearson": 0.13879000803081631,
+              "precision_at_k": 0.25909090909090904,
               "topk_overlap": 0.25909090909090904,
-              "po_mean": 0.2905412735144875
+              "lift_at_k": 1.2954545454545454,
+              "ndcg_at_k": 0.522082174462959,
+              "auroc_topk": 0.5685227272727272,
+              "precision_at_10pct": 0.21818181818181814,
+              "precision_at_20pct": 0.25909090909090904,
+              "precision_at_30pct": 0.3787878787878789,
+              "po_mean": 0.2905412735144875,
+              "n_batches": 22.0
             },
             "probe": {
               "spearman": 0.549404031312222,
+              "pearson": 0.6597479606462832,
+              "precision_at_k": 0.5954545454545455,
               "topk_overlap": 0.5954545454545455,
-              "po_mean": 0.08189155905895736
+              "lift_at_k": 2.977272727272727,
+              "ndcg_at_k": 0.8264825792558418,
+              "auroc_topk": 0.8382102272727274,
+              "precision_at_10pct": 0.5590909090909091,
+              "precision_at_20pct": 0.5954545454545455,
+              "precision_at_30pct": 0.6409090909090908,
+              "po_mean": 0.08189155905895736,
+              "n_batches": 22.0
             },
             "refit": {
               "spearman": 0.5292343779832528,
+              "pearson": 0.619420712441452,
+              "precision_at_k": 0.5659090909090909,
               "topk_overlap": 0.5659090909090909,
-              "po_mean": 0.07616203747215843
+              "lift_at_k": 2.8295454545454546,
+              "ndcg_at_k": 0.7877990594493993,
+              "auroc_topk": 0.8305965909090908,
+              "precision_at_10pct": 0.4863636363636364,
+              "precision_at_20pct": 0.5659090909090909,
+              "precision_at_30pct": 0.6121212121212122,
+              "po_mean": 0.07616203747215843,
+              "n_batches": 22.0
             }
           },
           "mse_mean_sig": 0.010387641972200058,
@@ -596,18 +1055,45 @@
             "n_reject": 22,
             "ref": {
               "spearman": 0.11491967378556037,
+              "pearson": 0.13879000803081631,
+              "precision_at_k": 0.25909090909090904,
               "topk_overlap": 0.25909090909090904,
-              "po_mean": 0.2905412735144875
+              "lift_at_k": 1.2954545454545454,
+              "ndcg_at_k": 0.522082174462959,
+              "auroc_topk": 0.5685227272727272,
+              "precision_at_10pct": 0.21818181818181814,
+              "precision_at_20pct": 0.25909090909090904,
+              "precision_at_30pct": 0.3787878787878789,
+              "po_mean": 0.2905412735144875,
+              "n_batches": 22.0
             },
             "probe": {
               "spearman": 0.549404031312222,
+              "pearson": 0.6597479606462832,
+              "precision_at_k": 0.5954545454545455,
               "topk_overlap": 0.5954545454545455,
-              "po_mean": 0.08189155905895736
+              "lift_at_k": 2.977272727272727,
+              "ndcg_at_k": 0.8264825792558418,
+              "auroc_topk": 0.8382102272727274,
+              "precision_at_10pct": 0.5590909090909091,
+              "precision_at_20pct": 0.5954545454545455,
+              "precision_at_30pct": 0.6409090909090908,
+              "po_mean": 0.08189155905895736,
+              "n_batches": 22.0
             },
             "refit": {
               "spearman": 0.5292343779832528,
+              "pearson": 0.619420712441452,
+              "precision_at_k": 0.5659090909090909,
               "topk_overlap": 0.5659090909090909,
-              "po_mean": 0.07616203747215843
+              "lift_at_k": 2.8295454545454546,
+              "ndcg_at_k": 0.7877990594493993,
+              "auroc_topk": 0.8305965909090908,
+              "precision_at_10pct": 0.4863636363636364,
+              "precision_at_20pct": 0.5659090909090909,
+              "precision_at_30pct": 0.6121212121212122,
+              "po_mean": 0.07616203747215843,
+              "n_batches": 22.0
             }
           },
           "mse_mean_sig": 0.011123077802924536,
@@ -627,18 +1113,45 @@
             "n_reject": 22,
             "ref": {
               "spearman": 0.11491967378556037,
+              "pearson": 0.13879000803081631,
+              "precision_at_k": 0.25909090909090904,
               "topk_overlap": 0.25909090909090904,
-              "po_mean": 0.2905412735144875
+              "lift_at_k": 1.2954545454545454,
+              "ndcg_at_k": 0.522082174462959,
+              "auroc_topk": 0.5685227272727272,
+              "precision_at_10pct": 0.21818181818181814,
+              "precision_at_20pct": 0.25909090909090904,
+              "precision_at_30pct": 0.3787878787878789,
+              "po_mean": 0.2905412735144875,
+              "n_batches": 22.0
             },
             "probe": {
               "spearman": 0.549404031312222,
+              "pearson": 0.6597479606462832,
+              "precision_at_k": 0.5954545454545455,
               "topk_overlap": 0.5954545454545455,
-              "po_mean": 0.08189155905895736
+              "lift_at_k": 2.977272727272727,
+              "ndcg_at_k": 0.8264825792558418,
+              "auroc_topk": 0.8382102272727274,
+              "precision_at_10pct": 0.5590909090909091,
+              "precision_at_20pct": 0.5954545454545455,
+              "precision_at_30pct": 0.6409090909090908,
+              "po_mean": 0.08189155905895736,
+              "n_batches": 22.0
             },
             "refit": {
               "spearman": 0.5292343779832528,
+              "pearson": 0.619420712441452,
+              "precision_at_k": 0.5659090909090909,
               "topk_overlap": 0.5659090909090909,
-              "po_mean": 0.07616203747215843
+              "lift_at_k": 2.8295454545454546,
+              "ndcg_at_k": 0.7877990594493993,
+              "auroc_topk": 0.8305965909090908,
+              "precision_at_10pct": 0.4863636363636364,
+              "precision_at_20pct": 0.5659090909090909,
+              "precision_at_30pct": 0.6121212121212122,
+              "po_mean": 0.07616203747215843,
+              "n_batches": 22.0
             }
           },
           "mse_mean_sig": 0.010780956872142101,
@@ -658,18 +1171,45 @@
             "n_reject": 22,
             "ref": {
               "spearman": 0.11491967378556037,
+              "pearson": 0.13879000803081631,
+              "precision_at_k": 0.25909090909090904,
               "topk_overlap": 0.25909090909090904,
-              "po_mean": 0.2905412735144875
+              "lift_at_k": 1.2954545454545454,
+              "ndcg_at_k": 0.522082174462959,
+              "auroc_topk": 0.5685227272727272,
+              "precision_at_10pct": 0.21818181818181814,
+              "precision_at_20pct": 0.25909090909090904,
+              "precision_at_30pct": 0.3787878787878789,
+              "po_mean": 0.2905412735144875,
+              "n_batches": 22.0
             },
             "probe": {
               "spearman": 0.549404031312222,
+              "pearson": 0.6597479606462832,
+              "precision_at_k": 0.5954545454545455,
               "topk_overlap": 0.5954545454545455,
-              "po_mean": 0.08189155905895736
+              "lift_at_k": 2.977272727272727,
+              "ndcg_at_k": 0.8264825792558418,
+              "auroc_topk": 0.8382102272727274,
+              "precision_at_10pct": 0.5590909090909091,
+              "precision_at_20pct": 0.5954545454545455,
+              "precision_at_30pct": 0.6409090909090908,
+              "po_mean": 0.08189155905895736,
+              "n_batches": 22.0
             },
             "refit": {
               "spearman": 0.5292343779832528,
+              "pearson": 0.619420712441452,
+              "precision_at_k": 0.5659090909090909,
               "topk_overlap": 0.5659090909090909,
-              "po_mean": 0.07616203747215843
+              "lift_at_k": 2.8295454545454546,
+              "ndcg_at_k": 0.7877990594493993,
+              "auroc_topk": 0.8305965909090908,
+              "precision_at_10pct": 0.4863636363636364,
+              "precision_at_20pct": 0.5659090909090909,
+              "precision_at_30pct": 0.6121212121212122,
+              "po_mean": 0.07616203747215843,
+              "n_batches": 22.0
             }
           },
           "mse_mean_sig": 0.01154096687239285,
@@ -701,18 +1241,45 @@
             "n_reject": 9,
             "ref": {
               "spearman": 0.3778137813781378,
+              "pearson": 0.6301583035235354,
+              "precision_at_k": 0.49444444444444446,
               "topk_overlap": 0.49444444444444446,
-              "po_mean": 0.02115912175995617
+              "lift_at_k": 2.4722222222222223,
+              "ndcg_at_k": 0.8090250804132544,
+              "auroc_topk": 0.749375,
+              "precision_at_10pct": 0.43333333333333335,
+              "precision_at_20pct": 0.49444444444444446,
+              "precision_at_30pct": 0.5518518518518518,
+              "po_mean": 0.02115912175995617,
+              "n_batches": 9.0
             },
             "probe": {
               "spearman": 0.7532833283328332,
+              "pearson": 0.8647815267424963,
+              "precision_at_k": 0.7,
               "topk_overlap": 0.7,
-              "po_mean": 0.016964373865684102
+              "lift_at_k": 3.5,
+              "ndcg_at_k": 0.9271662953793594,
+              "auroc_topk": 0.9169444444444443,
+              "precision_at_10pct": 0.6555555555555554,
+              "precision_at_20pct": 0.7,
+              "precision_at_30pct": 0.7444444444444445,
+              "po_mean": 0.016964373865684102,
+              "n_batches": 9.0
             },
             "refit": {
               "spearman": 0.7214014734806814,
+              "pearson": 0.8296755118168876,
+              "precision_at_k": 0.6333333333333334,
               "topk_overlap": 0.6333333333333334,
-              "po_mean": 0.015315674289252738
+              "lift_at_k": 3.1666666666666665,
+              "ndcg_at_k": 0.8931093262319512,
+              "auroc_topk": 0.9038194444444443,
+              "precision_at_10pct": 0.6444444444444444,
+              "precision_at_20pct": 0.6333333333333334,
+              "precision_at_30pct": 0.7148148148148148,
+              "po_mean": 0.015315674289252738,
+              "n_batches": 9.0
             }
           },
           "mse_mean_sig": 0.0006164351048759122,
@@ -732,18 +1299,45 @@
             "n_reject": 9,
             "ref": {
               "spearman": 0.3778137813781378,
+              "pearson": 0.6301583035235354,
+              "precision_at_k": 0.49444444444444446,
               "topk_overlap": 0.49444444444444446,
-              "po_mean": 0.02115912175995617
+              "lift_at_k": 2.4722222222222223,
+              "ndcg_at_k": 0.8090250804132544,
+              "auroc_topk": 0.749375,
+              "precision_at_10pct": 0.43333333333333335,
+              "precision_at_20pct": 0.49444444444444446,
+              "precision_at_30pct": 0.5518518518518518,
+              "po_mean": 0.02115912175995617,
+              "n_batches": 9.0
             },
             "probe": {
               "spearman": 0.7532833283328332,
+              "pearson": 0.8647815267424963,
+              "precision_at_k": 0.7,
               "topk_overlap": 0.7,
-              "po_mean": 0.016964373865684102
+              "lift_at_k": 3.5,
+              "ndcg_at_k": 0.9271662953793594,
+              "auroc_topk": 0.9169444444444443,
+              "precision_at_10pct": 0.6555555555555554,
+              "precision_at_20pct": 0.7,
+              "precision_at_30pct": 0.7444444444444445,
+              "po_mean": 0.016964373865684102,
+              "n_batches": 9.0
             },
             "refit": {
               "spearman": 0.7214014734806814,
+              "pearson": 0.8296755118168876,
+              "precision_at_k": 0.6333333333333334,
               "topk_overlap": 0.6333333333333334,
-              "po_mean": 0.015315674289252738
+              "lift_at_k": 3.1666666666666665,
+              "ndcg_at_k": 0.8931093262319512,
+              "auroc_topk": 0.9038194444444443,
+              "precision_at_10pct": 0.6444444444444444,
+              "precision_at_20pct": 0.6333333333333334,
+              "precision_at_30pct": 0.7148148148148148,
+              "po_mean": 0.015315674289252738,
+              "n_batches": 9.0
             }
           },
           "mse_mean_sig": 0.0006494255504881671,
@@ -763,18 +1357,45 @@
             "n_reject": 9,
             "ref": {
               "spearman": 0.3778137813781378,
+              "pearson": 0.6301583035235354,
+              "precision_at_k": 0.49444444444444446,
               "topk_overlap": 0.49444444444444446,
-              "po_mean": 0.02115912175995617
+              "lift_at_k": 2.4722222222222223,
+              "ndcg_at_k": 0.8090250804132544,
+              "auroc_topk": 0.749375,
+              "precision_at_10pct": 0.43333333333333335,
+              "precision_at_20pct": 0.49444444444444446,
+              "precision_at_30pct": 0.5518518518518518,
+              "po_mean": 0.02115912175995617,
+              "n_batches": 9.0
             },
             "probe": {
               "spearman": 0.7532833283328332,
+              "pearson": 0.8647815267424963,
+              "precision_at_k": 0.7,
               "topk_overlap": 0.7,
-              "po_mean": 0.016964373865684102
+              "lift_at_k": 3.5,
+              "ndcg_at_k": 0.9271662953793594,
+              "auroc_topk": 0.9169444444444443,
+              "precision_at_10pct": 0.6555555555555554,
+              "precision_at_20pct": 0.7,
+              "precision_at_30pct": 0.7444444444444445,
+              "po_mean": 0.016964373865684102,
+              "n_batches": 9.0
             },
             "refit": {
               "spearman": 0.7214014734806814,
+              "pearson": 0.8296755118168876,
+              "precision_at_k": 0.6333333333333334,
               "topk_overlap": 0.6333333333333334,
-              "po_mean": 0.015315674289252738
+              "lift_at_k": 3.1666666666666665,
+              "ndcg_at_k": 0.8931093262319512,
+              "auroc_topk": 0.9038194444444443,
+              "precision_at_10pct": 0.6444444444444444,
+              "precision_at_20pct": 0.6333333333333334,
+              "precision_at_30pct": 0.7148148148148148,
+              "po_mean": 0.015315674289252738,
+              "n_batches": 9.0
             }
           },
           "mse_mean_sig": 0.0007018866417102012,
@@ -794,18 +1415,45 @@
             "n_reject": 9,
             "ref": {
               "spearman": 0.3778137813781378,
+              "pearson": 0.6301583035235354,
+              "precision_at_k": 0.49444444444444446,
               "topk_overlap": 0.49444444444444446,
-              "po_mean": 0.02115912175995617
+              "lift_at_k": 2.4722222222222223,
+              "ndcg_at_k": 0.8090250804132544,
+              "auroc_topk": 0.749375,
+              "precision_at_10pct": 0.43333333333333335,
+              "precision_at_20pct": 0.49444444444444446,
+              "precision_at_30pct": 0.5518518518518518,
+              "po_mean": 0.02115912175995617,
+              "n_batches": 9.0
             },
             "probe": {
               "spearman": 0.7532833283328332,
+              "pearson": 0.8647815267424963,
+              "precision_at_k": 0.7,
               "topk_overlap": 0.7,
-              "po_mean": 0.016964373865684102
+              "lift_at_k": 3.5,
+              "ndcg_at_k": 0.9271662953793594,
+              "auroc_topk": 0.9169444444444443,
+              "precision_at_10pct": 0.6555555555555554,
+              "precision_at_20pct": 0.7,
+              "precision_at_30pct": 0.7444444444444445,
+              "po_mean": 0.016964373865684102,
+              "n_batches": 9.0
             },
             "refit": {
               "spearman": 0.7214014734806814,
+              "pearson": 0.8296755118168876,
+              "precision_at_k": 0.6333333333333334,
               "topk_overlap": 0.6333333333333334,
-              "po_mean": 0.015315674289252738
+              "lift_at_k": 3.1666666666666665,
+              "ndcg_at_k": 0.8931093262319512,
+              "auroc_topk": 0.9038194444444443,
+              "precision_at_10pct": 0.6444444444444444,
+              "precision_at_20pct": 0.6333333333333334,
+              "precision_at_30pct": 0.7148148148148148,
+              "po_mean": 0.015315674289252738,
+              "n_batches": 9.0
             }
           },
           "mse_mean_sig": 0.000703375627140128,
@@ -825,18 +1473,45 @@
             "n_reject": 9,
             "ref": {
               "spearman": 0.3778137813781378,
+              "pearson": 0.6301583035235354,
+              "precision_at_k": 0.49444444444444446,
               "topk_overlap": 0.49444444444444446,
-              "po_mean": 0.02115912175995617
+              "lift_at_k": 2.4722222222222223,
+              "ndcg_at_k": 0.8090250804132544,
+              "auroc_topk": 0.749375,
+              "precision_at_10pct": 0.43333333333333335,
+              "precision_at_20pct": 0.49444444444444446,
+              "precision_at_30pct": 0.5518518518518518,
+              "po_mean": 0.02115912175995617,
+              "n_batches": 9.0
             },
             "probe": {
               "spearman": 0.7532833283328332,
+              "pearson": 0.8647815267424963,
+              "precision_at_k": 0.7,
               "topk_overlap": 0.7,
-              "po_mean": 0.016964373865684102
+              "lift_at_k": 3.5,
+              "ndcg_at_k": 0.9271662953793594,
+              "auroc_topk": 0.9169444444444443,
+              "precision_at_10pct": 0.6555555555555554,
+              "precision_at_20pct": 0.7,
+              "precision_at_30pct": 0.7444444444444445,
+              "po_mean": 0.016964373865684102,
+              "n_batches": 9.0
             },
             "refit": {
               "spearman": 0.7214014734806814,
+              "pearson": 0.8296755118168876,
+              "precision_at_k": 0.6333333333333334,
               "topk_overlap": 0.6333333333333334,
-              "po_mean": 0.015315674289252738
+              "lift_at_k": 3.1666666666666665,
+              "ndcg_at_k": 0.8931093262319512,
+              "auroc_topk": 0.9038194444444443,
+              "precision_at_10pct": 0.6444444444444444,
+              "precision_at_20pct": 0.6333333333333334,
+              "precision_at_30pct": 0.7148148148148148,
+              "po_mean": 0.015315674289252738,
+              "n_batches": 9.0
             }
           },
           "mse_mean_sig": 0.0005892468433126537,
@@ -868,18 +1543,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.6083528352835283,
+              "pearson": 0.7228549203837027,
+              "precision_at_k": 0.65,
               "topk_overlap": 0.65,
-              "po_mean": 0.017166592284742595
+              "lift_at_k": 3.25,
+              "ndcg_at_k": 0.8767173596007737,
+              "auroc_topk": 0.8568749999999999,
+              "precision_at_10pct": 0.6285714285714287,
+              "precision_at_20pct": 0.65,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.017166592284742595,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.7252908147957653,
+              "pearson": 0.8120916031086153,
+              "precision_at_k": 0.7142857142857142,
               "topk_overlap": 0.7142857142857142,
-              "po_mean": 0.016765545420312427
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.9127722970165368,
+              "auroc_topk": 0.9193749999999999,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7142857142857142,
+              "precision_at_30pct": 0.7333333333333334,
+              "po_mean": 0.016765545420312427,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6886014315717285,
+              "pearson": 0.7842594012018405,
+              "precision_at_k": 0.7142857142857143,
               "topk_overlap": 0.7142857142857143,
-              "po_mean": 0.014952717143039794
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.8970083528144801,
+              "auroc_topk": 0.9111607142857142,
+              "precision_at_10pct": 0.5999999999999999,
+              "precision_at_20pct": 0.7142857142857143,
+              "precision_at_30pct": 0.719047619047619,
+              "po_mean": 0.014952717143039794,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0005025231291427358,
@@ -899,18 +1601,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.6083528352835283,
+              "pearson": 0.7228549203837027,
+              "precision_at_k": 0.65,
               "topk_overlap": 0.65,
-              "po_mean": 0.017166592284742595
+              "lift_at_k": 3.25,
+              "ndcg_at_k": 0.8767173596007737,
+              "auroc_topk": 0.8568749999999999,
+              "precision_at_10pct": 0.6285714285714287,
+              "precision_at_20pct": 0.65,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.017166592284742595,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.7252908147957653,
+              "pearson": 0.8120916031086153,
+              "precision_at_k": 0.7142857142857142,
               "topk_overlap": 0.7142857142857142,
-              "po_mean": 0.016765545420312427
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.9127722970165368,
+              "auroc_topk": 0.9193749999999999,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7142857142857142,
+              "precision_at_30pct": 0.7333333333333334,
+              "po_mean": 0.016765545420312427,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6886014315717285,
+              "pearson": 0.7842594012018405,
+              "precision_at_k": 0.7142857142857143,
               "topk_overlap": 0.7142857142857143,
-              "po_mean": 0.014952717143039794
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.8970083528144801,
+              "auroc_topk": 0.9111607142857142,
+              "precision_at_10pct": 0.5999999999999999,
+              "precision_at_20pct": 0.7142857142857143,
+              "precision_at_30pct": 0.719047619047619,
+              "po_mean": 0.014952717143039794,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0005517747700781418,
@@ -930,18 +1659,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.6083528352835283,
+              "pearson": 0.7228549203837027,
+              "precision_at_k": 0.65,
               "topk_overlap": 0.65,
-              "po_mean": 0.017166592284742595
+              "lift_at_k": 3.25,
+              "ndcg_at_k": 0.8767173596007737,
+              "auroc_topk": 0.8568749999999999,
+              "precision_at_10pct": 0.6285714285714287,
+              "precision_at_20pct": 0.65,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.017166592284742595,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.7252908147957653,
+              "pearson": 0.8120916031086153,
+              "precision_at_k": 0.7142857142857142,
               "topk_overlap": 0.7142857142857142,
-              "po_mean": 0.016765545420312427
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.9127722970165368,
+              "auroc_topk": 0.9193749999999999,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7142857142857142,
+              "precision_at_30pct": 0.7333333333333334,
+              "po_mean": 0.016765545420312427,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6886014315717285,
+              "pearson": 0.7842594012018405,
+              "precision_at_k": 0.7142857142857143,
               "topk_overlap": 0.7142857142857143,
-              "po_mean": 0.014952717143039794
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.8970083528144801,
+              "auroc_topk": 0.9111607142857142,
+              "precision_at_10pct": 0.5999999999999999,
+              "precision_at_20pct": 0.7142857142857143,
+              "precision_at_30pct": 0.719047619047619,
+              "po_mean": 0.014952717143039794,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0005562254177942607,
@@ -961,18 +1717,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.6083528352835283,
+              "pearson": 0.7228549203837027,
+              "precision_at_k": 0.65,
               "topk_overlap": 0.65,
-              "po_mean": 0.017166592284742595
+              "lift_at_k": 3.25,
+              "ndcg_at_k": 0.8767173596007737,
+              "auroc_topk": 0.8568749999999999,
+              "precision_at_10pct": 0.6285714285714287,
+              "precision_at_20pct": 0.65,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.017166592284742595,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.7252908147957653,
+              "pearson": 0.8120916031086153,
+              "precision_at_k": 0.7142857142857142,
               "topk_overlap": 0.7142857142857142,
-              "po_mean": 0.016765545420312427
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.9127722970165368,
+              "auroc_topk": 0.9193749999999999,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7142857142857142,
+              "precision_at_30pct": 0.7333333333333334,
+              "po_mean": 0.016765545420312427,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6886014315717285,
+              "pearson": 0.7842594012018405,
+              "precision_at_k": 0.7142857142857143,
               "topk_overlap": 0.7142857142857143,
-              "po_mean": 0.014952717143039794
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.8970083528144801,
+              "auroc_topk": 0.9111607142857142,
+              "precision_at_10pct": 0.5999999999999999,
+              "precision_at_20pct": 0.7142857142857143,
+              "precision_at_30pct": 0.719047619047619,
+              "po_mean": 0.014952717143039794,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0005361728120846054,
@@ -992,18 +1775,45 @@
             "n_reject": 7,
             "ref": {
               "spearman": 0.6083528352835283,
+              "pearson": 0.7228549203837027,
+              "precision_at_k": 0.65,
               "topk_overlap": 0.65,
-              "po_mean": 0.017166592284742595
+              "lift_at_k": 3.25,
+              "ndcg_at_k": 0.8767173596007737,
+              "auroc_topk": 0.8568749999999999,
+              "precision_at_10pct": 0.6285714285714287,
+              "precision_at_20pct": 0.65,
+              "precision_at_30pct": 0.6952380952380952,
+              "po_mean": 0.017166592284742595,
+              "n_batches": 7.0
             },
             "probe": {
               "spearman": 0.7252908147957653,
+              "pearson": 0.8120916031086153,
+              "precision_at_k": 0.7142857142857142,
               "topk_overlap": 0.7142857142857142,
-              "po_mean": 0.016765545420312427
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.9127722970165368,
+              "auroc_topk": 0.9193749999999999,
+              "precision_at_10pct": 0.6857142857142858,
+              "precision_at_20pct": 0.7142857142857142,
+              "precision_at_30pct": 0.7333333333333334,
+              "po_mean": 0.016765545420312427,
+              "n_batches": 7.0
             },
             "refit": {
               "spearman": 0.6886014315717285,
+              "pearson": 0.7842594012018405,
+              "precision_at_k": 0.7142857142857143,
               "topk_overlap": 0.7142857142857143,
-              "po_mean": 0.014952717143039794
+              "lift_at_k": 3.5714285714285716,
+              "ndcg_at_k": 0.8970083528144801,
+              "auroc_topk": 0.9111607142857142,
+              "precision_at_10pct": 0.5999999999999999,
+              "precision_at_20pct": 0.7142857142857143,
+              "precision_at_30pct": 0.719047619047619,
+              "po_mean": 0.014952717143039794,
+              "n_batches": 7.0
             }
           },
           "mse_mean_sig": 0.0005116931947477491,

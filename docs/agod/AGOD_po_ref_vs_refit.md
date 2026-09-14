@@ -1,9 +1,36 @@
-# Reference PO vs re-fit PO-learner (OnlineRFPerm reject)
+# Hard-sample ranking: reference PO vs re-fit PO-learner
 
-Blunt eval: gate opens → score three PO variants on the OOD batch →
-compare (1) ranking quality vs oracle hardness, (2) next-MSE on sig-only.
+Primary claim = **PO ranks hard OOD rows**. Downstream MSE is secondary.
 
-## Downstream next-MSE (sig-only)
+On each OnlineRFPerm reject batch:
+
+1. `truth_i = |Y_i − μ_oracle(X_i)|` with μ_oracle fit on recent∪current (diagnostic).
+2. Score `ref_po` / `probe_po` / `refit_po` on the same rows.
+3. Measure ranking quality (Spearman, Precision@20%, Lift, NDCG, AUROC).
+
+## Hard-row ranking (reject batches only) — primary
+
+| dataset | spearman ref→probe→**refit** | P@20% ref→probe→**refit** | AUROC ref→probe→**refit** | Lift@20% **refit** | NDCG **refit** |
+|---|---|---|---|---:|---:|
+| `metro_interstate` | 0.30→0.32→**0.32** | 0.29→0.36→**0.35** | 0.64→0.67→**0.67** | 1.75 | 0.54 |
+| `beijing_pm25` | 0.08→0.39→**0.40** | 0.35→0.52→**0.47** | 0.59→0.77→**0.77** | 2.35 | 0.74 |
+| `stocks_AAPL` | 0.29→0.67→**0.67** | 0.52→0.71→**0.69** | 0.72→0.93→**0.92** | 3.46 | 0.90 |
+| `waymo_proxy` | 0.11→0.55→**0.53** | 0.26→0.60→**0.57** | 0.57→0.84→**0.83** | 2.83 | 0.79 |
+| `stocks_MSFT` | 0.38→0.75→**0.72** | 0.49→0.70→**0.63** | 0.75→0.92→**0.90** | 3.17 | 0.89 |
+| `stocks_IWM` | 0.61→0.73→**0.69** | 0.65→0.71→**0.71** | 0.86→0.92→**0.91** | 3.57 | 0.90 |
+
+**Best Spearman wins:** ref=0, probe=4, **refit=2**
+**Best Precision@20% wins:** ref=0, probe=5, **refit=1**
+
+### Metric definitions (top 20% = hard)
+
+- **Spearman**: `corr(rank(PO), rank(truth))` — full order concordance.
+- **Precision@k**: `|Top_k(PO) ∩ Top_k(truth)| / k` — hard-set recovery.
+- **Lift@k**: Precision@k / (k/n) — vs random (1.0 = chance).
+- **NDCG@k**: graded by truth hardness — rewards ordering the *hardest* first.
+- **AUROC**: truth top-20% as positive class — threshold-free hard detection.
+
+## Downstream next-MSE (sig-only) — secondary
 
 | dataset | n_sig | unif | ref_po | probe_po | **refit_po** | dre | best |
 |---|---:|---:|---:|---:|---:|---:|---|
@@ -14,27 +41,8 @@ compare (1) ranking quality vs oracle hardness, (2) next-MSE on sig-only.
 | `stocks_MSFT` | 8 | 0.0006164 | 0.0006494 | 0.0007019 | **0.0007034** | 0.0005892 | `dre` |
 | `stocks_IWM` | 7 | 0.0005025 | 0.0005518 | 0.0005562 | **0.0005362** | 0.0005117 | `uniform` |
 
-**Wins (sig-only):** `uniform`=3, `ref_po`=1, `probe_po`=0, `refit_po`=1, `dre`=1
-**refit_po < ref_po:** `2/6`
-**refit_po < probe_po:** `3/6`
+**MSE wins (sig-only):** `uniform`=3, `ref_po`=1, `probe_po`=0, `refit_po`=1, `dre`=1
+**refit_po < ref_po (MSE):** `2/6`
+**refit_po < probe_po (MSE):** `3/6`
 
-## PO ranking quality on reject batches
-
-| dataset | spearman ref | probe | **refit** | topk ref | probe | **refit** |
-|---|---:|---:|---:|---:|---:|---:|
-| `metro_interstate` | 0.302 | 0.316 | **0.320** | 0.286 | 0.364 | **0.350** |
-| `beijing_pm25` | 0.084 | 0.393 | **0.399** | 0.350 | 0.520 | **0.470** |
-| `stocks_AAPL` | 0.287 | 0.670 | **0.665** | 0.521 | 0.707 | **0.693** |
-| `waymo_proxy` | 0.115 | 0.549 | **0.529** | 0.259 | 0.595 | **0.566** |
-| `stocks_MSFT` | 0.378 | 0.753 | **0.721** | 0.494 | 0.700 | **0.633** |
-| `stocks_IWM` | 0.608 | 0.725 | **0.689** | 0.650 | 0.714 | **0.714** |
-
-### How to read this
-
-- **PO itself** is just absolute residual risk — intentionally blunt.
-- **Spearman / topk**: does the PO score pick the same hard rows as an
-  oracle residual? Higher ⇒ better OOD instance ranking.
-- **sig-only MSE**: after IPTW with √PO, does next-batch error drop on
-  the batches where the gate actually fired?
-- Expectation: `refit_po` ≥ `probe_po` ≥ `ref_po` on ranking; MSE lift is
-  softer and may still lose to uniform on some packs.
+See `docs/agod/AGOD_hard_rank_eval.md` for the full protocol.

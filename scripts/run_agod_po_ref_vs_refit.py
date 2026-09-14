@@ -33,6 +33,7 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
+from agod.hard_rank_metrics import aggregate_hard_rank
 from agod.online_rfperm import fit_online_rfperm, update_online_rfperm
 from agod.po_iptw import dre_weights
 from agod.po_ref_vs_refit import (
@@ -95,8 +96,27 @@ def oracle_hardness(stream, t: int, seed: int) -> np.ndarray:
 
 
 def _agg_q(qs: List[dict], key: str) -> float:
-    vals = [q[key] for q in qs if q[key] == q[key]]
+    vals = [q[key] for q in qs if key in q and q[key] == q[key]]
     return float(np.mean(vals)) if vals else float("nan")
+
+
+def _pack_q(qs: List[dict], po_means: List[float]) -> dict:
+    """Aggregate full hard-rank metric suite over reject batches."""
+    agg = aggregate_hard_rank(qs) if qs else {}
+    return {
+        "spearman": agg.get("spearman", float("nan")),
+        "pearson": agg.get("pearson", float("nan")),
+        "precision_at_k": agg.get("precision_at_k", agg.get("topk_overlap", float("nan"))),
+        "topk_overlap": agg.get("topk_overlap", agg.get("precision_at_k", float("nan"))),
+        "lift_at_k": agg.get("lift_at_k", float("nan")),
+        "ndcg_at_k": agg.get("ndcg_at_k", float("nan")),
+        "auroc_topk": agg.get("auroc_topk", float("nan")),
+        "precision_at_10pct": agg.get("precision_at_10pct", float("nan")),
+        "precision_at_20pct": agg.get("precision_at_20pct", float("nan")),
+        "precision_at_30pct": agg.get("precision_at_30pct", float("nan")),
+        "po_mean": float(np.mean(po_means)) if po_means else float("nan"),
+        "n_batches": float(len(qs)),
+    }
 
 
 def run_mode(
@@ -185,21 +205,9 @@ def run_mode(
         "T_traj": T_traj,
         "po_quality": {
             "n_reject": len(q_ref),
-            "ref": {
-                "spearman": _agg_q(q_ref, "spearman"),
-                "topk_overlap": _agg_q(q_ref, "topk_overlap"),
-                "po_mean": float(np.mean(po_mean_ref)) if po_mean_ref else float("nan"),
-            },
-            "probe": {
-                "spearman": _agg_q(q_probe, "spearman"),
-                "topk_overlap": _agg_q(q_probe, "topk_overlap"),
-                "po_mean": float(np.mean(po_mean_probe)) if po_mean_probe else float("nan"),
-            },
-            "refit": {
-                "spearman": _agg_q(q_refit, "spearman"),
-                "topk_overlap": _agg_q(q_refit, "topk_overlap"),
-                "po_mean": float(np.mean(po_mean_refit)) if po_mean_refit else float("nan"),
-            },
+            "ref": _pack_q(q_ref, po_mean_ref),
+            "probe": _pack_q(q_probe, po_mean_probe),
+            "refit": _pack_q(q_refit, po_mean_refit),
         },
     }
 
@@ -254,17 +262,38 @@ def plot_all(all_res: dict, out_dir: Path) -> List[Path]:
     fig, ax = plt.subplots(figsize=(max(8, 1.5 * len(ds)), 4.4))
     for i, src in enumerate(("ref", "probe", "refit")):
         vals = [
-            all_res[d]["results"]["refit_po"]["po_quality"][src]["topk_overlap"] for d in ds
+            all_res[d]["results"]["refit_po"]["po_quality"][src].get(
+                "precision_at_k",
+                all_res[d]["results"]["refit_po"]["po_quality"][src].get("topk_overlap", np.nan),
+            )
+            for d in ds
         ]
         ax.bar(x + (i - 1) * w, vals, w, label=src)
     ax.set_xticks(x)
     ax.set_xticklabels(ds, rotation=15, ha="right")
-    ax.set_ylabel("Top-20% overlap with oracle hard rows")
-    ax.set_title("Hard-instance recovery on reject batches (↑ better)")
+    ax.set_ylabel("Precision@20% (hard-row recovery)")
+    ax.set_title("Top-hard Precision@k on reject batches (↑ better)")
     ax.legend()
     ax.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
-    p = out_dir / "po_topk_ref_vs_refit.png"
+    p = out_dir / "po_precision_at_k_ref_vs_refit.png"
+    fig.savefig(p, dpi=140)
+    plt.close(fig)
+    paths.append(p)
+
+    fig, ax = plt.subplots(figsize=(max(8, 1.5 * len(ds)), 4.4))
+    for i, src in enumerate(("ref", "probe", "refit")):
+        vals = [all_res[d]["results"]["refit_po"]["po_quality"][src].get("auroc_topk", np.nan) for d in ds]
+        ax.bar(x + (i - 1) * w, vals, w, label=src)
+    ax.axhline(0.5, color="k", ls="--", lw=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(ds, rotation=15, ha="right")
+    ax.set_ylabel("AUROC (truth top-20% = positive)")
+    ax.set_title("Hard-class AUROC on reject batches (↑ better)")
+    ax.legend()
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+    p = out_dir / "po_auroc_ref_vs_refit.png"
     fig.savefig(p, dpi=140)
     plt.close(fig)
     paths.append(p)
@@ -273,12 +302,53 @@ def plot_all(all_res: dict, out_dir: Path) -> List[Path]:
 
 def report(all_res: dict) -> str:
     lines = [
-        "# Reference PO vs re-fit PO-learner (OnlineRFPerm reject)",
+        "# Hard-sample ranking: reference PO vs re-fit PO-learner",
         "",
-        "Blunt eval: gate opens → score three PO variants on the OOD batch →",
-        "compare (1) ranking quality vs oracle hardness, (2) next-MSE on sig-only.",
+        "Primary claim = **PO ranks hard OOD rows**. Downstream MSE is secondary.",
         "",
-        "## Downstream next-MSE (sig-only)",
+        "On each OnlineRFPerm reject batch:",
+        "",
+        "1. `truth_i = |Y_i − μ_oracle(X_i)|` with μ_oracle fit on recent∪current (diagnostic).",
+        "2. Score `ref_po` / `probe_po` / `refit_po` on the same rows.",
+        "3. Measure ranking quality (Spearman, Precision@20%, Lift, NDCG, AUROC).",
+        "",
+        "## Hard-row ranking (reject batches only) — primary",
+        "",
+        "| dataset | spearman ref→probe→**refit** | P@20% ref→probe→**refit** | AUROC ref→probe→**refit** | Lift@20% **refit** | NDCG **refit** |",
+        "|---|---|---|---|---:|---:|",
+    ]
+    for d, blob in all_res.items():
+        q = blob["results"]["refit_po"]["po_quality"]
+        lines.append(
+            f"| `{d}` | "
+            f"{q['ref']['spearman']:.2f}→{q['probe']['spearman']:.2f}→**{q['refit']['spearman']:.2f}** | "
+            f"{q['ref']['precision_at_k']:.2f}→{q['probe']['precision_at_k']:.2f}→**{q['refit']['precision_at_k']:.2f}** | "
+            f"{q['ref']['auroc_topk']:.2f}→{q['probe']['auroc_topk']:.2f}→**{q['refit']['auroc_topk']:.2f}** | "
+            f"{q['refit']['lift_at_k']:.2f} | {q['refit']['ndcg_at_k']:.2f} |"
+        )
+
+    # ranking wins: who has best spearman / precision
+    sp_wins = {"ref": 0, "probe": 0, "refit": 0}
+    pk_wins = {"ref": 0, "probe": 0, "refit": 0}
+    for d, blob in all_res.items():
+        q = blob["results"]["refit_po"]["po_quality"]
+        sp_wins[max(("ref", "probe", "refit"), key=lambda s: q[s]["spearman"])] += 1
+        pk_wins[max(("ref", "probe", "refit"), key=lambda s: q[s]["precision_at_k"])] += 1
+
+    lines += [
+        "",
+        f"**Best Spearman wins:** ref={sp_wins['ref']}, probe={sp_wins['probe']}, **refit={sp_wins['refit']}**",
+        f"**Best Precision@20% wins:** ref={pk_wins['ref']}, probe={pk_wins['probe']}, **refit={pk_wins['refit']}**",
+        "",
+        "### Metric definitions (top 20% = hard)",
+        "",
+        "- **Spearman**: `corr(rank(PO), rank(truth))` — full order concordance.",
+        "- **Precision@k**: `|Top_k(PO) ∩ Top_k(truth)| / k` — hard-set recovery.",
+        "- **Lift@k**: Precision@k / (k/n) — vs random (1.0 = chance).",
+        "- **NDCG@k**: graded by truth hardness — rewards ordering the *hardest* first.",
+        "- **AUROC**: truth top-20% as positive class — threshold-free hard detection.",
+        "",
+        "## Downstream next-MSE (sig-only) — secondary",
         "",
         "| dataset | n_sig | unif | ref_po | probe_po | **refit_po** | dre | best |",
         "|---|---:|---:|---:|---:|---:|---:|---|",
@@ -304,33 +374,11 @@ def report(all_res: dict) -> str:
         )
     lines += [
         "",
-        f"**Wins (sig-only):** " + ", ".join(f"`{m}`={wins[m]}" for m in MODES),
-        f"**refit_po < ref_po:** `{refit_beats_ref}/{n}`",
-        f"**refit_po < probe_po:** `{refit_beats_probe}/{n}`",
+        f"**MSE wins (sig-only):** " + ", ".join(f"`{m}`={wins[m]}" for m in MODES),
+        f"**refit_po < ref_po (MSE):** `{refit_beats_ref}/{n}`",
+        f"**refit_po < probe_po (MSE):** `{refit_beats_probe}/{n}`",
         "",
-        "## PO ranking quality on reject batches",
-        "",
-        "| dataset | spearman ref | probe | **refit** | topk ref | probe | **refit** |",
-        "|---|---:|---:|---:|---:|---:|---:|",
-    ]
-    for d, blob in all_res.items():
-        q = blob["results"]["refit_po"]["po_quality"]
-        lines.append(
-            f"| `{d}` | {q['ref']['spearman']:.3f} | {q['probe']['spearman']:.3f} | "
-            f"**{q['refit']['spearman']:.3f}** | {q['ref']['topk_overlap']:.3f} | "
-            f"{q['probe']['topk_overlap']:.3f} | **{q['refit']['topk_overlap']:.3f}** |"
-        )
-    lines += [
-        "",
-        "### How to read this",
-        "",
-        "- **PO itself** is just absolute residual risk — intentionally blunt.",
-        "- **Spearman / topk**: does the PO score pick the same hard rows as an",
-        "  oracle residual? Higher ⇒ better OOD instance ranking.",
-        "- **sig-only MSE**: after IPTW with √PO, does next-batch error drop on",
-        "  the batches where the gate actually fired?",
-        "- Expectation: `refit_po` ≥ `probe_po` ≥ `ref_po` on ranking; MSE lift is",
-        "  softer and may still lose to uniform on some packs.",
+        "See `docs/agod/AGOD_hard_rank_eval.md` for the full protocol.",
         "",
     ]
     return "\n".join(lines)

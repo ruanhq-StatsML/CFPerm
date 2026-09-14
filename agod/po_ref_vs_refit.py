@@ -15,8 +15,18 @@ from typing import Dict
 
 import numpy as np
 
+from agod.hard_rank_metrics import hard_rank_metrics, po_quality_vs_truth
 from agod.po_iptw import instance_po_risk, po_iptw_weights
 from agod.po_refit import build_recent_ood_windows, refit_po_on_windows
+
+__all__ = [
+    "reference_po_from_fref",
+    "probe_po",
+    "refit_po_current",
+    "po_quality_vs_truth",
+    "hard_rank_metrics",
+    "weights_from_po",
+]
 
 
 def reference_po_from_fref(f_ref, X: np.ndarray, y: np.ndarray) -> np.ndarray:
@@ -55,30 +65,8 @@ def refit_po_current(
 
 
 def po_quality_vs_truth(po: np.ndarray, truth_hard: np.ndarray) -> Dict[str, float]:
-    """How well PO ranks truly hard rows (|residual| of a holdout oracle)."""
-    po = np.asarray(po, float).ravel()
-    truth = np.asarray(truth_hard, float).ravel()
-    if len(po) < 8:
-        return {
-            "spearman": float("nan"),
-            "pearson": float("nan"),
-            "topk_overlap": float("nan"),
-            "po_mean": float(np.mean(po)) if len(po) else float("nan"),
-        }
-    r_po = po.argsort().argsort().astype(float)
-    r_tr = truth.argsort().argsort().astype(float)
-    spearman = float(np.corrcoef(r_po, r_tr)[0, 1])
-    pearson = float(np.corrcoef(po, truth)[0, 1])
-    k = max(1, len(po) // 5)
-    top_po = set(np.argsort(po)[-k:])
-    top_tr = set(np.argsort(truth)[-k:])
-    overlap = float(len(top_po & top_tr) / k)
-    return {
-        "spearman": spearman,
-        "pearson": pearson,
-        "topk_overlap": overlap,
-        "po_mean": float(np.mean(po)),
-    }
+    """Hard-sample ranking quality (see ``agod.hard_rank_metrics``)."""
+    return hard_rank_metrics(po, truth_hard)
 
 
 def weights_from_po(po: np.ndarray, mode: str = "sqrt") -> np.ndarray:
