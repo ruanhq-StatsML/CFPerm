@@ -2,6 +2,7 @@ name: cfperm
 channels:
   - conda-forge
 dependencies:
+  - pandas
   - numpy
   - scikit-learn
   - xgboost

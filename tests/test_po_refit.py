@@ -51,12 +51,15 @@ def test_concept_hop_raises_ratio_and_gate():
         n_batches=6, n_per=90, p=10, seed=1, cov=0.0, concept_at=3, concept=1.0
     )
     # PO-ratio stays near 1 on a global flip (both sides' φ² jump).
-    # Residual CV gate is the detector.
+    # Residual consecutive-batch gate is the detector.
     sim = run_resid_stream(similar, gate=2.0)
     jmp = run_resid_stream(jumped, gate=2.0)
     assert jmp["fire_rate"] >= sim["fire_rate"]
     t0, t1 = assign_hop(jumped.batch, 3)
-    rho, _, _ = residual_hop_ratio(jumped.X, jumped.y, t0, t1)
+    p0, p1 = assign_hop(jumped.batch, 2)
+    rho, _, _ = residual_hop_ratio(
+        jumped.X, jumped.y, t0, t1, prev0=p0, prev1=p1
+    )
     assert rho > 1.5
 
 
@@ -130,8 +133,18 @@ def test_residual_gate_fires_on_concept_not_similar():
     fired = {h["t"]: h["fired"] for h in jmp["history"]}
     assert fired[3] is True
     t0, t1 = assign_hop(jumped.batch, 3)
-    rho, _, _ = residual_hop_ratio(jumped.X, jumped.y, t0, t1)
+    p0, p1 = assign_hop(jumped.batch, 2)
+    rho, _, _ = residual_hop_ratio(
+        jumped.X, jumped.y, t0, t1, prev0=p0, prev1=p1
+    )
     assert rho > 2.0
+
+
+def test_consecutive_residual_without_prev_is_one():
+    stream = make_batch_stream(n_batches=4, n_per=40, p=6, seed=7)
+    t0, t1 = assign_hop(stream.batch, 1)
+    rho, _, _ = residual_hop_ratio(stream.X, stream.y, t0, t1)
+    assert rho == 1.0
 
 
 def test_rf_xgb_mlp_fit_predict():

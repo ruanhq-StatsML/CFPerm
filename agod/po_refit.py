@@ -18,7 +18,6 @@ from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
-from sklearn.model_selection import KFold
 
 from agod.po_iptw import dre_weights, po_iptw_weights
 
@@ -61,11 +60,54 @@ class ScaledMLP:
         return self.est.predict(self.scaler.transform(np.asarray(X, dtype=float)))
 
 
-def make_regressor(learner="rf", *, seed=0):
+class ScaledMLPClassifier:
+    def __init__(self, seed=0):
+        from sklearn.neural_network import MLPClassifier
+        from sklearn.preprocessing import StandardScaler
+
+        self.scaler = StandardScaler()
+        self.est = MLPClassifier(
+            hidden_layer_sizes=(32, 16),
+            activation="relu",
+            alpha=1e-3,
+            learning_rate_init=5e-3,
+            max_iter=250,
+            random_state=int(seed),
+            verbose=False,
+        )
+
+    def fit(self, X, y, sample_weight=None):
+        Xs = self.scaler.fit_transform(np.asarray(X, dtype=float))
+        y = np.asarray(y).ravel()
+        if sample_weight is None:
+            self.est.fit(Xs, y)
+        else:
+            try:
+                self.est.fit(Xs, y, sample_weight=np.asarray(sample_weight, dtype=float))
+            except TypeError:
+                self.est.fit(Xs, y)
+        return self
+
+    def predict(self, X):
+        return self.est.predict(self.scaler.transform(np.asarray(X, dtype=float)))
+
+
+def make_regressor(learner="rf", *, seed=0, task="mse"):
     """RF / XGBoost / MLP. Ridge kept only as a debug switch, not the board."""
     kind = str(learner).lower()
     seed = int(seed)
+    clf = str(task) == "acc"
     if kind == "rf":
+        if clf:
+            from sklearn.ensemble import RandomForestClassifier
+
+            return RandomForestClassifier(
+                n_estimators=80,
+                max_depth=6,
+                min_samples_leaf=4,
+                n_jobs=1,
+                random_state=seed,
+            )
         from sklearn.ensemble import RandomForestRegressor
 
         return RandomForestRegressor(
@@ -77,6 +119,19 @@ def make_regressor(learner="rf", *, seed=0):
         )
     if kind in ("xgb", "xgboost"):
         try:
+            if clf:
+                from xgboost import XGBClassifier
+
+                return XGBClassifier(
+                    n_estimators=80,
+                    max_depth=4,
+                    learning_rate=0.1,
+                    subsample=0.9,
+                    colsample_bytree=0.9,
+                    n_jobs=1,
+                    random_state=seed,
+                    verbosity=0,
+                )
             from xgboost import XGBRegressor
 
             return XGBRegressor(
@@ -91,6 +146,12 @@ def make_regressor(learner="rf", *, seed=0):
                 objective="reg:squarederror",
             )
         except ImportError:
+            if clf:
+                from sklearn.ensemble import HistGradientBoostingClassifier
+
+                return HistGradientBoostingClassifier(
+                    max_depth=4, max_iter=80, learning_rate=0.1, random_state=seed
+                )
             from sklearn.ensemble import HistGradientBoostingRegressor
 
             return HistGradientBoostingRegressor(
@@ -100,12 +161,12 @@ def make_regressor(learner="rf", *, seed=0):
                 random_state=seed,
             )
     if kind == "mlp":
-        return ScaledMLP(seed=seed)
-    if kind == "ridge":
+        return ScaledMLPClassifier(seed=seed) if clf else ScaledMLP(seed=seed)
+    if kind == "ridge" and not clf:
         from sklearn.linear_model import Ridge
 
         return Ridge(alpha=3.0)
-    raise ValueError(f"unknown learner {learner!r}")
+    raise ValueError(f"unknown learner {learner!r} task={task!r}")
 
 
 def _fit(est, X, y, w=None):
@@ -120,27 +181,24 @@ def _fit(est, X, y, w=None):
         return est.fit(X, y)
 
 
-def fit_predict(Xtr, ytr, Xte, w=None, *, learner="rf", seed=0):
-    est = make_regressor(learner, seed=seed)
+def fit_predict(Xtr, ytr, Xte, w=None, *, learner="rf", seed=0, task="mse"):
+    est = make_regressor(learner, seed=seed, task=task)
+    ytr = np.asarray(ytr)
+    ytr = ytr.ravel().astype(int) if str(task) == "acc" else ytr.ravel().astype(float)
     _fit(est, Xtr, ytr, w)
-    return np.asarray(est.predict(np.asarray(Xte, dtype=float)), dtype=float).ravel()
+    return np.asarray(est.predict(np.asarray(Xte, dtype=float))).ravel()
 
 
-def cv_mse(X, y, *, learner="rf", seed=0, n_splits=4):
-    """OOS train MSE. Trees overfit in-sample; do not use train residuals."""
-    X = np.asarray(X, dtype=float)
-    y = np.asarray(y, dtype=float).ravel()
-    n = int(y.shape[0])
-    if n < 8:
-        pred = fit_predict(X, y, X, learner=learner, seed=seed)
-        return float(np.mean((pred - y) ** 2))
-    splits = int(min(n_splits, max(2, n // 15)))
-    kf = KFold(n_splits=splits, shuffle=True, random_state=int(seed))
-    errs = []
-    for i, (tr, te) in enumerate(kf.split(X)):
-        pred = fit_predict(X[tr], y[tr], X[te], learner=learner, seed=int(seed) + i)
-        errs.append(float(np.mean((pred - y[te]) ** 2)))
-    return float(np.mean(errs))
+def hop_score(y_true, y_pred, task="mse"):
+    y_true = np.asarray(y_true).ravel()
+    y_pred = np.asarray(y_pred).ravel()
+    if str(task) == "acc":
+        return float(np.mean(y_true.astype(int) == y_pred.astype(int)))
+    return float(np.mean((y_true.astype(float) - y_pred.astype(float)) ** 2))
+
+
+def _stream_task(stream):
+    return str(getattr(stream, "task", "mse") or "mse")
 
 
 def dr_pseudo_outcome(X, y, t, clip=0.05, learner="rf", seed=0, ridge_alpha=None):
@@ -216,24 +274,52 @@ def mix_lambda(ratio, gate=1.25, soft_scale=2.0):
     return float(np.clip((float(ratio) - g) / den, 0.0, 1.0))
 
 
-def residual_hop_ratio(X, y, t0, t1, learner="rf", seed=0, ridge_alpha=None):
-    """How badly a model fit on 上一批 predicts 这一批.
+def residual_hop_ratio(
+    X,
+    y,
+    t0,
+    t1,
+    learner="rf",
+    seed=0,
+    ridge_alpha=None,
+    prev0=None,
+    prev1=None,
+    task="mse",
+):
+    """Consecutive-batch residual, no K-fold.
 
-    Trees overfit train MSE, so the denominator is K-fold CV on T=0.
-    A global concept flip raises this a lot; a global flip does *not*
-    raise mean φ²_{T=1} / mean φ²_{T=0} (both sides jump together).
+    mse1 = train 上一批, score 这一批
+    mse0 = train 上上批, score 上一批   (previous consecutive hop)
+
+    Both are next-batch OOS. A global concept flip raises mse1 vs mse0.
     """
     del ridge_alpha
     t0 = np.asarray(t0, dtype=bool).ravel()
     t1 = np.asarray(t1, dtype=bool).ravel()
     X = np.asarray(X, dtype=float)
-    y = np.asarray(y, dtype=float).ravel()
+    y = np.asarray(y).ravel()
     if int(t0.sum()) < 3 or int(t1.sum()) < 3:
         return 1.0, 0.0, 0.0
-    mse0 = cv_mse(X[t0], y[t0], learner=learner, seed=seed)
-    pred1 = fit_predict(X[t0], y[t0], X[t1], learner=learner, seed=seed)
-    mse1 = float(np.mean((pred1 - y[t1]) ** 2))
-    return mse1 / (mse0 + 1e-8), mse0, mse1
+    pred1 = fit_predict(
+        X[t0], y[t0], X[t1], learner=learner, seed=seed, task=task
+    )
+    mse1 = hop_score(y[t1], pred1, task=task)
+    if str(task) == "acc":
+        # error-rate ratio so "higher = worse hop" still holds
+        mse1 = 1.0 - mse1
+    if prev0 is None or prev1 is None:
+        return 1.0, 0.0, float(mse1)
+    prev0 = np.asarray(prev0, dtype=bool).ravel()
+    prev1 = np.asarray(prev1, dtype=bool).ravel()
+    if int(prev0.sum()) < 3 or int(prev1.sum()) < 3:
+        return 1.0, 0.0, float(mse1)
+    pred0 = fit_predict(
+        X[prev0], y[prev0], X[prev1], learner=learner, seed=seed, task=task
+    )
+    mse0 = hop_score(y[prev1], pred0, task=task)
+    if str(task) == "acc":
+        mse0 = 1.0 - mse0
+    return mse1 / (mse0 + 1e-8), float(mse0), float(mse1)
 
 
 def refit_po_weights(
@@ -302,6 +388,35 @@ class Stream:
     batch: np.ndarray
     name: str = ""
     meta: dict | None = None
+    task: str = "mse"
+
+
+def stream_from_xy(
+    X,
+    y,
+    *,
+    n_per=100,
+    n_batches=12,
+    name="",
+    task="mse",
+    meta=None,
+):
+    """Cut already-ordered real rows into consecutive batches. No shuffle, no CV."""
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y).ravel()
+    n = int(n_per) * int(n_batches)
+    if len(X) < n:
+        raise ValueError(f"{name or 'stream'}: need {n} rows, got {len(X)}")
+    X, y = X[:n], y[:n]
+    batch = np.repeat(np.arange(int(n_batches), dtype=int), int(n_per))
+    return Stream(
+        X=X,
+        y=y,
+        batch=batch,
+        name=str(name),
+        meta=dict(meta or {}, n_batches=int(n_batches), n_per=int(n_per)),
+        task=str(task),
+    )
 
 
 def make_batch_stream(
@@ -341,6 +456,7 @@ def make_batch_stream(
         y=np.concatenate(ys),
         batch=np.concatenate(batches),
         name="synth",
+        task="mse",
         meta={
             "cov": float(cov),
             "concept": float(concept),
@@ -352,7 +468,7 @@ def make_batch_stream(
     )
 
 
-def _pack_stream(history, *, assign, gate, always, mode, learner="rf"):
+def _pack_stream(history, *, assign, gate, always, mode, learner="rf", metric="mse"):
     mses = np.array([h["next_mse"] for h in history], dtype=float)
     fires = np.array([h["fired"] for h in history], dtype=float)
     return {
@@ -361,6 +477,7 @@ def _pack_stream(history, *, assign, gate, always, mode, learner="rf"):
         "always": bool(always),
         "mode": mode,
         "learner": str(learner),
+        "metric": str(metric),
         "online_mse": float(mses.mean()) if mses.size else float("nan"),
         "mse_std": float(mses.std()) if mses.size else float("nan"),
         "fire_rate": float(fires.mean()) if fires.size else 0.0,
@@ -385,8 +502,9 @@ def run_refit_stream(
 ):
     """Online next-batch MSE. Train on T=1 rows, score batch t+1."""
     del ridge_alpha
+    task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
-    y = np.asarray(stream.y, dtype=float)
+    y = np.asarray(stream.y).ravel()
     batch = np.asarray(stream.batch, dtype=int)
     k = int(batch.max()) + 1
     assign_fn = assign_pair if assign == "pair" else assign_hop
@@ -417,8 +535,9 @@ def run_refit_stream(
             w=rec["weights"][tr],
             learner=learner,
             seed=int(seed) + t,
+            task=task,
         )
-        mse = float(np.mean((pred - y[te]) ** 2))
+        mse = hop_score(y[te], pred, task=task)
         history.append(
             {
                 "t": int(t),
@@ -436,7 +555,8 @@ def run_refit_stream(
     if soft and not always:
         tag = f"soft_{mode}"
     return _pack_stream(
-        history, assign=assign, gate=gate, always=always, mode=tag, learner=learner
+        history, assign=assign, gate=gate, always=always, mode=tag, learner=learner,
+        metric=task,
     )
 
 
@@ -471,8 +591,9 @@ def run_adaptive_stream(
     re-adjustment the quiet stream was missing.
     """
     del ridge_alpha
+    task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
-    y = np.asarray(stream.y, dtype=float)
+    y = np.asarray(stream.y).ravel()
     batch = np.asarray(stream.batch, dtype=int)
     k = int(batch.max()) + 1
     history = []
@@ -499,9 +620,9 @@ def run_adaptive_stream(
         if not np.any(tr) or not np.any(te):
             continue
         pred = fit_predict(
-            X[tr], y[tr], X[te], w=w_tr, learner=learner, seed=int(seed) + t
+            X[tr], y[tr], X[te], w=w_tr, learner=learner, seed=int(seed) + t, task=task
         )
-        mse = float(np.mean((pred - y[te]) ** 2))
+        mse = hop_score(y[te], pred, task=task)
         history.append(
             {
                 "t": int(t),
@@ -522,6 +643,7 @@ def run_adaptive_stream(
         always=False,
         mode="adaptive",
         learner=learner,
+        metric=task,
     )
 
 
@@ -533,8 +655,9 @@ def run_switch_stream(
     Isolates 'drop the old batch' from 'reweight the new batch'.
     """
     del ridge_alpha
+    task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
-    y = np.asarray(stream.y, dtype=float)
+    y = np.asarray(stream.y).ravel()
     batch = np.asarray(stream.batch, dtype=int)
     k = int(batch.max()) + 1
     history = []
@@ -547,8 +670,8 @@ def run_switch_stream(
         tr = t1 if rec["fired"] else ((batch == (t - 1)) | (batch == t))
         if not np.any(tr) or not np.any(te):
             continue
-        pred = fit_predict(X[tr], y[tr], X[te], learner=learner, seed=int(seed) + t)
-        mse = float(np.mean((pred - y[te]) ** 2))
+        pred = fit_predict(X[tr], y[tr], X[te], learner=learner, seed=int(seed) + t, task=task)
+        mse = hop_score(y[te], pred, task=task)
         history.append(
             {
                 "t": int(t),
@@ -563,15 +686,17 @@ def run_switch_stream(
             }
         )
     return _pack_stream(
-        history, assign="switch", gate=gate, always=False, mode="switch", learner=learner
+        history, assign="switch", gate=gate, always=False, mode="switch", learner=learner,
+        metric=task,
     )
 
 
 def run_dre_hop(stream: Stream, *, learner="rf", seed=0, ridge_alpha=None):
     """X-only density-ratio weights on the new batch. Ignores Y-shift."""
     del ridge_alpha
+    task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
-    y = np.asarray(stream.y, dtype=float)
+    y = np.asarray(stream.y).ravel()
     batch = np.asarray(stream.batch, dtype=int)
     k = int(batch.max()) + 1
     history = []
@@ -583,9 +708,9 @@ def run_dre_hop(stream: Stream, *, learner="rf", seed=0, ridge_alpha=None):
             continue
         w = dre_weights(X[prev], X[tr], seed=int(t))
         pred = fit_predict(
-            X[tr], y[tr], X[te], w=w, learner=learner, seed=int(seed) + t
+            X[tr], y[tr], X[te], w=w, learner=learner, seed=int(seed) + t, task=task
         )
-        mse = float(np.mean((pred - y[te]) ** 2))
+        mse = hop_score(y[te], pred, task=task)
         history.append(
             {
                 "t": int(t),
@@ -600,7 +725,8 @@ def run_dre_hop(stream: Stream, *, learner="rf", seed=0, ridge_alpha=None):
             }
         )
     return _pack_stream(
-        history, assign="hop", gate=0.0, always=True, mode="dre", learner=learner
+        history, assign="hop", gate=0.0, always=True, mode="dre", learner=learner,
+        metric=task,
     )
 
 
@@ -611,8 +737,9 @@ def run_oracle_switch(stream: Stream, *, learner="rf", seed=0, ridge_alpha=None)
     Quiet / covariate streams have no cut → always pair-uniform.
     """
     del ridge_alpha
+    task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
-    y = np.asarray(stream.y, dtype=float)
+    y = np.asarray(stream.y).ravel()
     batch = np.asarray(stream.batch, dtype=int)
     k = int(batch.max()) + 1
     cut = None if stream.meta is None else stream.meta.get("concept_at")
@@ -623,8 +750,8 @@ def run_oracle_switch(stream: Stream, *, learner="rf", seed=0, ridge_alpha=None)
         tr = (batch == t) if fired else ((batch == (t - 1)) | (batch == t))
         if not np.any(tr) or not np.any(te):
             continue
-        pred = fit_predict(X[tr], y[tr], X[te], learner=learner, seed=int(seed) + t)
-        mse = float(np.mean((pred - y[te]) ** 2))
+        pred = fit_predict(X[tr], y[tr], X[te], learner=learner, seed=int(seed) + t, task=task)
+        mse = hop_score(y[te], pred, task=task)
         history.append(
             {
                 "t": int(t),
@@ -645,6 +772,7 @@ def run_oracle_switch(stream: Stream, *, learner="rf", seed=0, ridge_alpha=None)
         always=False,
         mode="oracle",
         learner=learner,
+        metric=task,
     )
 
 
@@ -665,15 +793,27 @@ def run_resid_stream(
     ``po_on_fire`` then puts √PO weights on the new batch (refit PO-learner).
     """
     del ridge_alpha
+    task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
-    y = np.asarray(stream.y, dtype=float)
+    y = np.asarray(stream.y).ravel()
     batch = np.asarray(stream.batch, dtype=int)
     k = int(batch.max()) + 1
     history = []
     for t in range(1, k - 1):
         t0, t1 = assign_hop(batch, t)
+        prev0 = prev1 = None
+        if int(t) >= 2:
+            prev0, prev1 = assign_hop(batch, int(t) - 1)
         rho, mse0, mse1 = residual_hop_ratio(
-            X, y, t0, t1, learner=learner, seed=int(seed) + t
+            X,
+            y,
+            t0,
+            t1,
+            learner=learner,
+            seed=int(seed) + t,
+            prev0=prev0,
+            prev1=prev1,
+            task=task,
         )
         fired = bool(np.isfinite(rho) and rho >= float(gate))
         te = batch == (t + 1)
@@ -699,9 +839,9 @@ def run_resid_stream(
         if not np.any(tr) or not np.any(te):
             continue
         pred = fit_predict(
-            X[tr], y[tr], X[te], w=w_tr, learner=learner, seed=int(seed) + t
+            X[tr], y[tr], X[te], w=w_tr, learner=learner, seed=int(seed) + t, task=task
         )
-        mse = float(np.mean((pred - y[te]) ** 2))
+        mse = hop_score(y[te], pred, task=task)
         history.append(
             {
                 "t": int(t),
@@ -717,7 +857,8 @@ def run_resid_stream(
         )
     tag = "resid_po" if po_on_fire else "resid"
     return _pack_stream(
-        history, assign=tag, gate=gate, always=False, mode=tag, learner=learner
+        history, assign=tag, gate=gate, always=False, mode=tag, learner=learner,
+        metric=task,
     )
 
 

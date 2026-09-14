@@ -46,10 +46,9 @@ dropping the old batch from $\sqrt{\mathrm{PO}}$ IPTW.
 The PO-ratio gate $\rho=\bar r_{T=1}/\bar r_{T=0}$ misses a \emph{global}
 concept flip (both sides' $\varphi^2$ jump, so $\rho\approx 1$).
 The residual gate
-$\rho^{\mathrm{res}}=\mathrm{MSE}(\hat y_{B_{t-1}}(B_t))/\mathrm{CV\text{-}MSE}(B_{t-1})$
-is the ``batches clearly different'' detector; default $\gamma_{\mathrm{res}}=2$.
-Trees and MLPs overfit in-sample, so the denominator is $K$-fold CV, not
-train MSE.
+$\rho^{\mathrm{res}}=\mathrm{err}(B_{t-1}\!\to\! B_t)\,/\,\mathrm{err}(B_{t-2}\!\to\! B_{t-1})$
+is consecutive-batch next-hop error, \emph{not} $K$-fold CV.
+Quiet $\to$ train last two, uniform. Fire $\to$ drop the old batch.
 \textit{resid} then trains on $B_t$ only; \textit{resid\_po} also applies
 refit $\sqrt{\mathrm{PO}}$ weights on that new batch.
 Soft gate: $w \leftarrow (1-\lambda)\mathbf{1}+\lambda w_{\mathrm{PO}}$ with
