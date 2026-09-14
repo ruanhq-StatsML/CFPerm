@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""Continuous-batch PO-risk IPTW: uniform / prop / sqrt / inv → MSE @ 10 batches.
+"""Always-on PO-risk IPTW ablation (uniform / prop / sqrt / inv).
 
-Green (no DRE/DGA):
-  uniform : w = 1
-  prop    : w ∝ PO
-  sqrt    : w ∝ √PO     # soft upweight — w_i = sqrt(PO(X_i,Y_i,T_i=1))
-  inv     : w ∝ 1/PO
-
-Eval: fit batch t with weights → MSE on batch t+1.
+The AGOD **method** is gated online RFPerm + PO-risk
+(``agod.run_online_rfperm``). This script applies √PO every batch.
 
   PYTHONPATH=. python3 scripts/run_agod_po_iptw_mse.py \\
     --dataset affec --n-batches 10 --batch-size 256

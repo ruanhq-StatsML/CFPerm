@@ -116,3 +116,27 @@ https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 <img width="1796" height="552" alt="Screenshot 2026-08-03 at 09 57 54" src="https://github.com/user-attachments/assets/bd74444f-992d-4928-ac54-df080e397cf7" />
 - **Consequently, upon observing a notable drop in model performance, we prioritize post-hoc feature selection or localization of distribution-shift drivers over disentangling the shift into concept drift versus covariate shift, as such decomposition is not identifiable, Subset Localization is all you need!**
 - It gives people concise proxy for efficiently dealing with the model performance degradation in the deployed ML model - distribution shift driver localization is what you will need.
+
+## AGOD stream: online RFPerm + PO-risk
+
+The streaming adaptation method is **online RFPerm + PO-risk**, not
+always-on IPTW and not DRE.
+
+Probe = shallow RF on 上一批 (\(T=0\)). Score = instance `po_risk0`.
+Weight = \(w=\sqrt{\texttt{po\_risk0}}\) on \(T=1\), **only** when
+consecutive OOS error jumps, then anneal back to last-two uniform.
+
+```python
+from agod import run_online_rfperm
+rec = run_online_rfperm(stream, gate=1.5, learner="rf")
+```
+
+```bash
+PYTHONPATH=. python3 scripts/run_po_refit_gated.py --learners rf,xgb
+PYTHONPATH=. python3 scripts/run_po_refit_real.py --n-per 200 --learners rf,xgb
+```
+
+Overview: `docs/agod/AGOD_overview.md`. Method card:
+`docs/agod/AGOD_online_rfperm.md`. LaTeX tables:
+`docs/agod/AGOD_performance_tables.tex`.
+

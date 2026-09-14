@@ -1,0 +1,240 @@
+% Paste-ready AGOD performance comparison.
+% Requires booktabs. Last-two uniform default; rfperm = gated
+% last-two $\sqrt{\mathrm{po\_risk0}}$ on $T=1$; resid = drop-old.
+
+% Online RFPerm + PO-risk. Next-batch MSE. Uniform default.
+% rfperm = last-two, w=sqrt(po_risk0) on T=1 iff consecutive OOS jump.
+% dre = last-two, always-on logistic density-ratio on T=1 (X only).
+% resid = drop old batch (hard lever). oracle = knows the concept cut.
+
+\begin{table}[ht]\centering
+\caption{Next-batch MSE (\texttt{rf}). Last-two uniform is the
+default. \texttt{rfperm}: gated $\sqrt{\mathrm{PO}}$ on $T=1$.
+\texttt{dre}: always-on density ratio $p(x)$ on the same rows.
+\texttt{resid}: drop the old batch. Gate $\gamma=1.50$.}
+\label{tab:po-refit-mse-rf}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lcccccc@{}}\toprule
+Scene & uniform & DRE & rfperm & drop-old & oracle & fire \\
+\midrule
+similar & $\mathbf{0.540}$ & $0.541$ & $\mathbf{0.540}$ & $\mathbf{0.540}$ & $0.540$ & $0.00$ \\
+covariate & $0.728$ & $0.874$ & $\mathbf{0.720}$ & $0.852$ & $0.728$ & $0.04$ \\
+concept & $1.565$ & $1.584$ & $1.466$ & $\mathbf{1.332}$ & $1.379$ & $0.17$ \\
+mixed & $1.889$ & $2.020$ & $1.818$ & $\mathbf{1.657}$ & $1.765$ & $0.17$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{PO-risk vs density-ratio (\texttt{rf}).
+Same last-two rows. $\Delta=$ DRE $-$ rfperm (MSE $\downarrow$;
+positive means $\sqrt{\mathrm{PO}}$ wins). DRE cannot see a
+$P(Y\mid X)$ hop with stable $P(X)$.}
+\label{tab:po-vs-dre-rf}
+\small
+\begin{tabular}{@{}lcccc@{}}\toprule
+Scene & uniform & DRE & rfperm & $\Delta$ vs DRE \\
+\midrule
+similar & $0.540$ & $0.541$ & $0.540$ & $0.001$ \\
+covariate & $0.728$ & $0.874$ & $0.720$ & $\mathbf{0.154}$ \\
+concept & $1.565$ & $1.584$ & $1.466$ & $\mathbf{0.118}$ \\
+mixed & $1.889$ & $2.020$ & $1.818$ & $\mathbf{0.202}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Concept hop path (\texttt{rf}), cut at $B_4$.
+Next-batch MSE. The cut hop is unforecastable; annealing pays on the hop after.}
+\label{tab:po-refit-concept-rf}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}clccccc@{}}\toprule
+$t$ & test & uniform & DRE & rfperm & drop-old & oracle \\
+\midrule
+1 & $B_{2}$ & $\mathbf{0.557}$ & $0.569$ & $\mathbf{0.557}$ & $\mathbf{0.557}$ & $0.557$ \\
+2 & $B_{3}$ & $0.557$ & $\mathbf{0.547}$ & $0.557$ & $0.557$ & $0.557$ \\
+3 & $B_{4}$ $\leftarrow$ cut & $5.054$ & $\mathbf{5.051}$ & $5.054$ & $5.054$ & $5.054$ \\
+4 & $B_{5}$ & $2.149$ & $2.254$ & $1.556$ & $\mathbf{0.755}$ & $0.755$ \\
+5 & $B_{6}$ & $\mathbf{0.503}$ & $0.506$ & $\mathbf{0.503}$ & $\mathbf{0.503}$ & $0.619$ \\
+6 & $B_{7}$ & $\mathbf{0.568}$ & $0.575$ & $\mathbf{0.568}$ & $\mathbf{0.568}$ & $0.731$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Next-batch MSE (\texttt{xgb}). Last-two uniform is the
+default. \texttt{rfperm}: gated $\sqrt{\mathrm{PO}}$ on $T=1$.
+\texttt{dre}: always-on density ratio $p(x)$ on the same rows.
+\texttt{resid}: drop the old batch. Gate $\gamma=1.50$.}
+\label{tab:po-refit-mse-xgb}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lcccccc@{}}\toprule
+Scene & uniform & DRE & rfperm & drop-old & oracle & fire \\
+\midrule
+similar & $0.396$ & $\mathbf{0.393}$ & $0.396$ & $0.396$ & $0.396$ & $0.00$ \\
+covariate & $0.511$ & $0.586$ & $\mathbf{0.509}$ & $0.557$ & $0.511$ & $0.04$ \\
+concept & $1.639$ & $1.651$ & $1.592$ & $\mathbf{1.339}$ & $1.394$ & $0.17$ \\
+mixed & $1.957$ & $2.132$ & $1.920$ & $\mathbf{1.661}$ & $1.749$ & $0.17$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{PO-risk vs density-ratio (\texttt{xgb}).
+Same last-two rows. $\Delta=$ DRE $-$ rfperm (MSE $\downarrow$;
+positive means $\sqrt{\mathrm{PO}}$ wins). DRE cannot see a
+$P(Y\mid X)$ hop with stable $P(X)$.}
+\label{tab:po-vs-dre-xgb}
+\small
+\begin{tabular}{@{}lcccc@{}}\toprule
+Scene & uniform & DRE & rfperm & $\Delta$ vs DRE \\
+\midrule
+similar & $0.396$ & $0.393$ & $0.396$ & $-0.003$ \\
+covariate & $0.511$ & $0.586$ & $0.509$ & $\mathbf{0.078}$ \\
+concept & $1.639$ & $1.651$ & $1.592$ & $\mathbf{0.059}$ \\
+mixed & $1.957$ & $2.132$ & $1.920$ & $\mathbf{0.211}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Concept hop path (\texttt{xgb}), cut at $B_4$.
+Next-batch MSE. The cut hop is unforecastable; annealing pays on the hop after.}
+\label{tab:po-refit-concept-xgb}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}clccccc@{}}\toprule
+$t$ & test & uniform & DRE & rfperm & drop-old & oracle \\
+\midrule
+1 & $B_{2}$ & $0.407$ & $\mathbf{0.382}$ & $0.407$ & $0.407$ & $0.407$ \\
+2 & $B_{3}$ & $\mathbf{0.411}$ & $0.412$ & $\mathbf{0.411}$ & $\mathbf{0.411}$ & $0.411$ \\
+3 & $B_{4}$ $\leftarrow$ cut & $\mathbf{5.917}$ & $5.956$ & $\mathbf{5.917}$ & $\mathbf{5.917}$ & $5.917$ \\
+4 & $B_{5}$ & $2.334$ & $2.380$ & $2.051$ & $\mathbf{0.535}$ & $0.535$ \\
+5 & $B_{6}$ & $0.374$ & $\mathbf{0.371}$ & $0.374$ & $0.374$ & $0.486$ \\
+6 & $B_{7}$ & $\mathbf{0.391}$ & $0.405$ & $\mathbf{0.391}$ & $\mathbf{0.391}$ & $0.609$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% Real consecutive-batch clocks. Batch size 200, $\gamma=1.50$.
+% RMSE $\downarrow$ on continuous tasks; Acc $\uparrow$ on discrete.
+% fire = rfperm consecutive-OOS fire rate (first hop never fires).
+
+\begin{table}[ht]\centering
+\caption{Real consecutive clocks (\texttt{rf}), batch size 200,
+24 hops. Last-two uniform is the default. \texttt{rfperm} fires
+iff $e_{\mathrm{prev}}$ is a reliable denominator and $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
+Continuous: RMSE ($\downarrow$). Discrete: Acc ($\uparrow$).}
+\label{tab:po-refit-real-rf}
+\small
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}llcrrrrr@{}}\toprule
+Dataset & clock & metric & uniform & DRE & rfperm & drop-old & fire \\
+\midrule
+interstate & time & RMSE & $714.8$ & $704.3$ & $714.8$ & $\mathbf{698.1}$ & $0.00$ \\
+nyc\_taxi & time & RMSE & $2.586$ & $2.640$ & $2.585$ & $\mathbf{2.584}$ & $0.05$ \\
+electricity & time & Acc & $\mathbf{0.804}$ & $0.800$ & $\mathbf{0.804}$ & $0.801$ & $0.23$ \\
+airlines & time & Acc & $0.673$ & $\mathbf{0.676}$ & $0.673$ & $0.673$ & $0.00$ \\
+bike\_hour & time & RMSE & $57.06$ & $61.78$ & $\mathbf{56.93}$ & $57.83$ & $0.05$ \\
+beijing\_pm25 & time & RMSE & $\mathbf{78.51}$ & $79.59$ & $82.63$ & $81.16$ & $0.14$ \\
+occupancy & time & Acc & $0.859$ & $\mathbf{0.863}$ & $0.858$ & $0.859$ & $0.14$ \\
+diabetes\_readmit & shift & Acc & $\mathbf{0.638}$ & $0.633$ & $\mathbf{0.638}$ & $\mathbf{0.638}$ & $0.00$ \\
+california & spatial & RMSE & $0.693$ & $\mathbf{0.685}$ & $0.698$ & $0.697$ & $0.05$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Real consecutive clocks (\texttt{xgb}), batch size 200,
+24 hops. Last-two uniform is the default. \texttt{rfperm} fires
+iff $e_{\mathrm{prev}}$ is a reliable denominator and $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
+Continuous: RMSE ($\downarrow$). Discrete: Acc ($\uparrow$).}
+\label{tab:po-refit-real-xgb}
+\small
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}llcrrrrr@{}}\toprule
+Dataset & clock & metric & uniform & DRE & rfperm & drop-old & fire \\
+\midrule
+interstate & time & RMSE & $683.0$ & $688.1$ & $683.0$ & $\mathbf{677.2}$ & $0.00$ \\
+nyc\_taxi & time & RMSE & $2.726$ & $3.040$ & $\mathbf{2.716}$ & $2.825$ & $0.05$ \\
+electricity & time & Acc & $0.810$ & $0.805$ & $\mathbf{0.813}$ & $0.807$ & $0.23$ \\
+airlines & time & Acc & $\mathbf{0.648}$ & $0.646$ & $\mathbf{0.648}$ & $\mathbf{0.648}$ & $0.00$ \\
+bike\_hour & time & RMSE & $\mathbf{49.24}$ & $53.12$ & $49.62$ & $50.75$ & $0.05$ \\
+beijing\_pm25 & time & RMSE & $\mathbf{76.64}$ & $77.34$ & $79.38$ & $82.78$ & $0.14$ \\
+occupancy & time & Acc & $0.843$ & $0.836$ & $0.841$ & $\mathbf{0.851}$ & $0.14$ \\
+diabetes\_readmit & shift & Acc & $\mathbf{0.627}$ & $0.622$ & $\mathbf{0.627}$ & $\mathbf{0.627}$ & $0.00$ \\
+california & spatial & RMSE & $0.650$ & $0.656$ & $\mathbf{0.649}$ & $\mathbf{0.649}$ & $0.05$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Periodic reheating on \texttt{occupancy} (\texttt{rf}).
+Fire hops and the hop after (anneal). Metric: Acc.}
+\label{tab:po-refit-periodic-occupancy-rf}
+\small
+\begin{tabular}{@{}ccccc@{}}\toprule
+$t$ & fired & uniform & rfperm & drop-old \\
+\midrule
+8 & yes & $1.000$ & $1.000$ & $1.000$ \\
+9 & no & $1.000$ & $1.000$ & $1.000$ \\
+19 & yes & $0.570$ & $0.545$ & $0.565$ \\
+20 & yes & $1.000$ & $1.000$ & $1.000$ \\
+21 & no & $1.000$ & $1.000$ & $1.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Periodic reheating on \texttt{occupancy} (\texttt{xgb}).
+Fire hops and the hop after (anneal). Metric: Acc.}
+\label{tab:po-refit-periodic-occupancy-xgb}
+\small
+\begin{tabular}{@{}ccccc@{}}\toprule
+$t$ & fired & uniform & rfperm & drop-old \\
+\midrule
+8 & yes & $1.000$ & $1.000$ & $1.000$ \\
+9 & no & $1.000$ & $1.000$ & $1.000$ \\
+19 & yes & $0.595$ & $0.545$ & $0.765$ \\
+20 & yes & $1.000$ & $1.000$ & $1.000$ \\
+21 & no & $1.000$ & $1.000$ & $1.000$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Periodic reheating on \texttt{beijing\_pm25} (\texttt{rf}).
+Fire hops and the hop after (anneal). Metric: RMSE.}
+\label{tab:po-refit-periodic-beijing-pm25-rf}
+\small
+\begin{tabular}{@{}ccccc@{}}\toprule
+$t$ & fired & uniform & rfperm & drop-old \\
+\midrule
+2 & yes & $72.98$ & $73.87$ & $80.13$ \\
+3 & no & $113.1$ & $113.1$ & $113.1$ \\
+12 & yes & $29.58$ & $123.2$ & $91.63$ \\
+13 & no & $66.97$ & $66.97$ & $66.97$ \\
+22 & yes & $63.52$ & $64.84$ & $66.14$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Periodic reheating on \texttt{beijing\_pm25} (\texttt{xgb}).
+Fire hops and the hop after (anneal). Metric: RMSE.}
+\label{tab:po-refit-periodic-beijing-pm25-xgb}
+\small
+\begin{tabular}{@{}ccccc@{}}\toprule
+$t$ & fired & uniform & rfperm & drop-old \\
+\midrule
+2 & yes & $55.38$ & $53.98$ & $81.28$ \\
+3 & no & $100.2$ & $100.2$ & $100.2$ \\
+12 & yes & $49.94$ & $108.9$ & $99.65$ \\
+13 & no & $60.27$ & $60.27$ & $60.27$ \\
+22 & yes & $62.33$ & $64.08$ & $66.30$ \\
+\bottomrule
+\end{tabular}
+\end{table}
