@@ -238,41 +238,195 @@ def load_digits_pca(seed=0):
     ds = load_digits()
     Xp = _pca(ds.data, 16, seed)
     y = ds.target.astype(int)
-    # consecutive in feature space, not class-sorted
     return _order(Xp, y, Xp[:, 0]) + ("acc",)
 
 
-LOCAL = (
-    ("affec", lambda root, max_n, seed, pca_d: load_affec(root, max_n, seed, pca_d)),
-    ("tencent", lambda root, max_n, seed, pca_d: load_tencent(root, max_n, seed, pca_d)),
-    ("msrvtt", lambda root, max_n, seed, pca_d: load_msrvtt(root, max_n, seed, pca_d)),
+def _xy_cache_path(root, name):
+    return Path(root) / "data/public" / f"{name}_xy.npz"
+
+
+def _read_xy_cache(root, name, max_n):
+    p = _xy_cache_path(root, name)
+    if not p.is_file():
+        return None
+    z = np.load(p)
+    n = min(int(max_n), len(z["y"]))
+    return z["X"][:n], z["y"][:n]
+
+
+def _write_xy_cache(root, name, X, y, cap=20000):
+    p = _xy_cache_path(root, name)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    n = min(int(cap), len(y))
+    np.savez_compressed(p, X=np.asarray(X)[:n], y=np.asarray(y)[:n])
+
+
+def _labels(y):
+    import pandas as pd
+
+    y = pd.Series(y).astype(str)
+    codes, _ = pd.factorize(y, sort=False)
+    return codes.astype(np.int64)
+
+
+def load_electricity(root: Path, max_n: int, seed: int, pca_d: int):
+    """OpenML 151 elec2. Row order is the 30-min clock. y = price UP/DOWN."""
+    del seed, pca_d
+    cached = _read_xy_cache(root, "electricity", max_n)
+    if cached is not None:
+        return cached[0], cached[1], "acc"
+    from sklearn.datasets import fetch_openml
+
+    ds = fetch_openml(data_id=151, as_frame=True, parser="auto")
+    y = _labels(ds.target)
+    X = _as_numeric(ds.data)
+    _write_xy_cache(root, "electricity", X, y)
+    n = min(int(max_n), len(y))
+    return X[:n], y[:n], "acc"
+
+
+def load_airlines(root: Path, max_n: int, seed: int, pca_d: int):
+    """OpenML 1169 airlines. Row order is the flight clock. y = delay."""
+    del seed, pca_d
+    cached = _read_xy_cache(root, "airlines", max_n)
+    if cached is not None:
+        return cached[0], cached[1], "acc"
+    from sklearn.datasets import fetch_openml
+
+    ds = fetch_openml(data_id=1169, as_frame=True, parser="auto")
+    y = _labels(ds.target)
+    X = _as_numeric(ds.data)
+    _write_xy_cache(root, "airlines", X, y)
+    n = min(int(max_n), len(y))
+    return X[:n], y[:n], "acc"
+
+
+def _read_uci_zip_csv(url, member, **read_kw):
+    import io
+    import urllib.request
+    import zipfile
+
+    import pandas as pd
+
+    raw = urllib.request.urlopen(url, timeout=90).read()
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        names = zf.namelist()
+        path = member if member in names else next(n for n in names if n.endswith(member))
+        return pd.read_csv(zf.open(path), **read_kw)
+
+
+def load_bike_hour(root: Path, max_n: int, seed: int, pca_d: int):
+    """UCI Bike Sharing hour.csv, already ordered by day×hour. y = cnt."""
+    del seed, pca_d
+    cached = _read_xy_cache(root, "bike_hour", max_n)
+    if cached is not None:
+        return cached[0], cached[1], "mse"
+    url = "https://archive.ics.uci.edu/static/public/275/bike+sharing+dataset.zip"
+    df = _read_uci_zip_csv(url, "hour.csv")
+    y = df["cnt"].to_numpy(np.float64)
+    drop = [c for c in ("instant", "dteday", "casual", "registered", "cnt") if c in df.columns]
+    X = _as_numeric(df.drop(columns=drop))
+    _write_xy_cache(root, "bike_hour", X, y)
+    n = min(int(max_n), len(y))
+    return X[:n], y[:n], "mse"
+
+
+def load_beijing_pm25(root: Path, max_n: int, seed: int, pca_d: int):
+    """UCI Beijing PM2.5, hourly 2010–2014. Clock = year-month-day-hour."""
+    del seed, pca_d
+    import pandas as pd
+
+    cached = _read_xy_cache(root, "beijing_pm25", max_n)
+    if cached is not None:
+        return cached[0], cached[1], "mse"
+    url = (
+        "https://archive.ics.uci.edu/ml/machine-learning-databases/"
+        "00381/PRSA_data_2010.1.1-2014.12.31.csv"
+    )
+    df = pd.read_csv(url)
+    df = df.dropna(subset=["pm2.5"]).copy()
+    df = df.sort_values(["year", "month", "day", "hour"])
+    y = df["pm2.5"].to_numpy(np.float64)
+    X = _as_numeric(df.drop(columns=[c for c in ("No", "pm2.5") if c in df.columns]))
+    _write_xy_cache(root, "beijing_pm25", X, y)
+    n = min(int(max_n), len(y))
+    return X[:n], y[:n], "mse"
+
+
+def load_occupancy(root: Path, max_n: int, seed: int, pca_d: int):
+    """UCI occupancy detection, concatenated and sorted by date. y = Occupancy."""
+    del seed, pca_d
+    import pandas as pd
+
+    cached = _read_xy_cache(root, "occupancy", max_n)
+    if cached is not None:
+        return cached[0], cached[1], "acc"
+    url = "https://archive.ics.uci.edu/static/public/357/occupancy+detection.zip"
+    import io
+    import urllib.request
+    import zipfile
+
+    raw = urllib.request.urlopen(url, timeout=90).read()
+    frames = []
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        for name in zf.namelist():
+            if not name.endswith(".txt"):
+                continue
+            frames.append(pd.read_csv(zf.open(name)))
+    df = pd.concat(frames, ignore_index=True)
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.dropna(subset=["date", "Occupancy"]).sort_values("date")
+    y = df["Occupancy"].to_numpy(np.int64)
+    X = _as_numeric(df.drop(columns=["date", "Occupancy"]))
+    _write_xy_cache(root, "occupancy", X, y)
+    n = min(int(max_n), len(y))
+    return X[:n], y[:n], "acc"
+
+
+# (name, loader, clock, remote)
+# remote=True loaders are skipped in CI unless a cache exists or download=True.
+STREAMS = (
+    ("affec", load_affec, "local", False),
+    ("tencent", load_tencent, "local", False),
+    ("msrvtt", load_msrvtt, "local", False),
     (
         "coco_time",
         lambda root, max_n, seed, pca_d: load_img_txt(
             root, "coco_time_order", max_n, seed, pca_d
         ),
+        "local",
+        False,
     ),
     (
         "fashion_iq",
-        lambda root, max_n, seed, pca_d: load_img_txt(root, "fashion_iq", max_n, seed, pca_d),
+        lambda root, max_n, seed, pca_d: load_img_txt(
+            root, "fashion_iq", max_n, seed, pca_d
+        ),
+        "local",
+        False,
     ),
     (
         "indiana_cxr",
         lambda root, max_n, seed, pca_d: load_img_txt(
             root, "indiana_cxr", max_n, seed, pca_d
         ),
+        "local",
+        False,
     ),
+    ("interstate", load_interstate, "time", False),
+    ("nyc_taxi", load_nyc_taxi, "time", False),
+    ("electricity", load_electricity, "time", True),
+    ("airlines", load_airlines, "time", True),
+    ("bike_hour", load_bike_hour, "time", True),
+    ("beijing_pm25", load_beijing_pm25, "time", True),
+    ("occupancy", load_occupancy, "time", True),
+    ("diabetes_readmit", load_diabetes_readmit, "shift", False),
+    ("california", lambda root, max_n, seed, pca_d: load_california(), "spatial", False),
 )
 
-# Real consecutive streams. interstate / nyc_taxi / diabetes_readmit need root.
-PUBLIC = (
-    ("interstate", load_interstate),
-    ("nyc_taxi", load_nyc_taxi),
-    ("diabetes_readmit", load_diabetes_readmit),
-    ("california", lambda root, max_n, seed, pca_d: load_california()),
-    ("diabetes", lambda root, max_n, seed, pca_d: load_diabetes()),
-    ("wine_red", lambda root, max_n, seed, pca_d: load_wine_red()),
-)
+# Back-compat aliases used by older scripts/tests.
+LOCAL = tuple((n, fn) for n, fn, clock, _ in STREAMS if clock == "local")
+PUBLIC = tuple((n, fn) for n, fn, clock, _ in STREAMS if clock != "local")
 
 
 def iter_real_streams(
@@ -283,12 +437,19 @@ def iter_real_streams(
     pca_d=32,
     seed=0,
     max_n=8000,
+    download=False,
+    clocks=None,
 ):
-    """Yield (name, Stream). Skip missing packs / too-short tables."""
+    """Yield consecutive-batch streams. Skip missing packs / too-short tables.
+
+    ``download=False`` (CI default) will not fetch remote OpenML/UCI tables
+    unless a ``data/public/{name}_xy.npz`` cache already exists.
+    """
     root = Path(root or ROOT)
+    allow = set(clocks) if clocks else {"time", "shift", "spatial", "local"}
     seen = set()
 
-    def emit(name, packed):
+    def emit(name, packed, clock):
         if packed is None or name in seen:
             return None
         if len(packed) == 3:
@@ -298,8 +459,6 @@ def iter_real_streams(
             task = packed[2] if len(packed) > 2 else "mse"
         n_b = int(n_batches)
         n_p = int(n_per)
-        if name == "diabetes":
-            n_p, n_b = 50, 8
         if len(X) < n_p * n_b:
             n_b = int(len(X) // n_p)
         if n_b < 6:
@@ -312,14 +471,20 @@ def iter_real_streams(
             task=task,
             n_per=n_p,
             n_batches=n_b,
-            meta={"source": name, "seed": int(seed)},
+            meta={"source": name, "seed": int(seed), "clock": clock},
         )
         if st is None:
             return None
         seen.add(name)
         return st
 
-    for name, fn in LOCAL + PUBLIC:
+    for name, fn, clock, remote in STREAMS:
+        if clock not in allow:
+            continue
+        cache = _xy_cache_path(root, name)
+        if remote and not download and not cache.is_file():
+            print(f"[skip] {name}: no cache (pass download=True)", flush=True)
+            continue
         try:
             packed = fn(root, max_n, seed, pca_d)
         except Exception as exc:
@@ -328,6 +493,6 @@ def iter_real_streams(
         if packed is None:
             print(f"[skip] {name}: missing local pack", flush=True)
             continue
-        st = emit(name, packed)
+        st = emit(name, packed, clock)
         if st is not None:
             yield st

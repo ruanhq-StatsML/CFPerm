@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Uniform vs gated rolling PO-learner refit (next-batch MSE).
+"""Uniform vs gated online-RF √po_risk0 (next-batch MSE).
 
-Predictors are RF / XGBoost / MLP (not Ridge). Uniform is the default;
-re-adjust only when the new batch is clearly different.
+Uniform on the last two batches is the default. √PO / localization
+only fire when consecutive OOS probe error jumps (distribution shift),
+not every hop.
 
   PYTHONPATH=. python3 scripts/run_po_refit_gated.py
 """
@@ -14,13 +15,11 @@ from pathlib import Path
 
 import numpy as np
 
+from agod.online_rfperm import run_rfperm_stream
 from agod.po_refit import (
     make_batch_stream,
-    run_dre_hop,
     run_oracle_switch,
     run_resid_stream,
-    run_refit_stream,
-    run_switch_stream,
     run_uniform_on_same_rows,
 )
 
@@ -37,13 +36,10 @@ SCENES = (
 
 BOARD_METHODS = (
     "uniform_pair",
-    "gated_pair",
-    "switch",
+    "rfperm",
+    "local",
     "resid",
-    "resid_po",
     "oracle",
-    "uniform_hop",
-    "dre_hop",
 )
 
 
@@ -60,14 +56,11 @@ def run_scene(name, spec, seeds, n_batches, n_per, p, gate, learner):
         kw = dict(learner=learner, seed=seed)
         methods = {
             "uniform_pair": run_uniform_on_same_rows(stream, assign="pair", **kw),
-            "gated_pair": run_refit_stream(
-                stream, assign="pair", gate=gate, always=False, **kw
+            "rfperm": run_rfperm_stream(stream, gate=gate, localize=False, **kw),
+            "local": run_rfperm_stream(
+                stream, gate=gate, localize=True, q=0.30, **kw
             ),
-            "switch": run_switch_stream(stream, gate=gate, **kw),
             "resid": run_resid_stream(stream, gate=2.0, po_on_fire=False, **kw),
-            "resid_po": run_resid_stream(stream, gate=2.0, po_on_fire=True, **kw),
-            "uniform_hop": run_uniform_on_same_rows(stream, assign="hop", **kw),
-            "dre_hop": run_dre_hop(stream, **kw),
             "oracle": run_oracle_switch(stream, **kw),
         }
         for m, rec in methods.items():
@@ -86,6 +79,7 @@ def run_scene(name, spec, seeds, n_batches, n_per, p, gate, learner):
                             "next_mse": h["next_mse"],
                             "fired": h["fired"],
                             "ratio": h.get("ratio"),
+                            "n_train": h.get("n_train"),
                         }
                         for h in rec["history"]
                     ],
@@ -128,8 +122,8 @@ def _fmt_board(learner, scenes):
     lines = [
         f"### `{learner}`",
         "",
-        "| scene | uniform_pair | gated_pair | switch | resid | resid_po | oracle | uniform_hop | dre_hop |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| scene | uniform_pair | rfperm | local | resid | oracle |",
+        "|---|---:|---:|---:|---:|---:|",
     ]
     for scene, cell in scenes.items():
         m = cell["methods"]
@@ -138,36 +132,32 @@ def _fmt_board(learner, scenes):
             return m[k]["mse_mean"]
 
         lines.append(
-            "| `%s` | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f |"
+            "| `%s` | %.3f | %.3f | %.3f | %.3f | %.3f |"
             % (
                 scene,
                 mse("uniform_pair"),
-                mse("gated_pair"),
-                mse("switch"),
+                mse("rfperm"),
+                mse("local"),
                 mse("resid"),
-                mse("resid_po"),
                 mse("oracle"),
-                mse("uniform_hop"),
-                mse("dre_hop"),
             )
         )
     lines += [
         "",
         f"Fire rates (`{learner}`):",
         "",
-        "| scene | gated_pair | switch | resid | resid_po |",
-        "|---|---:|---:|---:|---:|",
+        "| scene | rfperm | local | resid |",
+        "|---|---:|---:|---:|",
     ]
     for scene, cell in scenes.items():
         m = cell["methods"]
         lines.append(
-            "| `%s` | %.2f | %.2f | %.2f | %.2f |"
+            "| `%s` | %.2f | %.2f | %.2f |"
             % (
                 scene,
-                m["gated_pair"]["fire_mean"],
-                m["switch"]["fire_mean"],
+                m["rfperm"]["fire_mean"],
+                m["local"]["fire_mean"],
                 m["resid"]["fire_mean"],
-                m["resid_po"]["fire_mean"],
             )
         )
     if "concept" in scenes:
@@ -178,7 +168,7 @@ def _fmt_board(learner, scenes):
                 "",
                 f"Concept hop path (`{learner}`, cut at `B_4`):",
                 "",
-                "| t (train) | test | uniform_pair | switch | resid | resid_po | oracle |",
+                "| t (train) | test | uniform_pair | rfperm | local | resid | oracle |",
                 "|---|---|---:|---:|---:|---:|---:|",
             ]
             for t in hops:
@@ -195,9 +185,9 @@ def _fmt_board(learner, scenes):
                         test,
                         mark,
                         at("uniform_pair"),
-                        at("switch"),
+                        at("rfperm"),
+                        at("local"),
                         at("resid"),
-                        at("resid_po"),
                         at("oracle"),
                     )
                 )
@@ -207,14 +197,26 @@ def _fmt_board(learner, scenes):
 
 def write_md(summary, gate, learners, path):
     lines = [
-        "# Rolling PO-learner refit (RF / XGBoost / MLP)",
+        "# Gated online-RF √po_risk0 vs PO-tail localization",
         "",
-        "Not Ridge. Same family for the DR PO-learner, the residual gate,",
-        "and the next-batch predictor: `rf` (80 trees, depth 6), `xgb`",
-        "(80 rounds, depth 4), `mlp` (32-16, standardized).",
-        "Residual denominator is **K-fold CV MSE** on 上一批 (trees overfit",
-        "train residuals). Uniform stays the default; re-adjust only when",
-        f"batches are clearly different (`gate_PO={gate}`, `gate_res=2`).",
+        "Probe is the shallow IPTW RF (`n_estimators=20`, `max_depth=4`)",
+        "on 上一批 as T=0. Instance `po_risk0` is `|Y−μ0(X)|` mixed with the",
+        "batch gap (`instance_po_risk`, mix=0.5). The next-batch model is",
+        f"`rf` / `xgb` / `mlp` (not Ridge). Gate γ={gate}:",
+        "",
+        "`e_now = err(μ0 fit B_{t-1} → B_t)`, "
+        "`e_prev = err(μ0 fit B_{t-2} → B_{t-1})`",
+        "",
+        "Fire only if `e_now / e_prev ≥ γ` (skip first hop). In-sample",
+        "`e1>e0` would fire every hop on trees — do not use it.",
+        "",
+        "- **uniform_pair**: last two batches, w=1 (default).",
+        "- **rfperm**: on fire, train current batch with `w=√po_risk0`.",
+        "- **local**: same gate; train the high-`po_risk0` tail (`q=0.3`).",
+        "- **resid**: consecutive residual hop-gate (full learner MSE).",
+        "- **oracle**: knows the concept cut (train-set upper bound).",
+        "",
+        "Always-on DRE / always-on √PO are off this board.",
         "",
         "## Board (next-batch MSE)",
         "",
@@ -222,12 +224,11 @@ def write_md(summary, gate, learners, path):
     for learner in learners:
         lines.extend(_fmt_board(learner, summary[learner]))
     lines += [
-        "- **similar / covariate**: `P(Y|X)` stable → uniform slightly better.",
-        "- **resid**: residual hop-gate drops the old batch; should track oracle",
-        "  after the cut is observed.",
-        "- **resid_po**: same train-set switch plus √PO. Often a wash vs resid.",
-        "- **gated_pair / switch**: PO-ratio gate; misses a global map flip.",
-        "- **dre_hop**: X-only; overreacts to covariate hops.",
+        "- **similar / covariate**: `P(Y|X)` stable → uniform; rfperm/local",
+        "  should stay quiet.",
+        "- **concept**: fire at the cut hop, then drop the old batch.",
+        "- **local** vs **rfperm**: same gate; localization keeps the high-PO",
+        "  tail instead of IPTW on the whole new batch.",
         "",
     ]
     path = Path(path)
@@ -238,30 +239,31 @@ def write_md(summary, gate, learners, path):
 
 def write_tex(summary, gate, learners, path):
     lines = [
-        r"% Rolling PO-learner refit. Auto-generated. RF / XGB / MLP, not Ridge.",
+        r"% Gated online-RF sqrt(po_risk0) vs PO-tail localization.",
     ]
     for learner in learners:
         lines += [
             r"\begin{table}[ht]\centering",
             r"\caption{Next-batch MSE with \texttt{%s}. Uniform default." % learner,
-            r"Residual gate uses CV MSE on the previous batch. $\gamma_{\mathrm{PO}}=%.2f$.}"
-            % gate,
+            r"RFPerm fires on consecutive OOS probe jump "
+            r"$(\gamma=%.2f)$.}" % gate,
             r"\label{tab:po-refit-%s}" % learner,
             r"\small",
             r"\setlength{\tabcolsep}{3.5pt}",
-            r"\begin{tabular}{@{}lcccc@{}}\toprule",
-            r"Scene & unif-pair & resid & resid+PO & oracle \\",
+            r"\begin{tabular}{@{}lccccc@{}}\toprule",
+            r"Scene & unif-pair & rfperm & local & resid & oracle \\",
             r"\midrule",
         ]
         for scene, cell in summary[learner].items():
             m = cell["methods"]
             lines.append(
-                r"%s & $%.3f$ & $%.3f$ & $%.3f$ & $%.3f$ \\"
+                r"%s & $%.3f$ & $%.3f$ & $%.3f$ & $%.3f$ & $%.3f$ \\"
                 % (
                     scene,
                     m["uniform_pair"]["mse_mean"],
+                    m["rfperm"]["mse_mean"],
+                    m["local"]["mse_mean"],
                     m["resid"]["mse_mean"],
-                    m["resid_po"]["mse_mean"],
                     m["oracle"]["mse_mean"],
                 )
             )
@@ -278,10 +280,10 @@ def main():
     ap.add_argument("--n-batches", type=int, default=8)
     ap.add_argument("--n-per", type=int, default=100)
     ap.add_argument("--p", type=int, default=12)
-    ap.add_argument("--gate", type=float, default=1.25)
+    ap.add_argument("--gate", type=float, default=1.5)
     ap.add_argument(
         "--learners",
-        default="rf,xgb,mlp",
+        default="rf,xgb",
         help="comma list: rf, xgb, mlp",
     )
     args = ap.parse_args()
