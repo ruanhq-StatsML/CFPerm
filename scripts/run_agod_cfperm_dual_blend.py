@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CFPerm-gated dual/blend (v8) — L0 = CFPerm DRPerm, not OnlineRFPerm.
+"""CFPerm-gated dual/blend v8.1 — multi-seed + Jaccard(CFPerm, RFPerm).
 
 Stack
 -----
@@ -9,8 +9,8 @@ L2  shape: hard_support / soft CV / blend(mix)
 L3  policy: dual | hard_m | blend_50
 
   PYTHONPATH=. python3 scripts/run_agod_cfperm_dual_blend.py \\
-    --datasets metro_interstate beijing_pm25 stocks_AAPL \\
-    --n-batches 20 --batch-size 128 --n-perm 21
+    --datasets metro_interstate beijing_pm25 stocks_AAPL stocks_MSFT stocks_IWM waymo_proxy \\
+    --n-batches 40 --batch-size 256 --n-perm 39 --seeds 0 1 2 --jaccard-rfperm
 """
 from __future__ import annotations
 
@@ -40,10 +40,19 @@ from agod.obs_po_weights import (
     gated_obs_po_weights,
     hard_subset_mask,
 )
+from agod.online_rfperm import fit_online_rfperm, update_online_rfperm
 from agod.po_refit import build_recent_ood_windows, refit_po_on_windows
 from agod.sig_batch_metrics import annotate_results_with_sig
 from agod.stream_packs import LOADERS, load_stocks
 
+DEFAULT_DATASETS = (
+    "metro_interstate",
+    "beijing_pm25",
+    "stocks_AAPL",
+    "stocks_MSFT",
+    "stocks_IWM",
+    "waymo_proxy",
+)
 MODES: Tuple[str, ...] = ("uniform", "hard_m", "dual", "blend_50")
 COLORS = {
     "uniform": "#4C566A",
@@ -57,9 +66,11 @@ def ensure_loaders() -> None:
     for t in ("MSFT", "IWM", "AAPL", "SPY", "QQQ"):
         key = f"stocks_{t}"
         if key not in LOADERS:
-            LOADERS[key] = (
-                lambda tk: (lambda root, max_n=20000: load_stocks(root, tk, max_n))
-            )(t)
+
+            def _mk(tk: str):
+                return lambda root, max_n=20000: load_stocks(root, tk, max_n)
+
+            LOADERS[key] = _mk(t)
 
 
 def load_xy(name: str, root: Path, max_n: int = 20000):
@@ -103,7 +114,6 @@ def precompute_gates(
     n_perm: int,
     risk: str,
 ) -> List[dict]:
-    """Run CFPerm once per timestep (shared across L2/L3 modes)."""
     cache: List[dict] = []
     for t in range(1, len(stream)):
         Xc, yc = stream[t]
@@ -132,6 +142,7 @@ def precompute_gates(
             n_perm=n_perm,
             alpha=alpha,
             seed=seed + 17 * t,
+            e_mode="known",
         )
         lam, is_bj = cfperm_intensity_to_temper(gate.intensity)
         cache.append(
@@ -148,6 +159,30 @@ def precompute_gates(
             }
         )
     return cache
+
+
+def rfperm_reject_mask(
+    stream, *, n_burn: int, alpha: float, seed: int
+) -> np.ndarray:
+    X0, y0 = stream[0]
+    state = fit_online_rfperm(X0, y0, seed=seed)
+    out: List[int] = []
+    for t in range(1, len(stream)):
+        Xc, yc = stream[t]
+        burn = t <= n_burn
+        step = update_online_rfperm(
+            state, Xc, yc, burn_in=burn, alpha=alpha, ewma=True, fdr="alpha_investing"
+        )
+        out.append(int(bool(step["reject"]) and not burn))
+    return np.asarray(out, int)
+
+
+def jaccard_binary(a, b) -> float:
+    a = np.asarray(a, bool)
+    b = np.asarray(b, bool)
+    inter = int(np.sum(a & b))
+    union = int(np.sum(a | b))
+    return float(inter / union) if union else float("nan")
 
 
 def run_mode(
@@ -176,7 +211,6 @@ def run_mode(
         if step["burn"]:
             gate_on.append(0)
             w = np.ones(len(yc), float)
-            fam = "burn"
         else:
             rejected = bool(step["reject"])
             gate_on.append(int(rejected))
@@ -188,7 +222,6 @@ def run_mode(
 
             if mode == "uniform" or not rejected:
                 w = np.ones(len(yc), float)
-                fam = "uniform"
             else:
                 po = refit_po_on_windows(windows, seed=seed + t, blend_mu_gap=0.25)
                 use_hard = mode == "hard_m" or (
@@ -203,7 +236,7 @@ def run_mode(
                         topk_frac=hard_frac,
                         boost_max=3.0,
                     )
-                    fam = "hard_support"
+                    fams.append("hard_support")
                 elif mode == "dual":
                     cap = max(lam, 0.15)
                     sel = cv_select_power(
@@ -217,19 +250,18 @@ def run_mode(
                         objective="all",
                     )
                     w = np.asarray(sel["weights"], float)
-                    fam = f"cv_PO^{float(sel['power']):g}"
-                else:  # blend_50 beijing
+                    fams.append(f"cv_PO^{float(sel['power']):g}")
+                else:
                     w = blend_hard_qrt_weights(
                         po, lam=max(lam, 0.25), mix=0.5, topk_frac=hard_frac
                     )
-                    fam = "blend_50"
+                    fams.append("blend_50")
 
                 Xr = np.vstack([windows.X_recent, windows.X_ood])
                 yr = np.concatenate([windows.y_recent, windows.y_ood])
                 mu_o = fit_rf(Xr, yr, np.ones(len(yr)), seed + 11 + t)
                 truth = np.abs(yc - mu_o.predict(Xc))
                 hard_rows.append({"po": hard_rank_metrics(po, truth)})
-                fams.append(fam)  # reject-only family (skip uniform/burn)
 
         model = fit_rf(Xc, yc, w, seed + t)
         if t + 1 < len(stream):
@@ -291,6 +323,8 @@ def run_dataset(name, root, **kw) -> dict:
     seed = kw["seed"]
     hard_frac = kw.pop("hard_frac")
     cv_folds = kw.pop("cv_folds")
+    jaccard_rfperm = bool(kw.pop("jaccard_rfperm", False))
+
     X, y = load_xy(name, root)
     X = pca_fit(X, pca_d, seed)
     stream = make_stream(X, y, batch_size, n_batches)
@@ -305,12 +339,7 @@ def run_dataset(name, root, **kw) -> dict:
     )
     results = {
         mode: run_mode(
-            stream,
-            mode,
-            seed,
-            gate_cache,
-            hard_frac=hard_frac,
-            cv_folds=cv_folds,
+            stream, mode, seed, gate_cache, hard_frac=hard_frac, cv_folds=cv_folds
         )
         for mode in MODES
     }
@@ -328,12 +357,96 @@ def run_dataset(name, root, **kw) -> dict:
             mh = np.asarray(r["mse_next_hard"], float)[: len(gate)]
             if len(mh) == len(gate):
                 r["mse_hard_mean_sig"] = float(mh[gate].mean())
+
+    jaccard = float("nan")
+    rfperm_duty = float("nan")
+    if jaccard_rfperm:
+        cf = np.asarray(results["dual"]["gate_on"], int)
+        rf = rfperm_reject_mask(
+            stream, n_burn=kw["n_burn"], alpha=kw["alpha"], seed=seed
+        )
+        n = min(len(cf), len(rf))
+        jaccard = jaccard_binary(cf[:n], rf[:n])
+        rfperm_duty = float(np.mean(rf[:n])) if n else float("nan")
+
     return {
         "dataset": name,
         "results": results,
         "duty": results["dual"]["duty"],
         "intensity_mean": results["dual"]["intensity_mean"],
         "beijing_frac": results["dual"]["beijing_frac"],
+        "jaccard_cfperm_rfperm": jaccard,
+        "rfperm_duty": rfperm_duty,
+        "seed": seed,
+    }
+
+
+def _nanmean(xs: List[float]) -> float:
+    arr = np.asarray(xs, float)
+    arr = arr[np.isfinite(arr)]
+    return float(arr.mean()) if len(arr) else float("nan")
+
+
+def average_seed_blobs(blobs: List[dict]) -> dict:
+    if len(blobs) == 1:
+        out = dict(blobs[0])
+        out["n_seeds"] = 1
+        out["seeds"] = [blobs[0].get("seed")]
+        return out
+    name = blobs[0]["dataset"]
+    results: Dict[str, dict] = {}
+    for mode in MODES:
+        keys = [
+            "mse_mean",
+            "mse_hard_mean",
+            "mse_mean_sig",
+            "mse_hard_mean_sig",
+            "duty",
+            "intensity_mean",
+            "lam_mean",
+            "beijing_frac",
+            "n_reject",
+            "rel_mse_vs_uniform_sig",
+        ]
+        agg = {
+            k: _nanmean([b["results"][mode].get(k, float("nan")) for b in blobs])
+            for k in keys
+        }
+        fams = [b["results"][mode].get("family_mode", "—") for b in blobs]
+        vals, counts = np.unique(np.asarray(fams), return_counts=True)
+        agg["family_mode"] = str(vals[int(np.argmax(counts))])
+        agg["gate_on"] = blobs[0]["results"][mode].get("gate_on", [])
+        agg["mse_next"] = blobs[0]["results"][mode].get("mse_next", [])
+        sp = [
+            b["results"][mode].get("hard_po", {}).get("spearman", float("nan"))
+            for b in blobs
+        ]
+        pk = [
+            b["results"][mode].get("hard_po", {}).get("precision_at_k", float("nan"))
+            for b in blobs
+        ]
+        agg["hard_po"] = {
+            "spearman": _nanmean(sp),
+            "precision_at_k": _nanmean(pk),
+            "n": int(
+                np.nansum(
+                    [b["results"][mode].get("hard_po", {}).get("n", 0) for b in blobs]
+                )
+            ),
+        }
+        results[mode] = agg
+    return {
+        "dataset": name,
+        "results": results,
+        "duty": results["dual"]["duty"],
+        "intensity_mean": results["dual"]["intensity_mean"],
+        "beijing_frac": results["dual"]["beijing_frac"],
+        "jaccard_cfperm_rfperm": _nanmean(
+            [b.get("jaccard_cfperm_rfperm", float("nan")) for b in blobs]
+        ),
+        "rfperm_duty": _nanmean([b.get("rfperm_duty", float("nan")) for b in blobs]),
+        "n_seeds": len(blobs),
+        "seeds": [b.get("seed") for b in blobs],
     }
 
 
@@ -343,8 +456,11 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
             return "—"
         return f"{100 * v:+.1f}%" if pct else f"{v:.4g}"
 
+    n_seeds = max((blob.get("n_seeds", 1) for blob in all_ds.values()), default=1)
     lines = [
-        "# CFPerm-gated dual/blend (v8)",
+        "# CFPerm-gated dual/blend (v8.1 multi-seed)",
+        "",
+        f"_Mean over **{n_seeds}** seed(s). L0 = CFPerm DRPerm (`e_mode=known`)._",
         "",
         "## Gate = CFPerm subset (not OnlineRFPerm)",
         "",
@@ -368,7 +484,7 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
             f"- mean p null/alt = {f(synth['mean_p_null'])} / {f(synth['mean_p_alt'])}",
             f"- mean T null/alt = {f(synth['mean_stat_null'])} / {f(synth['mean_stat_alt'])}",
             "",
-            "DGP: concept drift (batch-1 β scaled + label offset); evaluate size≈α, power↑.",
+            "DGP: concept drift; evaluate size≈α, power↑.",
             "",
         ]
     lines += [
@@ -444,17 +560,33 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
             f"{f(rel('blend_50'), pct=True)} | {f(r['dual']['duty'])} |"
         )
 
+    if any(
+        np.isfinite(blob.get("jaccard_cfperm_rfperm", float("nan")))
+        for blob in all_ds.values()
+    ):
+        lines += [
+            "",
+            "## Jaccard(CFPerm reject, OnlineRFPerm reject)",
+            "",
+            "| dataset | Jaccard | CFPerm duty | RFPerm duty |",
+            "|---|---:|---:|---:|",
+        ]
+        for ds, blob in all_ds.items():
+            lines.append(
+                f"| `{ds}` | {f(blob.get('jaccard_cfperm_rfperm'))} | "
+                f"{f(blob['results']['dual']['duty'])} | "
+                f"{f(blob.get('rfperm_duty'))} |"
+            )
+
     lines += [
         "",
         "### Estimate / evaluate checklist",
         "",
         "1. **L0 estimate**: DRPerm on (recent, current); get p, T, reject.",
-        "2. **L0 evaluate**: synthetic size/power; stream duty (should be selective).",
-        "3. **L1 estimate**: intensity from CFPerm (p, T, PO-gap) → λ / beijing.",
+        "2. **L0 evaluate**: synthetic size/power; stream duty (selective).",
+        "3. **L1 estimate**: intensity → λ / beijing.",
         "4. **L2/L3 evaluate**: sig-only hard-subset + pack MSE; calm ≈ uniform.",
-        "",
-        "Other CFPerm pieces (not L0): RRPerm risk; VIMP (permuCATE/LOCO/GRF) for",
-        "which features drive the shift after reject.",
+        "5. **Ablation**: Jaccard(CFPerm, RFPerm) reject sets.",
         "",
         "See `docs/agod/AGOD_cfperm_dual_blend.md`.",
         "",
@@ -465,36 +597,30 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", type=Path, default=Path("."))
-    ap.add_argument(
-        "--datasets",
-        nargs="+",
-        default=["metro_interstate", "beijing_pm25", "stocks_AAPL", "stocks_MSFT"],
-    )
-    ap.add_argument("--batch-size", type=int, default=128)
-    ap.add_argument("--n-batches", type=int, default=20)
+    ap.add_argument("--datasets", nargs="+", default=list(DEFAULT_DATASETS))
+    ap.add_argument("--batch-size", type=int, default=256)
+    ap.add_argument("--n-batches", type=int, default=40)
     ap.add_argument("--pca-d", type=int, default=12)
     ap.add_argument("--n-burn", type=int, default=4)
     ap.add_argument("--alpha", type=float, default=0.05)
     ap.add_argument("--n-recent", type=int, default=1)
     ap.add_argument("--cv-folds", type=int, default=3)
-    ap.add_argument(
-        "--n-perm",
-        type=int,
-        default=39,
-        help="Permutations for CFPerm. Need 1/(n_perm+1) < alpha or reject is impossible.",
-    )
+    ap.add_argument("--n-perm", type=int, default=39)
     ap.add_argument("--risk", choices=["dr", "rr"], default="dr")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--seeds", type=int, nargs="+", default=None)
+    ap.add_argument("--jaccard-rfperm", action="store_true")
     ap.add_argument("--skip-synth", action="store_true")
     ap.add_argument("--out", type=Path, default=Path("results/agod_cfperm_dual_blend"))
     args = ap.parse_args()
-    # Discrete permutation p-values: min p = 1/(n_perm+1). Must be < alpha.
+    seeds = list(args.seeds) if args.seeds else [args.seed]
+
     min_p = 1.0 / (args.n_perm + 1)
     if min_p >= args.alpha:
         need = int(np.ceil(1.0 / args.alpha - 1.0))
         raise SystemExit(
             f"n_perm={args.n_perm} → min p={min_p:.4f} >= alpha={args.alpha}; "
-            f"use n_perm>={need} (e.g. 39 for alpha=0.05)."
+            f"use n_perm>={need}."
         )
     args.out.mkdir(parents=True, exist_ok=True)
 
@@ -527,30 +653,47 @@ def main() -> None:
 
     all_ds: Dict[str, dict] = {}
     for name in args.datasets:
-        print(f"=== {name} ===", flush=True)
-        try:
-            blob = run_dataset(
-                name,
-                args.root,
-                seed=args.seed,
-                batch_size=args.batch_size,
-                n_batches=args.n_batches,
-                pca_d=args.pca_d,
-                n_burn=args.n_burn,
-                alpha=args.alpha,
-                n_recent=args.n_recent,
-                hard_frac=0.2,
-                cv_folds=args.cv_folds,
-                n_perm=args.n_perm,
-                risk=args.risk,
+        print(f"=== {name} seeds={seeds} ===", flush=True)
+        seed_blobs: List[dict] = []
+        for sd in seeds:
+            try:
+                blob = run_dataset(
+                    name,
+                    args.root,
+                    seed=sd,
+                    batch_size=args.batch_size,
+                    n_batches=args.n_batches,
+                    pca_d=args.pca_d,
+                    n_burn=args.n_burn,
+                    alpha=args.alpha,
+                    n_recent=args.n_recent,
+                    hard_frac=0.2,
+                    cv_folds=args.cv_folds,
+                    n_perm=args.n_perm,
+                    risk=args.risk,
+                    jaccard_rfperm=args.jaccard_rfperm,
+                )
+            except Exception as e:
+                print(f"  [skip] seed={sd}: {e}", flush=True)
+                continue
+            seed_blobs.append(blob)
+            jv = blob.get("jaccard_cfperm_rfperm", float("nan"))
+            print(
+                "  seed={}: duty={:.2f} inten={:.3f} jacc={}".format(
+                    sd,
+                    blob["results"]["dual"]["duty"],
+                    blob["results"]["dual"]["intensity_mean"],
+                    f"{jv:.3f}" if np.isfinite(jv) else "—",
+                ),
+                flush=True,
             )
-        except Exception as e:
-            print(f"[skip] {name}: {e}", flush=True)
+        if not seed_blobs:
             continue
+        blob = average_seed_blobs(seed_blobs)
         all_ds[name] = blob
         r = blob["results"]
         print(
-            "  duty={:.2f} inten={:.3f} | pack ".format(
+            "  mean duty={:.2f} inten={:.3f} | pack ".format(
                 r["dual"]["duty"], r["dual"]["intensity_mean"]
             )
             + " ".join(
@@ -564,16 +707,42 @@ def main() -> None:
     (args.out / "CFPERM_DUAL_BLEND_REPORT.md").write_text(md, encoding="utf-8")
     Path("docs/agod").mkdir(parents=True, exist_ok=True)
     Path("docs/agod/AGOD_cfperm_dual_blend.md").write_text(md, encoding="utf-8")
+
+    slim = {}
+    for ds, blob in all_ds.items():
+        slim[ds] = {
+            "duty": blob["duty"],
+            "intensity_mean": blob["intensity_mean"],
+            "beijing_frac": blob["beijing_frac"],
+            "jaccard_cfperm_rfperm": blob.get("jaccard_cfperm_rfperm"),
+            "rfperm_duty": blob.get("rfperm_duty"),
+            "n_seeds": blob.get("n_seeds", 1),
+            "seeds": blob.get("seeds"),
+            "results": {
+                m: {
+                    k: v
+                    for k, v in blob["results"][m].items()
+                    if k not in ("mse_next", "mse_next_hard", "gate_on")
+                }
+                for m in blob["results"]
+            },
+        }
     payload = {
-        "version": 8,
+        "version": "8.1",
         "gate": "cfperm",
         "risk": args.risk,
         "n_perm": args.n_perm,
+        "seeds": seeds,
+        "jaccard_rfperm": args.jaccard_rfperm,
+        "batch_size": args.batch_size,
+        "n_batches": args.n_batches,
         "modes": list(MODES),
         "synth": synth,
-        "datasets": all_ds,
+        "datasets": slim,
     }
-    (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    (args.out / "summary.json").write_text(
+        json.dumps(payload, indent=2, default=str), encoding="utf-8"
+    )
 
     if all_ds:
         packs = list(all_ds.keys())
@@ -592,7 +761,7 @@ def main() -> None:
         ax.set_xticks(x)
         ax.set_xticklabels(packs, rotation=15, ha="right")
         ax.set_ylabel("sig pack MSE (↓)")
-        ax.set_title("CFPerm-gated dual/blend")
+        ax.set_title(f"CFPerm dual/blend (seeds={seeds})")
         ax.legend(fontsize=8)
         ax.grid(True, axis="y", alpha=0.3)
         fig.tight_layout()
