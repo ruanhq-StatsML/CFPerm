@@ -1,0 +1,8 @@
+name: cfperm
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - scikit-learn
+  - pytest
+  - flake8
