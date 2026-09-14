@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CFPerm-gated dual/blend v8.1 — multi-seed + Jaccard(CFPerm, RFPerm).
+"""CFPerm-gated dual/blend v8.3 — multi-seed + beijing_gate=0.25.
 
 Stack
 -----
