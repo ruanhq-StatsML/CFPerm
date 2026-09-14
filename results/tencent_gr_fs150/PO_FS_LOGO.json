@@ -1,0 +1,332 @@
+{
+  "n": 6000,
+  "p": 150,
+  "pos_rate": 0.15683333333333332,
+  "w1_rate": 0.5,
+  "clock": "seq_t_end median split",
+  "rf_domain_auc": 0.7530592105263157,
+  "po_risk": 0.001781584459810288,
+  "family_n": {
+    "attr": 5,
+    "cross": 59,
+    "decay": 7,
+    "diversity": 4,
+    "funnel": 53,
+    "markov": 7,
+    "money": 11,
+    "session": 4
+  },
+  "rf_mass": {
+    "attr": 0.009527993208445716,
+    "cross": 0.345003454029675,
+    "decay": 0.048681033892884695,
+    "diversity": 0.0241003638447616,
+    "funnel": 0.3716515410233404,
+    "markov": 0.09205798956141269,
+    "money": 0.043451607650405094,
+    "session": 0.06552601678807458
+  },
+  "po_mass": {
+    "attr": 0.027336682606805635,
+    "cross": 0.4134969259567875,
+    "decay": 0.13355018018069253,
+    "diversity": 0.0,
+    "funnel": 0.28813237862593666,
+    "markov": 0.06640980418862,
+    "money": 0.0015610315764400277,
+    "session": 0.06951299686371765
+  },
+  "logo": {
+    "attr": {
+      "R_minus": 0.0018197310249813672,
+      "delta": -3.814656517107918e-05
+    },
+    "cross": {
+      "R_minus": 0.001903613287346665,
+      "delta": -0.00012202882753637703
+    },
+    "decay": {
+      "R_minus": 0.0018558521711062586,
+      "delta": -7.426771129597051e-05
+    },
+    "diversity": {
+      "R_minus": 0.0018103594551140182,
+      "delta": -2.8774995303730132e-05
+    },
+    "funnel": {
+      "R_minus": 0.0017725699959925,
+      "delta": 9.01446381778811e-06
+    },
+    "markov": {
+      "R_minus": 0.001838034332829768,
+      "delta": -5.6449873019479924e-05
+    },
+    "money": {
+      "R_minus": 0.0018602501463797095,
+      "delta": -7.866568656942144e-05
+    },
+    "session": {
+      "R_minus": 0.0017731710288349794,
+      "delta": 8.413430975308693e-06
+    }
+  },
+  "logo_share": {
+    "attr": 0.0,
+    "cross": 0.0,
+    "decay": 0.0,
+    "diversity": 0.0,
+    "funnel": 0.517243385248995,
+    "markov": 0.0,
+    "money": 0.0,
+    "session": 0.4827565573717314
+  },
+  "kendall": {
+    "po_vs_fscore": 0.04963467488482481,
+    "rfdomain_vs_fscore": 0.11469245646071208,
+    "po_vs_rfdomain": 0.38058289707831816
+  },
+  "top20_po": [
+    {
+      "rank": 1,
+      "name": "life_cnv_share",
+      "family": "funnel",
+      "po_vimp": 0.044801751559424924,
+      "fscore": 955.1276348195488
+    },
+    {
+      "rank": 2,
+      "name": "x_life_ctcvr__sess_bounce_rate",
+      "family": "cross",
+      "po_vimp": 0.03715270066295886,
+      "fscore": 554.039087715424
+    },
+    {
+      "rank": 3,
+      "name": "sess_depth_cnv_mean",
+      "family": "session",
+      "po_vimp": 0.03245650763673085,
+      "fscore": 973.4289935569008
+    },
+    {
+      "rank": 4,
+      "name": "dec_hl3d_dec_clk",
+      "family": "decay",
+      "po_vimp": 0.03046738009897385,
+      "fscore": 260.3718980202243
+    },
+    {
+      "rank": 5,
+      "name": "3d_clk_share",
+      "family": "funnel",
+      "po_vimp": 0.029821966605057756,
+      "fscore": 188.88225113339172
+    },
+    {
+      "rank": 6,
+      "name": "x_life_ctr__active_days",
+      "family": "cross",
+      "po_vimp": 0.028157203854344046,
+      "fscore": 215.3355444092338
+    },
+    {
+      "rank": 7,
+      "name": "sess_cnv_sess_rate",
+      "family": "session",
+      "po_vimp": 0.02748378439656322,
+      "fscore": 1001.0841463781658
+    },
+    {
+      "rank": 8,
+      "name": "dec_hl1d_dec_clk",
+      "family": "decay",
+      "po_vimp": 0.02646073162523206,
+      "fscore": 211.5742964265304
+    },
+    {
+      "rank": 9,
+      "name": "x_life_cvr__7d_ctr",
+      "family": "cross",
+      "po_vimp": 0.025874484692758142,
+      "fscore": 233.1058103763533
+    },
+    {
+      "rank": 10,
+      "name": "dec_hl7d_dec_clk",
+      "family": "decay",
+      "po_vimp": 0.02573456142833288,
+      "fscore": 257.7885397060182
+    },
+    {
+      "rank": 11,
+      "name": "dec_hl3d_dec_cnv",
+      "family": "decay",
+      "po_vimp": 0.023164802279321894,
+      "fscore": 734.4824557765164
+    },
+    {
+      "rank": 12,
+      "name": "attr_anyclk2cnv_min_std",
+      "family": "attr",
+      "po_vimp": 0.022325018689523548,
+      "fscore": 217.92484913170586
+    },
+    {
+      "rank": 13,
+      "name": "x_life_ctr__sess_n",
+      "family": "cross",
+      "po_vimp": 0.020469151911058036,
+      "fscore": 216.96674828305837
+    },
+    {
+      "rank": 14,
+      "name": "x_pay_cnt__active_days",
+      "family": "cross",
+      "po_vimp": 0.019541588474083164,
+      "fscore": 590.8276878876828
+    },
+    {
+      "rank": 15,
+      "name": "x_life_ctcvr__sess_n",
+      "family": "cross",
+      "po_vimp": 0.0178394827952662,
+      "fscore": 638.1449706358251
+    },
+    {
+      "rank": 16,
+      "name": "30d_cnv_share",
+      "family": "funnel",
+      "po_vimp": 0.017334230938563937,
+      "fscore": 857.1932554392523
+    },
+    {
+      "rank": 17,
+      "name": "x_life_ctr__attr_anyclk2cnv_min_p50",
+      "family": "cross",
+      "po_vimp": 0.016703825827096435,
+      "fscore": 241.20607409786058
+    },
+    {
+      "rank": 18,
+      "name": "trans_exp_to_clk",
+      "family": "markov",
+      "po_vimp": 0.0160488333712261,
+      "fscore": 199.96084090630313
+    },
+    {
+      "rank": 19,
+      "name": "14d_clk_share",
+      "family": "funnel",
+      "po_vimp": 0.015306078828128322,
+      "fscore": 227.76621639456266
+    },
+    {
+      "rank": 20,
+      "name": "trans_cnv_to_exp",
+      "family": "markov",
+      "po_vimp": 0.01482602242309023,
+      "fscore": 1086.6931851891777
+    }
+  ],
+  "top20_fscore": [
+    {
+      "rank": 1,
+      "name": "life_log1p_n_cnv",
+      "family": "funnel"
+    },
+    {
+      "rank": 2,
+      "name": "log1p_pay_cnt",
+      "family": "money"
+    },
+    {
+      "rank": 3,
+      "name": "log1p_abs_pay_cnt",
+      "family": "cross"
+    },
+    {
+      "rank": 4,
+      "name": "trans_cnv_to_exp",
+      "family": "markov"
+    },
+    {
+      "rank": 5,
+      "name": "trans_exp_to_cnv",
+      "family": "markov"
+    },
+    {
+      "rank": 6,
+      "name": "30d_log1p_n_cnv",
+      "family": "funnel"
+    },
+    {
+      "rank": 7,
+      "name": "item_entropy_cnv",
+      "family": "diversity"
+    },
+    {
+      "rank": 8,
+      "name": "sess_cnv_sess_rate",
+      "family": "session"
+    },
+    {
+      "rank": 9,
+      "name": "dec_hl7d_dec_cnv",
+      "family": "decay"
+    },
+    {
+      "rank": 10,
+      "name": "sess_depth_cnv_mean",
+      "family": "session"
+    },
+    {
+      "rank": 11,
+      "name": "life_cnv_share",
+      "family": "funnel"
+    },
+    {
+      "rank": 12,
+      "name": "30d_n_cnv",
+      "family": "funnel"
+    },
+    {
+      "rank": 13,
+      "name": "n_uniq_cnv_item",
+      "family": "diversity"
+    },
+    {
+      "rank": 14,
+      "name": "life_n_cnv",
+      "family": "funnel"
+    },
+    {
+      "rank": 15,
+      "name": "pay_cnt",
+      "family": "money"
+    },
+    {
+      "rank": 16,
+      "name": "attr_cnv_wo_prior_clk_cnt",
+      "family": "attr"
+    },
+    {
+      "rank": 17,
+      "name": "ui_only_exp_share",
+      "family": "funnel"
+    },
+    {
+      "rank": 18,
+      "name": "ui_exp_per_item_mean",
+      "family": "funnel"
+    },
+    {
+      "rank": 19,
+      "name": "log1p_abs_life_ctcvr",
+      "family": "cross"
+    },
+    {
+      "rank": 20,
+      "name": "x_pay_cnt__sess_bounce_rate",
+      "family": "cross"
+    }
+  ]
+}

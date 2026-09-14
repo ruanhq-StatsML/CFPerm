@@ -1,0 +1,1191 @@
+{
+  "split": 0.5,
+  "min_exp": 3,
+  "B": 25,
+  "vimp_floor": 0.03,
+  "rf_domain_auc": 0.71546450255186,
+  "mixture": [
+    {
+      "name": "active_days",
+      "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+      "vimp": 0.16488012411313183,
+      "lo": 0.12489584307252843,
+      "hi": 0.1952389505978545,
+      "selected": 1,
+      "rank": 1
+    },
+    {
+      "name": "sess_cnv_sess_rate",
+      "logic": "\u591a\u5c11\u573a\u771f\u6b63\u6210\u4ea4",
+      "vimp": 0.13892840223375344,
+      "lo": 0.05353908234787244,
+      "hi": 0.1606739568379516,
+      "selected": 1,
+      "rank": 2
+    },
+    {
+      "name": "sess_depth_cnv_mean",
+      "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+      "vimp": 0.1337539968762222,
+      "lo": 0.05993660798187398,
+      "hi": 0.16419234019055426,
+      "selected": 1,
+      "rank": 3
+    },
+    {
+      "name": "ui_only_exp_share",
+      "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+      "vimp": 0.11673444070909195,
+      "lo": 0.06264090894658936,
+      "hi": 0.22020682262908695,
+      "selected": 1,
+      "rank": 4
+    },
+    {
+      "name": "life_cnv_share",
+      "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u4e70\u5360\u591a\u5927",
+      "vimp": 0.10488024450556238,
+      "lo": 0.06959138987978361,
+      "hi": 0.17682409453072853,
+      "selected": 1,
+      "rank": 5
+    },
+    {
+      "name": "dec_hl7d_dec_cnv",
+      "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+      "vimp": 0.050936530464114456,
+      "lo": 0.036144596766916476,
+      "hi": 0.13321289486234325,
+      "selected": 1,
+      "rank": 6
+    },
+    {
+      "name": "pay_cnt",
+      "logic": "\u91cf\uff1a\u5de6\u7a97\u6210\u4ea4\u6b21\u6570\uff08\u4e0d\u662f\u4eba\uff09",
+      "vimp": 0.04782762026136406,
+      "lo": 0.023036423504017793,
+      "hi": 0.09993665276122127,
+      "selected": 0,
+      "rank": 7
+    },
+    {
+      "name": "life_ctr",
+      "logic": "\u5de6\u7a97 CTR\uff08\u8fc7\u53bb\u70b9\u7387 \u2192 \u53f3\u7a97\uff0c\u4e0d\u662f\u6cc4\u6f0f\uff09",
+      "vimp": 0.04537002675779489,
+      "lo": 0.030000833172769893,
+      "hi": 0.0728146352250938,
+      "selected": 1,
+      "rank": 8
+    },
+    {
+      "name": "dec_hl7d_dec_clk",
+      "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+      "vimp": 0.04357740900894152,
+      "lo": 0.027454042806036,
+      "hi": 0.04947590022128942,
+      "selected": 0,
+      "rank": 9
+    },
+    {
+      "name": "life_n_exp",
+      "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+      "vimp": 0.04346195044427321,
+      "lo": 0.03471450377157011,
+      "hi": 0.07099189103938647,
+      "selected": 1,
+      "rank": 10
+    },
+    {
+      "name": "hist_len",
+      "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+      "vimp": 0.039625923547080284,
+      "lo": 0.026111519066221403,
+      "hi": 0.0557051543068397,
+      "selected": 0,
+      "rank": 11
+    },
+    {
+      "name": "life_clk_share",
+      "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+      "vimp": 0.030208009112381782,
+      "lo": 0.021786563747373564,
+      "hi": 0.05768219340861038,
+      "selected": 0,
+      "rank": 12
+    },
+    {
+      "name": "sess_bounce_rate",
+      "logic": "\u573a\u788e",
+      "vimp": 0.022885323888221943,
+      "lo": 0.018544026308208575,
+      "hi": 0.041638513702096834,
+      "selected": 0,
+      "rank": 13
+    },
+    {
+      "name": "life_n_clk",
+      "logic": "\u91cf\uff1a\u5de6\u7a97\u70b9\u51fb\u6b21\u6570",
+      "vimp": 0.01692999807806626,
+      "lo": 0.005485390010159965,
+      "hi": 0.024887224595794077,
+      "selected": 0,
+      "rank": 14
+    }
+  ],
+  "targets": {
+    "n_clk": {
+      "ask": "\u53f3\u7a97\u70b9\u4e86\u51e0\u6b21\uff08\u91cf\uff09",
+      "kind": "count",
+      "n": 6000,
+      "mean": 1.131,
+      "po_risk_desc": 0.03226492057916372,
+      "top": [
+        {
+          "name": "dec_hl7d_dec_clk",
+          "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+          "vimp": 0.23059290046330705,
+          "lo": 0.1313953223265895,
+          "hi": 0.4409284440973296,
+          "selected": 1,
+          "rank": 1
+        },
+        {
+          "name": "life_clk_share",
+          "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+          "vimp": 0.16235098030599557,
+          "lo": 0.06444719013055589,
+          "hi": 0.19172213391999476,
+          "selected": 1,
+          "rank": 2
+        },
+        {
+          "name": "sess_bounce_rate",
+          "logic": "\u573a\u788e",
+          "vimp": 0.1014744828439388,
+          "lo": 0.04431034065083354,
+          "hi": 0.1742130255281833,
+          "selected": 1,
+          "rank": 3
+        },
+        {
+          "name": "life_ctr",
+          "logic": "\u5de6\u7a97 CTR\uff08\u8fc7\u53bb\u70b9\u7387 \u2192 \u53f3\u7a97\uff0c\u4e0d\u662f\u6cc4\u6f0f\uff09",
+          "vimp": 0.07971267323282341,
+          "lo": 0.03866852364926726,
+          "hi": 0.14362530025817777,
+          "selected": 1,
+          "rank": 4
+        },
+        {
+          "name": "active_days",
+          "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+          "vimp": 0.06342827736011408,
+          "lo": 0.027137541000338654,
+          "hi": 0.1128001570869974,
+          "selected": 0,
+          "rank": 5
+        },
+        {
+          "name": "life_n_exp",
+          "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+          "vimp": 0.04837028384164363,
+          "lo": 0.014915062600437286,
+          "hi": 0.09621035317117237,
+          "selected": 0,
+          "rank": 6
+        },
+        {
+          "name": "dec_hl7d_dec_cnv",
+          "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+          "vimp": 0.04800544965232589,
+          "lo": 0.01242256047438193,
+          "hi": 0.08786202024080263,
+          "selected": 0,
+          "rank": 7
+        },
+        {
+          "name": "hist_len",
+          "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+          "vimp": 0.046390092845099345,
+          "lo": 0.017885491359625718,
+          "hi": 0.10237320725878955,
+          "selected": 0,
+          "rank": 8
+        }
+      ]
+    },
+    "ctr": {
+      "ask": "\u53f3\u7a97\u6bcf\u6b21\u66dd\u5149\u540e\u70b9\u7684\u6bd4\u4f8b",
+      "kind": "rate",
+      "n": 5923,
+      "mean": 0.038658979178024876,
+      "po_risk_desc": 5.139442111366709e-05,
+      "top": [
+        {
+          "name": "dec_hl7d_dec_clk",
+          "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+          "vimp": 0.34869690168978074,
+          "lo": 0.12114973916919175,
+          "hi": 0.49101346505565036,
+          "selected": 1,
+          "rank": 1
+        },
+        {
+          "name": "life_clk_share",
+          "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+          "vimp": 0.12098316438845545,
+          "lo": 0.06542587838405914,
+          "hi": 0.19456596297524542,
+          "selected": 1,
+          "rank": 2
+        },
+        {
+          "name": "ui_only_exp_share",
+          "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+          "vimp": 0.10128282959230255,
+          "lo": 0.03101312544235914,
+          "hi": 0.1380345319818354,
+          "selected": 1,
+          "rank": 3
+        },
+        {
+          "name": "sess_bounce_rate",
+          "logic": "\u573a\u788e",
+          "vimp": 0.07690747774290768,
+          "lo": 0.04676753163061189,
+          "hi": 0.16959565192290138,
+          "selected": 1,
+          "rank": 4
+        },
+        {
+          "name": "active_days",
+          "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+          "vimp": 0.06591872731845784,
+          "lo": 0.022007687277717108,
+          "hi": 0.12587089958809816,
+          "selected": 0,
+          "rank": 5
+        },
+        {
+          "name": "life_ctr",
+          "logic": "\u5de6\u7a97 CTR\uff08\u8fc7\u53bb\u70b9\u7387 \u2192 \u53f3\u7a97\uff0c\u4e0d\u662f\u6cc4\u6f0f\uff09",
+          "vimp": 0.06302442080405052,
+          "lo": 0.03650491204725173,
+          "hi": 0.1377675754971275,
+          "selected": 1,
+          "rank": 6
+        },
+        {
+          "name": "life_n_exp",
+          "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+          "vimp": 0.03886091807142917,
+          "lo": 0.01424130691144842,
+          "hi": 0.07943914992707489,
+          "selected": 0,
+          "rank": 7
+        },
+        {
+          "name": "dec_hl7d_dec_cnv",
+          "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+          "vimp": 0.037704033119423705,
+          "lo": 0.01974696734413718,
+          "hi": 0.08641608798658253,
+          "selected": 0,
+          "rank": 8
+        }
+      ]
+    },
+    "n_cnv": {
+      "ask": "\u53f3\u7a97\u4e70\u4e86\u51e0\u6b21\uff08\u91cf\uff09",
+      "kind": "count",
+      "n": 6000,
+      "mean": 0.8393333333333334,
+      "po_risk_desc": 0.019260242737443155,
+      "top": [
+        {
+          "name": "sess_bounce_rate",
+          "logic": "\u573a\u788e",
+          "vimp": 0.14784330572384938,
+          "lo": 0.08377066252300691,
+          "hi": 0.2667309312761298,
+          "selected": 1,
+          "rank": 1
+        },
+        {
+          "name": "life_cnv_share",
+          "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u4e70\u5360\u591a\u5927",
+          "vimp": 0.12418973503219455,
+          "lo": 0.05599401513420131,
+          "hi": 0.16179860034998425,
+          "selected": 1,
+          "rank": 2
+        },
+        {
+          "name": "dec_hl7d_dec_cnv",
+          "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+          "vimp": 0.12102130708993465,
+          "lo": 0.08102517537369187,
+          "hi": 0.22348407910459064,
+          "selected": 1,
+          "rank": 3
+        },
+        {
+          "name": "hist_len",
+          "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+          "vimp": 0.09663324760771161,
+          "lo": 0.03790516775462616,
+          "hi": 0.15863120074737375,
+          "selected": 1,
+          "rank": 4
+        },
+        {
+          "name": "sess_cnv_sess_rate",
+          "logic": "\u591a\u5c11\u573a\u771f\u6b63\u6210\u4ea4",
+          "vimp": 0.0798294154344276,
+          "lo": 0.022532982887726805,
+          "hi": 0.1359084521023992,
+          "selected": 0,
+          "rank": 5
+        },
+        {
+          "name": "life_n_exp",
+          "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+          "vimp": 0.07877814969537349,
+          "lo": 0.038011004552856234,
+          "hi": 0.12428778135570573,
+          "selected": 1,
+          "rank": 6
+        },
+        {
+          "name": "sess_depth_cnv_mean",
+          "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+          "vimp": 0.0663082689683366,
+          "lo": 0.02596626815235756,
+          "hi": 0.10998852800684802,
+          "selected": 0,
+          "rank": 7
+        },
+        {
+          "name": "ui_only_exp_share",
+          "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+          "vimp": 0.059862418828740147,
+          "lo": 0.02808639593498182,
+          "hi": 0.09680615427129581,
+          "selected": 0,
+          "rank": 8
+        }
+      ]
+    },
+    "cvr": {
+      "ask": "\u53f3\u7a97\u70b9\u4e86\u4e4b\u540e\u4e70\u7684\u6bd4\u4f8b",
+      "kind": "rate",
+      "n": 2627,
+      "mean": 0.7366264555784026,
+      "po_risk_desc": 0.010995052157821697,
+      "top": [
+        {
+          "name": "dec_hl7d_dec_cnv",
+          "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+          "vimp": 0.18031672782857253,
+          "lo": 0.12571570142237487,
+          "hi": 0.22670697750227958,
+          "selected": 1,
+          "rank": 1
+        },
+        {
+          "name": "ui_only_exp_share",
+          "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+          "vimp": 0.13411273111028638,
+          "lo": 0.04935064920056331,
+          "hi": 0.1845835054762105,
+          "selected": 1,
+          "rank": 2
+        },
+        {
+          "name": "life_cnv_share",
+          "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u4e70\u5360\u591a\u5927",
+          "vimp": 0.1318393865900001,
+          "lo": 0.070951315273381,
+          "hi": 0.21613771670704035,
+          "selected": 1,
+          "rank": 3
+        },
+        {
+          "name": "sess_bounce_rate",
+          "logic": "\u573a\u788e",
+          "vimp": 0.10212862750106703,
+          "lo": 0.09380316257835,
+          "hi": 0.1819917454876857,
+          "selected": 1,
+          "rank": 4
+        },
+        {
+          "name": "active_days",
+          "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+          "vimp": 0.10172161012727442,
+          "lo": 0.03224120025330622,
+          "hi": 0.10103035627453075,
+          "selected": 1,
+          "rank": 5
+        },
+        {
+          "name": "life_n_exp",
+          "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+          "vimp": 0.07330082077135866,
+          "lo": 0.028402802268720204,
+          "hi": 0.08861525124974459,
+          "selected": 0,
+          "rank": 6
+        },
+        {
+          "name": "sess_depth_cnv_mean",
+          "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+          "vimp": 0.06887348358064745,
+          "lo": 0.022923023047739705,
+          "hi": 0.15165349248115917,
+          "selected": 0,
+          "rank": 7
+        },
+        {
+          "name": "pay_cnt",
+          "logic": "\u91cf\uff1a\u5de6\u7a97\u6210\u4ea4\u6b21\u6570\uff08\u4e0d\u662f\u4eba\uff09",
+          "vimp": 0.05697972976624806,
+          "lo": 0.009879939718660588,
+          "hi": 0.08810255457697012,
+          "selected": 0,
+          "rank": 8
+        }
+      ]
+    },
+    "any_cnv": {
+      "ask": "\u53f3\u7a97\u6709\u6ca1\u6709\u6210\u4ea4",
+      "kind": "binary",
+      "n": 6000,
+      "mean": 0.3525,
+      "po_risk_desc": 0.0015473167708066275,
+      "top": [
+        {
+          "name": "dec_hl7d_dec_clk",
+          "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+          "vimp": 0.1658809315307003,
+          "lo": 0.0900942886843776,
+          "hi": 0.2244843684373803,
+          "selected": 1,
+          "rank": 1
+        },
+        {
+          "name": "dec_hl7d_dec_cnv",
+          "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+          "vimp": 0.16025983459845683,
+          "lo": 0.080072712942053,
+          "hi": 0.22372569131636827,
+          "selected": 1,
+          "rank": 2
+        },
+        {
+          "name": "sess_bounce_rate",
+          "logic": "\u573a\u788e",
+          "vimp": 0.1231905492815419,
+          "lo": 0.08456855025181469,
+          "hi": 0.20232931719006156,
+          "selected": 1,
+          "rank": 3
+        },
+        {
+          "name": "hist_len",
+          "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+          "vimp": 0.06979991754587694,
+          "lo": 0.051257786336809545,
+          "hi": 0.1285582761683483,
+          "selected": 1,
+          "rank": 4
+        },
+        {
+          "name": "life_n_exp",
+          "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+          "vimp": 0.06945762034695077,
+          "lo": 0.03501167475105621,
+          "hi": 0.12450333445167046,
+          "selected": 1,
+          "rank": 5
+        },
+        {
+          "name": "active_days",
+          "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+          "vimp": 0.06837935666843006,
+          "lo": 0.041786108121650616,
+          "hi": 0.11197669479129749,
+          "selected": 1,
+          "rank": 6
+        },
+        {
+          "name": "life_clk_share",
+          "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+          "vimp": 0.059459505327769176,
+          "lo": 0.020054703032062464,
+          "hi": 0.08926041394708721,
+          "selected": 0,
+          "rank": 7
+        },
+        {
+          "name": "sess_depth_cnv_mean",
+          "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+          "vimp": 0.058424170548197686,
+          "lo": 0.025990019302575555,
+          "hi": 0.08596794807549314,
+          "selected": 0,
+          "rank": 8
+        }
+      ]
+    }
+  },
+  "cards": [
+    "mixture\u2229CTR \u9009\u4e2d = ['life_ctr', 'ui_only_exp_share']\uff1b\u53ea\u5728 mixture = ['active_days', 'dec_hl7d_dec_cnv', 'life_cnv_share', 'life_n_exp', 'sess_cnv_sess_rate', 'sess_depth_cnv_mean']\uff1b\u53ea\u5728 CTR = ['dec_hl7d_dec_clk', 'life_clk_share', 'sess_bounce_rate']\u3002",
+    "\u53ea\u88ab RF-domain \u9009\u4e2d\u7684\u5217\u5728\u56de\u7b54\u300c\u540e\u6765\u7684\u4eba\u662f\u8c01\u300d\uff08\u961f\u5217/tenure/\u91cf\uff09\uff0c\u4e0d\u662f\u300c\u7ed9\u5b9a\u8fd9\u4e9b\u4eba\u4e4b\u540e\u600e\u4e48\u70b9\u300d\u3002\u89e3\u8026\u7684\u5c31\u662f\u8fd9\u4e00\u5200\u3002",
+    "`pay_cnt` \u5728 mixture \u4e0b\u754c\u4e5f\u6ca1\u8fc7\u7ebf\uff1a\u8fd9\u6839\u65f6\u949f\u4e0a\u4eba\u8eab\u4e0a\u7684\u91cf\u66f4\u53ef\u80fd\u5728 `hist_len`/`life_n_exp`/`ui_only_exp_share`\u3002",
+    "`dec_hl7d_dec_clk` \u8fdb CTR \u56fe\uff1a\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6\uff0c\u4e0d\u662f lifetime \u5355\u91cf\u3002",
+    "`ui_only_exp_share` \u662f\u961f\u5217\uff08\u53ea\u66dd\u4e0d\u70b9\u8c01\u6765\u4e86\uff09\uff0c\u9ed8\u8ba4\u4e0d\u662f CTR \u673a\u5236\u3002"
+  ],
+  "targets_full": {
+    "n_clk": [
+      {
+        "name": "dec_hl7d_dec_clk",
+        "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+        "vimp": 0.23059290046330705,
+        "lo": 0.1313953223265895,
+        "hi": 0.4409284440973296,
+        "selected": 1,
+        "rank": 1
+      },
+      {
+        "name": "life_clk_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+        "vimp": 0.16235098030599557,
+        "lo": 0.06444719013055589,
+        "hi": 0.19172213391999476,
+        "selected": 1,
+        "rank": 2
+      },
+      {
+        "name": "sess_bounce_rate",
+        "logic": "\u573a\u788e",
+        "vimp": 0.1014744828439388,
+        "lo": 0.04431034065083354,
+        "hi": 0.1742130255281833,
+        "selected": 1,
+        "rank": 3
+      },
+      {
+        "name": "life_ctr",
+        "logic": "\u5de6\u7a97 CTR\uff08\u8fc7\u53bb\u70b9\u7387 \u2192 \u53f3\u7a97\uff0c\u4e0d\u662f\u6cc4\u6f0f\uff09",
+        "vimp": 0.07971267323282341,
+        "lo": 0.03866852364926726,
+        "hi": 0.14362530025817777,
+        "selected": 1,
+        "rank": 4
+      },
+      {
+        "name": "active_days",
+        "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+        "vimp": 0.06342827736011408,
+        "lo": 0.027137541000338654,
+        "hi": 0.1128001570869974,
+        "selected": 0,
+        "rank": 5
+      },
+      {
+        "name": "life_n_exp",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+        "vimp": 0.04837028384164363,
+        "lo": 0.014915062600437286,
+        "hi": 0.09621035317117237,
+        "selected": 0,
+        "rank": 6
+      },
+      {
+        "name": "dec_hl7d_dec_cnv",
+        "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+        "vimp": 0.04800544965232589,
+        "lo": 0.01242256047438193,
+        "hi": 0.08786202024080263,
+        "selected": 0,
+        "rank": 7
+      },
+      {
+        "name": "hist_len",
+        "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+        "vimp": 0.046390092845099345,
+        "lo": 0.017885491359625718,
+        "hi": 0.10237320725878955,
+        "selected": 0,
+        "rank": 8
+      },
+      {
+        "name": "ui_only_exp_share",
+        "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+        "vimp": 0.044354663191310886,
+        "lo": 0.03375068877003816,
+        "hi": 0.11552161300798534,
+        "selected": 1,
+        "rank": 9
+      },
+      {
+        "name": "pay_cnt",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u6210\u4ea4\u6b21\u6570\uff08\u4e0d\u662f\u4eba\uff09",
+        "vimp": 0.038958324954317065,
+        "lo": 0.005646194650754881,
+        "hi": 0.06126510258715813,
+        "selected": 0,
+        "rank": 10
+      },
+      {
+        "name": "sess_cnv_sess_rate",
+        "logic": "\u591a\u5c11\u573a\u771f\u6b63\u6210\u4ea4",
+        "vimp": 0.03817853405666461,
+        "lo": 0.007284484376948161,
+        "hi": 0.08107573323397044,
+        "selected": 0,
+        "rank": 11
+      },
+      {
+        "name": "life_cnv_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u4e70\u5360\u591a\u5927",
+        "vimp": 0.03471027543316562,
+        "lo": 0.009831787540185636,
+        "hi": 0.11110370929800771,
+        "selected": 0,
+        "rank": 12
+      },
+      {
+        "name": "life_n_clk",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u70b9\u51fb\u6b21\u6570",
+        "vimp": 0.031795455675350144,
+        "lo": 0.0,
+        "hi": 0.07455986191292366,
+        "selected": 0,
+        "rank": 13
+      },
+      {
+        "name": "sess_depth_cnv_mean",
+        "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+        "vimp": 0.031677606143943854,
+        "lo": 0.007230021223281165,
+        "hi": 0.08576963397904475,
+        "selected": 0,
+        "rank": 14
+      }
+    ],
+    "ctr": [
+      {
+        "name": "dec_hl7d_dec_clk",
+        "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+        "vimp": 0.34869690168978074,
+        "lo": 0.12114973916919175,
+        "hi": 0.49101346505565036,
+        "selected": 1,
+        "rank": 1
+      },
+      {
+        "name": "life_clk_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+        "vimp": 0.12098316438845545,
+        "lo": 0.06542587838405914,
+        "hi": 0.19456596297524542,
+        "selected": 1,
+        "rank": 2
+      },
+      {
+        "name": "ui_only_exp_share",
+        "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+        "vimp": 0.10128282959230255,
+        "lo": 0.03101312544235914,
+        "hi": 0.1380345319818354,
+        "selected": 1,
+        "rank": 3
+      },
+      {
+        "name": "sess_bounce_rate",
+        "logic": "\u573a\u788e",
+        "vimp": 0.07690747774290768,
+        "lo": 0.04676753163061189,
+        "hi": 0.16959565192290138,
+        "selected": 1,
+        "rank": 4
+      },
+      {
+        "name": "active_days",
+        "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+        "vimp": 0.06591872731845784,
+        "lo": 0.022007687277717108,
+        "hi": 0.12587089958809816,
+        "selected": 0,
+        "rank": 5
+      },
+      {
+        "name": "life_ctr",
+        "logic": "\u5de6\u7a97 CTR\uff08\u8fc7\u53bb\u70b9\u7387 \u2192 \u53f3\u7a97\uff0c\u4e0d\u662f\u6cc4\u6f0f\uff09",
+        "vimp": 0.06302442080405052,
+        "lo": 0.03650491204725173,
+        "hi": 0.1377675754971275,
+        "selected": 1,
+        "rank": 6
+      },
+      {
+        "name": "life_n_exp",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+        "vimp": 0.03886091807142917,
+        "lo": 0.01424130691144842,
+        "hi": 0.07943914992707489,
+        "selected": 0,
+        "rank": 7
+      },
+      {
+        "name": "dec_hl7d_dec_cnv",
+        "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+        "vimp": 0.037704033119423705,
+        "lo": 0.01974696734413718,
+        "hi": 0.08641608798658253,
+        "selected": 0,
+        "rank": 8
+      },
+      {
+        "name": "hist_len",
+        "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+        "vimp": 0.03218511692698538,
+        "lo": 0.017805775849295408,
+        "hi": 0.08819705112411114,
+        "selected": 0,
+        "rank": 9
+      },
+      {
+        "name": "pay_cnt",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u6210\u4ea4\u6b21\u6570\uff08\u4e0d\u662f\u4eba\uff09",
+        "vimp": 0.03131522727763632,
+        "lo": 0.003040553450702794,
+        "hi": 0.0685377657913473,
+        "selected": 0,
+        "rank": 10
+      },
+      {
+        "name": "life_cnv_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u4e70\u5360\u591a\u5927",
+        "vimp": 0.029055271292925067,
+        "lo": 0.012402601940201126,
+        "hi": 0.06884658611856134,
+        "selected": 0,
+        "rank": 11
+      },
+      {
+        "name": "sess_depth_cnv_mean",
+        "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+        "vimp": 0.023910237385308987,
+        "lo": 0.00662895350716443,
+        "hi": 0.04912744042799717,
+        "selected": 0,
+        "rank": 12
+      },
+      {
+        "name": "sess_cnv_sess_rate",
+        "logic": "\u591a\u5c11\u573a\u771f\u6b63\u6210\u4ea4",
+        "vimp": 0.0210574418680241,
+        "lo": 0.00623440818013601,
+        "hi": 0.07634118437321767,
+        "selected": 0,
+        "rank": 13
+      },
+      {
+        "name": "life_n_clk",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u70b9\u51fb\u6b21\u6570",
+        "vimp": 0.00909823252231278,
+        "lo": 0.002015968219052752,
+        "hi": 0.06358994237854387,
+        "selected": 0,
+        "rank": 14
+      }
+    ],
+    "n_cnv": [
+      {
+        "name": "sess_bounce_rate",
+        "logic": "\u573a\u788e",
+        "vimp": 0.14784330572384938,
+        "lo": 0.08377066252300691,
+        "hi": 0.2667309312761298,
+        "selected": 1,
+        "rank": 1
+      },
+      {
+        "name": "life_cnv_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u4e70\u5360\u591a\u5927",
+        "vimp": 0.12418973503219455,
+        "lo": 0.05599401513420131,
+        "hi": 0.16179860034998425,
+        "selected": 1,
+        "rank": 2
+      },
+      {
+        "name": "dec_hl7d_dec_cnv",
+        "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+        "vimp": 0.12102130708993465,
+        "lo": 0.08102517537369187,
+        "hi": 0.22348407910459064,
+        "selected": 1,
+        "rank": 3
+      },
+      {
+        "name": "hist_len",
+        "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+        "vimp": 0.09663324760771161,
+        "lo": 0.03790516775462616,
+        "hi": 0.15863120074737375,
+        "selected": 1,
+        "rank": 4
+      },
+      {
+        "name": "sess_cnv_sess_rate",
+        "logic": "\u591a\u5c11\u573a\u771f\u6b63\u6210\u4ea4",
+        "vimp": 0.0798294154344276,
+        "lo": 0.022532982887726805,
+        "hi": 0.1359084521023992,
+        "selected": 0,
+        "rank": 5
+      },
+      {
+        "name": "life_n_exp",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+        "vimp": 0.07877814969537349,
+        "lo": 0.038011004552856234,
+        "hi": 0.12428778135570573,
+        "selected": 1,
+        "rank": 6
+      },
+      {
+        "name": "sess_depth_cnv_mean",
+        "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+        "vimp": 0.0663082689683366,
+        "lo": 0.02596626815235756,
+        "hi": 0.10998852800684802,
+        "selected": 0,
+        "rank": 7
+      },
+      {
+        "name": "ui_only_exp_share",
+        "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+        "vimp": 0.059862418828740147,
+        "lo": 0.02808639593498182,
+        "hi": 0.09680615427129581,
+        "selected": 0,
+        "rank": 8
+      },
+      {
+        "name": "pay_cnt",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u6210\u4ea4\u6b21\u6570\uff08\u4e0d\u662f\u4eba\uff09",
+        "vimp": 0.05661406046564538,
+        "lo": 0.0049557280547672805,
+        "hi": 0.09349811051920995,
+        "selected": 0,
+        "rank": 9
+      },
+      {
+        "name": "dec_hl7d_dec_clk",
+        "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+        "vimp": 0.05594900299748223,
+        "lo": 0.028767156969000493,
+        "hi": 0.11707001430149964,
+        "selected": 0,
+        "rank": 10
+      },
+      {
+        "name": "active_days",
+        "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+        "vimp": 0.045023241319714,
+        "lo": 0.041581832933540626,
+        "hi": 0.11541612722228292,
+        "selected": 1,
+        "rank": 11
+      },
+      {
+        "name": "life_ctr",
+        "logic": "\u5de6\u7a97 CTR\uff08\u8fc7\u53bb\u70b9\u7387 \u2192 \u53f3\u7a97\uff0c\u4e0d\u662f\u6cc4\u6f0f\uff09",
+        "vimp": 0.03476413764535568,
+        "lo": 0.01483872943383268,
+        "hi": 0.05842149382639574,
+        "selected": 0,
+        "rank": 12
+      },
+      {
+        "name": "life_clk_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+        "vimp": 0.025674809331993145,
+        "lo": 0.01533532528230046,
+        "hi": 0.07048923435666925,
+        "selected": 0,
+        "rank": 13
+      },
+      {
+        "name": "life_n_clk",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u70b9\u51fb\u6b21\u6570",
+        "vimp": 0.007508899859241607,
+        "lo": 0.0013276924504169204,
+        "hi": 0.020111206672236627,
+        "selected": 0,
+        "rank": 14
+      }
+    ],
+    "cvr": [
+      {
+        "name": "dec_hl7d_dec_cnv",
+        "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+        "vimp": 0.18031672782857253,
+        "lo": 0.12571570142237487,
+        "hi": 0.22670697750227958,
+        "selected": 1,
+        "rank": 1
+      },
+      {
+        "name": "ui_only_exp_share",
+        "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+        "vimp": 0.13411273111028638,
+        "lo": 0.04935064920056331,
+        "hi": 0.1845835054762105,
+        "selected": 1,
+        "rank": 2
+      },
+      {
+        "name": "life_cnv_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u4e70\u5360\u591a\u5927",
+        "vimp": 0.1318393865900001,
+        "lo": 0.070951315273381,
+        "hi": 0.21613771670704035,
+        "selected": 1,
+        "rank": 3
+      },
+      {
+        "name": "sess_bounce_rate",
+        "logic": "\u573a\u788e",
+        "vimp": 0.10212862750106703,
+        "lo": 0.09380316257835,
+        "hi": 0.1819917454876857,
+        "selected": 1,
+        "rank": 4
+      },
+      {
+        "name": "active_days",
+        "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+        "vimp": 0.10172161012727442,
+        "lo": 0.03224120025330622,
+        "hi": 0.10103035627453075,
+        "selected": 1,
+        "rank": 5
+      },
+      {
+        "name": "life_n_exp",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+        "vimp": 0.07330082077135866,
+        "lo": 0.028402802268720204,
+        "hi": 0.08861525124974459,
+        "selected": 0,
+        "rank": 6
+      },
+      {
+        "name": "sess_depth_cnv_mean",
+        "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+        "vimp": 0.06887348358064745,
+        "lo": 0.022923023047739705,
+        "hi": 0.15165349248115917,
+        "selected": 0,
+        "rank": 7
+      },
+      {
+        "name": "pay_cnt",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u6210\u4ea4\u6b21\u6570\uff08\u4e0d\u662f\u4eba\uff09",
+        "vimp": 0.05697972976624806,
+        "lo": 0.009879939718660588,
+        "hi": 0.08810255457697012,
+        "selected": 0,
+        "rank": 8
+      },
+      {
+        "name": "hist_len",
+        "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+        "vimp": 0.04574936454982893,
+        "lo": 0.019409165565680377,
+        "hi": 0.10427464377561103,
+        "selected": 0,
+        "rank": 9
+      },
+      {
+        "name": "sess_cnv_sess_rate",
+        "logic": "\u591a\u5c11\u573a\u771f\u6b63\u6210\u4ea4",
+        "vimp": 0.04307681723582087,
+        "lo": 0.026144058289719455,
+        "hi": 0.11612652202577196,
+        "selected": 0,
+        "rank": 10
+      },
+      {
+        "name": "life_clk_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+        "vimp": 0.02455600419716983,
+        "lo": 0.008331120600196019,
+        "hi": 0.034546003207400075,
+        "selected": 0,
+        "rank": 11
+      },
+      {
+        "name": "dec_hl7d_dec_clk",
+        "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+        "vimp": 0.01934699834755057,
+        "lo": 0.0184507649983666,
+        "hi": 0.11081045706772363,
+        "selected": 0,
+        "rank": 12
+      },
+      {
+        "name": "life_ctr",
+        "logic": "\u5de6\u7a97 CTR\uff08\u8fc7\u53bb\u70b9\u7387 \u2192 \u53f3\u7a97\uff0c\u4e0d\u662f\u6cc4\u6f0f\uff09",
+        "vimp": 0.014813221315231518,
+        "lo": 0.006884384730506557,
+        "hi": 0.04515873453732378,
+        "selected": 0,
+        "rank": 13
+      },
+      {
+        "name": "life_n_clk",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u70b9\u51fb\u6b21\u6570",
+        "vimp": 0.00318447707894358,
+        "lo": 0.0,
+        "hi": 0.010823536269036142,
+        "selected": 0,
+        "rank": 14
+      }
+    ],
+    "any_cnv": [
+      {
+        "name": "dec_hl7d_dec_clk",
+        "logic": "\u8fd1\u671f\u70b9\u51fb\u70ed\u5ea6",
+        "vimp": 0.1658809315307003,
+        "lo": 0.0900942886843776,
+        "hi": 0.2244843684373803,
+        "selected": 1,
+        "rank": 1
+      },
+      {
+        "name": "dec_hl7d_dec_cnv",
+        "logic": "\u8fd1\u671f\u6210\u4ea4\u70ed\u5ea6",
+        "vimp": 0.16025983459845683,
+        "lo": 0.080072712942053,
+        "hi": 0.22372569131636827,
+        "selected": 1,
+        "rank": 2
+      },
+      {
+        "name": "sess_bounce_rate",
+        "logic": "\u573a\u788e",
+        "vimp": 0.1231905492815419,
+        "lo": 0.08456855025181469,
+        "hi": 0.20232931719006156,
+        "selected": 1,
+        "rank": 3
+      },
+      {
+        "name": "hist_len",
+        "logic": "tenure/\u91cf\uff1a\u770b\u4e86\u591a\u4e45\uff08\u548c\u5220\u5931\u7f20\uff09",
+        "vimp": 0.06979991754587694,
+        "lo": 0.051257786336809545,
+        "hi": 0.1285582761683483,
+        "selected": 1,
+        "rank": 4
+      },
+      {
+        "name": "life_n_exp",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u66dd\u5149\u6b21\u6570",
+        "vimp": 0.06945762034695077,
+        "lo": 0.03501167475105621,
+        "hi": 0.12450333445167046,
+        "selected": 1,
+        "rank": 5
+      },
+      {
+        "name": "active_days",
+        "logic": "tenure\uff1a\u6765\u4e86\u51e0\u5929",
+        "vimp": 0.06837935666843006,
+        "lo": 0.041786108121650616,
+        "hi": 0.11197669479129749,
+        "selected": 1,
+        "rank": 6
+      },
+      {
+        "name": "life_clk_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u70b9\u5360\u591a\u5927",
+        "vimp": 0.059459505327769176,
+        "lo": 0.020054703032062464,
+        "hi": 0.08926041394708721,
+        "selected": 0,
+        "rank": 7
+      },
+      {
+        "name": "sess_depth_cnv_mean",
+        "logic": "\u573a\u5185\u6210\u4ea4\u6df1\u5ea6",
+        "vimp": 0.058424170548197686,
+        "lo": 0.025990019302575555,
+        "hi": 0.08596794807549314,
+        "selected": 0,
+        "rank": 8
+      },
+      {
+        "name": "ui_only_exp_share",
+        "logic": "\u53ea\u66dd\u4e0d\u70b9\u7684\u8d27\u5360\u6bd4\uff08\u961f\u5217\uff09",
+        "vimp": 0.05643139107588138,
+        "lo": 0.046508001864793445,
+        "hi": 0.10555453686290635,
+        "selected": 1,
+        "rank": 9
+      },
+      {
+        "name": "sess_cnv_sess_rate",
+        "logic": "\u591a\u5c11\u573a\u771f\u6b63\u6210\u4ea4",
+        "vimp": 0.05365800801454595,
+        "lo": 0.016711562922435242,
+        "hi": 0.0694924352159439,
+        "selected": 0,
+        "rank": 10
+      },
+      {
+        "name": "life_ctr",
+        "logic": "\u5de6\u7a97 CTR\uff08\u8fc7\u53bb\u70b9\u7387 \u2192 \u53f3\u7a97\uff0c\u4e0d\u662f\u6cc4\u6f0f\uff09",
+        "vimp": 0.047308528216436094,
+        "lo": 0.022111423513017495,
+        "hi": 0.06762497790915897,
+        "selected": 0,
+        "rank": 11
+      },
+      {
+        "name": "life_cnv_share",
+        "logic": "\u7ed3\u6784\uff1a\u8f68\u8ff9\u91cc\u4e70\u5360\u591a\u5927",
+        "vimp": 0.03664636827820093,
+        "lo": 0.022569006420949347,
+        "hi": 0.08372760594760931,
+        "selected": 0,
+        "rank": 12
+      },
+      {
+        "name": "pay_cnt",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u6210\u4ea4\u6b21\u6570\uff08\u4e0d\u662f\u4eba\uff09",
+        "vimp": 0.016809786432150444,
+        "lo": 0.0039403625121978755,
+        "hi": 0.027721637938768355,
+        "selected": 0,
+        "rank": 13
+      },
+      {
+        "name": "life_n_clk",
+        "logic": "\u91cf\uff1a\u5de6\u7a97\u70b9\u51fb\u6b21\u6570",
+        "vimp": 0.014294032134861683,
+        "lo": 0.0025841604310471193,
+        "hi": 0.036356492946883964,
+        "selected": 0,
+        "rank": 14
+      }
+    ]
+  }
+}

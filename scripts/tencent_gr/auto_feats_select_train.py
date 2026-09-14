@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -45,6 +46,11 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+
+_ATTR_DIR = Path(__file__).resolve().parent
+if str(_ATTR_DIR) not in sys.path:
+    sys.path.insert(0, str(_ATTR_DIR))
+from attr_last_touch import last_touch
 
 A_EXP, A_CLK, A_CNV = 0, 1, 2
 A_NAME = {0: "exp", 1: "clk", 2: "cnv"}
@@ -232,68 +238,8 @@ def decay_counts(evs: Sequence[Event], t_end: int, hl: float) -> Dict[str, float
 
 
 def attribution(evs: Sequence[Event]) -> Dict[str, float]:
-    last_exp: Dict[int, int] = {}
-    first_exp: Dict[int, int] = {}
-    last_clk: Dict[int, int] = {}
-    first_clk: Dict[int, int] = {}
-    last_any_clk: Optional[int] = None
-    exp_cnt: Dict[int, int] = defaultdict(int)
-
-    exp2clk: List[float] = []
-    clk2cnv: List[float] = []
-    fclk2cnv: List[float] = []
-    exp2cnv: List[float] = []
-    any2cnv: List[float] = []
-    exp_before: List[float] = []
-    cnv_wo_clk = 0
-    cnv_n = 0
-
-    # attribution window flags (minutes buckets)
-    buckets = [5, 30, 60, 360, 1440, 10080]  # 5m..7d
-    clk2cnv_bucket = {b: 0.0 for b in buckets}
-
-    for iid, act, ts, _ in evs:
-        if act == A_EXP:
-            last_exp[iid] = ts
-            first_exp.setdefault(iid, ts)
-            exp_cnt[iid] += 1
-        elif act == A_CLK:
-            if iid in last_exp:
-                exp2clk.append((ts - last_exp[iid]) / 60.0)
-            last_clk[iid] = ts
-            first_clk.setdefault(iid, ts)
-            last_any_clk = ts
-        elif act == A_CNV:
-            cnv_n += 1
-            exp_before.append(float(exp_cnt.get(iid, 0)))
-            if iid in last_clk:
-                dt = (ts - last_clk[iid]) / 60.0
-                clk2cnv.append(dt)
-                for b in buckets:
-                    if dt <= b:
-                        clk2cnv_bucket[b] += 1.0
-            else:
-                cnv_wo_clk += 1
-            if iid in first_clk:
-                fclk2cnv.append((ts - first_clk[iid]) / 60.0)
-            if iid in first_exp:
-                exp2cnv.append((ts - first_exp[iid]) / 60.0)
-            if last_any_clk is not None:
-                any2cnv.append((ts - last_any_clk) / 60.0)
-
-    out: Dict[str, float] = {}
-    out.update(stats(exp2clk, "attr_exp2clk_min"))
-    out.update(stats(clk2cnv, "attr_clk2cnv_min"))
-    out.update(stats(fclk2cnv, "attr_firstclk2cnv_min"))
-    out.update(stats(exp2cnv, "attr_exp2cnv_min"))
-    out.update(stats(any2cnv, "attr_anyclk2cnv_min"))
-    out["attr_cnv_wo_prior_clk_cnt"] = float(cnv_wo_clk)
-    out["attr_cnv_wo_prior_clk_rate"] = rate(cnv_wo_clk, cnv_n)
-    out["attr_exp_before_cnv_mean"] = float(np.mean(exp_before)) if exp_before else 0.0
-    for b, v in clk2cnv_bucket.items():
-        out[f"attr_clk2cnv_within_{b}m_cnt"] = v
-        out[f"attr_clk2cnv_within_{b}m_rate"] = rate(v, cnv_n)
-    return out
+    """7d last-touch: item / halo / dark. See attr_last_touch.py."""
+    return last_touch(evs)
 
 
 def monetization(evs: Sequence[Event], price_p50: float) -> Dict[str, float]:
@@ -562,9 +508,9 @@ def split_prefix_suffix(
 
 def build_user_features(evs: Sequence[Event], price_p50: float) -> Dict[str, float]:
     if not evs:
-        return {"hist_len": 0.0, "active_days": 0.0, "pay_user": 0.0}
+        return {"hist_len": 0.0, "active_days": 0.0, "pay_user": 0.0, "_seq_t_end": 0.0}
     t_end = evs[-1][2]
-    feats: Dict[str, float] = {}
+    feats: Dict[str, float] = {"_seq_t_end": float(t_end)}
 
     life = funnel(evs, t_end, 10**12)
     for k, v in life.items():
@@ -633,6 +579,26 @@ def enrich_user_table(feats: Dict[str, float], urec: Optional[pd.Series]) -> Dic
     return feats
 
 
+def compare_feature_lists(selected: Sequence[str], prev_json: Path) -> Dict[str, Any]:
+    """Overlap vs the previous 128-feat F-score board."""
+    if not prev_json.is_file():
+        return {"prev_path": str(prev_json), "n_prev": 0, "n_new": len(selected)}
+    prev = json.loads(prev_json.read_text(encoding="utf-8"))
+    old_names = [x["name"] if isinstance(x, dict) else str(x) for x in prev]
+    new_s, old_s = set(selected), set(old_names)
+    return {
+        "prev_path": str(prev_json),
+        "n_prev": len(old_names),
+        "n_new": len(selected),
+        "n_overlap": len(new_s & old_s),
+        "n_only_new": len(new_s - old_s),
+        "n_only_prev": len(old_s - new_s),
+        "only_new": [n for n in selected if n not in old_s],
+        "only_prev": [n for n in old_names if n not in new_s],
+        "overlap": [n for n in selected if n in old_s],
+    }
+
+
 def pad_or_trim(df: pd.DataFrame, target_dim: int, exclude: Sequence[str]) -> pd.DataFrame:
     """Ensure roughly target_dim feature columns (pad zeros / trim low-var)."""
     feat_cols = [c for c in df.columns if c not in exclude]
@@ -642,8 +608,13 @@ def pad_or_trim(df: pd.DataFrame, target_dim: int, exclude: Sequence[str]) -> pd
         keep = list(var.index[:target_dim])
         return df[list(exclude) + keep]
     if len(feat_cols) < target_dim:
-        for i in range(target_dim - len(feat_cols)):
-            df[f"pad_zero_{i}"] = 0.0
+        n_pad = target_dim - len(feat_cols)
+        pad = pd.DataFrame(
+            0.0,
+            index=df.index,
+            columns=[f"pad_zero_{i}" for i in range(n_pad)],
+        )
+        df = pd.concat([df, pad], axis=1)
     return df
 
 
@@ -654,27 +625,29 @@ def select_and_train(
     select_k: int,
     method: str,
 ) -> Dict[str, Any]:
-    # clean
+    """F/MI is a leaky in-sample baseline. Split first; real board is PO-VIMP."""
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
-    # variance filter
+    idx = np.arange(len(y))
+    strat = y if len(np.unique(y)) > 1 else None
+    itr, ite = train_test_split(idx, test_size=0.25, random_state=42, stratify=strat)
+    Xtr, Xte, ytr, yte = X[itr], X[ite], y[itr], y[ite]
+
     vt = VarianceThreshold(threshold=1e-8)
-    Xv = vt.fit_transform(X)
+    Xtr_v = vt.fit_transform(Xtr)
+    Xte_v = vt.transform(Xte)
     kept = [n for n, m in zip(names, vt.get_support()) if m]
     print(f"  after variance filter: {len(kept)}")
 
-    k = min(select_k, len(kept), max(int(Xv.shape[0] * 0.5), 8))
-    if method == "mi":
-        selector = SelectKBest(mutual_info_classif, k=k)
-    else:
-        selector = SelectKBest(f_classif, k=k)
-    Xs = selector.fit_transform(Xv, y)
+    k = min(int(select_k), len(kept))
+    scorer = mutual_info_classif if method == "mi" else f_classif
+    selector = SelectKBest(scorer, k=k)
+    Xtr_s = selector.fit_transform(Xtr_v, ytr)
+    Xte_s = selector.transform(Xte_v)
     scores = selector.scores_
     support = selector.get_support()
     selected = [n for n, s in zip(kept, support) if s]
     score_map = {n: float(sc) for n, sc, s in zip(kept, scores, support) if s and np.isfinite(sc)}
     ranked = sorted(score_map.items(), key=lambda kv: -kv[1])
-
-    Xtr, Xte, ytr, yte = train_test_split(Xs, y, test_size=0.25, random_state=42, stratify=y)
 
     models = {
         "hgb": HistGradientBoostingClassifier(max_depth=4, max_iter=120, learning_rate=0.08, random_state=42),
@@ -686,8 +659,8 @@ def select_and_train(
     results = {}
     for name, model in models.items():
         t0 = time.time()
-        model.fit(Xtr, ytr)
-        proba = model.predict_proba(Xte)[:, 1]
+        model.fit(Xtr_s, ytr)
+        proba = model.predict_proba(Xte_s)[:, 1]
         pred = (proba >= 0.5).astype(int)
         results[name] = {
             "auc": float(roc_auc_score(yte, proba)),
@@ -775,7 +748,13 @@ def main() -> None:
     }
     label_col = label_map[args.label]
 
-    exclude = ["user_id", "_label_pay_user", "_label_has_cnv_7d", "_label_future_cnv"]
+    exclude = [
+        "user_id",
+        "_label_pay_user",
+        "_label_has_cnv_7d",
+        "_label_future_cnv",
+        "_seq_t_end",
+    ]
     df = pad_or_trim(df, args.target_dim, exclude)
     feat_cols = [c for c in df.columns if c not in exclude]
     print(f"feature_dim={len(feat_cols)}")
@@ -795,12 +774,33 @@ def main() -> None:
     report = select_and_train(X, y, feat_cols_use, args.select_k, args.select_method)
 
     args.out.mkdir(parents=True, exist_ok=True)
-    # save compact feature matrix (selected only names + all for reuse)
+    selected_names = [x["name"] for x in report["selected_features"]]
+    keep_extra = [
+        c
+        for c in ("user_id", "_seq_t_end", "_label_future_cnv", "_label_pay_user", "life_ctcvr")
+        if c in df.columns
+    ]
+    sel_cols = []
+    seen = set()
+    for c in keep_extra + selected_names:
+        if c in df.columns and c not in seen:
+            seen.add(c)
+            sel_cols.append(c)
+    df[sel_cols].to_parquet(args.out / "user_feats_selected.parquet", index=False)
     df[["user_id"] + feat_cols_use[: min(200, len(feat_cols_use))]].to_parquet(
         args.out / "user_feats_preview.parquet", index=False
     )
     (args.out / "selected_features.json").write_text(
         json.dumps(report["selected_features"], indent=2), encoding="utf-8"
+    )
+    (args.out / "FEATURES_150.txt").write_text(
+        "\n".join(f"{i:3d}  {n}" for i, n in enumerate(selected_names, 1)) + "\n",
+        encoding="utf-8",
+    )
+    prev_path = Path("results/tencent_gr_fs/selected_features.json")
+    compare = compare_feature_lists(selected_names, prev_path)
+    (args.out / "FEATURE_COMPARE_150_vs_128.json").write_text(
+        json.dumps(compare, indent=2), encoding="utf-8"
     )
     summary = {
         "n_users": int(len(df)),
@@ -812,9 +812,18 @@ def main() -> None:
         "metrics": report["metrics"],
         "label_pos_rate": report["label_pos_rate"],
         "top20": report["selected_features"][:20],
+        "compare_vs_128": {
+            "n_overlap": compare.get("n_overlap"),
+            "n_only_new": compare.get("n_only_new"),
+            "n_only_prev": compare.get("n_only_prev"),
+        },
     }
     (args.out / "train_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
+    overlap_n = compare.get("n_overlap", 0)
+    only_new = compare.get("only_new") or []
+    only_prev = compare.get("only_prev") or []
+    feat_md = "\n".join(f"{i}. `{n}`" for i, n in enumerate(selected_names, 1))
     md = f"""# TencentGR auto-1000 → feature-select → train
 
 - users: **{len(df)}**
@@ -822,6 +831,7 @@ def main() -> None:
 - used after leak-drop: **{len(feat_cols_use)}**
 - selected: **{report['n_selected']}** via `{args.select_method}`
 - label: `{args.label}` (pos rate={report['label_pos_rate']:.3f})
+- vs previous 128: overlap **{overlap_n}**, only-new **{len(only_new)}**, dropped **{len(only_prev)}**
 
 ## Metrics
 
@@ -835,6 +845,16 @@ def main() -> None:
 {json.dumps(report['selected_features'][:20], indent=2)}
 ```
 
+## 150-feature list
+
+{feat_md}
+
+## vs 128 board
+
+- overlap: {overlap_n}
+- new (not in 128): {", ".join(f"`{n}`" for n in only_new) or "(none)"}
+- dropped from 128: {", ".join(f"`{n}`" for n in only_prev) or "(none)"}
+
 ## Recipe
 
 1. **Generate**: combinatorial windows × funnel × decay × session × attribution × ARPU/deal × Markov × TOD × crosses ≈ 1000.
@@ -842,6 +862,7 @@ def main() -> None:
 3. **Train**: HistGradientBoosting + LogisticRegression holdout AUC/AP.
 
 Leakage note: for `pay_user`, raw `pay_cnt` / `life_n_cnv` / `arpu_sum` are dropped before selection.
+Label `future_cnv` uses prefix features and suffix conversion, so conversion-count features are not a direct leak.
 """
     (args.out / "FS_TRAIN_REPORT.md").write_text(md, encoding="utf-8")
     print(json.dumps(summary, indent=2)[:2500])
