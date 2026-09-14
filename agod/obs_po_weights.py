@@ -156,3 +156,77 @@ def gated_obs_po_weights(
         return ones
     w = obs_po_to_weights(po, mode=mode, **kwargs)
     return gate_blend(reject, w, soft=soft, p=p, alpha=alpha)
+
+
+def drift_intensity(
+    po: np.ndarray,
+    *,
+    control_resid: np.ndarray | None = None,
+    p: float | None = None,
+    T: float | None = None,
+    alpha: float = 0.05,
+    eps: float = 1e-6,
+) -> float:
+    """Scalar drift / shift intensity in [0, 1].
+
+    Primary signal (beijing-like shift)
+    -----------------------------------
+    ``mean(PO_ood) / mean(|Y−μ0| on recent control) − 1``
+    — hard mass relative to the control regime. Calm packs sit near 0;
+    drifted packs go large.
+
+    Secondary: within-OOD hard-tail q90/q50, RFPerm p-strength, T>0.
+    High ⇒ hard rows look like **shift signal**; low ⇒ hard ≈ noise.
+    """
+    po = np.asarray(po, float).ravel()
+    if len(po) == 0:
+        return 0.0
+
+    if control_resid is not None and len(control_resid) > 0:
+        cr = np.asarray(control_resid, float).ravel()
+        gap = float(np.mean(po) / (np.mean(np.abs(cr)) + eps) - 1.0)
+        # gap≈0 → matched; gap≳1 → OOD twice as hard as control
+        gap_n = float(np.clip(gap / 1.0, 0.0, 1.0))
+    else:
+        q50 = float(np.quantile(po, 0.5))
+        q90 = float(np.quantile(po, 0.9))
+        gap_n = float(np.clip((q90 / (q50 + eps) - 1.0) / 2.0, 0.0, 1.0))
+
+    p_strength = 0.0
+    if p is not None:
+        p_strength = float(np.clip((alpha - float(p)) / max(alpha, eps), 0.0, 1.0))
+
+    t_strength = 0.0
+    if T is not None:
+        t_strength = float(np.tanh(max(float(T), 0.0) / 10.0))
+
+    # gap dominates; p/T are tie-breakers
+    return float(np.clip(0.70 * gap_n + 0.20 * p_strength + 0.10 * t_strength, 0.0, 1.0))
+
+
+def adaptive_temper(
+    drift: float,
+    *,
+    lam_max: float = 0.75,
+    drift_gate: float = 0.20,
+) -> float:
+    """Map drift intensity → temper λ.
+
+    Below ``drift_gate`` → λ=0 (keep uniform even on reject — mild/noise packs).
+    Above gate → ramp to ``lam_max`` (beijing-like shift → soft PO reweight).
+    """
+    d = float(np.clip(drift, 0.0, 1.0))
+    if d <= drift_gate:
+        return 0.0
+    return float(lam_max * (d - drift_gate) / max(1.0 - drift_gate, 1e-6))
+
+
+def hard_subset_mask(score: np.ndarray, *, frac: float = 0.2) -> np.ndarray:
+    """Boolean mask of the hardest top-``frac`` rows by ``score``."""
+    s = np.asarray(score, float).ravel()
+    n = len(s)
+    k = max(1, int(round(n * frac)))
+    idx = np.argpartition(s, -k)[-k:]
+    m = np.zeros(n, dtype=bool)
+    m[idx] = True
+    return m
