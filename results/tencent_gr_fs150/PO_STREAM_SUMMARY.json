@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "n_rows": 6000,
+    "n_used": 4800,
+    "n_feat": 150,
+    "pos_rate": 0.19604166666666667,
+    "clock": "seq_t_end",
+    "n_per": 200,
+    "n_batches": 24
+  },
+  "gate": 1.5,
+  "board": {
+    "uniform_pair": {
+      "online_score": 0.8297727272727272,
+      "task": "acc",
+      "fire_rate": 0.0,
+      "n_hops": 22
+    },
+    "dre": {
+      "online_score": 0.8222727272727273,
+      "task": "acc",
+      "fire_rate": 1.0,
+      "n_hops": 22
+    },
+    "rfperm": {
+      "online_score": 0.8297727272727272,
+      "task": "acc",
+      "fire_rate": 0.0,
+      "n_hops": 22
+    },
+    "resid": {
+      "online_score": 0.8297727272727272,
+      "task": "acc",
+      "fire_rate": 0.0,
+      "n_hops": 22
+    }
+  }
+}
