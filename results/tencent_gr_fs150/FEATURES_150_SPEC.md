@@ -338,6 +338,11 @@ x_a__b      = a * b
 | 149 | 3d_clk_share | n_clk/n_tot 3d |
 | 150 | x_arpu_sum_proxy__arpu_mean_proxy | arpu_sum × arpu_mean |
 
+## 9. 买后点击（状态机 / asof，同构）
+
+见 `results/tencent_gr_fs150/POST_CALC.md`。扫：`scripts/tencent_gr/onepass_post.py`。
+`n_after_W = C(t+W)-C(t)`，`y` 跟不满窗且没点到记 NaN。不要和邻接 `trans_cnv_to_*` 混。
+
 ## 对拍时容易错的点
 
 1. 窗口左开右闭：`(t_end-W, t_end]`。落在 `t_end-W` 上的点不算。

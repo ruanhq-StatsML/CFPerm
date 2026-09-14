@@ -116,6 +116,7 @@ def onepass(evs: List[Event]) -> Dict[str, float]:
         prev_ts = ts
 
         # 4. 归因：点击记下时间；转化时回头找上次点
+        #    买后点击的对偶（pending ← CNV，CLK 闭上）见 onepass_post.py
         if act == CLK:
             last_any_clk = ts
             last_clk_item[iid] = ts

@@ -6,6 +6,7 @@ Grain
   ev     user × event
   attr   user × conversion   backward asof：买之前怎么点过来
   post   user × conversion   forward asof：买完会不会接着点
+                          状态机同构：scripts/tencent_gr/onepass_post.py
   sess   user × session
   user_* 每块聚合成 user 一行，再 outer join
 
