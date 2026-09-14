@@ -1,0 +1,32 @@
+ 1  life_cnv_share                              funnel      0.0448
+ 2  x_life_ctcvr__sess_bounce_rate              cross       0.0372
+ 3  sess_depth_cnv_mean                         session     0.0334
+ 4  dec_hl3d_dec_clk                            decay       0.0308
+ 5  3d_clk_share                                funnel      0.0298
+ 6  x_life_ctr__active_days                     cross       0.0281
+ 7  dec_hl1d_dec_clk                            decay       0.0265
+ 8  x_life_cvr__7d_ctr                          cross       0.0261
+ 9  sess_cnv_sess_rate                          session     0.0249
+10  dec_hl7d_dec_clk                            decay       0.0240
+11  dec_hl3d_dec_cnv                            decay       0.0230
+12  attr_anyclk2cnv_min_std                     attr        0.0224
+13  x_life_ctr__sess_n                          cross       0.0207
+14  x_pay_cnt__active_days                      cross       0.0195
+15  x_life_ctcvr__sess_n                        cross       0.0178
+16  x_life_ctr__attr_anyclk2cnv_min_p50         cross       0.0173
+17  30d_cnv_share                               funnel      0.0173
+18  trans_cnv_to_exp                            markov      0.0150
+19  dec_hl7d_dec_cnv                            decay       0.0150
+20  trend_n_cnv_3d_minus_14d                    funnel      0.0145
+21  x_life_cvr__sess_bounce_rate                cross       0.0145
+22  30d_clk_share                               funnel      0.0143
+23  14d_clk_share                               funnel      0.0141
+24  trend_cvr_3d_minus_14d                      funnel      0.0139
+25  trans2_exp_cnv_exp                          markov      0.0137
+26  x_sess_n__item_entropy_clk                  cross       0.0135
+27  trans_exp_to_exp                            markov      0.0131
+28  x_life_ctcvr__active_days                   cross       0.0130
+29  trans_exp_to_clk                            markov      0.0129
+30  x_hist_len__item_entropy_clk                cross       0.0124
+31  log1p_abs_life_ctcvr                        cross       0.0123
+32  x_life_ctcvr__pay_cnt                       cross       0.0111
