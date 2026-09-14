@@ -1,0 +1,1869 @@
+{
+  "clock": "seq_t_end median",
+  "y": "future_cnv",
+  "boards": [
+    {
+      "name": "onepass_full",
+      "n": 6000,
+      "p": 107,
+      "pos_rate": 0.15683333333333332,
+      "w1_rate": 0.5,
+      "rf_domain_auc": 0.7882810123474799,
+      "po_risk": 0.0016989643400005027,
+      "po_mass": {
+        "attr": 0.014977203814353359,
+        "cross": 0.22817419668762384,
+        "decay": 0.12621612060098086,
+        "diversity": 0.0016352999323294413,
+        "funnel": 0.43476715555737033,
+        "markov": 0.07452104817559278,
+        "money": 0.0,
+        "post": 0.03515294144175342,
+        "session": 0.08455603378899589
+      },
+      "rf_mass": {
+        "attr": 0.013424694613034163,
+        "cross": 0.2672672541578401,
+        "decay": 0.057735054295930024,
+        "diversity": 0.00701870530181449,
+        "funnel": 0.4232630140714555,
+        "markov": 0.12193758467159987,
+        "money": 0.0014567591988896191,
+        "post": 0.009868849649002689,
+        "session": 0.09802808403943349
+      },
+      "ranked": [
+        {
+          "rank": 1,
+          "name": "14d_n_exp",
+          "family": "funnel",
+          "po_vimp": 0.0524527143730001,
+          "rf_vimp": 0.04806686462421838
+        },
+        {
+          "rank": 2,
+          "name": "x_life_ctcvr__sess_bounce_rate",
+          "family": "cross",
+          "po_vimp": 0.044806074796175585,
+          "rf_vimp": 0.02990557607200241
+        },
+        {
+          "rank": 3,
+          "name": "30d_n_exp",
+          "family": "funnel",
+          "po_vimp": 0.04179234387640398,
+          "rf_vimp": 0.036595918414628406
+        },
+        {
+          "rank": 4,
+          "name": "life_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.04014432982515665,
+          "rf_vimp": 0.005500736071684563
+        },
+        {
+          "rank": 5,
+          "name": "7d_n_exp",
+          "family": "funnel",
+          "po_vimp": 0.036040824504464955,
+          "rf_vimp": 0.03678278104161676
+        },
+        {
+          "rank": 6,
+          "name": "hist_len",
+          "family": "funnel",
+          "po_vimp": 0.034999473842344794,
+          "rf_vimp": 0.014716470768774767
+        },
+        {
+          "rank": 7,
+          "name": "active_days",
+          "family": "funnel",
+          "po_vimp": 0.027055672531191382,
+          "rf_vimp": 0.024826835980528438
+        },
+        {
+          "rank": 8,
+          "name": "dec_hl7d_dec_clk",
+          "family": "decay",
+          "po_vimp": 0.026864659148391055,
+          "rf_vimp": 0.010684067864259229
+        },
+        {
+          "rank": 9,
+          "name": "dec_hl7d_dec_cnv",
+          "family": "decay",
+          "po_vimp": 0.026237826447344896,
+          "rf_vimp": 0.014632066283509049
+        },
+        {
+          "rank": 10,
+          "name": "dec_hl1d_dec_clk",
+          "family": "decay",
+          "po_vimp": 0.02612237306133052,
+          "rf_vimp": 0.006446130975718449
+        },
+        {
+          "rank": 11,
+          "name": "sess_bounce_rate",
+          "family": "session",
+          "po_vimp": 0.022151966812911573,
+          "rf_vimp": 0.005639939883375922
+        },
+        {
+          "rank": 12,
+          "name": "sess_n",
+          "family": "session",
+          "po_vimp": 0.02212317329282144,
+          "rf_vimp": 0.010289635575173662
+        },
+        {
+          "rank": 13,
+          "name": "x_life_cvr__sess_bounce_rate",
+          "family": "cross",
+          "po_vimp": 0.02209921676904901,
+          "rf_vimp": 0.002621501999089929
+        },
+        {
+          "rank": 14,
+          "name": "x_life_ctcvr__active_days",
+          "family": "cross",
+          "po_vimp": 0.021833746073477198,
+          "rf_vimp": 0.05206521897687668
+        },
+        {
+          "rank": 15,
+          "name": "x_life_ctr__attr_anyclk2cnv_min_p50",
+          "family": "cross",
+          "po_vimp": 0.02139117043751093,
+          "rf_vimp": 0.00826200326989342
+        },
+        {
+          "rank": 16,
+          "name": "dec_hl3d_dec_cnv",
+          "family": "decay",
+          "po_vimp": 0.020996405446594445,
+          "rf_vimp": 0.012932067763766528
+        },
+        {
+          "rank": 17,
+          "name": "trans_cnv_to_exp",
+          "family": "markov",
+          "po_vimp": 0.020604162672556815,
+          "rf_vimp": 0.011376388931884085
+        },
+        {
+          "rank": 18,
+          "name": "dec_hl3d_dec_clk",
+          "family": "decay",
+          "po_vimp": 0.019569776800389956,
+          "rf_vimp": 0.008843250061247351
+        },
+        {
+          "rank": 19,
+          "name": "sess_cnv_sess_rate",
+          "family": "session",
+          "po_vimp": 0.018173251224362558,
+          "rf_vimp": 0.024974541922747357
+        },
+        {
+          "rank": 20,
+          "name": "3d_n_exp",
+          "family": "funnel",
+          "po_vimp": 0.01744316366220613,
+          "rf_vimp": 0.025146845583380713
+        },
+        {
+          "rank": 21,
+          "name": "trans_exp_to_cnv",
+          "family": "markov",
+          "po_vimp": 0.01621928741342547,
+          "rf_vimp": 0.0077275255309539005
+        },
+        {
+          "rank": 22,
+          "name": "life_n_exp",
+          "family": "funnel",
+          "po_vimp": 0.016103678208663562,
+          "rf_vimp": 0.016817934445000786
+        },
+        {
+          "rank": 23,
+          "name": "trend_cvr_3d_minus_14d",
+          "family": "funnel",
+          "po_vimp": 0.015844577945758,
+          "rf_vimp": 0.0010589514398609847
+        },
+        {
+          "rank": 24,
+          "name": "x_life_ctcvr__sess_n",
+          "family": "cross",
+          "po_vimp": 0.015489268576541305,
+          "rf_vimp": 0.03216385566895942
+        },
+        {
+          "rank": 25,
+          "name": "trans2_exp_cnv_exp",
+          "family": "markov",
+          "po_vimp": 0.014300410500274086,
+          "rf_vimp": 0.01804432468661138
+        },
+        {
+          "rank": 26,
+          "name": "x_life_cvr__7d_ctr",
+          "family": "cross",
+          "po_vimp": 0.013456740215529497,
+          "rf_vimp": 0.00853727753192948
+        },
+        {
+          "rank": 27,
+          "name": "log1p_abs_life_ctcvr",
+          "family": "cross",
+          "po_vimp": 0.013362153895306029,
+          "rf_vimp": 0.030093525318660032
+        },
+        {
+          "rank": 28,
+          "name": "post_clk_dt_p50",
+          "family": "post",
+          "po_vimp": 0.012710345896164732,
+          "rf_vimp": 0.0020496378037865508
+        },
+        {
+          "rank": 29,
+          "name": "x_hist_len__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.012337281111957971,
+          "rf_vimp": 0.006051796464659543
+        },
+        {
+          "rank": 30,
+          "name": "sess_depth_cnv_mean",
+          "family": "session",
+          "po_vimp": 0.012323120424284335,
+          "rf_vimp": 0.02688717667968581
+        },
+        {
+          "rank": 31,
+          "name": "x_life_ctr__active_days",
+          "family": "cross",
+          "po_vimp": 0.01200579236606575,
+          "rf_vimp": 0.017817932294271498
+        },
+        {
+          "rank": 32,
+          "name": "x_post_clk_1d_rate__life_ctcvr",
+          "family": "cross",
+          "po_vimp": 0.011887051387062562,
+          "rf_vimp": 0.001797428120390836
+        },
+        {
+          "rank": 33,
+          "name": "14d_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.011624122288951207,
+          "rf_vimp": 0.009299342953378574
+        },
+        {
+          "rank": 34,
+          "name": "trans_exp_to_exp",
+          "family": "markov",
+          "po_vimp": 0.011300937724903584,
+          "rf_vimp": 0.06816908819181515
+        },
+        {
+          "rank": 35,
+          "name": "30d_ctr",
+          "family": "funnel",
+          "po_vimp": 0.010753669812141688,
+          "rf_vimp": 0.0061017501503462385
+        },
+        {
+          "rank": 36,
+          "name": "trans_exp_to_clk",
+          "family": "markov",
+          "po_vimp": 0.010484263497620152,
+          "rf_vimp": 0.016538699571645048
+        },
+        {
+          "rank": 37,
+          "name": "attr_anyclk2cnv_min_p50",
+          "family": "attr",
+          "po_vimp": 0.010447618902451565,
+          "rf_vimp": 0.003844072310402738
+        },
+        {
+          "rank": 38,
+          "name": "x_life_ctr__sess_n",
+          "family": "cross",
+          "po_vimp": 0.010420746491388173,
+          "rf_vimp": 0.0038334293134025246
+        },
+        {
+          "rank": 39,
+          "name": "x_sess_n__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.010340274554017655,
+          "rf_vimp": 0.0037973357153945606
+        },
+        {
+          "rank": 40,
+          "name": "7d_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.010204143094387571,
+          "rf_vimp": 0.002641180010741214
+        },
+        {
+          "rank": 41,
+          "name": "x_pay_cnt__active_days",
+          "family": "cross",
+          "po_vimp": 0.010178822782233633,
+          "rf_vimp": 0.03799021380720705
+        },
+        {
+          "rank": 42,
+          "name": "14d_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.00993896987027323,
+          "rf_vimp": 0.004837762907177681
+        },
+        {
+          "rank": 43,
+          "name": "7d_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.009752168683223898,
+          "rf_vimp": 0.012536920654047915
+        },
+        {
+          "rank": 44,
+          "name": "30d_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.009548469454628953,
+          "rf_vimp": 0.010796101708479089
+        },
+        {
+          "rank": 45,
+          "name": "14d_ctr",
+          "family": "funnel",
+          "po_vimp": 0.008654570976601753,
+          "rf_vimp": 0.00647924602149072
+        },
+        {
+          "rank": 46,
+          "name": "3d_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.007673122461162483,
+          "rf_vimp": 0.003927894864545449
+        },
+        {
+          "rank": 47,
+          "name": "post_clk_7d_rate",
+          "family": "post",
+          "po_vimp": 0.007518478669025953,
+          "rf_vimp": 0.0004972536380194329
+        },
+        {
+          "rank": 48,
+          "name": "dec_hl1d_dec_cnv",
+          "family": "decay",
+          "po_vimp": 0.00642507969705621,
+          "rf_vimp": 0.004197471347487157
+        },
+        {
+          "rank": 49,
+          "name": "sess_depth_clk_mean",
+          "family": "session",
+          "po_vimp": 0.006015884498261406,
+          "rf_vimp": 0.02021364511271183
+        },
+        {
+          "rank": 50,
+          "name": "14d_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.005529788680913384,
+          "rf_vimp": 0.012863775319023876
+        },
+        {
+          "rank": 51,
+          "name": "30d_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.005507005467515045,
+          "rf_vimp": 0.013859596126866445
+        },
+        {
+          "rank": 52,
+          "name": "14d_cvr",
+          "family": "funnel",
+          "po_vimp": 0.00526445141931924,
+          "rf_vimp": 0.0009475793871593439
+        },
+        {
+          "rank": 53,
+          "name": "7d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.005175152871295859,
+          "rf_vimp": 0.000482059686584582
+        },
+        {
+          "rank": 54,
+          "name": "14d_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.004767107098597499,
+          "rf_vimp": 0.004011927565670597
+        },
+        {
+          "rank": 55,
+          "name": "x_life_ctcvr__pay_cnt",
+          "family": "cross",
+          "po_vimp": 0.004747800200688496,
+          "rf_vimp": 0.029619554096044404
+        },
+        {
+          "rank": 56,
+          "name": "7d_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.004693386156026201,
+          "rf_vimp": 0.00445260970391091
+        },
+        {
+          "rank": 57,
+          "name": "3d_ctr",
+          "family": "funnel",
+          "po_vimp": 0.004574679467320221,
+          "rf_vimp": 0.0007659403164648644
+        },
+        {
+          "rank": 58,
+          "name": "attr_anyclk2cnv_min_std",
+          "family": "attr",
+          "po_vimp": 0.0045295849119167736,
+          "rf_vimp": 0.0016115653084779486
+        },
+        {
+          "rank": 59,
+          "name": "post_n_clk_before_1d_mean",
+          "family": "post",
+          "po_vimp": 0.004464246245661531,
+          "rf_vimp": 0.00019012086870908595
+        },
+        {
+          "rank": 60,
+          "name": "3d_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.00417147495335823,
+          "rf_vimp": 0.005238268608938145
+        },
+        {
+          "rank": 61,
+          "name": "post_delta_1d_p50",
+          "family": "post",
+          "po_vimp": 0.0040610497645802756,
+          "rf_vimp": 0.0009664153536217837
+        },
+        {
+          "rank": 62,
+          "name": "sess_clk_sess_rate",
+          "family": "session",
+          "po_vimp": 0.0037686375364391345,
+          "rf_vimp": 0.010023144865836945
+        },
+        {
+          "rank": 63,
+          "name": "7d_cvr",
+          "family": "funnel",
+          "po_vimp": 0.0034371423900392307,
+          "rf_vimp": 0.00019066114430942211
+        },
+        {
+          "rank": 64,
+          "name": "life_cvr",
+          "family": "funnel",
+          "po_vimp": 0.0032577163315938274,
+          "rf_vimp": 0.0018109297883125062
+        },
+        {
+          "rank": 65,
+          "name": "trend_n_cnv_3d_minus_14d",
+          "family": "funnel",
+          "po_vimp": 0.0030779532771938443,
+          "rf_vimp": 0.001788691470972014
+        },
+        {
+          "rank": 66,
+          "name": "14d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.002788613517148835,
+          "rf_vimp": 0.0007770462909545029
+        },
+        {
+          "rank": 67,
+          "name": "3d_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.002572978046367926,
+          "rf_vimp": 0.0011790692222201906
+        },
+        {
+          "rank": 68,
+          "name": "30d_cvr",
+          "family": "funnel",
+          "po_vimp": 0.0024755456428255727,
+          "rf_vimp": 0.0025880517273198225
+        },
+        {
+          "rank": 69,
+          "name": "7d_ctr",
+          "family": "funnel",
+          "po_vimp": 0.002447046346362455,
+          "rf_vimp": 0.015925340989161586
+        },
+        {
+          "rank": 70,
+          "name": "post_n_clk_after_1d_mean",
+          "family": "post",
+          "po_vimp": 0.0024460491869711574,
+          "rf_vimp": 0.0019397361038394358
+        },
+        {
+          "rank": 71,
+          "name": "life_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.002403927924299976,
+          "rf_vimp": 0.020089808876627584
+        },
+        {
+          "rank": 72,
+          "name": "7d_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0021448423142425713,
+          "rf_vimp": 0.001623195791586627
+        },
+        {
+          "rank": 73,
+          "name": "3d_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0021252907370040534,
+          "rf_vimp": 0.001268645699715461
+        },
+        {
+          "rank": 74,
+          "name": "x_post_lift_1d_p50__life_cvr",
+          "family": "cross",
+          "po_vimp": 0.0019259318261049796,
+          "rf_vimp": 0.0005815568329806304
+        },
+        {
+          "rank": 75,
+          "name": "x_post_clk_1d_rate__attr_wo_clk_rate",
+          "family": "cross",
+          "po_vimp": 0.0018921252047432741,
+          "rf_vimp": 0.0021290486763449437
+        },
+        {
+          "rank": 76,
+          "name": "30d_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0017237069744589638,
+          "rf_vimp": 0.002165626562116018
+        },
+        {
+          "rank": 77,
+          "name": "trans_clk_to_cnv",
+          "family": "markov",
+          "po_vimp": 0.0016119863668872028,
+          "rf_vimp": 8.155775881225822e-05
+        },
+        {
+          "rank": 78,
+          "name": "life_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.001542161222671968,
+          "rf_vimp": 0.022884892981236638
+        },
+        {
+          "rank": 79,
+          "name": "3d_cvr",
+          "family": "funnel",
+          "po_vimp": 0.0013979838236398826,
+          "rf_vimp": 0.00012019635002513728
+        },
+        {
+          "rank": 80,
+          "name": "30d_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.001314459053102687,
+          "rf_vimp": 0.013844331708596318
+        },
+        {
+          "rank": 81,
+          "name": "life_ctr",
+          "family": "funnel",
+          "po_vimp": 0.0012758942638368335,
+          "rf_vimp": 0.006000545484010156
+        },
+        {
+          "rank": 82,
+          "name": "post_clk_same_sess_rate",
+          "family": "post",
+          "po_vimp": 0.001264278617308031,
+          "rf_vimp": 0.00012544780607444568
+        },
+        {
+          "rank": 83,
+          "name": "post_clk_1d_rate",
+          "family": "post",
+          "po_vimp": 0.0012163859548602605,
+          "rf_vimp": 0.002213871216480652
+        },
+        {
+          "rank": 84,
+          "name": "item_entropy_clk",
+          "family": "diversity",
+          "po_vimp": 0.0011748818476541615,
+          "rf_vimp": 0.001383346307480646
+        },
+        {
+          "rank": 85,
+          "name": "30d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0010728321681104888,
+          "rf_vimp": 0.0007762206117779638
+        },
+        {
+          "rank": 86,
+          "name": "post_lift_1d_p50",
+          "family": "post",
+          "po_vimp": 0.0009326640020060712,
+          "rf_vimp": 0.00042888525917078634
+        },
+        {
+          "rank": 87,
+          "name": "post_clk_1h_rate",
+          "family": "post",
+          "po_vimp": 0.00047305663833047227,
+          "rf_vimp": 4.890333818052542e-05
+        },
+        {
+          "rank": 88,
+          "name": "n_uniq_clk_item",
+          "family": "diversity",
+          "po_vimp": 0.00046041808467691515,
+          "rf_vimp": 0.005635358994340864
+        },
+        {
+          "rank": 89,
+          "name": "post_n_obs_1d",
+          "family": "post",
+          "po_vimp": 6.638646688009601e-05,
+          "rf_vimp": 0.0014085782611298618
+        },
+        {
+          "rank": 90,
+          "name": "3d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.00041630505439413205
+        },
+        {
+          "rank": 91,
+          "name": "attr_wo_clk_cnt",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0009058222052161634
+        },
+        {
+          "rank": 92,
+          "name": "attr_wo_clk_rate",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0001537371626183311
+        },
+        {
+          "rank": 93,
+          "name": "attr_cnv_n",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0007982635126575268
+        },
+        {
+          "rank": 94,
+          "name": "pay_cnt",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.001456759198891076
+        },
+        {
+          "rank": 95,
+          "name": "life_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0023946737358177756
+        },
+        {
+          "rank": 96,
+          "name": "life_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.018663486228205548
+        },
+        {
+          "rank": 97,
+          "name": "attr_firstclk2cnv_min_p50",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.00611123411367488
+        },
+        {
+          "rank": 98,
+          "name": "attr_clk2cnv_min_p50",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 99,
+          "name": "attr_clk2cnv_within_1h_rate",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 100,
+          "name": "attr_clk2cnv_within_1d_rate",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 101,
+          "name": "attr_clk2cnv_within_5m_rate",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 102,
+          "name": "post_same_1h_rate",
+          "family": "post",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 103,
+          "name": "post_same_1d_rate",
+          "family": "post",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 104,
+          "name": "post_lift_same_1d_p50",
+          "family": "post",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 105,
+          "name": "post_clk_5m_rate",
+          "family": "post",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 106,
+          "name": "attr_clk2cnv_within_30m_rate",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 107,
+          "name": "x_post_same_1d_rate__life_cvr",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        }
+      ]
+    },
+    {
+      "name": "f150",
+      "n": 6000,
+      "p": 150,
+      "pos_rate": 0.15683333333333332,
+      "w1_rate": 0.5,
+      "rf_domain_auc": 0.7530592105263157,
+      "po_risk": 0.001782417326572652,
+      "po_mass": {
+        "attr": 0.027680533105683445,
+        "cross": 0.4199021864592642,
+        "decay": 0.13324627877513265,
+        "diversity": 0.0,
+        "funnel": 0.2836234885593585,
+        "markov": 0.06536265284393875,
+        "money": 0.0015120290983065762,
+        "session": 0.0686728311573158
+      },
+      "rf_mass": {
+        "attr": 0.009527993208445714,
+        "cross": 0.34500345402967514,
+        "decay": 0.048681033892884695,
+        "diversity": 0.0241003638447616,
+        "funnel": 0.37165154102334036,
+        "markov": 0.09205798956141269,
+        "money": 0.043451607650405094,
+        "session": 0.06552601678807457
+      },
+      "ranked": [
+        {
+          "rank": 1,
+          "name": "life_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.04480175155942501,
+          "rf_vimp": 0.013593215170503473
+        },
+        {
+          "rank": 2,
+          "name": "x_life_ctcvr__sess_bounce_rate",
+          "family": "cross",
+          "po_vimp": 0.03715270066295889,
+          "rf_vimp": 0.018611001913705773
+        },
+        {
+          "rank": 3,
+          "name": "sess_depth_cnv_mean",
+          "family": "session",
+          "po_vimp": 0.03336076671655692,
+          "rf_vimp": 0.022901131137177184
+        },
+        {
+          "rank": 4,
+          "name": "dec_hl3d_dec_clk",
+          "family": "decay",
+          "po_vimp": 0.030579739004994184,
+          "rf_vimp": 0.01167698770262227
+        },
+        {
+          "rank": 5,
+          "name": "3d_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.029821966605057686,
+          "rf_vimp": 0.006534997514308964
+        },
+        {
+          "rank": 6,
+          "name": "x_life_ctr__active_days",
+          "family": "cross",
+          "po_vimp": 0.028103278807306058,
+          "rf_vimp": 0.02345897572039138
+        },
+        {
+          "rank": 7,
+          "name": "dec_hl1d_dec_clk",
+          "family": "decay",
+          "po_vimp": 0.02625359711119754,
+          "rf_vimp": 0.008883957338324111
+        },
+        {
+          "rank": 8,
+          "name": "x_life_cvr__7d_ctr",
+          "family": "cross",
+          "po_vimp": 0.025874484692758288,
+          "rf_vimp": 0.004363014487493422
+        },
+        {
+          "rank": 9,
+          "name": "sess_cnv_sess_rate",
+          "family": "session",
+          "po_vimp": 0.02573935961033455,
+          "rf_vimp": 0.022562731249017382
+        },
+        {
+          "rank": 10,
+          "name": "dec_hl7d_dec_clk",
+          "family": "decay",
+          "po_vimp": 0.02552543563078686,
+          "rf_vimp": 0.010546733396255868
+        },
+        {
+          "rank": 11,
+          "name": "dec_hl3d_dec_cnv",
+          "family": "decay",
+          "po_vimp": 0.023164802279321908,
+          "rf_vimp": 0.006696649047971228
+        },
+        {
+          "rank": 12,
+          "name": "attr_anyclk2cnv_min_std",
+          "family": "attr",
+          "po_vimp": 0.022646345480469295,
+          "rf_vimp": 0.002445545367860273
+        },
+        {
+          "rank": 13,
+          "name": "x_life_ctr__sess_n",
+          "family": "cross",
+          "po_vimp": 0.020373893806994833,
+          "rf_vimp": 0.007431561680503044
+        },
+        {
+          "rank": 14,
+          "name": "x_pay_cnt__active_days",
+          "family": "cross",
+          "po_vimp": 0.01954158847408321,
+          "rf_vimp": 0.02680953276211025
+        },
+        {
+          "rank": 15,
+          "name": "x_life_ctcvr__sess_n",
+          "family": "cross",
+          "po_vimp": 0.017839482795266284,
+          "rf_vimp": 0.022925880833858322
+        },
+        {
+          "rank": 16,
+          "name": "30d_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.017287198786464435,
+          "rf_vimp": 0.021718780170843048
+        },
+        {
+          "rank": 17,
+          "name": "x_life_ctr__attr_anyclk2cnv_min_p50",
+          "family": "cross",
+          "po_vimp": 0.017025601946569074,
+          "rf_vimp": 0.015507227592472759
+        },
+        {
+          "rank": 18,
+          "name": "trans_cnv_to_exp",
+          "family": "markov",
+          "po_vimp": 0.01528259791119263,
+          "rf_vimp": 0.023641479831851532
+        },
+        {
+          "rank": 19,
+          "name": "dec_hl7d_dec_cnv",
+          "family": "decay",
+          "po_vimp": 0.014766121050328904,
+          "rf_vimp": 0.006637166523249166
+        },
+        {
+          "rank": 20,
+          "name": "trend_n_cnv_3d_minus_14d",
+          "family": "funnel",
+          "po_vimp": 0.01452045448583337,
+          "rf_vimp": 0.001594894462000692
+        },
+        {
+          "rank": 21,
+          "name": "30d_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.01441250977081614,
+          "rf_vimp": 0.006569010374904779
+        },
+        {
+          "rank": 22,
+          "name": "trans_exp_to_clk",
+          "family": "markov",
+          "po_vimp": 0.014239055329077896,
+          "rf_vimp": 0.007778870923327507
+        },
+        {
+          "rank": 23,
+          "name": "14d_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.014016379057424066,
+          "rf_vimp": 0.010378236509007325
+        },
+        {
+          "rank": 24,
+          "name": "trend_cvr_3d_minus_14d",
+          "family": "funnel",
+          "po_vimp": 0.013925848185410691,
+          "rf_vimp": 0.0015918368162854517
+        },
+        {
+          "rank": 25,
+          "name": "x_sess_n__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.01350583413602931,
+          "rf_vimp": 0.004001498757743264
+        },
+        {
+          "rank": 26,
+          "name": "trans2_exp_cnv_exp",
+          "family": "markov",
+          "po_vimp": 0.013423296568781906,
+          "rf_vimp": 0.012102867065032594
+        },
+        {
+          "rank": 27,
+          "name": "x_life_cvr__sess_bounce_rate",
+          "family": "cross",
+          "po_vimp": 0.013267565372488705,
+          "rf_vimp": 0.0022356050195101967
+        },
+        {
+          "rank": 28,
+          "name": "trans_exp_to_exp",
+          "family": "markov",
+          "po_vimp": 0.013133763637775095,
+          "rf_vimp": 0.0390383875188247
+        },
+        {
+          "rank": 29,
+          "name": "x_life_ctcvr__active_days",
+          "family": "cross",
+          "po_vimp": 0.013029890460285545,
+          "rf_vimp": 0.029827582949854197
+        },
+        {
+          "rank": 30,
+          "name": "log1p_abs_life_ctcvr",
+          "family": "cross",
+          "po_vimp": 0.01233803250821692,
+          "rf_vimp": 0.03141409221900181
+        },
+        {
+          "rank": 31,
+          "name": "x_life_ctcvr__pay_cnt",
+          "family": "cross",
+          "po_vimp": 0.011954078522506758,
+          "rf_vimp": 0.015152366296870907
+        },
+        {
+          "rank": 32,
+          "name": "x_hist_len__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.011450657228686734,
+          "rf_vimp": 0.0059442432144789625
+        },
+        {
+          "rank": 33,
+          "name": "3d_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.011144029652225938,
+          "rf_vimp": 0.0003927767742594893
+        },
+        {
+          "rank": 34,
+          "name": "x_life_cvr__hist_len",
+          "family": "cross",
+          "po_vimp": 0.011089323959038147,
+          "rf_vimp": 0.00154310356400541
+        },
+        {
+          "rank": 35,
+          "name": "x_life_ctcvr__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.010481970513479507,
+          "rf_vimp": 0.0020548914170188757
+        },
+        {
+          "rank": 36,
+          "name": "x_life_cvr__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.0098677205598601,
+          "rf_vimp": 0.0013411019604192837
+        },
+        {
+          "rank": 37,
+          "name": "x_sess_bounce_rate__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.009353727442976283,
+          "rf_vimp": 0.009636256836533987
+        },
+        {
+          "rank": 38,
+          "name": "ctvr_pay_per_expose",
+          "family": "funnel",
+          "po_vimp": 0.009347424294717908,
+          "rf_vimp": 0.02566984430719112
+        },
+        {
+          "rank": 39,
+          "name": "x_pay_cnt__sess_bounce_rate",
+          "family": "cross",
+          "po_vimp": 0.008938861133348157,
+          "rf_vimp": 0.014644648336959911
+        },
+        {
+          "rank": 40,
+          "name": "life_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.008870135928389405,
+          "rf_vimp": 0.012564532861253608
+        },
+        {
+          "rank": 41,
+          "name": "x_pay_cnt__hist_len",
+          "family": "cross",
+          "po_vimp": 0.008395243592072287,
+          "rf_vimp": 0.0056716846515510585
+        },
+        {
+          "rank": 42,
+          "name": "dec_hl1d_dec_cnv",
+          "family": "decay",
+          "po_vimp": 0.00836197333887444,
+          "rf_vimp": 0.0023143519281925286
+        },
+        {
+          "rank": 43,
+          "name": "trend_n_clk_1d_minus_7d",
+          "family": "funnel",
+          "po_vimp": 0.008315798808521294,
+          "rf_vimp": 0.0010460081395183706
+        },
+        {
+          "rank": 44,
+          "name": "14d_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.008230205907913426,
+          "rf_vimp": 0.008278401801932274
+        },
+        {
+          "rank": 45,
+          "name": "x_life_ctcvr__attr_anyclk2cnv_min_p50",
+          "family": "cross",
+          "po_vimp": 0.007903474689407237,
+          "rf_vimp": 0.005330176740127174
+        },
+        {
+          "rank": 46,
+          "name": "14d_cvr",
+          "family": "funnel",
+          "po_vimp": 0.007895755080333808,
+          "rf_vimp": 0.0002038763856635144
+        },
+        {
+          "rank": 47,
+          "name": "x_life_ctr__pay_cnt",
+          "family": "cross",
+          "po_vimp": 0.007753893882391151,
+          "rf_vimp": 0.0027226460472097027
+        },
+        {
+          "rank": 48,
+          "name": "log1p_abs_life_ctr",
+          "family": "cross",
+          "po_vimp": 0.007354301256806946,
+          "rf_vimp": 0.002619667508637317
+        },
+        {
+          "rank": 49,
+          "name": "x_life_ctr__7d_cvr",
+          "family": "cross",
+          "po_vimp": 0.007125221462574757,
+          "rf_vimp": 0.0010644408369287948
+        },
+        {
+          "rank": 50,
+          "name": "x_life_ctcvr__7d_ctr",
+          "family": "cross",
+          "po_vimp": 0.0071118341957133405,
+          "rf_vimp": 0.003575820005482883
+        },
+        {
+          "rank": 51,
+          "name": "x_life_ctr__life_cvr",
+          "family": "cross",
+          "po_vimp": 0.007069589116985959,
+          "rf_vimp": 0.0014247575266365757
+        },
+        {
+          "rank": 52,
+          "name": "x_life_cvr__sess_n",
+          "family": "cross",
+          "po_vimp": 0.006497758514613499,
+          "rf_vimp": 0.00098629902766002
+        },
+        {
+          "rank": 53,
+          "name": "7d_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.00614533602090578,
+          "rf_vimp": 0.0022004955578223697
+        },
+        {
+          "rank": 54,
+          "name": "sess_depth_clk_mean",
+          "family": "session",
+          "po_vimp": 0.006119286837953537,
+          "rf_vimp": 0.01342726855169884
+        },
+        {
+          "rank": 55,
+          "name": "x_pay_cnt__attr_anyclk2cnv_min_p50",
+          "family": "cross",
+          "po_vimp": 0.0060148538881697,
+          "rf_vimp": 0.0011427506326165584
+        },
+        {
+          "rank": 56,
+          "name": "7d_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.005924642272999336,
+          "rf_vimp": 0.0027607983445206855
+        },
+        {
+          "rank": 57,
+          "name": "log1p_abs_7d_ctr",
+          "family": "cross",
+          "po_vimp": 0.005788910188160925,
+          "rf_vimp": 0.009596197866210932
+        },
+        {
+          "rank": 58,
+          "name": "x_7d_cvr__sess_n",
+          "family": "cross",
+          "po_vimp": 0.005738097854170154,
+          "rf_vimp": 0.0014471154853266564
+        },
+        {
+          "rank": 59,
+          "name": "trend_n_cnv_7d_over_30d",
+          "family": "funnel",
+          "po_vimp": 0.005644641225567932,
+          "rf_vimp": 0.0025418374051795413
+        },
+        {
+          "rank": 60,
+          "name": "ui_only_exp_share",
+          "family": "funnel",
+          "po_vimp": 0.005487779523628141,
+          "rf_vimp": 0.07731327927771323
+        },
+        {
+          "rank": 61,
+          "name": "ui_exp_per_item_mean",
+          "family": "funnel",
+          "po_vimp": 0.00524322831589283,
+          "rf_vimp": 0.08234073601332687
+        },
+        {
+          "rank": 62,
+          "name": "log1p_abs_attr_anyclk2cnv_min_p50",
+          "family": "cross",
+          "po_vimp": 0.005162842585108733,
+          "rf_vimp": 0.002967336399526082
+        },
+        {
+          "rank": 63,
+          "name": "x_pay_cnt__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.004900743032233054,
+          "rf_vimp": 0.00026858226815628533
+        },
+        {
+          "rank": 64,
+          "name": "dec_hl7d_dec_arpu",
+          "family": "decay",
+          "po_vimp": 0.004594610359762073,
+          "rf_vimp": 0.001925187956318207
+        },
+        {
+          "rank": 65,
+          "name": "trend_cvr_7d_minus_30d",
+          "family": "funnel",
+          "po_vimp": 0.0045370151152027294,
+          "rf_vimp": 0.001473959804502687
+        },
+        {
+          "rank": 66,
+          "name": "7d_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.004481967411922269,
+          "rf_vimp": 0.018902299043012098
+        },
+        {
+          "rank": 67,
+          "name": "x_7d_cvr__sess_bounce_rate",
+          "family": "cross",
+          "po_vimp": 0.004085971776768034,
+          "rf_vimp": 0.0015692670733838288
+        },
+        {
+          "rank": 68,
+          "name": "x_7d_ctr__7d_cvr",
+          "family": "cross",
+          "po_vimp": 0.004055711970863775,
+          "rf_vimp": 0.00039144183806360427
+        },
+        {
+          "rank": 69,
+          "name": "x_pay_cnt__sess_n",
+          "family": "cross",
+          "po_vimp": 0.004008768013203027,
+          "rf_vimp": 0.004651228869125811
+        },
+        {
+          "rank": 70,
+          "name": "x_life_cvr__active_days",
+          "family": "cross",
+          "po_vimp": 0.003985919979197445,
+          "rf_vimp": 0.0004897831691670603
+        },
+        {
+          "rank": 71,
+          "name": "trans_exp_to_cnv",
+          "family": "markov",
+          "po_vimp": 0.003974919552613823,
+          "rf_vimp": 0.00664481219528879
+        },
+        {
+          "rank": 72,
+          "name": "x_7d_ctr__pay_cnt",
+          "family": "cross",
+          "po_vimp": 0.0038191737662867584,
+          "rf_vimp": 0.003930632545952344
+        },
+        {
+          "rank": 73,
+          "name": "trend_n_cnv_7d_minus_30d",
+          "family": "funnel",
+          "po_vimp": 0.0035268976908157056,
+          "rf_vimp": 0.0005431726649829354
+        },
+        {
+          "rank": 74,
+          "name": "30d_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.00351431966924926,
+          "rf_vimp": 0.010695687023977805
+        },
+        {
+          "rank": 75,
+          "name": "sess_clk_sess_rate",
+          "family": "session",
+          "po_vimp": 0.0034534179925394723,
+          "rf_vimp": 0.0066348858502466995
+        },
+        {
+          "rank": 76,
+          "name": "trans_clk_to_cnv",
+          "family": "markov",
+          "po_vimp": 0.0034419611046858215,
+          "rf_vimp": 0.00046344398485795285
+        },
+        {
+          "rank": 77,
+          "name": "14d_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.003406973067094323,
+          "rf_vimp": 0.001229573710252015
+        },
+        {
+          "rank": 78,
+          "name": "x_life_ctcvr__hist_len",
+          "family": "cross",
+          "po_vimp": 0.003388939535702941,
+          "rf_vimp": 0.004609619050771616
+        },
+        {
+          "rank": 79,
+          "name": "life_clk_share",
+          "family": "funnel",
+          "po_vimp": 0.003206110908592924,
+          "rf_vimp": 0.011954988926596868
+        },
+        {
+          "rank": 80,
+          "name": "14d_log1p_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0031163553308827872,
+          "rf_vimp": 0.0017081397700727161
+        },
+        {
+          "rank": 81,
+          "name": "14d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.003095279257524346,
+          "rf_vimp": 0.0009527942641528647
+        },
+        {
+          "rank": 82,
+          "name": "7d_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0029804663727832684,
+          "rf_vimp": 0.0025762616753335034
+        },
+        {
+          "rank": 83,
+          "name": "30d_cvr",
+          "family": "funnel",
+          "po_vimp": 0.002837331734381201,
+          "rf_vimp": 0.0010590828525276835
+        },
+        {
+          "rank": 84,
+          "name": "3d_ctcvr",
+          "family": "funnel",
+          "po_vimp": 0.0027677917645780943,
+          "rf_vimp": 0.0019874064145054423
+        },
+        {
+          "rank": 85,
+          "name": "x_life_ctcvr__arpu_mean_proxy",
+          "family": "cross",
+          "po_vimp": 0.002739693823791046,
+          "rf_vimp": 0.0031069417359665136
+        },
+        {
+          "rank": 86,
+          "name": "trend_n_cnv_1d_minus_7d",
+          "family": "funnel",
+          "po_vimp": 0.0025942856328047235,
+          "rf_vimp": 0.0003361875342769551
+        },
+        {
+          "rank": 87,
+          "name": "14d_cnv_share",
+          "family": "funnel",
+          "po_vimp": 0.0024510465071649083,
+          "rf_vimp": 0.008056425343665154
+        },
+        {
+          "rank": 88,
+          "name": "attr_anyclk2cnv_min_p90",
+          "family": "attr",
+          "po_vimp": 0.002331681715584968,
+          "rf_vimp": 0.005180753567341689
+        },
+        {
+          "rank": 89,
+          "name": "x_7d_cvr__item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.002291697071705225,
+          "rf_vimp": 0.0010329956501120543
+        },
+        {
+          "rank": 90,
+          "name": "x_arpu_mean_proxy__hist_len",
+          "family": "cross",
+          "po_vimp": 0.002174609127207136,
+          "rf_vimp": 0.002975922847686438
+        },
+        {
+          "rank": 91,
+          "name": "x_life_ctr__hist_len",
+          "family": "cross",
+          "po_vimp": 0.0019612665644610887,
+          "rf_vimp": 0.0188412640047659
+        },
+        {
+          "rank": 92,
+          "name": "x_7d_cvr__hist_len",
+          "family": "cross",
+          "po_vimp": 0.001872995634270337,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 93,
+          "name": "trans_cnv_to_cnv",
+          "family": "markov",
+          "po_vimp": 0.0018670587398769325,
+          "rf_vimp": 0.00238812804232168
+        },
+        {
+          "rank": 94,
+          "name": "3d_log1p_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0018140784799543987,
+          "rf_vimp": 0.001986324011156046
+        },
+        {
+          "rank": 95,
+          "name": "attr_anyclk2cnv_min_n",
+          "family": "attr",
+          "po_vimp": 0.0016999167505393597,
+          "rf_vimp": 0.0004300065256761746
+        },
+        {
+          "rank": 96,
+          "name": "7d_log1p_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0015828815064448745,
+          "rf_vimp": 0.0004301965698588499
+        },
+        {
+          "rank": 97,
+          "name": "x_arpu_mean_proxy__sess_n",
+          "family": "cross",
+          "po_vimp": 0.001530098957915988,
+          "rf_vimp": 0.0020019859392755362
+        },
+        {
+          "rank": 98,
+          "name": "7d_log1p_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.001393988985999507,
+          "rf_vimp": 0.001280188697005745
+        },
+        {
+          "rank": 99,
+          "name": "x_life_cvr__arpu_mean_proxy",
+          "family": "cross",
+          "po_vimp": 0.001345542157227277,
+          "rf_vimp": 0.000219271728178436
+        },
+        {
+          "rank": 100,
+          "name": "x_pay_cnt__arpu_mean_proxy",
+          "family": "cross",
+          "po_vimp": 0.0013137986329227187,
+          "rf_vimp": 0.0007849604242519313
+        },
+        {
+          "rank": 101,
+          "name": "x_arpu_sum_proxy__sess_bounce_rate",
+          "family": "cross",
+          "po_vimp": 0.0012414991393726665,
+          "rf_vimp": 0.0031003934423694084
+        },
+        {
+          "rank": 102,
+          "name": "arpu_per_active_day_proxy",
+          "family": "money",
+          "po_vimp": 0.001139486212142189,
+          "rf_vimp": 0.0024743719106835086
+        },
+        {
+          "rank": 103,
+          "name": "14d_log1p_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0011240278364535359,
+          "rf_vimp": 0.0006275107232829641
+        },
+        {
+          "rank": 104,
+          "name": "life_cvr",
+          "family": "funnel",
+          "po_vimp": 0.0010271848019626796,
+          "rf_vimp": 0.0008626705804858102
+        },
+        {
+          "rank": 105,
+          "name": "attr_cnv_wo_prior_clk_cnt",
+          "family": "attr",
+          "po_vimp": 0.0010025891591175055,
+          "rf_vimp": 0.0012656238691914185
+        },
+        {
+          "rank": 106,
+          "name": "x_arpu_mean_proxy__active_days",
+          "family": "cross",
+          "po_vimp": 0.0009961197287283658,
+          "rf_vimp": 0.003458437023844775
+        },
+        {
+          "rank": 107,
+          "name": "life_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0009320043508866055,
+          "rf_vimp": 0.0009309397233532853
+        },
+        {
+          "rank": 108,
+          "name": "30d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0007889073146935398,
+          "rf_vimp": 0.0016433679937417304
+        },
+        {
+          "rank": 109,
+          "name": "30d_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0006995087814418491,
+          "rf_vimp": 0.0023640441273677067
+        },
+        {
+          "rank": 110,
+          "name": "log1p_abs_life_cvr",
+          "family": "cross",
+          "po_vimp": 0.0005617056859815101,
+          "rf_vimp": 0.0006494700864864345
+        },
+        {
+          "rank": 111,
+          "name": "trend_n_cnv_3d_over_14d",
+          "family": "funnel",
+          "po_vimp": 0.000522458025234964,
+          "rf_vimp": 0.0004105526523305998
+        },
+        {
+          "rank": 112,
+          "name": "sq_pay_cnt",
+          "family": "cross",
+          "po_vimp": 0.0004686278709818206,
+          "rf_vimp": 0.0006726891628756392
+        },
+        {
+          "rank": 113,
+          "name": "life_cnv_price_sum",
+          "family": "money",
+          "po_vimp": 0.00023397331135272185,
+          "rf_vimp": 0.001484548127079496
+        },
+        {
+          "rank": 114,
+          "name": "3d_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0001457454863781447,
+          "rf_vimp": 0.0013011137783855609
+        },
+        {
+          "rank": 115,
+          "name": "log1p_arpu_sum",
+          "family": "money",
+          "po_vimp": 0.00013856957481317772,
+          "rf_vimp": 0.0014696341976098916
+        },
+        {
+          "rank": 116,
+          "name": "x_arpu_mean_proxy__sess_bounce_rate",
+          "family": "cross",
+          "po_vimp": 5.458974183643839e-05,
+          "rf_vimp": 0.0021775043247067942
+        },
+        {
+          "rank": 117,
+          "name": "cvr_pay_per_click",
+          "family": "funnel",
+          "po_vimp": 4.1777045668316225e-05,
+          "rf_vimp": 0.00027591231136792175
+        },
+        {
+          "rank": 118,
+          "name": "3d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.00012834200050948401
+        },
+        {
+          "rank": 119,
+          "name": "7d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0026007790601736682
+        },
+        {
+          "rank": 120,
+          "name": "3d_log1p_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0003971446653638239
+        },
+        {
+          "rank": 121,
+          "name": "pay_cnt",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.012290317457123744
+        },
+        {
+          "rank": 122,
+          "name": "life_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.009187576344516734
+        },
+        {
+          "rank": 123,
+          "name": "n_uniq_cnv_item",
+          "family": "diversity",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.008859950660710842
+        },
+        {
+          "rank": 124,
+          "name": "life_log1p_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.00022554184543106863
+        },
+        {
+          "rank": 125,
+          "name": "log1p_abs_pay_cnt",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.00021224521335537065
+        },
+        {
+          "rank": 126,
+          "name": "log1p_pay_cnt",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.02026952779834431
+        },
+        {
+          "rank": 127,
+          "name": "pay_user",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 128,
+          "name": "attr_cnv_wo_prior_clk_rate",
+          "family": "attr",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0002060638783856885
+        },
+        {
+          "rank": 129,
+          "name": "n_uniq_clk_item",
+          "family": "diversity",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0020454147216840074
+        },
+        {
+          "rank": 130,
+          "name": "x_7d_cvr__attr_clk2cnv_min_p50",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0012184095392484924
+        },
+        {
+          "rank": 131,
+          "name": "1d_log1p_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0
+        },
+        {
+          "rank": 132,
+          "name": "7d_cvr",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0008620192179165497
+        },
+        {
+          "rank": 133,
+          "name": "log1p_abs_arpu_mean_proxy",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.003393177822400091
+        },
+        {
+          "rank": 134,
+          "name": "30d_cnv_price_mean",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 4.131478774775346e-05
+        },
+        {
+          "rank": 135,
+          "name": "sq_arpu_mean_proxy",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0014460570216700199
+        },
+        {
+          "rank": 136,
+          "name": "life_log1p_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.004374539206690964
+        },
+        {
+          "rank": 137,
+          "name": "30d_log1p_n_clk",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0017384332636874473
+        },
+        {
+          "rank": 138,
+          "name": "log1p_abs_7d_cvr",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0004252623546868948
+        },
+        {
+          "rank": 139,
+          "name": "item_entropy_clk",
+          "family": "diversity",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.002850882155626701
+        },
+        {
+          "rank": 140,
+          "name": "log1p_abs_item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0004902029894141957
+        },
+        {
+          "rank": 141,
+          "name": "arpu_mean_proxy",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0027562501058322635
+        },
+        {
+          "rank": 142,
+          "name": "life_cnv_price_mean",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0008799864071124218
+        },
+        {
+          "rank": 143,
+          "name": "log1p_abs_arpu_sum_proxy",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0012814490192956701
+        },
+        {
+          "rank": 144,
+          "name": "arpu_p50_proxy",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0013605347715167366
+        },
+        {
+          "rank": 145,
+          "name": "item_entropy_cnv",
+          "family": "diversity",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.010344116306764153
+        },
+        {
+          "rank": 146,
+          "name": "30d_log1p_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0005049600102461465
+        },
+        {
+          "rank": 147,
+          "name": "arpu_sum_proxy",
+          "family": "money",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.00042512208739842574
+        },
+        {
+          "rank": 148,
+          "name": "1d_n_cnv",
+          "family": "funnel",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0007498473267464213
+        },
+        {
+          "rank": 149,
+          "name": "sq_item_entropy_clk",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0043325954729667125
+        },
+        {
+          "rank": 150,
+          "name": "x_arpu_sum_proxy__arpu_mean_proxy",
+          "family": "cross",
+          "po_vimp": 0.0,
+          "rf_vimp": 0.0018201851209968106
+        }
+      ]
+    }
+  ]
+}
