@@ -532,7 +532,7 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
 
     n_seeds = max((blob.get("n_seeds", 1) for blob in all_ds.values()), default=1)
     lines = [
-        "# CFPerm-gated dual/blend (v8.1 multi-seed)",
+        "# CFPerm-gated dual/blend (v8.3 full multi-seed (beijing_gate=0.25))",
         "",
         f"_Mean over **{n_seeds}** seed(s). L0 = CFPerm DRPerm (`e_mode=known`)._",
         "",
@@ -951,7 +951,7 @@ def main() -> None:
             },
         }
     payload = {
-        "version": "8.2",
+        "version": "8.3",
         "gate": "cfperm",
         "risk": args.risk,
         "n_perm": args.n_perm,

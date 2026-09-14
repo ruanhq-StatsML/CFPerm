@@ -1,27 +1,29 @@
-# AGOD obs-PO recipe (CFPerm gate, v8.2)
+# AGOD obs-PO recipe (CFPerm gate, v8.3)
 
 ## Thesis
 
-认 **hard**; packMSE only under **beijing**; **L0 = CFPerm DRPerm** (not OnlineRFPerm).
+认 **hard**; packMSE only under **beijing**; **L0 = CFPerm DRPerm**.
 
 ## Locked
 
 | Item | Choice |
 |---|---|
 | L0 | CFPerm DRPerm, `e_mode=known`, `n_perm≥39`, α=0.05 |
-| L1 | intensity → λ / beijing; **`beijing_gate=0.25`** (v8.2; was 0.45) |
+| L1 | intensity → λ / beijing; **`beijing_gate=0.25`** |
 | temper | gate=0.20, lam_max=0.75 |
-| Hard claim | `hard_m` = hard_support on reject (mild) |
-| Dual | mild→hard_support; intensity>0.25→soft CV |
-| RFPerm-era extras | blend mix≤0.5; reject dual_r2 / n_recent=2 |
+| Default policy | **`dual`** (mild→hard_support; intensity>0.25→soft CV) |
+| Hard claim path | `hard_m` reported separately |
+| Blend | mix≤0.5; optional on sparse packs |
 
-## Evidence
+## Evidence (v8.3: 40×256 × 6 packs × 3 seeds)
 
-- v8.1: Jaccard(CFPerm,RFPerm)≈0.00–0.22; sparse stocks hard_m pack −3%…−4%
-- v8.2 scan: beijing_gate≤0.25 → bj@reject≈1.0, dual pack rel ≈ **+0.6%**; gate=0.45 → bj@reject≈0.2, dual pack rel ≈ **+9%**
+- Synth: size=0, power=0.8
+- bj@reject = **1.0** on all packs with rejects
+- Pack vs uni: dual **+1.8% / +0.4%** on metro/beijing vs hard_m **+5.2% / +8.0%**
+- Hard-subset: dual wins 3/6 packs
 
 ## Open
 
-- Full 40×256 multi-seed under beijing_gate=0.25
-- dual+blend_50 hybrid only when BJ fires
-- Optional: post-reject FSDS / VIMP feature subset
+- dual+blend_50 hybrid only on BJ rejects
+- Post-reject FSDS / VIMP feature subset
+- Optional RRPerm L0 ablation
