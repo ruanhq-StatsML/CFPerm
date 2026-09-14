@@ -133,6 +133,7 @@ def _xy(df: pd.DataFrame, ycol: str, need: str | None):
     names = [c for c in X_KEEP if c in sub.columns]
     X = sub[names].fillna(0.0).to_numpy(np.float64)
     y = pd.to_numeric(sub[ycol], errors="coerce").fillna(0.0).to_numpy(np.float64)
+    med = float(np.median(df["t_end"].to_numpy(np.float64)))
     w = (sub["t_end"].to_numpy(np.float64) > med).astype(int)
     return sub, names, X, y, w
 
@@ -263,8 +264,14 @@ def insights(mix_rows: list[dict], by_y: dict) -> list[str]:
         cards.append(
             f"点次数选中但 CTR 未选中 {count_not_rate}：量跟着曝光走，换成每次曝光后的比例就掉了。"
         )
-    if "ui_only_exp_share" in mix_sel:
-        cards.append("`ui_only_exp_share` 是队列（只曝不点谁来了），默认不是 CTR 机制。")
+    if "ui_only_exp_share" in mix_sel and "ui_only_exp_share" not in ctr_sel:
+        cards.append("`ui_only_exp_share` 只在 mixture：队列（只曝不点谁来了），不是 CTR 图。")
+    elif "ui_only_exp_share" in mix_sel and "ui_only_exp_share" in ctr_sel:
+        cards.append("`ui_only_exp_share` 两板都过线：后来的人只曝不点，右窗点率也还咬着这列——队列和 CTR 没完全拆开。")
+    if "dec_hl7d_dec_clk" in ctr_sel and "dec_hl7d_dec_cnv" in (cnv_sel | {r["name"] for r in by_y.get("n_cnv", {}).get("rows", []) if r["selected"]}):
+        cards.append("CTR 选中点击衰减、成交 Y 选中成交衰减：点图和买图不是同一套热度。")
+    if "life_cnv_share" in mix_sel and "life_cnv_share" not in ctr_sel:
+        cards.append("`life_cnv_share` 只在 mixture：轨迹里买占多大是谁来了，不是右窗怎么点。")
     return cards
 
 
