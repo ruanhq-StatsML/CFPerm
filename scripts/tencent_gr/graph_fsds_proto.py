@@ -3,6 +3,7 @@
 
 φ=(Y-μ)(W-e) 是早/晚对 Y 的距离，不是 treatment effect。
 图谱只是另一包 X：左窗行为 → networkx 度数 / 投影 PageRank / 同场共点。
+关联定义见 ASSOC / assoc_edges：catalog、hit、hop、proj、coclick。
 不是 GNN，不是 DFS。漏斗列仍在；graph 当 hop 给 LOGO/LOCO。
 
   python3 scripts/tencent_gr/graph_fsds_proto.py

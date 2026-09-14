@@ -84,8 +84,9 @@ def _user_story(uid: int, items: np.ndarray) -> tuple[list, str]:
     elif kind == 1:
         add(a, EXP, 0)
         add(a, CLK, 20)
-        add(b, EXP, 400)
-        add(b, CLK, 15)
+        add(b, EXP, 40)
+        add(b, CLK, 20)
+        add(a, EXP, SESS + 60)  # 推 t_cut，两下点留在左窗 → coclick
     elif kind == 2:
         add(a, EXP, 0)
         add(a, CLK, 20)
@@ -313,6 +314,7 @@ def main() -> None:
     mix = path_mix(story)
     assert set(mix.path) >= {"A_same_clk", "B_other_clk", "C_same_exp", "D_empty"}
     assert 0 not in set(El["hit"].user_id.astype(int))
+    assert len(El["coclick"]) > 0
 
 
 if __name__ == "__main__":
