@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-"""小合成集：回忆漏斗 + 场 + 店跳 + 左窗构图。防泄漏。
-
-每人一条能点名的故事（uid%6）。店名是标签不是 X。单号只在 cnv_ts 出现。
-构图只用左窗 clk/cnv；曝光不是边；右窗不得进 G。
+"""好几年不写就忘。跑一遍，对着六条故事把口径找回来。
 
   python3 scripts/tencent_gr/synth_recall.py
+
+时间不能倒。一层漏斗一问，不要共用一个 Y。
+曝光 → 点击 → 转化 → 买后点击
+ CTR     CVR    路径     续逛 ≠ 转化
+
+相邻 Δt>30min 切断一场。同一 W：(t−W,t] 是 X，(t,t+W] 是 Y。
+跟不满不当 0。空 asof 不填 0。n_clk 是量，cnv_share 是结构。
+
+店名是标签不是 X。先有货在店上，行为序列，cnv_ts 才有单号。
+图：左窗 clk/cnv 才是边，曝光不是边，右窗不得进 G。不是 GNN，不是 DFS。
 """
 from __future__ import annotations
 
@@ -27,6 +34,16 @@ SESS = 30 * 60
 T0 = 1_700_000_000
 SEED = 0
 FOLLOW_PAD = 2 * 86400  # 垫 t_end，买后窗跟满；不参与 t_cut
+
+# uid%6。忘了就从这六个人往下对。
+STORY = {
+    0: "bounce_exp",       # 看一眼走。有场切，没点。曝光层。图上没边。
+    1: "clk_no_cnv",       # 点了不买。有 CTR，没有 CVR，没有单。
+    2: "same_item_cnv",    # 同品点完买。路径 A。当场续逛 ≠ 第二笔转化。
+    3: "other_clk_cnv",    # 先点别的再买这件。路径 B。跨场回访。
+    4: "empty_path_cnv",   # 没点就买。路径 D。dt_item 空，别填 0。
+    5: "two_cnv",          # 两单。第一单 next 跨场，第二单当场。
+}
 
 
 def catalog(n_item: int, n_merch: int, seed: int) -> pd.DataFrame:
@@ -60,34 +77,28 @@ def _user_story(uid: int, items: np.ndarray) -> tuple[list, str]:
         evs.append((uid, iid, act, t))
 
     if kind == 0:
-        tag = "bounce_exp"
         add(a, EXP, 0)
-        add(b, EXP, SESS + 60)  # 下一场，看一眼走
+        add(b, EXP, SESS + 60)
     elif kind == 1:
-        tag = "clk_no_cnv"
         add(a, EXP, 0)
         add(a, CLK, 20)
         add(b, EXP, 400)
         add(b, CLK, 15)
     elif kind == 2:
-        tag = "same_item_cnv"  # 同品点完买 + 当场续逛
         add(a, EXP, 0)
         add(a, CLK, 20)
         add(a, CNV, 600)
         add(a, CLK, 120)
     elif kind == 3:
-        tag = "other_clk_cnv"  # 先点别的再买这件 + 跨场回访
         add(b, EXP, 0)
         add(b, CLK, 20)
         add(a, EXP, 300)
         add(a, CNV, 40)
         add(b, CLK, SESS + 90)
     elif kind == 4:
-        tag = "empty_path_cnv"  # 没点就买
         add(a, EXP, 0)
         add(a, CNV, 80)
     else:
-        tag = "two_cnv"
         add(a, EXP, 0)
         add(a, CLK, 10)
         add(a, CNV, 50)
@@ -95,7 +106,7 @@ def _user_story(uid: int, items: np.ndarray) -> tuple[list, str]:
         add(b, CLK, 20)
         add(b, CNV, 30)
         add(b, CLK, 200)
-    return evs, tag
+    return evs, STORY[kind]
 
 
 def make_synth(n_users: int = 60, n_item: int = 24, n_merch: int = 6, seed: int = SEED):
@@ -153,6 +164,41 @@ def hit_pairs(df: pd.DataFrame) -> set[tuple[int, int]]:
     return {(int(u), int(i)) for u, i in zip(h.user_id, h.item_id)}
 
 
+def _fmt_seq(g: pd.DataFrame) -> str:
+    g = g.sort_values("ts")
+    prev = None
+    bits = []
+    actn = {0: "exp", 1: "clk", 2: "cnv"}
+    for r in g.itertuples():
+        dt = "" if prev is None else f"+{int(r.ts - prev)}s"
+        if prev is not None and r.ts - prev > SESS:
+            dt += "|sess"
+        bits.append(f"{dt} i{int(r.item_id)}:{actn[int(r.act)]}".strip())
+        prev = r.ts
+    return " ".join(bits)
+
+
+def walk(story: pd.DataFrame, post: pd.DataFrame) -> None:
+    print("—— 六条故事（user 0..5）——")
+    for uid in range(6):
+        g = story.loc[story.user_id.eq(uid)]
+        print(f"u{uid} {STORY[uid]}: {_fmt_seq(g)}")
+        rows = post.loc[post.user_id.eq(uid)]
+        if rows.empty:
+            print("    无单")
+            continue
+        for i, r in enumerate(rows.itertuples()):
+            dt_item = r.dt_item_min
+            dt_item_s = "empty" if dt_item != dt_item else f"{dt_item:.1f}min"
+            nxt = r.dt_next_clk_sec
+            nxt_s = "none" if nxt is None or nxt != nxt else f"{int(nxt)}s"
+            print(
+                f"    cnv{i} item={int(r.item_id)} wo_prior_clk={bool(r.wo_prior_clk)} "
+                f"dt_item={dt_item_s} next={nxt_s} "
+                f"same={r.next_clk_same_sess} cross={r.next_clk_cross_sess}"
+            )
+
+
 def _post_rows(ev: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for uid, g in ev.groupby("user_id", sort=False):
@@ -165,6 +211,7 @@ def _post_rows(ev: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
+    print(__doc__)
     OUT.mkdir(parents=True, exist_ok=True)
     ev, story, cat, orders, stories = make_synth()
     # t_cut 只看故事，pad 一律进右窗（跟满，不当行为）
@@ -218,28 +265,23 @@ def main() -> None:
     print("same_sess vs cross (user_post by story)")
     print(userp.groupby("story")[["post_clk_same_sess_rate", "post_clk_cross_sess_rate"]]
           .mean().round(3).to_string())
-    print("orders e.g.", orders.order_number.head(3).tolist())
-    print("shops\n",
-          cat.drop_duplicates("merchant_id")[["merchant_id", "merchant_name"]].head(6).to_string(index=False))
+    print("shops", cat.drop_duplicates("merchant_id").merchant_name.tolist())
+    walk(story, post)
 
-    u2 = story.loc[story.user_id.eq(2), ["ts", "item_id", "act"]].copy()
-    u2["act"] = u2.act.map({0: "exp", 1: "clk", 2: "cnv"})
-    print("user 2 (same_item_cnv)\n", u2.to_string(index=False))
     p2 = post.loc[post.user_id.eq(2)]
-    if len(p2):
-        print("post dt_next", int(p2.iloc[0].dt_next_clk_sec),
-              "same_sess", p2.iloc[0].next_clk_same_sess)
-    u3 = story.loc[story.user_id.eq(3), ["ts", "item_id", "act"]].copy()
-    u3["act"] = u3.act.map({0: "exp", 1: "clk", 2: "cnv"})
-    print("user 3 (other_clk_cnv)\n", u3.to_string(index=False))
     p3 = post.loc[post.user_id.eq(3)]
-    if len(p3):
-        print("post dt_next", int(p3.iloc[0].dt_next_clk_sec),
-              "same_sess", p3.iloc[0].next_clk_same_sess,
-              "cross_sess", p3.iloc[0].next_clk_cross_sess)
-    # 故事自检：同品续逛当场；跨场回访；空路径没点
+    p4 = post.loc[post.user_id.eq(4)]
+    p5 = post.loc[post.user_id.eq(5)]
     assert float(p2.iloc[0].next_clk_same_sess) == 1.0
     assert float(p3.iloc[0].next_clk_cross_sess) == 1.0
+    assert bool(p4.iloc[0].wo_prior_clk)
+    assert p4.iloc[0].dt_item_min != p4.iloc[0].dt_item_min  # empty ≠ 0
+    assert float(p5.iloc[0].next_clk_cross_sess) == 1.0
+    assert float(p5.iloc[1].next_clk_same_sess) == 1.0
+    bounce = story.loc[story.user_id.eq(0)].sort_values("ts")
+    assert int(bounce.act.max()) == EXP
+    assert int(bounce.ts.diff().iloc[-1]) > SESS
+    assert 0 not in set(gu.user_id.astype(int))  # 曝光不是边
     empty = path_mix(story)
     assert int(empty.loc[empty.path.eq("D_empty"), "n"].iloc[0]) > 0
 
