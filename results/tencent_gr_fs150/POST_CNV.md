@@ -1,6 +1,7 @@
 # 买完会不会带动后续点击
 
-计算（状态机 ≡ asof）：`results/tencent_gr_fs150/POST_CALC.md`，扫 `scripts/tencent_gr/onepass_post.py`。
+计算（状态机 ≡ asof）：`POST_CALC.md` / `onepass_post.py`。  
+业务 writeup（路径 / 指针 / 当场 / 跟满窗评估）：`ASOF_PATH_WRITEUP.md`，PDF：`ASOF_PATH_WRITEUP.pdf`。
 
 last-touch（backward asof）= 买之前怎么点过来。
 这块（forward asof）= **买完还会不会点**。`trans_cnv_to_exp` 只是邻接 Markov，不够。

@@ -1,5 +1,7 @@
 # 买后点击：怎么算
 
+业务怎么刻画、怎么评估（路径 / 指针 / 当场 / 跟满窗）：见 `ASOF_PATH_WRITEUP.md`（PDF 同名）。
+
 代码：`scripts/tencent_gr/onepass_post.py`（状态机）≡ `block_tables.tab_post_cnv_events`（asof）。  
 事件先按 `(ts, act)` 排：同秒 CLK=1 在 CNV=2 前。`t_end = 序列最后一条.ts`。
 
