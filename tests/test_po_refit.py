@@ -63,3 +63,13 @@ def test_refit_weights_mean_one_when_fired():
     assert rec["fired"]
     assert abs(float(w.mean()) - 1.0) < 0.05
     assert rec["ok"]
+
+
+def test_adaptive_matches_pair_uniform_when_quiet():
+    from agod.po_refit import run_adaptive_stream
+
+    stream = make_batch_stream(n_batches=6, n_per=80, p=8, seed=3, cov=0.0)
+    adp = run_adaptive_stream(stream, gate=1.25)
+    uni = run_uniform_on_same_rows(stream, assign="pair")
+    assert adp["fire_rate"] <= 0.5
+    assert abs(adp["online_mse"] - uni["online_mse"]) < 0.08

@@ -273,3 +273,71 @@ def run_uniform_on_same_rows(stream: Stream, assign: Assign = "pair", ridge_alph
         mode="sqrt",
         ridge_alpha=ridge_alpha,
     )
+
+
+def run_adaptive_stream(
+    stream: Stream,
+    *,
+    gate=1.25,
+    mode="sqrt",
+    ridge_alpha=3.0,
+):
+    """Similar hops: pool last two, uniform. Different hops: train on new batch + √PO.
+
+    Gate is the hop contrast (T=0=上一批, T=1=这一批). That is the
+    re-adjustment the quiet stream was missing.
+    """
+    X = np.asarray(stream.X, dtype=float)
+    y = np.asarray(stream.y, dtype=float)
+    batch = np.asarray(stream.batch, dtype=int)
+    k = int(batch.max()) + 1
+    history = []
+    for t in range(1, k - 1):
+        t0, t1 = assign_hop(batch, t)
+        rec = refit_po_weights(
+            X,
+            y,
+            t0,
+            t1,
+            gate=gate,
+            always=False,
+            mode=mode,
+            ridge_alpha=ridge_alpha,
+        )
+        te = batch == (t + 1)
+        if rec["fired"]:
+            tr = t1
+            w_tr = rec["weights"][tr]
+        else:
+            tr = (batch == (t - 1)) | (batch == t)
+            w_tr = None
+        if not np.any(tr) or not np.any(te):
+            continue
+        pred = _ridge_predict(X[tr], y[tr], X[te], w=w_tr, alpha=ridge_alpha)
+        mse = float(np.mean((pred - y[te]) ** 2))
+        history.append(
+            {
+                "t": int(t),
+                "next_mse": mse,
+                "fired": rec["fired"],
+                "ratio": rec["ratio"],
+                "mean_r0": rec["mean_r0"],
+                "mean_r1": rec["mean_r1"],
+                "n_train": int(tr.sum()),
+                "n_test": int(te.sum()),
+            }
+        )
+    mses = np.array([h["next_mse"] for h in history], dtype=float)
+    fires = np.array([h["fired"] for h in history], dtype=float)
+    return {
+        "assign": "adaptive",
+        "gate": float(gate),
+        "always": False,
+        "mode": "adaptive",
+        "online_mse": float(mses.mean()) if mses.size else float("nan"),
+        "mse_std": float(mses.std()) if mses.size else float("nan"),
+        "fire_rate": float(fires.mean()) if fires.size else 0.0,
+        "path": mses.tolist(),
+        "history": history,
+        "n_hops": int(mses.size),
+    }
