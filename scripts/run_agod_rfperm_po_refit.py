@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
-"""OnlineRFPerm gate → post-hoc T=0/T=1 PO re-fit → √PO weights.
+"""OnlineRFPerm gate → recent-control PO re-fit → √PO on OOD batch.
 
-Elaboration
------------
-1. Uniform is the default (should look slightly best overall).
-2. OnlineRFPerm: small p / FDR reject ⇒ batch is *significantly* different.
-3. Only then post-hoc reweight:
-     T=0 : recent control window (batch just before the pair)
-     T=1 : previous batch ∪ current batch
-   Re-fit μ0 (and optional μ1); PO_i = |Y−μ0(X)| (+ μ-gap blend) on T=1;
-   take √PO weights on the *current* slice; fit the downstream RF.
+Protocol
+--------
+1. Default = **uniform** (should look slightly best overall).
+2. OnlineRFPerm: small p / FDR reject ⇒ **current** batch is OOD / significant.
+3. Only then post-hoc reweight with a *fresh* PO learner:
 
-Modes: uniform | sqrt (always, stale probe residual) | sqrt_gated
-       | sqrt_gated_refit (RFPerm + T=0/T=1 re-fit) | dre
+     recent_control  R = batch_{t-k}, …, batch_{t-1}   (--n-control = k)
+         → re-fit μ0 under the recent regime
+
+     ood_batch       O = batch_t
+         → PO_i = |Y_i − μ0(X_i)| (+ optional μ-gap)
+         → w ∝ √PO **only on O**; fit the downstream RF on O
+
+   Legacy ``--window-mode prev_cur`` keeps T0=before-pair, T1=prev∪cur.
+
+4. Eval: next-MSE on **significant batches only** (non-reject ≡ uniform).
+
+Modes: uniform | sqrt | sqrt_gated | sqrt_gated_refit | dre
 
   PYTHONPATH=. python3 scripts/run_agod_rfperm_po_refit.py \\
     --datasets metro_interstate beijing_pm25 stocks_AAPL waymo_proxy
@@ -97,6 +103,7 @@ def run_mode(
     alpha: float,
     soft_gate: bool,
     n_control: int,
+    window_mode: str = "recent_ood",
 ) -> dict:
     mse_next, mae_next = [], []
     gate_on, p_traj, T_traj, refit_on = [], [], [], []
@@ -136,7 +143,11 @@ def run_mode(
         else:  # sqrt_gated_refit
             if rejected and t >= 1:
                 w = current_batch_sqrt_po_weights(
-                    stream, t, seed=seed + 7 * t, n_control=n_control
+                    stream,
+                    t,
+                    seed=seed + 7 * t,
+                    n_control=n_control,
+                    window_mode=window_mode,  # type: ignore[arg-type]
                 )
                 did_refit = 1
             else:
@@ -267,13 +278,13 @@ def plot_all(all_res: dict, out_dir: Path) -> List[Path]:
 
 def report(all_res: dict) -> str:
     lines = [
-        "# OnlineRFPerm → T=0/T=1 PO re-fit → √PO (post-hoc)",
+        "# OnlineRFPerm → recent-control PO re-fit → √PO on OOD",
         "",
         "Default = **uniform**. On significant OnlineRFPerm reject only:",
         "",
-        "- `T=0`: recent control batch(es) before the pair",
-        "- `T=1`: previous ∪ current batch",
-        "- re-fit μ0 (optional μ1); `PO=|Y−μ0(X)|`; `w=√PO` on current batch",
+        "- **recent control** `R = batch_{t-k},…,batch_{t-1}` (re-fit μ0)",
+        "- **OOD batch** `O = batch_t` (score PO, apply `w∝√PO`)",
+        "- downstream RF fits on O with those weights",
         "",
         "Primary metric = next-MSE on **significant (reject) batches only**.",
         "Non-reject steps stay uniform → excluded from the mean.",
@@ -332,7 +343,18 @@ def main() -> None:
     ap.add_argument("--batch-size", type=int, default=100)
     ap.add_argument("--n-batches", type=int, default=40)
     ap.add_argument("--n-burn", type=int, default=5)
-    ap.add_argument("--n-control", type=int, default=1)
+    ap.add_argument(
+        "--n-control",
+        type=int,
+        default=1,
+        help="n_recent: how many preceding batches re-fit μ0 (recent control)",
+    )
+    ap.add_argument(
+        "--window-mode",
+        choices=("recent_ood", "prev_cur"),
+        default="recent_ood",
+        help="recent_ood: R=last k batches, O=current; prev_cur: legacy T0/T1 pair",
+    )
     ap.add_argument("--alpha", type=float, default=0.05)
     ap.add_argument("--soft-gate", action="store_true")
     ap.add_argument("--max-n", type=int, default=8000)
@@ -362,7 +384,8 @@ def main() -> None:
         stream = make_stream(X, y, args.batch_size, args.n_batches)
         print(
             f"=== {name} n={len(X)} d={X.shape[1]} batches={len(stream)} "
-            f"burn={args.n_burn} control={args.n_control} ===",
+            f"burn={args.n_burn} recent={args.n_control} "
+            f"window={args.window_mode} ===",
             flush=True,
         )
         results = {}
@@ -376,6 +399,7 @@ def main() -> None:
                 alpha=args.alpha,
                 soft_gate=args.soft_gate,
                 n_control=args.n_control,
+                window_mode=args.window_mode,
             )
             print(
                 f"    mse={results[mode]['mse_mean']:.6g} "
@@ -398,6 +422,8 @@ def main() -> None:
         "n_batches": args.n_batches,
         "n_burn": args.n_burn,
         "n_control": args.n_control,
+        "n_recent": args.n_control,
+        "window_mode": args.window_mode,
         "alpha": args.alpha,
         "modes": list(MODES),
         "skipped": skipped,

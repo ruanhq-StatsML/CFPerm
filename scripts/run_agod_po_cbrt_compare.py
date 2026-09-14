@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Compare PO power weights: PO^{1/2} vs PO^{1/3} (gated T0/T1 re-fit).
+"""Compare PO powers under OnlineRFPerm + recent/OOD re-fit.
 
-Default remains uniform. On OnlineRFPerm reject:
-  gated_sqrt : w ∝ PO^{1/2}
-  gated_cbrt : w ∝ PO^{1/3}   ← softer adaptation
+Default remains uniform. On reject:
+  recent_control R = last k batches → re-fit μ0
+  ood_batch      O = current        → w ∝ PO^{1/2} (gated_sqrt)
+                                     or PO^{1/3} (gated_cbrt, softer)
 
   PYTHONPATH=. python3 scripts/run_agod_po_cbrt_compare.py \\
     --datasets metro_interstate beijing_pm25 stocks_AAPL waymo_proxy
@@ -80,7 +81,16 @@ def make_stream(X, y, bs, n_batches):
     return [(X[i : i + bs], y[i : i + bs]) for i in range(0, len(X), bs)]
 
 
-def run_mode(stream, mode: str, seed: int, *, n_burn: int, alpha: float, n_control: int) -> dict:
+def run_mode(
+    stream,
+    mode: str,
+    seed: int,
+    *,
+    n_burn: int,
+    alpha: float,
+    n_control: int,
+    window_mode: str = "recent_ood",
+) -> dict:
     mse_next, mae_next, gate_on, posthoc = [], [], [], []
     X0, y0 = stream[0]
     probe = fit_rf(X0, y0, np.ones(len(y0)), seed)
@@ -109,7 +119,11 @@ def run_mode(stream, mode: str, seed: int, *, n_burn: int, alpha: float, n_contr
         elif mode == "gated_sqrt":
             if rejected:
                 w = current_batch_sqrt_po_weights(
-                    stream, t, seed=seed + 7 * t, n_control=n_control
+                    stream,
+                    t,
+                    seed=seed + 7 * t,
+                    n_control=n_control,
+                    window_mode=window_mode,  # type: ignore[arg-type]
                 )
                 used = 1
             else:
@@ -117,7 +131,11 @@ def run_mode(stream, mode: str, seed: int, *, n_burn: int, alpha: float, n_contr
         elif mode == "gated_cbrt":
             if rejected:
                 w = current_batch_cbrt_po_weights(
-                    stream, t, seed=seed + 7 * t, n_control=n_control
+                    stream,
+                    t,
+                    seed=seed + 7 * t,
+                    n_control=n_control,
+                    window_mode=window_mode,  # type: ignore[arg-type]
                 )
                 used = 1
             else:
@@ -261,7 +279,18 @@ def main() -> None:
     ap.add_argument("--batch-size", type=int, default=100)
     ap.add_argument("--n-batches", type=int, default=40)
     ap.add_argument("--n-burn", type=int, default=5)
-    ap.add_argument("--n-control", type=int, default=1)
+    ap.add_argument(
+        "--n-control",
+        type=int,
+        default=1,
+        help="n_recent: preceding batches used to re-fit μ0",
+    )
+    ap.add_argument(
+        "--window-mode",
+        choices=("recent_ood", "prev_cur"),
+        default="recent_ood",
+        help="recent_ood: R=last k, O=current; prev_cur: legacy pair cut",
+    )
     ap.add_argument("--alpha", type=float, default=0.05)
     ap.add_argument("--max-n", type=int, default=8000)
     ap.add_argument("--pca-d", type=int, default=32)
@@ -299,6 +328,7 @@ def main() -> None:
                 n_burn=args.n_burn,
                 alpha=args.alpha,
                 n_control=args.n_control,
+                window_mode=args.window_mode,
             )
             print(
                 f"    mse={results[mode]['mse_mean']:.6g} "
@@ -313,6 +343,9 @@ def main() -> None:
         "n_batches": args.n_batches,
         "modes": list(MODES),
         "skipped": skipped,
+        "n_control": args.n_control,
+        "n_recent": args.n_control,
+        "window_mode": args.window_mode,
         "datasets": all_res,
         "note": (
             "cbrt = PO**(1/3); softer than sqrt; default still uniform. "
