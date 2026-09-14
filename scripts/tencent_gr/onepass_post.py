@@ -74,6 +74,10 @@ def onepass_post(evs: List[Event]) -> List[Dict]:
                     p["next_same_ts"] = ts
                 if dt <= 0:
                     continue
+                if dt <= SESS_GAP:
+                    p["n_clk_after_same_sess"] += 1
+                elif dt <= POST_WINS["1d"]:
+                    p["n_clk_after_cross_1d"] += 1
                 for name, w in POST_WINS.items():
                     if dt <= w:
                         p["n_clk_after"][name] += 1
@@ -103,6 +107,8 @@ def onepass_post(evs: List[Event]) -> List[Dict]:
                 "n_same_before": {},
                 "n_clk_after": {k: 0 for k in POST_WINS},
                 "n_same_after": {k: 0 for k in POST_WINS},
+                "n_clk_after_same_sess": 0,
+                "n_clk_after_cross_1d": 0,
                 "next_clk_ts": None,
                 "next_clk_item": None,
                 "next_same_ts": None,
@@ -133,7 +139,16 @@ def onepass_post(evs: List[Event]) -> List[Dict]:
         rec["dt_next_same_sec"] = dt_same
         rec["dt_next_clk_min"] = None if dt_any is None else dt_any / 60.0
         rec["next_clk_same_sess"] = None if dt_any is None else float(dt_any <= SESS_GAP)
+        rec["next_clk_cross_sess"] = None if dt_any is None else float(dt_any > SESS_GAP)
         rec["log1p_price"] = math.log1p(max(float(rec["price"] or 0.0), 0.0))
+        if follow >= SESS_GAP:
+            rec["n_clk_after_same_sess"] = rec["n_clk_after_same_sess"]
+        else:
+            rec["n_clk_after_same_sess"] = float("nan")
+        if follow >= POST_WINS["1d"]:
+            rec["n_clk_after_cross_1d"] = rec["n_clk_after_cross_1d"]
+        else:
+            rec["n_clk_after_cross_1d"] = float("nan")
         rec["lag_post_clk_1d_rate"] = (y1d_sum / y1d_cnt) if y1d_cnt else float("nan")
 
         for name, w in POST_WINS.items():
@@ -180,6 +195,10 @@ def user_post(rows: List[Dict]) -> Dict[str, float]:
             "post_same_1d_rate": 0.0,
             "post_lift_1d_p50": 0.0,
             "post_clk_dt_p50": -1.0,
+            "post_clk_same_sess_rate": 0.0,
+            "post_clk_cross_sess_rate": 0.0,
+            "post_n_clk_after_same_sess_mean": 0.0,
+            "post_n_clk_after_cross_1d_mean": 0.0,
         }
     return {
         "post_n_obs_1d": float(sum(r["y_post_clk_1d"] == r["y_post_clk_1d"] for r in rows if r["y_post_clk_1d"] is not None)),
@@ -190,11 +209,14 @@ def user_post(rows: List[Dict]) -> Dict[str, float]:
         "post_same_1h_rate": mean_obs("y_post_same_1h"),
         "post_same_1d_rate": mean_obs("y_post_same_1d"),
         "post_clk_same_sess_rate": mean_obs("next_clk_same_sess"),
+        "post_clk_cross_sess_rate": mean_obs("next_clk_cross_sess"),
         "post_clk_dt_p50": med("dt_next_clk_min", -1.0),
         "post_lift_1d_p50": med("lift_1d", 0.0),
         "post_delta_1d_p50": med("delta_1d", 0.0),
         "post_n_clk_after_1d_mean": mean_obs("n_clk_after_1d"),
         "post_n_clk_before_1d_mean": mean_obs("n_clk_before_1d"),
+        "post_n_clk_after_same_sess_mean": mean_obs("n_clk_after_same_sess"),
+        "post_n_clk_after_cross_1d_mean": mean_obs("n_clk_after_cross_1d"),
     }
 
 
@@ -242,6 +264,7 @@ def assert_match_asof(evs: List[Event], uid: int = 1) -> None:
         "sess_clk_before",
         "lag_post_clk_1d_rate",
         "wo_prior_clk",
+        "next_clk_cross_sess",
     ]
     for i, r in enumerate(rows):
         for k in keys:
@@ -284,6 +307,10 @@ def _demo() -> None:
     assert rows[0]["n_clk_after_1d"] == 2
     assert rows[0]["n_clk_before_1d"] == 1
     assert rows[1]["lag_post_clk_1d_rate"] == 1.0
+    assert rows[0]["next_clk_same_sess"] == 1.0
+    assert rows[0]["next_clk_cross_sess"] == 0.0
+    assert rows[0]["n_clk_after_same_sess"] == 1
+    assert rows[0]["n_clk_after_cross_1d"] == 1
     assert_match_asof(evs)
 
     rng = __import__("random").Random(0)

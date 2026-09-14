@@ -355,6 +355,11 @@ def tab_post_cnv_events(ev: pd.DataFrame, attr_ev: Optional[pd.DataFrame] = None
         out["dt_next_clk_sec"].le(SESS_GAP).astype(float),
         np.nan,
     )
+    out["next_clk_cross_sess"] = np.where(
+        out["next_clk_ts"].notna(),
+        out["dt_next_clk_sec"].gt(SESS_GAP).astype(float),
+        np.nan,
+    )
 
     # 买前/买后同长窗点击量：cum(t+W)-cum(t) vs cum(t)-cum(t-W)
     out["n_clk_le"] = _asof_cum(out, clk, ["user_id"], "cnv_ts", "cum_any")
@@ -437,6 +442,7 @@ def tab_post_cnv_user(post_ev: pd.DataFrame, users) -> pd.DataFrame:
         "post_same_1h_rate": 0.0,
         "post_same_1d_rate": 0.0,
         "post_clk_same_sess_rate": 0.0,
+        "post_clk_cross_sess_rate": 0.0,
         "post_clk_dt_p50": -1.0,
         "post_lift_1d_p50": 0.0,
         "post_delta_1d_p50": 0.0,
@@ -461,6 +467,7 @@ def tab_post_cnv_user(post_ev: pd.DataFrame, users) -> pd.DataFrame:
             "post_same_1h_rate": mean_obs("y_post_same_1h"),
             "post_same_1d_rate": mean_obs("y_post_same_1d"),
             "post_clk_same_sess_rate": mean_obs("next_clk_same_sess"),
+            "post_clk_cross_sess_rate": mean_obs("next_clk_cross_sess"),
             "post_clk_dt_p50": post_ev.groupby("user_id")["dt_next_clk_min"].median(),
             "post_lift_1d_p50": post_ev.groupby("user_id")["lift_1d"].median(),
             "post_delta_1d_p50": post_ev.groupby("user_id")["delta_1d"].median(),
@@ -471,6 +478,7 @@ def tab_post_cnv_user(post_ev: pd.DataFrame, users) -> pd.DataFrame:
     ).reset_index()
     rec["post_clk_dt_p50"] = rec["post_clk_dt_p50"].fillna(-1.0)
     rec["post_clk_same_sess_rate"] = rec["post_clk_same_sess_rate"].fillna(0.0)
+    rec["post_clk_cross_sess_rate"] = rec["post_clk_cross_sess_rate"].fillna(0.0)
     out = base.merge(rec, on="user_id", how="left")
     for k, v in zeros.items():
         out[k] = out[k].fillna(v)
@@ -609,6 +617,7 @@ def _demo() -> None:
         "n_clk_after_1d",
         "lift_1d",
         "next_clk_same_sess",
+        "next_clk_cross_sess",
         "lag_post_clk_1d_rate",
     ]
     print(post[pcols].to_string(index=False))
@@ -622,6 +631,8 @@ def _demo() -> None:
         "attr_clk2cnv_within_5m_rate",
         "post_clk_1d_rate",
         "post_same_1d_rate",
+        "post_clk_same_sess_rate",
+        "post_clk_cross_sess_rate",
         "post_lift_1d_p50",
         "trans_exp_to_clk",
         "x_life_ctcvr__sess_bounce_rate",
@@ -632,6 +643,7 @@ def _demo() -> None:
     assert float(post.iloc[0]["y_post_clk_1h"]) == 1.0
     assert float(post.iloc[1]["y_post_clk_1d"]) == 0.0
     assert float(post.iloc[0]["next_clk_same_sess"]) == 1.0
+    assert float(post.iloc[0]["next_clk_cross_sess"]) == 0.0
 
 
 if __name__ == "__main__":
