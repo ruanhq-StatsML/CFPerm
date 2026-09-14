@@ -29,18 +29,32 @@ clipped). The next-step Ridge trains on T=1 and is scored on $B_{t+1}$.
 Gate uses the hop contrast $B_{t-1}$ vs $B_t$.
 If the gate is quiet, train on $B_{t-1}\cup B_t$ with uniform weights
 (more data, same $P(Y\mid X)$).
-If the gate fires, drop the old batch and train on $B_t$ with
-$\sqrt{\mathrm{PO}}$ --- that is the re-adjustment on a clearly different
-batch. Pair-always PO is the wrong default: it mixes pre- and post-shift
-rows on the cut hop.
+If the gate fires, drop the old batch and train on $B_t$ --- that is the
+re-adjustment on a clearly different batch. Pair-always PO is the wrong
+default: it mixes pre- and post-shift rows on the cut hop.
+The PO-ratio $\rho$ is a \emph{pocket} detector (T=1 riskier than T=0).
+A global map flip needs the residual hop ratio instead.
 
 \paragraph{Hop variant.}
 $T{=}0=B_{t-1}$, $T{=}1=B_t$, train on the new batch only. Pair uses more
 recent mass; hop is the tighter ``new vs immediately previous'' contrast.
 
 \paragraph{What else (same slot).}
+\textit{switch}: same train-set rule as adaptive, but $w=1$ --- isolates
+dropping the old batch from $\sqrt{\mathrm{PO}}$ IPTW.
+The PO-ratio gate $\rho=\bar r_{T=1}/\bar r_{T=0}$ misses a \emph{global}
+concept flip (both sides' $\varphi^2$ jump, so $\rho\approx 1$).
+The residual gate
+$\rho^{\mathrm{res}}=\mathrm{MSE}(\hat y_{B_{t-1}}(B_t))/\mathrm{MSE}_{\mathrm{train}}(B_{t-1})$
+is the ``batches clearly different'' detector; default $\gamma_{\mathrm{res}}=2$.
+\textit{resid} then trains on $B_t$ only; \textit{resid\_po} also applies
+refit $\sqrt{\mathrm{PO}}$ weights on that new batch.
 Soft gate: $w \leftarrow (1-\lambda)\mathbf{1}+\lambda w_{\mathrm{PO}}$ with
-$\lambda=\mathrm{clip}((\rho-\gamma)/(2\gamma),0,1)$ instead of a hard cut.
-EMA of $w$ across hops. Do not apply PO weights on T=0 rows. Density-ratio
-DRE stays the X-only baseline; it still ignores label risk.
+$\lambda=\mathrm{clip}((\rho-\gamma)/(2\gamma),0,1)$.
+\textit{oracle}: knows $\texttt{concept\_at}$; train-set upper bound.
+DRE stays the $X$-only baseline; it still ignores label risk.
+The first post-cut batch is structurally unpredictable from labels
+(when scoring $B_4$ the hop $B_2$ vs $B_3$ is still quiet).
+EMA of $w$ across hops is left for later: after the cut is absorbed,
+pooling the last two post-shift batches is already the right default.
 Not CATE; $\varphi$ is a discrepancy. Unique CS/CD remains impossible.

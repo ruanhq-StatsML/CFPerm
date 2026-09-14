@@ -20,7 +20,7 @@ from typing import Literal
 import numpy as np
 from sklearn.linear_model import Ridge
 
-from agod.po_iptw import po_iptw_weights
+from agod.po_iptw import dre_weights, po_iptw_weights
 
 Assign = Literal["hop", "pair"]
 
@@ -88,6 +88,33 @@ def assign_pair(batch, t):
     return t0, t1
 
 
+def mix_lambda(ratio, gate=1.25, soft_scale=2.0):
+    """Soft gate: 0 below γ, then ramp to 1 over ``soft_scale * γ`` extra ratio."""
+    g = float(gate)
+    den = float(soft_scale) * g
+    if den <= 0:
+        return 1.0 if float(ratio) >= g else 0.0
+    return float(np.clip((float(ratio) - g) / den, 0.0, 1.0))
+
+
+def residual_hop_ratio(X, y, t0, t1, ridge_alpha=3.0):
+    """How badly a model fit on 上一批 predicts 这一批.
+
+    Global concept flip raises this a lot; a global flip does *not*
+    raise mean φ²_{T=1} / mean φ²_{T=0} (both sides jump together).
+    """
+    t0 = np.asarray(t0, dtype=bool).ravel()
+    t1 = np.asarray(t1, dtype=bool).ravel()
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float).ravel()
+    if int(t0.sum()) < 3 or int(t1.sum()) < 3:
+        return 1.0, 0.0, 0.0
+    clf = Ridge(alpha=float(ridge_alpha)).fit(X[t0], y[t0])
+    mse0 = float(np.mean((clf.predict(X[t0]) - y[t0]) ** 2))
+    mse1 = float(np.mean((clf.predict(X[t1]) - y[t1]) ** 2))
+    return mse1 / (mse0 + 1e-8), mse0, mse1
+
+
 def refit_po_weights(
     X,
     y,
@@ -98,8 +125,14 @@ def refit_po_weights(
     always=False,
     mode="sqrt",
     ridge_alpha=3.0,
+    soft=False,
+    soft_scale=2.0,
 ):
-    """Refit PO-learner on T0 vs T1; return weights on T1 (and gate flag)."""
+    """Refit PO-learner on T0 vs T1; return weights on T1 (and gate flag).
+
+    Hard gate: uniform unless ρ ≥ γ, then full √PO.
+    Soft gate: w = (1-λ) + λ w_PO with λ = clip((ρ-γ)/(2γ), 0, 1).
+    """
     t0 = np.asarray(t0, dtype=bool).ravel()
     t1 = np.asarray(t1, dtype=bool).ravel()
     on = t0 | t1
@@ -108,21 +141,28 @@ def refit_po_weights(
     phi, nuis = dr_pseudo_outcome(X[on], y[on], T, ridge_alpha=ridge_alpha)
     risk_on = instance_phi2(phi)
     ratio, m0, m1 = batch_contrast(risk_on, T)
-    fired = bool(always or (nuis["ok"] and should_readjust(ratio, gate=gate)))
     w_all = np.ones(t1.shape[0], dtype=float)
-    if fired and nuis["ok"]:
-        r_full = np.zeros(t1.shape[0], dtype=float)
-        r_full[on] = risk_on
-        w1 = po_iptw_weights(r_full[t1], mode=mode)  # type: ignore[arg-type]
-        w_all[t1] = w1
-    else:
-        # uniform on T=1
-        pass
+    lam = 0.0
+    if nuis["ok"]:
+        if always:
+            lam = 1.0
+        elif soft:
+            lam = mix_lambda(ratio, gate=gate, soft_scale=soft_scale)
+        elif should_readjust(ratio, gate=gate):
+            lam = 1.0
+        if lam > 0:
+            r_full = np.zeros(t1.shape[0], dtype=float)
+            r_full[on] = risk_on
+            w_po = po_iptw_weights(r_full[t1], mode=mode)  # type: ignore[arg-type]
+            mixed = (1.0 - lam) + lam * w_po
+            w_all[t1] = mixed / (mixed.mean() + 1e-8)
+    fired = bool(lam > 0)
     return {
         "weights": w_all,
         "fired": fired,
         "ok": nuis["ok"],
         "ratio": float(ratio),
+        "lambda": float(lam),
         "mean_r0": float(m0),
         "mean_r1": float(m1),
         "pi": float(nuis["pi"]),
@@ -195,6 +235,23 @@ def _ridge_predict(Xtr, ytr, Xte, w=None, alpha=3.0):
     return clf.predict(Xte)
 
 
+def _pack_stream(history, *, assign, gate, always, mode):
+    mses = np.array([h["next_mse"] for h in history], dtype=float)
+    fires = np.array([h["fired"] for h in history], dtype=float)
+    return {
+        "assign": assign,
+        "gate": float(gate),
+        "always": bool(always),
+        "mode": mode,
+        "online_mse": float(mses.mean()) if mses.size else float("nan"),
+        "mse_std": float(mses.std()) if mses.size else float("nan"),
+        "fire_rate": float(fires.mean()) if fires.size else 0.0,
+        "path": mses.tolist(),
+        "history": history,
+        "n_hops": int(mses.size),
+    }
+
+
 def run_refit_stream(
     stream: Stream,
     *,
@@ -203,6 +260,8 @@ def run_refit_stream(
     always=False,
     mode="sqrt",
     ridge_alpha=3.0,
+    soft=False,
+    soft_scale=2.0,
 ):
     """Online next-batch MSE. Train on T=1 rows, score batch t+1."""
     X = np.asarray(stream.X, dtype=float)
@@ -222,6 +281,8 @@ def run_refit_stream(
             always=always,
             mode=mode,
             ridge_alpha=ridge_alpha,
+            soft=soft,
+            soft_scale=soft_scale,
         )
         tr = t1
         te = batch == (t + 1)
@@ -241,26 +302,17 @@ def run_refit_stream(
                 "next_mse": mse,
                 "fired": rec["fired"],
                 "ratio": rec["ratio"],
+                "lambda": rec["lambda"],
                 "mean_r0": rec["mean_r0"],
                 "mean_r1": rec["mean_r1"],
                 "n_train": int(tr.sum()),
                 "n_test": int(te.sum()),
             }
         )
-    mses = np.array([h["next_mse"] for h in history], dtype=float)
-    fires = np.array([h["fired"] for h in history], dtype=float)
-    return {
-        "assign": assign,
-        "gate": float(gate),
-        "always": bool(always),
-        "mode": "uniform" if (not always and gate >= 1e6) else mode,
-        "online_mse": float(mses.mean()) if mses.size else float("nan"),
-        "mse_std": float(mses.std()) if mses.size else float("nan"),
-        "fire_rate": float(fires.mean()) if fires.size else 0.0,
-        "path": mses.tolist(),
-        "history": history,
-        "n_hops": int(mses.size),
-    }
+    tag = "uniform" if (not always and not soft and gate >= 1e6) else mode
+    if soft and not always:
+        tag = f"soft_{mode}"
+    return _pack_stream(history, assign=assign, gate=gate, always=always, mode=tag)
 
 
 def run_uniform_on_same_rows(stream: Stream, assign: Assign = "pair", ridge_alpha=3.0):
@@ -321,23 +373,187 @@ def run_adaptive_stream(
                 "next_mse": mse,
                 "fired": rec["fired"],
                 "ratio": rec["ratio"],
+                "lambda": rec.get("lambda", 1.0 if rec["fired"] else 0.0),
                 "mean_r0": rec["mean_r0"],
                 "mean_r1": rec["mean_r1"],
                 "n_train": int(tr.sum()),
                 "n_test": int(te.sum()),
             }
         )
-    mses = np.array([h["next_mse"] for h in history], dtype=float)
-    fires = np.array([h["fired"] for h in history], dtype=float)
-    return {
-        "assign": "adaptive",
-        "gate": float(gate),
-        "always": False,
-        "mode": "adaptive",
-        "online_mse": float(mses.mean()) if mses.size else float("nan"),
-        "mse_std": float(mses.std()) if mses.size else float("nan"),
-        "fire_rate": float(fires.mean()) if fires.size else 0.0,
-        "path": mses.tolist(),
-        "history": history,
-        "n_hops": int(mses.size),
-    }
+    return _pack_stream(
+        history, assign="adaptive", gate=gate, always=False, mode="adaptive"
+    )
+
+
+def run_switch_stream(stream: Stream, *, gate=1.25, ridge_alpha=3.0):
+    """Same train-set switch as adaptive, but always uniform (no √PO).
+
+    Isolates 'drop the old batch' from 'reweight the new batch'.
+    """
+    X = np.asarray(stream.X, dtype=float)
+    y = np.asarray(stream.y, dtype=float)
+    batch = np.asarray(stream.batch, dtype=int)
+    k = int(batch.max()) + 1
+    history = []
+    for t in range(1, k - 1):
+        t0, t1 = assign_hop(batch, t)
+        rec = refit_po_weights(
+            X, y, t0, t1, gate=gate, always=False, ridge_alpha=ridge_alpha
+        )
+        te = batch == (t + 1)
+        tr = t1 if rec["fired"] else ((batch == (t - 1)) | (batch == t))
+        if not np.any(tr) or not np.any(te):
+            continue
+        pred = _ridge_predict(X[tr], y[tr], X[te], w=None, alpha=ridge_alpha)
+        mse = float(np.mean((pred - y[te]) ** 2))
+        history.append(
+            {
+                "t": int(t),
+                "next_mse": mse,
+                "fired": rec["fired"],
+                "ratio": rec["ratio"],
+                "lambda": rec["lambda"],
+                "mean_r0": rec["mean_r0"],
+                "mean_r1": rec["mean_r1"],
+                "n_train": int(tr.sum()),
+                "n_test": int(te.sum()),
+            }
+        )
+    return _pack_stream(
+        history, assign="switch", gate=gate, always=False, mode="switch"
+    )
+
+
+def run_dre_hop(stream: Stream, *, ridge_alpha=3.0):
+    """X-only density-ratio weights on the new batch. Ignores Y-shift."""
+    X = np.asarray(stream.X, dtype=float)
+    y = np.asarray(stream.y, dtype=float)
+    batch = np.asarray(stream.batch, dtype=int)
+    k = int(batch.max()) + 1
+    history = []
+    for t in range(1, k - 1):
+        prev = batch == (t - 1)
+        tr = batch == t
+        te = batch == (t + 1)
+        if not np.any(prev) or not np.any(tr) or not np.any(te):
+            continue
+        w = dre_weights(X[prev], X[tr], seed=int(t))
+        pred = _ridge_predict(X[tr], y[tr], X[te], w=w, alpha=ridge_alpha)
+        mse = float(np.mean((pred - y[te]) ** 2))
+        history.append(
+            {
+                "t": int(t),
+                "next_mse": mse,
+                "fired": True,
+                "ratio": float("nan"),
+                "lambda": 1.0,
+                "mean_r0": float("nan"),
+                "mean_r1": float("nan"),
+                "n_train": int(tr.sum()),
+                "n_test": int(te.sum()),
+            }
+        )
+    return _pack_stream(
+        history, assign="hop", gate=0.0, always=True, mode="dre"
+    )
+
+
+def run_oracle_switch(stream: Stream, *, ridge_alpha=3.0):
+    """Knows concept_at: after the cut, train on the new batch only.
+
+    Diagnostic upper bound for *train-set* choice, not a deployable method.
+    Quiet / covariate streams have no cut → always pair-uniform.
+    """
+    X = np.asarray(stream.X, dtype=float)
+    y = np.asarray(stream.y, dtype=float)
+    batch = np.asarray(stream.batch, dtype=int)
+    k = int(batch.max()) + 1
+    cut = None if stream.meta is None else stream.meta.get("concept_at")
+    history = []
+    for t in range(1, k - 1):
+        te = batch == (t + 1)
+        fired = cut is not None and int(t) >= int(cut)
+        tr = (batch == t) if fired else ((batch == (t - 1)) | (batch == t))
+        if not np.any(tr) or not np.any(te):
+            continue
+        pred = _ridge_predict(X[tr], y[tr], X[te], w=None, alpha=ridge_alpha)
+        mse = float(np.mean((pred - y[te]) ** 2))
+        history.append(
+            {
+                "t": int(t),
+                "next_mse": mse,
+                "fired": bool(fired),
+                "ratio": float("nan"),
+                "lambda": 1.0 if fired else 0.0,
+                "mean_r0": float("nan"),
+                "mean_r1": float("nan"),
+                "n_train": int(tr.sum()),
+                "n_test": int(te.sum()),
+            }
+        )
+    return _pack_stream(
+        history, assign="oracle", gate=0.0, always=False, mode="oracle"
+    )
+
+
+def run_resid_stream(
+    stream: Stream,
+    *,
+    gate=2.0,
+    po_on_fire=False,
+    po_gate=1.25,
+    mode="sqrt",
+    ridge_alpha=3.0,
+):
+    """Re-adjust when 上一批→这一批 residual MSE jumps (not PO-ratio).
+
+    Quiet: train pair, uniform. Fire: drop the old batch.
+    ``po_on_fire`` then puts √PO weights on the new batch (refit PO-learner).
+    """
+    X = np.asarray(stream.X, dtype=float)
+    y = np.asarray(stream.y, dtype=float)
+    batch = np.asarray(stream.batch, dtype=int)
+    k = int(batch.max()) + 1
+    history = []
+    for t in range(1, k - 1):
+        t0, t1 = assign_hop(batch, t)
+        rho, mse0, mse1 = residual_hop_ratio(X, y, t0, t1, ridge_alpha=ridge_alpha)
+        fired = bool(np.isfinite(rho) and rho >= float(gate))
+        te = batch == (t + 1)
+        if fired:
+            tr = t1
+            w_tr = None
+            if po_on_fire:
+                rec = refit_po_weights(
+                    X,
+                    y,
+                    t0,
+                    t1,
+                    gate=po_gate,
+                    always=True,
+                    mode=mode,
+                    ridge_alpha=ridge_alpha,
+                )
+                w_tr = rec["weights"][tr]
+        else:
+            tr = (batch == (t - 1)) | (batch == t)
+            w_tr = None
+        if not np.any(tr) or not np.any(te):
+            continue
+        pred = _ridge_predict(X[tr], y[tr], X[te], w=w_tr, alpha=ridge_alpha)
+        mse = float(np.mean((pred - y[te]) ** 2))
+        history.append(
+            {
+                "t": int(t),
+                "next_mse": mse,
+                "fired": fired,
+                "ratio": float(rho),
+                "lambda": 1.0 if fired else 0.0,
+                "mean_r0": float(mse0),
+                "mean_r1": float(mse1),
+                "n_train": int(tr.sum()),
+                "n_test": int(te.sum()),
+            }
+        )
+    tag = "resid_po" if po_on_fire else "resid"
+    return _pack_stream(history, assign=tag, gate=gate, always=False, mode=tag)

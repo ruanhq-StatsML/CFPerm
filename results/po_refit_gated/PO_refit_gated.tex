@@ -3,16 +3,18 @@
 \caption{Next-batch Ridge MSE. Uniform is the default. The PO-learner is
 refit at every hop with $T{=}0$ the most recent control batch and
 $T{=}1$ the previous$\cup$current batch. $\sqrt{\mathrm{PO}}$ weights fire
-only when the T=1 / T=0 PO-risk ratio exceeds $1.25$.}
+only when the T=1 / T=0 PO-risk ratio exceeds $1.25$. switch drops the old
+batch without reweighting; oracle knows the concept cut.}
 \label{tab:po-refit-gated}
 \small
-\begin{tabular}{@{}lccccc@{}}\toprule
-Scene & uniform (pair) & gated pair & always PO & adaptive & fire \\
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lcccccc@{}}\toprule
+Scene & unif-pair & gated-PO & resid & resid+PO & oracle & hop \\
 \midrule
-similar & $0.273$ & $0.277$ & $0.333$ & $0.293$ & $0.17$ \\
-covariate & $0.370$ & $0.373$ & $0.449$ & $0.406$ & $0.21$ \\
-concept & $1.695$ & $1.515$ & $1.409$ & $1.609$ & $0.12$ \\
-mixed & $2.176$ & $2.003$ & $1.884$ & $1.983$ & $0.21$ \\
+similar & $0.275$ & $0.277$ & $0.272$ & $0.275$ & $0.272$ & $0.294$ \\
+covariate & $0.336$ & $0.338$ & $0.391$ & $0.410$ & $0.331$ & $0.428$ \\
+concept & $1.674$ & $1.460$ & $1.372$ & $1.372$ & $1.378$ & $1.376$ \\
+mixed & $1.963$ & $1.748$ & $1.616$ & $1.628$ & $1.624$ & $1.616$ \\
 \bottomrule
 \end{tabular}
 \end{table}
