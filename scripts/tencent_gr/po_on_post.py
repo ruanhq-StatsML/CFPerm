@@ -140,6 +140,9 @@ def write_md(path: Path, mix: dict, clocks: dict) -> None:
         "",
         f"daily mix：n_cnv={mix['n_cnv']}  sku_clk={mix['sku_clk_share']:.4f}  empty={mix['empty_any']:.3f}  sess0={mix['sess_clk0']:.3f}  GATE={mix['sku_gate']}",
         "",
+        "中位切：塔和列的 LOGO/LOCO **全负**。Q1 vs Q4 家族 LOGO 仍负；LOCO ΔR>0 的是 `n_clk_before_7d`、`dt_any_min`、`n_clk_7d × sess`，量级 1e-5，R 仍是 3e-4。",
+        "概念没跳（和用户粒 rfperm fire=0 同一句）。RF-domain 分的是人（`n_prior_cnv`）。PO-VIMP 爱交叉，LOCO 不认——impurity ≠ 漂移源。SKU 两批都 ~0。",
+        "",
     ]
     for cname, rec in clocks.items():
         lines += [
@@ -219,16 +222,33 @@ def main() -> None:
     u = pd.read_parquet(USER, columns=["user_id", "_seq_t_end"])
     u["user_id"] = u["user_id"].astype(np.int64)
     sub = sub.merge(u, on="user_id", how="left")
+    clock = sub["_seq_t_end"].to_numpy(np.float64)
+    q1, q3 = np.nanpercentile(clock, [25.0, 75.0])
+    m_q = (clock <= q1) | (clock >= q3)
     clocks_w = {
-        "seq_t_end_median": (sub["_seq_t_end"].to_numpy(np.float64) > np.nanmedian(sub["_seq_t_end"].to_numpy(np.float64))).astype(int),
-        "cnv_ts_median": (sub["cnv_ts"].to_numpy(np.float64) > np.median(sub["cnv_ts"].to_numpy(np.float64))).astype(int),
+        "seq_t_end_median": (
+            np.ones(len(sub), dtype=bool),
+            (clock > np.nanmedian(clock)).astype(int),
+        ),
+        "seq_t_end_q1q4": (m_q, (clock[m_q] >= q3).astype(int)),
+        "cnv_ts_median": (
+            np.ones(len(sub), dtype=bool),
+            (sub["cnv_ts"].to_numpy(np.float64) > np.median(sub["cnv_ts"].to_numpy(np.float64))).astype(int),
+        ),
     }
 
     clocks = {}
-    for i, (cname, w) in enumerate(clocks_w.items()):
-        print(f"\n== {cname} W1={w.mean():.3f} ==", flush=True)
-        rec = board(X, y, w, names, seed=SEED + 17 * i, do_loco=(cname == "seq_t_end_median"))
-        rec["mix"] = mix_by_w(sub, w)
+    for i, (cname, (mask, w)) in enumerate(clocks_w.items()):
+        print(f"\n== {cname} n={int(mask.sum())} W1={w.mean():.3f} ==", flush=True)
+        rec = board(
+            X[mask],
+            y[mask],
+            w,
+            names,
+            seed=SEED + 17 * i,
+            do_loco=(cname != "cnv_ts_median"),
+        )
+        rec["mix"] = mix_by_w(sub.loc[mask], w)
         rec["clock"] = cname
         clocks[cname] = rec
         print(
