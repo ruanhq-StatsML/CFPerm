@@ -63,4 +63,13 @@ Attribution 家族：LOGO Δ 大 = 决策时长/漏点结构在批间变了；Δ
 - Kendall τ(PO-VIMP, F-score) **0.05**：F 板 ≠ OOD 板
 - attr LOGO Δ **负**：决策时延不是漂移源；F-score 把它排前面只是「转化过的人还会转化」
 
+## 6. 对偶：买完会不会接着点（forward asof）
+
+backward = 买之前的路；forward = 买之后的点。`trans_cnv_to_exp` 只是邻接下一跳，不够。
+
+转化粒 `post`：`merge_asof(..., direction="forward")` 找下一次点击（任意 / 同品），再 `cum asof` 做同长窗 before/after。
+Y=`y_post_clk_1d` / `y_post_same_1d`；X 只用 cnv_ts 已知（买前量、路径、当场、价格、滞后买后率）。lift 是描述不是 CATE。
+
+细节和这批数：`results/tencent_gr_fs150/POST_CNV.md`。
+
 下一步：family LOGO → 组内再 CFPerm/LOCO 到单特征；别再堆 1000 维 F 选。
