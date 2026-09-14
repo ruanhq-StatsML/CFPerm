@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -45,6 +46,11 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+
+_ATTR_DIR = Path(__file__).resolve().parent
+if str(_ATTR_DIR) not in sys.path:
+    sys.path.insert(0, str(_ATTR_DIR))
+from attr_last_touch import last_touch
 
 A_EXP, A_CLK, A_CNV = 0, 1, 2
 A_NAME = {0: "exp", 1: "clk", 2: "cnv"}
@@ -232,68 +238,8 @@ def decay_counts(evs: Sequence[Event], t_end: int, hl: float) -> Dict[str, float
 
 
 def attribution(evs: Sequence[Event]) -> Dict[str, float]:
-    last_exp: Dict[int, int] = {}
-    first_exp: Dict[int, int] = {}
-    last_clk: Dict[int, int] = {}
-    first_clk: Dict[int, int] = {}
-    last_any_clk: Optional[int] = None
-    exp_cnt: Dict[int, int] = defaultdict(int)
-
-    exp2clk: List[float] = []
-    clk2cnv: List[float] = []
-    fclk2cnv: List[float] = []
-    exp2cnv: List[float] = []
-    any2cnv: List[float] = []
-    exp_before: List[float] = []
-    cnv_wo_clk = 0
-    cnv_n = 0
-
-    # attribution window flags (minutes buckets)
-    buckets = [5, 30, 60, 360, 1440, 10080]  # 5m..7d
-    clk2cnv_bucket = {b: 0.0 for b in buckets}
-
-    for iid, act, ts, _ in evs:
-        if act == A_EXP:
-            last_exp[iid] = ts
-            first_exp.setdefault(iid, ts)
-            exp_cnt[iid] += 1
-        elif act == A_CLK:
-            if iid in last_exp:
-                exp2clk.append((ts - last_exp[iid]) / 60.0)
-            last_clk[iid] = ts
-            first_clk.setdefault(iid, ts)
-            last_any_clk = ts
-        elif act == A_CNV:
-            cnv_n += 1
-            exp_before.append(float(exp_cnt.get(iid, 0)))
-            if iid in last_clk:
-                dt = (ts - last_clk[iid]) / 60.0
-                clk2cnv.append(dt)
-                for b in buckets:
-                    if dt <= b:
-                        clk2cnv_bucket[b] += 1.0
-            else:
-                cnv_wo_clk += 1
-            if iid in first_clk:
-                fclk2cnv.append((ts - first_clk[iid]) / 60.0)
-            if iid in first_exp:
-                exp2cnv.append((ts - first_exp[iid]) / 60.0)
-            if last_any_clk is not None:
-                any2cnv.append((ts - last_any_clk) / 60.0)
-
-    out: Dict[str, float] = {}
-    out.update(stats(exp2clk, "attr_exp2clk_min"))
-    out.update(stats(clk2cnv, "attr_clk2cnv_min"))
-    out.update(stats(fclk2cnv, "attr_firstclk2cnv_min"))
-    out.update(stats(exp2cnv, "attr_exp2cnv_min"))
-    out.update(stats(any2cnv, "attr_anyclk2cnv_min"))
-    out["attr_cnv_wo_prior_clk_cnt"] = float(cnv_wo_clk)
-    out["attr_cnv_wo_prior_clk_rate"] = rate(cnv_wo_clk, cnv_n)
-    out["attr_exp_before_cnv_mean"] = float(np.mean(exp_before)) if exp_before else 0.0
-    for b, v in clk2cnv_bucket.items():
-        out[f"attr_clk2cnv_within_{b}m_cnt"] = v
-        out[f"attr_clk2cnv_within_{b}m_rate"] = rate(v, cnv_n)
-    return out
+    """7d last-touch: item / halo / dark. See attr_last_touch.py."""
+    return last_touch(evs)
 
 
 def monetization(evs: Sequence[Event], price_p50: float) -> Dict[str, float]:
@@ -679,27 +625,29 @@ def select_and_train(
     select_k: int,
     method: str,
 ) -> Dict[str, Any]:
-    # clean
+    """F/MI is a leaky in-sample baseline. Split first; real board is PO-VIMP."""
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
-    # variance filter
+    idx = np.arange(len(y))
+    strat = y if len(np.unique(y)) > 1 else None
+    itr, ite = train_test_split(idx, test_size=0.25, random_state=42, stratify=strat)
+    Xtr, Xte, ytr, yte = X[itr], X[ite], y[itr], y[ite]
+
     vt = VarianceThreshold(threshold=1e-8)
-    Xv = vt.fit_transform(X)
+    Xtr_v = vt.fit_transform(Xtr)
+    Xte_v = vt.transform(Xte)
     kept = [n for n, m in zip(names, vt.get_support()) if m]
     print(f"  after variance filter: {len(kept)}")
 
-    k = min(select_k, len(kept), max(int(Xv.shape[0] * 0.5), 8))
-    if method == "mi":
-        selector = SelectKBest(mutual_info_classif, k=k)
-    else:
-        selector = SelectKBest(f_classif, k=k)
-    Xs = selector.fit_transform(Xv, y)
+    k = min(int(select_k), len(kept))
+    scorer = mutual_info_classif if method == "mi" else f_classif
+    selector = SelectKBest(scorer, k=k)
+    Xtr_s = selector.fit_transform(Xtr_v, ytr)
+    Xte_s = selector.transform(Xte_v)
     scores = selector.scores_
     support = selector.get_support()
     selected = [n for n, s in zip(kept, support) if s]
     score_map = {n: float(sc) for n, sc, s in zip(kept, scores, support) if s and np.isfinite(sc)}
     ranked = sorted(score_map.items(), key=lambda kv: -kv[1])
-
-    Xtr, Xte, ytr, yte = train_test_split(Xs, y, test_size=0.25, random_state=42, stratify=y)
 
     models = {
         "hgb": HistGradientBoostingClassifier(max_depth=4, max_iter=120, learning_rate=0.08, random_state=42),
@@ -711,8 +659,8 @@ def select_and_train(
     results = {}
     for name, model in models.items():
         t0 = time.time()
-        model.fit(Xtr, ytr)
-        proba = model.predict_proba(Xte)[:, 1]
+        model.fit(Xtr_s, ytr)
+        proba = model.predict_proba(Xte_s)[:, 1]
         pred = (proba >= 0.5).astype(int)
         results[name] = {
             "auc": float(roc_auc_score(yte, proba)),
