@@ -2,9 +2,10 @@
 
 PO-risk as OOD score (preferred empirically vs DRE):
 
-  w = 1              # uniform
+  w = 1              # uniform  (default strategy)
   w ∝ PO             # prop  — hard upweight high-risk
-  w ∝ sqrt(PO)       # soft  — w_i = √PO(X_i,Y_i,T_i=1)
+  w ∝ PO^{1/2}       # sqrt  — soft
+  w ∝ PO^{1/3}       # cbrt  — softer adaptation
   w ∝ 1 / PO         # inv
   w ∝ p/(1-p)        # dre  — logistic density-ratio baseline
 
