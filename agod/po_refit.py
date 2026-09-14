@@ -98,6 +98,28 @@ def refit_po_risk_t01(
     return np.asarray(po, float)
 
 
+def current_batch_po_weights(
+    stream: list,
+    t: int,
+    *,
+    seed: int = 0,
+    n_control: int = 1,
+    blend_mu_gap: float = 0.25,
+    mode: str = "sqrt",
+    power: float | None = None,
+) -> np.ndarray:
+    """Post-hoc PO weights for *current* batch after T=0/T=1 re-fit.
+
+    ``mode``/``power`` forwarded to ``po_iptw_weights`` (e.g. sqrt, cbrt,
+    or power=1/3).
+    """
+    X0, y0, X1, y1 = build_t01_windows(stream, t, n_control=n_control)
+    po1 = refit_po_risk_t01(X0, y0, X1, y1, seed=seed, blend_mu_gap=blend_mu_gap)
+    n_cur = len(stream[t][1])
+    po_cur = po1[-n_cur:]
+    return po_iptw_weights(po_cur, mode=mode, power=power)  # type: ignore[arg-type]
+
+
 def current_batch_sqrt_po_weights(
     stream: list,
     t: int,
@@ -106,13 +128,21 @@ def current_batch_sqrt_po_weights(
     n_control: int = 1,
     blend_mu_gap: float = 0.25,
 ) -> np.ndarray:
-    """Post-hoc √PO weights for *current* batch only, after T=0/T=1 re-fit.
+    """Backward-compatible √PO wrapper."""
+    return current_batch_po_weights(
+        stream, t, seed=seed, n_control=n_control, blend_mu_gap=blend_mu_gap, mode="sqrt"
+    )
 
-    T=1 = prev∪cur; weights returned have length = len(current batch),
-    taken from the second half of the T=1 PO vector.
-    """
-    X0, y0, X1, y1 = build_t01_windows(stream, t, n_control=n_control)
-    po1 = refit_po_risk_t01(X0, y0, X1, y1, seed=seed, blend_mu_gap=blend_mu_gap)
-    n_cur = len(stream[t][1])
-    po_cur = po1[-n_cur:]
-    return po_iptw_weights(po_cur, mode="sqrt")
+
+def current_batch_cbrt_po_weights(
+    stream: list,
+    t: int,
+    *,
+    seed: int = 0,
+    n_control: int = 1,
+    blend_mu_gap: float = 0.25,
+) -> np.ndarray:
+    """Post-hoc PO^{1/3} weights (softer than √PO)."""
+    return current_batch_po_weights(
+        stream, t, seed=seed, n_control=n_control, blend_mu_gap=blend_mu_gap, mode="cbrt"
+    )

@@ -16,7 +16,7 @@ from typing import Literal
 
 import numpy as np
 
-WeightMode = Literal["uniform", "prop", "sqrt", "inv", "dre"]
+WeightMode = Literal["uniform", "prop", "sqrt", "cbrt", "inv", "dre"]
 
 
 def po_iptw_weights(
@@ -26,21 +26,36 @@ def po_iptw_weights(
     eps: float = 1e-6,
     clip: tuple[float, float] = (0.05, 20.0),
     treated: np.ndarray | None = None,
+    power: float | None = None,
 ) -> np.ndarray:
     """Map PO-risk → sample weights.
+
+    Modes
+    -----
+    uniform : w = 1
+    prop    : w ∝ PO
+    sqrt    : w ∝ PO^{1/2}   (soft)
+    cbrt    : w ∝ PO^{1/3}   (softer — milder adaptation)
+    inv     : w ∝ 1/PO
+    Or pass ``power`` to use w ∝ PO^power directly (overrides mode shape).
 
     If ``treated`` is given (T_i∈{0,1}), only T_i=1 rows get PO-shaped
     weights; untreated stay at 1 (then re-normalize).
     """
     po = np.asarray(po, dtype=float).ravel()
     po = np.maximum(po, eps)
-    if mode == "uniform":
+    if power is not None:
+        w = np.power(po, float(power))
+    elif mode == "uniform":
         w = np.ones_like(po)
     elif mode == "prop":
         w = po.copy()
     elif mode == "sqrt":
         # w_i = sqrt(PO-risk(X_i, Y_i, T_i=1))
         w = np.sqrt(po)
+    elif mode == "cbrt":
+        # w_i = PO^{1/3} — softer than sqrt
+        w = np.cbrt(po)
     elif mode == "inv":
         w = 1.0 / po
     elif mode == "dre":
