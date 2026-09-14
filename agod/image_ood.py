@@ -1,8 +1,11 @@
-"""Image-OOD benchmark: frozen embeddings + pseudo-outcome PO-risk.
+"""Image-OOD: frozen embeddings + pseudo-outcome PO-risk vs classical scores.
 
-1. Embedding x = frozen ViT (or cached CLIP img feat).
-2. Fit pseudo-outcome μ on ID-train only.
-3. Score PO-risk on ID-test ∪ OOD; report AUROC / FPR95 / AUPR + hard-rank.
+Protocol
+--------
+1. Embedding x = frozen ViT (Food101) or cached CLIP img feat.
+2. Fit pseudo-outcome μ on **ID-train** only.
+3. Score ID-test ∪ OOD with PO-risk and classical embedding OOD scores
+   (Mahalanobis / kNN / centroid). **No DRE.**
 """
 from __future__ import annotations
 
@@ -14,9 +17,9 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, roc_auc_score
 from sklearn.model_selection import train_test_split
+from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
 # pack -> (subdir, id_value, ood_value, domain_col)
@@ -26,7 +29,6 @@ CLIP_OOD_PACKS: Dict[str, Tuple[str, str, str, str]] = {
     "indiana_cxr": ("indiana_cxr", "Frontal", "Lateral", "projection"),
     "fashion_iq": ("fashion_iq", "train", "test", "split"),
 }
-IMAGE_OOD_PACKS = CLIP_OOD_PACKS
 
 
 @dataclass
@@ -78,7 +80,19 @@ def _pca_id_only(X_tr, X_te, X_ood, pca_d: int, seed: int):
 
 
 def _make_split(
-    X, y, id_mask, ood_mask, *, pack, id_domain, ood_domain, pca_d, id_test_frac, seed, max_n, extra_meta=None
+    X,
+    y,
+    id_mask,
+    ood_mask,
+    *,
+    pack,
+    id_domain,
+    ood_domain,
+    pca_d,
+    id_test_frac,
+    seed,
+    max_n,
+    extra_meta=None,
 ) -> ImageOODSplit:
     X_id, y_id = X[id_mask], y[id_mask]
     X_ood, y_ood = X[ood_mask], y[ood_mask]
@@ -116,8 +130,8 @@ def _make_split(
         X_ood=X_ood,
         y_ood=np.asarray(y_ood, int),
         pack=pack,
-        id_domain=id_domain,
-        ood_domain=ood_domain,
+        id_domain=str(id_domain),
+        ood_domain=str(ood_domain),
         meta=meta,
     )
 
@@ -136,7 +150,8 @@ def load_clip_ood_pack(
         raise KeyError(pack)
     sub, id_dom, ood_dom, dom_col = CLIP_OOD_PACKS[pack]
     d = Path(root) / "data/img_txt" / sub
-    X = np.load(_find_feat(d)).astype(np.float32)
+    feat = _find_feat(d)
+    X = np.load(feat).astype(np.float32)
     y = coarse_labels(np.load(d / "labels.npy"), top_k=top_k_labels)
     meta_df = _load_meta(d)
     if dom_col not in meta_df.columns:
@@ -146,10 +161,18 @@ def load_clip_ood_pack(
     id_key = uniq.get(str(id_dom).lower(), str(id_dom))
     ood_key = uniq.get(str(ood_dom).lower(), str(ood_dom))
     return _make_split(
-        X, y, dom == id_key, dom == ood_key,
-        pack=pack, id_domain=str(id_key), ood_domain=str(ood_key),
-        pca_d=pca_d, id_test_frac=id_test_frac, seed=seed, max_n=max_n,
-        extra_meta={"backbone": "clip_cached", "feat": _find_feat(d).name},
+        X,
+        y,
+        dom == id_key,
+        dom == ood_key,
+        pack=pack,
+        id_domain=str(id_key),
+        ood_domain=str(ood_key),
+        pca_d=pca_d,
+        id_test_frac=id_test_frac,
+        seed=seed,
+        max_n=max_n,
+        extra_meta={"backbone": "clip_cached", "feat": feat.name},
     )
 
 
@@ -178,7 +201,9 @@ def load_food101_vit_pack(
     if "domain" in meta_df.columns and set(meta_df["domain"].astype(str)) >= {"id", "ood"}:
         dom = meta_df["domain"].astype(str).to_numpy()
     else:
-        dom = make_class_holdout_domains(y_raw, id_frac_classes=id_frac_classes, seed=seed)
+        dom = make_class_holdout_domains(
+            y_raw, id_frac_classes=id_frac_classes, seed=seed
+        )
         meta_df["domain"] = dom
         meta_df.to_csv(out_dir / "df_metadata.csv", index=False)
 
@@ -186,12 +211,19 @@ def load_food101_vit_pack(
     ood_mask = dom == "ood"
     id_classes = sorted(np.unique(y_raw[id_mask]).tolist())
     remap = {c: i for i, c in enumerate(id_classes)}
-    # OOD / held-out classes → −1 so nll/resid use label-free fallbacks
     y = np.asarray([remap.get(int(yi), -1) for yi in y_raw], dtype=int)
     return _make_split(
-        X, y, id_mask, ood_mask,
-        pack="food101_vit", id_domain="id_classes", ood_domain="heldout_classes",
-        pca_d=pca_d, id_test_frac=id_test_frac, seed=seed, max_n=max_n,
+        X,
+        y,
+        id_mask,
+        ood_mask,
+        pack="food101_vit",
+        id_domain="id_classes",
+        ood_domain="heldout_classes",
+        pca_d=pca_d,
+        id_test_frac=id_test_frac,
+        seed=seed,
+        max_n=max_n,
         extra_meta={
             "backbone": model_name,
             "protocol": "class_holdout",
@@ -206,7 +238,15 @@ def load_image_ood_pack(root: Path, pack: str, **kwargs) -> ImageOODSplit:
     kwargs = dict(kwargs)
     kwargs.pop("feat", None)
     if pack == "food101_vit":
-        keys = ("pca_d", "id_frac_classes", "id_test_frac", "seed", "max_n", "model_name", "extract_max_n")
+        keys = (
+            "pca_d",
+            "id_frac_classes",
+            "id_test_frac",
+            "seed",
+            "max_n",
+            "model_name",
+            "extract_max_n",
+        )
         return load_food101_vit_pack(root, **{k: kwargs[k] for k in keys if k in kwargs})
     keys = ("pca_d", "top_k_labels", "id_test_frac", "seed", "max_n")
     return load_clip_ood_pack(root, pack, **{k: kwargs[k] for k in keys if k in kwargs})
@@ -214,7 +254,11 @@ def load_image_ood_pack(root: Path, pack: str, **kwargs) -> ImageOODSplit:
 
 def fit_po_classifier(X, y, seed: int = 0) -> RandomForestClassifier:
     clf = RandomForestClassifier(
-        n_estimators=100, max_depth=14, min_samples_leaf=2, random_state=seed, n_jobs=1
+        n_estimators=100,
+        max_depth=14,
+        min_samples_leaf=2,
+        random_state=seed,
+        n_jobs=1,
     )
     clf.fit(X, np.asarray(y, int))
     return clf
@@ -222,7 +266,11 @@ def fit_po_classifier(X, y, seed: int = 0) -> RandomForestClassifier:
 
 def fit_po_regressor(X, y, seed: int = 0) -> RandomForestRegressor:
     rf = RandomForestRegressor(
-        n_estimators=80, max_depth=12, min_samples_leaf=2, random_state=seed, n_jobs=1
+        n_estimators=80,
+        max_depth=12,
+        min_samples_leaf=2,
+        random_state=seed,
+        n_jobs=1,
     )
     rf.fit(X, np.asarray(y, float))
     return rf
@@ -233,7 +281,7 @@ def score_po_msp(clf, X) -> np.ndarray:
 
 
 def score_po_nll(clf, X, y) -> np.ndarray:
-    """1 − p(y|x). Unseen / sentinel labels (−1) fall back to 1 − max_c p(c|x)."""
+    """1 − p(y|x). Unseen labels (−1) → 1 − max_c p(c|x)."""
     p = clf.predict_proba(X)
     classes = list(clf.classes_)
     y = np.asarray(y).ravel().astype(int)
@@ -242,13 +290,11 @@ def score_po_nll(clf, X, y) -> np.ndarray:
         if yi in classes:
             out[i] = 1.0 - float(p[i, classes.index(yi)])
         else:
-            # class-holdout OOD: no true ID label — use label-free uncertainty
             out[i] = 1.0 - float(p[i].max())
     return out
 
 
 def score_po_resid(reg, X, y) -> np.ndarray:
-    """|y − μ(x)|. Sentinel y < 0 → fractional distance of μ to nearest class index."""
     pred = np.asarray(reg.predict(X), float).ravel()
     y = np.asarray(y, float).ravel()
     out = np.abs(y - pred)
@@ -258,23 +304,61 @@ def score_po_resid(reg, X, y) -> np.ndarray:
     return out
 
 
-def score_energy(clf, X, T: float = 1.0) -> np.ndarray:
-    """RF has no logits; use Shannon entropy as an energy / uncertainty proxy.
-
-    Classical −T logsumexp(logit/T) is degenerate on already-normalized probs
-    (sums to 1 → energy ≈ 0). Higher entropy ⇒ more OOD-like.
-    """
-    del T  # kept for API compatibility with logit-energy callers
+def score_po_energy(clf, X) -> np.ndarray:
+    """Shannon entropy of μ (RF has no logits). Higher ⇒ more OOD-like."""
     p = np.clip(clf.predict_proba(X), 1e-8, 1.0)
     return -np.sum(p * np.log(p), axis=1)
 
 
-def score_dre_domain(X_id, X_eval, *, seed: int = 0) -> np.ndarray:
-    Xs = StandardScaler().fit_transform(np.vstack([X_id, X_eval]))
-    y = np.concatenate([np.zeros(len(X_id)), np.ones(len(X_eval))])
-    clf = LogisticRegression(max_iter=500, random_state=seed)
-    clf.fit(Xs, y)
-    return clf.predict_proba(Xs[len(X_id):])[:, 1]
+def fit_mahalanobis(X_id: np.ndarray, y_id: np.ndarray, *, eps: float = 1e-5):
+    """Class-conditional Gaussians + shared cov (Lee et al.)."""
+    X = np.asarray(X_id, float)
+    y = np.asarray(y_id, int).ravel()
+    classes = np.unique(y)
+    means = {int(c): X[y == c].mean(axis=0) for c in classes}
+    d = X.shape[1]
+    cov = np.zeros((d, d), float)
+    n = 0
+    for c in classes:
+        xc = X[y == c] - means[int(c)]
+        cov += xc.T @ xc
+        n += len(xc)
+    cov = cov / max(n, 1) + eps * np.eye(d)
+    return {"means": means, "prec": np.linalg.pinv(cov), "classes": classes}
+
+
+def score_mahalanobis(maha: dict, X: np.ndarray) -> np.ndarray:
+    X = np.asarray(X, float)
+    prec = maha["prec"]
+    dists = []
+    for c in maha["classes"]:
+        delta = X - maha["means"][int(c)]
+        dists.append(np.einsum("ij,jk,ik->i", delta, prec, delta))
+    return np.min(np.vstack(dists), axis=0)
+
+
+def score_centroid(X_id: np.ndarray, X_eval: np.ndarray, y_id: np.ndarray) -> np.ndarray:
+    """L2 distance to nearest ID class centroid."""
+    X_id = np.asarray(X_id, float)
+    X_eval = np.asarray(X_eval, float)
+    y = np.asarray(y_id, int).ravel()
+    cents = np.vstack([X_id[y == c].mean(axis=0) for c in np.unique(y)])
+    d2 = ((X_eval[:, None, :] - cents[None, :, :]) ** 2).sum(axis=2)
+    return np.sqrt(d2.min(axis=1))
+
+
+def score_knn(X_id: np.ndarray, X_eval: np.ndarray, *, k: int = 5) -> np.ndarray:
+    """Mean L2 to k nearest ID-train neighbors (Sun et al.)."""
+    X_id = np.asarray(X_id, float)
+    X_eval = np.asarray(X_eval, float)
+    sc = StandardScaler().fit(X_id)
+    X_id_s = sc.transform(X_id)
+    X_eval_s = sc.transform(X_eval)
+    k = int(min(k, len(X_id_s)))
+    nn = NearestNeighbors(n_neighbors=k, algorithm="auto", metric="euclidean")
+    nn.fit(X_id_s)
+    dists, _ = nn.kneighbors(X_eval_s)
+    return dists.mean(axis=1)
 
 
 def fpr_at_tpr(y_true, score, *, tpr_level: float = 0.95) -> float:
