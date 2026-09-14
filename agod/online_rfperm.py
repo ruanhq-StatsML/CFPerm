@@ -10,7 +10,11 @@ on trees):
 
   e_now  = err(μ0 fitted on B_{t-1}, scored on B_t)
   e_prev = err(μ0 fitted on B_{t-2}, scored on B_{t-1})
-  fire iff e_now / e_prev ≥ γ   (default 1.5; skip the first hop)
+  fire iff e_prev ≥ e_floor and e_now / e_prev ≥ γ
+           (default γ=1.5; skip the first hop)
+  e_floor is 2% / 1/n on classification (constant-label OOS of 0 is
+  a vacuous denominator, not a hop) and ~0 on regression.
+
 
 Quiet → last two batches, w=1.
 Fire → same rows; T=0 stays 1, T=1 gets √po_risk0.
@@ -74,11 +78,27 @@ def probe_err(model, X, y, task="mse"):
 score_probe = probe_err
 
 
-def hop_fires(e_now, e_prev, gate=1.5):
-    """Consecutive OOS gate. First hop has no previous OOS → quiet."""
+def error_floor(task, n):
+    """Minimum reliable OOS denominator.
+
+    Classification on a constant-label stretch has e_prev=0, so
+    e_now/e_prev is 10^7-scale and γ is vacuous. Require at least one
+    mistake (1/n) and 2% error before a ratio is a hop.
+    """
+    if str(task) == "acc":
+        return max(1.0 / max(int(n), 1), 0.02)
+    return 1e-8
+
+
+def hop_fires(e_now, e_prev, gate=1.5, e_floor=0.0):
+    """Consecutive OOS gate. First hop / vacuous e_prev → quiet."""
     if e_prev is None:
         return False
-    ratio = shift_ratio(e_now, e_prev)
+    e_prev = float(e_prev)
+    floor = float(e_floor or 0.0)
+    if e_prev < floor:
+        return False
+    ratio = shift_ratio(e_now, e_prev, e_floor=floor)
     return bool(np.isfinite(ratio) and ratio >= float(gate))
 
 
@@ -103,8 +123,9 @@ def po_risk0_rows(model, X, y, *, batch_po=0.0, task="mse"):
     return instance_po_risk(y, pred, batch_po=batch_po, mix=0.5)
 
 
-def shift_ratio(e_now, e_prev):
-    return float(e_now) / (float(e_prev) + 1e-8)
+def shift_ratio(e_now, e_prev, e_floor=0.0):
+    denom = max(float(e_prev), float(e_floor or 0.0), 1e-8)
+    return float(e_now) / denom
 
 
 def _quantiles(x):
@@ -218,11 +239,12 @@ def run_rfperm_stream(
             continue
         probe = fit_online_rf(X[t0], y[t0], seed=int(seed) + t, task=task)
         e_now = probe_err(probe, X[t1], y[t1], task=task)
-        fired = hop_fires(e_now, e_prev, gate=gate)
+        e_fl = error_floor(task, int(t1.sum()))
+        fired = hop_fires(e_now, e_prev, gate=gate, e_floor=e_fl)
         if e_prev is None:
             ratio, po_b = 1.0, 0.0
         else:
-            ratio = shift_ratio(e_now, e_prev)
+            ratio = shift_ratio(e_now, e_prev, e_floor=e_fl)
             po_b = max(float(e_now) - float(e_prev), 0.0)
         q = quantify_last_two(
             probe, X, y, batch, t, task=task, batch_po=po_b, fired=fired

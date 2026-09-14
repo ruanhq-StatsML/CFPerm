@@ -232,18 +232,28 @@ def real_tables(rows, gate, n_per):
         "",
     ]
     for learner in learners:
+        has_dre = any(
+            r["learner"] == learner and r["method"] == "dre" for r in rows
+        )
+        tab = "llcrrrrr" if has_dre else "llcrrrr"
+        head = (
+            r"Dataset & clock & metric & uniform & DRE & rfperm & drop-old & fire \\"
+            if has_dre
+            else r"Dataset & clock & metric & uniform & rfperm & drop-old & fire \\"
+        )
         lines += [
             r"\begin{table}[ht]\centering",
             r"\caption{Real consecutive clocks (\texttt{%s}), batch size %d,"
             % (learner, n_per),
             r"24 hops. Last-two uniform is the default. \texttt{rfperm} fires",
-            r"iff $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=%.2f$." % gate,
+            r"iff $e_{\mathrm{prev}}$ is a reliable denominator and "
+            r"$e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=%.2f$." % gate,
             r"Continuous: RMSE ($\downarrow$). Discrete: Acc ($\uparrow$).}",
             r"\label{tab:po-refit-real-%s}" % learner,
             r"\small",
-            r"\setlength{\tabcolsep}{3.5pt}",
-            r"\begin{tabular}{@{}llcrrrr@{}}\toprule",
-            r"Dataset & clock & metric & uniform & rfperm & drop-old & fire \\",
+            r"\setlength{\tabcolsep}{3.2pt}",
+            r"\begin{tabular}{@{}%s@{}}\toprule" % tab,
+            head,
             r"\midrule",
         ]
         for ds in datasets:
@@ -257,22 +267,43 @@ def real_tables(rows, gate, n_per):
             scores = {
                 m: _real_score(by_m[m])
                 for m in ("uniform_pair", "rfperm", "resid")
+                if m in by_m
             }
+            has_dre = "dre" in by_m
+            if has_dre:
+                scores["dre"] = _real_score(by_m["dre"])
             vals = [scores["uniform_pair"], scores["rfperm"], scores["resid"]]
+            if has_dre:
+                vals.insert(1, scores["dre"])
             fmt = _rmse_fmt(scores["uniform_pair"]) if task == "mse" else "%.3f"
             bold = _bold_min if task == "mse" else _bold_max
-            lines.append(
-                r"%s & %s & %s & %s & %s & %s & $%.2f$ \\"
-                % (
-                    ds.replace("_", r"\_"),
-                    clock,
-                    metric,
-                    bold(vals, scores["uniform_pair"], fmt),
-                    bold(vals, scores["rfperm"], fmt),
-                    bold(vals, scores["resid"], fmt),
-                    by_m["rfperm"]["fire_rate"],
+            if has_dre:
+                lines.append(
+                    r"%s & %s & %s & %s & %s & %s & %s & $%.2f$ \\"
+                    % (
+                        ds.replace("_", r"\_"),
+                        clock,
+                        metric,
+                        bold(vals, scores["uniform_pair"], fmt),
+                        bold(vals, scores["dre"], fmt),
+                        bold(vals, scores["rfperm"], fmt),
+                        bold(vals, scores["resid"], fmt),
+                        by_m["rfperm"]["fire_rate"],
+                    )
                 )
-            )
+            else:
+                lines.append(
+                    r"%s & %s & %s & %s & %s & %s & $%.2f$ \\"
+                    % (
+                        ds.replace("_", r"\_"),
+                        clock,
+                        metric,
+                        bold(vals, scores["uniform_pair"], fmt),
+                        bold(vals, scores["rfperm"], fmt),
+                        bold(vals, scores["resid"], fmt),
+                        by_m["rfperm"]["fire_rate"],
+                    )
+                )
         lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}", ""])
     extra = _periodic_hop_tables(rows)
     if extra:

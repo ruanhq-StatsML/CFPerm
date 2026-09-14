@@ -25,6 +25,13 @@ def test_hop_fires_skips_first_and_needs_jump():
     assert hop_fires(1.6, 1.0, gate=1.5) is True
 
 
+def test_hop_fires_rejects_vacuous_zero_denominator():
+    # Occupancy empty-room: e_prev=0, e_now large, γ is meaningless.
+    assert hop_fires(0.80, 0.0, gate=1.5, e_floor=0.02) is False
+    assert hop_fires(0.80, 0.01, gate=1.5, e_floor=0.02) is False
+    assert hop_fires(0.80, 0.40, gate=1.5, e_floor=0.02) is True
+
+
 def test_sqrt_po_weights_mean_one():
     rng = np.random.default_rng(0)
     po = rng.uniform(0.2, 4.0, size=40)
@@ -51,6 +58,23 @@ def test_similar_stream_rfperm_rarely_fires():
     uni = run_uniform_last_two(stream)
     assert rec["fire_rate"] <= 0.25
     assert abs(uni["online_mse"] - rec["online_mse"]) < 1e-9
+
+
+def test_constant_label_stretch_does_not_vacuous_fire():
+    from agod.po_refit import Stream
+
+    rng = np.random.default_rng(0)
+    n_per, n_batches, p = 40, 6, 6
+    X = rng.normal(size=(n_per * n_batches, p))
+    y = np.zeros(n_per * n_batches, dtype=int)
+    y[3 * n_per :] = 1
+    batch = np.repeat(np.arange(n_batches), n_per)
+    stream = Stream(X=X, y=y, batch=batch, name="flip", task="acc")
+    rec = run_rfperm_stream(stream, gate=1.5)
+    # The first post-flip hop has e_prev=0 on the constant stretch.
+    hop = next(h for h in rec["history"] if h["t"] == 3)
+    assert hop["mean_r0"] < 0.02
+    assert hop["fired"] is False
 
 
 def test_concept_stream_rfperm_fires_at_cut():

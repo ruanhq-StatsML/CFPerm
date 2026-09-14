@@ -5,23 +5,23 @@
 \begin{table}[ht]\centering
 \caption{Real consecutive clocks (\texttt{rf}), batch size 200,
 24 hops. Last-two uniform is the default. \texttt{rfperm} fires
-iff $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
+iff $e_{\mathrm{prev}}$ is a reliable denominator and $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
 Continuous: RMSE ($\downarrow$). Discrete: Acc ($\uparrow$).}
 \label{tab:po-refit-real-rf}
 \small
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}llcrrrr@{}}\toprule
-Dataset & clock & metric & uniform & rfperm & drop-old & fire \\
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}llcrrrrr@{}}\toprule
+Dataset & clock & metric & uniform & DRE & rfperm & drop-old & fire \\
 \midrule
-interstate & time & RMSE & $714.8$ & $714.8$ & $\mathbf{698.1}$ & $0.00$ \\
-nyc\_taxi & time & RMSE & $2.586$ & $2.585$ & $\mathbf{2.584}$ & $0.05$ \\
-electricity & time & Acc & $\mathbf{0.804}$ & $\mathbf{0.804}$ & $0.801$ & $0.23$ \\
-airlines & time & Acc & $\mathbf{0.673}$ & $\mathbf{0.673}$ & $\mathbf{0.673}$ & $0.00$ \\
-bike\_hour & time & RMSE & $57.06$ & $\mathbf{56.93}$ & $57.83$ & $0.05$ \\
-beijing\_pm25 & time & RMSE & $\mathbf{78.51}$ & $82.63$ & $81.16$ & $0.14$ \\
-occupancy & time & Acc & $\mathbf{0.859}$ & $0.831$ & $\mathbf{0.859}$ & $0.27$ \\
-diabetes\_readmit & shift & Acc & $\mathbf{0.638}$ & $\mathbf{0.638}$ & $\mathbf{0.638}$ & $0.00$ \\
-california & spatial & RMSE & $\mathbf{0.693}$ & $0.698$ & $0.697$ & $0.05$ \\
+interstate & time & RMSE & $714.8$ & $704.3$ & $714.8$ & $\mathbf{698.1}$ & $0.00$ \\
+nyc\_taxi & time & RMSE & $2.586$ & $2.640$ & $2.585$ & $\mathbf{2.584}$ & $0.05$ \\
+electricity & time & Acc & $\mathbf{0.804}$ & $0.800$ & $\mathbf{0.804}$ & $0.801$ & $0.23$ \\
+airlines & time & Acc & $0.673$ & $\mathbf{0.676}$ & $0.673$ & $0.673$ & $0.00$ \\
+bike\_hour & time & RMSE & $57.06$ & $61.78$ & $\mathbf{56.93}$ & $57.83$ & $0.05$ \\
+beijing\_pm25 & time & RMSE & $\mathbf{78.51}$ & $79.59$ & $82.63$ & $81.16$ & $0.14$ \\
+occupancy & time & Acc & $0.859$ & $\mathbf{0.863}$ & $0.858$ & $0.859$ & $0.14$ \\
+diabetes\_readmit & shift & Acc & $\mathbf{0.638}$ & $0.633$ & $\mathbf{0.638}$ & $\mathbf{0.638}$ & $0.00$ \\
+california & spatial & RMSE & $0.693$ & $\mathbf{0.685}$ & $0.698$ & $0.697$ & $0.05$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -29,23 +29,23 @@ california & spatial & RMSE & $\mathbf{0.693}$ & $0.698$ & $0.697$ & $0.05$ \\
 \begin{table}[ht]\centering
 \caption{Real consecutive clocks (\texttt{xgb}), batch size 200,
 24 hops. Last-two uniform is the default. \texttt{rfperm} fires
-iff $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
+iff $e_{\mathrm{prev}}$ is a reliable denominator and $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
 Continuous: RMSE ($\downarrow$). Discrete: Acc ($\uparrow$).}
 \label{tab:po-refit-real-xgb}
 \small
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}llcrrrr@{}}\toprule
-Dataset & clock & metric & uniform & rfperm & drop-old & fire \\
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}llcrrrrr@{}}\toprule
+Dataset & clock & metric & uniform & DRE & rfperm & drop-old & fire \\
 \midrule
-interstate & time & RMSE & $683.0$ & $683.0$ & $\mathbf{677.2}$ & $0.00$ \\
-nyc\_taxi & time & RMSE & $2.726$ & $\mathbf{2.716}$ & $2.825$ & $0.05$ \\
-electricity & time & Acc & $0.810$ & $\mathbf{0.813}$ & $0.807$ & $0.23$ \\
-airlines & time & Acc & $\mathbf{0.648}$ & $\mathbf{0.648}$ & $\mathbf{0.648}$ & $0.00$ \\
-bike\_hour & time & RMSE & $\mathbf{49.24}$ & $49.62$ & $50.75$ & $0.05$ \\
-beijing\_pm25 & time & RMSE & $\mathbf{76.64}$ & $79.38$ & $82.78$ & $0.14$ \\
-occupancy & time & Acc & $0.843$ & $0.846$ & $\mathbf{0.851}$ & $0.27$ \\
-diabetes\_readmit & shift & Acc & $\mathbf{0.627}$ & $\mathbf{0.627}$ & $\mathbf{0.627}$ & $0.00$ \\
-california & spatial & RMSE & $0.650$ & $\mathbf{0.649}$ & $\mathbf{0.649}$ & $0.05$ \\
+interstate & time & RMSE & $683.0$ & $688.1$ & $683.0$ & $\mathbf{677.2}$ & $0.00$ \\
+nyc\_taxi & time & RMSE & $2.726$ & $3.040$ & $\mathbf{2.716}$ & $2.825$ & $0.05$ \\
+electricity & time & Acc & $0.810$ & $0.805$ & $\mathbf{0.813}$ & $0.807$ & $0.23$ \\
+airlines & time & Acc & $\mathbf{0.648}$ & $0.646$ & $\mathbf{0.648}$ & $\mathbf{0.648}$ & $0.00$ \\
+bike\_hour & time & RMSE & $\mathbf{49.24}$ & $53.12$ & $49.62$ & $50.75$ & $0.05$ \\
+beijing\_pm25 & time & RMSE & $\mathbf{76.64}$ & $77.34$ & $79.38$ & $82.78$ & $0.14$ \\
+occupancy & time & Acc & $0.843$ & $0.836$ & $0.841$ & $\mathbf{0.851}$ & $0.14$ \\
+diabetes\_readmit & shift & Acc & $\mathbf{0.627}$ & $0.622$ & $\mathbf{0.627}$ & $\mathbf{0.627}$ & $0.00$ \\
+california & spatial & RMSE & $0.650$ & $0.656$ & $\mathbf{0.649}$ & $\mathbf{0.649}$ & $0.05$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -58,14 +58,8 @@ Fire hops and the hop after (anneal). Metric: Acc.}
 \begin{tabular}{@{}ccccc@{}}\toprule
 $t$ & fired & uniform & rfperm & drop-old \\
 \midrule
-5 & yes & $0.840$ & $0.840$ & $0.840$ \\
-6 & no & $0.865$ & $0.865$ & $0.865$ \\
 8 & yes & $1.000$ & $1.000$ & $1.000$ \\
 9 & no & $1.000$ & $1.000$ & $1.000$ \\
-12 & yes & $1.000$ & $0.405$ & $1.000$ \\
-13 & no & $1.000$ & $1.000$ & $1.000$ \\
-17 & yes & $0.925$ & $0.925$ & $0.925$ \\
-18 & no & $0.705$ & $0.705$ & $0.705$ \\
 19 & yes & $0.570$ & $0.545$ & $0.565$ \\
 20 & yes & $1.000$ & $1.000$ & $1.000$ \\
 21 & no & $1.000$ & $1.000$ & $1.000$ \\
@@ -81,14 +75,8 @@ Fire hops and the hop after (anneal). Metric: Acc.}
 \begin{tabular}{@{}ccccc@{}}\toprule
 $t$ & fired & uniform & rfperm & drop-old \\
 \midrule
-5 & yes & $0.840$ & $0.945$ & $0.840$ \\
-6 & no & $0.870$ & $0.870$ & $0.870$ \\
 8 & yes & $1.000$ & $1.000$ & $1.000$ \\
 9 & no & $1.000$ & $1.000$ & $1.000$ \\
-12 & yes & $1.000$ & $1.000$ & $1.000$ \\
-13 & no & $1.000$ & $1.000$ & $1.000$ \\
-17 & yes & $0.925$ & $0.925$ & $0.925$ \\
-18 & no & $0.680$ & $0.680$ & $0.680$ \\
 19 & yes & $0.595$ & $0.545$ & $0.765$ \\
 20 & yes & $1.000$ & $1.000$ & $1.000$ \\
 21 & no & $1.000$ & $1.000$ & $1.000$ \\

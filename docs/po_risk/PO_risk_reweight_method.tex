@@ -35,9 +35,15 @@ errors (no $K$-fold; an in-sample $e_1>e_0$ on trees fires every hop)
   e_{\mathrm{prev}}
     = \mathrm{err}\bigl(\mu_0 \text{ fit } B_{t-2}\to B_{t-1}\bigr).
 \end{equation}
-The hop fires iff $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma$
+The hop fires iff $e_{\mathrm{prev}}\ge e_{\mathrm{floor}}$ and
+$e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma$
 (default $\gamma=1.5$). The first hop is always quiet: there is no
-previous OOS.
+previous OOS. A classification stretch with constant labels has
+$e_{\mathrm{prev}}=0$; the ratio is then $10^{7}$-scale and $\gamma$
+is vacuous. We set $e_{\mathrm{floor}}=\max(1/n,0.02)$ on discrete
+tasks and refuse to fire --- that is an empty-room occupancy
+denominator, not a $P(Y\mid X)$ hop. Regression keeps
+$e_{\mathrm{floor}}\approx 0$.
 
 \paragraph{Instance PO-risk.}
 Every observation on the last two batches gets its own score against

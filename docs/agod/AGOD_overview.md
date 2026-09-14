@@ -137,50 +137,50 @@ DRE overreacts more (→ 0.87). Reweight barely moves (0.728 → 0.720).
 No shuffle. Row order is the clock. 24 consecutive batches. Local
 Affec / Tencent / COCO packs were not on this machine.
 
-RF RMSE (↓) / Acc (↑):
+RF RMSE (↓) / Acc (↑), same last-two rows. DRE is always-on \(p(x)\).
 
-| dataset | clock | uniform | reweight | drop-old | fire |
-|---|---|---:|---:|---:|---:|
-| interstate | time | 714.8 | 714.8 | 698.1 | 0.00 |
-| nyc_taxi | time | 2.586 | 2.585 | 2.584 | 0.05 |
-| bike_hour | time | 57.06 | 56.93 | 57.83 | 0.05 |
-| beijing_pm25 | time | **78.5** | 82.6 | 81.2 | 0.14 |
-| electricity | time | 0.804 | 0.804 | 0.801 | 0.23 |
-| airlines | time | 0.673 | 0.673 | 0.673 | 0.00 |
-| occupancy | time | **0.859** | 0.831 | 0.859 | 0.27 |
-| diabetes_readmit | shift | 0.638 | 0.638 | 0.638 | 0.00 |
-| california | spatial | 0.693 | 0.698 | 0.697 | 0.05 |
+| dataset | clock | uniform | DRE | reweight | drop-old | fire |
+|---|---|---:|---:|---:|---:|---:|
+| interstate | time | 714.8 | 704.3 | 714.8 | **698.1** | 0.00 |
+| nyc_taxi | time | 2.586 | 2.640 | 2.585 | **2.584** | 0.05 |
+| bike_hour | time | 57.06 | 61.78 | **56.93** | 57.83 | 0.05 |
+| beijing_pm25 | time | **78.5** | 79.6 | 82.6 | 81.2 | 0.14 |
+| electricity | time | **0.804** | 0.800 | **0.804** | 0.801 | 0.23 |
+| airlines | time | 0.673 | **0.676** | 0.673 | 0.673 | 0.00 |
+| occupancy | time | 0.859 | **0.863** | 0.858 | 0.859 | 0.14 |
+| diabetes_readmit | shift | **0.638** | 0.633 | **0.638** | **0.638** | 0.00 |
+| california | spatial | 0.693 | **0.685** | 0.698 | 0.697 | 0.05 |
 
 Quiet clocks (airlines, interstate, readmit, and most taxi/bike hops)
-match uniform. That is the intended anneal-to-default. Small
-reweight moves on taxi / bike / electricity are noise-scale. XGB
-says the same.
+match uniform. That is the intended anneal-to-default. Occupancy
+used to lose 0.859 → 0.831 on \(10^7\)-scale empty-room ratios;
+those hops are now refused (\(e_{\mathrm{prev}}<0.02\)) and Acc is
+0.858. DRE helps where \(P(X)\) moves (interstate, california) and
+hurts where it does not (taxi, bike, beijing) --- same identifiability
+as synth. Small reweight moves on taxi / bike / electricity are
+noise-scale. XGB says the same.
 
 Drop-old helps interstate a little (715 → 698) and nowhere else
 systematically.
 
-## Periodic reheating (the remaining case)
+## Periodic reheating (what remains)
 
-Occupancy RFPerm fires at hops \(t=5,8,12,17,19,20\) (rate 0.27).
-After each fire the next ratio collapses (e.g. \(t=5\) fire →
-\(t=6\) ratio \(0.20\)) — that is annealing. Then the day/night
-occupancy map flips again and the probe reheats. Several of those
-ratios are \(10^7\)-scale because \(e_{\mathrm{prev}}\approx 0\)
-on a constant-label stretch (empty rooms); \(\gamma=1.5\) is then
-vacuous.
-
-Beijing PM2.5 fires at \(t=2,12,22\) (rate 0.14): episode-scale,
-not every batch, still enough to make √PO hurt the next hour-block
-(78.5 → 82.6 RMSE).
+Vacuous \(e_{\mathrm{prev}}=0\) fires are closed. Occupancy still
+fires at \(t=8,19,20\) (rate 0.14) on *real* day/night hops; Acc
+stays within 0.001 of uniform. Beijing PM2.5 still fires at
+\(t=2,12,22\) (rate 0.14): episode-scale, not empty denominators,
+and \(\sqrt{\mathrm{PO}}\) still hurts the next hour-block
+(78.5 → 82.6 RMSE). That hop is a true \(P(Y\mid X)\) jump whose
+*next* block is not the same episode --- reweighting the current
+plume does not forecast the next one.
 
 Electricity is in between (rate 0.23): reweight is a wash (Acc
 0.804 → 0.804 RF, 0.810 → 0.813 XGB).
 
-So: **annealing works**. The leftover failure mode is a clock whose
-\(P(Y\mid X)\) is itself periodic at the batch scale. Raising
-\(\gamma\), requiring two consecutive jumps, or flooring
-\(e_{\mathrm{prev}}\) would be the only follow-up with new
-information. It is not a reason to go back to always-on IPTW.
+So: **annealing works**, and the empty-room gate is closed. The
+leftover is a clock whose \(P(Y\mid X)\) episode does not persist
+one batch. That is not a reason to go back to always-on IPTW, and
+it is not a reason to raise \(\gamma\) on the synth concept cut.
 
 ## What we tried and dropped
 

@@ -126,11 +126,11 @@ $t$ & test & uniform & DRE & rfperm & drop-old & oracle \\
 \begin{table}[ht]\centering
 \caption{Real consecutive clocks (\texttt{rf}), batch size 200,
 24 hops. Last-two uniform is the default. \texttt{rfperm} fires
-iff $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
+iff $e_{\mathrm{prev}}$ is a reliable denominator and $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
 Continuous: RMSE ($\downarrow$). Discrete: Acc ($\uparrow$).}
 \label{tab:po-refit-real-rf}
 \small
-\setlength{\tabcolsep}{3.5pt}
+\setlength{\tabcolsep}{3.2pt}
 \begin{tabular}{@{}llcrrrr@{}}\toprule
 Dataset & clock & metric & uniform & rfperm & drop-old & fire \\
 \midrule
@@ -150,11 +150,11 @@ california & spatial & RMSE & $\mathbf{0.693}$ & $0.698$ & $0.697$ & $0.05$ \\
 \begin{table}[ht]\centering
 \caption{Real consecutive clocks (\texttt{xgb}), batch size 200,
 24 hops. Last-two uniform is the default. \texttt{rfperm} fires
-iff $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
+iff $e_{\mathrm{prev}}$ is a reliable denominator and $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=1.50$.
 Continuous: RMSE ($\downarrow$). Discrete: Acc ($\uparrow$).}
 \label{tab:po-refit-real-xgb}
 \small
-\setlength{\tabcolsep}{3.5pt}
+\setlength{\tabcolsep}{3.2pt}
 \begin{tabular}{@{}llcrrrr@{}}\toprule
 Dataset & clock & metric & uniform & rfperm & drop-old & fire \\
 \midrule

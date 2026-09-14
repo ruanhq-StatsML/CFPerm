@@ -18,7 +18,7 @@ from pathlib import Path
 
 from agod.online_rfperm import run_online_rfperm
 from agod.performance_tex import write_all_tex, write_real_tex
-from agod.po_refit import run_resid_stream, run_uniform_last_two
+from agod.po_refit import run_dre_last_two, run_resid_stream, run_uniform_last_two
 from agod.real_data import iter_real_streams
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +27,7 @@ DOCS = ROOT / "docs" / "agod"
 
 METHODS = (
     "uniform_pair",
+    "dre",
     "rfperm",
     "resid",
 )
@@ -36,6 +37,7 @@ def run_one(stream, learner, gate, seed):
     kw = dict(learner=learner, seed=seed)
     return {
         "uniform_pair": run_uniform_last_two(stream, **kw),
+        "dre": run_dre_last_two(stream, **kw),
         "rfperm": run_online_rfperm(stream, gate=gate, **kw),
         "resid": run_resid_stream(stream, gate=2.0, po_on_fire=False, **kw),
     }
@@ -51,9 +53,11 @@ def write_md(rows, path, *, n_per, gate):
         "",
         f"Batch size **{n_per}**, row order is the stream clock (no shuffle,",
         f"no K-fold). Gate γ={gate}: fire only when consecutive OOS probe",
-        "error jumps. Always-on DRE / always-on √PO are off this board.",
+        "error jumps *and* e_prev is a reliable denominator (no 0/0",
+        "occupancy empty-room ratios). DRE is last-two p(x) on the same rows.",
         "",
         "- **uniform_pair**: last two batches, w=1.",
+        "- **dre**: same rows; always-on logistic density-ratio on T=1.",
         "- **rfperm**: same rows; on fire, T=1 gets `w=√po_risk0`.",
         "- **resid**: residual hop-gate (drop old batch) as a reference.",
         "",
@@ -68,7 +72,7 @@ def write_md(rows, path, *, n_per, gate):
     for learner in learners:
         lines += [f"## `{learner}`", ""]
         lines += [
-            "| dataset | clock | task | n_batches | uniform_pair | rfperm | resid | fire_rfperm | fire_resid |",
+            "| dataset | clock | task | n_batches | uniform | DRE | rfperm | resid | fire |",
             "|---|---|---|---:|---:|---:|---:|---:|---:|",
         ]
         for ds in datasets:
@@ -87,17 +91,17 @@ def write_md(rows, path, *, n_per, gate):
                 return float(v)
 
             lines.append(
-                "| `%s` | %s | %s | %d | %.4f | %.4f | %.4f | %.2f | %.2f |"
+                "| `%s` | %s | %s | %d | %.4f | %.4f | %.4f | %.4f | %.2f |"
                 % (
                     ds,
                     clock,
                     "RMSE" if task == "mse" else "acc",
                     nb,
                     sc("uniform_pair"),
+                    sc("dre") if "dre" in by_m else float("nan"),
                     sc("rfperm"),
                     sc("resid"),
                     by_m["rfperm"]["fire_rate"],
-                    by_m["resid"]["fire_rate"],
                 )
             )
         lines.append("")
