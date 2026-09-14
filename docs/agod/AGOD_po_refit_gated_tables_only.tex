@@ -1,20 +1,51 @@
-% Rolling PO-learner refit. Auto-generated.
+% Rolling PO-learner refit. Auto-generated. RF / XGB / MLP, not Ridge.
 \begin{table}[ht]\centering
-\caption{Next-batch Ridge MSE. Uniform is the default. The PO-learner is
-refit at every hop with $T{=}0$ the most recent control batch and
-$T{=}1$ the previous$\cup$current batch. $\sqrt{\mathrm{PO}}$ weights fire
-only when the T=1 / T=0 PO-risk ratio exceeds $1.25$. switch drops the old
-batch without reweighting; oracle knows the concept cut.}
-\label{tab:po-refit-gated}
+\caption{Next-batch MSE with \texttt{rf}. Uniform default.
+Residual gate uses CV MSE on the previous batch. $\gamma_{\mathrm{PO}}=1.25$.}
+\label{tab:po-refit-rf}
 \small
 \setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lcccccc@{}}\toprule
-Scene & unif-pair & gated-PO & resid & resid+PO & oracle & hop \\
+\begin{tabular}{@{}lcccc@{}}\toprule
+Scene & unif-pair & resid & resid+PO & oracle \\
 \midrule
-similar & $0.275$ & $0.277$ & $0.272$ & $0.275$ & $0.272$ & $0.294$ \\
-covariate & $0.336$ & $0.338$ & $0.391$ & $0.410$ & $0.331$ & $0.428$ \\
-concept & $1.674$ & $1.460$ & $1.372$ & $1.372$ & $1.378$ & $1.376$ \\
-mixed & $1.963$ & $1.748$ & $1.616$ & $1.628$ & $1.624$ & $1.616$ \\
+similar & $0.582$ & $0.540$ & $0.540$ & $0.540$ \\
+covariate & $0.762$ & $0.888$ & $0.958$ & $0.728$ \\
+concept & $1.593$ & $1.332$ & $1.324$ & $1.379$ \\
+mixed & $1.916$ & $1.701$ & $1.709$ & $1.765$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Next-batch MSE with \texttt{xgb}. Uniform default.
+Residual gate uses CV MSE on the previous batch. $\gamma_{\mathrm{PO}}=1.25$.}
+\label{tab:po-refit-xgb}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lcccc@{}}\toprule
+Scene & unif-pair & resid & resid+PO & oracle \\
+\midrule
+similar & $0.426$ & $0.396$ & $0.396$ & $0.396$ \\
+covariate & $0.545$ & $0.614$ & $0.622$ & $0.511$ \\
+concept & $1.669$ & $1.339$ & $1.342$ & $1.394$ \\
+mixed & $1.998$ & $1.697$ & $1.671$ & $1.749$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]\centering
+\caption{Next-batch MSE with \texttt{mlp}. Uniform default.
+Residual gate uses CV MSE on the previous batch. $\gamma_{\mathrm{PO}}=1.25$.}
+\label{tab:po-refit-mlp}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lcccc@{}}\toprule
+Scene & unif-pair & resid & resid+PO & oracle \\
+\midrule
+similar & $0.448$ & $0.426$ & $0.426$ & $0.426$ \\
+covariate & $0.773$ & $1.096$ & $1.142$ & $0.674$ \\
+concept & $2.119$ & $1.611$ & $1.620$ & $1.694$ \\
+mixed & $2.521$ & $2.157$ & $2.208$ & $2.241$ \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -1,52 +1,104 @@
-# Rolling PO-learner refit, gated re-adjustment
+# Rolling PO-learner refit (RF / XGBoost / MLP)
 
-Uniform stays the default. When a new batch arrives, **refit** the
-PO-learner: `T=0` = most recent control (`B_{t-2}`), `T=1` = 上一批 ∪ 这一批.
-√PO weights apply **only if** mean PO-risk on T=1 / T=0 ≥ `gate=1.25`.
+Not Ridge. Same family for the DR PO-learner, the residual gate,
+and the next-batch predictor: `rf` (80 trees, depth 6), `xgb`
+(80 rounds, depth 4), `mlp` (32-16, standardized).
+Residual denominator is **K-fold CV MSE** on 上一批 (trees overfit
+train residuals). Uniform stays the default; re-adjust only when
+batches are clearly different (`gate_PO=1.25`, `gate_res=2`).
 
-## Board (next-batch Ridge MSE)
+## Board (next-batch MSE)
 
-| scene | uniform_pair | gated_pair | switch | adaptive | resid | resid_po | oracle | uniform_hop | gated_hop | dre_hop |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `similar` | 0.275 | 0.277 | 0.276 | 0.288 | 0.272 | 0.275 | 0.272 | 0.294 | 0.307 | 0.306 |
-| `covariate` | 0.336 | 0.338 | 0.341 | 0.358 | 0.391 | 0.410 | 0.331 | 0.428 | 0.445 | 0.846 |
-| `concept` | 1.674 | 1.460 | 1.635 | 1.628 | 1.372 | 1.372 | 1.378 | 1.376 | 1.368 | 1.366 |
-| `mixed` | 1.963 | 1.748 | 1.843 | 1.852 | 1.616 | 1.628 | 1.624 | 1.616 | 1.625 | 1.782 |
+### `rf`
 
-Fire rates (PO-ratio γ=1.25 vs residual γ=2.0):
+| scene | uniform_pair | gated_pair | switch | resid | resid_po | oracle | uniform_hop | dre_hop |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `similar` | 0.582 | 0.582 | 0.555 | 0.540 | 0.540 | 0.540 | 0.725 | 0.725 |
+| `covariate` | 0.762 | 0.758 | 0.784 | 0.888 | 0.958 | 0.728 | 1.206 | 2.489 |
+| `concept` | 1.593 | 1.593 | 1.573 | 1.332 | 1.324 | 1.379 | 1.362 | 1.356 |
+| `mixed` | 1.916 | 1.916 | 1.822 | 1.701 | 1.709 | 1.765 | 1.706 | 2.323 |
 
-| scene | gated_pair | gated_hop | switch | resid | resid_po | soft_pair |
-|---|---:|---:|---:|---:|---:|---:|
-| `similar` | 0.02 | 0.15 | 0.15 | 0.02 | 0.02 | 0.02 |
-| `covariate` | 0.02 | 0.19 | 0.19 | 0.21 | 0.21 | 0.02 |
-| `concept` | 0.17 | 0.10 | 0.10 | 0.19 | 0.19 | 0.17 |
-| `mixed` | 0.19 | 0.17 | 0.17 | 0.27 | 0.27 | 0.19 |
+Fire rates (`rf`):
 
-## Concept stream, MSE by hop (predict `B_{t+1}`)
+| scene | gated_pair | switch | resid | resid_po |
+|---|---:|---:|---:|---:|
+| `similar` | 0.00 | 0.12 | 0.00 | 0.00 |
+| `covariate` | 0.08 | 0.21 | 0.17 | 0.17 |
+| `concept` | 0.00 | 0.08 | 0.17 | 0.17 |
+| `mixed` | 0.00 | 0.12 | 0.25 | 0.25 |
 
-Cut is `concept_at=4`. Predicting `B_4` uses hop `t=3` (both
-pre-cut) — that first post-shift batch is structurally
-unpredictable from labels. Gate can fire from `t=4`.
+Concept hop path (`rf`, cut at `B_4`):
 
-| t (train) | test | uniform_pair | switch | resid | resid_po | oracle | gated_hop |
-|---|---|---:|---:|---:|---:|---:|---:|
-| 1 | `B_2` | 0.283 | 0.266 | 0.262 | 0.262 | 0.262 | 0.294 |
-| 2 | `B_3` | 0.284 | 0.284 | 0.284 | 0.284 | 0.284 | 0.298 |
-| 3 | `B_4` ← cut | 6.833 | 6.807 | 6.834 | 6.813 | 6.833 | 6.715 |
-| 4 | `B_5` | 2.104 | 1.911 | 0.311 | 0.332 | 0.311 | 0.316 |
-| 5 | `B_6` | 0.279 | 0.284 | 0.279 | 0.279 | 0.290 | 0.300 |
-| 6 | `B_7` | 0.259 | 0.259 | 0.259 | 0.259 | 0.286 | 0.286 |
+| t (train) | test | uniform_pair | switch | resid | resid_po | oracle |
+|---|---|---:|---:|---:|---:|---:|
+| 1 | `B_2` | 0.755 | 0.557 | 0.557 | 0.557 | 0.557 |
+| 2 | `B_3` | 0.561 | 0.557 | 0.557 | 0.557 | 0.557 |
+| 3 | `B_4` ← cut | 5.028 | 5.054 | 5.054 | 5.054 | 5.054 |
+| 4 | `B_5` | 2.148 | 2.149 | 0.755 | 0.708 | 0.755 |
+| 5 | `B_6` | 0.495 | 0.556 | 0.503 | 0.503 | 0.619 |
+| 6 | `B_7` | 0.570 | 0.568 | 0.568 | 0.568 | 0.731 |
 
-- **similar / covariate**: `P(Y|X)` stable → uniform slightly better;
-  always-on √PO hurts. PO-ratio gate fire-rate should stay low.
-- **PO-ratio vs residual gate**: a *global* concept flip raises φ² on
-  both T=0 and T=1, so ρ=r̄1/r̄0 stays near 1 and switch/adaptive
-  keep pooling. Residual gate = MSE(fit 上一批 → 这一批) / train MSE;
-  that is the 'batches clearly different' detector.
-- **switch vs resid**: same train-set idea; differ only in the gate.
-- **resid vs resid_po**: drop old batch, then optional √PO on the new one.
-- **oracle**: knows `concept_at`; train-set upper bound, not deployable.
-- **dre_hop**: X-only density ratio. Misses label shift; overreacts to X-hop.
-- pair = last two batches; hop = new batch only.
+### `xgb`
 
-11 methods, Ridge next-batch MSE, gate γ=1.25.
+| scene | uniform_pair | gated_pair | switch | resid | resid_po | oracle | uniform_hop | dre_hop |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `similar` | 0.426 | 0.443 | 0.415 | 0.396 | 0.396 | 0.396 | 0.556 | 0.562 |
+| `covariate` | 0.545 | 0.564 | 0.597 | 0.614 | 0.622 | 0.511 | 0.842 | 1.117 |
+| `concept` | 1.669 | 1.614 | 1.654 | 1.339 | 1.342 | 1.394 | 1.339 | 1.339 |
+| `mixed` | 1.998 | 1.956 | 1.811 | 1.697 | 1.671 | 1.749 | 1.697 | 1.760 |
+
+Fire rates (`xgb`):
+
+| scene | gated_pair | switch | resid | resid_po |
+|---|---:|---:|---:|---:|
+| `similar` | 0.42 | 0.21 | 0.00 | 0.00 |
+| `covariate` | 0.58 | 0.33 | 0.17 | 0.17 |
+| `concept` | 0.29 | 0.12 | 0.17 | 0.17 |
+| `mixed` | 0.46 | 0.25 | 0.25 | 0.25 |
+
+Concept hop path (`xgb`, cut at `B_4`):
+
+| t (train) | test | uniform_pair | switch | resid | resid_po | oracle |
+|---|---|---:|---:|---:|---:|---:|
+| 1 | `B_2` | 0.588 | 0.407 | 0.407 | 0.407 | 0.407 |
+| 2 | `B_3` | 0.411 | 0.443 | 0.411 | 0.411 | 0.411 |
+| 3 | `B_4` ← cut | 5.917 | 5.917 | 5.917 | 5.917 | 5.917 |
+| 4 | `B_5` | 2.334 | 2.334 | 0.535 | 0.555 | 0.535 |
+| 5 | `B_6` | 0.374 | 0.434 | 0.374 | 0.374 | 0.486 |
+| 6 | `B_7` | 0.391 | 0.391 | 0.391 | 0.391 | 0.609 |
+
+### `mlp`
+
+| scene | uniform_pair | gated_pair | switch | resid | resid_po | oracle | uniform_hop | dre_hop |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `similar` | 0.448 | 0.457 | 0.437 | 0.426 | 0.426 | 0.426 | 0.600 | 0.605 |
+| `covariate` | 0.773 | 0.837 | 1.065 | 1.096 | 1.142 | 0.674 | 1.512 | 1.857 |
+| `concept` | 2.119 | 2.063 | 1.983 | 1.611 | 1.620 | 1.694 | 1.754 | 1.754 |
+| `mixed` | 2.521 | 2.597 | 2.371 | 2.157 | 2.208 | 2.241 | 2.460 | 2.527 |
+
+Fire rates (`mlp`):
+
+| scene | gated_pair | switch | resid | resid_po |
+|---|---:|---:|---:|---:|
+| `similar` | 0.25 | 0.17 | 0.00 | 0.00 |
+| `covariate` | 0.67 | 0.42 | 0.21 | 0.21 |
+| `concept` | 0.29 | 0.25 | 0.17 | 0.17 |
+| `mixed` | 0.54 | 0.42 | 0.33 | 0.33 |
+
+Concept hop path (`mlp`, cut at `B_4`):
+
+| t (train) | test | uniform_pair | switch | resid | resid_po | oracle |
+|---|---|---:|---:|---:|---:|---:|
+| 1 | `B_2` | 0.574 | 0.465 | 0.442 | 0.442 | 0.442 |
+| 2 | `B_3` | 0.481 | 0.481 | 0.481 | 0.481 | 0.481 |
+| 3 | `B_4` ← cut | 7.211 | 7.060 | 7.211 | 7.211 | 7.211 |
+| 4 | `B_5` | 3.618 | 2.946 | 0.703 | 0.756 | 0.703 |
+| 5 | `B_6` | 0.413 | 0.529 | 0.413 | 0.413 | 0.622 |
+| 6 | `B_7` | 0.418 | 0.418 | 0.418 | 0.418 | 0.708 |
+
+- **similar / covariate**: `P(Y|X)` stable → uniform slightly better.
+- **resid**: residual hop-gate drops the old batch; should track oracle
+  after the cut is observed.
+- **resid_po**: same train-set switch plus √PO. Often a wash vs resid.
+- **gated_pair / switch**: PO-ratio gate; misses a global map flip.
+- **dre_hop**: X-only; overreacts to covariate hops.
