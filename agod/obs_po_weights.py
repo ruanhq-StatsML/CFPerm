@@ -9,10 +9,15 @@ After OnlineRFPerm reject on batch O:
 
 Non-reject → w=1. Hard-reweight, not an OOD detector.
 
-Iteration note
---------------
-Raw IPTW (esp. prop / √PO) often hurts next-MSE vs uniform while still
-ranking hard rows well. Prefer soft maps + tempering / top-k support.
+Logic we buy (v4)
+-----------------
+- **Hard-rank always**: obs PO is a hardness score (Spearman / P@k).
+  Mechanism that matches this claim: put mass on the hard support
+  (``hard_support`` / top-k), not diffuse soft IPTW.
+- **Pack MSE only under beijing-class drift**: when hard-tail ≈ shift
+  signal, soft temper can lift all-row next-MSE; on calm packs hard ≈
+  noise and uniform wins. Encode with a *higher* drift gate for the
+  pack-MSE path; do not chase pack MSE on mild rejects.
 """
 from __future__ import annotations
 
@@ -33,7 +38,11 @@ ObsWeightMode = Literal[
     "quantile",
     "hybrid",
     "topk",  # boost only top-q hard rows
+    "hard_support",  # top-k boost scaled by λ (hard-claim mechanism)
 ]
+
+# Beijing-class drift gate for pack-MSE path (stricter than mild reject).
+BEIJING_DRIFT_GATE = 0.45
 
 
 def _mean1_clip(w: np.ndarray, clip: tuple[float, float], eps: float) -> np.ndarray:
@@ -80,6 +89,32 @@ def topk_boost_weights(
     return _mean1_clip(w, clip, eps)
 
 
+def hard_support_weights(
+    po: np.ndarray,
+    *,
+    frac: float = 0.2,
+    boost_max: float = 3.0,
+    lam: float = 1.0,
+    clip: tuple[float, float] = (0.05, 20.0),
+    eps: float = 1e-6,
+) -> np.ndarray:
+    """Hard-claim mechanism: mass only on top-``frac`` PO rows.
+
+    ``boost = 1 + λ·(boost_max − 1)``. λ=0 → uniform; λ=1 → full hard boost.
+    Easy rows stay at base weight 1 (before mean-1 renormalization).
+    """
+    lam = float(np.clip(lam, 0.0, 1.0))
+    boost = 1.0 + lam * (float(boost_max) - 1.0)
+    if boost <= 1.0 + 1e-12:
+        return np.ones(len(np.asarray(po).ravel()), float)
+    return topk_boost_weights(po, frac=frac, boost=boost, clip=clip, eps=eps)
+
+
+def is_beijing_class_drift(drift: float, *, gate: float = BEIJING_DRIFT_GATE) -> bool:
+    """True when drift looks like shift-signal (beijing-class), not mild noise."""
+    return float(drift) > float(gate)
+
+
 def obs_po_to_weights(
     po: np.ndarray,
     mode: ObsWeightMode = "sqrt",
@@ -92,6 +127,7 @@ def obs_po_to_weights(
     temper: float = 1.0,
     topk_frac: float = 0.2,
     topk_boost: float = 2.0,
+    boost_max: float = 3.0,
     clip: tuple[float, float] = (0.05, 20.0),
     eps: float = 1e-6,
 ) -> np.ndarray:
@@ -99,21 +135,27 @@ def obs_po_to_weights(
 
     Modes
     -----
-    uniform  : w = 1
-    prop     : w ∝ PO
-    sqrt     : w ∝ √PO
-    cbrt     : w ∝ PO^{1/3}
-    qrt      : w ∝ PO^{1/4}
-    quantile : within-batch CDF rank (soft, bounded)
-    hybrid   : F̂(PO)^{q_power} · PO^{hybrid_power}
-    topk     : only top-``topk_frac`` hard rows get ``topk_boost``
+    uniform      : w = 1
+    prop         : w ∝ PO
+    sqrt         : w ∝ √PO
+    cbrt         : w ∝ PO^{1/3}
+    qrt          : w ∝ PO^{1/4}
+    quantile     : within-batch CDF rank (soft, bounded)
+    hybrid       : F̂(PO)^{q_power} · PO^{hybrid_power}
+    topk         : only top-``topk_frac`` hard rows get ``topk_boost``
+    hard_support : top-k boost scaled by ``temper`` as λ (hard-claim path)
 
-    ``temper`` ∈ [0,1] mixes the chosen map with uniform after shaping
-    (1 = full map, 0 = uniform). Default 1 keeps backward compatibility.
+    ``temper`` ∈ [0,1] mixes soft maps with uniform after shaping
+    (1 = full map, 0 = uniform). For ``hard_support``, ``temper`` is λ
+    on the hard boost (no second temper mix).
     """
     po = np.maximum(np.asarray(po, float).ravel(), eps)
     if mode == "uniform":
         return np.ones_like(po)
+    if mode == "hard_support":
+        return hard_support_weights(
+            po, frac=topk_frac, boost_max=boost_max, lam=temper, clip=clip, eps=eps
+        )
     if mode == "qrt":
         w = po_iptw_weights(po, mode="sqrt", power=0.25 if power is None else power, clip=clip, eps=eps)
     elif mode in ("prop", "sqrt", "cbrt"):
@@ -212,8 +254,11 @@ def adaptive_temper(
 ) -> float:
     """Map drift intensity → temper λ.
 
-    Below ``drift_gate`` → λ=0 (keep uniform even on reject — mild/noise packs).
-    Above gate → ramp to ``lam_max`` (beijing-like shift → soft PO reweight).
+    Below ``drift_gate`` → λ=0 (keep uniform even on reject — mild/noise).
+    Above gate → ramp to ``lam_max``.
+
+    Use ``drift_gate≈0.2`` for the hard-support path (mild fire OK).
+    Use ``BEIJING_DRIFT_GATE≈0.45`` for the pack-MSE path (only shift packs).
     """
     d = float(np.clip(drift, 0.0, 1.0))
     if d <= drift_gate:

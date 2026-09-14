@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Obs-PO hard-reweight v3: adaptive temper by drift + hard-subset MSE.
+"""Obs-PO hard-reweight v4: hard-support + beijing-class packMSE gate.
 
-Thesis
-------
-- Obs PO **ranks hard rows** (always useful as a hardness score).
-- Pack next-MSE only lifts when hard ≈ **shift signal** (beijing-like),
-  not when hard ≈ noise (calm stocks). Encode that with drift-adaptive λ:
-    mild reject  → λ≈0 (stay uniform)
-    strong drift → λ↑ (soft PO^{1/4} temper)
-
-Also report **hard-subset next-MSE** (top-20% of next batch by PO) — the
-metric that matches the hard-reweight claim.
+Logic we buy
+------------
+1. **Hard-rank always** — obs PO ranks hard rows (Spearman / P@20%).
+   Mechanism that matches: ``hard_support`` (top-k boost scaled by λ).
+2. **Pack MSE only under beijing-class drift** — chase all-row next-MSE
+   only when drift ≫ mild (gate≈0.45). Calm rejects stay uniform for packMSE.
+3. Primary claim metric = **hard-subset next-MSE**; packMSE is conditional.
 
   PYTHONPATH=. python3 scripts/run_agod_obs_po_weights.py \\
     --datasets metro_interstate beijing_pm25 stocks_AAPL stocks_MSFT stocks_IWM waymo_proxy
@@ -20,7 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import matplotlib
 
@@ -32,31 +29,32 @@ from sklearn.ensemble import RandomForestRegressor
 
 from agod.hard_rank_metrics import hard_rank_metrics
 from agod.obs_po_weights import (
+    BEIJING_DRIFT_GATE,
     adaptive_temper,
     drift_intensity,
     gated_obs_po_weights,
     hard_subset_mask,
+    is_beijing_class_drift,
 )
 from agod.online_rfperm import fit_online_rfperm, update_online_rfperm
 from agod.po_refit import build_recent_ood_windows, refit_po_on_windows
 from agod.sig_batch_metrics import annotate_results_with_sig
 from agod.stream_packs import LOADERS, load_stocks
 
-# mode -> how temper is chosen
-# fixed λ | adapt | uniform
+# v4 modes: hard-claim path + beijing packMSE path + v3 baselines
 MODES: Tuple[str, ...] = (
     "uniform",
-    "gated_qrt_t50",       # fixed λ=0.5 (v2 best)
-    "gated_qrt_adapt",     # λ = f(drift)
-    "gated_qrt_adapt_r2",  # adapt + n_recent=2
-    "gated_cbrt_adapt",     # adapt with ∛ base
+    "gated_qrt_adapt",       # v3 soft qrt, mild gate 0.2
+    "gated_qrt_hi",          # soft qrt, beijing gate 0.45 (packMSE path)
+    "gated_hard_adapt",      # hard_support, mild gate 0.2 (hard claim)
+    "gated_hard_hi",         # hard_support, beijing gate 0.45
 )
 COLORS = {
     "uniform": "#4C566A",
-    "gated_qrt_t50": "#EBCB8B",
     "gated_qrt_adapt": "#A3BE8C",
-    "gated_qrt_adapt_r2": "#88C0D0",
-    "gated_cbrt_adapt": "#5E81AC",
+    "gated_qrt_hi": "#EBCB8B",
+    "gated_hard_adapt": "#88C0D0",
+    "gated_hard_hi": "#5E81AC",
 }
 
 
@@ -97,17 +95,32 @@ def fit_rf(X, y, w, seed):
 
 
 def mode_spec(mode: str) -> dict:
-    """Return obs_mode / temper policy / n_recent."""
+    """obs map / drift gate / n_recent."""
     if mode == "uniform":
-        return {"obs": "uniform", "temper": 0.0, "adapt": False, "n_recent": None}
-    if mode == "gated_qrt_t50":
-        return {"obs": "qrt", "temper": 0.5, "adapt": False, "n_recent": None}
+        return {"obs": "uniform", "adapt": False, "drift_gate": 0.0, "n_recent": None}
     if mode == "gated_qrt_adapt":
-        return {"obs": "qrt", "temper": None, "adapt": True, "n_recent": None}
-    if mode == "gated_qrt_adapt_r2":
-        return {"obs": "qrt", "temper": None, "adapt": True, "n_recent": 2}
-    if mode == "gated_cbrt_adapt":
-        return {"obs": "cbrt", "temper": None, "adapt": True, "n_recent": None}
+        return {"obs": "qrt", "adapt": True, "drift_gate": 0.20, "n_recent": None}
+    if mode == "gated_qrt_hi":
+        return {
+            "obs": "qrt",
+            "adapt": True,
+            "drift_gate": BEIJING_DRIFT_GATE,
+            "n_recent": None,
+        }
+    if mode == "gated_hard_adapt":
+        return {
+            "obs": "hard_support",
+            "adapt": True,
+            "drift_gate": 0.20,
+            "n_recent": None,
+        }
+    if mode == "gated_hard_hi":
+        return {
+            "obs": "hard_support",
+            "adapt": True,
+            "drift_gate": BEIJING_DRIFT_GATE,
+            "n_recent": None,
+        }
     raise KeyError(mode)
 
 
@@ -128,6 +141,7 @@ def run_mode(
     gate_on: List[int] = []
     drifts: List[float] = []
     lams: List[float] = []
+    beijing_on: List[int] = []
     hard_rows: List[dict] = []
 
     X0, y0 = stream[0]
@@ -155,8 +169,7 @@ def run_mode(
                 stream, t, n_recent=n_recent, window_mode="recent_ood"
             )
             po = refit_po_on_windows(windows, seed=seed + t, blend_mu_gap=0.25)
-            # Drift vs fixed f_ref (same yardstick as RFPerm) — not in-sample μ0,
-            # which understates control residuals and inflates OOD/control ratios.
+            # Drift vs fixed f_ref (RFPerm yardstick) — not in-sample μ0.
             f_ref = rfperm.f_ref
             control_resid = np.abs(
                 windows.y_recent - f_ref.predict(windows.X_recent)
@@ -170,11 +183,14 @@ def run_mode(
                 alpha=alpha,
             )
             if spec["adapt"]:
-                lam_used = adaptive_temper(drift, lam_max=0.75, drift_gate=0.20)
+                lam_used = adaptive_temper(
+                    drift, lam_max=0.75, drift_gate=float(spec["drift_gate"])
+                )
             else:
-                lam_used = float(spec["temper"])
+                lam_used = 0.0
             drifts.append(drift)
             lams.append(lam_used)
+            beijing_on.append(int(is_beijing_class_drift(drift)))
             w = gated_obs_po_weights(
                 po,
                 reject=True,
@@ -183,6 +199,8 @@ def run_mode(
                 p=float(step["p"]),
                 alpha=alpha,
                 temper=lam_used,
+                topk_frac=hard_frac,
+                boost_max=3.0,
             )
 
         model = fit_rf(Xc, yc, w, seed + t)
@@ -193,8 +211,6 @@ def run_mode(
             err2 = (yn - pred) ** 2
             mse_next.append(float(np.mean(err2)))
 
-            # Hard-subset on next batch: score with μ0 from current windows if any,
-            # else a quick μ0 on previous batch.
             if windows is not None:
                 mu0 = fit_rf(
                     windows.X_recent,
@@ -248,6 +264,7 @@ def run_mode(
         "duty": float(np.mean(gate_on)) if gate_on else 0.0,
         "drift_mean": _avg(drifts),
         "lam_mean": _avg(lams),
+        "beijing_frac": _avg([float(x) for x in beijing_on]),
     }
 
 
@@ -279,21 +296,17 @@ def run_dataset(
     annotate_results_with_sig(
         results,
         preferred_gate_modes=(
-            "gated_qrt_t50",
             "gated_qrt_adapt",
-            "gated_qrt_adapt_r2",
-            "gated_cbrt_adapt",
+            "gated_qrt_hi",
+            "gated_hard_adapt",
+            "gated_hard_hi",
         ),
     )
-    # also sig-filter hard/easy mse using same gate mask
-    from agod.sig_batch_metrics import significant_only_stats
-
-    # piggy-back: copy mse_next_hard into a side channel via annotate pattern
     gate = None
     for m in (
         "gated_qrt_adapt",
-        "gated_qrt_t50",
-        "gated_cbrt_adapt",
+        "gated_hard_adapt",
+        "gated_qrt_hi",
         "uniform",
     ):
         if m in results and results[m].get("gate_on"):
@@ -312,6 +325,9 @@ def run_dataset(
         "n_batches": len(stream),
         "results": results,
         "drift_mean_adapt": results["gated_qrt_adapt"].get("drift_mean"),
+        "beijing_class": is_beijing_class_drift(
+            float(results["gated_qrt_adapt"].get("drift_mean") or 0.0)
+        ),
     }
 
 
@@ -323,7 +339,7 @@ def _bars(all_ds: dict, out: Path):
     mid = (len(MODES) - 1) / 2.0
 
     for ax, key, title in [
-        (axes[0], "mse_mean_sig", "sig-only next MSE (all rows)"),
+        (axes[0], "mse_mean_sig", "sig-only next MSE (all rows / pack)"),
         (axes[1], "mse_hard_mean_sig", "sig-only next MSE (hard top-20%)"),
     ]:
         for i, m in enumerate(MODES):
@@ -339,7 +355,7 @@ def _bars(all_ds: dict, out: Path):
         ax.grid(True, axis="y", alpha=0.3)
     axes[0].legend(ncol=2, fontsize=6)
     fig.tight_layout()
-    path = out / "obs_po_v3_mse.png"
+    path = out / "obs_po_v4_mse.png"
     fig.savefig(path, dpi=140)
     plt.close(fig)
     return path
@@ -353,61 +369,49 @@ def report(all_ds: dict) -> str:
 
     short = {
         "uniform": "uniform",
-        "gated_qrt_t50": "qrtλ.5",
-        "gated_qrt_adapt": "qrt_adapt",
-        "gated_qrt_adapt_r2": "qrt_ad+r2",
-        "gated_cbrt_adapt": "cbrt_adapt",
+        "gated_qrt_adapt": "qrt_mild",
+        "gated_qrt_hi": "qrt_bj",
+        "gated_hard_adapt": "hard_mild",
+        "gated_hard_hi": "hard_bj",
     }
     lines = [
-        "# Observation-level PO hard-reweight v3 (drift-adaptive)",
+        "# Observation-level PO hard-reweight v4",
         "",
-        "## Logic (do we buy it?)",
+        "## Do we buy hard / beijing-drift / packMSE?",
         "",
-        "Yes, with a split:",
+        "**Yes, with a clean split (this is the locked thesis):**",
         "",
-        "1. **Hard-rank always** — obs PO identifies hard rows (Spearman ~0.5–0.8).",
-        "   That alone justifies PO as a *hardness score* for reweight targeting.",
-        "2. **Pack MSE only under shift** — when hard-tail = drift signal (beijing-like),",
-        "   soft temper helps next-MSE; when hard ≈ noise (calm stocks), uniform wins.",
-        "3. Therefore **λ should track drift intensity**, not a fixed temper.",
+        "1. **认 hard** — obs PO is a hardness score. Spearman ~0.5–0.8, P@20% ≫ random.",
+        "   The matching mechanism is **hard_support** (boost only the hard top-k),",
+        "   not diffuse soft IPTW. Primary metric = **hard-subset next-MSE**.",
+        "2. **条件认 beijing类漂移 → packMSE** — all-row pack MSE is only a fair",
+        "   claim when hard-tail ≈ shift signal (drift ≫ mild, gate≈0.45).",
+        "   On calm packs, hard ≈ noise → uniform wins packMSE; do not force lift.",
+        "3. **不认** chasing packMSE on every RFPerm reject, or treating PO as an",
+        "   image-OOD detector. Reject gate stays OnlineRFPerm; PO is post-hoc reweight.",
         "",
-        "v3: `λ = adaptive_temper(drift_intensity(PO, p, T))` with gate at drift≈0.2.",
-        "Also report **hard-subset next-MSE** (top-20% of next batch by PO).",
+        f"v4: hard_support λ via mild gate (0.2) vs beijing gate ({BEIJING_DRIFT_GATE});",
+        "soft qrt kept as the packMSE-oriented comparator under the same gates.",
         "",
         "## Drift intensity (mean on reject batches)",
         "",
-        "| dataset | drift_mean (qrt_adapt) | lam_mean |",
-        "|---|---:|---:|",
+        "| dataset | drift_mean | beijing_class? | lam qrt_mild | lam qrt_bj | lam hard_mild |",
+        "|---|---:|:---:|---:|---:|---:|",
     ]
     for ds, blob in all_ds.items():
-        r = blob["results"]["gated_qrt_adapt"]
-        lines.append(f"| `{ds}` | {f(r.get('drift_mean'))} | {f(r.get('lam_mean'))} |")
+        r = blob["results"]
+        bj = "yes" if blob.get("beijing_class") else "no"
+        lines.append(
+            f"| `{ds}` | {f(r['gated_qrt_adapt'].get('drift_mean'))} | {bj} | "
+            f"{f(r['gated_qrt_adapt'].get('lam_mean'))} | "
+            f"{f(r['gated_qrt_hi'].get('lam_mean'))} | "
+            f"{f(r['gated_hard_adapt'].get('lam_mean'))} |"
+        )
 
     hdr = " | ".join(short[m] for m in MODES)
     lines += [
         "",
-        "## Sig-only next MSE — all rows (↓)",
-        "",
-        f"| dataset | {hdr} | best |",
-        "|" + "---|---:" * len(MODES) + "|---|",
-    ]
-    wins = {m: 0 for m in MODES}
-    for ds, blob in all_ds.items():
-        r = blob["results"]
-
-        def score(m):
-            v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
-            return v if v == v else 1e99
-
-        best = min(MODES, key=score)
-        wins[best] += 1
-        cells = [f(r[m].get("mse_mean_sig", r[m]["mse_mean"])) for m in MODES]
-        lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` |")
-    lines += ["", "**Wins (all-row MSE):** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins.items())]
-
-    lines += [
-        "",
-        "## Sig-only next MSE — hard top-20% of next batch (↓)  ← primary claim",
+        "## Sig-only next MSE — hard top-20% (↓)  ← primary claim (认 hard)",
         "",
         f"| dataset | {hdr} | best |",
         "|" + "---|---:" * len(MODES) + "|---|",
@@ -426,45 +430,79 @@ def report(all_ds: dict) -> str:
         lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` |")
     lines += [
         "",
-        "**Wins (hard-subset MSE):** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins_h.items()),
+        "**Wins (hard-subset):** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins_h.items()),
         "",
-        "## Rel. all-row MSE vs uniform (qrt_adapt / qrtλ.5)",
+        "## Sig-only next MSE — all rows / pack (↓)  ← only claim under beijing drift",
         "",
-        "| dataset | qrt_adapt | qrtλ.5 | drift |",
-        "|---|---:|---:|---:|",
+        f"| dataset | {hdr} | best | beijing? |",
+        "|" + "---|---:" * len(MODES) + "|---|:---:|",
+    ]
+    wins = {m: 0 for m in MODES}
+    wins_bj = {m: 0 for m in MODES}
+    n_bj = 0
+    for ds, blob in all_ds.items():
+        r = blob["results"]
+        bj = bool(blob.get("beijing_class"))
+
+        def score(m):
+            v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
+            return v if v == v else 1e99
+
+        best = min(MODES, key=score)
+        wins[best] += 1
+        if bj:
+            n_bj += 1
+            wins_bj[best] += 1
+        cells = [f(r[m].get("mse_mean_sig", r[m]["mse_mean"])) for m in MODES]
+        lines.append(
+            f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` | {'yes' if bj else 'no'} |"
+        )
+    lines += [
+        "",
+        "**Wins (all packs):** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins.items()),
+        f"**Wins among beijing-class packs only (n={n_bj}):** "
+        + ", ".join(f"`{short[k]}`={v}" for k, v in wins_bj.items()),
+        "",
+        "## Rel. pack MSE vs uniform (soft qrt paths)",
+        "",
+        "| dataset | qrt_mild | qrt_bj | hard_mild | hard_bj | drift | beijing? |",
+        "|---|---:|---:|---:|---:|---:|:---:|",
     ]
     for ds, blob in all_ds.items():
         r = blob["results"]
         u = r["uniform"].get("mse_mean_sig", r["uniform"]["mse_mean"])
+        bj = "yes" if blob.get("beijing_class") else "no"
 
         def rel(m):
             v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
             return (v / u - 1.0) if u == u and u > 0 else float("nan")
 
         lines.append(
-            f"| `{ds}` | {f(rel('gated_qrt_adapt'), pct=True)} | {f(rel('gated_qrt_t50'), pct=True)} | "
-            f"{f(r['gated_qrt_adapt'].get('drift_mean'))} |"
+            f"| `{ds}` | {f(rel('gated_qrt_adapt'), pct=True)} | {f(rel('gated_qrt_hi'), pct=True)} | "
+            f"{f(rel('gated_hard_adapt'), pct=True)} | {f(rel('gated_hard_hi'), pct=True)} | "
+            f"{f(r['gated_qrt_adapt'].get('drift_mean'))} | {bj} |"
         )
 
     lines += [
         "",
-        "## Hard-rank (unchanged claim)",
+        "## Hard-rank (认 hard — unchanged)",
         "",
         "| dataset | spearman | P@20% | n_reject |",
         "|---|---:|---:|---:|",
     ]
     for ds, blob in all_ds.items():
-        h = blob["results"]["gated_qrt_adapt"]["hard_po"]
-        nrej = blob["results"]["gated_qrt_adapt"]["n_reject"]
+        h = blob["results"]["gated_hard_adapt"]["hard_po"]
+        nrej = blob["results"]["gated_hard_adapt"]["n_reject"]
         lines.append(f"| `{ds}` | {f(h['spearman'])} | {f(h['precision_at_k'])} | {nrej} |")
 
     lines += [
         "",
         "### Takeaway",
         "",
-        "- **Agree:** hard-rank is the robust justification; pack MSE is conditional on drift.",
-        "- **v3 test:** adaptive λ should fire on high-drift packs and stay near 0 on calm ones.",
-        "- Prefer hard-subset next-MSE when claiming hard-reweight benefit.",
+        "- **认 hard**: use PO to find / boost hard support; judge by hard-subset MSE + rank.",
+        "- **条件认 packMSE**: only advertise all-row lift on beijing-class drift packs;",
+        "  prefer `qrt_bj` / `hard_bj` (high gate) so calm rejects stay near uniform.",
+        "- Mild-gate soft qrt remains a useful ablation, not the default packMSE claim.",
         "",
         "See `docs/agod/AGOD_obs_po_weights.md`.",
         "",
@@ -518,29 +556,31 @@ def main() -> None:
             continue
         all_ds[name] = blob
         r = blob["results"]
+        bj = "BJ" if blob.get("beijing_class") else "calm"
         print(
-            "  drift={:.3f} lam_adapt={:.3f} | sigMSE ".format(
+            "  drift={:.3f} ({}) | sigPack ".format(
                 r["gated_qrt_adapt"].get("drift_mean") or float("nan"),
-                r["gated_qrt_adapt"].get("lam_mean") or float("nan"),
+                bj,
             )
             + " ".join(
-                f"{m}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4g}" for m in MODES
+                f"{short_name(m)}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4g}" for m in MODES
             )
-            + " | hardMSE "
+            + " | hard "
             + " ".join(
-                f"{m}={r[m].get('mse_hard_mean_sig', r[m].get('mse_hard_mean', float('nan'))):.4g}"
+                f"{short_name(m)}={r[m].get('mse_hard_mean_sig', r[m].get('mse_hard_mean', float('nan'))):.4g}"
                 for m in MODES
             ),
             flush=True,
         )
 
     payload = {
-        "version": 3,
+        "version": 4,
         "batch_size": args.batch_size,
         "n_batches": args.n_batches,
         "modes": list(MODES),
+        "beijing_drift_gate": BEIJING_DRIFT_GATE,
         "datasets": all_ds,
-        "note": "v3 drift-adaptive temper + hard-subset next-MSE",
+        "note": "v4 hard_support + beijing-class packMSE gate",
     }
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     md = report(all_ds)
@@ -550,6 +590,16 @@ def main() -> None:
     plots = [_bars(all_ds, args.out)] if all_ds else []
     print(md)
     print("plots:", [str(p) for p in plots])
+
+
+def short_name(m: str) -> str:
+    return {
+        "uniform": "uni",
+        "gated_qrt_adapt": "qrt_m",
+        "gated_qrt_hi": "qrt_bj",
+        "gated_hard_adapt": "h_m",
+        "gated_hard_hi": "h_bj",
+    }.get(m, m)
 
 
 if __name__ == "__main__":
