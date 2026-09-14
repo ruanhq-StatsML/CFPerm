@@ -6,7 +6,7 @@ Stack
 L0  CFPerm DRPerm(recent vs current) → reject?
 L1  intensity (p, T, PO-gap)         → λ, beijing?
 L2  shape: hard_support / soft CV / blend(mix)
-L3  policy: dual | hard_m | blend_50
+L3  policy: dual | dual_b50 | hard_m | blend_50
 
   PYTHONPATH=. python3 scripts/run_agod_cfperm_dual_blend.py \\
     --datasets metro_interstate beijing_pm25 stocks_AAPL stocks_MSFT stocks_IWM waymo_proxy \\
@@ -53,11 +53,12 @@ DEFAULT_DATASETS = (
     "stocks_IWM",
     "waymo_proxy",
 )
-MODES: Tuple[str, ...] = ("uniform", "hard_m", "dual", "blend_50")
+MODES: Tuple[str, ...] = ("uniform", "hard_m", "dual", "dual_b50", "blend_50")
 COLORS = {
     "uniform": "#4C566A",
     "hard_m": "#88C0D0",
     "dual": "#5E81AC",
+    "dual_b50": "#A3BE8C",
     "blend_50": "#D08770",
 }
 
@@ -101,7 +102,13 @@ def fit_rf(X, y, w, seed):
 
 
 def short_name(m: str) -> str:
-    return {"uniform": "uni", "hard_m": "hard_m", "dual": "dual", "blend_50": "b50"}[m]
+    return {
+        "uniform": "uni",
+        "hard_m": "hard_m",
+        "dual": "dual",
+        "dual_b50": "d_b50",
+        "blend_50": "b50",
+    }[m]
 
 
 def precompute_gates(
@@ -254,8 +261,9 @@ def run_mode(
                 w = np.ones(len(yc), float)
             else:
                 po = refit_po_on_windows(windows, seed=seed + t, blend_mu_gap=0.25)
+                # Mild rejects → hard_support for all adaptive policies.
                 use_hard = mode == "hard_m" or (
-                    mode in ("dual", "blend_50") and not is_bj
+                    mode in ("dual", "dual_b50", "blend_50") and not is_bj
                 )
                 if use_hard:
                     w = gated_obs_po_weights(
@@ -268,6 +276,7 @@ def run_mode(
                     )
                     fams.append("hard_support")
                 elif mode == "dual":
+                    # BJ → soft CV (locked default)
                     cap = max(lam, 0.15)
                     sel = cv_select_power(
                         Xc,
@@ -281,7 +290,14 @@ def run_mode(
                     )
                     w = np.asarray(sel["weights"], float)
                     fams.append(f"cv_PO^{float(sel['power']):g}")
+                elif mode == "dual_b50":
+                    # BJ → blend_50 hybrid (hard/qrt mix) instead of soft CV
+                    w = blend_hard_qrt_weights(
+                        po, lam=max(lam, 0.25), mix=0.5, topk_frac=hard_frac
+                    )
+                    fams.append("dual_b50")
                 else:
+                    # pure blend_50 policy (mild already handled above when not BJ)
                     w = blend_hard_qrt_weights(
                         po, lam=max(lam, 0.25), mix=0.5, topk_frac=hard_frac
                     )
@@ -390,7 +406,7 @@ def run_dataset(name, root, **kw) -> dict:
     annotate_results_with_sig(
         results,
         preferred_gate_modes=tuple(
-            m for m in ("hard_m", "dual", "blend_50") if m in results
+            m for m in ("hard_m", "dual", "dual_b50", "blend_50") if m in results
         ),
     )
     gate = None
@@ -532,7 +548,7 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
 
     n_seeds = max((blob.get("n_seeds", 1) for blob in all_ds.values()), default=1)
     lines = [
-        "# CFPerm-gated dual/blend (v8.3 full multi-seed (beijing_gate=0.25))",
+        "# CFPerm-gated dual/blend (v8.4 dual_b50 hybrid)",
         "",
         f"_Mean over **{n_seeds}** seed(s). L0 = CFPerm DRPerm (`e_mode=known`)._",
         "",
@@ -541,12 +557,13 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
         "| piece | role |",
         "|---|---|",
         "| **DRPerm** (`risk=dr`) | L0 batch shift: PO-risk + permute-W |",
-        "| **RRPerm** (`risk=rr`) | optional L0 via R-risk |",
+        "| **RRPerm** (`risk=rr`) | optional L0 via `--risk rr` |",
         "| **CFPerm-VIMP** | post-hoc feature attribution (not stream gate) |",
         "",
         "L1 intensity = `0.55·po_gap + 0.30·p_strength + 0.15·T_strength`.",
         "dual: mild → hard_support; beijing (intensity>beijing_gate) → soft CV.",
-        "blend_50: mild → hard; beijing → hard/qrt mix=0.5.",
+        "dual_b50: mild → hard_support; beijing → hard/qrt blend mix=0.5 (no soft CV).",
+        "blend_50: mild → hard; beijing → hard/qrt mix=0.5 (same BJ path as dual_b50).",
         "",
     ]
     if synth:
@@ -623,8 +640,8 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
         "",
         "## Rel. pack MSE vs uniform (CFPerm-sig)",
         "",
-        "| dataset | hard_m | dual | b50 | duty |",
-        "|---|---:|---:|---:|---:|",
+        "| dataset | hard_m | dual | d_b50 | b50 | duty |",
+        "|---|---:|---:|---:|---:|---:|",
     ]
     for ds, blob in all_ds.items():
         r = blob["results"]
@@ -638,8 +655,33 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
 
         lines.append(
             f"| `{ds}` | {f(rel('hard_m'), pct=True)} | {f(rel('dual'), pct=True)} | "
-            f"{f(rel('blend_50'), pct=True)} | {f(r['dual']['duty'])} |"
+            f"{f(rel('dual_b50'), pct=True)} | {f(rel('blend_50'), pct=True)} | "
+            f"{f(r['dual']['duty'])} |"
         )
+
+    # dual vs dual_b50 verdict on metro/beijing
+    focus = [ds for ds in ("metro_interstate", "beijing_pm25") if ds in all_ds]
+    if focus and all("dual_b50" in all_ds[ds]["results"] for ds in focus):
+        def _rel_pack(ds, m):
+            r = all_ds[ds]["results"]
+            u = r["uniform"].get("mse_mean_sig", r["uniform"]["mse_mean"])
+            v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
+            return (v / u - 1.0) if u == u and u > 0 else float("nan")
+
+        b50_beats = all(
+            _rel_pack(ds, "dual_b50") < _rel_pack(ds, "dual") for ds in focus
+        )
+        lines += [
+            "",
+            "## v8.4 dual_b50 vs soft-CV dual",
+            "",
+            (
+                f"**dual_b50 {'beats' if b50_beats else 'loses to'} soft-CV dual** on "
+                "metro/beijing packMSE → "
+                f"{'consider locking dual_b50' if b50_beats else 'keep dual as default'}."
+            ),
+            "",
+        ]
 
     if any(
         np.isfinite(blob.get("jaccard_cfperm_rfperm", float("nan")))
@@ -774,9 +816,9 @@ def main() -> None:
                     beijing_gate=args.beijing_gate,
                     temper_gate=args.temper_gate,
                     lam_max=args.lam_max,
-                    modes=("uniform", "hard_m", "dual", "blend_50")
+                    modes=("uniform", "hard_m", "dual", "dual_b50", "blend_50")
                     if not scan_gates
-                    else ("uniform", "hard_m", "dual"),
+                    else ("uniform", "hard_m", "dual", "dual_b50"),
                 )
             except Exception as e:
                 print(f"  [skip] seed={sd}: {e}", flush=True)
@@ -951,7 +993,7 @@ def main() -> None:
             },
         }
     payload = {
-        "version": "8.3",
+        "version": "8.4",
         "gate": "cfperm",
         "risk": args.risk,
         "n_perm": args.n_perm,
