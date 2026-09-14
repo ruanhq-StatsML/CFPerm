@@ -30,6 +30,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 from agod.online_rfperm import fit_online_rfperm, gate_blend, update_online_rfperm
 from agod.po_iptw import dre_weights, instance_po_risk, po_iptw_weights
+from agod.sig_batch_metrics import annotate_results_with_sig
 from agod.stream_packs import LOADERS, load_stocks
 
 MODES = ("uniform", "sqrt", "sqrt_gated", "dre")
@@ -253,18 +254,20 @@ def report(all_res: dict) -> str:
         "Gate = PDF OnlineRFPerm (rank/EWMA p + alpha-investing FDR).",
         "Reweight only when reject: `w=√PO`; else uniform.",
         "",
-        "| dataset | unif | always-√ | **gated-√** | dre | duty | cumR(g−dre) | best |",
+        "Primary metric = next-MSE on **significant (reject) batches only**.",
+        "",
+        "| dataset | n_sig | unif | always-√ | **gated-√** | dre | duty | best |",
         "|---|---:|---:|---:|---:|---:|---:|---|",
     ]
     for d, blob in all_res.items():
-        res, reg = blob["results"], blob["regret"]
-        means = {m: res[m]["mse_mean"] for m in MODES}
+        res = blob["results"]
+        means = {m: res[m].get("mse_mean_sig", res[m]["mse_mean"]) for m in MODES}
         best = min(means, key=means.get)
+        n_sig = res["sqrt_gated"].get("n_significant", "?")
         lines.append(
-            f"| `{d}` | {means['uniform']:.4g} | {means['sqrt']:.4g} | "
+            f"| `{d}` | {n_sig} | {means['uniform']:.4g} | {means['sqrt']:.4g} | "
             f"**{means['sqrt_gated']:.4g}** | {means['dre']:.4g} | "
-            f"{res['sqrt_gated']['gate_duty']:.2f} | "
-            f"{reg['sqrt_gated']['cum_regret_vs_dre']:.4g} | `{best}` |"
+            f"{res['sqrt_gated']['gate_duty']:.2f} | `{best}` |"
         )
     lines += [
         "",
@@ -273,6 +276,7 @@ def report(all_res: dict) -> str:
         "T = MSE(f_ref, batch) - E_ref",
         "p = rank/EWMA vs historical T; online FDR → reject",
         "w = sqrt(PO) if reject else 1",
+        "metric = mean(mse_next[reject])  # drop non-significant",
         "```",
         "",
     ]
@@ -337,6 +341,7 @@ def main() -> None:
                 f"    mse={results[mode]['mse_mean']:.6g} "
                 f"duty={results[mode]['gate_duty']:.2f}"
             )
+        annotate_results_with_sig(results, preferred_gate_modes=("sqrt_gated",))
         all_res[name] = {"results": results, "regret": regrets(results), "meta": meta}
 
     args.out.mkdir(parents=True, exist_ok=True)

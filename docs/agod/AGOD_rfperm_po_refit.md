@@ -21,3 +21,16 @@ Default = **uniform**. On significant OnlineRFPerm reject only:
 
 Expectation: uniform slightly best overall; refit fires sparsely on
 clearly-shifted batches and should beat always-√ / DRE there.
+
+## Significant batches only
+
+| dataset | n_sig | duty | uniform | sqrt | sqrt_gated | sqrt_gated_refit | dre | best |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| `metro_interstate` | 6/38 | 0.16 | 8.602e+05 | 8.455e+05 | 7.839e+05 | **7.977e+05** | 1.642e+06 | `sqrt_gated` |
+| `beijing_pm25` | 5/38 | 0.13 | 2364 | 2528 | 2627 | **2391** | 3577 | `uniform` |
+| `stocks_AAPL` | 6/38 | 0.16 | 0.0007784 | 0.0008755 | 0.0008796 | **0.0008912** | 0.0008401 | `uniform` |
+| `waymo_proxy` | 22/38 | 0.58 | 0.009992 | 0.01101 | 0.01118 | **0.01082** | 0.01154 | `uniform` |
+| `stocks_MSFT` | 8/38 | 0.21 | 0.0006164 | 0.0006963 | 0.0006919 | **0.0006875** | 0.0005892 | `dre` |
+| `stocks_IWM` | 7/38 | 0.18 | 0.0005025 | 0.0005516 | 0.0005588 | **0.0005479** | 0.0005117 | `uniform` |
+
+**Wins (sig-only):** `uniform`=4, `sqrt`=0, `sqrt_gated`=1, `sqrt_gated_refit`=0, `dre`=1

@@ -36,6 +36,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from agod.online_rfperm import fit_online_rfperm, gate_blend, update_online_rfperm
 from agod.po_iptw import dre_weights, instance_po_risk, po_iptw_weights
 from agod.po_refit import current_batch_sqrt_po_weights
+from agod.sig_batch_metrics import annotate_results_with_sig
 from agod.stream_packs import LOADERS, load_stocks
 
 MODES = ("uniform", "sqrt", "sqrt_gated", "sqrt_gated_refit", "dre")
@@ -198,16 +199,19 @@ def plot_all(all_res: dict, out_dir: Path) -> List[Path]:
     w = 0.15
     for i, mode in enumerate(MODES):
         vals = [
-            all_res[d]["results"][mode]["mse_mean"]
-            / (all_res[d]["results"]["uniform"]["mse_mean"] + 1e-12)
+            all_res[d]["results"][mode].get(
+                "rel_mse_vs_uniform_sig",
+                all_res[d]["results"][mode]["mse_mean"]
+                / (all_res[d]["results"]["uniform"]["mse_mean"] + 1e-12),
+            )
             for d in ds
         ]
         ax.bar(x + (i - 2) * w, vals, w, label=mode, color=COLORS[mode])
     ax.axhline(1.0, color="k", ls="--", lw=0.8)
     ax.set_xticks(x)
     ax.set_xticklabels(ds, rotation=15, ha="right")
-    ax.set_ylabel("Next-MSE / uniform")
-    ax.set_title("RFPerm + T0/T1 PO re-fit vs always-√ / DRE")
+    ax.set_ylabel("Next-MSE / uniform (significant only)")
+    ax.set_title("RFPerm + T0/T1 PO re-fit — significant batches only")
     ax.legend(ncol=3, fontsize=7)
     ax.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
@@ -271,14 +275,17 @@ def report(all_res: dict) -> str:
         "- `T=1`: previous ∪ current batch",
         "- re-fit μ0 (optional μ1); `PO=|Y−μ0(X)|`; `w=√PO` on current batch",
         "",
-        "| dataset | unif | always-√ | gated | **refit** | dre | refit-duty | best |",
-        "|---|---:|---:|---:|---:|---:|---:|---|",
+        "Primary metric = next-MSE on **significant (reject) batches only**.",
+        "Non-reject steps stay uniform → excluded from the mean.",
+        "",
+        "| dataset | n_sig | unif | always-√ | gated | **refit** | dre | duty | best |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     beats_dre = beats_always = beats_gated = 0
     n = 0
     for d, blob in all_res.items():
         res = blob["results"]
-        means = {m: res[m]["mse_mean"] for m in MODES}
+        means = {m: res[m].get("mse_mean_sig", res[m]["mse_mean"]) for m in MODES}
         best = min(means, key=means.get)
         n += 1
         if means["sqrt_gated_refit"] < means["dre"]:
@@ -287,19 +294,20 @@ def report(all_res: dict) -> str:
             beats_always += 1
         if means["sqrt_gated_refit"] < means["sqrt_gated"]:
             beats_gated += 1
+        n_sig = res["sqrt_gated_refit"].get("n_significant", "?")
+        duty = res["sqrt_gated_refit"]["refit_duty"]
         lines.append(
-            f"| `{d}` | {means['uniform']:.4g} | {means['sqrt']:.4g} | "
+            f"| `{d}` | {n_sig} | {means['uniform']:.4g} | {means['sqrt']:.4g} | "
             f"{means['sqrt_gated']:.4g} | **{means['sqrt_gated_refit']:.4g}** | "
-            f"{means['dre']:.4g} | {res['sqrt_gated_refit']['refit_duty']:.2f} | `{best}` |"
+            f"{means['dre']:.4g} | {duty:.2f} | `{best}` |"
         )
     lines += [
         "",
-        f"**refit vs DRE:** `{beats_dre}/{n}`",
-        f"**refit vs always-√:** `{beats_always}/{n}`",
-        f"**refit vs probe-gated:** `{beats_gated}/{n}`",
+        f"**refit vs DRE (sig-only):** `{beats_dre}/{n}`",
+        f"**refit vs always-√ (sig-only):** `{beats_always}/{n}`",
+        f"**refit vs probe-gated (sig-only):** `{beats_gated}/{n}`",
         "",
-        "Expectation: uniform slightly best overall; refit fires sparsely on",
-        "clearly-shifted batches and should beat always-√ / DRE there.",
+        "Expectation: gated reweight only matters on reject batches; elsewhere ≡ uniform.",
         "",
     ]
     return "\n".join(lines)
@@ -374,6 +382,14 @@ def main() -> None:
                 f"gate={results[mode]['gate_duty']:.2f} "
                 f"refit={results[mode]['refit_duty']:.2f}"
             )
+        annotate_results_with_sig(
+            results, preferred_gate_modes=("sqrt_gated_refit", "sqrt_gated")
+        )
+        print(
+            f"  [sig-only] n={results['sqrt_gated_refit']['n_significant']} "
+            f"refit={results['sqrt_gated_refit']['mse_mean_sig']:.6g} "
+            f"unif={results['uniform']['mse_mean_sig']:.6g}"
+        )
         all_res[name] = {"results": results, "regret": regrets(results), "meta": meta}
 
     args.out.mkdir(parents=True, exist_ok=True)
@@ -386,6 +402,7 @@ def main() -> None:
         "modes": list(MODES),
         "skipped": skipped,
         "datasets": all_res,
+        "note": "Primary compare uses mse_mean_sig (OnlineRFPerm reject batches only).",
     }
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     md = report(all_res)
