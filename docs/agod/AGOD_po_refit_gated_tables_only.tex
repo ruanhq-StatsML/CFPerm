@@ -1,17 +1,17 @@
-% Gated online-RF sqrt(po_risk0) vs PO-tail localization.
+% Gated online-RF sqrt(po_risk0) reweighting.
 \begin{table}[ht]\centering
 \caption{Next-batch MSE with \texttt{rf}. Uniform default.
 RFPerm fires on consecutive OOS probe jump $(\gamma=1.50)$.}
 \label{tab:po-refit-rf}
 \small
 \setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lccccc@{}}\toprule
-Scene & unif-pair & rfperm & local & resid & oracle \\
+\begin{tabular}{@{}lcccc@{}}\toprule
+Scene & unif-pair & rfperm & resid & oracle \\
 \midrule
-similar & $0.540$ & $0.540$ & $0.540$ & $0.540$ & $0.540$ \\
-covariate & $0.728$ & $0.845$ & $1.087$ & $0.852$ & $0.728$ \\
-concept & $1.565$ & $1.331$ & $1.542$ & $1.332$ & $1.379$ \\
-mixed & $1.889$ & $1.672$ & $2.126$ & $1.657$ & $1.765$ \\
+similar & $0.540$ & $0.540$ & $0.540$ & $0.540$ \\
+covariate & $0.728$ & $0.720$ & $0.852$ & $0.728$ \\
+concept & $1.565$ & $1.466$ & $1.332$ & $1.379$ \\
+mixed & $1.889$ & $1.818$ & $1.657$ & $1.765$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -22,13 +22,13 @@ RFPerm fires on consecutive OOS probe jump $(\gamma=1.50)$.}
 \label{tab:po-refit-xgb}
 \small
 \setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lccccc@{}}\toprule
-Scene & unif-pair & rfperm & local & resid & oracle \\
+\begin{tabular}{@{}lcccc@{}}\toprule
+Scene & unif-pair & rfperm & resid & oracle \\
 \midrule
-similar & $0.396$ & $0.396$ & $0.396$ & $0.396$ & $0.396$ \\
-covariate & $0.511$ & $0.565$ & $0.897$ & $0.557$ & $0.511$ \\
-concept & $1.639$ & $1.339$ & $1.551$ & $1.339$ & $1.394$ \\
-mixed & $1.957$ & $1.648$ & $1.849$ & $1.661$ & $1.749$ \\
+similar & $0.396$ & $0.396$ & $0.396$ & $0.396$ \\
+covariate & $0.511$ & $0.509$ & $0.557$ & $0.511$ \\
+concept & $1.639$ & $1.592$ & $1.339$ & $1.394$ \\
+mixed & $1.957$ & $1.920$ & $1.661$ & $1.749$ \\
 \bottomrule
 \end{tabular}
 \end{table}
