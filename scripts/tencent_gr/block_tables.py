@@ -39,7 +39,6 @@ POST_PREDICT_X = [
     "n_clk_same_before",
     "sess_pos",
     "sess_clk_before",
-    "price",
     "log1p_price",
     "n_prior_cnv",
     "lag_post_clk_1d_rate",
@@ -386,7 +385,9 @@ def tab_post_cnv_events(ev: pd.DataFrame, attr_ev: Optional[pd.DataFrame] = None
         ):
             out.loc[~obs, col] = np.nan
 
-    out["log1p_price"] = np.log1p(out["price"].fillna(0.0).clip(lower=0.0))
+    price = pd.to_numeric(out["price"], errors="coerce")
+    out["price"] = price
+    out["log1p_price"] = np.log1p(price.fillna(0.0).clip(lower=0.0))
 
     # 当场（买这一刻之前的场深）——热场续点 vs 隔天回访
     ev_s = ev.sort_values(["user_id", "ts"]).copy()

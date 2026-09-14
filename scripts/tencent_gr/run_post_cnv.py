@@ -55,6 +55,14 @@ X_BLOCKS = {
         "item_within_5m",
         "item_within_1h",
     ],
+    "+lag": [
+        "n_clk_before_1h",
+        "n_clk_before_1d",
+        "n_clk_before_7d",
+        "n_clk_same_before",
+        "n_prior_cnv",
+        "lag_post_clk_1d_rate",
+    ],
     "+sess_money_lag": POST_PREDICT_X,
 }
 
@@ -122,7 +130,7 @@ def fit_auc(xtr, ytr, xte, yte) -> dict:
 
 
 def split_users(post: pd.DataFrame, rng: np.random.Generator, frac: float = 0.7):
-    u = post["user_id"].drop_duplicates().to_numpy()
+    u = post["user_id"].drop_duplicates().to_numpy().copy()
     rng.shuffle(u)
     n = max(1, int(len(u) * frac))
     tr, te = set(u[:n]), set(u[n:])
@@ -201,9 +209,9 @@ def write_note(path: Path, s: dict, pred: dict) -> None:
         "  路径  wo_prior_clk, dt_item/any, item_within_5m/1h     # 已有 attr 表",
         "  买前量 n_clk_before_{1h,1d,7d}, n_clk_same_before      # 基线活跃，不是 Y",
         "  当场  sess_pos, sess_clk_before                         # 热场续点的主混杂",
-        "  钱    price, log1p_price",
+        "  钱    log1p_price",
         "  滞后  n_prior_cnv, lag_post_clk_1d_rate                 # 此前各单的买后点击率，shift(1)",
-        "不准进 X：n_clk_after_* / lift_* / dt_next / y_post_*",
+        "不准进 X：n_clk_after_* / lift_* / dt_next / y_post_* / 原始 price（和 log1p 共线）",
         "```",
         "",
         "为什么要这些：",
@@ -230,7 +238,14 @@ def write_note(path: Path, s: dict, pred: dict) -> None:
         f"P(lift>1)={f(s['p_lift_gt1'])}；P(n_after>n_before)={f(s['p_delta_gt0'])}。",
         f"任意：before {f(s['n_before_1d_mean'])} → after {f(s['n_after_1d_mean'])}；",
         f"同品：before {f(s['n_same_before_1d_mean'])} → after {f(s['n_same_after_1d_mean'])}。",
-        f"有下一次点击时，P(仍在当场 30min)={f(s['same_sess_given_next'])}；dt_next p50={f(s['dt_next_clk_p50'])} min。",
+        f"有下一次点击时，P(仍在当场 30min)={f(s['same_sess_given_next'])}；"
+        f"dt_next p50={f(s['dt_next_clk_p50']/1440, 1)} d。",
+        "",
+        "读这批：买完 **不抬** 后续点击。1d after≈before，lift 中位数 0，P(after>before)=0.09。",
+        "5m/1h 几乎不点；同品 1d 只有约千分之一（这件商品买完基本不再点它）。",
+        "7d 任意 0.41、dt_next 中位约 6 天 → 那是人还在平台上逛，不是购买带动的余热。",
+        "同品 last-click 在这批对得上的极少，所以 attr 同品桶对「买后任意点击」几乎没信息；",
+        "有用的是任意点击间隔、7d 买前量和滞后买后率。",
         "",
         "## 预测 Y=y_post_clk_1d（按用户 70/30）",
         "",
@@ -255,9 +270,10 @@ def write_note(path: Path, s: dict, pred: dict) -> None:
             lines.append(f"| `{k}` | {v:+.3f} |")
     lines += [
         "",
-        "volume-only 已经不低 → 很大一部分是「爱点的人继续点」。",
-        "path / sess 再涨，才是买这一刻的路径和热场在说话。",
-        "同品 Y 更难（更稀），但更贴近「这件商品买完还看」。",
+        "volume-only 已经能到 ~0.68：1d 任意点击主要是「本来就爱点的人还在点」。",
+        "+lag 再涨，说明「这个人以前买完爱不爱点」是下一单的主信号。",
+        "path/sess/price 几乎不再涨：同品买后点击近乎 0，1d Y 也不是当场续点。",
+        "同品 Y 这批只有十几正例，不够建模——要刻画「买完还看这件」先承认事件极稀。",
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -295,38 +311,54 @@ def main() -> None:
         pred[name] = fit_auc(x.loc[tr], yv.loc[tr], x.loc[te], yv.loc[te])
         print(name, {k: pred[name][k] for k in pred[name] if k != "log_coef"})
 
+    y1h = post["y_post_clk_1h"]
+    m1h = y1h.notna()
+    subh = post.loc[m1h].copy()
+    yvh = subh["y_post_clk_1h"].astype(int)
+    trh, teh = split_users(subh, rng)
+    xh = prep_x(subh, POST_PREDICT_X)
+    pred["Y=clk_1h allX"] = fit_auc(xh.loc[trh], yvh.loc[trh], xh.loc[teh], yvh.loc[teh])
+    print("clk_1h", {k: pred["Y=clk_1h allX"][k] for k in pred["Y=clk_1h allX"] if k != "log_coef"})
+
     # 同品 1d，完整 X
     y2 = post["y_post_same_1d"]
     m2 = y2.notna()
     sub2 = post.loc[m2].copy()
     yv2 = sub2["y_post_same_1d"].astype(int)
-    tr2, te2 = split_users(sub2, rng)
-    x2 = prep_x(sub2, POST_PREDICT_X)
-    pred["Y=same_1d allX"] = fit_auc(x2.loc[tr2], yv2.loc[tr2], x2.loc[te2], yv2.loc[te2])
-    print("same_1d", {k: pred["Y=same_1d allX"][k] for k in pred["Y=same_1d allX"] if k != "log_coef"})
+    print(f"same_1d rows {len(sub2)} pos={int(yv2.sum())} rate={float(yv2.mean()):.5f}")
+    if int(yv2.sum()) >= 20 and int((1 - yv2).sum()) >= 20:
+        tr2, te2 = split_users(sub2, rng)
+        x2 = prep_x(sub2, POST_PREDICT_X)
+        pred["Y=same_1d allX"] = fit_auc(x2.loc[tr2], yv2.loc[tr2], x2.loc[te2], yv2.loc[te2])
+        print("same_1d", {k: pred["Y=same_1d allX"][k] for k in pred["Y=same_1d allX"] if k != "log_coef"})
+    else:
+        pred["Y=same_1d allX"] = {
+            "hgb_auc": float("nan"),
+            "log_auc": float("nan"),
+            "hgb_ap": float("nan"),
+            "note": f"too few pos ({int(yv2.sum())})",
+        }
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     write_note(args.out, s, pred)
     post_out = args.out.with_name("post_cnv_events.parquet")
-    keep = [
-        c
-        for c in sub.columns
-        if c in (
-            ["user_id", "item_id", "cnv_ts", "price"]
-            + POST_PREDICT_X
-            + [
-                "y_post_clk_1h",
-                "y_post_clk_1d",
-                "y_post_clk_7d",
-                "y_post_same_1d",
-                "lift_1d",
-                "delta_1d",
-                "n_clk_after_1d",
-                "n_clk_before_1d",
-            ]
-        )
-    ]
     # 全转化粒太大就只写未删失 1d 的预测用列
+    cols_keep = [
+        "user_id",
+        "item_id",
+        "cnv_ts",
+        "log1p_price",
+        *POST_PREDICT_X,
+        "y_post_clk_1h",
+        "y_post_clk_1d",
+        "y_post_clk_7d",
+        "y_post_same_1d",
+        "lift_1d",
+        "delta_1d",
+        "n_clk_after_1d",
+        "n_clk_before_1d",
+    ]
+    keep = [c for c in dict.fromkeys(cols_keep) if c in sub.columns]
     sub[keep].to_parquet(post_out, index=False)
     print(f"wrote {post_out}")
 

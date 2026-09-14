@@ -3,8 +3,6 @@
 last-touch（backward asof）= 买之前怎么点过来。
 这块（forward asof）= **买完还会不会点**。`trans_cnv_to_exp` 只是邻接 Markov，不够。
 
-跑：`python3 scripts/tencent_gr/run_post_cnv.py`（写本文件的数字段）。
-
 ## 中间表
 
 ```
@@ -38,9 +36,9 @@ X 只能是 cnv_ts 已知：
   路径  wo_prior_clk, dt_item/any, item_within_5m/1h     # 已有 attr 表
   买前量 n_clk_before_{1h,1d,7d}, n_clk_same_before      # 基线活跃，不是 Y
   当场  sess_pos, sess_clk_before                         # 热场续点的主混杂
-  钱    price, log1p_price
+  钱    log1p_price
   滞后  n_prior_cnv, lag_post_clk_1d_rate                 # 此前各单的买后点击率，shift(1)
-不准进 X：n_clk_after_* / lift_* / dt_next / y_post_*
+不准进 X：n_clk_after_* / lift_* / dt_next / y_post_* / 原始 price（和 log1p 共线）
 ```
 
 为什么要这些：
@@ -54,6 +52,57 @@ X 只能是 cnv_ts 已知：
 用户表只并 **历史倾向**（`post_clk_1d_rate` 等），给 `future_cnv` 那类用户粒任务。
 预测「这一单之后」必须停在转化粒。
 
-## 这批 prefix
+## 这批 prefix（n_cnv=12866, n_user=3273）
 
-先跑 `run_post_cnv.py` 填表。
+| 窗 | 未删失 | 任意点击率 | 同品点击率 |
+|---|---:|---:|---:|
+| 5m | 12767 | 0.005 | 0.000 |
+| 1h | 12746 | 0.023 | 0.000 |
+| 1d | 12564 | 0.113 | 0.001 |
+| 7d | 11822 | 0.412 | 0.001 |
+
+1d lift p50=0.000 mean=0.114；P(lift>1)=0.014；P(n_after>n_before)=0.089。
+任意：before 0.136 → after 0.135；
+同品：before 0.001 → after 0.001。
+有下一次点击时，P(仍在当场 30min)=0.023；dt_next p50=5.8 d。
+
+读这批：买完 **不抬** 后续点击。1d after≈before，lift 中位数 0，P(after>before)=0.09。
+5m/1h 几乎不点；同品 1d 只有约千分之一（这件商品买完基本不再点它）。
+7d 任意 0.41、dt_next 中位约 6 天 → 那是人还在平台上逛，不是购买带动的余热。
+同品 last-click 在这批对得上的极少，所以 attr 同品桶对「买后任意点击」几乎没信息；
+有用的是任意点击间隔、7d 买前量和滞后买后率。
+
+## 预测 Y=y_post_clk_1d（按用户 70/30）
+
+| X | HGB AUC | LogReg AUC | HGB AP |
+|---|---:|---:|---:|
+| volume | 0.678 | 0.678 | 0.274 |
+| +path | 0.689 | 0.670 | 0.278 |
+| +lag | 0.728 | 0.708 | 0.304 |
+| +sess_money_lag | 0.745 | 0.713 | 0.371 |
+| Y=clk_1h allX | 0.708 | 0.670 | 0.113 |
+| Y=same_1d allX | nan | nan | nan |
+
+LogReg 系数（标准化后，Y=任意 1d 点击；>0 更像买完还点）：
+
+| feat | coef |
+|---|---:|
+| `lag_post_clk_1d_rate` | +0.370 |
+| `n_clk_before_7d` | +0.334 |
+| `dt_any_min` | -0.111 |
+| `item_within_1h` | -0.053 |
+| `item_within_5m` | -0.052 |
+| `n_clk_before_1d` | +0.048 |
+| `n_prior_cnv` | +0.039 |
+| `sess_pos` | -0.033 |
+| `sess_clk_before` | +0.030 |
+| `dt_item_min` | -0.021 |
+| `log1p_price` | +0.012 |
+| `n_clk_before_1h` | -0.005 |
+| `wo_prior_clk` | +0.000 |
+| `n_clk_same_before` | -0.000 |
+
+volume-only 已经能到 ~0.68：1d 任意点击主要是「本来就爱点的人还在点」。
++lag 再涨，说明「这个人以前买完爱不爱点」是下一单的主信号。
+path/sess/price 几乎不再涨：同品买后点击近乎 0，1d Y 也不是当场续点。
+同品 Y 这批只有十几正例，不够建模——要刻画「买完还看这件」先承认事件极稀。
