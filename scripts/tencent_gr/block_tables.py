@@ -139,16 +139,20 @@ def tab_session(ev: pd.DataFrame) -> pd.DataFrame:
 
 # ----- 块：归因（中间表 = 每笔转化一行）-----
 def tab_attr_events(ev: pd.DataFrame) -> pd.DataFrame:
-    """每笔 cnv 一行。同商品 last-click / 任意 last-click / 同商品 first-click。"""
+    """每笔 cnv 一行。同商品 last-click / 任意 last-click / 同商品 first-click。
+
+    pandas 3 的 merge_asof 要求 *时间键全局单调*，不能只按 (user, item) 排。
+    `by` 仍然按组匹配；排序键是 ts。
+    """
     clk = (
         ev.loc[ev.act == CLK, ["user_id", "item_id", "ts"]]
         .rename(columns={"ts": "clk_ts"})
-        .sort_values(["user_id", "item_id", "clk_ts"])
+        .sort_values("clk_ts", kind="mergesort")
     )
     cnv = (
         ev.loc[ev.act == CNV, ["user_id", "item_id", "ts"]]
         .rename(columns={"ts": "cnv_ts"})
-        .sort_values(["user_id", "item_id", "cnv_ts"])
+        .sort_values("cnv_ts", kind="mergesort")
     )
     if cnv.empty:
         return cnv.assign(
@@ -166,19 +170,22 @@ def tab_attr_events(ev: pd.DataFrame) -> pd.DataFrame:
         right_on="clk_ts",
         direction="backward",
     )
-    clk_any = clk.drop(columns="item_id").sort_values(["user_id", "clk_ts"])
+    clk_any = clk.drop(columns="item_id").sort_values("clk_ts", kind="mergesort")
     anyj = pd.merge_asof(
-        cnv.sort_values(["user_id", "cnv_ts"]),
+        cnv,
         clk_any,
         by="user_id",
         left_on="cnv_ts",
         right_on="clk_ts",
         direction="backward",
     )
-    first = clk.drop_duplicates(["user_id", "item_id"], keep="first")
+    first = clk.drop_duplicates(["user_id", "item_id"], keep="first").rename(
+        columns={"clk_ts": "first_clk_ts"}
+    )
+    first = first.sort_values("first_clk_ts", kind="mergesort")
     firstj = pd.merge_asof(
         cnv,
-        first.rename(columns={"clk_ts": "first_clk_ts"}),
+        first,
         by=["user_id", "item_id"],
         left_on="cnv_ts",
         right_on="first_clk_ts",
@@ -247,11 +254,11 @@ def _asof_cum(left: pd.DataFrame, clk: pd.DataFrame, by: List[str], left_on: str
     right = (
         clk[list(by) + ["ts", cum_col]]
         .rename(columns={"ts": "_rts", cum_col: "_cum"})
-        .sort_values(list(by) + ["_rts"])
+        .sort_values("_rts", kind="mergesort")
     )
     tmp = left[list(by) + [left_on]].copy()
     tmp["_i"] = np.arange(n)
-    tmp = tmp.sort_values(list(by) + [left_on])
+    tmp = tmp.sort_values(left_on, kind="mergesort")
     j = pd.merge_asof(
         tmp,
         right,
@@ -278,10 +285,10 @@ def _asof_next(left: pd.DataFrame, clk: pd.DataFrame, by: List[str], left_on: st
     if want_item:
         keep = list(by) + ["item_id", "ts"]
         rename["item_id"] = "_next_item"
-    right = clk[keep].rename(columns=rename).sort_values(list(by) + ["_next_ts"])
+    right = clk[keep].rename(columns=rename).sort_values("_next_ts", kind="mergesort")
     tmp = left[list(by) + [left_on]].copy()
     tmp["_i"] = np.arange(len(left))
-    tmp = tmp.sort_values(list(by) + [left_on])
+    tmp = tmp.sort_values(left_on, kind="mergesort")
     j = pd.merge_asof(
         tmp,
         right,
