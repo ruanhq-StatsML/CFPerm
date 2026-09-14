@@ -1,237 +1,157 @@
-# 路径、指针与 merge_asof
+# 多模态归因：做特征就是在拆成交
 
-转化粒特征：怎么刻画、怎么评估。自己落地时按这个做即可。  
-事件 `(user, item, act, ts)`，`act∈{0=曝光, 1=点击, 2=转化}`。先按 `(ts, act)` 排：同秒点击在转化前。`t_end` = 该用户序列最后一条 ts。
+asof / 指针没有方法论含量。含量在：同一笔转化，用几种触点去对，你会看见这门生意到底是怎么成交的。  
+特征不是先想 150 维再找故事；是先问「这单从哪来、买完人还在不在」，对得上再留列。
 
-本文不是因果、不是 CATE。asof 只是「以某条事件为锚，找另一类事件的最近一次」。
-
----
-
-## 1. 原语
-
-```
-merge_asof(left=锚, right=候选, by=组, left_on=ts, right_on=ts,
-           direction=backward|forward, allow_exact_matches=exact)
-```
-
-| 参数 | 含义 |
-|---|---|
-| `by=user` | 同一个人 |
-| `by=(user, item)` | 同一个人同一商品 |
-| `backward` | 锚时刻之前（含/不含同秒由 exact 定）最近一条候选 |
-| `forward` | 锚时刻之后最近一条候选 |
-| `exact=True` | 同秒算匹配 |
-| `exact=False` | 同秒不算；forward 时「下一次」必须严格晚于锚 |
-
-pandas 3：时间键必须**全局单调**，不能只按 `(user, item)` 排。`by` 仍按组匹配。
-
-指针扫一遍和 asof 同构：
-
-- backward：正向扫，候选更新指针，锚出现时读指针。
-- forward：锚推进 `pending`，候选出现时把还没闭上的锚闭上。
-
-窗内计数用累计：
-
-```
-C(t) = #{ 候选 | ts ≤ t }
-n_(t-W, t] = C(t) − C(t−W)
-n_(t, t+W] = C(t+W) − C(t)
-```
-
-`C(t)` 本身也是 `merge_asof(锚, 候选.cumcount, backward, exact=True)`。
+事件 `(user, item, act, ts)`，`0=曝光 1=点击 2=转化`。转化一行一张中间表。  
+计算（asof ≡ 指针、跟满窗）见 `POST_CALC.md`。下面只讲业务：对上是什么、对不上说明什么、该留哪列。
 
 ---
 
-## 2. 已经成立的一块：最近一次点击 → 这一次转化
+## 1. 为什么要「多模态」
 
-这是路径。锚 = 转化，候选 = 点击，`direction=backward`。
+只用同品 last-click，你默认了漏斗是：
 
 ```
-last_item = merge_asof(cnv, clk, by=(user, item), backward, exact=True)
-last_any  = merge_asof(cnv, clk, by=user,         backward, exact=True)
-first_item: 每个 (user, item) 只留最早一次点击，再 backward asof
+看见这件 → 点这件 → 买这件
 ```
 
-落地字段（转化一行）：
+电商信息流经常不是这样。几种触点是几种生意，不是几种算法：
 
-| 字段 | 计算 | 在问什么 |
+| 模态 | asof | 你在问的生意 |
 |---|---|---|
-| `dt_item` | `(cnv_ts − last_item.ts) / 60`，空则空 | 这件商品点完多久下单 |
-| `dt_any` | `(cnv_ts − last_any.ts) / 60` | 全局上次点完多久下单 |
-| `wo_prior_clk` | `last_item` 空 | 这件从未点过就买 |
-| `item_within_B` | `dt_item ≤ B` 且非空 | 5m / 30m / 1h / 1d 桶 |
+| 同品 last-click | cnv←clk，`by=(user,item)`，backward | 这件点完多久下单（SKU 决策） |
+| 任意 last-click | cnv←clk，`by=user`，backward | 刚逛完别的，转手买了这件（场/推荐） |
+| 同品 first-click | 每 (user,item) 只留最早一次点，再 backward | 从第一次注意到下单，考虑期 |
+| 同品 last-曝光 | cnv←exp，`by=(user,item)`，backward | 看过没点就买（漏点、曝光即买） |
+| 当场 | 不是 asof：本场、本条之前点了几次 | 逛热了才买，还是一场开头就买 |
+| 买后任意点 | cnv→clk，`by=user`，forward | 买完人还在不在平台 |
+| 买后同品点 | cnv→clk，`by=(user,item)`，forward | 这件买完还看不看（复访/后悔/晒单） |
 
-指针（正向扫）：
+**多模态 = 这几路同时对。** 路与路的占比，就是成交构成。某一路几乎对不上，不是特征废了，是这条生意假设被数据否了——这正是做特征要得到的。
 
-```
-last_any, last_item = None, {}
-if CLK: last_any = ts; last_item[item] = ts
-if CNV: dt_any = ts − last_any; dt_item = ts − last_item[item]
-```
-
-同一对 `(last_clk, cnv)` 从点击侧看就是「这次点击之后的下一次转化」：
-
-```
-next_cnv = merge_asof(clk, cnv, by=(user, item), forward, exact=False)
-```
-
-和 `last_item` 是同一批配对，只是粒从转化换成点击。路径分析停在转化粒；若做「点了会不会买」才用点击粒。
+同一对 `(last_clk, cnv)` 从点击侧看是 `merge_asof(clk, cnv, forward)`：「这次点击之后下一次转化」。粒换成点击，才是「点了会不会买」。路径分析停在转化粒。
 
 ---
 
-## 3. 对偶：这一次转化 → 下一次点击
+## 2. 这批 prefix 的成交构成（6000 user / 12866 cnv）
 
-锚 = 转化，候选 = 点击，`direction=forward`，`exact=False`。
+先对模态，再决定堆哪些列。`prefix_frac=0.75`。
 
-```
-next     = merge_asof(cnv, clk, by=user,         forward, exact=False)
-next_i   = merge_asof(cnv, clk, by=(user, item), forward, exact=False)
-dt       = next.ts − cnv_ts          # 没有 next → 空
-follow   = t_end − cnv_ts
-```
+| 模态 | 单数 | 占比 | 读法 |
+|---|---:|---:|---|
+| B 只点过别的，再买这件 | 6619 | **51.5%** | 有点击，但点的不是成交 SKU |
+| D 序列里看不见任何点击 | 6220 | **48.3%** | 这条 seq 上没有 clk 可归因 |
+| A 同品点过再买 | 14 | 0.11% | 经典 SKU 漏斗，几乎不存在 |
+| C 同品只曝光、没点就买 | 13 | 0.10% | 「漏点/曝光即买」也几乎对不上 |
 
-**只用跟满窗的单。** 窗 W∈{5m, 1h, 1d, 7d}：
+同品 last-曝光能对上的也只有 **0.20%**。  
+任意 last-click 能对上的 51.6%，`dt_any` 中位 **4.1 天**（p90≈21 天）——不是当场点完就买。  
+当场：`sess_clk_before=0` 占 **98.4%**，`sess_pos` 中位 = 1。转化经常是一场的开头或孤立事件，不是「逛热了再下单」。
 
-```
-y_post_clk_W  = 1{ dt ≤ W }
-              ; follow ≥ W 且没点到 → 0
-              ; follow < W 且没点到 → 丢掉（NaN，不当 0）
-y_post_same_W = 同上，用 next_i
-```
-
-窗内已点到即使 `follow < W` 也算 1（事件已经发生）。没点到且没跟满，不知道，不能当负例。
-
-`trans_cnv_to_exp` 是邻接 Markov（下一条事件），不是窗内点击，不要替代这一块。
+所以：如果你只做同品 last-click，12866 单里 14 单有数，其余全是空路径。空填 0 分钟会假装「秒下」，那是假故事。  
+这批信息流的成交，主模态是 **B 跨品点击 + D 序列外/未记录触点**，不是 SKU 漏斗。
 
 ---
 
-## 4. 还有哪些 asof 值得做
+## 3. 各模态：对上了讲什么，留什么列
 
-同一原语，换锚 / 候选 / by / 方向。建议都做成转化粒或对应锚粒中间表，不要先堆用户一行。
+### A. 同品 last-click（这批 n=14）
 
-| 锚 | 候选 | 方向 | by | 字段直觉 |
-|---|---|---|---|---|
-| cnv | clk | backward | item / user | 路径（§2，必做） |
-| cnv | clk | backward | item，只留 first | 从第一次点到下单 |
-| **cnv** | **clk** | **forward** | **user / item** | **买后下一次点（§3，必做）** |
-| cnv | cnv | forward | user / item | 下一次买 / 复购同品 |
-| cnv | exp | forward | user / item | 买后又看没看 |
-| cnv | exp | backward | item | 最后一次曝光到下单（无点击路径） |
-| clk | cnv | forward | item | 点完会不会买（点击粒） |
-| clk | clk | forward | user | 点完还会不会点（较少单独做） |
+业务：这件点完多久买。`dt_item` 中位 139 分钟；`within_5m` 约 21%（样本极小）。first-click 和 last-click 相同——看不见「考虑很久、最后一击成交」。
 
-场内版：匹配后再加 `dt ≤ 30min`（或先按 session id 切开再 asof）。用来区分当场续点 vs 隔场回访。
+该留：`dt_item`、`item_within_5m/1h`、`wo_prior_clk`。  
+**justify：** 这是 SKU 归因的标准问法，必须算；算完看占比。占比≈0 时，这些列近似常数，别指望它们预测任何东西（这批 `wo_prior_clk` 系数就是 0）。列还是要有：下次换场景（商详、搜推）占比会变，模态表就是监控。
 
-同长窗 before/after 计数（任意 / 同品）是 asof 的累计形式，不是新原语。
+### B. 任意 last-click（这批 51.5%）
 
-用户一行只对未删失转化做 `mean` / `median`，再 join。交叉最后乘。
+业务：人在平台上动过手，但成交 SKU 不是刚才点的那件。Last-click 若记到 SKU，会把功劳记错商品；记到用户「还在逛」，才对。
 
----
+该留：`dt_any`、是否有任意点击。  
+**justify：** 跨品是推荐/信息流的主路径——曝光队列把另一件卖出去了。`dt_any` 中位 4 天，说明连「任意 last-click」也不是 5 分钟冲动，是隔了好几天的回访成交。短桶 `within_5m` 对这批任意路径几乎无效；长间隔才是这模态的形状。
 
-## 5. 路径怎么刻画、怎么评估
+### C. 同品只曝光没点（这批 n=13）
 
-路径 = 转化时刻已经知道的 backward asof，**不准含任何买后信息**。
+业务：看过这件、没点、买了。漏点、货架冲动、或点击没记上。
 
-刻画（转化粒，先不要模型）：
+该留：`dt_exp_item`、`wo_prior_exp_item`。  
+**justify：** 和 A 一起，才能区分「点了才买」vs「看见就买」。这批两路都空，说明 **成交 SKU 经常根本没在这条曝光序列里出现**——不是漏点，是覆盖/归因链路不在 seq 里。这是数据业务结论，不是窗口开错了。
 
-- `P(wo_prior_clk)`、`dt_item` / `dt_any` 的分位数、各 `within_B` 占比
-- 空值单独一档，不要填 0（0 分钟 = 刚点完就买）
-- 和当场一起切：`within_5m` × `sess_clk_before>0` = 热场短路径；`wo_prior_clk` × `sess_clk_before=0` = 冷场直达
+### D. 序列里没有点击（48.3%）
 
-评估（预测买后点击时）：
+业务：在你用来做特征的这段 prefix 上，这单没有 clk 可挂。可能是站外/直播/订单回写、可能是点击未入 seq、可能是更早的点被 prefix 切掉。
 
-- 样本：`follow ≥ W` 的转化
-- `Y = y_post_clk_W` 或 `y_post_same_W`（更稀、更干净）
-- 对照：只拿买前点击量 `n_clk_before_W`；再加路径；看 AUC/AP 增量
-- 短窗 Y（5m/1h）路径和当场才应该有用；1d/7d 任意点击多半是「人还在」，路径增量会很小
-- 不要用 F-score 对着 `future_cnv` 选这些列
+**不要**把 `dt` 填 0。单独一档「空路径」。  
+**justify：** D 的买后 1d 任意点击率 **6.8%**，B 是 **15.7%**。看不见触点的成交，买完也不怎么点——更像成交被写进来的人，不像还在信息流里逛的人。混在一起建模，会把两种生意平均掉。
 
 ---
 
-## 6. 当场：`sess_clk_before`
+## 4. 当场 `sess_clk_before`
 
-不是 asof。一场 = 相邻事件间隔 ≤ 30min；超过就关场。
+定义：本场（相邻间隔 ≤30min）、本条转化之前的点击数。不是用户级 `sess_n` / bounce。
 
-```
-sess_pos         = 本场第几条（含本条转化）
-sess_clk_before  = 本场、本条之前的点击数
-```
+这批 **98.4% = 0**，场深中位 1。生意含义：转化事件常常自己开一场，前面没有「先点几下再买」。  
+那 **1.6%** `sess_clk_before>0` 的单，买后 1d 点击率 **29% vs 11%**。热场里买完还会点——这是续逛，不是购买带动。
 
-指针：
-
-```
-若 ts − prev_ts > 30min: sess_pos = 0; sess_clk = 0
-sess_pos += 1
-CLK 时 sess_clk += 1
-CNV 时读出 sess_pos, sess_clk_before = sess_clk
-```
-
-**刻画什么：** 下单这一刻场热不热。`sess_clk_before=0`：这场还没点过就买（曝光即买 / 新场第一条附近）。`≥1`：买之前这场已经动过手。它是「买后立刻又点」的主混杂——场没关，下一击几乎是续逛。
-
-**怎么评估：**
-
-1. 分布：转化上 `sess_clk_before` 的直方图；对比随机事件上的同一量（转化是否更爱落在热场）。
-2. 和 Y 的关系要按窗拆：  
-   - 与 `y_post_clk_5m` / `next_clk_same_sess` 强相关 → 当场续点，不是购买带动。  
-   - 控住 `n_clk_before_1d` 之后仍预测 `y_post_clk_1d` → 泄漏的是用户热度，不是场。
-3. 消融：volume → +sess → 看短窗 Y 和长窗 Y 分别涨多少。短窗涨、长窗不涨，当场就做对了。
-4. 不要和用户级 `sess_n` / `sess_bounce_rate` 混。那两个是整段历史的场统计；`sess_clk_before` 是**这一单所在场**。
+该留：`sess_clk_before`、`sess_pos`。  
+**justify：** 短窗买后点击的主混杂。评估必须拆窗：跟 `y_5m` / `next_clk_same_sess` 绑在一起，当场就做对了；控住买前 7d 量还能预测 `y_1d`，漏的是用户热度，不是场。这批 1d 上当场几乎没增量，和 98% 为 0 是同一件事。
 
 ---
 
-## 7. 滞后
+## 5. 买后：任意 vs 同品
 
 ```
-lag_post_clk_W_rate = mean( 此前各单的 y_post_clk_W | 非 NaN )
-n_prior_cnv         = 此前转化条数
+next   = merge_asof(cnv, clk, by=user, forward, exact=False)
+next_i = merge_asof(cnv, clk, by=(user,item), forward, exact=False)
 ```
 
-必须 `shift(1)`：本单的 Y 不能进本单的 X。此前单若当时没跟满窗，那一单不进均值。
+只用跟满窗的单：没点到且 `follow<W` 不当 0。
 
-刻画：用户「买完还点」的倾向，给下一单用。  
-评估：volume 之上再加 lag，1d/7d Y 通常这是最大增量；短窗 Y 不该主要靠 lag（那是当场的事）。
+这批（跟满 1d）：任意点击率 11.3%，同品 0.10%；1d after≈before；lift 中位 0；有下一次点时，仍在当场 30min 的只有 2.3%；`dt_next` 中位约 6 天。
+
+**justify：**
+
+- 同品买后≈0 和同品买前≈0 是一件事：这条序列上，成交 SKU 就不是互动对象。还去做「买完带动同品点击」没有事件。
+- 任意买后 11%、7d 到 41%，是「人还在平台」，不是这单余热。所以 1d Y 的主信号是买前 7d 量和滞后买后率（爱点的人继续点），不是路径短桶。
+- `lift` 任意窗会被连单污染；同品 lift 干净，但这批同品基数先死了。
+
+滞后 `lag_post_clk_1d_rate`：这个人以前买完爱不爱点，给下一单。必须 `shift(1)`。这批它是 1d 预测头名——用户倾向，不是这一单的路径。
 
 ---
 
-## 8. 评估协议（自己做特征时按这个收）
+## 6. 评估：验证的是生意假设，不是 AUC
 
-**粒：** 转化一行。用户任务（如 `future_cnv`）只并历史倾向，不要拿本单买后量去预测用户未来转化。
+先出模态表（§2），再消融。按用户切。Y 只用跟满窗。X 不含买后量。
 
-**删失：** 预测窗 W 的模型，只用 `follow ≥ W` 的单；或窗内已观察到正例的单。负例必须跟满。
+| 你以为的生意 | 特征上该看到 | 这批实际 |
+|---|---|---|
+| SKU 点完就买 | A 占比高，`within_5m` 高 | A=0.11%，假设不成立 |
+| 曝光即买这件 | C 占比高 | C=0.10%，同品曝光也对不上 |
+| 逛热了再买 | `sess_clk_before>0` 多 | 98% 为 0 |
+| 买完还看这件 | `y_post_same_1d` 有基数 | 千分之一，先别建模 |
+| 买完带动平台点击 | `n_after > n_before` | after≈before，lift 中位 0 |
+| 跨品逛完再买 | B 占比高，`dt_any` 有形状 | **B=51.5%，dt_any 中位 4 天** |
+| 空路径是另一种人 | D 的买后点击更低 | 6.8% vs B 的 15.7% |
 
-**X：** 只有 `cnv_ts` 已知的量——路径、买前窗计数、当场、价格、滞后。  
-不准进：`n_after`、`lift`、`dt_next`、`y_post_*`。
+消融怎么读：
 
-**切分：** 按 `user_id` 切，不要随机切转化（lag 和用户热度会漏）。
+- volume 已经 0.68（1d 任意）：基线就是「爱点的人还在点」
+- +同品 path 几乎不动：模态 A 不存在，列没有方差
+- +`dt_any` / 有没有任意点击：在测模态 B
+- +sess 短窗涨、长窗不涨：当场续逛
+- +lag 长窗涨：用户稳定倾向
 
-**先刻画后模型：**
-
-1. 未删失集合上的 `P(y_post_clk_W)`、`P(y_post_same_W)`  
-2. `n_after` vs `n_before`（任意 / 同品）；`P(dt ≤ 30min | 有 next)`  
-3. `E[X | Y=1]` vs `E[X | Y=0]`：路径、当场、lag 分列  
-4. 再消融 AUC/AP：`volume` → `+path` → `+sess` → `+lag`
-
-**读增量：**
-
-| 消融涨在哪 | 说明 |
-|---|---|
-| 只有 volume | 爱点的人继续点 |
-| +path 在短窗 | 决策时长 / 漏点在管当场余热 |
-| +sess 在短窗、长窗不动 | 当场续逛，不是买完回访 |
-| +lag 在长窗 | 用户稳定倾向 |
-| 同品 Y 正例极少 | 「买完还看这件」事件本身稀，先报基数再建模 |
-
-不要：全样本 F-score、删失当 0、用邻接转移代替窗、把用户级 bounce 当成当场。
+F-score 对着 `future_cnv` 会把成交次数推上去，看不见模态。不要用。
 
 ---
 
-## 9. 建议落地顺序
+## 7. 自己落地：先模态表，再留列
 
-1. 转化中间表：§2 路径 asof（item / any / first）  
-2. 同一张表：§3 forward asof + `follow` + `y_W`（先 1h/1d）  
-3. 累计 `n_before_W` / `n_after_W`（after 只在跟满时留）  
-4. 扫场：`sess_pos`、`sess_clk_before`  
-5. 按转化时间 `lag`  
-6. 按 §8 出一张刻画表 + 一组消融，再决定哪些进用户表
+1. 转化中间表，四路 backward：同品 clk、任意 clk、同品 first clk、同品 last exp。空单独记，禁止填 0。  
+2. 当场：`sess_clk_before`、`sess_pos`。  
+3. Forward：任意 / 同品 next clk，跟满窗才留 y 和 `n_after`。  
+4. **先打一张模态占比 + `E[买后Y|模态]`。** 占比≈0 的路，列保留作监控，不进主模型。  
+5. 主模型用对得上的路：这批就是任意路径、买前量、滞后、空路径档。  
+6. 用户表只并历史倾向（未删失 mean/median），交叉最后乘。
 
-中间表 polish 后再 `user_id` merge。交叉最后做。
+换场景（商详、搜推、广告）时重出 §2 那张表。模态变了，该留的列才变。这就是多模态归因的用处：不是更炫的模型，是每次做特征把成交构成核对一遍。
