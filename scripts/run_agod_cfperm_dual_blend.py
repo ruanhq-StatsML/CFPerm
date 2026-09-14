@@ -1,0 +1,605 @@
+#!/usr/bin/env python3
+"""CFPerm-gated dual/blend (v8) — L0 = CFPerm DRPerm, not OnlineRFPerm.
+
+Stack
+-----
+L0  CFPerm DRPerm(recent vs current) → reject?
+L1  intensity (p, T, PO-gap)         → λ, beijing?
+L2  shape: hard_support / soft CV / blend(mix)
+L3  policy: dual | hard_m | blend_50
+
+  PYTHONPATH=. python3 scripts/run_agod_cfperm_dual_blend.py \\
+    --datasets metro_interstate beijing_pm25 stocks_AAPL \\
+    --n-batches 20 --batch-size 128 --n-perm 21
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestRegressor
+
+from agod.cfperm_gate import (
+    cfperm_batch_test,
+    cfperm_intensity_to_temper,
+    eval_cfperm_size_power,
+    synthetic_shift_trial,
+)
+from agod.hard_rank_metrics import hard_rank_metrics
+from agod.obs_po_cv import SOFT_POWERS, cv_select_power
+from agod.obs_po_weights import (
+    blend_hard_qrt_weights,
+    gated_obs_po_weights,
+    hard_subset_mask,
+)
+from agod.po_refit import build_recent_ood_windows, refit_po_on_windows
+from agod.sig_batch_metrics import annotate_results_with_sig
+from agod.stream_packs import LOADERS, load_stocks
+
+MODES: Tuple[str, ...] = ("uniform", "hard_m", "dual", "blend_50")
+COLORS = {
+    "uniform": "#4C566A",
+    "hard_m": "#88C0D0",
+    "dual": "#5E81AC",
+    "blend_50": "#D08770",
+}
+
+
+def ensure_loaders() -> None:
+    for t in ("MSFT", "IWM", "AAPL", "SPY", "QQQ"):
+        key = f"stocks_{t}"
+        if key not in LOADERS:
+            LOADERS[key] = (
+                lambda tk: (lambda root, max_n=20000: load_stocks(root, tk, max_n))
+            )(t)
+
+
+def load_xy(name: str, root: Path, max_n: int = 20000):
+    ensure_loaders()
+    out = LOADERS[name](root, max_n=max_n)
+    return np.asarray(out[0], float), np.asarray(out[1], float).ravel()
+
+
+def pca_fit(X, d, seed):
+    X = np.asarray(X, float)
+    if d and X.shape[1] > d:
+        return PCA(n_components=d, random_state=seed).fit_transform(X).astype(np.float32)
+    return X.astype(np.float32)
+
+
+def make_stream(X, y, bs: int, n_batches: int):
+    need = bs * n_batches
+    X, y = X[:need], y[:need]
+    return [(X[i : i + bs], y[i : i + bs]) for i in range(0, len(X), bs)]
+
+
+def fit_rf(X, y, w, seed):
+    m = RandomForestRegressor(
+        n_estimators=40, max_depth=8, min_samples_leaf=2, random_state=seed, n_jobs=1
+    )
+    m.fit(X, y, sample_weight=w)
+    return m
+
+
+def short_name(m: str) -> str:
+    return {"uniform": "uni", "hard_m": "hard_m", "dual": "dual", "blend_50": "b50"}[m]
+
+
+def precompute_gates(
+    stream,
+    *,
+    seed: int,
+    n_burn: int,
+    alpha: float,
+    n_recent: int,
+    n_perm: int,
+    risk: str,
+) -> List[dict]:
+    """Run CFPerm once per timestep (shared across L2/L3 modes)."""
+    cache: List[dict] = []
+    for t in range(1, len(stream)):
+        Xc, yc = stream[t]
+        windows = build_recent_ood_windows(
+            stream, t, n_recent=n_recent, window_mode="recent_ood"
+        )
+        if t <= n_burn:
+            cache.append(
+                {
+                    "t": t,
+                    "burn": True,
+                    "reject": False,
+                    "intensity": 0.0,
+                    "lam": 0.0,
+                    "is_bj": False,
+                    "windows": windows,
+                }
+            )
+            continue
+        gate = cfperm_batch_test(
+            windows.X_recent,
+            windows.y_recent,
+            Xc,
+            yc,
+            risk=risk,  # type: ignore[arg-type]
+            n_perm=n_perm,
+            alpha=alpha,
+            seed=seed + 17 * t,
+        )
+        lam, is_bj = cfperm_intensity_to_temper(gate.intensity)
+        cache.append(
+            {
+                "t": t,
+                "burn": False,
+                "reject": bool(gate.reject),
+                "intensity": float(gate.intensity),
+                "lam": float(lam),
+                "is_bj": bool(is_bj),
+                "p_value": float(gate.p_value),
+                "statistic": float(gate.statistic),
+                "windows": windows,
+            }
+        )
+    return cache
+
+
+def run_mode(
+    stream,
+    mode: str,
+    seed: int,
+    gate_cache: List[dict],
+    *,
+    hard_frac: float,
+    cv_folds: int,
+) -> dict:
+    mse_next: List[float] = []
+    mse_hard: List[float] = []
+    gate_on: List[int] = []
+    intensities: List[float] = []
+    lams: List[float] = []
+    beijing_on: List[int] = []
+    hard_rows: List[dict] = []
+    fams: List[str] = []
+
+    for step in gate_cache:
+        t = int(step["t"])
+        Xc, yc = stream[t]
+        windows = step["windows"]
+
+        if step["burn"]:
+            gate_on.append(0)
+            w = np.ones(len(yc), float)
+            fam = "burn"
+        else:
+            rejected = bool(step["reject"])
+            gate_on.append(int(rejected))
+            intensities.append(float(step["intensity"]))
+            lam = float(step["lam"])
+            is_bj = bool(step["is_bj"])
+            beijing_on.append(int(is_bj))
+            lams.append(lam)
+
+            if mode == "uniform" or not rejected:
+                w = np.ones(len(yc), float)
+                fam = "uniform"
+            else:
+                po = refit_po_on_windows(windows, seed=seed + t, blend_mu_gap=0.25)
+                use_hard = mode == "hard_m" or (
+                    mode in ("dual", "blend_50") and not is_bj
+                )
+                if use_hard:
+                    w = gated_obs_po_weights(
+                        po,
+                        reject=True,
+                        mode="hard_support",
+                        temper=max(lam, 0.25),
+                        topk_frac=hard_frac,
+                        boost_max=3.0,
+                    )
+                    fam = "hard_support"
+                elif mode == "dual":
+                    cap = max(lam, 0.15)
+                    sel = cv_select_power(
+                        Xc,
+                        yc,
+                        po,
+                        powers=SOFT_POWERS,
+                        n_folds=cv_folds,
+                        seed=seed + t,
+                        temper_cap=cap,
+                        objective="all",
+                    )
+                    w = np.asarray(sel["weights"], float)
+                    fam = f"cv_PO^{float(sel['power']):g}"
+                else:  # blend_50 beijing
+                    w = blend_hard_qrt_weights(
+                        po, lam=max(lam, 0.25), mix=0.5, topk_frac=hard_frac
+                    )
+                    fam = "blend_50"
+
+                Xr = np.vstack([windows.X_recent, windows.X_ood])
+                yr = np.concatenate([windows.y_recent, windows.y_ood])
+                mu_o = fit_rf(Xr, yr, np.ones(len(yr)), seed + 11 + t)
+                truth = np.abs(yc - mu_o.predict(Xc))
+                hard_rows.append({"po": hard_rank_metrics(po, truth)})
+                fams.append(fam)  # reject-only family (skip uniform/burn)
+
+        model = fit_rf(Xc, yc, w, seed + t)
+        if t + 1 < len(stream):
+            Xn, yn = stream[t + 1]
+            err2 = (yn - model.predict(Xn)) ** 2
+            mse_next.append(float(np.mean(err2)))
+            Xp, yp = stream[t - 1]
+            mu0 = fit_rf(Xp, yp, np.ones(len(yp)), seed + 99 + t)
+            po_n = np.abs(yn - mu0.predict(Xn))
+            hm = hard_subset_mask(po_n, frac=hard_frac)
+            mse_hard.append(float(np.mean(err2[hm])))
+
+    def _avg(xs):
+        return float(np.mean(xs)) if xs else float("nan")
+
+    fam_mode = "—"
+    if fams:
+        vals, counts = np.unique(np.asarray(fams), return_counts=True)
+        fam_mode = str(vals[int(np.argmax(counts))])
+
+    hard_po = {"spearman": float("nan"), "precision_at_k": float("nan"), "n": 0}
+    if hard_rows:
+        sp = [
+            h["po"]["spearman"]
+            for h in hard_rows
+            if h["po"]["spearman"] == h["po"]["spearman"]
+        ]
+        pk = [
+            h["po"]["precision_at_k"]
+            for h in hard_rows
+            if h["po"]["precision_at_k"] == h["po"]["precision_at_k"]
+        ]
+        hard_po = {
+            "spearman": float(np.mean(sp)) if sp else float("nan"),
+            "precision_at_k": float(np.mean(pk)) if pk else float("nan"),
+            "n": len(hard_rows),
+        }
+
+    return {
+        "mse_next": mse_next,
+        "mse_next_hard": mse_hard,
+        "gate_on": gate_on,
+        "mse_mean": _avg(mse_next),
+        "mse_hard_mean": _avg(mse_hard),
+        "n_reject": int(sum(gate_on)),
+        "duty": float(np.mean(gate_on)) if gate_on else 0.0,
+        "intensity_mean": _avg(intensities),
+        "lam_mean": _avg(lams),
+        "beijing_frac": _avg([float(x) for x in beijing_on]),
+        "family_mode": fam_mode,
+        "hard_po": hard_po,
+    }
+
+
+def run_dataset(name, root, **kw) -> dict:
+    pca_d = kw.pop("pca_d")
+    batch_size = kw.pop("batch_size")
+    n_batches = kw.pop("n_batches")
+    seed = kw["seed"]
+    hard_frac = kw.pop("hard_frac")
+    cv_folds = kw.pop("cv_folds")
+    X, y = load_xy(name, root)
+    X = pca_fit(X, pca_d, seed)
+    stream = make_stream(X, y, batch_size, n_batches)
+    gate_cache = precompute_gates(
+        stream,
+        seed=seed,
+        n_burn=kw["n_burn"],
+        alpha=kw["alpha"],
+        n_recent=kw["n_recent"],
+        n_perm=kw["n_perm"],
+        risk=kw["risk"],
+    )
+    results = {
+        mode: run_mode(
+            stream,
+            mode,
+            seed,
+            gate_cache,
+            hard_frac=hard_frac,
+            cv_folds=cv_folds,
+        )
+        for mode in MODES
+    }
+    annotate_results_with_sig(
+        results, preferred_gate_modes=("hard_m", "dual", "blend_50")
+    )
+    gate = None
+    for m in ("dual", "hard_m", "uniform"):
+        if results[m].get("gate_on"):
+            g = np.asarray(results[m]["gate_on"], bool)
+            gate = g[: len(results[m]["mse_next"])]
+            break
+    if gate is not None and gate.any():
+        for r in results.values():
+            mh = np.asarray(r["mse_next_hard"], float)[: len(gate)]
+            if len(mh) == len(gate):
+                r["mse_hard_mean_sig"] = float(mh[gate].mean())
+    return {
+        "dataset": name,
+        "results": results,
+        "duty": results["dual"]["duty"],
+        "intensity_mean": results["dual"]["intensity_mean"],
+        "beijing_frac": results["dual"]["beijing_frac"],
+    }
+
+
+def report(all_ds: dict, synth: dict | None = None) -> str:
+    def f(v, pct=False):
+        if v is None or (isinstance(v, float) and v != v):
+            return "—"
+        return f"{100 * v:+.1f}%" if pct else f"{v:.4g}"
+
+    lines = [
+        "# CFPerm-gated dual/blend (v8)",
+        "",
+        "## Gate = CFPerm subset (not OnlineRFPerm)",
+        "",
+        "| piece | role |",
+        "|---|---|",
+        "| **DRPerm** (`risk=dr`) | L0 batch shift: PO-risk + permute-W |",
+        "| **RRPerm** (`risk=rr`) | optional L0 via R-risk |",
+        "| **CFPerm-VIMP** | post-hoc feature attribution (not stream gate) |",
+        "",
+        "L1 intensity = `0.55·po_gap + 0.30·p_strength + 0.15·T_strength`.",
+        "dual: mild → hard_support; beijing (intensity>0.45) → soft CV.",
+        "blend_50: mild → hard; beijing → hard/qrt mix=0.5.",
+        "",
+    ]
+    if synth:
+        lines += [
+            "## Synthetic gate eval (how we estimate/evaluate L0)",
+            "",
+            f"- **size** (null reject) = **{f(synth['size'])}**",
+            f"- **power** (alt reject) = **{f(synth['power'])}**",
+            f"- mean p null/alt = {f(synth['mean_p_null'])} / {f(synth['mean_p_alt'])}",
+            f"- mean T null/alt = {f(synth['mean_stat_null'])} / {f(synth['mean_stat_alt'])}",
+            "",
+            "DGP: concept drift (batch-1 β scaled + label offset); evaluate size≈α, power↑.",
+            "",
+        ]
+    lines += [
+        "## Stream packs (CFPerm duty / intensity)",
+        "",
+        "| dataset | duty | intensitȳ | beijing_frac | dual fam |",
+        "|---|---:|---:|---:|---|",
+    ]
+    for ds, blob in all_ds.items():
+        r = blob["results"]["dual"]
+        lines.append(
+            f"| `{ds}` | {f(r['duty'])} | {f(r['intensity_mean'])} | "
+            f"{f(r['beijing_frac'])} | `{r['family_mode']}` |"
+        )
+
+    short = {m: short_name(m) for m in MODES}
+    hdr = " | ".join(short[m] for m in MODES)
+    lines += [
+        "",
+        "## Sig-only hard top-20% next-MSE (↓)",
+        "",
+        f"| dataset | {hdr} | best |",
+        "|" + "---|---:" * len(MODES) + "|---|",
+    ]
+    for ds, blob in all_ds.items():
+        r = blob["results"]
+
+        def score_h(m, r=r):
+            v = r[m].get("mse_hard_mean_sig", r[m].get("mse_hard_mean"))
+            return v if v == v else 1e99
+
+        best = min(MODES, key=score_h)
+        cells = [
+            f(r[m].get("mse_hard_mean_sig", r[m].get("mse_hard_mean"))) for m in MODES
+        ]
+        lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` |")
+
+    lines += [
+        "",
+        "## Sig-only pack next-MSE (↓)",
+        "",
+        f"| dataset | {hdr} | best |",
+        "|" + "---|---:" * len(MODES) + "|---|",
+    ]
+    for ds, blob in all_ds.items():
+        r = blob["results"]
+
+        def score(m, r=r):
+            v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
+            return v if v == v else 1e99
+
+        best = min(MODES, key=score)
+        cells = [f(r[m].get("mse_mean_sig", r[m]["mse_mean"])) for m in MODES]
+        lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` |")
+
+    lines += [
+        "",
+        "## Rel. pack MSE vs uniform (CFPerm-sig)",
+        "",
+        "| dataset | hard_m | dual | b50 | duty |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for ds, blob in all_ds.items():
+        r = blob["results"]
+        u = r["uniform"].get("mse_mean_sig", r["uniform"]["mse_mean"])
+
+        def rel(m):
+            v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
+            return (v / u - 1.0) if u == u and u > 0 else float("nan")
+
+        lines.append(
+            f"| `{ds}` | {f(rel('hard_m'), pct=True)} | {f(rel('dual'), pct=True)} | "
+            f"{f(rel('blend_50'), pct=True)} | {f(r['dual']['duty'])} |"
+        )
+
+    lines += [
+        "",
+        "### Estimate / evaluate checklist",
+        "",
+        "1. **L0 estimate**: DRPerm on (recent, current); get p, T, reject.",
+        "2. **L0 evaluate**: synthetic size/power; stream duty (should be selective).",
+        "3. **L1 estimate**: intensity from CFPerm (p, T, PO-gap) → λ / beijing.",
+        "4. **L2/L3 evaluate**: sig-only hard-subset + pack MSE; calm ≈ uniform.",
+        "",
+        "Other CFPerm pieces (not L0): RRPerm risk; VIMP (permuCATE/LOCO/GRF) for",
+        "which features drive the shift after reject.",
+        "",
+        "See `docs/agod/AGOD_cfperm_dual_blend.md`.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--root", type=Path, default=Path("."))
+    ap.add_argument(
+        "--datasets",
+        nargs="+",
+        default=["metro_interstate", "beijing_pm25", "stocks_AAPL", "stocks_MSFT"],
+    )
+    ap.add_argument("--batch-size", type=int, default=128)
+    ap.add_argument("--n-batches", type=int, default=20)
+    ap.add_argument("--pca-d", type=int, default=12)
+    ap.add_argument("--n-burn", type=int, default=4)
+    ap.add_argument("--alpha", type=float, default=0.05)
+    ap.add_argument("--n-recent", type=int, default=1)
+    ap.add_argument("--cv-folds", type=int, default=3)
+    ap.add_argument(
+        "--n-perm",
+        type=int,
+        default=39,
+        help="Permutations for CFPerm. Need 1/(n_perm+1) < alpha or reject is impossible.",
+    )
+    ap.add_argument("--risk", choices=["dr", "rr"], default="dr")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--skip-synth", action="store_true")
+    ap.add_argument("--out", type=Path, default=Path("results/agod_cfperm_dual_blend"))
+    args = ap.parse_args()
+    # Discrete permutation p-values: min p = 1/(n_perm+1). Must be < alpha.
+    min_p = 1.0 / (args.n_perm + 1)
+    if min_p >= args.alpha:
+        need = int(np.ceil(1.0 / args.alpha - 1.0))
+        raise SystemExit(
+            f"n_perm={args.n_perm} → min p={min_p:.4f} >= alpha={args.alpha}; "
+            f"use n_perm>={need} (e.g. 39 for alpha=0.05)."
+        )
+    args.out.mkdir(parents=True, exist_ok=True)
+
+    synth = None
+    if not args.skip_synth:
+        print("=== synthetic CFPerm size/power ===", flush=True)
+        trials = []
+        for i in range(10):
+            trials.append(
+                synthetic_shift_trial(
+                    shift=0.0, seed=i, n_perm=args.n_perm, n0=64, n1=64, p=6
+                )
+            )
+        for i in range(10):
+            trials.append(
+                synthetic_shift_trial(
+                    shift=1.5, seed=100 + i, n_perm=args.n_perm, n0=64, n1=64, p=6
+                )
+            )
+        s = eval_cfperm_size_power(trials)
+        synth = {
+            "size": s.size,
+            "power": s.power,
+            "mean_p_null": s.mean_p_null,
+            "mean_p_alt": s.mean_p_alt,
+            "mean_stat_null": s.mean_stat_null,
+            "mean_stat_alt": s.mean_stat_alt,
+        }
+        print(f"  size={s.size:.3f} power={s.power:.3f}", flush=True)
+
+    all_ds: Dict[str, dict] = {}
+    for name in args.datasets:
+        print(f"=== {name} ===", flush=True)
+        try:
+            blob = run_dataset(
+                name,
+                args.root,
+                seed=args.seed,
+                batch_size=args.batch_size,
+                n_batches=args.n_batches,
+                pca_d=args.pca_d,
+                n_burn=args.n_burn,
+                alpha=args.alpha,
+                n_recent=args.n_recent,
+                hard_frac=0.2,
+                cv_folds=args.cv_folds,
+                n_perm=args.n_perm,
+                risk=args.risk,
+            )
+        except Exception as e:
+            print(f"[skip] {name}: {e}", flush=True)
+            continue
+        all_ds[name] = blob
+        r = blob["results"]
+        print(
+            "  duty={:.2f} inten={:.3f} | pack ".format(
+                r["dual"]["duty"], r["dual"]["intensity_mean"]
+            )
+            + " ".join(
+                f"{short_name(m)}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4g}"
+                for m in MODES
+            ),
+            flush=True,
+        )
+
+    md = report(all_ds, synth)
+    (args.out / "CFPERM_DUAL_BLEND_REPORT.md").write_text(md, encoding="utf-8")
+    Path("docs/agod").mkdir(parents=True, exist_ok=True)
+    Path("docs/agod/AGOD_cfperm_dual_blend.md").write_text(md, encoding="utf-8")
+    payload = {
+        "version": 8,
+        "gate": "cfperm",
+        "risk": args.risk,
+        "n_perm": args.n_perm,
+        "modes": list(MODES),
+        "synth": synth,
+        "datasets": all_ds,
+    }
+    (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    if all_ds:
+        packs = list(all_ds.keys())
+        fig, ax = plt.subplots(figsize=(max(8, 1.6 * len(packs)), 4.2))
+        x = np.arange(len(packs))
+        w = 0.18
+        mid = (len(MODES) - 1) / 2.0
+        for i, m in enumerate(MODES):
+            vals = [
+                all_ds[p]["results"][m].get(
+                    "mse_mean_sig", all_ds[p]["results"][m]["mse_mean"]
+                )
+                for p in packs
+            ]
+            ax.bar(x + (i - mid) * w, vals, w, label=short_name(m), color=COLORS[m])
+        ax.set_xticks(x)
+        ax.set_xticklabels(packs, rotation=15, ha="right")
+        ax.set_ylabel("sig pack MSE (↓)")
+        ax.set_title("CFPerm-gated dual/blend")
+        ax.legend(fontsize=8)
+        ax.grid(True, axis="y", alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(args.out / "cfperm_dual_blend_mse.png", dpi=140)
+        plt.close(fig)
+    print(md)
+
+
+if __name__ == "__main__":
+    main()
