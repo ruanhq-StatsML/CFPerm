@@ -39,6 +39,8 @@ def family_of(name: str) -> str:
         return "session"
     if name.startswith("dec_"):
         return "decay"
+    if name.startswith("post_"):
+        return "post"
     if name.startswith("x_") or name.startswith("sq_") or name.startswith("log1p_abs_"):
         return "cross"
     if name.startswith("item_entropy") or name.startswith("n_uniq_"):
