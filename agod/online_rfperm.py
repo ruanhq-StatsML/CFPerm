@@ -68,9 +68,9 @@ def rank_pvalue(T_cur: float, T_hist: List[float], *, ewma: bool = True, lam: fl
 
     Uniform rank:
       p = #{i: T_cur <= T_i} / n_hist
-    EWMA (recent-focused):
-      p = sum_i e^{-lam*(n-i)} 1{T_cur > T_i} / sum_i e^{-lam*(n-i)}
-        — PDF writes I{MSE_new > MSE_i}; we use T which is MSE-E_ref so same order.
+    EWMA (recent-focused), same orientation as rank:
+      p = sum_i w_i 1{T_cur <= T_i} / sum_i w_i
+      (large degradation → small p).
     """
     if not T_hist:
         return 1.0
