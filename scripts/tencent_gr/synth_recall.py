@@ -237,6 +237,11 @@ def main() -> None:
         print("post dt_next", int(p3.iloc[0].dt_next_clk_sec),
               "same_sess", p3.iloc[0].next_clk_same_sess,
               "cross_sess", p3.iloc[0].next_clk_cross_sess)
+    # 故事自检：同品续逛当场；跨场回访；空路径没点
+    assert float(p2.iloc[0].next_clk_same_sess) == 1.0
+    assert float(p3.iloc[0].next_clk_cross_sess) == 1.0
+    empty = path_mix(story)
+    assert int(empty.loc[empty.path.eq("D_empty"), "n"].iloc[0]) > 0
 
 
 if __name__ == "__main__":
