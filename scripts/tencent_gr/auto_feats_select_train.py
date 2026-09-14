@@ -562,9 +562,9 @@ def split_prefix_suffix(
 
 def build_user_features(evs: Sequence[Event], price_p50: float) -> Dict[str, float]:
     if not evs:
-        return {"hist_len": 0.0, "active_days": 0.0, "pay_user": 0.0}
+        return {"hist_len": 0.0, "active_days": 0.0, "pay_user": 0.0, "_seq_t_end": 0.0}
     t_end = evs[-1][2]
-    feats: Dict[str, float] = {}
+    feats: Dict[str, float] = {"_seq_t_end": float(t_end)}
 
     life = funnel(evs, t_end, 10**12)
     for k, v in life.items():
@@ -631,6 +631,26 @@ def enrich_user_table(feats: Dict[str, float], urec: Optional[pd.Series]) -> Dic
             cnt[x] += 1
         feats[f"u_side_{col}_ent"] = entropy(cnt)
     return feats
+
+
+def compare_feature_lists(selected: Sequence[str], prev_json: Path) -> Dict[str, Any]:
+    """Overlap vs the previous 128-feat F-score board."""
+    if not prev_json.is_file():
+        return {"prev_path": str(prev_json), "n_prev": 0, "n_new": len(selected)}
+    prev = json.loads(prev_json.read_text(encoding="utf-8"))
+    old_names = [x["name"] if isinstance(x, dict) else str(x) for x in prev]
+    new_s, old_s = set(selected), set(old_names)
+    return {
+        "prev_path": str(prev_json),
+        "n_prev": len(old_names),
+        "n_new": len(selected),
+        "n_overlap": len(new_s & old_s),
+        "n_only_new": len(new_s - old_s),
+        "n_only_prev": len(old_s - new_s),
+        "only_new": [n for n in selected if n not in old_s],
+        "only_prev": [n for n in old_names if n not in new_s],
+        "overlap": [n for n in selected if n in old_s],
+    }
 
 
 def pad_or_trim(df: pd.DataFrame, target_dim: int, exclude: Sequence[str]) -> pd.DataFrame:
@@ -775,7 +795,13 @@ def main() -> None:
     }
     label_col = label_map[args.label]
 
-    exclude = ["user_id", "_label_pay_user", "_label_has_cnv_7d", "_label_future_cnv"]
+    exclude = [
+        "user_id",
+        "_label_pay_user",
+        "_label_has_cnv_7d",
+        "_label_future_cnv",
+        "_seq_t_end",
+    ]
     df = pad_or_trim(df, args.target_dim, exclude)
     feat_cols = [c for c in df.columns if c not in exclude]
     print(f"feature_dim={len(feat_cols)}")
@@ -795,12 +821,28 @@ def main() -> None:
     report = select_and_train(X, y, feat_cols_use, args.select_k, args.select_method)
 
     args.out.mkdir(parents=True, exist_ok=True)
-    # save compact feature matrix (selected only names + all for reuse)
+    selected_names = [x["name"] for x in report["selected_features"]]
+    keep_extra = [
+        c
+        for c in ("user_id", "_seq_t_end", "_label_future_cnv", "_label_pay_user", "life_ctcvr")
+        if c in df.columns
+    ]
+    sel_cols = keep_extra + [c for c in selected_names if c in df.columns]
+    df[sel_cols].to_parquet(args.out / "user_feats_selected.parquet", index=False)
     df[["user_id"] + feat_cols_use[: min(200, len(feat_cols_use))]].to_parquet(
         args.out / "user_feats_preview.parquet", index=False
     )
     (args.out / "selected_features.json").write_text(
         json.dumps(report["selected_features"], indent=2), encoding="utf-8"
+    )
+    (args.out / "FEATURES_150.txt").write_text(
+        "\n".join(f"{i:3d}  {n}" for i, n in enumerate(selected_names, 1)) + "\n",
+        encoding="utf-8",
+    )
+    prev_path = Path("results/tencent_gr_fs/selected_features.json")
+    compare = compare_feature_lists(selected_names, prev_path)
+    (args.out / "FEATURE_COMPARE_150_vs_128.json").write_text(
+        json.dumps(compare, indent=2), encoding="utf-8"
     )
     summary = {
         "n_users": int(len(df)),
@@ -812,9 +854,18 @@ def main() -> None:
         "metrics": report["metrics"],
         "label_pos_rate": report["label_pos_rate"],
         "top20": report["selected_features"][:20],
+        "compare_vs_128": {
+            "n_overlap": compare.get("n_overlap"),
+            "n_only_new": compare.get("n_only_new"),
+            "n_only_prev": compare.get("n_only_prev"),
+        },
     }
     (args.out / "train_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
+    overlap_n = compare.get("n_overlap", 0)
+    only_new = compare.get("only_new") or []
+    only_prev = compare.get("only_prev") or []
+    feat_md = "\n".join(f"{i}. `{n}`" for i, n in enumerate(selected_names, 1))
     md = f"""# TencentGR auto-1000 → feature-select → train
 
 - users: **{len(df)}**
@@ -822,6 +873,7 @@ def main() -> None:
 - used after leak-drop: **{len(feat_cols_use)}**
 - selected: **{report['n_selected']}** via `{args.select_method}`
 - label: `{args.label}` (pos rate={report['label_pos_rate']:.3f})
+- vs previous 128: overlap **{overlap_n}**, only-new **{len(only_new)}**, dropped **{len(only_prev)}**
 
 ## Metrics
 
@@ -835,6 +887,16 @@ def main() -> None:
 {json.dumps(report['selected_features'][:20], indent=2)}
 ```
 
+## 150-feature list
+
+{feat_md}
+
+## vs 128 board
+
+- overlap: {overlap_n}
+- new (not in 128): {", ".join(f"`{n}`" for n in only_new) or "(none)"}
+- dropped from 128: {", ".join(f"`{n}`" for n in only_prev) or "(none)"}
+
 ## Recipe
 
 1. **Generate**: combinatorial windows × funnel × decay × session × attribution × ARPU/deal × Markov × TOD × crosses ≈ 1000.
@@ -842,6 +904,7 @@ def main() -> None:
 3. **Train**: HistGradientBoosting + LogisticRegression holdout AUC/AP.
 
 Leakage note: for `pay_user`, raw `pay_cnt` / `life_n_cnv` / `arpu_sum` are dropped before selection.
+Label `future_cnv` uses prefix features and suffix conversion, so conversion-count features are not a direct leak.
 """
     (args.out / "FS_TRAIN_REPORT.md").write_text(md, encoding="utf-8")
     print(json.dumps(summary, indent=2)[:2500])
