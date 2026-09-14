@@ -57,6 +57,8 @@ $\lambda=\mathrm{clip}((\rho-\gamma)/(2\gamma),0,1)$.
 DRE stays the $X$-only baseline; it still ignores label risk.
 The first post-cut batch is structurally unpredictable from labels
 (when scoring $B_4$ the hop $B_2$ vs $B_3$ is still quiet).
-EMA of $w$ across hops is left for later: after the cut is absorbed,
-pooling the last two post-shift batches is already the right default.
-Not CATE; $\varphi$ is a discrepancy. Unique CS/CD remains impossible.
+Real consecutive streams (Metro Interstate hourly traffic, NYC green
+taxi by pickup clock, California latitude, diabetes readmission
+source$\to$target) use the same hop protocol. Uniform on the last two
+batches is the default there too; DRE and always-on $\sqrt{\mathrm{PO}}$
+hurt. EMA of $w$ across hops is left for later.
