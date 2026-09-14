@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""好几年不写就忘。跑一遍，对着六条故事把口径找回来。
+"""好几年不写就忘。跑一遍，对着故事把口径找回来。
 
   python3 scripts/tencent_gr/synth_recall.py
 
@@ -7,11 +7,12 @@
 曝光 → 点击 → 转化 → 买后点击
  CTR     CVR    路径     续逛 ≠ 转化
 
-相邻 Δt>30min 切断一场。同一 W：(t−W,t] 是 X，(t,t+W] 是 Y。
-跟不满不当 0。空 asof 不填 0。n_clk 是量，cnv_share 是结构。
+路径四格（一笔 CNV 怎么过来）：
+  A 同品点完买 / B 先点别的 / C 同品只曝不点就买 / D 没点就买
+点了不买、bounce 不是路径，是漏斗没走完。
+买后：next Δt≤30min 当场续逛，否则跨场。两单：第一单 next 跨场，第二单当场。
 
-店名是标签不是 X。先有货在店上，行为序列，cnv_ts 才有单号。
-图：左窗 clk/cnv 才是边，曝光不是边，右窗不得进 G。不是 GNN，不是 DFS。
+图：先定关联再连边。节点 u/i/m。只左窗。曝光不是边。店名不是边。单号不是节点。
 """
 from __future__ import annotations
 
@@ -23,7 +24,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from feat_proto import split_lr  # noqa: E402
-from graph_fsds_proto import graph_tables  # noqa: E402
+from graph_fsds_proto import ASSOC, assoc_edges, graph_tables  # noqa: E402
 from merchant_name import generate_catalog_names  # noqa: E402
 from onepass_post import onepass_post, user_post  # noqa: E402
 
@@ -35,14 +36,15 @@ T0 = 1_700_000_000
 SEED = 0
 FOLLOW_PAD = 2 * 86400  # 垫 t_end，买后窗跟满；不参与 t_cut
 
-# uid%6。忘了就从这六个人往下对。
+# uid%7。忘了就从这几个人往下对。
 STORY = {
-    0: "bounce_exp",       # 看一眼走。有场切，没点。曝光层。图上没边。
-    1: "clk_no_cnv",       # 点了不买。有 CTR，没有 CVR，没有单。
-    2: "same_item_cnv",    # 同品点完买。路径 A。当场续逛 ≠ 第二笔转化。
-    3: "other_clk_cnv",    # 先点别的再买这件。路径 B。跨场回访。
-    4: "empty_path_cnv",   # 没点就买。路径 D。dt_item 空，别填 0。
-    5: "two_cnv",          # 两单。第一单 next 跨场，第二单当场。
+    0: "bounce_exp",       # 看一眼走。没点没买。曝光不是边。
+    1: "clk_no_cnv",       # 点了不买。有 CTR，没有路径。同场两点 → coclick。
+    2: "same_item_cnv",    # A 同品点完买。当场续逛 ≠ 第二笔转化。
+    3: "other_clk_cnv",    # B 先点别的再买这件。跨场回访。
+    4: "empty_path_cnv",   # D 没点就买（连这件曝都没有）。dt_item 空，别填 0。
+    5: "two_cnv",          # 买后：第一单 next 跨场，第二单当场。
+    6: "same_exp_cnv",     # C 同品只曝不点就买。不是 D。
 }
 
 
@@ -68,7 +70,7 @@ def _user_story(uid: int, items: np.ndarray) -> tuple[list, str]:
     """每人一条可点名的漏斗故事。pad 另加，不写进故事。"""
     t = T0 + uid * 86400
     a, b = int(items[0]), int(items[1])
-    kind = uid % 6
+    kind = uid % 7
     evs: list[tuple[int, int, int, int]] = []
 
     def add(iid, act, dt):
@@ -96,9 +98,9 @@ def _user_story(uid: int, items: np.ndarray) -> tuple[list, str]:
         add(a, CNV, 40)
         add(b, CLK, SESS + 90)
     elif kind == 4:
-        add(a, EXP, 0)
+        add(b, EXP, 0)
         add(a, CNV, 80)
-    else:
+    elif kind == 5:
         add(a, EXP, 0)
         add(a, CLK, 10)
         add(a, CNV, 50)
@@ -106,10 +108,13 @@ def _user_story(uid: int, items: np.ndarray) -> tuple[list, str]:
         add(b, CLK, 20)
         add(b, CNV, 30)
         add(b, CLK, 200)
+    else:
+        add(a, EXP, 0)
+        add(a, CNV, 80)
     return evs, STORY[kind]
 
 
-def make_synth(n_users: int = 60, n_item: int = 24, n_merch: int = 6, seed: int = SEED):
+def make_synth(n_users: int = 70, n_item: int = 24, n_merch: int = 6, seed: int = SEED):
     rng = np.random.default_rng(seed)
     cat = catalog(n_item, n_merch, seed)
     stories = []
@@ -140,19 +145,23 @@ def make_synth(n_users: int = 60, n_item: int = 24, n_merch: int = 6, seed: int 
 
 
 def path_mix(ev: pd.DataFrame) -> pd.DataFrame:
-    """转化路径：同品点过 / 只点过别的 / 空路径。"""
+    """转化路径四格：A 同品点过 / B 只点过别的 / C 同品只曝不点 / D 没点也没曝这件。"""
     rows = []
     for _, g in ev.groupby("user_id", sort=False):
         g = g.sort_values("ts")
         for _, r in g.loc[g.act.eq(CNV)].iterrows():
             before = g.loc[g.ts < r.ts]
             clk = before.loc[before.act.eq(CLK)]
-            same = bool((clk.item_id == r.item_id).any())
+            exp = before.loc[before.act.eq(EXP)]
+            same_clk = bool((clk.item_id == r.item_id).any())
             any_clk = len(clk) > 0
-            if same:
+            same_exp = bool((exp.item_id == r.item_id).any())
+            if same_clk:
                 mode = "A_same_clk"
             elif any_clk:
                 mode = "B_other_clk"
+            elif same_exp:
+                mode = "C_same_exp"
             else:
                 mode = "D_empty"
             rows.append(mode)
@@ -178,9 +187,23 @@ def _fmt_seq(g: pd.DataFrame) -> str:
     return " ".join(bits)
 
 
+def print_assoc(story: pd.DataFrame, left: pd.DataFrame, imap: pd.DataFrame) -> dict:
+    print("—— 关联定义（边=业务层。构图用 left，story 是故事里有的）——")
+    Es = assoc_edges(story, imap)
+    El = assoc_edges(left, imap)
+    for a in ASSOC:
+        name = a["name"]
+        print(f"{name:8} {a['edge']:18} story={len(Es[name]):3} left={len(El[name]):3}  {a['when']}")
+        print(f"         {a['rule']}")
+        df = El[name] if len(El[name]) else Es[name]
+        if len(df):
+            print("         e.g.", df.head(2).to_dict("records"))
+    return El
+
+
 def walk(story: pd.DataFrame, post: pd.DataFrame) -> None:
-    print("—— 六条故事（user 0..5）——")
-    for uid in range(6):
+    print("—— 故事（user 0..6）——")
+    for uid in range(7):
         g = story.loc[story.user_id.eq(uid)]
         print(f"u{uid} {STORY[uid]}: {_fmt_seq(g)}")
         rows = post.loc[post.user_id.eq(uid)]
@@ -220,6 +243,7 @@ def main() -> None:
     imap = cat[["item_id", "merchant_id"]]
     gu, gi, gm = graph_tables(left, imap)
     gu_all, _, _ = graph_tables(story, imap)  # 反例：故事全量构图会吃到右窗
+    El = print_assoc(story, left, imap)
 
     left_p = hit_pairs(left)
     right_only = hit_pairs(right) - left_p
@@ -250,6 +274,8 @@ def main() -> None:
     mm.to_parquet(OUT / "split.parquet", index=False)
     post.to_parquet(OUT / "post.parquet", index=False)
     userp.to_parquet(OUT / "user_post.parquet", index=False)
+    for name, df in El.items():
+        df.to_parquet(OUT / f"assoc_{name}.parquet", index=False)
 
     print("wrote", OUT)
     print("n_ev", len(ev), "n_story", len(story), "n_cnv", int((story.act == CNV).sum()),
@@ -272,18 +298,21 @@ def main() -> None:
     p3 = post.loc[post.user_id.eq(3)]
     p4 = post.loc[post.user_id.eq(4)]
     p5 = post.loc[post.user_id.eq(5)]
+    p6 = post.loc[post.user_id.eq(6)]
     assert float(p2.iloc[0].next_clk_same_sess) == 1.0
     assert float(p3.iloc[0].next_clk_cross_sess) == 1.0
     assert bool(p4.iloc[0].wo_prior_clk)
     assert p4.iloc[0].dt_item_min != p4.iloc[0].dt_item_min  # empty ≠ 0
     assert float(p5.iloc[0].next_clk_cross_sess) == 1.0
     assert float(p5.iloc[1].next_clk_same_sess) == 1.0
+    assert bool(p6.iloc[0].wo_prior_clk)
     bounce = story.loc[story.user_id.eq(0)].sort_values("ts")
     assert int(bounce.act.max()) == EXP
     assert int(bounce.ts.diff().iloc[-1]) > SESS
     assert 0 not in set(gu.user_id.astype(int))  # 曝光不是边
-    empty = path_mix(story)
-    assert int(empty.loc[empty.path.eq("D_empty"), "n"].iloc[0]) > 0
+    mix = path_mix(story)
+    assert set(mix.path) >= {"A_same_clk", "B_other_clk", "C_same_exp", "D_empty"}
+    assert 0 not in set(El["hit"].user_id.astype(int))
 
 
 if __name__ == "__main__":
