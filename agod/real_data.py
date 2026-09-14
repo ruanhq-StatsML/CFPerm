@@ -104,6 +104,105 @@ def load_tencent(root: Path, max_n: int, seed: int, pca_d: int):
     return _pca(X[:n], pca_d, seed), y[:n], "mse"
 
 
+def _as_numeric(df):
+    import pandas as pd
+
+    parts = []
+    for c in df.columns:
+        s = df[c]
+        if str(s.dtype) in ("object", "string", "category") or s.dtype == object:
+            codes, _ = pd.factorize(s.astype(str), sort=False)
+            parts.append(codes.astype(np.float64)[:, None])
+        else:
+            v = pd.to_numeric(s, errors="coerce").to_numpy(dtype=np.float64)
+            v = np.nan_to_num(v, nan=0.0, posinf=0.0, neginf=0.0)
+            parts.append(v[:, None])
+    return np.hstack(parts) if parts else np.zeros((len(df), 1))
+
+
+def load_interstate(root: Path, max_n: int, seed: int, pca_d: int):
+    """UCI Metro Interstate Traffic Volume, hourly 2012–2018. Clock = date_time."""
+    del seed, pca_d
+    import pandas as pd
+
+    gz = root / "data/public/Metro_Interstate_Traffic_Volume.csv.gz"
+    csv = root / "data/public/Metro_Interstate_Traffic_Volume.csv"
+    if gz.is_file():
+        df = pd.read_csv(gz)
+    elif csv.is_file():
+        df = pd.read_csv(csv)
+    else:
+        url = "https://archive.ics.uci.edu/static/public/492/metro+interstate+traffic+volume.zip"
+        df = pd.read_csv(url, compression="zip")
+    df["date_time"] = pd.to_datetime(df["date_time"], errors="coerce")
+    df = df.dropna(subset=["date_time", "traffic_volume"]).sort_values("date_time")
+    df["hour"] = df["date_time"].dt.hour
+    df["dow"] = df["date_time"].dt.dayofweek
+    df["month"] = df["date_time"].dt.month
+    df["is_holiday"] = (~df["holiday"].isna()) & (df["holiday"].astype(str) != "None")
+    df["is_holiday"] = df["is_holiday"].astype(int)
+    df["rain_1h"] = np.clip(pd.to_numeric(df["rain_1h"], errors="coerce").fillna(0), 0, 50)
+    df["weather_code"] = pd.factorize(df["weather_main"].astype(str))[0]
+    cols = ["temp", "rain_1h", "snow_1h", "clouds_all", "hour", "dow", "month", "is_holiday", "weather_code"]
+    X = df[cols].to_numpy(np.float64)
+    y = df["traffic_volume"].to_numpy(np.float64)
+    n = min(int(max_n), len(X))
+    return X[:n], y[:n], "mse"
+
+
+def load_nyc_taxi(root: Path, max_n: int, seed: int, pca_d: int):
+    """OpenML NYC green taxi Dec 2016, ordered by pickup clock. y = tip_amount."""
+    del seed, pca_d
+    import pandas as pd
+    from sklearn.datasets import fetch_openml
+
+    cache = root / "data/public/nyc_taxi_xy.npz"
+    if cache.is_file():
+        z = np.load(cache)
+        n = min(int(max_n), len(z["y"]))
+        return z["X"][:n], z["y"][:n], "mse"
+    ds = fetch_openml(data_id=42729, as_frame=True, parser="auto")
+    df = ds.data.copy()
+    y = pd.to_numeric(ds.target, errors="coerce").to_numpy(np.float64)
+    keep = ~np.isnan(y)
+    df, y = df.loc[keep], y[keep]
+    # consecutive trips: day → hour → minute (already a stream clock)
+    day = pd.to_numeric(df.get("lpep_pickup_datetime_day"), errors="coerce").fillna(0)
+    hour = pd.to_numeric(df.get("lpep_pickup_datetime_hour"), errors="coerce").fillna(0)
+    minute = pd.to_numeric(df.get("lpep_pickup_datetime_minute"), errors="coerce").fillna(0)
+    key = day.to_numpy() * 24 * 60 + hour.to_numpy() * 60 + minute.to_numpy()
+    # total_amount includes the tip — drop it
+    drop = [c for c in df.columns if c == "total_amount"]
+    X = _as_numeric(df.drop(columns=drop, errors="ignore"))
+    order = np.argsort(key, kind="mergesort")
+    X, y = X[order], y[order]
+    n = min(int(max_n), len(X))
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(cache, X=X[: max(n, 12000)], y=y[: max(n, 12000)])
+    return X[:n], y[:n], "mse"
+
+
+def load_diabetes_readmit(root: Path, max_n: int, seed: int, pca_d: int):
+    """Local source→target diabetes readmission (datasets.zip). Real shift stream."""
+    del seed, pca_d
+    import zipfile
+
+    import pandas as pd
+
+    zpath = root / "datasets/datasets.zip"
+    if not zpath.is_file():
+        return None
+    with zipfile.ZipFile(zpath) as zf:
+        src = pd.read_csv(zf.open("source_DiabetesReadmission.csv"))
+        tgt = pd.read_csv(zf.open("target_DiabetesReadmission.csv"))
+    ycol = "readmitted"
+    df = pd.concat([src, tgt], ignore_index=True)
+    y = df[ycol].to_numpy(np.int64)
+    X = _as_numeric(df.drop(columns=[ycol]))
+    n = min(int(max_n), len(X))
+    return X[:n], y[:n], "acc"
+
+
 def load_california():
     from sklearn.datasets import fetch_california_housing
 
@@ -160,22 +259,25 @@ LOCAL = (
     ),
 )
 
+# Real consecutive streams. interstate / nyc_taxi / diabetes_readmit need root.
 PUBLIC = (
-    ("california", load_california),
-    ("diabetes", load_diabetes),
-    ("wine_red", load_wine_red),
-    ("digits", load_digits_pca),
+    ("interstate", load_interstate),
+    ("nyc_taxi", load_nyc_taxi),
+    ("diabetes_readmit", load_diabetes_readmit),
+    ("california", lambda root, max_n, seed, pca_d: load_california()),
+    ("diabetes", lambda root, max_n, seed, pca_d: load_diabetes()),
+    ("wine_red", lambda root, max_n, seed, pca_d: load_wine_red()),
 )
 
 
 def iter_real_streams(
     *,
     root: Path | None = None,
-    n_per=100,
-    n_batches=10,
+    n_per=200,
+    n_batches=12,
     pca_d=32,
     seed=0,
-    max_n=2500,
+    max_n=8000,
 ):
     """Yield (name, Stream). Skip missing packs / too-short tables."""
     root = Path(root or ROOT)
@@ -212,7 +314,7 @@ def iter_real_streams(
         seen.add(name)
         return st
 
-    for name, fn in LOCAL:
+    for name, fn in LOCAL + PUBLIC:
         try:
             packed = fn(root, max_n, seed, pca_d)
         except Exception as exc:
@@ -220,16 +322,6 @@ def iter_real_streams(
             continue
         if packed is None:
             print(f"[skip] {name}: missing local pack", flush=True)
-            continue
-        st = emit(name, packed)
-        if st is not None:
-            yield st
-
-    for name, fn in PUBLIC:
-        try:
-            packed = fn() if name != "digits" else fn(seed)
-        except Exception as exc:
-            print(f"[skip] {name}: {exc}", flush=True)
             continue
         st = emit(name, packed)
         if st is not None:

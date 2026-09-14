@@ -60,11 +60,13 @@ def write_md(rows, path):
         "# Real-data consecutive-batch PO-refit (no K-fold)",
         "",
         "Each hop trains on the latest consecutive batches and scores the",
-        "**next** batch. Residual gate:",
+        "**next** batch. Residual gate (no K-fold):",
         "",
-        "`ρ = err(B_{t-1} → B_t) / err(B_{t-2} → B_{t-1})`",
+        "`ρ = err(fit B_{t-1} → B_t) / err(fit B_{t-2} → B_{t-1})`",
         "",
-        "MSE ↓ for continuous, Acc ↑ for discrete. Uniform is the default.",
+        "Streams are time- or space-ordered: Metro Interstate traffic,",
+        "NYC green taxi, California latitude, diabetes readmission",
+        "source→target. MSE ↓ for continuous, Acc ↑ for discrete.",
         "",
     ]
     learners = sorted({r["learner"] for r in rows})
@@ -122,8 +124,8 @@ def write_md(rows, path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--learners", default="rf,xgb")
-    ap.add_argument("--n-batches", type=int, default=10)
-    ap.add_argument("--n-per", type=int, default=100)
+    ap.add_argument("--n-batches", type=int, default=12)
+    ap.add_argument("--n-per", type=int, default=200)
     ap.add_argument("--gate", type=float, default=1.25)
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--pca-d", type=int, default=32)
@@ -135,6 +137,7 @@ def main():
         n_batches=args.n_batches,
         pca_d=args.pca_d,
         seed=args.seed,
+        max_n=max(8000, args.n_per * args.n_batches),
     ):
         task = stream.task
         nb = int(stream.batch.max()) + 1
