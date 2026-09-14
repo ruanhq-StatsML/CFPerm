@@ -44,14 +44,17 @@ def bases(df: pd.DataFrame) -> pd.DataFrame:
     b["n_clk_7d_log"] = np.log1p(_num(df, "n_clk_before_7d").clip(lower=0))
     b["n_clk_same_log"] = np.log1p(_num(df, "n_clk_same_before").clip(lower=0))
     b["wo_prior_clk"] = _num(df, "wo_prior_clk")
-    miss = _num(df, "dt_any_min_miss")
     if "dt_any_min" in df.columns:
-        dt = pd.to_numeric(df["dt_any_min"], errors="coerce")
-        miss = miss.where(miss > 0, dt.isna().astype(float) | (dt < 0).astype(float))
-        dt = dt.where(~((dt < 0) | dt.isna()), 0.0)
+        dt_raw = pd.to_numeric(df["dt_any_min"], errors="coerce")
     else:
-        dt = pd.Series(0.0, index=df.index)
-    b["dt_any_log"] = np.where(miss > 0, 0.0, np.log1p(dt.clip(lower=0)))
+        dt_raw = pd.Series(np.nan, index=df.index)
+    if "dt_any_min_miss" in df.columns:
+        miss = _num(df, "dt_any_min_miss") > 0
+    else:
+        miss = dt_raw.isna()
+    miss = miss.astype(bool) | (dt_raw < 0).fillna(False)
+    dt = dt_raw.clip(lower=0).fillna(0.0)
+    b["dt_any_log"] = np.where(miss.to_numpy(), 0.0, np.log1p(dt.to_numpy()))
     return b
 
 
