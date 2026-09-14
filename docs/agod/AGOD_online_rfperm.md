@@ -1,7 +1,7 @@
 # Method: online RFPerm + PO-risk
 
-This is the AGOD stream method. Not DRE. Not always-on IPTW. Not
-PO-tail subset.
+This is gated PO-risk reweighting on an online stream. Not AGOD.
+Not DRE. Not always-on IPTW. Not PO-tail subset.
 
 Every observation on the last two batches is scored:
 
@@ -48,6 +48,7 @@ hop = rec["history"][k]
    error, so the ratio drops and the stream cools.
 
 Drop-old (`run_resid_stream`) is a different, harder lever for a
-one-shot concept cut. Boards: `AGOD_overview.md`,
-`AGOD_po_refit_gated.md`, `AGOD_po_refit_real.md`.
-LaTeX: `AGOD_performance_tables.tex`.
+one-shot concept cut. Method LaTeX:
+`docs/po_risk/PO_risk_reweight_method.tex`. Boards:
+`AGOD_overview.md`, `AGOD_po_refit_gated.md`,
+`AGOD_po_refit_real.md`. Tables: `AGOD_performance_tables.tex`.

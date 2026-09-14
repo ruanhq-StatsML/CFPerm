@@ -1,0 +1,94 @@
+% Gated PO-risk reweighting (not AGOD).
+% Paste-ready method. Needs amsmath.
+% This is online last-two-batch reweighting with instance PO-risk.
+% It is not attribution-guided distillation, not DRE, not always-on IPTW.
+
+\section{Gated PO-risk reweighting}
+\label{sec:po-risk-reweight}
+
+We adapt an online predictor on a consecutive-batch stream
+$B_0,B_1,\ldots$ by \emph{reweighting} the last two batches with an
+instance PO-risk score. This is not AGOD (no modality attribution, no
+distillation routing) and not density-ratio estimation. The default is
+uniform on the last two batches. $\sqrt{\mathrm{PO}}$ weights fire only
+when a consecutive out-of-sample probe jump says $P(Y\mid X)$ moved,
+then anneal back.
+
+\paragraph{Setup.}
+At hop $t$ the learner has seen $B_0,\ldots,B_t$ and is scored on the
+\emph{next} batch $B_{t+1}$. The train set is always the last two
+batches $B_{t-1}\cup B_t$ (same rows whether the gate is quiet or on
+fire). Write $T_i=0$ for rows in $B_{t-1}$ (上一批) and $T_i=1$ for
+rows in $B_t$ (这一批). The next-step model is RF / XGBoost (not Ridge).
+
+\paragraph{Probe.}
+The PO probe is a shallow random forest ($n_{\mathrm{est}}=20$,
+$\mathrm{depth}=4$) fit on 上一批 as $T=0$:
+\begin{equation}
+  \mu_0 \;=\; \mathrm{RF}(B_{t-1}).
+\end{equation}
+This probe is \emph{not} the next-step predictor. Consecutive OOS
+errors (no $K$-fold; an in-sample $e_1>e_0$ on trees fires every hop)
+\begin{equation}
+  e_{\mathrm{now}}
+    = \mathrm{err}\bigl(\mu_0 \text{ fit } B_{t-1}\to B_t\bigr),\qquad
+  e_{\mathrm{prev}}
+    = \mathrm{err}\bigl(\mu_0 \text{ fit } B_{t-2}\to B_{t-1}\bigr).
+\end{equation}
+The hop fires iff $e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma$
+(default $\gamma=1.5$). The first hop is always quiet: there is no
+previous OOS.
+
+\paragraph{Instance PO-risk.}
+Every observation on the last two batches gets its own score against
+the $T=0$ probe. For regression,
+\begin{equation}
+  r_i \;=\; \bigl|Y_i - \mu_0(X_i)\bigr|.
+\end{equation}
+For classification, $r_i=1-p_{\mu_0}(Y_i\mid X_i)$. Mix with the batch
+gap $\delta=\max(e_{\mathrm{now}}-e_{\mathrm{prev}},0)$ at mix $0.5$:
+\begin{equation}
+  \texttt{po\_risk0}_i
+    \;=\; r_i\,\bigl(1 + 0.5\,\delta\bigr).
+\end{equation}
+This is a \emph{per-row} map, not a batch scalar.
+
+\paragraph{Weights.}
+Quiet hops stay uniform. On fire, keep the same last-two rows;
+$T=0$ stays at $1$ and $T=1$ is upweighted by $\sqrt{\mathrm{PO}}$:
+\begin{equation}
+  \tilde w_i
+    =
+    \begin{cases}
+      1, & \text{quiet, or } T_i=0,\\
+      \sqrt{\texttt{po\_risk0}_i}, & \text{fire and } T_i=1,
+    \end{cases}
+  \qquad
+  w_i
+    = \mathrm{clip}\!\left(\frac{\tilde w_i}{\bar{\tilde w}},\, 0.05,\, 20\right).
+\end{equation}
+The next-step model trains on $(X_i,Y_i,w_i)_{i\in B_{t-1}\cup B_t}$
+and is scored on $B_{t+1}$.
+
+\paragraph{Annealing.}
+The ratio is a one-shot heat. After a fire, the next hop's
+$e_{\mathrm{prev}}$ \emph{is} that large OOS error, so
+$e_{\mathrm{now}}/e_{\mathrm{prev}}\ll\gamma$ and the stream cools
+back to last-two uniform. A one-shot concept cut heats once. A
+periodic clock (day/night occupancy, PM2.5 episodes) reheats on a
+schedule; reweighting is built for the hop after a jump, not to ride
+a cycle.
+
+\paragraph{Two levers, not one.}
+Reweighting does not drop the old batch. Dropping $B_{t-1}$ and
+training on $B_t$ only is a separate hard lever (residual hop-gate).
+PO-tail subset localization is off: at batch size $200$ a $q=0.3$
+tail is too thin. Always-on $\sqrt{\mathrm{PO}}$ and always-on DRE
+lose to last-two uniform on quiet and on real consecutive clocks ---
+that is why the default is uniform.
+
+\paragraph{What this is not.}
+Not AGOD: there is no modality-specific gap and no distillation
+router. Not DRE: the score uses $(X,Y)$ residual risk, not $p(x)$.
+Not always-on IPTW: $\sqrt{\mathrm{PO}}$ is gated. Not in-sample
+$e_1>e_0$: that never anneals on trees.

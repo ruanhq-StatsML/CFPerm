@@ -10,7 +10,8 @@ then cool back.
 
 This note is the overview. Numbered boards live in
 `AGOD_po_refit_gated.md` (synth) and `AGOD_po_refit_real.md`
-(batch-200 clocks). Paste-ready LaTeX:
+(batch-200 clocks). Method LaTeX (PO-risk reweighting, not AGOD):
+`docs/po_risk/PO_risk_reweight_method.tex`. Tables:
 `AGOD_performance_tables.tex`. Code:
 `agod.online_rfperm.run_online_rfperm`.
 
