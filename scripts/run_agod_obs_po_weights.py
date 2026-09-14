@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""Iterate observation-level PO-risk hard-reweight under OnlineRFPerm.
+"""Iterate observation-level PO hard-reweight (tempered / soft / top-k).
 
-Protocol
---------
-Default = uniform (w=1).
-OnlineRFPerm gate on batch t.
-On reject only:
-  recent R → μ0; OOD O=batch_t → PO_i = |Y−μ0(X)|
-  w_i = transform(PO_i) ∈ {prop, √PO, ∛PO, quantile, hybrid}
-  re-fit RF on O with sample_weight=w → next-batch MSE
+v2 focus (after v1): prop/√ often hurt next-MSE; PO still ranks hard rows.
+Try softer maps that keep hard emphasis without blowing MSE:
 
-Primary: **sig-only** next-MSE + hard-rank vs residual truth.
-(Not an image-OOD detector.)
+  uniform
+  gated_cbrt          — previous soft baseline
+  gated_qrt           — PO^{1/4}
+  gated_cbrt_t50      — ∛PO tempered λ=0.5 with uniform
+  gated_qrt_t50       — PO^{1/4} tempered λ=0.5
+  gated_topk20        — only top-20% hard rows boosted
+  gated_cbrt_soft     — soft p-blend gate (not hard reject)
 
   PYTHONPATH=. python3 scripts/run_agod_obs_po_weights.py \\
-    --datasets metro_interstate beijing_pm25 stocks_AAPL stocks_MSFT waymo_proxy
+    --datasets metro_interstate beijing_pm25 stocks_AAPL stocks_MSFT stocks_IWM waymo_proxy
 """
 from __future__ import annotations
 
@@ -38,21 +37,25 @@ from agod.po_refit import build_recent_ood_windows, refit_po_on_windows
 from agod.sig_batch_metrics import annotate_results_with_sig
 from agod.stream_packs import LOADERS, load_stocks
 
-MODES: Tuple[str, ...] = (
-    "uniform",
-    "gated_prop",
-    "gated_sqrt",
-    "gated_cbrt",
-    "gated_quantile",
-    "gated_hybrid",
-)
+# mode_name -> (obs_mode, temper, soft_gate, topk_frac)
+MODE_CFG: Dict[str, Tuple[ObsWeightMode, float, bool, float]] = {
+    "uniform": ("uniform", 1.0, False, 0.2),
+    "gated_cbrt": ("cbrt", 1.0, False, 0.2),
+    "gated_qrt": ("qrt", 1.0, False, 0.2),
+    "gated_cbrt_t50": ("cbrt", 0.5, False, 0.2),
+    "gated_qrt_t50": ("qrt", 0.5, False, 0.2),
+    "gated_topk20": ("topk", 1.0, False, 0.2),
+    "gated_cbrt_soft": ("cbrt", 0.5, True, 0.2),
+}
+MODES: Tuple[str, ...] = tuple(MODE_CFG.keys())
 COLORS = {
     "uniform": "#4C566A",
-    "gated_prop": "#BF616A",
-    "gated_sqrt": "#88C0D0",
     "gated_cbrt": "#5E81AC",
-    "gated_quantile": "#A3BE8C",
-    "gated_hybrid": "#B48EAD",
+    "gated_qrt": "#88C0D0",
+    "gated_cbrt_t50": "#A3BE8C",
+    "gated_qrt_t50": "#EBCB8B",
+    "gated_topk20": "#B48EAD",
+    "gated_cbrt_soft": "#D08770",
 }
 
 
@@ -96,17 +99,6 @@ def fit_rf(X, y, w, seed):
     return m
 
 
-def mode_to_obs(mode: str) -> ObsWeightMode:
-    return {
-        "uniform": "uniform",
-        "gated_prop": "prop",
-        "gated_sqrt": "sqrt",
-        "gated_cbrt": "cbrt",
-        "gated_quantile": "quantile",
-        "gated_hybrid": "hybrid",
-    }[mode]
-
-
 def run_mode(
     stream,
     mode: str,
@@ -116,11 +108,11 @@ def run_mode(
     alpha: float,
     n_recent: int,
 ) -> dict:
+    obs_mode, temper, soft_gate, topk_frac = MODE_CFG[mode]
     mse_next: List[float] = []
     gate_on: List[int] = []
     hard_rows: List[dict] = []
     X0, y0 = stream[0]
-    probe = fit_rf(X0, y0, np.ones(len(y0)), seed)
     rfperm = fit_online_rfperm(X0, y0, seed=seed)
 
     for t in range(1, len(stream)):
@@ -134,7 +126,8 @@ def run_mode(
 
         windows = None
         po = None
-        if mode == "uniform" or not rejected:
+        apply = rejected or (soft_gate and not burn)
+        if mode == "uniform" or not apply:
             w = np.ones(len(yc), float)
         else:
             windows = build_recent_ood_windows(
@@ -143,11 +136,14 @@ def run_mode(
             po = refit_po_on_windows(windows, seed=seed + t, blend_mu_gap=0.25)
             w = gated_obs_po_weights(
                 po,
-                reject=True,
-                mode=mode_to_obs(mode),
-                soft=False,
+                reject=rejected,
+                mode=obs_mode,
+                soft=soft_gate,
                 p=float(step["p"]),
                 alpha=alpha,
+                temper=temper,
+                topk_frac=topk_frac,
+                topk_boost=2.0,
             )
 
         model = fit_rf(Xc, yc, w, seed + t)
@@ -167,8 +163,6 @@ def run_mode(
                     "w": hard_rank_metrics(w, truth),
                 }
             )
-
-        probe = model  # noqa: F841 — keep last probe for parity with older scripts
 
     def _mean_hard(key: str) -> dict:
         if not hard_rows:
@@ -197,6 +191,12 @@ def run_mode(
         "hard_w": _mean_hard("w"),
         "n_reject": int(sum(gate_on)),
         "duty": float(np.mean(gate_on)) if gate_on else 0.0,
+        "cfg": {
+            "obs_mode": obs_mode,
+            "temper": temper,
+            "soft_gate": soft_gate,
+            "topk_frac": topk_frac,
+        },
     }
 
 
@@ -221,31 +221,37 @@ def run_dataset(
             stream, mode, seed, n_burn=n_burn, alpha=alpha, n_recent=n_recent
         )
     annotate_results_with_sig(
-        results, preferred_gate_modes=("gated_sqrt", "gated_cbrt", "gated_hybrid")
+        results,
+        preferred_gate_modes=(
+            "gated_cbrt",
+            "gated_qrt",
+            "gated_cbrt_t50",
+            "gated_topk20",
+        ),
     )
     return {"dataset": name, "n_batches": len(stream), "results": results}
 
 
 def _bar_mse(all_ds: dict, out: Path):
     packs = list(all_ds.keys())
-    fig, ax = plt.subplots(figsize=(max(8, 1.6 * len(packs)), 4.6))
+    fig, ax = plt.subplots(figsize=(max(9, 1.7 * len(packs)), 4.8))
     x = np.arange(len(packs))
-    w = 0.13
+    w = 0.11
     mid = (len(MODES) - 1) / 2.0
     for i, m in enumerate(MODES):
-        vals = []
-        for p in packs:
-            r = all_ds[p]["results"][m]
-            vals.append(r.get("mse_mean_sig", r["mse_mean"]))
+        vals = [
+            all_ds[p]["results"][m].get("mse_mean_sig", all_ds[p]["results"][m]["mse_mean"])
+            for p in packs
+        ]
         ax.bar(x + (i - mid) * w, vals, w, label=m, color=COLORS[m])
     ax.set_xticks(x)
     ax.set_xticklabels(packs, rotation=15, ha="right")
     ax.set_ylabel("sig-only next MSE (↓)")
-    ax.set_title("Obs-level PO hard-reweight (OnlineRFPerm-gated)")
-    ax.legend(ncol=3, fontsize=7)
+    ax.set_title("Obs PO hard-reweight v2: soft / temper / top-k")
+    ax.legend(ncol=3, fontsize=6)
     ax.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
-    p = out / "obs_po_sig_mse.png"
+    p = out / "obs_po_sig_mse_v2.png"
     fig.savefig(p, dpi=140)
     plt.close(fig)
     return p
@@ -257,16 +263,26 @@ def report(all_ds: dict) -> str:
             return "—"
         return f"{v:.4f}"
 
+    short = {
+        "uniform": "uniform",
+        "gated_cbrt": "cbrt",
+        "gated_qrt": "qrt",
+        "gated_cbrt_t50": "cbrtλ.5",
+        "gated_qrt_t50": "qrtλ.5",
+        "gated_topk20": "topk20",
+        "gated_cbrt_soft": "cbrt_soft",
+    }
+    header = " | ".join(short[m] for m in MODES)
     lines = [
-        "# Observation-level PO-risk hard-reweight (iterated)",
+        "# Observation-level PO hard-reweight v2 (temper / soft / top-k)",
         "",
-        "Default = **uniform**. OnlineRFPerm reject → obs PO on OOD batch →",
-        "`w ∝ PO / √PO / ∛PO / quantile / hybrid`. Sig-only next-MSE + hard-rank.",
+        "Default = **uniform**. On OnlineRFPerm reject, obs PO → soft weights.",
+        "v2 adds PO^{1/4}, temper(λ=0.5), top-20% boost, soft p-gate.",
         "",
         "## Sig-only next MSE (↓ better)",
         "",
-        "| dataset | uniform | g_prop | g_sqrt | g_cbrt | g_quantile | g_hybrid | best |",
-        "|---|---:|---:|---:|---:|---:|---:|---|",
+        f"| dataset | {header} | best |",
+        "|" + "---|---:" * len(MODES) + "|---|",
     ]
     wins = {m: 0 for m in MODES}
     for ds, blob in all_ds.items():
@@ -279,34 +295,30 @@ def report(all_ds: dict) -> str:
         best = min(MODES, key=score)
         wins[best] += 1
         cells = [f(r[m].get("mse_mean_sig", r[m]["mse_mean"])) for m in MODES]
-        lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{best}` |")
+        lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` |")
     lines += [
         "",
-        "**Wins:** " + ", ".join(f"`{k}`={v}" for k, v in wins.items()),
+        "**Wins:** " + ", ".join(f"`{short[k]}`={v}" for k, v in wins.items()),
         "",
-        "## Hard-rank on reject batches (PO score vs oracle residual)",
+        "## Hard-rank (PO vs oracle residual) on reject batches",
         "",
-        "| dataset | spearman √PO / ∛PO / quantile / hybrid | P@20% √PO / ∛PO / quantile / hybrid |",
-        "|---|---|---|",
+        "| dataset | spearman | P@20% | n_reject |",
+        "|---|---:|---:|---:|",
     ]
     for ds, blob in all_ds.items():
-        r = blob["results"]
-        sp = " / ".join(
-            f(r[m]["hard_po"]["spearman"])
-            for m in ("gated_sqrt", "gated_cbrt", "gated_quantile", "gated_hybrid")
+        # PO ranking identical across monotone maps — report from cbrt run
+        h = blob["results"]["gated_cbrt"]["hard_po"]
+        nrej = blob["results"]["gated_cbrt"]["n_reject"]
+        lines.append(
+            f"| `{ds}` | {f(h['spearman'])} | {f(h['precision_at_k'])} | {nrej} |"
         )
-        pk = " / ".join(
-            f(r[m]["hard_po"]["precision_at_k"])
-            for m in ("gated_sqrt", "gated_cbrt", "gated_quantile", "gated_hybrid")
-        )
-        lines.append(f"| `{ds}` | {sp} | {pk} |")
     lines += [
         "",
         "### Takeaway",
         "",
-        "1. Obs-level PO **ranks hard rows well** (Spearman ≈ 0.5–0.8 on reject batches).",
-        "2. IPTW→next-MSE is delicate — prefer soft ∛PO; prop overshoots; uniform often wins MSE.",
-        "3. Hard-reweight after RFPerm — **not** an image-OOD detector.",
+        "1. Obs PO still **ranks hard rows** (use for hard-reweight targeting).",
+        "2. Prefer **tempered / soft** maps (∛·λ0.5, ¼, top-k) over raw prop/√ for MSE.",
+        "3. Not an image-OOD detector — Mahalanobis / gradient / RF-binary for that.",
         "",
         "See `docs/agod/AGOD_obs_po_weights.md`.",
         "",
@@ -325,6 +337,7 @@ def main() -> None:
             "beijing_pm25",
             "stocks_AAPL",
             "stocks_MSFT",
+            "stocks_IWM",
             "waymo_proxy",
         ],
     )
@@ -362,19 +375,21 @@ def main() -> None:
         print(
             "  sigMSE "
             + " ".join(
-                f"{m}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4f}" for m in MODES
+                f"{m}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4g}" for m in MODES
             ),
             flush=True,
         )
 
     payload = {
+        "version": 2,
         "batch_size": args.batch_size,
         "n_batches": args.n_batches,
         "n_recent": args.n_recent,
         "alpha": args.alpha,
         "modes": list(MODES),
+        "mode_cfg": {k: {"obs": v[0], "temper": v[1], "soft": v[2], "topk_frac": v[3]} for k, v in MODE_CFG.items()},
         "datasets": all_ds,
-        "note": "obs-level PO hard-reweight under OnlineRFPerm; sig-only MSE",
+        "note": "obs PO hard-reweight v2: temper / soft / top-k under OnlineRFPerm",
     }
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     md = report(all_ds)

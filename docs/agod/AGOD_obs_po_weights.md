@@ -1,38 +1,36 @@
-# Observation-level PO-risk hard-reweight (iterated)
+# Observation-level PO hard-reweight v2 (temper / soft / top-k)
 
-Default = **uniform**. OnlineRFPerm reject → obs PO on OOD batch →
-`w ∝ PO / √PO / ∛PO / quantile / hybrid`. Sig-only next-MSE + hard-rank.
+Default = **uniform**. On OnlineRFPerm reject, obs PO → soft weights.
+v2 adds PO^{1/4}, temper(λ=0.5), top-20% boost, soft p-gate.
 
 ## Sig-only next MSE (↓ better)
 
-| dataset | uniform | g_prop | g_sqrt | g_cbrt | g_quantile | g_hybrid | best |
-|---|---:|---:|---:|---:|---:|---:|---|
-| `metro_interstate` | 835439.5663 | 1185248.0535 | 917613.6149 | 878576.0213 | 913325.1359 | 1024913.3308 | `uniform` |
-| `beijing_pm25` | 1672.8836 | 2039.2833 | 1752.2192 | 1621.3274 | 1701.3844 | 1963.7620 | `gated_cbrt` |
-| `stocks_AAPL` | 0.0007 | 0.0008 | 0.0008 | 0.0007 | 0.0007 | 0.0008 | `uniform` |
-| `stocks_MSFT` | 0.0003 | 0.0004 | 0.0003 | 0.0003 | 0.0003 | 0.0004 | `uniform` |
-| `stocks_IWM` | 0.0005 | 0.0006 | 0.0006 | 0.0006 | 0.0006 | 0.0006 | `uniform` |
-| `waymo_proxy` | 0.0093 | 0.0107 | 0.0099 | 0.0098 | 0.0101 | 0.0108 | `uniform` |
+| dataset | uniform | cbrt | qrt | cbrtλ.5 | qrtλ.5 | topk20 | cbrt_soft | best |
+|---|---:---|---:---|---:---|---:---|---:---|---:---|---:|---|
+| `metro_interstate` | 835439.5663 | 878576.0213 | 854390.7049 | 838005.4775 | 832847.9943 | 856440.5587 | 840610.7980 | `qrtλ.5` |
+| `beijing_pm25` | 1672.8836 | 1621.3274 | 1643.6229 | 1623.2712 | 1536.1622 | 1626.4155 | 1632.1986 | `qrtλ.5` |
+| `stocks_AAPL` | 0.0007 | 0.0007 | 0.0007 | 0.0007 | 0.0007 | 0.0007 | 0.0007 | `uniform` |
+| `stocks_MSFT` | 0.0003 | 0.0003 | 0.0003 | 0.0003 | 0.0003 | 0.0003 | 0.0003 | `uniform` |
+| `stocks_IWM` | 0.0005 | 0.0006 | 0.0006 | 0.0006 | 0.0006 | 0.0006 | 0.0006 | `uniform` |
+| `waymo_proxy` | 0.0093 | 0.0098 | 0.0095 | 0.0095 | 0.0094 | 0.0098 | 0.0095 | `uniform` |
 
-**Wins:** `uniform`=5, `gated_prop`=0, `gated_sqrt`=0, `gated_cbrt`=1, `gated_quantile`=0, `gated_hybrid`=0
+**Wins:** `uniform`=4, `cbrt`=0, `qrt`=0, `cbrtλ.5`=0, `qrtλ.5`=2, `topk20`=0, `cbrt_soft`=0
 
-## Hard-rank on reject batches (PO score vs oracle residual)
+## Hard-rank (PO vs oracle residual) on reject batches
 
-| dataset | spearman √PO / ∛PO / quantile / hybrid | P@20% √PO / ∛PO / quantile / hybrid |
-|---|---|---|
-| `metro_interstate` | 0.5335 / 0.5335 / 0.5335 / 0.5335 | 0.5441 / 0.5441 / 0.5441 / 0.5441 |
-| `beijing_pm25` | 0.5521 / 0.5521 / 0.5521 / 0.5521 | 0.5294 / 0.5294 / 0.5294 / 0.5294 |
-| `stocks_AAPL` | 0.7701 / 0.7701 / 0.7701 / 0.7701 | 0.6634 / 0.6634 / 0.6634 / 0.6634 |
-| `stocks_MSFT` | 0.8126 / 0.8126 / 0.8126 / 0.8126 | 0.7602 / 0.7602 / 0.7602 / 0.7602 |
-| `stocks_IWM` | 0.7769 / 0.7769 / 0.7769 / 0.7769 | 0.6716 / 0.6716 / 0.6716 / 0.6716 |
-| `waymo_proxy` | 0.6492 / 0.6492 / 0.6492 / 0.6492 | 0.6180 / 0.6180 / 0.6180 / 0.6180 |
+| dataset | spearman | P@20% | n_reject |
+|---|---:|---:|---:|
+| `metro_interstate` | 0.5335 | 0.5441 | 8 |
+| `beijing_pm25` | 0.5521 | 0.5294 | 6 |
+| `stocks_AAPL` | 0.7701 | 0.6634 | 6 |
+| `stocks_MSFT` | 0.8126 | 0.7602 | 4 |
+| `stocks_IWM` | 0.7769 | 0.6716 | 4 |
+| `waymo_proxy` | 0.6492 | 0.6180 | 31 |
 
 ### Takeaway
 
-1. **Obs-level PO ranks hard rows well** — Spearman vs oracle residual ≈ 0.53–0.81
-   on reject batches (stocks highest). Monotone maps (√ / ∛ / quantile) share that ranking.
-2. **IPTW into next-MSE is delicate** — `prop` overshoots; soft `cbrt` is safest and
-   wins on beijing; many packs still prefer uniform for MSE.
-3. Use PO weights as **hard-reweight after RFPerm**, not as an image-OOD detector.
+1. Obs PO still **ranks hard rows** (use for hard-reweight targeting).
+2. Prefer **tempered / soft** maps (∛·λ0.5, ¼, top-k) over raw prop/√ for MSE.
+3. Not an image-OOD detector — Mahalanobis / gradient / RF-binary for that.
 
-Image-OOD stays with Mahalanobis / gradient / RF-binary.
+See `docs/agod/AGOD_obs_po_weights.md`.
