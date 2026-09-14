@@ -341,11 +341,13 @@ def cfperm_intensity_to_temper(
     *,
     lam_max: float = 0.75,
     gate: float = 0.20,
-    beijing_gate: float = 0.45,
+    beijing_gate: float = 0.25,
 ) -> Tuple[float, bool]:
     """Map CFPerm intensity → (λ, is_beijing).
 
     Same dual schedule as before, but driven by CFPerm L1 not RFPerm drift.
+    Default ``beijing_gate=0.25`` (v8.2): CFPerm intensities typically sit in
+    ~0.1–0.3, so the old 0.45 threshold almost never opened the soft path.
     """
     d = float(np.clip(intensity, 0.0, 1.0))
     is_bj = d > float(beijing_gate)

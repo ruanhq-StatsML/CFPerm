@@ -144,21 +144,45 @@ def precompute_gates(
             seed=seed + 17 * t,
             e_mode="known",
         )
-        lam, is_bj = cfperm_intensity_to_temper(gate.intensity)
+        # Store intensity only; λ / beijing remapped later (threshold scan).
         cache.append(
             {
                 "t": t,
                 "burn": False,
                 "reject": bool(gate.reject),
                 "intensity": float(gate.intensity),
-                "lam": float(lam),
-                "is_bj": bool(is_bj),
+                "lam": 0.0,
+                "is_bj": False,
                 "p_value": float(gate.p_value),
                 "statistic": float(gate.statistic),
                 "windows": windows,
             }
         )
     return cache
+
+
+def remap_gate_temper(
+    gate_cache: List[dict],
+    *,
+    beijing_gate: float = 0.25,
+    temper_gate: float = 0.20,
+    lam_max: float = 0.75,
+) -> List[dict]:
+    """Recompute (λ, is_beijing) from cached intensity without re-running CFPerm."""
+    out: List[dict] = []
+    for step in gate_cache:
+        step = dict(step)
+        if not step.get("burn", False):
+            lam, is_bj = cfperm_intensity_to_temper(
+                float(step["intensity"]),
+                lam_max=lam_max,
+                gate=temper_gate,
+                beijing_gate=beijing_gate,
+            )
+            step["lam"] = float(lam)
+            step["is_bj"] = bool(is_bj)
+        out.append(step)
+    return out
 
 
 def rfperm_reject_mask(
@@ -199,7 +223,8 @@ def run_mode(
     gate_on: List[int] = []
     intensities: List[float] = []
     lams: List[float] = []
-    beijing_on: List[int] = []
+    beijing_on: List[int] = []  # among rejects only
+    beijing_all: List[int] = []  # all post-burn steps
     hard_rows: List[dict] = []
     fams: List[str] = []
 
@@ -217,8 +242,13 @@ def run_mode(
             intensities.append(float(step["intensity"]))
             lam = float(step["lam"])
             is_bj = bool(step["is_bj"])
-            beijing_on.append(int(is_bj))
             lams.append(lam)
+            if rejected:
+                beijing_on.append(int(is_bj))
+            else:
+                # keep all-step beijing for diagnostics too
+                pass
+            beijing_all.append(int(is_bj))
 
             if mode == "uniform" or not rejected:
                 w = np.ones(len(yc), float)
@@ -310,7 +340,8 @@ def run_mode(
         "duty": float(np.mean(gate_on)) if gate_on else 0.0,
         "intensity_mean": _avg(intensities),
         "lam_mean": _avg(lams),
-        "beijing_frac": _avg([float(x) for x in beijing_on]),
+        "beijing_frac": _avg([float(x) for x in beijing_on]),  # among rejects
+        "beijing_frac_all": _avg([float(x) for x in beijing_all]),
         "family_mode": fam_mode,
         "hard_po": hard_po,
     }
@@ -324,11 +355,15 @@ def run_dataset(name, root, **kw) -> dict:
     hard_frac = kw.pop("hard_frac")
     cv_folds = kw.pop("cv_folds")
     jaccard_rfperm = bool(kw.pop("jaccard_rfperm", False))
+    beijing_gate = float(kw.pop("beijing_gate", 0.25))
+    temper_gate = float(kw.pop("temper_gate", 0.20))
+    lam_max = float(kw.pop("lam_max", 0.75))
+    modes = tuple(kw.pop("modes", MODES))
 
     X, y = load_xy(name, root)
     X = pca_fit(X, pca_d, seed)
     stream = make_stream(X, y, batch_size, n_batches)
-    gate_cache = precompute_gates(
+    raw_cache = precompute_gates(
         stream,
         seed=seed,
         n_burn=kw["n_burn"],
@@ -337,18 +372,30 @@ def run_dataset(name, root, **kw) -> dict:
         n_perm=kw["n_perm"],
         risk=kw["risk"],
     )
+    gate_cache = remap_gate_temper(
+        raw_cache,
+        beijing_gate=beijing_gate,
+        temper_gate=temper_gate,
+        lam_max=lam_max,
+    )
     results = {
         mode: run_mode(
             stream, mode, seed, gate_cache, hard_frac=hard_frac, cv_folds=cv_folds
         )
-        for mode in MODES
+        for mode in modes
     }
+    # pad missing modes for annotate if scanning with subset
+    if "uniform" not in results:
+        raise ValueError("uniform mode required for sig annotate")
     annotate_results_with_sig(
-        results, preferred_gate_modes=("hard_m", "dual", "blend_50")
+        results,
+        preferred_gate_modes=tuple(
+            m for m in ("hard_m", "dual", "blend_50") if m in results
+        ),
     )
     gate = None
     for m in ("dual", "hard_m", "uniform"):
-        if results[m].get("gate_on"):
+        if m in results and results[m].get("gate_on"):
             g = np.asarray(results[m]["gate_on"], bool)
             gate = g[: len(results[m]["mse_next"])]
             break
@@ -361,7 +408,7 @@ def run_dataset(name, root, **kw) -> dict:
     jaccard = float("nan")
     rfperm_duty = float("nan")
     if jaccard_rfperm:
-        cf = np.asarray(results["dual"]["gate_on"], int)
+        cf = np.asarray(results["uniform"]["gate_on"], int)
         rf = rfperm_reject_mask(
             stream, n_burn=kw["n_burn"], alpha=kw["alpha"], seed=seed
         )
@@ -369,15 +416,36 @@ def run_dataset(name, root, **kw) -> dict:
         jaccard = jaccard_binary(cf[:n], rf[:n])
         rfperm_duty = float(np.mean(rf[:n])) if n else float("nan")
 
+    # intensity percentiles on reject steps (for threshold choice)
+    inten_rej = [
+        float(s["intensity"])
+        for s in gate_cache
+        if (not s.get("burn")) and s.get("reject")
+    ]
+    inten_q = {}
+    if inten_rej:
+        qs = [0.5, 0.75, 0.9]
+        vals = np.quantile(inten_rej, qs)
+        inten_q = {f"q{int(100*q)}": float(v) for q, v in zip(qs, vals)}
+        inten_q["mean"] = float(np.mean(inten_rej))
+        inten_q["max"] = float(np.max(inten_rej))
+        inten_q["n_reject"] = len(inten_rej)
+
+    dual = results.get("dual", results.get("hard_m", results["uniform"]))
     return {
         "dataset": name,
         "results": results,
-        "duty": results["dual"]["duty"],
-        "intensity_mean": results["dual"]["intensity_mean"],
-        "beijing_frac": results["dual"]["beijing_frac"],
+        "duty": dual["duty"],
+        "intensity_mean": dual["intensity_mean"],
+        "beijing_frac": dual["beijing_frac"],
+        "beijing_frac_all": dual.get("beijing_frac_all", float("nan")),
         "jaccard_cfperm_rfperm": jaccard,
         "rfperm_duty": rfperm_duty,
+        "beijing_gate": beijing_gate,
+        "intensity_reject_quantiles": inten_q,
         "seed": seed,
+        "_raw_gate_cache": raw_cache,  # for scan reuse
+        "_stream": stream,
     }
 
 
@@ -389,13 +457,14 @@ def _nanmean(xs: List[float]) -> float:
 
 def average_seed_blobs(blobs: List[dict]) -> dict:
     if len(blobs) == 1:
-        out = dict(blobs[0])
+        out = {k: v for k, v in blobs[0].items() if not k.startswith("_")}
         out["n_seeds"] = 1
         out["seeds"] = [blobs[0].get("seed")]
         return out
     name = blobs[0]["dataset"]
+    modes = list(blobs[0]["results"].keys())
     results: Dict[str, dict] = {}
-    for mode in MODES:
+    for mode in modes:
         keys = [
             "mse_mean",
             "mse_hard_mean",
@@ -405,6 +474,7 @@ def average_seed_blobs(blobs: List[dict]) -> dict:
             "intensity_mean",
             "lam_mean",
             "beijing_frac",
+            "beijing_frac_all",
             "n_reject",
             "rel_mse_vs_uniform_sig",
         ]
@@ -438,13 +508,17 @@ def average_seed_blobs(blobs: List[dict]) -> dict:
     return {
         "dataset": name,
         "results": results,
-        "duty": results["dual"]["duty"],
-        "intensity_mean": results["dual"]["intensity_mean"],
-        "beijing_frac": results["dual"]["beijing_frac"],
+        "duty": results.get("dual", results[modes[0]])["duty"],
+        "intensity_mean": results.get("dual", results[modes[0]])["intensity_mean"],
+        "beijing_frac": results.get("dual", results[modes[0]])["beijing_frac"],
+        "beijing_frac_all": results.get("dual", results[modes[0]]).get(
+            "beijing_frac_all", float("nan")
+        ),
         "jaccard_cfperm_rfperm": _nanmean(
             [b.get("jaccard_cfperm_rfperm", float("nan")) for b in blobs]
         ),
         "rfperm_duty": _nanmean([b.get("rfperm_duty", float("nan")) for b in blobs]),
+        "beijing_gate": blobs[0].get("beijing_gate"),
         "n_seeds": len(blobs),
         "seeds": [b.get("seed") for b in blobs],
     }
@@ -471,7 +545,7 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
         "| **CFPerm-VIMP** | post-hoc feature attribution (not stream gate) |",
         "",
         "L1 intensity = `0.55·po_gap + 0.30·p_strength + 0.15·T_strength`.",
-        "dual: mild → hard_support; beijing (intensity>0.45) → soft CV.",
+        "dual: mild → hard_support; beijing (intensity>beijing_gate) → soft CV.",
         "blend_50: mild → hard; beijing → hard/qrt mix=0.5.",
         "",
     ]
@@ -500,14 +574,19 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
             f"{f(r['beijing_frac'])} | `{r['family_mode']}` |"
         )
 
-    short = {m: short_name(m) for m in MODES}
-    hdr = " | ".join(short[m] for m in MODES)
+    # Use modes present in results (scan may drop blend_50).
+    modes = list(MODES)
+    if all_ds:
+        modes = [m for m in MODES if m in next(iter(all_ds.values()))["results"]]
+
+    short = {m: short_name(m) for m in modes}
+    hdr = " | ".join(short[m] for m in modes)
     lines += [
         "",
         "## Sig-only hard top-20% next-MSE (↓)",
         "",
         f"| dataset | {hdr} | best |",
-        "|" + "---|---:" * len(MODES) + "|---|",
+        "|" + "---|---:" * len(modes) + "|---|",
     ]
     for ds, blob in all_ds.items():
         r = blob["results"]
@@ -516,9 +595,9 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
             v = r[m].get("mse_hard_mean_sig", r[m].get("mse_hard_mean"))
             return v if v == v else 1e99
 
-        best = min(MODES, key=score_h)
+        best = min(modes, key=score_h)
         cells = [
-            f(r[m].get("mse_hard_mean_sig", r[m].get("mse_hard_mean"))) for m in MODES
+            f(r[m].get("mse_hard_mean_sig", r[m].get("mse_hard_mean"))) for m in modes
         ]
         lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` |")
 
@@ -527,7 +606,7 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
         "## Sig-only pack next-MSE (↓)",
         "",
         f"| dataset | {hdr} | best |",
-        "|" + "---|---:" * len(MODES) + "|---|",
+        "|" + "---|---:" * len(modes) + "|---|",
     ]
     for ds, blob in all_ds.items():
         r = blob["results"]
@@ -536,8 +615,8 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
             v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
             return v if v == v else 1e99
 
-        best = min(MODES, key=score)
-        cells = [f(r[m].get("mse_mean_sig", r[m]["mse_mean"])) for m in MODES]
+        best = min(modes, key=score)
+        cells = [f(r[m].get("mse_mean_sig", r[m]["mse_mean"])) for m in modes]
         lines.append(f"| `{ds}` | " + " | ".join(cells) + f" | `{short[best]}` |")
 
     lines += [
@@ -552,6 +631,8 @@ def report(all_ds: dict, synth: dict | None = None) -> str:
         u = r["uniform"].get("mse_mean_sig", r["uniform"]["mse_mean"])
 
         def rel(m):
+            if m not in r:
+                return float("nan")
             v = r[m].get("mse_mean_sig", r[m]["mse_mean"])
             return (v / u - 1.0) if u == u and u > 0 else float("nan")
 
@@ -611,6 +692,21 @@ def main() -> None:
     ap.add_argument("--seeds", type=int, nargs="+", default=None)
     ap.add_argument("--jaccard-rfperm", action="store_true")
     ap.add_argument("--skip-synth", action="store_true")
+    ap.add_argument(
+        "--beijing-gate",
+        type=float,
+        default=0.25,
+        help="Intensity threshold for beijing soft path (v8.1 used 0.45 → rarely fired).",
+    )
+    ap.add_argument("--temper-gate", type=float, default=0.20)
+    ap.add_argument("--lam-max", type=float, default=0.75)
+    ap.add_argument(
+        "--scan-beijing-gates",
+        type=float,
+        nargs="+",
+        default=None,
+        help="If set, reuse CFPerm cache and evaluate dual at each beijing gate.",
+    )
     ap.add_argument("--out", type=Path, default=Path("results/agod_cfperm_dual_blend"))
     args = ap.parse_args()
     seeds = list(args.seeds) if args.seeds else [args.seed]
@@ -652,6 +748,9 @@ def main() -> None:
         print(f"  size={s.size:.3f} power={s.power:.3f}", flush=True)
 
     all_ds: Dict[str, dict] = {}
+    scan_rows: List[dict] = []
+    scan_gates = list(args.scan_beijing_gates) if args.scan_beijing_gates else None
+
     for name in args.datasets:
         print(f"=== {name} seeds={seeds} ===", flush=True)
         seed_blobs: List[dict] = []
@@ -672,38 +771,160 @@ def main() -> None:
                     n_perm=args.n_perm,
                     risk=args.risk,
                     jaccard_rfperm=args.jaccard_rfperm,
+                    beijing_gate=args.beijing_gate,
+                    temper_gate=args.temper_gate,
+                    lam_max=args.lam_max,
+                    modes=("uniform", "hard_m", "dual", "blend_50")
+                    if not scan_gates
+                    else ("uniform", "hard_m", "dual"),
                 )
             except Exception as e:
                 print(f"  [skip] seed={sd}: {e}", flush=True)
                 continue
             seed_blobs.append(blob)
-            jv = blob.get("jaccard_cfperm_rfperm", float("nan"))
             print(
-                "  seed={}: duty={:.2f} inten={:.3f} jacc={}".format(
+                "  seed={}: duty={:.2f} inten={:.3f} bj_rej={:.2f} fam={} q={}".format(
                     sd,
                     blob["results"]["dual"]["duty"],
                     blob["results"]["dual"]["intensity_mean"],
-                    f"{jv:.3f}" if np.isfinite(jv) else "—",
+                    blob["results"]["dual"].get("beijing_frac", float("nan")),
+                    blob["results"]["dual"].get("family_mode"),
+                    blob.get("intensity_reject_quantiles"),
                 ),
                 flush=True,
             )
+
+            # Threshold scan: reuse CFPerm cache, rematerialize dual only
+            if scan_gates and "_raw_gate_cache" in blob:
+                stream = blob["_stream"]
+                raw = blob["_raw_gate_cache"]
+                for bg in scan_gates:
+                    gcache = remap_gate_temper(
+                        raw,
+                        beijing_gate=float(bg),
+                        temper_gate=args.temper_gate,
+                        lam_max=args.lam_max,
+                    )
+                    dual_r = run_mode(
+                        stream,
+                        "dual",
+                        sd,
+                        gcache,
+                        hard_frac=0.2,
+                        cv_folds=args.cv_folds,
+                    )
+                    uni_r = run_mode(
+                        stream,
+                        "uniform",
+                        sd,
+                        gcache,
+                        hard_frac=0.2,
+                        cv_folds=args.cv_folds,
+                    )
+                    # sig pack MSE on CFPerm rejects
+                    gmask = np.asarray(dual_r["gate_on"], bool)
+                    n = min(len(gmask), len(dual_r["mse_next"]), len(uni_r["mse_next"]))
+                    gmask = gmask[:n]
+                    if gmask.any():
+                        dual_sig = float(np.mean(np.asarray(dual_r["mse_next"])[:n][gmask]))
+                        uni_sig = float(np.mean(np.asarray(uni_r["mse_next"])[:n][gmask]))
+                        rel = dual_sig / uni_sig - 1.0 if uni_sig > 0 else float("nan")
+                    else:
+                        dual_sig = uni_sig = rel = float("nan")
+                    scan_rows.append(
+                        {
+                            "dataset": name,
+                            "seed": sd,
+                            "beijing_gate": float(bg),
+                            "duty": dual_r["duty"],
+                            "beijing_frac_reject": dual_r["beijing_frac"],
+                            "family_mode": dual_r["family_mode"],
+                            "dual_mse_sig": dual_sig,
+                            "uni_mse_sig": uni_sig,
+                            "rel_vs_uni": rel,
+                        }
+                    )
+                    print(
+                        f"    scan bj_gate={bg:.2f}: bj_rej={dual_r['beijing_frac']:.2f} "
+                        f"fam={dual_r['family_mode']} rel={rel:+.1%}"
+                        if rel == rel
+                        else f"    scan bj_gate={bg:.2f}: bj_rej={dual_r['beijing_frac']:.2f} fam={dual_r['family_mode']} rel=—",
+                        flush=True,
+                    )
+
         if not seed_blobs:
             continue
         blob = average_seed_blobs(seed_blobs)
         all_ds[name] = blob
         r = blob["results"]
+        modes_present = [m for m in MODES if m in r]
         print(
-            "  mean duty={:.2f} inten={:.3f} | pack ".format(
-                r["dual"]["duty"], r["dual"]["intensity_mean"]
+            "  mean duty={:.2f} inten={:.3f} bj_rej={:.2f} | pack ".format(
+                r["dual"]["duty"],
+                r["dual"]["intensity_mean"],
+                r["dual"].get("beijing_frac", float("nan")),
             )
             + " ".join(
                 f"{short_name(m)}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4g}"
-                for m in MODES
+                for m in modes_present
             ),
             flush=True,
         )
 
+    # Summarize beijing-gate scan
+    scan_summary = None
+    if scan_rows:
+        scan_summary = {}
+        for bg in sorted(set(r["beijing_gate"] for r in scan_rows)):
+            rows = [r for r in scan_rows if r["beijing_gate"] == bg]
+            scan_summary[str(bg)] = {
+                "beijing_frac_reject_mean": _nanmean(
+                    [r["beijing_frac_reject"] for r in rows]
+                ),
+                "rel_vs_uni_mean": _nanmean([r["rel_vs_uni"] for r in rows]),
+                "n": len(rows),
+                "by_dataset": {},
+            }
+            for ds in sorted(set(r["dataset"] for r in rows)):
+                drows = [r for r in rows if r["dataset"] == ds]
+                scan_summary[str(bg)]["by_dataset"][ds] = {
+                    "beijing_frac_reject": _nanmean(
+                        [r["beijing_frac_reject"] for r in drows]
+                    ),
+                    "rel_vs_uni": _nanmean([r["rel_vs_uni"] for r in drows]),
+                    "family_modes": sorted(
+                        {r["family_mode"] for r in drows if r["family_mode"]}
+                    ),
+                }
+        print("=== beijing_gate scan summary ===", flush=True)
+        for bg, s in scan_summary.items():
+            print(
+                f"  gate={bg}: bj_rej̄={s['beijing_frac_reject_mean']:.3f} "
+                f"rel̄={s['rel_vs_uni_mean']:+.1%}"
+                if s["rel_vs_uni_mean"] == s["rel_vs_uni_mean"]
+                else f"  gate={bg}: bj_rej̄={s['beijing_frac_reject_mean']:.3f} rel̄=—",
+                flush=True,
+            )
+        (args.out / "beijing_gate_scan.json").write_text(
+            json.dumps({"rows": scan_rows, "summary": scan_summary}, indent=2),
+            encoding="utf-8",
+        )
+
     md = report(all_ds, synth)
+    if scan_summary:
+        md += "\n## Beijing-gate scan (dual soft path)\n\n"
+        md += "| beijing_gate | bj_frac@reject̄ | dual rel pack vs unī |\n|---|---:|---:|\n"
+        for bg, s in scan_summary.items():
+            rel = s["rel_vs_uni_mean"]
+            md += (
+                f"| {bg} | {s['beijing_frac_reject_mean']:.3f} | "
+                + (f"{100*rel:+.1f}%" if rel == rel else "—")
+                + " |\n"
+            )
+        md += (
+            "\n_Lower beijing_gate → more soft-CV dual path. "
+            "v8.1 default 0.45 rarely fired; retune toward reject-intensity quantiles._\n"
+        )
     (args.out / "CFPERM_DUAL_BLEND_REPORT.md").write_text(md, encoding="utf-8")
     Path("docs/agod").mkdir(parents=True, exist_ok=True)
     Path("docs/agod/AGOD_cfperm_dual_blend.md").write_text(md, encoding="utf-8")
@@ -714,6 +935,8 @@ def main() -> None:
             "duty": blob["duty"],
             "intensity_mean": blob["intensity_mean"],
             "beijing_frac": blob["beijing_frac"],
+            "beijing_frac_all": blob.get("beijing_frac_all"),
+            "beijing_gate": blob.get("beijing_gate", args.beijing_gate),
             "jaccard_cfperm_rfperm": blob.get("jaccard_cfperm_rfperm"),
             "rfperm_duty": blob.get("rfperm_duty"),
             "n_seeds": blob.get("n_seeds", 1),
@@ -728,16 +951,20 @@ def main() -> None:
             },
         }
     payload = {
-        "version": "8.1",
+        "version": "8.2",
         "gate": "cfperm",
         "risk": args.risk,
         "n_perm": args.n_perm,
         "seeds": seeds,
+        "beijing_gate": args.beijing_gate,
+        "temper_gate": args.temper_gate,
+        "lam_max": args.lam_max,
         "jaccard_rfperm": args.jaccard_rfperm,
         "batch_size": args.batch_size,
         "n_batches": args.n_batches,
         "modes": list(MODES),
         "synth": synth,
+        "beijing_gate_scan": scan_summary,
         "datasets": slim,
     }
     (args.out / "summary.json").write_text(
@@ -746,11 +973,12 @@ def main() -> None:
 
     if all_ds:
         packs = list(all_ds.keys())
+        modes_plot = [m for m in MODES if m in next(iter(all_ds.values()))["results"]]
         fig, ax = plt.subplots(figsize=(max(8, 1.6 * len(packs)), 4.2))
         x = np.arange(len(packs))
         w = 0.18
-        mid = (len(MODES) - 1) / 2.0
-        for i, m in enumerate(MODES):
+        mid = (len(modes_plot) - 1) / 2.0
+        for i, m in enumerate(modes_plot):
             vals = [
                 all_ds[p]["results"][m].get(
                     "mse_mean_sig", all_ds[p]["results"][m]["mse_mean"]
@@ -761,7 +989,9 @@ def main() -> None:
         ax.set_xticks(x)
         ax.set_xticklabels(packs, rotation=15, ha="right")
         ax.set_ylabel("sig pack MSE (↓)")
-        ax.set_title(f"CFPerm dual/blend (seeds={seeds})")
+        ax.set_title(
+            f"CFPerm dual/blend (seeds={seeds}, beijing_gate={args.beijing_gate})"
+        )
         ax.legend(fontsize=8)
         ax.grid(True, axis="y", alpha=0.3)
         fig.tight_layout()
