@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Obs-PO hard-reweight v6: hard-support + beijing-class packMSE gate.
+"""Obs-PO hard-reweight v7: hard-support + beijing-class packMSE gate.
 
 Logic we buy
 ------------
@@ -10,6 +10,7 @@ Logic we buy
 3. Primary claim metric = **hard-subset next-MSE**; packMSE is conditional.
 4. **v5**: CV-MSE picks PO^power × temper (or family) per reject; add log1p map.
 5. **v6**: hard-objective CV; soft power grid; dual/blend hard+qrt under beijing.
+6. **v7**: blend mix scan {0.25,0.5,0.75}; dual with n_recent=2.
 
   PYTHONPATH=. python3 scripts/run_agod_obs_po_weights.py \\
     --datasets metro_interstate beijing_pm25 stocks_AAPL stocks_MSFT stocks_IWM waymo_proxy
@@ -48,21 +49,21 @@ from agod.stream_packs import LOADERS, load_stocks
 # v4 modes: hard-claim path + beijing packMSE path + v3 baselines
 MODES: Tuple[str, ...] = (
     "uniform",
-    "gated_hard_adapt",   # hard claim default
-    "gated_qrt_hi",       # beijing packMSE baseline
-    "cv_power_cap",       # v5 best pack under beijing
-    "cv_hard_cap",        # NEW: CV on hard-subset MSE, beijing cap + soft powers
-    "blend_bj",           # NEW: mix hard_support + qrt under beijing λ
-    "dual",               # NEW: hard_support if mild; cv_power_cap if beijing
+    "gated_hard_adapt",  # hard claim default
+    "dual",              # v6 winner: mild→hard, BJ→soft CV
+    "dual_r2",           # NEW: dual + n_recent=2
+    "blend_25",          # NEW: mix scan (more qrt)
+    "blend_50",          # mix=0.5 (v6 blend_bj)
+    "blend_75",          # NEW: mix scan (more hard_support)
 )
 COLORS = {
     "uniform": "#4C566A",
     "gated_hard_adapt": "#88C0D0",
-    "gated_qrt_hi": "#EBCB8B",
-    "cv_power_cap": "#B48EAD",
-    "cv_hard_cap": "#A3BE8C",
-    "blend_bj": "#D08770",
     "dual": "#5E81AC",
+    "dual_r2": "#81A1C1",
+    "blend_25": "#EBCB8B",
+    "blend_50": "#D08770",
+    "blend_75": "#BF616A",
 }
 
 
@@ -114,36 +115,16 @@ def mode_spec(mode: str) -> dict:
             "drift_gate": 0.20,
             "n_recent": None,
         }
-    if mode == "gated_qrt_hi":
-        return {
-            "kind": "fixed",
-            "obs": "qrt",
-            "adapt": True,
-            "drift_gate": BEIJING_DRIFT_GATE,
-            "n_recent": None,
-        }
-    if mode == "cv_power_cap":
-        return {
-            "kind": "cv_power",
-            "temper_cap": True,
-            "drift_gate": BEIJING_DRIFT_GATE,
-            "powers": "soft",
-            "objective": "all",
-            "n_recent": None,
-        }
-    if mode == "cv_hard_cap":
-        return {
-            "kind": "cv_power",
-            "temper_cap": True,
-            "drift_gate": BEIJING_DRIFT_GATE,
-            "powers": "soft",
-            "objective": "hard",
-            "n_recent": None,
-        }
-    if mode == "blend_bj":
-        return {"kind": "blend", "drift_gate": BEIJING_DRIFT_GATE, "mix": 0.5, "n_recent": None}
     if mode == "dual":
-        return {"kind": "dual", "n_recent": None}
+        return {"kind": "dual", "n_recent": None, "bj_objective": "all"}
+    if mode == "dual_r2":
+        return {"kind": "dual", "n_recent": 2, "bj_objective": "all"}
+    if mode == "blend_25":
+        return {"kind": "blend", "drift_gate": BEIJING_DRIFT_GATE, "mix": 0.25, "n_recent": None}
+    if mode == "blend_50":
+        return {"kind": "blend", "drift_gate": BEIJING_DRIFT_GATE, "mix": 0.50, "n_recent": None}
+    if mode == "blend_75":
+        return {"kind": "blend", "drift_gate": BEIJING_DRIFT_GATE, "mix": 0.75, "n_recent": None}
     raise KeyError(mode)
 
 
@@ -310,7 +291,8 @@ def run_mode(
                         n_folds=cv_folds,
                         seed=seed + t,
                         temper_cap=cap,
-                        objective="all",
+                        objective=spec.get("bj_objective", "all"),
+                        hard_frac=hard_frac,
                     )
                     w = np.asarray(sel["weights"], float)
                     lam_used = float(sel["temper"])
@@ -450,18 +432,18 @@ def run_dataset(
         results,
         preferred_gate_modes=(
             "gated_hard_adapt",
-            "gated_qrt_hi",
-            "cv_power_cap",
-            "cv_hard_cap",
-            "blend_bj",
             "dual",
+            "dual_r2",
+            "blend_25",
+            "blend_50",
+            "blend_75",
         ),
     )
     gate = None
     for m in (
         "gated_hard_adapt",
-        "cv_power_cap",
-        "gated_qrt_hi",
+        "dual",
+        "dual_r2",
         "uniform",
     ):
         if m in results and results[m].get("gate_on"):
@@ -510,7 +492,7 @@ def _bars(all_ds: dict, out: Path):
         ax.grid(True, axis="y", alpha=0.3)
     axes[0].legend(ncol=2, fontsize=6)
     fig.tight_layout()
-    path = out / "obs_po_v6_mse.png"
+    path = out / "obs_po_v7_mse.png"
     fig.savefig(path, dpi=140)
     plt.close(fig)
     return path
@@ -524,30 +506,26 @@ def report(all_ds: dict) -> str:
 
     short = {m: short_name(m) for m in MODES}
     lines = [
-        "# Observation-level PO hard-reweight v6 (hard-CV + dual/blend)",
+        "# Observation-level PO hard-reweight v7 (blend mix + dual_r2)",
         "",
-        "## What changed vs v5",
+        "## What changed vs v6",
         "",
-        "- Drop uncapped CV / log1p/family ablations from the primary table.",
-        "- **`cv_hard_cap`**: CV-MSE on hard top-20% of each fold (matches primary claim),",
-        "  soft power grid {0, 1/8, 1/4}, beijing temper cap.",
-        "- **`blend_bj`**: 50/50 hard_support + qrt under beijing λ.",
-        "- **`dual`**: mild reject → hard_support; beijing → soft `cv_power_cap`.",
-        "- Keep `hard_m` / `qrt_bj` / `cv_power_cap` as baselines.",
+        "- Keep **`dual`** (v6 beijing packMSE winner) and **`hard_m`**.",
+        "- **`dual_r2`**: same dual policy with `n_recent=2` for PO/μ0 windows.",
+        "- **Blend mix scan**: `blend_25` / `blend_50` / `blend_75` (hard_support vs qrt).",
+        "- Drop cv_hard_cap from primary table (did not transfer in v6).",
         "",
-        "## Drift / CV diagnostics",
+        "## Drift / dual diagnostics",
         "",
-        "| dataset | drift | beijing? | cv_cap power̄ | cv_hard power̄ | dual mode |",
-        "|---|---:|:---:|---:|---:|---|",
+        "| dataset | drift | beijing? | dual mode | dual_r2 mode |",
+        "|---|---:|:---:|---|---|",
     ]
     for ds, blob in all_ds.items():
         r = blob["results"]
         bj = "yes" if blob.get("beijing_class") else "no"
         lines.append(
             f"| `{ds}` | {f(blob.get('drift_mean'))} | {bj} | "
-            f"{f(r['cv_power_cap'].get('power_mean'))} | "
-            f"{f(r['cv_hard_cap'].get('power_mean'))} | "
-            f"`{r['dual'].get('family_mode')}` |"
+            f"`{r['dual'].get('family_mode')}` | `{r['dual_r2'].get('family_mode')}` |"
         )
 
     hdr = " | ".join(short[m] for m in MODES)
@@ -607,7 +585,7 @@ def report(all_ds: dict) -> str:
         "",
         "## Rel. pack MSE vs uniform",
         "",
-        "| dataset | hard_m | qrt_bj | cv_cap | cv_hard | blend | dual | drift |",
+        "| dataset | hard_m | dual | dual_r2 | b25 | b50 | b75 | drift |",
         "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for ds, blob in all_ds.items():
@@ -620,9 +598,9 @@ def report(all_ds: dict) -> str:
 
         lines.append(
             f"| `{ds}` | {f(rel('gated_hard_adapt'), pct=True)} | "
-            f"{f(rel('gated_qrt_hi'), pct=True)} | {f(rel('cv_power_cap'), pct=True)} | "
-            f"{f(rel('cv_hard_cap'), pct=True)} | {f(rel('blend_bj'), pct=True)} | "
-            f"{f(rel('dual'), pct=True)} | {f(blob.get('drift_mean'))} |"
+            f"{f(rel('dual'), pct=True)} | {f(rel('dual_r2'), pct=True)} | "
+            f"{f(rel('blend_25'), pct=True)} | {f(rel('blend_50'), pct=True)} | "
+            f"{f(rel('blend_75'), pct=True)} | {f(blob.get('drift_mean'))} |"
         )
 
     lines += [
@@ -641,10 +619,9 @@ def report(all_ds: dict) -> str:
         "",
         "### Takeaway",
         "",
-        "- Prefer **`dual`** as the unified policy: hard_support on mild rejects,",
-        "  soft CV under beijing for packMSE.",
-        "- Prefer **`cv_hard_cap`** when optimizing the hard-subset claim via CV.",
-        "- Soft power grid ≤1/4 + beijing temper cap remains the safe packMSE dial.",
+        "- If `dual_r2` ≥ `dual` on beijing packMSE, prefer n_recent=2 in the recipe.",
+        "- Pick blend mix by beijing packMSE / hard-subset tradeoff; lock best mix.",
+        "- Default unified policy remains dual-family unless mix clearly dominates.",
         "",
         "See `docs/agod/AGOD_obs_po_weights.md`.",
         "",
@@ -702,11 +679,11 @@ def main() -> None:
         r = blob["results"]
         bj = "BJ" if blob.get("beijing_class") else "calm"
         print(
-            "  drift={:.3f} ({}) cv_cap={:.3g} cv_hard={:.3g} | sigPack ".format(
+            "  drift={:.3f} ({}) dual={} dual_r2={} | sigPack ".format(
                 float(blob.get("drift_mean") or float("nan")),
                 bj,
-                float(r["cv_power_cap"].get("power_mean") or 0.0),
-                float(r["cv_hard_cap"].get("power_mean") or 0.0),
+                r["dual"].get("family_mode"),
+                r["dual_r2"].get("family_mode"),
             )
             + " ".join(
                 f"{short_name(m)}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4g}" for m in MODES
@@ -720,14 +697,14 @@ def main() -> None:
         )
 
     payload = {
-        "version": 6,
+        "version": 7,
         "batch_size": args.batch_size,
         "n_batches": args.n_batches,
         "cv_folds": args.cv_folds,
         "modes": list(MODES),
         "beijing_drift_gate": BEIJING_DRIFT_GATE,
         "datasets": all_ds,
-        "note": "v6 hard-CV + dual/blend under beijing",
+        "note": "v7 blend mix scan + dual n_recent=2",
     }
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     md = report(all_ds)
@@ -743,11 +720,11 @@ def short_name(m: str) -> str:
     return {
         "uniform": "uni",
         "gated_hard_adapt": "hard_m",
-        "gated_qrt_hi": "qrt_bj",
-        "cv_power_cap": "cv_cap",
-        "cv_hard_cap": "cv_hard",
-        "blend_bj": "blend",
         "dual": "dual",
+        "dual_r2": "dual_r2",
+        "blend_25": "b25",
+        "blend_50": "b50",
+        "blend_75": "b75",
     }.get(m, m)
 
 
