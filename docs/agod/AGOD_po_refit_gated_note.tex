@@ -17,13 +17,14 @@ Do not reuse a frozen probe. At hop $t$ (batches $0,\ldots,t$ observed),
 On the first hop, fall back to $T{=}0=B_0$, $T{=}1=B_1$.
 Refit the DR PO-learner
 $\varphi=(\mu_1-\mu_0)+(T-\pi)(Y-\mu_T)/(\pi(1-\pi))$ on this assignment
-only. Instance score $r_i=\varphi_i^2$. Contrast
+only, with the same family as the next-step predictor (RF / XGBoost / MLP;
+not Ridge). Instance score $r_i=\varphi_i^2$. Contrast
 \[
   \rho_t = \bar r_{T=1}\,/\,\bar r_{T=0}.
 \]
 If $\rho_t < \gamma$ (default $\gamma=1.25$), weights are uniform.
 If $\rho_t \ge \gamma$, $w_i \propto \sqrt{r_i}$ on T=1 rows (mean-1,
-clipped). The next-step Ridge trains on T=1 and is scored on $B_{t+1}$.
+clipped). The next-step model trains on T=1 and is scored on $B_{t+1}$.
 
 \paragraph{Adaptive train set (the re-adjustment).}
 Gate uses the hop contrast $B_{t-1}$ vs $B_t$.
@@ -45,8 +46,10 @@ dropping the old batch from $\sqrt{\mathrm{PO}}$ IPTW.
 The PO-ratio gate $\rho=\bar r_{T=1}/\bar r_{T=0}$ misses a \emph{global}
 concept flip (both sides' $\varphi^2$ jump, so $\rho\approx 1$).
 The residual gate
-$\rho^{\mathrm{res}}=\mathrm{MSE}(\hat y_{B_{t-1}}(B_t))/\mathrm{MSE}_{\mathrm{train}}(B_{t-1})$
+$\rho^{\mathrm{res}}=\mathrm{MSE}(\hat y_{B_{t-1}}(B_t))/\mathrm{CV\text{-}MSE}(B_{t-1})$
 is the ``batches clearly different'' detector; default $\gamma_{\mathrm{res}}=2$.
+Trees and MLPs overfit in-sample, so the denominator is $K$-fold CV, not
+train MSE.
 \textit{resid} then trains on $B_t$ only; \textit{resid\_po} also applies
 refit $\sqrt{\mathrm{PO}}$ weights on that new batch.
 Soft gate: $w \leftarrow (1-\lambda)\mathbf{1}+\lambda w_{\mathrm{PO}}$ with

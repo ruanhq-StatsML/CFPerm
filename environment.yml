@@ -4,5 +4,6 @@ channels:
 dependencies:
   - numpy
   - scikit-learn
+  - xgboost
   - pytest
   - flake8
