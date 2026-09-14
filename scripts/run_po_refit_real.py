@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Gated online-RF √po_risk0 on consecutive-batch real streams.
+"""Gated online-RF √po_risk0 reweighting on consecutive-batch real streams.
 
-Uniform on the last two batches is the default. √PO / localization
-only fire when consecutive OOS probe error jumps:
+Uniform on the last two batches is the default. √PO IPTW only
+fires when consecutive OOS probe error jumps:
 
   e_now  = err(μ0 fit B_{t-1} → B_t)
   e_prev = err(μ0 fit B_{t-2} → B_{t-1})
@@ -27,7 +27,6 @@ DOCS = ROOT / "docs" / "agod"
 METHODS = (
     "uniform_pair",
     "rfperm",
-    "local",
     "resid",
 )
 
@@ -36,8 +35,7 @@ def run_one(stream, learner, gate, seed):
     kw = dict(learner=learner, seed=seed)
     return {
         "uniform_pair": run_uniform_last_two(stream, **kw),
-        "rfperm": run_rfperm_stream(stream, gate=gate, localize=False, **kw),
-        "local": run_rfperm_stream(stream, gate=gate, localize=True, q=0.30, **kw),
+        "rfperm": run_rfperm_stream(stream, gate=gate, **kw),
         "resid": run_resid_stream(stream, gate=2.0, po_on_fire=False, **kw),
     }
 
@@ -51,9 +49,8 @@ def write_md(rows, path, *, n_per, gate):
         "error jumps. Always-on DRE / always-on √PO are off this board.",
         "",
         "- **uniform_pair**: last two batches, w=1.",
-        "- **rfperm**: on fire, current batch with `w=√po_risk0`.",
-        "- **local**: same gate; high-`po_risk0` tail (`q=0.3`).",
-        "- **resid**: residual hop-gate (full learner MSE) as a reference.",
+        "- **rfperm**: same rows; on fire, T=1 gets `w=√po_risk0`.",
+        "- **resid**: residual hop-gate (drop old batch) as a reference.",
         "",
         "Continuous tasks report **RMSE** (↓); discrete report **Acc** (↑).",
         "",
@@ -66,8 +63,8 @@ def write_md(rows, path, *, n_per, gate):
     for learner in learners:
         lines += [f"## `{learner}`", ""]
         lines += [
-            "| dataset | clock | task | n_batches | uniform_pair | rfperm | local | resid | fire_rfperm | fire_resid |",
-            "|---|---|---|---:|---:|---:|---:|---:|---:|---:|",
+            "| dataset | clock | task | n_batches | uniform_pair | rfperm | resid | fire_rfperm | fire_resid |",
+            "|---|---|---|---:|---:|---:|---:|---:|---:|",
         ]
         for ds in datasets:
             sub = [r for r in rows if r["learner"] == learner and r["dataset"] == ds]
@@ -85,7 +82,7 @@ def write_md(rows, path, *, n_per, gate):
                 return float(v)
 
             lines.append(
-                "| `%s` | %s | %s | %d | %.4f | %.4f | %.4f | %.4f | %.2f | %.2f |"
+                "| `%s` | %s | %s | %d | %.4f | %.4f | %.4f | %.2f | %.2f |"
                 % (
                     ds,
                     clock,
@@ -93,7 +90,6 @@ def write_md(rows, path, *, n_per, gate):
                     nb,
                     sc("uniform_pair"),
                     sc("rfperm"),
-                    sc("local"),
                     sc("resid"),
                     by_m["rfperm"]["fire_rate"],
                     by_m["resid"]["fire_rate"],
@@ -102,16 +98,9 @@ def write_md(rows, path, *, n_per, gate):
         lines.append("")
     lines += [
         "Quiet streams should match uniform. A real P(Y|X) hop should fire",
-        "rfperm/local; RMSE/Acc then shows whether adapting helped the",
-        "**next** batch.",
-        "",
-        "On these clocks last-two uniform is the default. rfperm stays",
-        "quiet on airlines / interstate / readmit. When it does fire",
-        "(Beijing PM2.5, occupancy, electricity) √PO and the PO-tail",
-        "usually do **not** beat uniform — `q=0.3` of 200 rows is a thin",
-        "train set. resid dropping the stale batch helps interstate a",
-        "little. Synth concept still needs the gate: that is the setting",
-        "where `w=√po_risk0` pays off.",
+        "rfperm; RMSE/Acc then shows whether reweighting helped the",
+        "**next** batch. Subset localization is off this board — too thin",
+        "at batch size 200.",
         "",
     ]
     path = Path(path)

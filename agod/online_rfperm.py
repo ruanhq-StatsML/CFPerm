@@ -1,21 +1,19 @@
-"""Online RF probe → gated √po_risk0, plus PO-tail localization.
+"""Gated online-RF √po_risk0 reweighting.
 
-This is the IPTW stream logic in ``run_agod_po_ood_stream_multi`` /
-``run_agod_po_iptw_mse``, with one change: do **not** apply √PO every
-batch. The shallow RF on 上一批 is T=0. Instance
+IPTW from ``run_agod_po_ood_stream_multi``, except **not** every batch.
+Shallow RF on 上一批 is T=0. Instance
 
   po_risk0_i = |Y_i − μ0(X_i)|   (mixed with batch gap, same as IPTW)
 
-and ``w = np.sqrt(po_risk0)`` only when the *consecutive OOS* probe
-error jumps — in-sample e1>e0 always holds for trees and would fire
-every hop.
+Consecutive OOS probe (in-sample e1>e0 would fire every hop on trees):
 
   e_now  = err(μ0 fitted on B_{t-1}, scored on B_t)
   e_prev = err(μ0 fitted on B_{t-2}, scored on B_{t-1})
   fire iff e_now / e_prev ≥ γ   (default 1.5; skip the first hop)
 
-Quiet → last two batches, uniform. Fire → current batch with √po_risk0
-or the high-po_risk0 tail (post-hoc subset localization).
+Quiet → last two batches, w=1.
+Fire → same rows, reweight: T=0 stays 1, T=1 gets w=√po_risk0
+(mean 1). No subset localization.
 """
 from __future__ import annotations
 
@@ -104,36 +102,29 @@ def po_risk0_rows(model, X, y, *, batch_po=0.0, task="mse"):
     return instance_po_risk(y, pred, batch_po=batch_po, mix=0.5)
 
 
-def po_tail_mask(risk, q=0.30, min_n=8):
-    """High-PO tail inside the current batch (post-hoc subset)."""
-    r = np.asarray(risk, dtype=float).ravel()
-    n = r.size
-    if n == 0:
-        return np.zeros(0, dtype=bool)
-    keep = max(int(min_n), int(np.ceil(float(q) * n)))
-    keep = min(keep, n)
-    out = np.zeros(n, dtype=bool)
-    if keep >= n:
-        out[:] = True
-        return out
-    out[np.argpartition(r, -keep)[-keep:]] = True
-    return out
-
-
 def shift_ratio(e_now, e_prev):
     return float(e_now) / (float(e_prev) + 1e-8)
+
+
+def last_two_sqrt_weights(batch, t, po1):
+    """Last two batches: T=0 w=1, T=1 w=√po_risk0, mean 1."""
+    batch = np.asarray(batch, dtype=int)
+    tr = (batch == int(t) - 1) | (batch == int(t))
+    treated = (batch[tr] == int(t)).astype(float)
+    po = np.ones(int(tr.sum()), dtype=float)
+    po[treated > 0.5] = np.asarray(po1, dtype=float).ravel()
+    w = po_iptw_weights(po, mode="sqrt", treated=treated)
+    return tr, w
 
 
 def run_rfperm_stream(
     stream: Stream,
     *,
     gate=1.5,
-    localize=False,
-    q=0.30,
     learner="rf",
     seed=0,
 ):
-    """Gated online-RF √po_risk0. ``localize`` trains on the PO tail only."""
+    """Gated √po_risk0 reweighting on the last two batches."""
     task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
     y = np.asarray(stream.y).ravel()
@@ -155,21 +146,10 @@ def run_rfperm_stream(
             ratio = shift_ratio(e_now, e_prev)
             po_b = max(float(e_now) - float(e_prev), 0.0)
         po0 = po_risk0_rows(probe, X[t1], y[t1], batch_po=po_b, task=task)
+        tr = (batch == (t - 1)) | (batch == t)
+        w_tr = None
         if fired:
-            if localize:
-                tail = po_tail_mask(po0, q=q)
-                tr = np.zeros(t1.shape[0], dtype=bool)
-                tr[np.flatnonzero(t1)[tail]] = True
-                if str(task) == "acc" and np.unique(y[tr]).size < 2:
-                    # one-class tail: keep the hop (drop old batch) but don't subset
-                    tr = t1
-                w_tr = None
-            else:
-                tr = t1
-                w_tr = po_iptw_weights(po0, mode="sqrt")
-        else:
-            tr = (batch == (t - 1)) | (batch == t)
-            w_tr = None
+            tr, w_tr = last_two_sqrt_weights(batch, t, po0)
         pred = fit_predict(
             X[tr], y[tr], X[te], w=w_tr, learner=learner, seed=int(seed) + t, task=task
         )
@@ -185,18 +165,16 @@ def run_rfperm_stream(
                 "mean_r1": float(e_now),
                 "n_train": int(tr.sum()),
                 "n_test": int(te.sum()),
-                "q_tail": float(q),
-                "localize": bool(localize),
+                "mean_w": 1.0 if w_tr is None else float(np.mean(w_tr)),
             }
         )
         e_prev = e_now
-    tag = "local" if localize else "rfperm"
     return _pack_stream(
         history,
-        assign=tag,
+        assign="rfperm",
         gate=gate,
         always=False,
-        mode=tag,
+        mode="sqrt",
         learner=learner,
         metric=task,
     )

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Uniform vs gated online-RF √po_risk0 (next-batch MSE).
+"""Uniform vs gated online-RF √po_risk0 reweighting (next-batch MSE).
 
-Uniform on the last two batches is the default. √PO / localization
-only fire when consecutive OOS probe error jumps (distribution shift),
-not every hop.
+Uniform on the last two batches is the default. √PO IPTW only
+fires when consecutive OOS probe error jumps (distribution shift).
 
   PYTHONPATH=. python3 scripts/run_po_refit_gated.py
 """
@@ -37,7 +36,6 @@ SCENES = (
 BOARD_METHODS = (
     "uniform_pair",
     "rfperm",
-    "local",
     "resid",
     "oracle",
 )
@@ -56,10 +54,7 @@ def run_scene(name, spec, seeds, n_batches, n_per, p, gate, learner):
         kw = dict(learner=learner, seed=seed)
         methods = {
             "uniform_pair": run_uniform_last_two(stream, **kw),
-            "rfperm": run_rfperm_stream(stream, gate=gate, localize=False, **kw),
-            "local": run_rfperm_stream(
-                stream, gate=gate, localize=True, q=0.30, **kw
-            ),
+            "rfperm": run_rfperm_stream(stream, gate=gate, **kw),
             "resid": run_resid_stream(stream, gate=2.0, po_on_fire=False, **kw),
             "oracle": run_oracle_switch(stream, **kw),
         }
@@ -122,8 +117,8 @@ def _fmt_board(learner, scenes):
     lines = [
         f"### `{learner}`",
         "",
-        "| scene | uniform_pair | rfperm | local | resid | oracle |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| scene | uniform_pair | rfperm | resid | oracle |",
+        "|---|---:|---:|---:|---:|",
     ]
     for scene, cell in scenes.items():
         m = cell["methods"]
@@ -132,12 +127,11 @@ def _fmt_board(learner, scenes):
             return m[k]["mse_mean"]
 
         lines.append(
-            "| `%s` | %.3f | %.3f | %.3f | %.3f | %.3f |"
+            "| `%s` | %.3f | %.3f | %.3f | %.3f |"
             % (
                 scene,
                 mse("uniform_pair"),
                 mse("rfperm"),
-                mse("local"),
                 mse("resid"),
                 mse("oracle"),
             )
@@ -146,17 +140,16 @@ def _fmt_board(learner, scenes):
         "",
         f"Fire rates (`{learner}`):",
         "",
-        "| scene | rfperm | local | resid |",
-        "|---|---:|---:|---:|",
+        "| scene | rfperm | resid |",
+        "|---|---:|---:|",
     ]
     for scene, cell in scenes.items():
         m = cell["methods"]
         lines.append(
-            "| `%s` | %.2f | %.2f | %.2f |"
+            "| `%s` | %.2f | %.2f |"
             % (
                 scene,
                 m["rfperm"]["fire_mean"],
-                m["local"]["fire_mean"],
                 m["resid"]["fire_mean"],
             )
         )
@@ -168,8 +161,8 @@ def _fmt_board(learner, scenes):
                 "",
                 f"Concept hop path (`{learner}`, cut at `B_4`):",
                 "",
-                "| t (train) | test | uniform_pair | rfperm | local | resid | oracle |",
-                "|---|---|---:|---:|---:|---:|---:|",
+                "| t (train) | test | uniform_pair | rfperm | resid | oracle |",
+                "|---|---|---:|---:|---:|---:|",
             ]
             for t in hops:
                 test = f"B_{t + 1}"
@@ -179,14 +172,13 @@ def _fmt_board(learner, scenes):
                     return m[method]["by_t"][str(t)]
 
                 lines.append(
-                    "| %d | `%s`%s | %.3f | %.3f | %.3f | %.3f | %.3f |"
+                    "| %d | `%s`%s | %.3f | %.3f | %.3f | %.3f |"
                     % (
                         t,
                         test,
                         mark,
                         at("uniform_pair"),
                         at("rfperm"),
-                        at("local"),
                         at("resid"),
                         at("oracle"),
                     )
@@ -197,7 +189,7 @@ def _fmt_board(learner, scenes):
 
 def write_md(summary, gate, learners, path):
     lines = [
-        "# Gated online-RF √po_risk0 vs PO-tail localization",
+        "# Gated online-RF √po_risk0 reweighting",
         "",
         "Probe is the shallow IPTW RF (`n_estimators=20`, `max_depth=4`)",
         "on 上一批 as T=0. Instance `po_risk0` is `|Y−μ0(X)|` mixed with the",
@@ -211,12 +203,12 @@ def write_md(summary, gate, learners, path):
         "`e1>e0` would fire every hop on trees — do not use it.",
         "",
         "- **uniform_pair**: last two batches, w=1 (default).",
-        "- **rfperm**: on fire, train current batch with `w=√po_risk0`.",
-        "- **local**: same gate; train the high-`po_risk0` tail (`q=0.3`).",
-        "- **resid**: consecutive residual hop-gate (full learner MSE).",
+        "- **rfperm**: same rows; on fire, T=0 stays 1 and T=1 gets",
+        "  `w=√po_risk0` (mean 1).",
+        "- **resid**: drop the old batch when consecutive residual MSE jumps.",
         "- **oracle**: knows the concept cut (train-set upper bound).",
         "",
-        "Always-on DRE / always-on √PO are off this board.",
+        "Always-on DRE / always-on √PO / PO-tail subset are off this board.",
         "",
         "## Board (next-batch MSE)",
         "",
@@ -224,11 +216,10 @@ def write_md(summary, gate, learners, path):
     for learner in learners:
         lines.extend(_fmt_board(learner, summary[learner]))
     lines += [
-        "- **similar / covariate**: `P(Y|X)` stable → uniform; rfperm/local",
+        "- **similar / covariate**: `P(Y|X)` stable → uniform; rfperm",
         "  should stay quiet.",
-        "- **concept**: fire at the cut hop, then drop the old batch.",
-        "- **local** vs **rfperm**: same gate; localization keeps the high-PO",
-        "  tail instead of IPTW on the whole new batch.",
+        "- **concept**: fire at the cut hop and reweight the new batch.",
+        "  Dropping the stale batch (resid) is a different lever.",
         "",
     ]
     path = Path(path)
@@ -239,7 +230,7 @@ def write_md(summary, gate, learners, path):
 
 def write_tex(summary, gate, learners, path):
     lines = [
-        r"% Gated online-RF sqrt(po_risk0) vs PO-tail localization.",
+        r"% Gated online-RF sqrt(po_risk0) reweighting.",
     ]
     for learner in learners:
         lines += [
@@ -250,19 +241,18 @@ def write_tex(summary, gate, learners, path):
             r"\label{tab:po-refit-%s}" % learner,
             r"\small",
             r"\setlength{\tabcolsep}{3.5pt}",
-            r"\begin{tabular}{@{}lccccc@{}}\toprule",
-            r"Scene & unif-pair & rfperm & local & resid & oracle \\",
+            r"\begin{tabular}{@{}lcccc@{}}\toprule",
+            r"Scene & unif-pair & rfperm & resid & oracle \\",
             r"\midrule",
         ]
         for scene, cell in summary[learner].items():
             m = cell["methods"]
             lines.append(
-                r"%s & $%.3f$ & $%.3f$ & $%.3f$ & $%.3f$ & $%.3f$ \\"
+                r"%s & $%.3f$ & $%.3f$ & $%.3f$ & $%.3f$ \\"
                 % (
                     scene,
                     m["uniform_pair"]["mse_mean"],
                     m["rfperm"]["mse_mean"],
-                    m["local"]["mse_mean"],
                     m["resid"]["mse_mean"],
                     m["oracle"]["mse_mean"],
                 )

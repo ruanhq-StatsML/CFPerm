@@ -1,11 +1,11 @@
-"""Gated online-RF √po_risk0 and PO-tail localization."""
+"""Gated online-RF √po_risk0 reweighting."""
 from __future__ import annotations
 
 import numpy as np
 
 from agod.online_rfperm import (
     hop_fires,
-    po_tail_mask,
+    last_two_sqrt_weights,
     run_rfperm_stream,
 )
 from agod.po_iptw import po_iptw_weights
@@ -26,11 +26,16 @@ def test_sqrt_po_weights_mean_one():
     assert np.all(w > 0)
 
 
-def test_po_tail_keeps_high_risk_fraction():
-    r = np.arange(100, dtype=float)
-    mask = po_tail_mask(r, q=0.30, min_n=8)
-    assert int(mask.sum()) == 30
-    assert set(np.flatnonzero(mask).tolist()) == set(range(70, 100))
+def test_last_two_reweight_keeps_control_near_one():
+    batch = np.repeat([0, 1, 2], 10)
+    rng = np.random.default_rng(1)
+    po1 = rng.uniform(0.2, 5.0, size=10)
+    tr, w = last_two_sqrt_weights(batch, 2, po1)
+    assert int(tr.sum()) == 20
+    assert abs(float(w.mean()) - 1.0) < 0.08
+    treated = batch[tr] == 2
+    # T=0 stays flatter; T=1 carries the √PO shape
+    assert float(w[treated].std()) >= float(w[~treated].std())
 
 
 def test_similar_stream_rfperm_rarely_fires():
@@ -38,7 +43,6 @@ def test_similar_stream_rfperm_rarely_fires():
     rec = run_rfperm_stream(stream, gate=1.5)
     uni = run_uniform_last_two(stream)
     assert rec["fire_rate"] <= 0.25
-    # quiet: last-two uniform, same rows as rfperm
     assert abs(uni["online_mse"] - rec["online_mse"]) < 1e-9
 
 
@@ -56,6 +60,20 @@ def test_concept_stream_rfperm_fires_at_cut():
     assert fired[3] is True
     hop3 = next(h for h in jmp["history"] if h["t"] == 3)
     assert hop3["mean_r1"] > hop3["mean_r0"] * 1.5
+    assert abs(hop3["mean_w"] - 1.0) < 0.08
+
+
+def test_reweight_keeps_last_two_rows_when_fired():
+    jumped = make_batch_stream(
+        n_batches=6, n_per=80, p=8, seed=4, cov=0.0, concept_at=3, concept=1.0
+    )
+    rec = run_rfperm_stream(jumped, gate=1.5)
+    uni = run_uniform_last_two(jumped)
+    for h, g in zip(rec["history"], uni["history"]):
+        assert h["n_train"] == g["n_train"]
+    fired = [h for h in rec["history"] if h["fired"]]
+    assert fired
+    assert all(abs(h["mean_w"] - 1.0) < 0.08 for h in fired)
 
 
 def test_fit_predict_single_class_does_not_crash():
@@ -68,20 +86,3 @@ def test_fit_predict_single_class_does_not_crash():
         pred = fit_predict(X, y, X[:5], learner=kind, seed=0, task="acc")
         assert pred.shape == (5,)
         assert np.all(pred == 1)
-
-
-def test_local_tail_trains_fewer_rows_when_fired():
-    jumped = make_batch_stream(
-        n_batches=6, n_per=80, p=8, seed=4, cov=0.0, concept_at=3, concept=1.0
-    )
-    full = run_rfperm_stream(jumped, gate=1.5, localize=False)
-    loc = run_rfperm_stream(jumped, gate=1.5, localize=True, q=0.30)
-    assert loc["fire_rate"] == full["fire_rate"]
-    fired_hops = [h for h, g in zip(loc["history"], full["history"]) if h["fired"]]
-    assert fired_hops
-    for h, g in zip(loc["history"], full["history"]):
-        if not h["fired"]:
-            assert h["n_train"] == g["n_train"]
-        else:
-            assert h["n_train"] < g["n_train"]
-            assert h["n_train"] <= int(np.ceil(0.30 * g["n_train"])) + 1
