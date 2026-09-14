@@ -53,6 +53,51 @@ gap $\delta=\max(e_{\mathrm{now}}-e_{\mathrm{prev}},0)$ at mix $0.5$:
 \end{equation}
 This is a \emph{per-row} map, not a batch scalar.
 
+\paragraph{Why PO-risk is significant only when OOD is large.}
+Let $\mu_t^\star(x)=\mathbb{E}_t[Y\mid X=x]$ be the new regression and
+$\mu_0$ the probe fit on 上一批. Under squared loss the OOS risk
+splits exactly into irreducible noise plus the regression gap
+\begin{equation}
+  \mathbb{E}_t\bigl[(Y-\mu_0(X))^2\bigr]
+    \;=\;
+    \underbrace{\mathbb{E}_t\bigl[(Y-\mu_t^\star(X))^2\bigr]}_{\sigma_t^2}
+    \;+\;
+    \underbrace{\mathbb{E}_t\bigl[(\mu_t^\star(X)-\mu_0(X))^2\bigr]}_{\Delta_t^2}.
+  \label{eq:po-excess}
+\end{equation}
+The MAE / $1-p$ probe we use is a robust surrogate of the same split.
+Quiet consecutive batches have $\Delta_t\approx 0$, so
+$e_{\mathrm{now}}/e_{\mathrm{prev}}\approx 1$ and instance
+$r_i$ is just noise. A large $P(Y\mid X)$ hop makes $\Delta_t$ first
+order: the gate ratio is
+\begin{equation}
+  \frac{e_{\mathrm{now}}}{e_{\mathrm{prev}}}
+    \;\approx\;
+    1 + \frac{\Delta_t^2}{\sigma^2},
+\end{equation}
+which crosses $\gamma$ only when the concept OOD is large relative to
+noise. Pointwise, $\mathbb{E}[r_i\mid X_i]\approx \sigma+| \mu_t^\star-\mu_0|(X_i)$,
+so
+\begin{equation}
+  \sqrt{\texttt{po\_risk0}_i}
+    \;\approx\;
+    \begin{cases}
+      \sigma, & \Delta_t \ll \sigma \quad\text{(weights collapse to uniform after mean-1)},\\[2pt]
+      \bigl|\mu_t^\star(X_i)-\mu_0(X_i)\bigr|, & \Delta_t \gg \sigma \quad\text{(weights track where the map flipped)}.
+    \end{cases}
+\end{equation}
+Two scales move together, both $\propto\Delta_t$. The batch gap
+$\delta$ inflates every $T{=}1$ weight relative to $T{=}0$; the residual
+$r_i$ ranks \emph{within} $T{=}1$. That is why PO-risk is a wash on
+similar / covariate hops (fire $0.00$--$0.04$) and pays on a concept
+cut (fire $0.17$; next-batch MSE $2.15\to 1.56$ on the hop after $B_4$).
+Density ratio $p(x)$ cannot see~\eqref{eq:po-excess}: covariate OOD
+leaves $\Delta_t=0$. A \emph{global} map flip makes
+$|\mu_t^\star-\mu_0|$ nearly constant on $T{=}1$, so $\sqrt{\mathrm{PO}}$
+is almost a constant tilt; dropping the old batch is then the harder,
+better lever. Reweighting is the right soft lever when OOD is large
+\emph{and} heterogeneous in $x$.
+
 \paragraph{Weights.}
 Quiet hops stay uniform. On fire, keep the same last-two rows;
 $T=0$ stays at $1$ and $T=1$ is upweighted by $\sqrt{\mathrm{PO}}$:

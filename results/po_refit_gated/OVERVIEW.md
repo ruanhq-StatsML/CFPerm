@@ -56,6 +56,21 @@ size 200 that is ~60 rows and it loses to both levers.
 The next-batch model is RF / XGBoost (not Ridge). Score is always
 the **next** batch.
 
+## Why PO-risk is significant when OOD is large
+
+Squared loss splits OOS risk into noise plus the regression gap
+\(\Delta_t^2=\mathbb{E}_t[(\mu_t^\star-\mu_0)^2]\). The gate ratio is
+\(\approx 1+\Delta_t^2/\sigma^2\), so it fires only when the
+\(P(Y\mid X)\) hop is large relative to noise. Instance
+\(\sqrt{\texttt{po\_risk0}}\approx\sigma\) when \(\Delta_t\) is small
+(mean-1 weights collapse to uniform) and
+\(\approx|\mu_t^\star-\mu_0|(X)\) when \(\Delta_t\) is large (weights
+track where the map flipped). The batch gap \(\delta\) tilts \(T=1\)
+versus \(T=0\); \(r_i\) ranks within \(T=1\). That is the similar /
+covariate wash versus the concept-cut gain. DRE cannot see \(\Delta_t\).
+A global map flip makes \(\sqrt{\mathrm{PO}}\) almost constant on
+\(T=1\); drop-old is then the harder lever.
+
 ## Annealing
 
 The ratio is a one-shot heat. After a fire, \(e_{\mathrm{prev}}\)
