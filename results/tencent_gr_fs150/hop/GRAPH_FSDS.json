@@ -1,0 +1,280 @@
+{
+  "n": 12564,
+  "p": 18,
+  "pos_rate": 0.1132601082457816,
+  "w1_rate": 0.4996816300541229,
+  "rf_domain_auc": 0.7808276759860816,
+  "po_risk": 0.00017483464653684447,
+  "family_n": {
+    "funnel_order": 5,
+    "funnel_user": 5,
+    "graph": 8
+  },
+  "po_mass": {
+    "funnel_order": 0.1610458186504277,
+    "funnel_user": 0.5414586590237809,
+    "graph": 0.2974955223247914
+  },
+  "rf_mass": {
+    "funnel_order": 0.16213182265810433,
+    "funnel_user": 0.6618297917680177,
+    "graph": 0.17603838557287782
+  },
+  "logo": {
+    "funnel_order": {
+      "R_minus": 0.00013883774571866222,
+      "delta": 3.5996900818182254e-05
+    },
+    "funnel_user": {
+      "R_minus": 0.0004249980966049491,
+      "delta": -0.0002501634500681046
+    },
+    "graph": {
+      "R_minus": 0.00015244760125584912,
+      "delta": 2.2387045280995358e-05
+    }
+  },
+  "logo_share": {
+    "funnel_order": 0.6165547655939367,
+    "funnel_user": 0.0,
+    "graph": 0.38344521727806746
+  },
+  "ranked_po": [
+    {
+      "rank": 1,
+      "name": "dec_hl7d_dec_clk",
+      "hop": "funnel_user",
+      "po_vimp": 0.17060515983913851,
+      "rf_vimp": 0.16852084093046954
+    },
+    {
+      "rank": 2,
+      "name": "life_ctr",
+      "hop": "funnel_user",
+      "po_vimp": 0.12309888974367009,
+      "rf_vimp": 0.06968214912014456
+    },
+    {
+      "rank": 3,
+      "name": "n_prior_cnv",
+      "hop": "funnel_order",
+      "po_vimp": 0.10625452043484865,
+      "rf_vimp": 0.10931034909279902
+    },
+    {
+      "rank": 4,
+      "name": "g_m_clust",
+      "hop": "graph",
+      "po_vimp": 0.09204747627864869,
+      "rf_vimp": 0.004822577491229055
+    },
+    {
+      "rank": 5,
+      "name": "life_cnv_share",
+      "hop": "funnel_user",
+      "po_vimp": 0.09073451094133275,
+      "rf_vimp": 0.3350097934302531
+    },
+    {
+      "rank": 6,
+      "name": "sess_bounce_rate",
+      "hop": "funnel_user",
+      "po_vimp": 0.08572828064337876,
+      "rf_vimp": 0.07815448911940409
+    },
+    {
+      "rank": 7,
+      "name": "post_clk_same_sess_rate",
+      "hop": "funnel_user",
+      "po_vimp": 0.07129181785680216,
+      "rf_vimp": 0.010462519168408329
+    },
+    {
+      "rank": 8,
+      "name": "g_m_pr",
+      "hop": "graph",
+      "po_vimp": 0.05832317455953172,
+      "rf_vimp": 0.006258866904663231
+    },
+    {
+      "rank": 9,
+      "name": "g_m_user_deg",
+      "hop": "graph",
+      "po_vimp": 0.039824077961233884,
+      "rf_vimp": 0.005268909947501241
+    },
+    {
+      "rank": 10,
+      "name": "g_m_proj_deg",
+      "hop": "graph",
+      "po_vimp": 0.03145065886152684,
+      "rf_vimp": 0.0032069119869828286
+    },
+    {
+      "rank": 11,
+      "name": "n_clk_before_1d",
+      "hop": "funnel_order",
+      "po_vimp": 0.02979865388324397,
+      "rf_vimp": 0.03794476405229223
+    },
+    {
+      "rank": 12,
+      "name": "g_i_user_deg",
+      "hop": "graph",
+      "po_vimp": 0.029082314151667805,
+      "rf_vimp": 0.004045763371373265
+    },
+    {
+      "rank": 13,
+      "name": "g_u_item_deg",
+      "hop": "graph",
+      "po_vimp": 0.022571555092735934,
+      "rf_vimp": 0.07732004147841852
+    },
+    {
+      "rank": 14,
+      "name": "g_u_merch_deg",
+      "hop": "graph",
+      "po_vimp": 0.02150397671435822,
+      "rf_vimp": 0.07511531439288574
+    },
+    {
+      "rank": 15,
+      "name": "log1p_price",
+      "hop": "funnel_order",
+      "po_vimp": 0.0131982990799606,
+      "rf_vimp": 0.011482097377502581
+    },
+    {
+      "rank": 16,
+      "name": "sess_clk_before",
+      "hop": "funnel_order",
+      "po_vimp": 0.0069854946320518935,
+      "rf_vimp": 0.00046393461519596377
+    },
+    {
+      "rank": 17,
+      "name": "empty_any",
+      "hop": "funnel_order",
+      "po_vimp": 0.004808850620483663,
+      "rf_vimp": 0.0029306775204766726
+    },
+    {
+      "rank": 18,
+      "name": "g_i_coclick_deg",
+      "hop": "graph",
+      "po_vimp": 0.00269228870538584,
+      "rf_vimp": 0.0
+    }
+  ],
+  "loco": [
+    {
+      "name": "n_prior_cnv",
+      "hop": "funnel_order",
+      "impurity": 0.10625452043484865,
+      "loco_dR": 3.382469289539523e-05
+    },
+    {
+      "name": "life_ctr",
+      "hop": "funnel_user",
+      "impurity": 0.12309888974367009,
+      "loco_dR": 3.0382111728969956e-05
+    },
+    {
+      "name": "log1p_price",
+      "hop": "funnel_order",
+      "impurity": 0.0131982990799606,
+      "loco_dR": 2.206326597378611e-05
+    },
+    {
+      "name": "g_m_clust",
+      "hop": "graph",
+      "impurity": 0.09204747627864869,
+      "loco_dR": 2.1928315353872814e-05
+    },
+    {
+      "name": "g_m_pr",
+      "hop": "graph",
+      "impurity": 0.05832317455953172,
+      "loco_dR": 2.0842285446861407e-05
+    },
+    {
+      "name": "sess_clk_before",
+      "hop": "funnel_order",
+      "impurity": 0.0069854946320518935,
+      "loco_dR": 2.0631661159417917e-05
+    },
+    {
+      "name": "g_u_item_deg",
+      "hop": "graph",
+      "impurity": 0.022571555092735934,
+      "loco_dR": 2.0050908464754595e-05
+    },
+    {
+      "name": "n_clk_before_1d",
+      "hop": "funnel_order",
+      "impurity": 0.02979865388324397,
+      "loco_dR": 1.9591664907723318e-05
+    },
+    {
+      "name": "post_clk_same_sess_rate",
+      "hop": "funnel_user",
+      "impurity": 0.07129181785680216,
+      "loco_dR": 1.785751371271343e-05
+    },
+    {
+      "name": "g_i_user_deg",
+      "hop": "graph",
+      "impurity": 0.029082314151667805,
+      "loco_dR": 1.740579051045339e-05
+    },
+    {
+      "name": "g_u_merch_deg",
+      "hop": "graph",
+      "impurity": 0.02150397671435822,
+      "loco_dR": 1.4634029234851e-05
+    },
+    {
+      "name": "g_m_proj_deg",
+      "hop": "graph",
+      "impurity": 0.03145065886152684,
+      "loco_dR": 1.2316474752265179e-05
+    },
+    {
+      "name": "empty_any",
+      "hop": "funnel_order",
+      "impurity": 0.004808850620483663,
+      "loco_dR": 1.208608828303509e-05
+    },
+    {
+      "name": "g_m_user_deg",
+      "hop": "graph",
+      "impurity": 0.039824077961233884,
+      "loco_dR": 1.02048376849415e-05
+    },
+    {
+      "name": "sess_bounce_rate",
+      "hop": "funnel_user",
+      "impurity": 0.08572828064337876,
+      "loco_dR": 3.3807988029216883e-06
+    },
+    {
+      "name": "g_i_coclick_deg",
+      "hop": "graph",
+      "impurity": 0.00269228870538584,
+      "loco_dR": -4.988972850103929e-06
+    },
+    {
+      "name": "life_cnv_share",
+      "hop": "funnel_user",
+      "impurity": 0.09073451094133275,
+      "loco_dR": -6.62158291018065e-05
+    },
+    {
+      "name": "dec_hl7d_dec_clk",
+      "hop": "funnel_user",
+      "impurity": 0.17060515983913851,
+      "loco_dR": -0.0001084122919941378
+    }
+  ]
+}
