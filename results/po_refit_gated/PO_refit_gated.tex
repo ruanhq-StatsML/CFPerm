@@ -1,51 +1,34 @@
-% Rolling PO-learner refit. Auto-generated. RF / XGB / MLP, not Ridge.
+% Gated online-RF sqrt(po_risk0) vs PO-tail localization.
 \begin{table}[ht]\centering
 \caption{Next-batch MSE with \texttt{rf}. Uniform default.
-Residual gate uses CV MSE on the previous batch. $\gamma_{\mathrm{PO}}=1.25$.}
+RFPerm fires on consecutive OOS probe jump $(\gamma=1.50)$.}
 \label{tab:po-refit-rf}
 \small
 \setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lcccc@{}}\toprule
-Scene & unif-pair & resid & resid+PO & oracle \\
+\begin{tabular}{@{}lccccc@{}}\toprule
+Scene & unif-pair & rfperm & local & resid & oracle \\
 \midrule
-similar & $0.582$ & $0.540$ & $0.540$ & $0.540$ \\
-covariate & $0.762$ & $0.888$ & $0.958$ & $0.728$ \\
-concept & $1.593$ & $1.332$ & $1.324$ & $1.379$ \\
-mixed & $1.916$ & $1.701$ & $1.709$ & $1.765$ \\
+similar & $0.540$ & $0.540$ & $0.540$ & $0.540$ & $0.540$ \\
+covariate & $0.728$ & $0.845$ & $1.087$ & $0.852$ & $0.728$ \\
+concept & $1.565$ & $1.331$ & $1.542$ & $1.332$ & $1.379$ \\
+mixed & $1.889$ & $1.672$ & $2.126$ & $1.657$ & $1.765$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[ht]\centering
 \caption{Next-batch MSE with \texttt{xgb}. Uniform default.
-Residual gate uses CV MSE on the previous batch. $\gamma_{\mathrm{PO}}=1.25$.}
+RFPerm fires on consecutive OOS probe jump $(\gamma=1.50)$.}
 \label{tab:po-refit-xgb}
 \small
 \setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lcccc@{}}\toprule
-Scene & unif-pair & resid & resid+PO & oracle \\
+\begin{tabular}{@{}lccccc@{}}\toprule
+Scene & unif-pair & rfperm & local & resid & oracle \\
 \midrule
-similar & $0.426$ & $0.396$ & $0.396$ & $0.396$ \\
-covariate & $0.545$ & $0.614$ & $0.622$ & $0.511$ \\
-concept & $1.669$ & $1.339$ & $1.342$ & $1.394$ \\
-mixed & $1.998$ & $1.697$ & $1.671$ & $1.749$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[ht]\centering
-\caption{Next-batch MSE with \texttt{mlp}. Uniform default.
-Residual gate uses CV MSE on the previous batch. $\gamma_{\mathrm{PO}}=1.25$.}
-\label{tab:po-refit-mlp}
-\small
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}lcccc@{}}\toprule
-Scene & unif-pair & resid & resid+PO & oracle \\
-\midrule
-similar & $0.448$ & $0.426$ & $0.426$ & $0.426$ \\
-covariate & $0.773$ & $1.096$ & $1.142$ & $0.674$ \\
-concept & $2.119$ & $1.611$ & $1.620$ & $1.694$ \\
-mixed & $2.521$ & $2.157$ & $2.208$ & $2.241$ \\
+similar & $0.396$ & $0.396$ & $0.396$ & $0.396$ & $0.396$ \\
+covariate & $0.511$ & $0.565$ & $0.897$ & $0.557$ & $0.511$ \\
+concept & $1.639$ & $1.339$ & $1.551$ & $1.339$ & $1.394$ \\
+mixed & $1.957$ & $1.648$ & $1.849$ & $1.661$ & $1.749$ \\
 \bottomrule
 \end{tabular}
 \end{table}

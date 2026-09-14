@@ -105,6 +105,14 @@ def write_md(rows, path, *, n_per, gate):
         "rfperm/local; RMSE/Acc then shows whether adapting helped the",
         "**next** batch.",
         "",
+        "On these clocks last-two uniform is the default. rfperm stays",
+        "quiet on airlines / interstate / readmit. When it does fire",
+        "(Beijing PM2.5, occupancy, electricity) √PO and the PO-tail",
+        "usually do **not** beat uniform — `q=0.3` of 200 rows is a thin",
+        "train set. resid dropping the stale batch helps interstate a",
+        "little. Synth concept still needs the gate: that is the setting",
+        "where `w=√po_risk0` pays off.",
+        "",
     ]
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,37 +1,52 @@
-# Real-data consecutive-batch PO-refit (no K-fold)
+# Real consecutive-batch PO-risk adaptation
 
-Each hop trains on the latest consecutive batches and scores the
-**next** batch. Residual gate (no K-fold):
+Batch size **200**, row order is the stream clock (no shuffle,
+no K-fold). Gate γ=1.5: fire only when consecutive OOS probe
+error jumps. Always-on DRE / always-on √PO are off this board.
 
-`ρ = err(fit B_{t-1} → B_t) / err(fit B_{t-2} → B_{t-1})`
+- **uniform_pair**: last two batches, w=1.
+- **rfperm**: on fire, current batch with `w=√po_risk0`.
+- **local**: same gate; high-`po_risk0` tail (`q=0.3`).
+- **resid**: residual hop-gate (full learner MSE) as a reference.
 
-Streams are time- or space-ordered: Metro Interstate traffic,
-NYC green taxi, California latitude, diabetes readmission
-source→target. Continuous tasks report **RMSE** (↓); discrete report **Acc** (↑).
+Continuous tasks report **RMSE** (↓); discrete report **Acc** (↑).
 
 ## `rf`
 
-| dataset | task | n_batches | uniform_pair | gated_pair | switch | resid | resid_po | uniform_hop | dre_hop | fire_resid |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `interstate` | RMSE | 12 | 742.5653 | 753.6823 | 749.8380 | 748.6585 | 794.8598 | 831.6054 | 919.6351 | 0.20 |
-| `nyc_taxi` | RMSE | 12 | 3.0610 | 3.4956 | 2.9863 | 2.9796 | 6.4155 | 3.0234 | 3.1062 | 0.10 |
-| `diabetes_readmit` | acc | 12 | 0.6590 | 0.6590 | 0.6520 | 0.6520 | 0.6520 | 0.6550 | 0.6550 | 0.00 |
-| `california` | RMSE | 12 | 0.8222 | 0.8362 | 0.8307 | 0.8328 | 0.8557 | 0.8523 | 0.9210 | 0.10 |
-| `diabetes` | RMSE | 8 | 62.3650 | 63.6214 | 64.1201 | 62.3974 | 62.3974 | 65.0094 | 72.6396 | 0.00 |
-| `wine_red` | RMSE | 7 | 0.7196 | 0.7196 | 0.7108 | 0.7159 | 0.7159 | 0.7354 | 0.7703 | 0.00 |
+| dataset | clock | task | n_batches | uniform_pair | rfperm | local | resid | fire_rfperm | fire_resid |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `interstate` | time | RMSE | 24 | 714.8018 | 714.8018 | 714.8018 | 698.0895 | 0.00 | 0.14 |
+| `nyc_taxi` | time | RMSE | 24 | 2.5859 | 2.6070 | 2.6157 | 2.5836 | 0.05 | 0.09 |
+| `electricity` | time | acc | 24 | 0.8036 | 0.8007 | 0.7680 | 0.8014 | 0.23 | 0.14 |
+| `airlines` | time | acc | 24 | 0.6727 | 0.6727 | 0.6727 | 0.6727 | 0.00 | 0.00 |
+| `bike_hour` | time | RMSE | 24 | 57.0618 | 57.4091 | 68.5804 | 57.8255 | 0.05 | 0.18 |
+| `beijing_pm25` | time | RMSE | 24 | 78.5127 | 85.6038 | 93.6690 | 81.1645 | 0.14 | 0.27 |
+| `occupancy` | time | acc | 24 | 0.8589 | 0.8316 | 0.8586 | 0.8586 | 0.27 | 0.27 |
+| `diabetes_readmit` | shift | acc | 24 | 0.6382 | 0.6382 | 0.6382 | 0.6382 | 0.00 | 0.00 |
+| `california` | spatial | RMSE | 24 | 0.6929 | 0.7002 | 0.7001 | 0.6973 | 0.05 | 0.09 |
 
 ## `xgb`
 
-| dataset | task | n_batches | uniform_pair | gated_pair | switch | resid | resid_po | uniform_hop | dre_hop | fire_resid |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `interstate` | RMSE | 12 | 714.8927 | 727.5632 | 791.4930 | 729.3593 | 727.2737 | 875.4076 | 837.0926 | 0.20 |
-| `nyc_taxi` | RMSE | 12 | 3.1940 | 3.9710 | 3.4359 | 3.4343 | 3.5016 | 3.3324 | 3.8698 | 0.20 |
-| `diabetes_readmit` | acc | 12 | 0.6430 | 0.6430 | 0.6460 | 0.6460 | 0.6460 | 0.6245 | 0.6215 | 0.00 |
-| `california` | RMSE | 12 | 0.7666 | 0.7673 | 0.7871 | 0.7579 | 0.7579 | 0.8307 | 0.8459 | 0.00 |
-| `diabetes` | RMSE | 8 | 69.4372 | 69.5872 | 70.8420 | 68.9944 | 68.9944 | 72.4591 | 74.2521 | 0.00 |
-| `wine_red` | RMSE | 7 | 0.7441 | 0.7537 | 0.7620 | 0.7413 | 0.7413 | 0.7759 | 0.7612 | 0.00 |
+| dataset | clock | task | n_batches | uniform_pair | rfperm | local | resid | fire_rfperm | fire_resid |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `interstate` | time | RMSE | 24 | 683.0381 | 683.0381 | 683.0381 | 677.2343 | 0.00 | 0.14 |
+| `nyc_taxi` | time | RMSE | 24 | 2.7259 | 2.7135 | 2.7104 | 2.8246 | 0.05 | 0.09 |
+| `electricity` | time | acc | 24 | 0.8100 | 0.8145 | 0.7941 | 0.8068 | 0.23 | 0.18 |
+| `airlines` | time | acc | 24 | 0.6482 | 0.6482 | 0.6482 | 0.6482 | 0.00 | 0.00 |
+| `bike_hour` | time | RMSE | 24 | 49.2405 | 49.5605 | 57.8814 | 50.7515 | 0.05 | 0.18 |
+| `beijing_pm25` | time | RMSE | 24 | 76.6374 | 82.3031 | 100.2405 | 82.7780 | 0.14 | 0.27 |
+| `occupancy` | time | acc | 24 | 0.8432 | 0.8148 | 0.8509 | 0.8509 | 0.27 | 0.23 |
+| `diabetes_readmit` | shift | acc | 24 | 0.6273 | 0.6273 | 0.6273 | 0.6273 | 0.00 | 0.00 |
+| `california` | spatial | RMSE | 24 | 0.6500 | 0.6603 | 0.7003 | 0.6486 | 0.05 | 0.05 |
 
-- **resid** drops the old batch only when the consecutive hop error jumps.
-- **resid_po** = resid train-set + √PO on the new batch.
-- **gated_pair / switch** use PO-ratio, which misses a global label map flip.
-- No K-fold; no shuffle. Row order is the stream clock.
+Quiet streams should match uniform. A real P(Y|X) hop should fire
+rfperm/local; RMSE/Acc then shows whether adapting helped the
+**next** batch.
+
+On these clocks last-two uniform is the default. rfperm stays
+quiet on airlines / interstate / readmit. When it does fire
+(Beijing PM2.5, occupancy, electricity) √PO and the PO-tail
+usually do **not** beat uniform — `q=0.3` of 200 rows is a thin
+train set. resid dropping the stale batch helps interstate a
+little. Synth concept still needs the gate: that is the setting
+where `w=√po_risk0` pays off.
