@@ -302,10 +302,11 @@ def report(all_ds: dict) -> str:
         lines.append(f"| `{ds}` | {sp} | {pk} |")
     lines += [
         "",
-        "### Note",
+        "### Takeaway",
         "",
-        "This is **hard-reweight** after the RFPerm gate — not image-OOD detection.",
-        "Image-OOD stays with Mahalanobis / gradient / RF-binary.",
+        "1. Obs-level PO **ranks hard rows well** (Spearman ≈ 0.5–0.8 on reject batches).",
+        "2. IPTW→next-MSE is delicate — prefer soft ∛PO; prop overshoots; uniform often wins MSE.",
+        "3. Hard-reweight after RFPerm — **not** an image-OOD detector.",
         "",
         "See `docs/agod/AGOD_obs_po_weights.md`.",
         "",
