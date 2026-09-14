@@ -2,6 +2,8 @@
 
 Overview: `docs/agod/AGOD_overview.md` (anneal to uniform;
 reweight only on a consecutive OOS jump).
+LaTeX: `docs/agod/AGOD_po_refit_gated_tables_only.tex`,
+`docs/agod/AGOD_performance_tables.tex`.
 
 Probe is the shallow IPTW RF (`n_estimators=20`, `max_depth=4`)
 on 上一批 as T=0. Instance `po_risk0` is `|Y−μ0(X)|` mixed with the

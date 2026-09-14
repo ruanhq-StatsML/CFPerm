@@ -50,3 +50,4 @@ hop = rec["history"][k]
 Drop-old (`run_resid_stream`) is a different, harder lever for a
 one-shot concept cut. Boards: `AGOD_overview.md`,
 `AGOD_po_refit_gated.md`, `AGOD_po_refit_real.md`.
+LaTeX: `AGOD_performance_tables.tex`.

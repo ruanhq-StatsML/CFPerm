@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 
 from agod.online_rfperm import run_online_rfperm
+from agod.performance_tex import write_all_tex, write_synth_tex
 from agod.po_refit import (
     make_batch_stream,
     run_oracle_switch,
@@ -195,6 +196,8 @@ def write_md(summary, gate, learners, path):
         "",
         "Overview: `docs/agod/AGOD_overview.md` (anneal to uniform;",
         "reweight only on a consecutive OOS jump).",
+        "LaTeX: `docs/agod/AGOD_po_refit_gated_tables_only.tex`,",
+        "`docs/agod/AGOD_performance_tables.tex`.",
         "",
         "Probe is the shallow IPTW RF (`n_estimators=20`, `max_depth=4`)",
         "on 上一批 as T=0. Instance `po_risk0` is `|Y−μ0(X)|` mixed with the",
@@ -233,40 +236,7 @@ def write_md(summary, gate, learners, path):
     return path
 
 
-def write_tex(summary, gate, learners, path):
-    lines = [
-        r"% Gated online-RF sqrt(po_risk0) reweighting.",
-    ]
-    for learner in learners:
-        lines += [
-            r"\begin{table}[ht]\centering",
-            r"\caption{Next-batch MSE with \texttt{%s}. Uniform default." % learner,
-            r"RFPerm fires on consecutive OOS probe jump "
-            r"$(\gamma=%.2f)$.}" % gate,
-            r"\label{tab:po-refit-%s}" % learner,
-            r"\small",
-            r"\setlength{\tabcolsep}{3.5pt}",
-            r"\begin{tabular}{@{}lcccc@{}}\toprule",
-            r"Scene & unif-pair & rfperm & resid & oracle \\",
-            r"\midrule",
-        ]
-        for scene, cell in summary[learner].items():
-            m = cell["methods"]
-            lines.append(
-                r"%s & $%.3f$ & $%.3f$ & $%.3f$ & $%.3f$ \\"
-                % (
-                    scene,
-                    m["uniform_pair"]["mse_mean"],
-                    m["rfperm"]["mse_mean"],
-                    m["resid"]["mse_mean"],
-                    m["oracle"]["mse_mean"],
-                )
-            )
-        lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}", ""])
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines), encoding="utf-8")
-    return path
+write_tex = write_synth_tex
 
 
 def main():
@@ -315,6 +285,15 @@ def main():
     write_md(summary, args.gate, learners, DOCS / "AGOD_po_refit_gated.md")
     write_tex(summary, args.gate, learners, OUT / "PO_refit_gated.tex")
     write_tex(summary, args.gate, learners, DOCS / "AGOD_po_refit_gated_tables_only.tex")
+    real_json = ROOT / "results" / "po_refit_real" / "summary.json"
+    if real_json.is_file():
+        real = json.loads(real_json.read_text(encoding="utf-8"))
+        write_all_tex(
+            payload,
+            real,
+            DOCS / "AGOD_performance_tables.tex",
+        )
+        write_all_tex(payload, real, OUT / "AGOD_performance_tables.tex")
     print(json.dumps(summary, indent=2))
 
 

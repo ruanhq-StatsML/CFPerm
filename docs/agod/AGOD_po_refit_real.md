@@ -1,6 +1,8 @@
 # Real consecutive-batch PO-risk adaptation
 
 Overview: `docs/agod/AGOD_overview.md`.
+LaTeX: `docs/agod/AGOD_po_refit_real_tables.tex`,
+`docs/agod/AGOD_performance_tables.tex`.
 
 Batch size **200**, row order is the stream clock (no shuffle,
 no K-fold). Gate γ=1.5: fire only when consecutive OOS probe

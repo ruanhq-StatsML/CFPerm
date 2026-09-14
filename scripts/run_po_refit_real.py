@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 
 from agod.online_rfperm import run_online_rfperm
+from agod.performance_tex import write_all_tex, write_real_tex
 from agod.po_refit import run_resid_stream, run_uniform_last_two
 from agod.real_data import iter_real_streams
 
@@ -45,6 +46,8 @@ def write_md(rows, path, *, n_per, gate):
         "# Real consecutive-batch PO-risk adaptation",
         "",
         "Overview: `docs/agod/AGOD_overview.md`.",
+        "LaTeX: `docs/agod/AGOD_po_refit_real_tables.tex`,",
+        "`docs/agod/AGOD_performance_tables.tex`.",
         "",
         f"Batch size **{n_per}**, row order is the stream clock (no shuffle,",
         f"no K-fold). Gate γ={gate}: fire only when consecutive OOS probe",
@@ -211,6 +214,23 @@ def main():
         n_per=args.n_per,
         gate=args.gate,
     )
+    write_real_tex(
+        rows,
+        args.gate,
+        args.n_per,
+        OUT / "PO_refit_real.tex",
+    )
+    write_real_tex(
+        rows,
+        args.gate,
+        args.n_per,
+        DOCS / "AGOD_po_refit_real_tables.tex",
+    )
+    gated_json = ROOT / "results" / "po_refit_gated" / "summary.json"
+    if gated_json.is_file():
+        gated = json.loads(gated_json.read_text(encoding="utf-8"))
+        write_all_tex(gated, payload, DOCS / "AGOD_performance_tables.tex")
+        write_all_tex(gated, payload, OUT / "AGOD_performance_tables.tex")
     print("wrote", OUT)
 
 

@@ -137,5 +137,6 @@ PYTHONPATH=. python3 scripts/run_po_refit_real.py --n-per 200 --learners rf,xgb
 ```
 
 Overview: `docs/agod/AGOD_overview.md`. Method card:
-`docs/agod/AGOD_online_rfperm.md`.
+`docs/agod/AGOD_online_rfperm.md`. LaTeX tables:
+`docs/agod/AGOD_performance_tables.tex`.
 
