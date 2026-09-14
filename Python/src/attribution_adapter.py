@@ -207,14 +207,21 @@ def _linear_mse_grad(clf, X, y):
     return np.concatenate([np.asarray(g_coef, dtype=float).ravel(), [g_int]])
 
 
-def dga_alignments(clf, X, y, batch, domains, spe_domain, align="dot"):
+def dga_alignments(clf, X, y, batch, domains, spe_domain, align="dot", spe_mask=None):
     """Per-domain gradient alignment a_i = ⟨∇ℓ(θ, D_i), ∇ℓ(θ, D_spe)⟩.
 
     ``align='cosine'`` uses cosine of the two gradients (scale-stable surrogate
     still in the DGA/DoGE family). ``align='dot'`` is the paper inner product.
+    Optional ``spe_mask`` (bool, same length as ``batch``) replaces the whole
+    specialized domain — used by PO-risk tail localization of D_spe.
     """
     batch = np.asarray(batch, dtype=int)
-    is_spe = batch == int(spe_domain)
+    if spe_mask is None:
+        is_spe = batch == int(spe_domain)
+    else:
+        is_spe = np.asarray(spe_mask, dtype=bool).reshape(-1)
+        if is_spe.shape[0] != batch.shape[0]:
+            raise ValueError("spe_mask length must match batch")
     if not np.any(is_spe):
         return np.zeros(len(domains), dtype=float)
     g_spe = _linear_mse_grad(clf, X[is_spe], y[is_spe])
@@ -592,6 +599,10 @@ def run_adapter_method(stream, method, seed=SEED, **kw):
         return run_hop_ridge(stream)
     if method == "dga_ridge":
         return run_dga_ridge(stream)
+    if method == "dga_po_ridge":
+        from dga_po_localize import run_dga_po_localize
+
+        return run_dga_po_localize(stream)
     if method == "attr_adapter":
         return run_attr_adapter(stream)
     if method == "river_pa":

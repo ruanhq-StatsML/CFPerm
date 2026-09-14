@@ -1,0 +1,76 @@
+% PO-risk post-hoc subset localization for DGA hop weights.
+% Ranking / description only --- not a new loss, not a CFPerm p-value.
+
+\paragraph{Two questions, one hop.}
+DGA (Fan--Grangier--Ablin 2024) mixes generic domains so that one training
+step most reduces $L_{\mathrm{spe}}$.
+That is a \emph{training} weight.
+Post-hoc subset localization (the CFPerm README step) asks a different
+question: which pocket of $X$ is driving the discrepancy.
+Do not treat $\alpha_i$ as a shift-driver ranking --- high alignment means
+\emph{transferable} mass, not the changed subset.
+
+\paragraph{PO-risk localizes $D_{\mathrm{spe}}$, then DGA aligns to the pocket.}
+The default specialized set $D_{\mathrm{spe}}=B_{t-1}$ dilutes the specialized
+gradient whenever only a subgroup of the last batch moved.
+On hop $t$ (causal: only $B_0,\ldots,B_{t-1}$), treat batch membership as
+$T=\mathbf{1}\{B_{t-1}\}$ and form the DR pseudo-outcome
+\begin{equation}
+  \varphi
+  =
+  (\mu_1-\mu_0)
+  +
+  \frac{(T-\pi)(Y-\mu_T)}{\pi(1-\pi)},
+\end{equation}
+with $\pi$ the observed batch share and $\mu_w$ a Ridge outcome.
+Instance PO-risk is the DR contrast $r_i=\varphi_i^2$ (not
+$(\varphi_i-\hat\tau(X_i))^2$: after a global $\hat\tau$ fits, leftover CATE
+residual anti-localizes the pocket).
+The localized specialized set is the high-PO tail inside $B_{t-1}$,
+\[
+  D_{\mathrm{spe}}^{\mathrm{loc}}
+  =
+  \{i\in B_{t-1}: r_i \ge q_{1-q}(r|_{B_{t-1}})\},
+\]
+default $q=0.3$.
+DGA then uses $a_i=\langle\nabla\ell(\theta,D_i),\nabla\ell(\theta,D_{\mathrm{spe}}^{\mathrm{loc}})\rangle$
+and the same mirror-descent / EMA simplex as \texttt{dga\_ridge}.
+No new loss: Ridge sample weights remain $w_{\mathrm{row}}=\alpha_{\mathrm{batch(row)}}$.
+
+\paragraph{Subgroup analysis = mean-diff discretization.}
+Inside $B_{t-1}$, compare the PO tail to its complement.
+For each coordinate $j$,
+\[
+  \Delta_j
+  =
+  \bar x_j^{\mathrm{high\text{-}PO}}
+  -
+  \bar x_j^{\mathrm{low\text{-}PO}},
+\]
+with Cohen's $d$ for scale.
+Top-$k$ features are split at the midpoint of the two means; the conjunction
+$\{X_{j_1}\gtrless c_1\}\cap\cdots\cap\{X_{j_k}\gtrless c_k\}$ is the
+localized slice --- the same post-hoc subgroup device as the CFPerm
+README (mean difference between groups for discretization).
+Unique CS / CD attribution remains impossible; the slice is a proxy for
+where to look, not a decomposition.
+
+\paragraph{How to read DGA $\alpha$ after localization.}
+Join per-domain mean PO-risk with $a_i$ / $\alpha_i$:
+\begin{itemize}
+  \item high $a_i$, low mean PO: stable mass that still helps the pocket
+        (mix it);
+  \item high $a_i$, high mean PO: large but \emph{same-direction} residual
+        (mix with care --- the pocket and this domain share a gradient);
+  \item low / negative $a_i$, high mean PO: conflicting domain
+        (do not mix; this is the ``would raise $L_{\mathrm{spe}}$'' set).
+\end{itemize}
+TSS $(\hat c,\hat\delta)$ still gates bank vs Ridge.
+PO-risk does not replace hop cosine IW on Amazon; it localizes $D_{\mathrm{spe}}$
+when the last batch is mixed.
+
+\paragraph{What not to do.}
+Do not multiply $\alpha_{\mathrm{batch}}\times\sqrt{\mathrm{PO}}_i$ as a default
+actuator --- raw PO-prop overfit the current window on the IPTW board.
+Do not claim a $p$-value from this ranking.
+Do not treat high-$\alpha$ domains as the shift drivers.

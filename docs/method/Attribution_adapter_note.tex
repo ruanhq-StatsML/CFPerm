@@ -22,6 +22,16 @@ the density-ratio surrogate on category means).
 On Amazon Reviews 2023 this hop-weighted ridge is the strongest online MSE
 cut we measure against plateau RidgeSGD and the Wu instance bank.
 
+\emph{PO-risk localizes $D_{\mathrm{spe}}$ before DGA (post-hoc subset).}
+When only a subgroup of $B_{t-1}$ moved, the whole-batch specialized
+gradient is diluted.
+Instance PO-risk $r_i=\varphi_i^2$ ranks rows in
+$B_{t-1}$; DGA then aligns to the high-PO tail, and feature mean-diff
+/ midpoint splits describe the pocket
+(\texttt{docs/method/DGA\_po\_subset\_note.tex}, \texttt{dga\_po\_ridge}).
+This is the README subgroup step, not a new loss and not a $p$-value.
+High DGA $\alpha$ is transferable mass, not the shift driver.
+
 \emph{DGA when density-ratio IW is the weak link.}
 Fan--Grangier--Ablin (2024) \emph{Dynamic Gradient Alignment} replaces the
 $p_{\mathrm{te}}/p_{\mathrm{tr}}$ (or embedding-IS) weight by a mirror-descent

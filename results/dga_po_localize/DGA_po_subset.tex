@@ -1,0 +1,24 @@
+% DGA + PO-risk subset localization. Auto-generated planted stream.
+\begin{table}[ht]\centering
+\caption{PO-risk tail localizes $D_{\mathrm{spe}}=B_{t-1}$, then DGA aligns to that
+pocket. Post-hoc subgroup analysis is the mean-diff / Cohen's $d$ ranking inside
+$B_{t-1}$ (high-PO vs complement), discretized at midpoints. Planted synthetic
+stream; not an Amazon MSE claim.}
+\label{tab:dga-po-subset}
+\small
+\begin{tabular}{@{}lcc@{}}\toprule
+Feature & Cohen's $d$ & planted \\
+\midrule
+X0 & $1.00$ & yes \\
+X2 & $0.84$ & yes \\
+X1 & $0.66$ & yes \\
+X7 & $0.38$ & no \\
+X10 & $0.24$ & no \\
+\midrule
+PO-tail precision vs plant & \multicolumn{2}{c}{$0.73$} \\
+PO-tail recall vs plant & \multicolumn{2}{c}{$0.65$} \\
+top-$k$ planted-coord recall & \multicolumn{2}{c}{$1.00$} \\
+online MSE (\texttt{dga\_po\_ridge}) & \multicolumn{2}{c}{$2.103$} \\
+\bottomrule
+\end{tabular}
+\end{table}
