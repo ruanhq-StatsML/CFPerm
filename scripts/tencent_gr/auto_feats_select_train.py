@@ -662,8 +662,13 @@ def pad_or_trim(df: pd.DataFrame, target_dim: int, exclude: Sequence[str]) -> pd
         keep = list(var.index[:target_dim])
         return df[list(exclude) + keep]
     if len(feat_cols) < target_dim:
-        for i in range(target_dim - len(feat_cols)):
-            df[f"pad_zero_{i}"] = 0.0
+        n_pad = target_dim - len(feat_cols)
+        pad = pd.DataFrame(
+            0.0,
+            index=df.index,
+            columns=[f"pad_zero_{i}" for i in range(n_pad)],
+        )
+        df = pd.concat([df, pad], axis=1)
     return df
 
 
@@ -827,7 +832,12 @@ def main() -> None:
         for c in ("user_id", "_seq_t_end", "_label_future_cnv", "_label_pay_user", "life_ctcvr")
         if c in df.columns
     ]
-    sel_cols = keep_extra + [c for c in selected_names if c in df.columns]
+    sel_cols = []
+    seen = set()
+    for c in keep_extra + selected_names:
+        if c in df.columns and c not in seen:
+            seen.add(c)
+            sel_cols.append(c)
     df[sel_cols].to_parquet(args.out / "user_feats_selected.parquet", index=False)
     df[["user_id"] + feat_cols_use[: min(200, len(feat_cols_use))]].to_parquet(
         args.out / "user_feats_preview.parquet", index=False
