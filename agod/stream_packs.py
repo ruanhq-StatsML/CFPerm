@@ -228,6 +228,8 @@ LOADERS: Dict[str, Callable[..., Optional[ArrayPack]]] = {
     "stocks_SPY": _stocks("SPY"),
     "stocks_QQQ": _stocks("QQQ"),
     "stocks_AAPL": _stocks("AAPL"),
+    "stocks_MSFT": _stocks("MSFT"),
+    "stocks_IWM": _stocks("IWM"),
     "waymo_proxy": load_waymo_proxy,
     "affec": load_affec,
 }
