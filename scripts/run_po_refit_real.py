@@ -16,7 +16,7 @@ import argparse
 import json
 from pathlib import Path
 
-from agod.online_rfperm import run_rfperm_stream
+from agod.online_rfperm import run_online_rfperm
 from agod.po_refit import run_resid_stream, run_uniform_last_two
 from agod.real_data import iter_real_streams
 
@@ -35,7 +35,7 @@ def run_one(stream, learner, gate, seed):
     kw = dict(learner=learner, seed=seed)
     return {
         "uniform_pair": run_uniform_last_two(stream, **kw),
-        "rfperm": run_rfperm_stream(stream, gate=gate, **kw),
+        "rfperm": run_online_rfperm(stream, gate=gate, **kw),
         "resid": run_resid_stream(stream, gate=2.0, po_on_fire=False, **kw),
     }
 

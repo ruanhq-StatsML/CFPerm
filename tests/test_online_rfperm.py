@@ -1,4 +1,4 @@
-"""Gated online-RF √po_risk0 reweighting."""
+"""Gated online RFPerm + PO-risk."""
 from __future__ import annotations
 
 import numpy as np
@@ -10,6 +10,13 @@ from agod.online_rfperm import (
 )
 from agod.po_iptw import po_iptw_weights
 from agod.po_refit import make_batch_stream, run_uniform_last_two
+
+
+def test_online_rfperm_is_the_stream_entry():
+    from agod import run_online_rfperm
+    from agod.online_rfperm import run_rfperm_stream
+
+    assert run_online_rfperm is run_rfperm_stream
 
 
 def test_hop_fires_skips_first_and_needs_jump():

@@ -1,13 +1,16 @@
 # Gated PO-risk reweighting — overview
 
-Always-on √PO IPTW and always-on DRE lose to last-two uniform on
-quiet and real consecutive streams. The method that matches that
-fact is **periodic annealing**: stay uniform, heat only when the
-consecutive OOS probe jumps, then cool back.
+**The method is online RFPerm + PO-risk.** The probe is the shallow
+online RF on 上一批 (\(T=0\)); the score is instance `po_risk0`;
+the weight is \(w=\sqrt{\texttt{po\_risk0}}\) on \(T=1\). Always-on
+√PO IPTW and always-on DRE lose to last-two uniform on quiet and
+real consecutive streams. Matching that fact: **periodic annealing**
+— stay uniform, heat only when the consecutive OOS probe jumps,
+then cool back.
 
 This note is the overview. Numbered boards live in
 `AGOD_po_refit_gated.md` (synth) and `AGOD_po_refit_real.md`
-(batch-200 clocks). Code: `agod/online_rfperm.py`.
+(batch-200 clocks). Code: `agod.online_rfperm.run_online_rfperm`.
 
 ## What we ship
 

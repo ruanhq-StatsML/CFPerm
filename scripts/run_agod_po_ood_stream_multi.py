@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Streaming real-data: PO-risk as OOD score (√PO) vs logistic DRE.
+"""Streaming real-data ablation: always-on √PO vs DRE.
 
-batch_size=100, preserve gradual order, no synth.
+The AGOD **method** is gated online RFPerm + PO-risk
+(``agod.run_online_rfperm`` / ``scripts/run_po_refit_real.py``).
+This script is the always-on ablation (every batch IPTW) — it loses
+to last-two uniform on quiet clocks.
 
   PYTHONPATH=. python3 scripts/run_agod_po_ood_stream_multi.py \\
     --batch-size 100 --n-batches 20

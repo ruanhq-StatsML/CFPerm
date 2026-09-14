@@ -1,8 +1,9 @@
-"""AGOD lightweight package init (PO-IPTW + rolling PO-learner refit)."""
+"""AGOD: online RFPerm + PO-risk (gated √PO IPTW)."""
 
 from agod.online_rfperm import (
     fit_online_probe,
     hop_fires,
+    run_online_rfperm,
     run_rfperm_stream,
     score_probe,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "po_iptw_weights",
     "refit_po_weights",
     "run_adaptive_stream",
+    "run_online_rfperm",
     "run_oracle_switch",
     "run_resid_stream",
     "run_refit_stream",

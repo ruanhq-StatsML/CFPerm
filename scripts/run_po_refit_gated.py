@@ -14,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
-from agod.online_rfperm import run_rfperm_stream
+from agod.online_rfperm import run_online_rfperm
 from agod.po_refit import (
     make_batch_stream,
     run_oracle_switch,
@@ -54,7 +54,7 @@ def run_scene(name, spec, seeds, n_batches, n_per, p, gate, learner):
         kw = dict(learner=learner, seed=seed)
         methods = {
             "uniform_pair": run_uniform_last_two(stream, **kw),
-            "rfperm": run_rfperm_stream(stream, gate=gate, **kw),
+            "rfperm": run_online_rfperm(stream, gate=gate, **kw),
             "resid": run_resid_stream(stream, gate=2.0, po_on_fire=False, **kw),
             "oracle": run_oracle_switch(stream, **kw),
         }

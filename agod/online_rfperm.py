@@ -1,19 +1,20 @@
-"""Gated online-RF √po_risk0 reweighting.
+"""Online RFPerm + PO-risk (the AGOD stream method).
 
-IPTW from ``run_agod_po_ood_stream_multi``, except **not** every batch.
-Shallow RF on 上一批 is T=0. Instance
+Probe = the same shallow RF as ``run_agod_po_ood_stream_multi``
+(``n_estimators=20``, ``max_depth=4``) on 上一批 as T=0.
+Score = instance ``po_risk0`` from ``instance_po_risk``.
+Weight = ``w = sqrt(po_risk0)`` on T=1, mean 1.
 
-  po_risk0_i = |Y_i − μ0(X_i)|   (mixed with batch gap, same as IPTW)
-
-Consecutive OOS probe (in-sample e1>e0 would fire every hop on trees):
+Not every batch. Consecutive OOS (in-sample e1>e0 fires every hop
+on trees):
 
   e_now  = err(μ0 fitted on B_{t-1}, scored on B_t)
   e_prev = err(μ0 fitted on B_{t-2}, scored on B_{t-1})
   fire iff e_now / e_prev ≥ γ   (default 1.5; skip the first hop)
 
 Quiet → last two batches, w=1.
-Fire → same rows, reweight: T=0 stays 1, T=1 gets w=√po_risk0
-(mean 1). No subset localization.
+Fire → same rows; T=0 stays 1, T=1 gets √po_risk0.
+Then the next hop cools (anneal). No subset localization.
 """
 from __future__ import annotations
 
@@ -124,7 +125,7 @@ def run_rfperm_stream(
     learner="rf",
     seed=0,
 ):
-    """Gated √po_risk0 reweighting on the last two batches."""
+    """Online RFPerm + PO-risk. Last two batches; √po_risk0 on T=1 iff gated."""
     task = _stream_task(stream)
     X = np.asarray(stream.X, dtype=float)
     y = np.asarray(stream.y).ravel()
@@ -178,3 +179,6 @@ def run_rfperm_stream(
         learner=learner,
         metric=task,
     )
+
+
+run_online_rfperm = run_rfperm_stream
