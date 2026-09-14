@@ -1,5 +1,7 @@
 # Real consecutive-batch PO-risk adaptation
 
+Overview: `docs/agod/AGOD_overview.md`.
+
 Batch size **200**, row order is the stream clock (no shuffle,
 no K-fold). Gate γ=1.5: fire only when consecutive OOS probe
 error jumps. Always-on DRE / always-on √PO are off this board.

@@ -44,6 +44,8 @@ def write_md(rows, path, *, n_per, gate):
     lines = [
         "# Real consecutive-batch PO-risk adaptation",
         "",
+        "Overview: `docs/agod/AGOD_overview.md`.",
+        "",
         f"Batch size **{n_per}**, row order is the stream clock (no shuffle,",
         f"no K-fold). Gate γ={gate}: fire only when consecutive OOS probe",
         "error jumps. Always-on DRE / always-on √PO are off this board.",

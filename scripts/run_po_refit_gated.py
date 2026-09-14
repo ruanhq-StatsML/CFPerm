@@ -191,6 +191,9 @@ def write_md(summary, gate, learners, path):
     lines = [
         "# Gated online-RF √po_risk0 reweighting",
         "",
+        "Overview: `docs/agod/AGOD_overview.md` (anneal to uniform;",
+        "reweight only on a consecutive OOS jump).",
+        "",
         "Probe is the shallow IPTW RF (`n_estimators=20`, `max_depth=4`)",
         "on 上一批 as T=0. Instance `po_risk0` is `|Y−μ0(X)|` mixed with the",
         "batch gap (`instance_po_risk`, mix=0.5). The next-batch model is",
