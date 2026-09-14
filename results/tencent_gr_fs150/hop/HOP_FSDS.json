@@ -1,0 +1,760 @@
+{
+  "hops": "user \u2014 order \u2014 item \u2014 merchant",
+  "n_merch": 400,
+  "merchant": {
+    "n": 400,
+    "p": 18,
+    "pos_rate": 0.0337678264254867,
+    "w1_rate": 0.5,
+    "rf_domain_auc": 0.6387999999999999,
+    "po_risk": 7.813276510197682e-07,
+    "family_n": {
+      "recency": 2,
+      "shop_draw": 2,
+      "structure": 3,
+      "user_hop": 5,
+      "volume": 6
+    },
+    "po_mass": {
+      "recency": 0.0727048451020896,
+      "shop_draw": 0.25257114511191003,
+      "structure": 0.170860215222052,
+      "user_hop": 0.28275369099652503,
+      "volume": 0.2211101035664232
+    },
+    "rf_mass": {
+      "recency": 0.06547090702309703,
+      "shop_draw": 0.09874794224400403,
+      "structure": 0.10954818969107696,
+      "user_hop": 0.2812102369437679,
+      "volume": 0.445022724097054
+    },
+    "logo": {
+      "recency": {
+        "R_minus": 8.600649197375627e-07,
+        "delta": -7.873726871779443e-08
+      },
+      "shop_draw": {
+        "R_minus": 9.559833867614787e-07,
+        "delta": -1.7465573574171048e-07
+      },
+      "structure": {
+        "R_minus": 6.7880213046306e-07,
+        "delta": 1.0252552055670828e-07
+      },
+      "user_hop": {
+        "R_minus": 7.525135926131036e-07,
+        "delta": 2.8814058406664655e-08
+      },
+      "volume": {
+        "R_minus": 6.965483524600213e-07,
+        "delta": 8.477929855974689e-08
+      }
+    },
+    "logo_share": {
+      "recency": 0.0,
+      "shop_draw": 0.0,
+      "structure": 0.4743919056947477,
+      "user_hop": 0.13332442502232225,
+      "volume": 0.3922790422212666
+    },
+    "ranked_po": [
+      {
+        "rank": 1,
+        "name": "m_star",
+        "hop": "shop_draw",
+        "po_vimp": 0.13515300159938184,
+        "rf_vimp": 0.06796970946737083
+      },
+      {
+        "rank": 2,
+        "name": "m_open_days",
+        "hop": "shop_draw",
+        "po_vimp": 0.1174181435127808,
+        "rf_vimp": 0.030778232776731956
+      },
+      {
+        "rank": 3,
+        "name": "m_n_item",
+        "hop": "volume",
+        "po_vimp": 0.10728419390857456,
+        "rf_vimp": 0.16178822572803744
+      },
+      {
+        "rank": 4,
+        "name": "m_user_dec_clk",
+        "hop": "user_hop",
+        "po_vimp": 0.08607138754160634,
+        "rf_vimp": 0.08853539189366103
+      },
+      {
+        "rank": 5,
+        "name": "m_ctr",
+        "hop": "structure",
+        "po_vimp": 0.0677440601516021,
+        "rf_vimp": 0.03558894686086651
+      },
+      {
+        "rank": 6,
+        "name": "m_cnv_share",
+        "hop": "structure",
+        "po_vimp": 0.06719711753639052,
+        "rf_vimp": 0.05812487567261312
+      },
+      {
+        "rank": 7,
+        "name": "m_n_user",
+        "hop": "volume",
+        "po_vimp": 0.06473143119502751,
+        "rf_vimp": 0.1946240373152796
+      },
+      {
+        "rank": 8,
+        "name": "m_user_life_ctr",
+        "hop": "user_hop",
+        "po_vimp": 0.06353563629162888,
+        "rf_vimp": 0.025634709521083064
+      },
+      {
+        "rank": 9,
+        "name": "m_user_bounce",
+        "hop": "user_hop",
+        "po_vimp": 0.053854051361455296,
+        "rf_vimp": 0.054683776128394035
+      },
+      {
+        "rank": 10,
+        "name": "m_dec_cnv",
+        "hop": "recency",
+        "po_vimp": 0.04780263591016055,
+        "rf_vimp": 0.04503528156727411
+      },
+      {
+        "rank": 11,
+        "name": "m_user_same_sess",
+        "hop": "user_hop",
+        "po_vimp": 0.04317782085554161,
+        "rf_vimp": 0.05353506229869457
+      },
+      {
+        "rank": 12,
+        "name": "m_user_life_cnv_share",
+        "hop": "user_hop",
+        "po_vimp": 0.03611479494657574,
+        "rf_vimp": 0.05882129710221644
+      },
+      {
+        "rank": 13,
+        "name": "m_cvr",
+        "hop": "structure",
+        "po_vimp": 0.03591903753423031,
+        "rf_vimp": 0.01583436715770688
+      },
+      {
+        "rank": 14,
+        "name": "m_dec_clk",
+        "hop": "recency",
+        "po_vimp": 0.024902209192001794,
+        "rf_vimp": 0.0204356254558884
+      },
+      {
+        "rank": 15,
+        "name": "m_n_exp",
+        "hop": "volume",
+        "po_vimp": 0.01841316273495708,
+        "rf_vimp": 0.062121786877753236
+      },
+      {
+        "rank": 16,
+        "name": "m_n_cnv",
+        "hop": "volume",
+        "po_vimp": 0.013568126469070107,
+        "rf_vimp": 0.006551569529475611
+      },
+      {
+        "rank": 17,
+        "name": "m_n_order",
+        "hop": "volume",
+        "po_vimp": 0.011733503918620568,
+        "rf_vimp": 0.00613543387436063
+      },
+      {
+        "rank": 18,
+        "name": "m_n_clk",
+        "hop": "volume",
+        "po_vimp": 0.005379685340394542,
+        "rf_vimp": 0.013801670772592558
+      }
+    ],
+    "loco": [
+      {
+        "name": "m_user_same_sess",
+        "hop": "user_hop",
+        "impurity": 0.04317782085554161,
+        "loco_dR": 1.9786956477559256e-07
+      },
+      {
+        "name": "m_open_days",
+        "hop": "shop_draw",
+        "impurity": 0.1174181435127808,
+        "loco_dR": 1.017524604767194e-07
+      },
+      {
+        "name": "m_n_clk",
+        "hop": "volume",
+        "impurity": 0.005379685340394542,
+        "loco_dR": 9.52881181439479e-08
+      },
+      {
+        "name": "m_n_exp",
+        "hop": "volume",
+        "impurity": 0.01841316273495708,
+        "loco_dR": 5.6176859893217636e-08
+      },
+      {
+        "name": "m_cvr",
+        "hop": "structure",
+        "impurity": 0.03591903753423031,
+        "loco_dR": 5.3477437482045385e-08
+      },
+      {
+        "name": "m_n_user",
+        "hop": "volume",
+        "impurity": 0.06473143119502751,
+        "loco_dR": 4.56123045572708e-08
+      },
+      {
+        "name": "m_user_dec_clk",
+        "hop": "user_hop",
+        "impurity": 0.08607138754160634,
+        "loco_dR": 2.8676477207557954e-08
+      },
+      {
+        "name": "m_n_cnv",
+        "hop": "volume",
+        "impurity": 0.013568126469070107,
+        "loco_dR": 2.260965024778664e-08
+      },
+      {
+        "name": "m_dec_clk",
+        "hop": "recency",
+        "impurity": 0.024902209192001794,
+        "loco_dR": 1.9284306810543192e-08
+      },
+      {
+        "name": "m_ctr",
+        "hop": "structure",
+        "impurity": 0.0677440601516021,
+        "loco_dR": 1.805296763248262e-08
+      },
+      {
+        "name": "m_n_order",
+        "hop": "volume",
+        "impurity": 0.011733503918620568,
+        "loco_dR": 8.538456554501602e-09
+      },
+      {
+        "name": "m_star",
+        "hop": "shop_draw",
+        "impurity": 0.13515300159938184,
+        "loco_dR": 8.26365900404774e-09
+      },
+      {
+        "name": "m_n_item",
+        "hop": "volume",
+        "impurity": 0.10728419390857456,
+        "loco_dR": -8.955486299402356e-09
+      },
+      {
+        "name": "m_user_life_ctr",
+        "hop": "user_hop",
+        "impurity": 0.06353563629162888,
+        "loco_dR": -1.3470054811488121e-08
+      },
+      {
+        "name": "m_cnv_share",
+        "hop": "structure",
+        "impurity": 0.06719711753639052,
+        "loco_dR": -2.67907869321509e-08
+      },
+      {
+        "name": "m_user_life_cnv_share",
+        "hop": "user_hop",
+        "impurity": 0.03611479494657574,
+        "loco_dR": -3.640987736792191e-08
+      },
+      {
+        "name": "m_user_bounce",
+        "hop": "user_hop",
+        "impurity": 0.053854051361455296,
+        "loco_dR": -1.7868003371206235e-07
+      },
+      {
+        "name": "m_dec_cnv",
+        "hop": "recency",
+        "impurity": 0.04780263591016055,
+        "loco_dR": -1.9921392352737567e-07
+      }
+    ]
+  },
+  "order": {
+    "n": 12564,
+    "p": 28,
+    "pos_rate": 0.1132601082457816,
+    "w1_rate": 0.4996816300541229,
+    "rf_domain_auc": 0.7625215199686658,
+    "po_risk": 0.00019164648496171007,
+    "family_n": {
+      "merchant": 18,
+      "order": 5,
+      "user": 5
+    },
+    "po_mass": {
+      "merchant": 0.4434756658122192,
+      "order": 0.12038937755897082,
+      "user": 0.43613495662780993
+    },
+    "rf_mass": {
+      "merchant": 0.0789932226095573,
+      "order": 0.2346056014607125,
+      "user": 0.6864011759287302
+    },
+    "logo": {
+      "merchant": {
+        "R_minus": 0.00015007630016245155,
+        "delta": 4.157018479925852e-05
+      },
+      "order": {
+        "R_minus": 0.00021885375056361763,
+        "delta": -2.720726560190756e-05
+      },
+      "user": {
+        "R_minus": 0.00042925129492965623,
+        "delta": -0.00023760480996794616
+      }
+    },
+    "logo_share": {
+      "merchant": 0.999999975944298,
+      "order": 0.0,
+      "user": 0.0
+    },
+    "ranked_po": [
+      {
+        "rank": 1,
+        "name": "dec_hl7d_dec_clk",
+        "hop": "user",
+        "po_vimp": 0.1336825141600634,
+        "rf_vimp": 0.12835528390036516
+      },
+      {
+        "rank": 2,
+        "name": "life_ctr",
+        "hop": "user",
+        "po_vimp": 0.11645823346735706,
+        "rf_vimp": 0.06235523890733861
+      },
+      {
+        "rank": 3,
+        "name": "n_prior_cnv",
+        "hop": "order",
+        "po_vimp": 0.07273432108757358,
+        "rf_vimp": 0.17596338467666942
+      },
+      {
+        "rank": 4,
+        "name": "sess_bounce_rate",
+        "hop": "user",
+        "po_vimp": 0.06713340084493317,
+        "rf_vimp": 0.1258370302813509
+      },
+      {
+        "rank": 5,
+        "name": "life_cnv_share",
+        "hop": "user",
+        "po_vimp": 0.060710833057728175,
+        "rf_vimp": 0.3481075808084516
+      },
+      {
+        "rank": 6,
+        "name": "post_clk_same_sess_rate",
+        "hop": "user",
+        "po_vimp": 0.05814997509816426,
+        "rf_vimp": 0.0217460420319103
+      },
+      {
+        "rank": 7,
+        "name": "m_open_days",
+        "hop": "merchant",
+        "po_vimp": 0.05753691303591264,
+        "rf_vimp": 0.002920716929505854
+      },
+      {
+        "rank": 8,
+        "name": "m_user_life_ctr",
+        "hop": "merchant",
+        "po_vimp": 0.04715534369171613,
+        "rf_vimp": 0.00699862528499962
+      },
+      {
+        "rank": 9,
+        "name": "m_user_dec_clk",
+        "hop": "merchant",
+        "po_vimp": 0.044407531962594324,
+        "rf_vimp": 0.005152918564522076
+      },
+      {
+        "rank": 10,
+        "name": "m_star",
+        "hop": "merchant",
+        "po_vimp": 0.037235617449440865,
+        "rf_vimp": 0.0040768249021354425
+      },
+      {
+        "rank": 11,
+        "name": "m_user_life_cnv_share",
+        "hop": "merchant",
+        "po_vimp": 0.03705289258246765,
+        "rf_vimp": 0.00465520949523337
+      },
+      {
+        "rank": 12,
+        "name": "m_user_bounce",
+        "hop": "merchant",
+        "po_vimp": 0.03344480378318742,
+        "rf_vimp": 0.008657956019265688
+      },
+      {
+        "rank": 13,
+        "name": "m_dec_cnv",
+        "hop": "merchant",
+        "po_vimp": 0.03297494703495698,
+        "rf_vimp": 0.0064934895139485875
+      },
+      {
+        "rank": 14,
+        "name": "m_ctr",
+        "hop": "merchant",
+        "po_vimp": 0.0321150695686865,
+        "rf_vimp": 0.005018084737434586
+      },
+      {
+        "rank": 15,
+        "name": "m_cnv_share",
+        "hop": "merchant",
+        "po_vimp": 0.030091092227285197,
+        "rf_vimp": 0.0043815458927583695
+      },
+      {
+        "rank": 16,
+        "name": "n_clk_before_1d",
+        "hop": "order",
+        "po_vimp": 0.026687819568423986,
+        "rf_vimp": 0.022157211028603203
+      },
+      {
+        "rank": 17,
+        "name": "m_dec_clk",
+        "hop": "merchant",
+        "po_vimp": 0.0168721495905401,
+        "rf_vimp": 0.006145738445170934
+      },
+      {
+        "rank": 18,
+        "name": "m_user_same_sess",
+        "hop": "merchant",
+        "po_vimp": 0.016687306770320376,
+        "rf_vimp": 0.003238403779396487
+      },
+      {
+        "rank": 19,
+        "name": "m_n_exp",
+        "hop": "merchant",
+        "po_vimp": 0.015873010173303136,
+        "rf_vimp": 0.003924151082664256
+      },
+      {
+        "rank": 20,
+        "name": "m_n_user",
+        "hop": "merchant",
+        "po_vimp": 0.01356554511695246,
+        "rf_vimp": 0.0005705218932954871
+      },
+      {
+        "rank": 21,
+        "name": "m_n_item",
+        "hop": "merchant",
+        "po_vimp": 0.010552882540954442,
+        "rf_vimp": 0.0022552108540972175
+      },
+      {
+        "rank": 22,
+        "name": "empty_any",
+        "hop": "order",
+        "po_vimp": 0.008655987008067868,
+        "rf_vimp": 0.0033808991488249287
+      },
+      {
+        "rank": 23,
+        "name": "sess_clk_before",
+        "hop": "order",
+        "po_vimp": 0.007538822710415907,
+        "rf_vimp": 0.0008744323865254779
+      },
+      {
+        "rank": 24,
+        "name": "m_n_cnv",
+        "hop": "merchant",
+        "po_vimp": 0.005838467821856748,
+        "rf_vimp": 0.0027982520903299833
+      },
+      {
+        "rank": 25,
+        "name": "m_n_order",
+        "hop": "merchant",
+        "po_vimp": 0.004805693689260373,
+        "rf_vimp": 0.005516491023424893
+      },
+      {
+        "rank": 26,
+        "name": "log1p_price",
+        "hop": "order",
+        "po_vimp": 0.004772427184609874,
+        "rf_vimp": 0.03222967422032413
+      },
+      {
+        "rank": 27,
+        "name": "m_cvr",
+        "hop": "merchant",
+        "po_vimp": 0.004589726556515359,
+        "rf_vimp": 0.003648284087476005
+      },
+      {
+        "rank": 28,
+        "name": "m_n_clk",
+        "hop": "merchant",
+        "po_vimp": 0.0026766722167120014,
+        "rf_vimp": 0.00254079801397744
+      }
+    ],
+    "loco": [
+      {
+        "name": "n_prior_cnv",
+        "hop": "order",
+        "impurity": 0.07273432108757358,
+        "loco_dR": 3.490445296683363e-05
+      },
+      {
+        "name": "m_n_cnv",
+        "hop": "merchant",
+        "impurity": 0.005838467821856748,
+        "loco_dR": 2.5613404261370785e-05
+      },
+      {
+        "name": "m_user_life_ctr",
+        "hop": "merchant",
+        "impurity": 0.04715534369171613,
+        "loco_dR": 2.523568536771687e-05
+      },
+      {
+        "name": "m_n_order",
+        "hop": "merchant",
+        "impurity": 0.004805693689260373,
+        "loco_dR": 1.9628663330656512e-05
+      },
+      {
+        "name": "m_n_clk",
+        "hop": "merchant",
+        "impurity": 0.0026766722167120014,
+        "loco_dR": 1.856516524905219e-05
+      },
+      {
+        "name": "m_n_user",
+        "hop": "merchant",
+        "impurity": 0.01356554511695246,
+        "loco_dR": 1.7435583339160096e-05
+      },
+      {
+        "name": "empty_any",
+        "hop": "order",
+        "impurity": 0.008655987008067868,
+        "loco_dR": 1.7188166983422707e-05
+      },
+      {
+        "name": "m_user_dec_clk",
+        "hop": "merchant",
+        "impurity": 0.044407531962594324,
+        "loco_dR": 1.5973795315700034e-05
+      },
+      {
+        "name": "life_ctr",
+        "hop": "user",
+        "impurity": 0.11645823346735706,
+        "loco_dR": 1.4804828755257579e-05
+      },
+      {
+        "name": "m_cnv_share",
+        "hop": "merchant",
+        "impurity": 0.030091092227285197,
+        "loco_dR": 1.4100681440435184e-05
+      },
+      {
+        "name": "m_user_life_cnv_share",
+        "hop": "merchant",
+        "impurity": 0.03705289258246765,
+        "loco_dR": 1.116563785759757e-05
+      },
+      {
+        "name": "m_n_exp",
+        "hop": "merchant",
+        "impurity": 0.015873010173303136,
+        "loco_dR": 9.197833236259084e-06
+      },
+      {
+        "name": "m_n_item",
+        "hop": "merchant",
+        "impurity": 0.010552882540954442,
+        "loco_dR": 7.519739976342591e-06
+      },
+      {
+        "name": "m_cvr",
+        "hop": "merchant",
+        "impurity": 0.004589726556515359,
+        "loco_dR": 7.1201031015026225e-06
+      },
+      {
+        "name": "m_dec_clk",
+        "hop": "merchant",
+        "impurity": 0.0168721495905401,
+        "loco_dR": 7.020884178740366e-07
+      },
+      {
+        "name": "m_ctr",
+        "hop": "merchant",
+        "impurity": 0.0321150695686865,
+        "loco_dR": -1.0015896612796966e-09
+      },
+      {
+        "name": "post_clk_same_sess_rate",
+        "hop": "user",
+        "impurity": 0.05814997509816426,
+        "loco_dR": -8.930460682441289e-07
+      },
+      {
+        "name": "m_user_same_sess",
+        "hop": "merchant",
+        "impurity": 0.016687306770320376,
+        "loco_dR": -1.823316165981524e-06
+      },
+      {
+        "name": "m_user_bounce",
+        "hop": "merchant",
+        "impurity": 0.03344480378318742,
+        "loco_dR": -2.5711419803093856e-06
+      },
+      {
+        "name": "m_star",
+        "hop": "merchant",
+        "impurity": 0.037235617449440865,
+        "loco_dR": -3.3158278937102837e-06
+      },
+      {
+        "name": "sess_clk_before",
+        "hop": "order",
+        "impurity": 0.007538822710415907,
+        "loco_dR": -5.10781038857465e-06
+      },
+      {
+        "name": "sess_bounce_rate",
+        "hop": "user",
+        "impurity": 0.06713340084493317,
+        "loco_dR": -6.341204430137788e-06
+      },
+      {
+        "name": "m_dec_cnv",
+        "hop": "merchant",
+        "impurity": 0.03297494703495698,
+        "loco_dR": -1.0839685613132791e-05
+      },
+      {
+        "name": "m_open_days",
+        "hop": "merchant",
+        "impurity": 0.05753691303591264,
+        "loco_dR": -1.2840000628412164e-05
+      },
+      {
+        "name": "log1p_price",
+        "hop": "order",
+        "impurity": 0.004772427184609874,
+        "loco_dR": -2.1444872745288683e-05
+      },
+      {
+        "name": "n_clk_before_1d",
+        "hop": "order",
+        "impurity": 0.026687819568423986,
+        "loco_dR": -3.504983042366527e-05
+      },
+      {
+        "name": "life_cnv_share",
+        "hop": "user",
+        "impurity": 0.060710833057728175,
+        "loco_dR": -8.244214151950836e-05
+      },
+      {
+        "name": "dec_hl7d_dec_clk",
+        "hop": "user",
+        "impurity": 0.1336825141600634,
+        "loco_dR": -0.000138563452847774
+      }
+    ]
+  },
+  "sample_shops": [
+    {
+      "merchant_id": 83,
+      "merchant_name": "Delta Bazaar Market",
+      "m_n_item": 49,
+      "m_n_cnv": 3
+    },
+    {
+      "merchant_id": 278,
+      "merchant_name": "Silver Goods Studio",
+      "m_n_item": 59,
+      "m_n_cnv": 3
+    },
+    {
+      "merchant_id": 192,
+      "merchant_name": "Maple Emporium Co",
+      "m_n_item": 32,
+      "m_n_cnv": 1
+    },
+    {
+      "merchant_id": 269,
+      "merchant_name": "Jade Depot Ltd",
+      "m_n_item": 46,
+      "m_n_cnv": 1
+    },
+    {
+      "merchant_id": 224,
+      "merchant_name": "Ember Imports Co",
+      "m_n_item": 38,
+      "m_n_cnv": 5
+    },
+    {
+      "merchant_id": 13,
+      "merchant_name": "North Outlet Ltd",
+      "m_n_item": 38,
+      "m_n_cnv": 1
+    },
+    {
+      "merchant_id": 264,
+      "merchant_name": "Ember Imports Co",
+      "m_n_item": 43,
+      "m_n_cnv": 0
+    },
+    {
+      "merchant_id": 158,
+      "merchant_name": "Silver Goods Studio",
+      "m_n_item": 43,
+      "m_n_cnv": 2
+    }
+  ]
+}

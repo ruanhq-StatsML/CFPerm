@@ -11,10 +11,15 @@ Event: (item_id, act, ts, price)
 from __future__ import annotations
 
 import math
+import sys
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from onepass_post import onepass_post, user_post  # noqa: E402
 
 EXP, CLK, CNV = 0, 1, 2
 NAME = {0: "exp", 1: "clk", 2: "cnv"}
@@ -47,7 +52,9 @@ def entropy(cnt: Dict[int, int]) -> float:
 
 def onepass(evs: List[Event]) -> Dict[str, float]:
     if not evs:
-        return {"hist_len": 0.0}
+        out = {"hist_len": 0.0}
+        out.update(user_post([]))
+        return out
     evs = sorted(evs, key=lambda e: e[2])
     t_end = evs[-1][2]
 
@@ -219,29 +226,40 @@ def onepass(evs: List[Event]) -> Dict[str, float]:
     feats["x_hist_len__item_entropy_clk"] = hist_len * h_clk
     feats["x_life_ctcvr__pay_cnt"] = life["ctcvr"] * pay_cnt
     feats["log1p_abs_life_ctcvr"] = math.log1p(abs(life["ctcvr"]))
+
+    # 买后：当场续逛 vs 跨场回访（30min 切断）。不在这里做 DFS。
+    post = user_post(onepass_post(evs))
+    feats.update(post)
+    feats["x_life_ctcvr__post_clk_same_sess_rate"] = life["ctcvr"] * post["post_clk_same_sess_rate"]
+    feats["x_life_ctcvr__post_clk_cross_sess_rate"] = life["ctcvr"] * post["post_clk_cross_sess_rate"]
     return feats
 
 
 def _demo() -> None:
-    # 一个用户：看→点→隔很久再买；第二天又看一眼就走（bounce）
     t0 = 1_700_000_000
     evs: List[Event] = [
         (11, EXP, t0, 99.0),
         (11, CLK, t0 + 20, 99.0),
-        (11, CNV, t0 + 3600, 99.0),          # 点完 60min 才买
-        (22, EXP, t0 + 86400 + 10, 50.0),    # 次日另一件，看一眼
+        (11, CNV, t0 + 3600, 99.0),
+        (11, CLK, t0 + 3600 + 600, 99.0),           # 当场续点
+        (22, EXP, t0 + 86400 + 10, 50.0),
+        (22, CLK, t0 + 86400 + 30, 50.0),
+        (22, CNV, t0 + 86400 + 40, 50.0),
+        (99, CLK, t0 + 86400 + 40 + 2 * 3600, 1.0),  # 2h 后跨场回访
+        (0, EXP, t0 + 20 * 86400, None),
     ]
     f = onepass(evs)
     want = [
         "life_cnv_share",
         "sess_bounce_rate",
-        "sess_n",
-        "attr_anyclk2cnv_min_p50",
-        "trans_exp_to_clk",
-        "x_life_ctcvr__sess_bounce_rate",
+        "post_clk_same_sess_rate",
+        "post_clk_cross_sess_rate",
+        "post_n_clk_after_same_sess_mean",
+        "post_n_clk_after_cross_1d_mean",
+        "x_life_ctcvr__post_clk_cross_sess_rate",
     ]
     for k in want:
-        print(f"{k:36s} {f[k]:.4f}")
+        print(f"{k:42s} {f[k]:.4f}")
 
 
 if __name__ == "__main__":
