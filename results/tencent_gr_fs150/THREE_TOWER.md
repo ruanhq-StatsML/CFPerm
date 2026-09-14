@@ -40,6 +40,9 @@ GATE=1: 打开 SKU 塔，整网（或只 fusion+SKU）重训
 
 不要在 14/12866 上硬开闸。同品列继续进 daily mix 监控，占比跳了再开。
 
+**Fusion 的显式版 = User × Ctx 交叉**（`scripts/tencent_gr/cross_feats.py`）。  
+SKU 交叉跟 GATE。不要 `heat × empty`（empty ⇒ 7d 热度=0）。
+
 **和 v1 的关系**
 
 | | v1（已训） | 三塔 |

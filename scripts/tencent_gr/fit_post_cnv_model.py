@@ -9,6 +9,7 @@ SKU 漏斗每天看构成率：占比 <1% 则 SKU 支路关掉（这批 ~0.11%�
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +20,9 @@ from sklearn.metrics import average_precision_score, log_loss, roc_auc_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cross_feats import add_cross  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 POST = ROOT / "results/tencent_gr_fs150/tables/post.parquet"
@@ -40,7 +44,8 @@ ABLATION = [
     ("+any_path", ["heat", "empty", "any_path"]),
     ("+sess", ["heat", "empty", "any_path", "sess"]),
     ("+lag", ["heat", "empty", "any_path", "sess", "lag"]),
-    ("+sku", ["heat", "empty", "any_path", "sess", "lag", "sku"]),
+    ("+cross", ["heat", "empty", "any_path", "sess", "lag", "cross"]),
+    ("+sku", ["heat", "empty", "any_path", "sess", "lag", "cross", "sku"]),
 ]
 
 
@@ -146,7 +151,7 @@ post 转化粒                    daily mix: sku_clk={mix['sku_clk_share']:.4f} 
   │ 7d/1d/1h│ empty_any│ dt_any    │ pos      │ post_clk_1d│ wo_prior_clk    │
   │ n_clk   │ lag_empty│ (+miss)   │ clk_before│ n_prior    │ dt_item/within  │
   └─────────┴──────────┴───────────┴──────────┴────────────┴─────────────────┘
-        | concat
+        | concat + User×Ctx 交叉（SKU 交叉 × GATE）
         +-- LogReg  (scale → 线性)           系数可读
         +-- HGB     (depth=3, 80 iter)       吃 NaN
         +-- MLP     (16 → 8 → 1, ReLU)       浅层非线性
@@ -180,7 +185,7 @@ def write_md(path: Path, mix: dict, sku_on: bool, rows: list, coef: dict) -> Non
             f"| {name} | {lg['auc']:.3f} | {hg['auc']:.3f} | {mp['auc']:.3f} | {hg['ap']:.3f} |"
         )
     if coef:
-        lines += ["", "LogReg 系数（主模型，标准化后）：", "", "| feat | coef |", "|---|---:|"]
+        lines += ["", "LogReg 系数（+cross，标准化后）：", "", "| feat | coef |", "|---|---:|"]
         for k, v in sorted(coef.items(), key=lambda kv: -abs(kv[1]))[:16]:
             lines.append(f"| `{k}` | {v:+.3f} |")
     lines += [
@@ -212,8 +217,10 @@ def main() -> None:
             if name == "+sku":
                 print("skip +sku (gate off)")
             continue
-        cols = [c for b in brs for c in BRANCHES[b]]
+        cols = [c for b in brs if b != "cross" for c in BRANCHES[b]]
         x = prep(sub, cols)
+        if "cross" in brs:
+            x = add_cross(x, sku_on=sku_on and "sku" in brs)
         pack = fit_pack(x.loc[tr], y.loc[tr], x.loc[te], y.loc[te])
         rows.append((name, pack))
         last_coef = pack.get("log_coef") or last_coef
