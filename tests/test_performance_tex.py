@@ -12,6 +12,7 @@ def _synth():
         name: {"mse_mean": mse, "fire_mean": fire, "by_t": dict(hop)}
         for name, mse, fire in (
             ("uniform_pair", 1.5, 0.0),
+            ("dre", 1.48, 1.0),
             ("rfperm", 1.4, 0.17),
             ("resid", 1.3, 0.17),
             ("oracle", 1.35, 1.0),
@@ -35,6 +36,7 @@ def test_synth_tables_have_fire_and_hop_path():
     assert r"\begin{tabular}" in tex
     assert "similar" in tex
     assert "fire" in tex
+    assert r"tab:po-vs-dre-rf" in tex
     assert r"$\leftarrow$ cut" in tex
     assert r"\mathbf{1.300}" in tex or r"\mathbf{1.3}" in tex
 

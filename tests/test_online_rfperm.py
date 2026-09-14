@@ -100,6 +100,23 @@ def test_quiet_observations_have_unit_weights():
         assert np.isfinite(np.asarray(h["po_risk0"], float)).all()
 
 
+def test_dre_last_two_same_rows_and_ignores_concept():
+    from agod.po_refit import run_dre_last_two
+
+    jumped = make_batch_stream(
+        n_batches=6, n_per=80, p=8, seed=4, cov=0.0, concept_at=3, concept=1.0
+    )
+    uni = run_uniform_last_two(jumped)
+    dre = run_dre_last_two(jumped)
+    po = run_rfperm_stream(jumped, gate=1.5)
+    assert dre["n_hops"] == uni["n_hops"]
+    for h, g in zip(dre["history"], uni["history"]):
+        assert h["n_train"] == g["n_train"]
+    # P(X) is unchanged, so DRE cannot systematically beat uniform.
+    assert dre["online_mse"] >= uni["online_mse"] - 0.08
+    assert po["fire_rate"] > 0.0
+
+
 def test_reweight_keeps_last_two_rows_when_fired():
     jumped = make_batch_stream(
         n_batches=6, n_per=80, p=8, seed=4, cov=0.0, concept_at=3, concept=1.0

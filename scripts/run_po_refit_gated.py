@@ -18,6 +18,7 @@ from agod.online_rfperm import run_online_rfperm
 from agod.performance_tex import write_all_tex, write_synth_tex
 from agod.po_refit import (
     make_batch_stream,
+    run_dre_last_two,
     run_oracle_switch,
     run_resid_stream,
     run_uniform_last_two,
@@ -36,6 +37,7 @@ SCENES = (
 
 BOARD_METHODS = (
     "uniform_pair",
+    "dre",
     "rfperm",
     "resid",
     "oracle",
@@ -55,6 +57,7 @@ def run_scene(name, spec, seeds, n_batches, n_per, p, gate, learner):
         kw = dict(learner=learner, seed=seed)
         methods = {
             "uniform_pair": run_uniform_last_two(stream, **kw),
+            "dre": run_dre_last_two(stream, **kw),
             "rfperm": run_online_rfperm(stream, gate=gate, **kw),
             "resid": run_resid_stream(stream, gate=2.0, po_on_fire=False, **kw),
             "oracle": run_oracle_switch(stream, **kw),
@@ -120,8 +123,8 @@ def _fmt_board(learner, scenes):
     lines = [
         f"### `{learner}`",
         "",
-        "| scene | uniform_pair | rfperm | resid | oracle |",
-        "|---|---:|---:|---:|---:|",
+        "| scene | uniform | DRE | rfperm | drop-old | oracle |",
+        "|---|---:|---:|---:|---:|---:|",
     ]
     for scene, cell in scenes.items():
         m = cell["methods"]
@@ -130,10 +133,11 @@ def _fmt_board(learner, scenes):
             return m[k]["mse_mean"]
 
         lines.append(
-            "| `%s` | %.3f | %.3f | %.3f | %.3f |"
+            "| `%s` | %.3f | %.3f | %.3f | %.3f | %.3f |"
             % (
                 scene,
                 mse("uniform_pair"),
+                mse("dre"),
                 mse("rfperm"),
                 mse("resid"),
                 mse("oracle"),
@@ -164,8 +168,8 @@ def _fmt_board(learner, scenes):
                 "",
                 f"Concept hop path (`{learner}`, cut at `B_4`):",
                 "",
-                "| t (train) | test | uniform_pair | rfperm | resid | oracle |",
-                "|---|---|---:|---:|---:|---:|",
+                "| t (train) | test | uniform | DRE | rfperm | drop-old | oracle |",
+                "|---|---|---:|---:|---:|---:|---:|",
             ]
             for t in hops:
                 test = f"B_{t + 1}"
@@ -175,12 +179,13 @@ def _fmt_board(learner, scenes):
                     return m[method]["by_t"][str(t)]
 
                 lines.append(
-                    "| %d | `%s`%s | %.3f | %.3f | %.3f | %.3f |"
+                    "| %d | `%s`%s | %.3f | %.3f | %.3f | %.3f | %.3f |"
                     % (
                         t,
                         test,
                         mark,
                         at("uniform_pair"),
+                        at("dre"),
                         at("rfperm"),
                         at("resid"),
                         at("oracle"),
@@ -211,12 +216,15 @@ def write_md(summary, gate, learners, path):
         "`e1>e0` would fire every hop on trees — do not use it.",
         "",
         "- **uniform_pair**: last two batches, w=1 (default).",
+        "- **dre**: same last-two rows; always-on logistic density-ratio",
+        "  on T=1 vs T=0 (X only).",
         "- **rfperm**: same rows; on fire, T=0 stays 1 and T=1 gets",
         "  `w=√po_risk0` (mean 1).",
         "- **resid**: drop the old batch when consecutive residual MSE jumps.",
         "- **oracle**: knows the concept cut (train-set upper bound).",
         "",
-        "Always-on DRE / always-on √PO / PO-tail subset are off this board.",
+        "Always-on √PO / PO-tail subset are off this board. DRE is the",
+        "p(x) baseline on the *same* last-two rows.",
         "",
         "## Board (next-batch MSE)",
         "",
@@ -225,9 +233,9 @@ def write_md(summary, gate, learners, path):
         lines.extend(_fmt_board(learner, summary[learner]))
     lines += [
         "- **similar / covariate**: `P(Y|X)` stable → uniform; rfperm",
-        "  should stay quiet.",
-        "- **concept**: fire at the cut hop and reweight the new batch.",
-        "  Dropping the stale batch (resid) is a different lever.",
+        "  should stay quiet. DRE reweights p(x) and can hurt covariate.",
+        "- **concept**: P(X) stable, P(Y|X) flips → DRE ≈ uniform;",
+        "  rfperm upweights the new map. Drop-old is the harder lever.",
         "",
     ]
     path = Path(path)

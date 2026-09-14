@@ -36,21 +36,37 @@ def synth_tables(summary, gate, learners):
     lines = [
         r"% Online RFPerm + PO-risk. Next-batch MSE. Uniform default.",
         r"% rfperm = last-two, w=sqrt(po_risk0) on T=1 iff consecutive OOS jump.",
+        r"% dre = last-two, always-on logistic density-ratio on T=1 (X only).",
         r"% resid = drop old batch (hard lever). oracle = knows the concept cut.",
         "",
     ]
     for learner in learners:
+        has_dre = all(
+            "dre" in cell["methods"] for cell in summary[learner].values()
+        )
+        n_cols = "lcccccc" if has_dre else "lccccc"
+        head = (
+            r"Scene & uniform & DRE & rfperm & drop-old & oracle & fire \\"
+            if has_dre
+            else r"Scene & uniform & rfperm & drop-old & oracle & fire \\"
+        )
         lines += [
             r"\begin{table}[ht]\centering",
             r"\caption{Next-batch MSE (\texttt{%s}). Last-two uniform is the" % learner,
-            r"default. \texttt{rfperm}: online RFPerm + PO-risk, fire iff "
-            r"$e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma=%.2f$." % gate,
-            r"\texttt{resid}: drop the old batch. \texttt{oracle}: knows the cut.}",
+            r"default. \texttt{rfperm}: gated $\sqrt{\mathrm{PO}}$ on $T=1$.",
+        ]
+        if has_dre:
+            lines.append(
+                r"\texttt{dre}: always-on density ratio $p(x)$ on the same rows."
+            )
+        lines += [
+            r"\texttt{resid}: drop the old batch. Gate "
+            r"$\gamma=%.2f$.}" % gate,
             r"\label{tab:po-refit-mse-%s}" % learner,
             r"\small",
-            r"\setlength{\tabcolsep}{4pt}",
-            r"\begin{tabular}{@{}lccccc@{}}\toprule",
-            r"Scene & uniform & rfperm & drop-old & oracle & fire \\",
+            r"\setlength{\tabcolsep}{3.5pt}",
+            r"\begin{tabular}{@{}%s@{}}\toprule" % n_cols,
+            head,
             r"\midrule",
         ]
         for scene, cell in summary[learner].items():
@@ -60,33 +76,56 @@ def synth_tables(summary, gate, learners):
                 m["rfperm"]["mse_mean"],
                 m["resid"]["mse_mean"],
             ]
-            lines.append(
-                r"%s & %s & %s & %s & $%.3f$ & $%.2f$ \\"
-                % (
-                    scene,
-                    _bold_min(vals, m["uniform_pair"]["mse_mean"], "%.3f"),
-                    _bold_min(vals, m["rfperm"]["mse_mean"], "%.3f"),
-                    _bold_min(vals, m["resid"]["mse_mean"], "%.3f"),
-                    m["oracle"]["mse_mean"],
-                    m["rfperm"]["fire_mean"],
+            if has_dre:
+                vals.insert(1, m["dre"]["mse_mean"])
+                lines.append(
+                    r"%s & %s & %s & %s & %s & $%.3f$ & $%.2f$ \\"
+                    % (
+                        scene,
+                        _bold_min(vals, m["uniform_pair"]["mse_mean"], "%.3f"),
+                        _bold_min(vals, m["dre"]["mse_mean"], "%.3f"),
+                        _bold_min(vals, m["rfperm"]["mse_mean"], "%.3f"),
+                        _bold_min(vals, m["resid"]["mse_mean"], "%.3f"),
+                        m["oracle"]["mse_mean"],
+                        m["rfperm"]["fire_mean"],
+                    )
                 )
-            )
+            else:
+                lines.append(
+                    r"%s & %s & %s & %s & $%.3f$ & $%.2f$ \\"
+                    % (
+                        scene,
+                        _bold_min(vals, m["uniform_pair"]["mse_mean"], "%.3f"),
+                        _bold_min(vals, m["rfperm"]["mse_mean"], "%.3f"),
+                        _bold_min(vals, m["resid"]["mse_mean"], "%.3f"),
+                        m["oracle"]["mse_mean"],
+                        m["rfperm"]["fire_mean"],
+                    )
+                )
         lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}", ""])
+        if has_dre:
+            lines += _po_vs_dre_table(summary[learner], learner)
         if "concept" not in summary[learner]:
             continue
         m = summary[learner]["concept"]["methods"]
         hops = sorted(int(t) for t in m["uniform_pair"].get("by_t", {}))
         if not hops:
             continue
+        hop_cols = "clccccc" if has_dre else "clcccc"
+        hop_head = (
+            r"$t$ & test & uniform & DRE & rfperm & drop-old & oracle \\"
+            if has_dre
+            else r"$t$ & test & uniform & rfperm & drop-old & oracle \\"
+        )
         lines += [
             r"\begin{table}[ht]\centering",
             r"\caption{Concept hop path (\texttt{%s}), cut at $B_4$." % learner,
             r"Next-batch MSE. The cut hop is unforecastable; annealing pays on the hop after.}",
             r"\label{tab:po-refit-concept-%s}" % learner,
             r"\small",
-            r"\setlength{\tabcolsep}{4pt}",
-            r"\begin{tabular}{@{}clcccc@{}}\toprule",
-            r"$t$ & test & uniform & rfperm & drop-old & oracle \\",
+            r"\setlength{\tabcolsep}{3.5pt}",
+            r"\begin{tabular}{@{}%s@{}}\toprule" % hop_cols,
+            hop_head,
             r"\midrule",
         ]
         for t in hops:
@@ -96,19 +135,72 @@ def synth_tables(summary, gate, learners):
                 m["rfperm"]["by_t"][str(t)],
                 m["resid"]["by_t"][str(t)],
             ]
-            lines.append(
-                r"%d & $B_{%d}$%s & %s & %s & %s & $%.3f$ \\"
-                % (
-                    t,
-                    t + 1,
-                    mark,
-                    _bold_min(row_vals, row_vals[0], "%.3f"),
-                    _bold_min(row_vals, row_vals[1], "%.3f"),
-                    _bold_min(row_vals, row_vals[2], "%.3f"),
-                    m["oracle"]["by_t"][str(t)],
+            if has_dre:
+                dre_t = m["dre"]["by_t"][str(t)]
+                row_vals = [
+                    m["uniform_pair"]["by_t"][str(t)],
+                    dre_t,
+                    m["rfperm"]["by_t"][str(t)],
+                    m["resid"]["by_t"][str(t)],
+                ]
+                lines.append(
+                    r"%d & $B_{%d}$%s & %s & %s & %s & %s & $%.3f$ \\"
+                    % (
+                        t,
+                        t + 1,
+                        mark,
+                        _bold_min(row_vals, row_vals[0], "%.3f"),
+                        _bold_min(row_vals, row_vals[1], "%.3f"),
+                        _bold_min(row_vals, row_vals[2], "%.3f"),
+                        _bold_min(row_vals, row_vals[3], "%.3f"),
+                        m["oracle"]["by_t"][str(t)],
+                    )
                 )
-            )
+            else:
+                lines.append(
+                    r"%d & $B_{%d}$%s & %s & %s & %s & $%.3f$ \\"
+                    % (
+                        t,
+                        t + 1,
+                        mark,
+                        _bold_min(row_vals, row_vals[0], "%.3f"),
+                        _bold_min(row_vals, row_vals[1], "%.3f"),
+                        _bold_min(row_vals, row_vals[2], "%.3f"),
+                        m["oracle"]["by_t"][str(t)],
+                    )
+                )
         lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}", ""])
+    return lines
+
+
+def _po_vs_dre_table(scenes, learner):
+    """Highlight rfperm minus DRE (positive = PO better on MSE)."""
+    lines = [
+        r"\begin{table}[ht]\centering",
+        r"\caption{PO-risk vs density-ratio (\texttt{%s})." % learner,
+        r"Same last-two rows. $\Delta=$ DRE $-$ rfperm (MSE $\downarrow$;",
+        r"positive means $\sqrt{\mathrm{PO}}$ wins). DRE cannot see a",
+        r"$P(Y\mid X)$ hop with stable $P(X)$.}",
+        r"\label{tab:po-vs-dre-%s}" % learner,
+        r"\small",
+        r"\begin{tabular}{@{}lcccc@{}}\toprule",
+        r"Scene & uniform & DRE & rfperm & $\Delta$ vs DRE \\",
+        r"\midrule",
+    ]
+    for scene, cell in scenes.items():
+        m = cell["methods"]
+        u, d, p = (
+            m["uniform_pair"]["mse_mean"],
+            m["dre"]["mse_mean"],
+            m["rfperm"]["mse_mean"],
+        )
+        delta = d - p
+        dlt = r"$\mathbf{%.3f}$" % delta if delta > 1e-3 else r"$%.3f$" % delta
+        lines.append(
+            r"%s & $%.3f$ & $%.3f$ & $%.3f$ & %s \\"
+            % (scene, u, d, p, dlt)
+        )
+    lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}", ""])
     return lines
 
 

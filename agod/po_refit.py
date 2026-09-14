@@ -591,6 +591,57 @@ def run_uniform_last_two(stream: Stream, *, learner="rf", seed=0):
     )
 
 
+def run_dre_last_two(stream: Stream, *, learner="rf", seed=0):
+    """Last-two batches; T=1 gets X-only density-ratio vs T=0. Always on.
+
+    Same rows as uniform / rfperm. The score is $p(x)$, not PO-risk, so a
+    $P(Y\\mid X)$ hop with stable $P(X)$ is invisible.
+    """
+    task = _stream_task(stream)
+    X = np.asarray(stream.X, dtype=float)
+    y = np.asarray(stream.y).ravel()
+    batch = np.asarray(stream.batch, dtype=int)
+    k = int(batch.max()) + 1
+    history = []
+    for t in range(1, k - 1):
+        t0 = batch == (t - 1)
+        t1 = batch == t
+        te = batch == (t + 1)
+        tr = t0 | t1
+        if not np.any(t0) or not np.any(t1) or not np.any(te):
+            continue
+        w_new = dre_weights(X[t0], X[t1], seed=int(seed) + t)
+        w = np.ones(int(tr.sum()), dtype=float)
+        w[batch[tr] == t] = w_new
+        w = w / (float(w.mean()) + 1e-6)
+        pred = fit_predict(
+            X[tr], y[tr], X[te], w=w, learner=learner, seed=int(seed) + t, task=task
+        )
+        mse = hop_score(y[te], pred, task=task)
+        history.append(
+            {
+                "t": int(t),
+                "next_mse": mse,
+                "fired": True,
+                "ratio": float("nan"),
+                "lambda": 1.0,
+                "mean_r0": float("nan"),
+                "mean_r1": float("nan"),
+                "n_train": int(tr.sum()),
+                "n_test": int(te.sum()),
+            }
+        )
+    return _pack_stream(
+        history,
+        assign="pair",
+        gate=0.0,
+        always=True,
+        mode="dre",
+        learner=learner,
+        metric=task,
+    )
+
+
 def run_adaptive_stream(
     stream: Stream,
     *,

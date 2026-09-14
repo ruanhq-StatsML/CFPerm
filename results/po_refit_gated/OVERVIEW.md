@@ -67,9 +67,11 @@ Squared loss splits OOS risk into noise plus the regression gap
 \(\approx|\mu_t^\star-\mu_0|(X)\) when \(\Delta_t\) is large (weights
 track where the map flipped). The batch gap \(\delta\) tilts \(T=1\)
 versus \(T=0\); \(r_i\) ranks within \(T=1\). That is the similar /
-covariate wash versus the concept-cut gain. DRE cannot see \(\Delta_t\).
-A global map flip makes \(\sqrt{\mathrm{PO}}\) almost constant on
-\(T=1\); drop-old is then the harder lever.
+covariate wash versus the concept-cut gain. DRE cannot see \(\Delta_t\):
+on concept it matches uniform (1.584 \(\approx\) 1.565) while
+\(\sqrt{\mathrm{PO}}\) pays (1.466); on covariate it hurts
+(0.728 \(\to\) 0.874). A global map flip makes \(\sqrt{\mathrm{PO}}\)
+almost constant on \(T=1\); drop-old is then the harder lever.
 
 ## Annealing
 
@@ -98,30 +100,37 @@ it never anneals.
 ## Synth (expected)
 
 RF, 4 seeds, 8 batches × 100. Quiet methods match to numerical
-identity when fire\(=0\).
+identity when fire\(=0\). DRE is always-on logistic \(p(x)\) on the
+\emph{same} last-two rows.
 
-| scene | uniform | reweight | drop-old | fire |
-|---|---:|---:|---:|---:|
-| similar | 0.540 | 0.540 | 0.540 | 0.00 |
-| covariate | 0.728 | 0.720 | 0.852 | 0.04 |
-| concept | 1.565 | 1.466 | 1.332 | 0.17 |
-| mixed | 1.889 | 1.818 | 1.657 | 0.17 |
+| scene | uniform | DRE | reweight | drop-old | \(\Delta\) vs DRE |
+|---|---:|---:|---:|---:|---:|
+| similar | 0.540 | 0.541 | 0.540 | 0.540 | 0.001 |
+| covariate | 0.728 | 0.874 | **0.720** | 0.852 | **0.154** |
+| concept | 1.565 | 1.584 | 1.466 | **1.332** | **0.118** |
+| mixed | 1.889 | 2.020 | 1.818 | **1.657** | **0.202** |
+
+\(\Delta=\) DRE \(-\) reweight. Positive = \(\sqrt{\mathrm{PO}}\) wins.
+DRE cannot see a \(P(Y\mid X)\) hop with stable \(P(X)\): on concept
+it sits on uniform (1.584 \(\approx\) 1.565) while reweight pays.
+On covariate it reweights the wrong axis and *hurts* (0.728 \(\to\) 0.874).
 
 Concept path, cut at \(B_4\), RF, next-batch MSE:
 
-| train \(t\) | test | uniform | reweight | drop-old |
-|---|---|---:|---:|---:|
-| 3 | \(B_4\) ← cut | 5.054 | 5.054 | 5.054 |
-| 4 | \(B_5\) | 2.149 | **1.556** | **0.755** |
-| 5 | \(B_6\) | 0.503 | 0.503 | 0.503 |
+| train \(t\) | test | uniform | DRE | reweight | drop-old |
+|---|---|---:|---:|---:|---:|
+| 3 | \(B_4\) ← cut | 5.054 | 5.051 | 5.054 | 5.054 |
+| 4 | \(B_5\) | 2.149 | 2.254 | **1.556** | **0.755** |
+| 5 | \(B_6\) | 0.503 | 0.506 | 0.503 | 0.503 |
 
 The cut hop itself is unforecastable. The hop *after* the cut is
 where annealing pays: reweight is the soft lever (2.15 → 1.56),
-drop-old is the hard one (→ 0.76). Then fire goes dark and all
-three sit on last-two uniform. XGB is the same shape.
+drop-old is the hard one (→ 0.76). DRE is *worse* than uniform on
+that hop (2.25). Then fire goes dark and PO/uniform sit together.
+XGB is the same shape.
 
 Covariate hops should stay quiet. Drop-old overreacts (0.73 → 0.85).
-Reweight barely moves (0.728 → 0.720).
+DRE overreacts more (→ 0.87). Reweight barely moves (0.728 → 0.720).
 
 ## Real clocks, batch = 200
 
