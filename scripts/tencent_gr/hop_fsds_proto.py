@@ -9,7 +9,7 @@
 FSDS = PO-risk + LOGO(跳) + LOCO(列)。φ=(Y-μ)(W-e)。R 不当检验。
 
   python3 scripts/tencent_gr/hop_fsds_proto.py
-  python3 scripts/tencent_gr/hop_fsds_proto.py --vllm   # 有 vLLM 才抽店名，否则假英文
+  python3 scripts/tencent_gr/hop_fsds_proto.py --names faker
 """
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from po_fs_logo import po_risk_fit, rf_domain  # noqa: E402
+from merchant_name import generate_catalog_names  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 EV = ROOT / "results/tencent_gr_fs150/tables/ev.parquet"
@@ -36,16 +37,6 @@ HL7 = 7 * 86400.0
 LN2 = math.log(2.0)
 MIN_EXP = 3
 SPLIT = 0.5
-
-ADJ = (
-    "Amber Bright Cedar Delta Ember Frost Golden Harbor Ivory Jade "
-    "Kinetic Lumen Maple North Oak Pearl Quartz Ridge Silver Tide"
-).split()
-NOUN = (
-    "Basket Bazaar Cart Depot Emporium Forge Goods House Imports Kettle "
-    "Mart Outlet Plaza Rack Supply Trader Union Vault Works Yard"
-).split()
-SFX = "Co Ltd Shop Store Collective Trading Studio Market".split()
 
 USER_HOP = [
     "life_ctr",
@@ -103,24 +94,14 @@ def merch_family(name: str) -> str:
     return "shop_draw"
 
 
-def shop_names(n: int, seed: int, *, messy: bool = False, vllm: bool = False) -> list[str]:
-    if vllm:
+def shop_names(n: int, seed: int, *, backend: str = "faker") -> list[str]:
+    if backend == "vllm":
         try:
             return _names_vllm(n, seed)
         except Exception as exc:
             print(f"vLLM names fallback ({exc})", flush=True)
-    rng = np.random.default_rng(seed)
-    if messy:
-        alpha = np.array(list("abcdefghijklmnopqrstuvwxyz"))
-        out = []
-        for _ in range(n):
-            k = int(rng.integers(6, 14))
-            out.append("".join(rng.choice(alpha, size=k)))
-        return out
-    return [
-        f"{ADJ[i % len(ADJ)]} {NOUN[(i * 7) % len(NOUN)]} {SFX[(i * 13) % len(SFX)]}"
-        for i in range(n)
-    ]
+            backend = "faker"
+    return generate_catalog_names(n, seed, backend=backend)
 
 
 def _names_vllm(n: int, seed: int) -> list[str]:
@@ -137,10 +118,11 @@ def _names_vllm(n: int, seed: int) -> list[str]:
     return names
 
 
-def catalog(item_ids: np.ndarray, n_merch: int, seed: int, *, messy: bool, vllm: bool) -> pd.DataFrame:
+def catalog(item_ids: np.ndarray, n_merch: int, seed: int, *, backend: str = "faker") -> pd.DataFrame:
+    """上架在先：item 先挂到店，后面的点击/转化才能走到 merchant。"""
     item_ids = np.unique(np.asarray(item_ids, dtype=np.int64))
     mid = (item_ids * (10**9 + 7) + int(seed)) % int(n_merch)
-    names = shop_names(n_merch, seed, messy=messy, vllm=vllm)
+    names = shop_names(n_merch, seed, backend=backend)
     rng = np.random.default_rng(seed + 3)
     shop = pd.DataFrame(
         {
@@ -155,6 +137,7 @@ def catalog(item_ids: np.ndarray, n_merch: int, seed: int, *, messy: bool, vllm:
 
 
 def mint_orders(cnv: pd.DataFrame, seed: int) -> pd.DataFrame:
+    """转化当下才发单号。order 指向当时的 item，item 已经有 merchant。"""
     n = len(cnv)
     rng = np.random.default_rng(seed + 9)
     nums = rng.choice(np.arange(100_000_000, 200_000_000), size=n, replace=False)
@@ -353,7 +336,7 @@ def demo() -> None:
                 rows.append((u, iid, CNV, t0 + u * 1000 + k * 400 + 80))
         rows.append((u, 99, EXP, t0 + 20 * 86400))
     ev = pd.DataFrame(rows, columns=["user_id", "item_id", "act", "ts"])
-    cat = catalog(ev.item_id.to_numpy(), 3, 0, messy=False, vllm=False)
+    cat = catalog(ev.item_id.to_numpy(), 3, 0, backend="faker")
     ev = ev.merge(cat[["item_id", "merchant_id"]], on="item_id")
     cnv = ev.loc[ev.act.eq(CNV), ["user_id", "item_id", "ts"]].rename(columns={"ts": "cnv_ts"})
     orders = mint_orders(cnv, 0)
@@ -368,8 +351,7 @@ def main() -> None:
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--n-merch", type=int, default=N_MERCH)
-    ap.add_argument("--messy", action="store_true")
-    ap.add_argument("--vllm", action="store_true")
+    ap.add_argument("--names", default="faker", choices=["faker", "template", "messy", "vllm"])
     ap.add_argument("--no-loco", action="store_true")
     args = ap.parse_args()
     demo()
@@ -385,7 +367,7 @@ def main() -> None:
     ev = pd.read_parquet(EV)
     post = pd.read_parquet(POST)
     users = pd.read_parquet(USER)
-    cat = catalog(ev.item_id.to_numpy(), args.n_merch, SEED, messy=args.messy, vllm=args.vllm)
+    cat = catalog(ev.item_id.to_numpy(), args.n_merch, SEED, backend=args.names)
     ev = ev.merge(cat[["item_id", "merchant_id"]], on="item_id", how="left")
     cnv = ev.loc[ev.act.eq(CNV), ["user_id", "item_id", "merchant_id", "ts", "price"]].rename(
         columns={"ts": "cnv_ts"}
@@ -449,7 +431,7 @@ def main() -> None:
         "# Hop FSDS prototype（user / order / item / merchant）",
         "",
         "不是图谱 GNN。跳：`item → merchant`（上架），`cnv → order → item → merchant`。",
-        "店名是抽的英文（或 `--messy` / `--vllm`）。订单号 `randint` 在转化行上。",
+        "店名默认 `faker.company()`（标签，不进 X）。`--names template|messy|vllm`。",
         "PO-risk φ=(Y−μ)(W−e)；LOGO=整跳拿掉；LOCO=一列拿掉。R 不当检验。",
         "",
         "店粒：该店自己的时间 50% 切开，左 X 右 Y=`ctr`（右窗 n_clk/n_exp），W=`1{t_end>中位}`。",
