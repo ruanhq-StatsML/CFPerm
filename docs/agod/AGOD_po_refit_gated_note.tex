@@ -1,0 +1,37 @@
+% Rolling PO-learner refit with a uniform default.
+
+\paragraph{Uniform unless the batch is clearly different.}
+Always-on $\sqrt{\mathrm{PO}}$ IPTW reweights every hop, including hops
+where $P(Y\mid X)$ did not move. That is why uniform is slightly better on
+quiet streams. The fix is a \emph{gate}: stay uniform until the refit
+PO-learner says T=1 is clearly riskier than T=0.
+
+\paragraph{Refit when a new batch arrives.}
+Do not reuse a frozen probe. At hop $t$ (batches $0,\ldots,t$ observed),
+\begin{equation}
+  T{=}0:\ \text{most recent control } B_{t-2},
+  \qquad
+  T{=}1:\ B_{t-1}\cup B_t
+  \ \text{(上一批 and 这一批)}.
+\end{equation}
+On the first hop, fall back to $T{=}0=B_0$, $T{=}1=B_1$.
+Refit the DR PO-learner
+$\varphi=(\mu_1-\mu_0)+(T-\pi)(Y-\mu_T)/(\pi(1-\pi))$ on this assignment
+only. Instance score $r_i=\varphi_i^2$. Contrast
+\[
+  \rho_t = \bar r_{T=1}\,/\,\bar r_{T=0}.
+\]
+If $\rho_t < \gamma$ (default $\gamma=1.25$), weights are uniform.
+If $\rho_t \ge \gamma$, $w_i \propto \sqrt{r_i}$ on T=1 rows (mean-1,
+clipped). The next-step Ridge trains on T=1 and is scored on $B_{t+1}$.
+
+\paragraph{Hop variant.}
+$T{=}0=B_{t-1}$, $T{=}1=B_t$, train on the new batch only. Pair uses more
+recent mass; hop is the tighter ``new vs immediately previous'' contrast.
+
+\paragraph{What else (same slot).}
+Soft gate: $w \leftarrow (1-\lambda)\mathbf{1}+\lambda w_{\mathrm{PO}}$ with
+$\lambda=\mathrm{clip}((\rho-\gamma)/(2\gamma),0,1)$ instead of a hard cut.
+EMA of $w$ across hops. Do not apply PO weights on T=0 rows. Density-ratio
+DRE stays the X-only baseline; it still ignores label risk.
+Not CATE; $\varphi$ is a discrepancy. Unique CS/CD remains impossible.
