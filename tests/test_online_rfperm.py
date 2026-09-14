@@ -9,7 +9,7 @@ from agod.online_rfperm import (
     run_rfperm_stream,
 )
 from agod.po_iptw import po_iptw_weights
-from agod.po_refit import make_batch_stream, run_uniform_on_same_rows
+from agod.po_refit import make_batch_stream, run_uniform_last_two
 
 
 def test_hop_fires_skips_first_and_needs_jump():
@@ -36,10 +36,10 @@ def test_po_tail_keeps_high_risk_fraction():
 def test_similar_stream_rfperm_rarely_fires():
     stream = make_batch_stream(n_batches=6, n_per=80, p=8, seed=0, cov=0.0)
     rec = run_rfperm_stream(stream, gate=1.5)
-    uni = run_uniform_on_same_rows(stream, assign="pair")
+    uni = run_uniform_last_two(stream)
     assert rec["fire_rate"] <= 0.25
-    # quiet: gated √PO should not beat last-two uniform
-    assert uni["online_mse"] <= rec["online_mse"] + 0.25
+    # quiet: last-two uniform, same rows as rfperm
+    assert abs(uni["online_mse"] - rec["online_mse"]) < 1e-9
 
 
 def test_concept_stream_rfperm_fires_at_cut():

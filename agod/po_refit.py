@@ -576,6 +576,17 @@ def run_uniform_on_same_rows(
     )
 
 
+def run_uniform_last_two(stream: Stream, *, learner="rf", seed=0):
+    """Always train on B_{t-1} ∪ B_t, w=1.
+
+    ``assign_pair`` falls back to hop at t=1 (only the new batch). Quiet
+    rfperm/resid use the last two batches on every hop; this matches them.
+    """
+    return run_resid_stream(
+        stream, gate=1e9, po_on_fire=False, learner=learner, seed=seed
+    )
+
+
 def run_adaptive_stream(
     stream: Stream,
     *,

@@ -20,7 +20,7 @@ from agod.po_refit import (
     make_batch_stream,
     run_oracle_switch,
     run_resid_stream,
-    run_uniform_on_same_rows,
+    run_uniform_last_two,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,7 +55,7 @@ def run_scene(name, spec, seeds, n_batches, n_per, p, gate, learner):
         )
         kw = dict(learner=learner, seed=seed)
         methods = {
-            "uniform_pair": run_uniform_on_same_rows(stream, assign="pair", **kw),
+            "uniform_pair": run_uniform_last_two(stream, **kw),
             "rfperm": run_rfperm_stream(stream, gate=gate, localize=False, **kw),
             "local": run_rfperm_stream(
                 stream, gate=gate, localize=True, q=0.30, **kw

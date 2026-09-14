@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 
 from agod.online_rfperm import run_rfperm_stream
-from agod.po_refit import run_resid_stream, run_uniform_on_same_rows
+from agod.po_refit import run_resid_stream, run_uniform_last_two
 from agod.real_data import iter_real_streams
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,7 +35,7 @@ METHODS = (
 def run_one(stream, learner, gate, seed):
     kw = dict(learner=learner, seed=seed)
     return {
-        "uniform_pair": run_uniform_on_same_rows(stream, assign="pair", **kw),
+        "uniform_pair": run_uniform_last_two(stream, **kw),
         "rfperm": run_rfperm_stream(stream, gate=gate, localize=False, **kw),
         "local": run_rfperm_stream(stream, gate=gate, localize=True, q=0.30, **kw),
         "resid": run_resid_stream(stream, gate=2.0, po_on_fire=False, **kw),
