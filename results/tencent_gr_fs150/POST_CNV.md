@@ -1,8 +1,8 @@
 # 买完会不会带动后续点击
 
 计算（状态机 ≡ asof）：`POST_CALC.md` / `onepass_post.py`。  
-业务 writeup（多模态归因 / 成交构成）：`ASOF_PATH_WRITEUP.md`，PDF：`ASOF_PATH_WRITEUP.pdf`。  
-这批主模态是 **跨品点击 51.5% + 序列无点击 48.3%**，同品 last-click 只有 14/12866。
+业务 writeup（任意/同品、续逛、热度、曝光-点击-购买列表）：`ASOF_PATH_WRITEUP.md` / `.pdf`。  
+同品 last-click 14/12866；主构成是任意点击 51.5% + 序列无点击 48.3%。没有归因 GT，别拿 AUC 审生意。
 
 last-touch（backward asof）= 买之前怎么点过来。
 这块（forward asof）= **买完还会不会点**。`trans_cnv_to_exp` 只是邻接 Markov，不够。
