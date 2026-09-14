@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Obs-PO hard-reweight v5: hard-support + beijing-class packMSE gate.
+"""Obs-PO hard-reweight v6: hard-support + beijing-class packMSE gate.
 
 Logic we buy
 ------------
@@ -9,6 +9,7 @@ Logic we buy
    only when drift ≫ mild (gate≈0.45). Calm rejects stay uniform for packMSE.
 3. Primary claim metric = **hard-subset next-MSE**; packMSE is conditional.
 4. **v5**: CV-MSE picks PO^power × temper (or family) per reject; add log1p map.
+5. **v6**: hard-objective CV; soft power grid; dual/blend hard+qrt under beijing.
 
   PYTHONPATH=. python3 scripts/run_agod_obs_po_weights.py \\
     --datasets metro_interstate beijing_pm25 stocks_AAPL stocks_MSFT stocks_IWM waymo_proxy
@@ -29,10 +30,11 @@ from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestRegressor
 
 from agod.hard_rank_metrics import hard_rank_metrics
-from agod.obs_po_cv import cv_select_family, cv_select_power
+from agod.obs_po_cv import SOFT_POWERS, cv_select_power
 from agod.obs_po_weights import (
     BEIJING_DRIFT_GATE,
     adaptive_temper,
+    blend_hard_qrt_weights,
     drift_intensity,
     gated_obs_po_weights,
     hard_subset_mask,
@@ -46,21 +48,21 @@ from agod.stream_packs import LOADERS, load_stocks
 # v4 modes: hard-claim path + beijing packMSE path + v3 baselines
 MODES: Tuple[str, ...] = (
     "uniform",
-    "gated_hard_adapt",      # v4 hard claim
-    "gated_qrt_hi",          # v4 beijing packMSE
-    "gated_log1p_hi",        # new soft map, beijing gate
-    "cv_power",              # CV over power × temper
-    "cv_power_cap",          # CV with temper ≤ beijing adaptive λ
-    "cv_family",             # CV over discrete families
+    "gated_hard_adapt",   # hard claim default
+    "gated_qrt_hi",       # beijing packMSE baseline
+    "cv_power_cap",       # v5 best pack under beijing
+    "cv_hard_cap",        # NEW: CV on hard-subset MSE, beijing cap + soft powers
+    "blend_bj",           # NEW: mix hard_support + qrt under beijing λ
+    "dual",               # NEW: hard_support if mild; cv_power_cap if beijing
 )
 COLORS = {
     "uniform": "#4C566A",
     "gated_hard_adapt": "#88C0D0",
     "gated_qrt_hi": "#EBCB8B",
-    "gated_log1p_hi": "#D08770",
-    "cv_power": "#A3BE8C",
     "cv_power_cap": "#B48EAD",
-    "cv_family": "#5E81AC",
+    "cv_hard_cap": "#A3BE8C",
+    "blend_bj": "#D08770",
+    "dual": "#5E81AC",
 }
 
 
@@ -120,25 +122,28 @@ def mode_spec(mode: str) -> dict:
             "drift_gate": BEIJING_DRIFT_GATE,
             "n_recent": None,
         }
-    if mode == "gated_log1p_hi":
-        return {
-            "kind": "fixed",
-            "obs": "log1p",
-            "adapt": True,
-            "drift_gate": BEIJING_DRIFT_GATE,
-            "n_recent": None,
-        }
-    if mode == "cv_power":
-        return {"kind": "cv_power", "temper_cap": False, "n_recent": None}
     if mode == "cv_power_cap":
         return {
             "kind": "cv_power",
             "temper_cap": True,
             "drift_gate": BEIJING_DRIFT_GATE,
+            "powers": "soft",
+            "objective": "all",
             "n_recent": None,
         }
-    if mode == "cv_family":
-        return {"kind": "cv_family", "drift_gate": 0.20, "n_recent": None}
+    if mode == "cv_hard_cap":
+        return {
+            "kind": "cv_power",
+            "temper_cap": True,
+            "drift_gate": BEIJING_DRIFT_GATE,
+            "powers": "soft",
+            "objective": "hard",
+            "n_recent": None,
+        }
+    if mode == "blend_bj":
+        return {"kind": "blend", "drift_gate": BEIJING_DRIFT_GATE, "mix": 0.5, "n_recent": None}
+    if mode == "dual":
+        return {"kind": "dual", "n_recent": None}
     raise KeyError(mode)
 
 
@@ -248,7 +253,6 @@ def run_mode(
                         lams.append(lam_used)
                         powers.append(power_used)
                         families.append(fam_used)
-                        # fall through to fit below
                         model = fit_rf(Xc, yc, w, seed + t)
                         if t + 1 < len(stream):
                             Xn, yn = stream[t + 1]
@@ -262,33 +266,71 @@ def run_mode(
                             mse_next_hard.append(float(np.mean(err2[hard_m])))
                             mse_next_easy.append(float(np.mean(err2[~hard_m])))
                         continue
-                sel = cv_select_power(
-                    Xc, yc, po, n_folds=cv_folds, seed=seed + t, temper_cap=cap
+                powers_grid = SOFT_POWERS if spec.get("powers") == "soft" else None
+                sel_kw = dict(
+                    n_folds=cv_folds,
+                    seed=seed + t,
+                    temper_cap=cap,
+                    objective=spec.get("objective", "all"),
+                    hard_frac=hard_frac,
                 )
+                if powers_grid is not None:
+                    sel_kw["powers"] = powers_grid
+                sel = cv_select_power(Xc, yc, po, **sel_kw)
                 w = np.asarray(sel["weights"], float)
                 lam_used = float(sel["temper"])
                 power_used = float(sel["power"])
-                fam_used = f"PO^{power_used:g}"
+                fam_used = f"PO^{power_used:g}/{sel.get('objective','all')}"
 
-            elif kind == "cv_family":
+            elif kind == "blend":
                 lam_used = adaptive_temper(
                     drift, lam_max=0.75, drift_gate=float(spec["drift_gate"])
                 )
-                if lam_used <= 0.0:
-                    w = np.ones(len(yc), float)
-                    fam_used = "uniform"
-                else:
-                    sel = cv_select_family(
+                w = blend_hard_qrt_weights(
+                    po,
+                    lam=lam_used,
+                    mix=float(spec.get("mix", 0.5)),
+                    topk_frac=hard_frac,
+                    boost_max=3.0,
+                )
+                fam_used = "blend_hard_qrt"
+                power_used = 0.25
+
+            elif kind == "dual":
+                # mild reject → hard_support; beijing → soft CV power cap
+                if is_beijing_class_drift(drift):
+                    cap = adaptive_temper(
+                        drift, lam_max=0.75, drift_gate=BEIJING_DRIFT_GATE
+                    )
+                    sel = cv_select_power(
                         Xc,
                         yc,
                         po,
-                        temper=lam_used,
+                        powers=SOFT_POWERS,
                         n_folds=cv_folds,
                         seed=seed + t,
-                        topk_frac=hard_frac,
+                        temper_cap=cap,
+                        objective="all",
                     )
                     w = np.asarray(sel["weights"], float)
-                    fam_used = str(sel["family"])
+                    lam_used = float(sel["temper"])
+                    power_used = float(sel["power"])
+                    fam_used = f"dual_cv_PO^{power_used:g}"
+                else:
+                    lam_used = adaptive_temper(drift, lam_max=0.75, drift_gate=0.20)
+                    w = gated_obs_po_weights(
+                        po,
+                        reject=True,
+                        mode="hard_support",
+                        soft=False,
+                        p=float(step["p"]),
+                        alpha=alpha,
+                        temper=lam_used,
+                        topk_frac=hard_frac,
+                        boost_max=3.0,
+                    )
+                    fam_used = "dual_hard"
+                    power_used = 0.0
             else:
                 raise RuntimeError(kind)
 
@@ -409,16 +451,16 @@ def run_dataset(
         preferred_gate_modes=(
             "gated_hard_adapt",
             "gated_qrt_hi",
-            "gated_log1p_hi",
-            "cv_power",
             "cv_power_cap",
-            "cv_family",
+            "cv_hard_cap",
+            "blend_bj",
+            "dual",
         ),
     )
     gate = None
     for m in (
         "gated_hard_adapt",
-        "cv_power",
+        "cv_power_cap",
         "gated_qrt_hi",
         "uniform",
     ):
@@ -468,7 +510,7 @@ def _bars(all_ds: dict, out: Path):
         ax.grid(True, axis="y", alpha=0.3)
     axes[0].legend(ncol=2, fontsize=6)
     fig.tight_layout()
-    path = out / "obs_po_v5_mse.png"
+    path = out / "obs_po_v6_mse.png"
     fig.savefig(path, dpi=140)
     plt.close(fig)
     return path
@@ -482,28 +524,30 @@ def report(all_ds: dict) -> str:
 
     short = {m: short_name(m) for m in MODES}
     lines = [
-        "# Observation-level PO hard-reweight v5 (CV-MSE + new maps)",
+        "# Observation-level PO hard-reweight v6 (hard-CV + dual/blend)",
         "",
-        "## What changed",
+        "## What changed vs v5",
         "",
-        "- New soft map: `log1p` (beijing-gated); `softmax` via `cv_family`.",
-        "- **CV-MSE** picks `(power, temper)` per rejected batch (`cv_power`),",
-        "  or with beijing temper cap (`cv_power_cap`),",
-        "  or among discrete families (`cv_family`).",
-        "- Thesis unchanged: 认 hard; packMSE only under beijing-class drift.",
+        "- Drop uncapped CV / log1p/family ablations from the primary table.",
+        "- **`cv_hard_cap`**: CV-MSE on hard top-20% of each fold (matches primary claim),",
+        "  soft power grid {0, 1/8, 1/4}, beijing temper cap.",
+        "- **`blend_bj`**: 50/50 hard_support + qrt under beijing λ.",
+        "- **`dual`**: mild reject → hard_support; beijing → soft `cv_power_cap`.",
+        "- Keep `hard_m` / `qrt_bj` / `cv_power_cap` as baselines.",
         "",
         "## Drift / CV diagnostics",
         "",
-        "| dataset | drift | beijing? | cv_p power̄ | cv_p λ̄ | cv_cap power̄ | cv_fam mode |",
-        "|---|---:|:---:|---:|---:|---:|---|",
+        "| dataset | drift | beijing? | cv_cap power̄ | cv_hard power̄ | dual mode |",
+        "|---|---:|:---:|---:|---:|---|",
     ]
     for ds, blob in all_ds.items():
         r = blob["results"]
         bj = "yes" if blob.get("beijing_class") else "no"
         lines.append(
             f"| `{ds}` | {f(blob.get('drift_mean'))} | {bj} | "
-            f"{f(r['cv_power'].get('power_mean'))} | {f(r['cv_power'].get('lam_mean'))} | "
-            f"{f(r['cv_power_cap'].get('power_mean'))} | `{r['cv_family'].get('family_mode')}` |"
+            f"{f(r['cv_power_cap'].get('power_mean'))} | "
+            f"{f(r['cv_hard_cap'].get('power_mean'))} | "
+            f"`{r['dual'].get('family_mode')}` |"
         )
 
     hdr = " | ".join(short[m] for m in MODES)
@@ -563,7 +607,7 @@ def report(all_ds: dict) -> str:
         "",
         "## Rel. pack MSE vs uniform",
         "",
-        "| dataset | hard_m | qrt_bj | log_bj | cv_p | cv_cap | cv_fam | drift |",
+        "| dataset | hard_m | qrt_bj | cv_cap | cv_hard | blend | dual | drift |",
         "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for ds, blob in all_ds.items():
@@ -576,9 +620,9 @@ def report(all_ds: dict) -> str:
 
         lines.append(
             f"| `{ds}` | {f(rel('gated_hard_adapt'), pct=True)} | "
-            f"{f(rel('gated_qrt_hi'), pct=True)} | {f(rel('gated_log1p_hi'), pct=True)} | "
-            f"{f(rel('cv_power'), pct=True)} | {f(rel('cv_power_cap'), pct=True)} | "
-            f"{f(rel('cv_family'), pct=True)} | {f(blob.get('drift_mean'))} |"
+            f"{f(rel('gated_qrt_hi'), pct=True)} | {f(rel('cv_power_cap'), pct=True)} | "
+            f"{f(rel('cv_hard_cap'), pct=True)} | {f(rel('blend_bj'), pct=True)} | "
+            f"{f(rel('dual'), pct=True)} | {f(blob.get('drift_mean'))} |"
         )
 
     lines += [
@@ -597,9 +641,10 @@ def report(all_ds: dict) -> str:
         "",
         "### Takeaway",
         "",
-        "- CV-MSE auto-tunes power/temper per reject; calm packs often pick ≈uniform.",
-        "- Prefer `cv_power_cap` / `qrt_bj` / `log_bj` for packMSE under beijing drift;",
-        "  prefer `gated_hard_adapt` / CV-family for the hard claim.",
+        "- Prefer **`dual`** as the unified policy: hard_support on mild rejects,",
+        "  soft CV under beijing for packMSE.",
+        "- Prefer **`cv_hard_cap`** when optimizing the hard-subset claim via CV.",
+        "- Soft power grid ≤1/4 + beijing temper cap remains the safe packMSE dial.",
         "",
         "See `docs/agod/AGOD_obs_po_weights.md`.",
         "",
@@ -657,11 +702,11 @@ def main() -> None:
         r = blob["results"]
         bj = "BJ" if blob.get("beijing_class") else "calm"
         print(
-            "  drift={:.3f} ({}) cv_p={:.3g}@{:.2f} | sigPack ".format(
+            "  drift={:.3f} ({}) cv_cap={:.3g} cv_hard={:.3g} | sigPack ".format(
                 float(blob.get("drift_mean") or float("nan")),
                 bj,
-                float(r["cv_power"].get("power_mean") or 0.0),
-                float(r["cv_power"].get("lam_mean") or 0.0),
+                float(r["cv_power_cap"].get("power_mean") or 0.0),
+                float(r["cv_hard_cap"].get("power_mean") or 0.0),
             )
             + " ".join(
                 f"{short_name(m)}={r[m].get('mse_mean_sig', r[m]['mse_mean']):.4g}" for m in MODES
@@ -675,14 +720,14 @@ def main() -> None:
         )
 
     payload = {
-        "version": 5,
+        "version": 6,
         "batch_size": args.batch_size,
         "n_batches": args.n_batches,
         "cv_folds": args.cv_folds,
         "modes": list(MODES),
         "beijing_drift_gate": BEIJING_DRIFT_GATE,
         "datasets": all_ds,
-        "note": "v5 CV-MSE power/family + log1p map",
+        "note": "v6 hard-CV + dual/blend under beijing",
     }
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     md = report(all_ds)
@@ -699,10 +744,10 @@ def short_name(m: str) -> str:
         "uniform": "uni",
         "gated_hard_adapt": "hard_m",
         "gated_qrt_hi": "qrt_bj",
-        "gated_log1p_hi": "log_bj",
-        "cv_power": "cv_p",
         "cv_power_cap": "cv_cap",
-        "cv_family": "cv_fam",
+        "cv_hard_cap": "cv_hard",
+        "blend_bj": "blend",
+        "dual": "dual",
     }.get(m, m)
 
 

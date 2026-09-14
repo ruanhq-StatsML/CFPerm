@@ -18,6 +18,8 @@ from sklearn.model_selection import KFold
 from agod.obs_po_weights import obs_po_to_weights
 
 DEFAULT_POWERS: Tuple[float, ...] = (0.0, 0.125, 0.25, 1.0 / 3.0, 0.5)
+# Soft grid (v6): higher powers often overshoot packMSE; keep ≤1/4.
+SOFT_POWERS: Tuple[float, ...] = (0.0, 0.125, 0.25)
 DEFAULT_TEMPERS: Tuple[float, ...] = (0.0, 0.35, 0.55, 0.75)
 DEFAULT_FAMILIES: Tuple[str, ...] = (
     "uniform",
@@ -47,18 +49,29 @@ def cv_mse_for_weights(
     n_folds: int = 3,
     seed: int = 0,
     model_factory: Optional[Callable[[int], object]] = None,
+    po: np.ndarray | None = None,
+    hard_frac: float | None = None,
 ) -> float:
-    """K-fold MSE of a weighted fit (lower is better)."""
+    """K-fold MSE of a weighted fit (lower is better).
+
+    If ``hard_frac`` is set with ``po``, evaluate hold-out MSE only on the
+    hardest top-``hard_frac`` rows of each val fold (matches hard claim).
+    """
     X = np.asarray(X, float)
     y = np.asarray(y, float).ravel()
     w = np.asarray(w, float).ravel()
+    po_arr = None if po is None else np.asarray(po, float).ravel()
     n = len(y)
     if n < max(2 * n_folds, 8):
-        # too small: in-sample residual proxy
         m = (model_factory or _cheap_rf)(seed)
         m.fit(X, y, sample_weight=w)
         pred = m.predict(X)
-        return float(np.mean((y - pred) ** 2))
+        err2 = (y - pred) ** 2
+        if hard_frac is not None and po_arr is not None and len(po_arr) == n:
+            k = max(1, int(round(n * hard_frac)))
+            idx = np.argpartition(po_arr, -k)[-k:]
+            return float(np.mean(err2[idx]))
+        return float(np.mean(err2))
 
     kf = KFold(n_splits=n_folds, shuffle=True, random_state=seed)
     losses: List[float] = []
@@ -66,7 +79,14 @@ def cv_mse_for_weights(
         m = (model_factory or _cheap_rf)(seed + fold_i)
         m.fit(X[tr], y[tr], sample_weight=w[tr])
         pred = m.predict(X[te])
-        losses.append(float(np.mean((y[te] - pred) ** 2)))
+        err2 = (y[te] - pred) ** 2
+        if hard_frac is not None and po_arr is not None:
+            po_te = po_arr[te]
+            k = max(1, int(round(len(te) * hard_frac)))
+            idx = np.argpartition(po_te, -k)[-k:]
+            losses.append(float(np.mean(err2[idx])))
+        else:
+            losses.append(float(np.mean(err2)))
     return float(np.mean(losses))
 
 
@@ -97,21 +117,33 @@ def cv_select_power(
     seed: int = 0,
     temper_cap: float | None = None,
     model_factory: Optional[Callable[[int], object]] = None,
+    objective: str = "all",
+    hard_frac: float = 0.2,
 ) -> Dict[str, object]:
     """Grid-search (power, temper) by CV-MSE on the OOD batch.
 
     ``temper_cap`` (e.g. adaptive_temper(drift)) upper-bounds λ so CV
     cannot overshoot the drift budget; None → full temper grid.
+
+    ``objective``: ``"all"`` = full-batch val MSE; ``"hard"`` = hard top-k only.
     """
     rows: List[dict] = []
     best = None
+    hard = None if objective != "hard" else hard_frac
     for p in powers:
         for lam in tempers:
             if temper_cap is not None:
                 lam = min(float(lam), float(temper_cap))
             w = make_power_weights(po, float(p), temper=float(lam))
             mse = cv_mse_for_weights(
-                X, y, w, n_folds=n_folds, seed=seed, model_factory=model_factory
+                X,
+                y,
+                w,
+                n_folds=n_folds,
+                seed=seed,
+                model_factory=model_factory,
+                po=po if hard is not None else None,
+                hard_frac=hard,
             )
             row = {"power": float(p), "temper": float(lam), "cv_mse": mse}
             rows.append(row)
@@ -126,6 +158,7 @@ def cv_select_power(
         "cv_mse": best["cv_mse"],
         "weights": w_best,
         "grid": rows,
+        "objective": objective,
     }
 
 

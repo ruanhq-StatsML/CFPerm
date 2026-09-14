@@ -144,6 +144,32 @@ def is_beijing_class_drift(drift: float, *, gate: float = BEIJING_DRIFT_GATE) ->
     return float(drift) > float(gate)
 
 
+def blend_hard_qrt_weights(
+    po: np.ndarray,
+    *,
+    lam: float,
+    mix: float = 0.5,
+    topk_frac: float = 0.2,
+    boost_max: float = 3.0,
+    clip: tuple[float, float] = (0.05, 20.0),
+    eps: float = 1e-6,
+) -> np.ndarray:
+    """Blend hard_support and PO^{1/4} under a shared temper λ.
+
+    ``mix`` ∈ [0,1]: 0 → pure qrt, 1 → pure hard_support. Encodes dual claim
+    in one weight vector (hard mass + soft packMSE shape).
+    """
+    mix = float(np.clip(mix, 0.0, 1.0))
+    lam = float(np.clip(lam, 0.0, 1.0))
+    if lam <= 0.0:
+        return np.ones(len(np.asarray(po).ravel()), float)
+    w_h = hard_support_weights(
+        po, frac=topk_frac, boost_max=boost_max, lam=lam, clip=clip, eps=eps
+    )
+    w_q = obs_po_to_weights(po, mode="qrt", temper=lam, clip=clip, eps=eps)
+    return _mean1_clip(mix * w_h + (1.0 - mix) * w_q, clip, eps)
+
+
 def obs_po_to_weights(
     po: np.ndarray,
     mode: ObsWeightMode = "sqrt",
