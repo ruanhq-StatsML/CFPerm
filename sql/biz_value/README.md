@@ -16,8 +16,12 @@ Primary landing surface: **客服助手 incremental contribution** (tickets / re
 ```bash
 pip install duckdb pandas
 PYTHONPATH=. python3 scripts/agod/run_biz_value_sql_demo.py
+# → docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md
+python3 scripts/agod/cs_assist_weekly_ops_brief.py
 # → docs/biz/CS_ASSISTANT_CONTRIBUTION.md
 ```
 
 Narrative map (CN): `docs/biz/HALLUC_STYLE_BIZ_SQL_MAP.md`  
 CS contribution (CN): `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
+
+Weekly ops brief (CN): `docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`
