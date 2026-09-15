@@ -1,0 +1,26 @@
+[
+  {
+    "theme":"hallucination",
+    "surface_id":"shop_assistant",
+    "n_fire_acted_days":7.0,
+    "n_fire_ignored_days":7.0,
+    "avg_cost_fire_acted":710.0,
+    "avg_cost_fire_ignored":1211.4285714286,
+    "avg_cost_quiet":195.3571428571,
+    "primary_value_proxy":501.4285714286,
+    "style_only_days":null,
+    "avg_ctr_style_only":null
+  },
+  {
+    "theme":"style_creative",
+    "surface_id":"feed_caption",
+    "n_fire_acted_days":null,
+    "n_fire_ignored_days":null,
+    "avg_cost_fire_acted":null,
+    "avg_cost_fire_ignored":null,
+    "avg_cost_quiet":null,
+    "primary_value_proxy":547.5,
+    "style_only_days":12.0,
+    "avg_ctr_style_only":0.0594444444
+  }
+]

@@ -76,6 +76,16 @@ FSDS / PO 轴诊断（P(X) vs P(Y|X) 代理）
 推荐 / 风控 / 交易：同一闭环换特征库与业务时钟；PO-risk 作 OOD 强度与置信排序，
 不是因果根因分数。
 
+## 7. Business SQL (must-have for value justification)
+
+幻觉 / 文风不能停在 AUROC。把信号挂到 CS/退款/CTR/品牌/合并门禁：
+
+- 映射说明：`docs/biz/HALLUC_STYLE_BIZ_SQL_MAP.md`
+- SQL 包：`sql/biz_value/`（schema + halluc value + style value + dashboard）
+- 种子跑数：`PYTHONPATH=. python3 scripts/agod/run_biz_value_sql_demo.py`
+
+对外价值句式：fire+acted vs fire+ignored 的日均质量成本差；style-only 日只开素材工单。
+
 ## Run
 
 ```bash
