@@ -36,7 +36,7 @@
 
 所以：**不能**把 directional cosine 直接塞进凸 stacking 还指望得到组合权——线性目标在单纯形上必崩到一个 expert。要组合，必须用方向匹配（平方损失）或方差惩罚。`direction_match_weights` 就是这件事：互补的两路单位梯度（轴 0 和轴 1）去拟合 `ĝ_hold = (e0+e1)/√2` 时，π 会拆成约 (0.5, 0.5, 0)，而 `linear_gain_is_vertex` 只会点其中一个。
 
-诚实协议在梯度上还多一条：`g_m` 和 `g_hold` 必须来自 **不同 batch**（probe vs holdout）。同一窗的 holdout 既当票又当靶，就是 leaky stacking。
+诚实协议在梯度上还多一条：`g_m` 和 `g_hold` 必须来自 **不同 batch**（probe vs holdout）。同一窗的 holdout 既当票又当靶，就是 leaky stacking。推荐侧同一条合同是 **因果 user_feat**（只用 t 之前的评论、丢掉当前 review 文本），见 [`AGOD_recsys_features.md`](AGOD_recsys_features.md)。
 
 ```
 P_t probe → g_m          # 票（OOF 特征）

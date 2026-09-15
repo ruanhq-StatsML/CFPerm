@@ -1,0 +1,12 @@
+% Causal recsys features vs leaky current-review
+\begin{table}[t]\centering
+\caption{Amazon recsys feature contract is causal time-OOF. Keeping the current review makes label prediction a sentiment task.}
+\label{tab:agod-recsys-features}
+\begin{tabular}{lcc}\toprule
+protocol & current-review leak rate & corr(text, label) \\
+\midrule
+causal (emit then update) & 0.00 & 0.03 \\
+leaky (+ current review) & 1.00 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}

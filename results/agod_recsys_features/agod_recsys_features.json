@@ -1,0 +1,31 @@
+{
+  "causal": {
+    "n": 115,
+    "n_leak_current": 0,
+    "leak_rate": 0.0,
+    "n_text_overlap": 71,
+    "text_overlap_rate": 0.6173913043478261,
+    "splits": {
+      "train": 79,
+      "valid": 35,
+      "test": 1
+    }
+  },
+  "leaky_current_rate": 1.0,
+  "shortcut": {
+    "corr_current_review_text": 0.9999999999999998,
+    "corr_causal_review_cnt": 0.02960286186810055,
+    "leak_rate": 0.0
+  },
+  "example_user_text": "Category history: Tools: 50%; Electronics: 50%. Total reviews: 2. Avg price: 72.9043. Price std: 14.8824. Review history: Review1: love this excellent perfect item Review2: love this excellent perfect item",
+  "example_item_text": "Item category: Sports. Item title: sku-0. Item price: 37.10.",
+  "example_agod_blob_chars": 266,
+  "n_users": 24,
+  "split_cut": {
+    "train_end": "2023-06-30",
+    "valid_end": "2023-09-30",
+    "n_train": 79,
+    "n_valid": 35,
+    "n_test": 1
+  }
+}

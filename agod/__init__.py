@@ -117,6 +117,19 @@ from .stack_track import (
 )
 from .shift import decompose_hybrid, decompose_mmd, decompose_rf
 from .mmd import rbf_mmd2, whiten_pair
+from .recsys_features import (
+    TRAIN_END,
+    VALID_END,
+    agod_concat_blob,
+    build_item_text,
+    build_user_text,
+    causal_user_feat,
+    emit_causal_rows,
+    leak_report,
+    leaky_user_feat,
+    shortcut_gap,
+    split_by_date,
+)
 
 __all__ = [
     "ADAPTER_LAYERS",
@@ -214,6 +227,17 @@ __all__ = [
     "kfold_oof_predict",
     "alignment_leak",
     "disjoint_probe_holdout",
+    "TRAIN_END",
+    "VALID_END",
+    "causal_user_feat",
+    "leaky_user_feat",
+    "emit_causal_rows",
+    "split_by_date",
+    "build_user_text",
+    "build_item_text",
+    "agod_concat_blob",
+    "leak_report",
+    "shortcut_gap",
 ]
 
 __version__ = "0.1.0"
