@@ -1,0 +1,42 @@
+{
+  "surface": "alignment_rfperm_as_judge",
+  "package": "agod.online_rfperm / agod.po_iptw",
+  "data": "data/hf_cache/hh_rlhf_helpful_base_2500.jsonl",
+  "n": 1600,
+  "gate": 1.25,
+  "stream_fires": 0,
+  "hop_at_cut": {
+    "t": 18,
+    "fired": false,
+    "ratio": 0.9807708676608308,
+    "ranking": {
+      "n_t1": 80,
+      "auroc_po_risk0": 0.4896291640477688,
+      "precision_at_10": 0.4
+    }
+  },
+  "po_gate_step": {
+    "fired": false,
+    "ratio": 0.9722222222222223,
+    "mean_po": 0.47921482861330167,
+    "mean_w": 1.0,
+    "precision_at_k": 0.6,
+    "audit_topk_local": [
+      23,
+      17,
+      13,
+      22,
+      45,
+      31,
+      27,
+      32,
+      51,
+      18
+    ]
+  },
+  "merge_gate": "ACCEPT",
+  "how_to_use_in_dpo_rlhf": {
+    "on_fire": "拒合并或限量合并；po_risk0 Top-k 人工复核偏好对；可选 √PO 重加权",
+    "on_quiet": "放行合并，w=1"
+  }
+}
