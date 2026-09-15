@@ -418,6 +418,7 @@ def main() -> int:
         "08_cs_unit_econ_cumulative.sql",
         "09_cs_opportunity_breakeven.sql",
         "10_cs_action_contain_split.sql",
+        "11_cs_week_split_coverage.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -548,6 +549,22 @@ def main() -> int:
     ).fetchdf()
     dump(cs_contain_split, OUT / "cs_assist_action_contain_split.json")
     dump(cs_contain_check, OUT / "cs_assist_contain_attribution_check.json")
+    cs_week_split = con.execute(
+        "SELECT * FROM vw_cs_assist_week_value_split ORDER BY week_start"
+    ).fetchdf()
+    cs_week_split_chk = con.execute(
+        "SELECT * FROM vw_cs_assist_week_split_check"
+    ).fetchdf()
+    cs_cover = con.execute(
+        "SELECT * FROM vw_cs_assist_coverage_expansion ORDER BY target_coverage_pct"
+    ).fetchdf()
+    cs_cover_dec = con.execute(
+        "SELECT * FROM vw_cs_assist_coverage_decision"
+    ).fetchdf()
+    dump(cs_week_split, OUT / "cs_assist_week_value_split.json")
+    dump(cs_week_split_chk, OUT / "cs_assist_week_split_check.json")
+    dump(cs_cover, OUT / "cs_assist_coverage_expansion.json")
+    dump(cs_cover_dec, OUT / "cs_assist_coverage_decision.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -621,6 +638,10 @@ def main() -> int:
     contain_chk = (
         cs_contain_check.iloc[0].to_dict() if len(cs_contain_check) else {}
     )
+    cover_dec = cs_cover_dec.iloc[0].to_dict() if len(cs_cover_dec) else {}
+    week_split_chk = (
+        cs_week_split_chk.iloc[0].to_dict() if len(cs_week_split_chk) else {}
+    )
 
     contain_split_rows = []
     for _, row in cs_contain_split.iterrows():
@@ -635,6 +656,28 @@ def main() -> int:
     contain_split_table = (
         "\n".join(contain_split_rows) if contain_split_rows else "| (none) |||||||"
     )
+
+    week_split_rows = []
+    for _, row in cs_week_split.iterrows():
+        week_split_rows.append(
+            f"| {str(row['week_start'])[:10]} | {int(row['days_acted'])} | "
+            f"¥{int(row['yen_from_tickets'])} | ¥{int(row['yen_from_refunds'])} | "
+            f"**¥{int(row['yen_from_containment'])}** | **¥{int(row['gross_yen'])}** | "
+            f"{row['contain_share_pct']}% | {row['pct_of_total_gross']}% |"
+        )
+    week_split_table = (
+        "\n".join(week_split_rows) if week_split_rows else "| (none) |||||||"
+    )
+
+    cover_rows = []
+    for _, row in cs_cover.iterrows():
+        cover_rows.append(
+            f"| {row['scenario']} | {row['target_coverage_pct']}% | "
+            f"**¥{int(row['projected_gross_yen']):,}** | "
+            f"**¥{int(row['projected_net_yen']):,}** | "
+            f"¥{int(row['incremental_gross_vs_now']):,} |"
+        )
+    cover_table = "\n".join(cover_rows) if cover_rows else "| (none) ||||"
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -825,6 +868,22 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 承接对账缺口：次数 {contain_chk.get('contain_count_gap')} / ¥{contain_chk.get('contain_yen_gap')}（应为 ~0）。
 
+## 周贡献三项拆分（工单 / 退款 / 承接）
+
+| 周 | acted天 | 工单¥ | 退款¥ | 承接¥ | 毛¥ | 承接占毛% | 占总毛% |
+|----|---------|-------|-------|-------|-----|-----------|---------|
+{week_split_table}
+
+周拆分对账缺口：毛¥ {week_split_chk.get('gross_gap')} / 承接¥ {week_split_chk.get('contain_yen_gap')}（应为 ~0）。
+
+## 火情覆盖率外推（50% → 75% → 100%）
+
+| 情景 | 目标覆盖 | 投影毛¥ | 投影净¥ | 相对当前毛增量 |
+|------|----------|---------|---------|----------------|
+{cover_table}
+
+读法：现覆盖 {cover_dec.get('fire_day_coverage_pct')}%；拉满可多拿毛约 ¥{int(cover_dec.get('gross_uplift_if_full_coverage') or 0):,}。
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -835,7 +894,7 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 ## 一句对外
 
-{one.get('external_one_liner_cn') or '（重跑 demo 生成）'}
+{cover_dec.get('external_one_liner_cn') or one.get('external_one_liner_cn') or '（重跑 demo 生成）'}
 """
     (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(cs_report)
     docs_biz = ROOT / "docs" / "biz" / "CS_ASSISTANT_CONTRIBUTION.md"

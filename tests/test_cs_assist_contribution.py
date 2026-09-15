@@ -35,6 +35,7 @@ def con():
         "08_cs_unit_econ_cumulative.sql",
         "09_cs_opportunity_breakeven.sql",
         "10_cs_action_contain_split.sql",
+        "11_cs_week_split_coverage.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -239,6 +240,38 @@ def test_cumulative_curve_ends_at_total(con):
     ).fetchone()
     assert abs(last[0] - total) <= 2.0
     assert abs(last[1] - 100.0) < 0.2
+
+
+def test_week_value_split_and_coverage_expansion(con):
+    """周三项拆分对账；覆盖率外推净贡献随覆盖上升。"""
+    weeks = con.execute(
+        "SELECT week_start, yen_from_tickets, yen_from_refunds, yen_from_containment, gross_yen "
+        "FROM vw_cs_assist_week_value_split ORDER BY week_start"
+    ).fetchall()
+    assert len(weeks) >= 1
+    for _w, yt, yr, yc, g in weeks:
+        assert yt >= 0 and yr >= 0 and yc >= 0
+        assert abs((yt + yr + yc) - g) <= 2.0
+
+    chk = con.execute("SELECT * FROM vw_cs_assist_week_split_check").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, chk))
+    assert abs(d["gross_gap"]) <= 2.0
+    assert abs(d["contain_yen_gap"]) <= 2.0
+
+    cov = con.execute(
+        "SELECT scenario, target_coverage_pct, projected_net_yen "
+        "FROM vw_cs_assist_coverage_expansion ORDER BY target_coverage_pct"
+    ).fetchall()
+    assert [r[0] for r in cov] == ["cover_50_current", "cover_75", "cover_100_full"]
+    assert cov[0][2] < cov[1][2] < cov[2][2]
+
+    dec = con.execute("SELECT * FROM vw_cs_assist_coverage_decision").fetchone()
+    dcols = [d[0] for d in con.description]
+    line = dict(zip(dcols, dec))
+    assert "Before→After" in line["external_one_liner_cn"]
+    assert "75%" in line["external_one_liner_cn"] or "75" in line["external_one_liner_cn"]
+    assert line["gross_uplift_if_full_coverage"] > 0
 
 
 def test_action_contain_split_reconciles(con):
