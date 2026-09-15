@@ -93,3 +93,22 @@ CREATE TABLE IF NOT EXISTS dim_value_assumption (
   source_note    VARCHAR,
   PRIMARY KEY (as_of, surface_id, metric)
 );
+
+-- HF landing hop knobs that drive CS seed fire/rag intensity
+CREATE TABLE IF NOT EXISTS dim_hf_hop_knobs (
+  surface_id           VARCHAR PRIMARY KEY,
+  source               VARCHAR,
+  dataset              VARCHAR,
+  quiet_halluc         DOUBLE,
+  fire_halluc          DOUBLE,
+  raw_fire_halluc      DOUBLE,
+  acted_halluc_scale   DOUBLE,
+  hop_ratio            DOUBLE,
+  rag_low              DOUBLE,
+  rag_ok               DOUBLE,
+  rag_threshold        DOUBLE,
+  precision_at_10      DOUBLE,
+  fired_at_cut         INTEGER,
+  ignore_ticket_bump   DOUBLE,
+  ignore_refund_bump   DOUBLE
+);

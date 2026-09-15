@@ -100,6 +100,21 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 - hop_ratio: `11.714285714285724`；acted_halluc_scale: `0.25`
 - rag_low / rag_ok / thr: `0.3` / `0.75` / `0.35`
 
+## HF knobs → 费率桥接（可对账）
+
+| 项 | 值 |
+|----|-----|
+| HF source | `results/agod/hf_landing/halu_regime_rag.json` |
+| hop_ratio / fired | `11.714285714285724` / `1` |
+| fire_halluc biz / raw | `0.41` / `0.82` |
+| ignore ticket/refund bump | `0.12` / `0.07857142857142863` |
+| rag_low / ok / thr | `0.3` / `0.75` / `0.35` |
+| 工单 quiet→ignored→acted | 1.5% → 15.86% → 1.14% |
+| 承接 quiet→ignored→acted | 97.89% → 75.21% → 97.79% |
+| bridge_status | **knobs_align_with_rates** |
+
+桥接一句：HF knobs（hop_ratio≈11.7, fire_halluc=0.41, rag_thr=0.35）→ 工单率 15.86%→1.14%，承接 +22.57pp；净¥16590。
+
 ## 周归因贡献（财务对账）
 
 | 周起始 | acted天 | 会话 | 少工单 | 少退款 | 多承接 | 毛¥ | 占总毛% |
@@ -164,8 +179,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 | 动作 | 天数 | 多承接 | 承接¥ | 占该动作毛% | 占总承接次% | 占总承接¥% | 日均承接¥ |
 |------|------|--------|-------|-------------|-------------|------------|-----------|
 | model_rollback | 3 | 135.7 | **¥475** | 6.5% | 42.9% | 42.9% | ¥158/日 |
-| audit_topk | 2 | 90.1 | **¥316** | 6.8% | 28.5% | 28.5% | ¥158/日 |
 | retrieval_refresh | 2 | 90.1 | **¥316** | 6.7% | 28.5% | 28.5% | ¥158/日 |
+| audit_topk | 2 | 90.1 | **¥316** | 6.8% | 28.5% | 28.5% | ¥158/日 |
 
 承接对账缺口：次数 -0.1 / ¥1.0（应为 ~0）。
 

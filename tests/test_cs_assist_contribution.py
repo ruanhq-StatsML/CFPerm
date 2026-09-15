@@ -37,6 +37,7 @@ def con():
         "10_cs_action_contain_split.sql",
         "11_cs_week_split_coverage.sql",
         "12_cs_payback_contain.sql",
+        "13_cs_hf_knob_bridge.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -241,6 +242,22 @@ def test_cumulative_curve_ends_at_total(con):
     ).fetchone()
     assert abs(last[0] - total) <= 2.0
     assert abs(last[1] - 100.0) < 0.2
+
+
+def test_hf_knob_bridge_aligns(con):
+    """HF knobs 须入库，并与 before/after 费率桥接通过。"""
+    n = con.execute("SELECT COUNT(*) FROM dim_hf_hop_knobs").fetchone()[0]
+    assert n >= 1
+    row = con.execute("SELECT * FROM vw_cs_assist_hf_knob_bridge").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, row))
+    assert d["hop_ratio"] >= 2.0
+    assert d["fired_at_cut"] == 1
+    assert d["ticket_rate_ignored_pct"] > d["ticket_rate_quiet_pct"]
+    assert d["ticket_rate_acted_pct"] < d["ticket_rate_ignored_pct"]
+    assert d["contain_lift_pp"] > 10
+    assert d["bridge_status"] == "knobs_align_with_rates"
+    assert "HF knobs" in d["external_one_liner_cn"]
 
 
 def test_payback_contain_numerator(con):

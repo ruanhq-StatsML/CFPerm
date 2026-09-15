@@ -140,6 +140,31 @@ def seed(con, hop: dict | None = None) -> None:
     ignore_ticket_bump = float(np.clip(0.03 + 0.01 * hop["hop_ratio"], 0.04, 0.12))
     ignore_refund_bump = float(np.clip(0.02 + 0.005 * hop["hop_ratio"], 0.025, 0.08))
 
+    con.execute("DELETE FROM dim_hf_hop_knobs WHERE surface_id = 'shop_assistant'")
+    con.execute(
+        """
+        INSERT INTO dim_hf_hop_knobs VALUES (
+          'shop_assistant', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )
+        """,
+        [
+            str(hop.get("source") or ""),
+            str(hop.get("dataset") or ""),
+            q_h,
+            f_h,
+            float(hop.get("raw_fire_halluc") or f_h),
+            acted_scale,
+            float(hop["hop_ratio"]),
+            rag_low,
+            rag_ok,
+            rag_thr,
+            float(hop.get("precision_at_10") or 0),
+            int(hop.get("fired_at_cut") or 0),
+            ignore_ticket_bump,
+            ignore_refund_bump,
+        ],
+    )
+
     for d in range(days):
         dt = start + timedelta(days=d)
         # Hallucination surface: concept hop after day 14 (HF cut analogue)
@@ -420,6 +445,7 @@ def main() -> int:
         "10_cs_action_contain_split.sql",
         "11_cs_week_split_coverage.sql",
         "12_cs_payback_contain.sql",
+        "13_cs_hf_knob_bridge.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -430,10 +456,14 @@ def main() -> int:
         "fct_shift_signal",
         "fct_serve_event",
         "dim_value_assumption",
+        "dim_hf_hop_knobs",
         "dim_creative",
         "dim_surface",
     ]:
-        con.execute(f"DELETE FROM {t}")
+        try:
+            con.execute(f"DELETE FROM {t}")
+        except Exception:
+            pass
 
     hop = load_hf_hop()
     (OUT / "hf_hop_knobs.json").write_text(
@@ -570,6 +600,8 @@ def main() -> int:
         "SELECT * FROM vw_cs_assist_action_payback_contain ORDER BY payback_days"
     ).fetchdf()
     dump(cs_pay_contain, OUT / "cs_assist_action_payback_contain.json")
+    cs_hf_bridge = con.execute("SELECT * FROM vw_cs_assist_hf_knob_bridge").fetchdf()
+    dump(cs_hf_bridge, OUT / "cs_assist_hf_knob_bridge.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -698,6 +730,7 @@ def main() -> int:
     pay_contain_table = (
         "\n".join(pay_contain_rows) if pay_contain_rows else "| (none) ||||||"
     )
+    hf_bridge = cs_hf_bridge.iloc[0].to_dict() if len(cs_hf_bridge) else {}
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -833,6 +866,21 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 - quiet_halluc / fire_halluc(biz): `{hop_quiet}` / `{hop_fire}`
 - hop_ratio: `{hop_ratio}`；acted_halluc_scale: `{hop_acted_scale}`
 - rag_low / rag_ok / thr: `{hop_rag_low}` / `{hop_rag_ok}` / `{hop_rag_thr}`
+
+## HF knobs → 费率桥接（可对账）
+
+| 项 | 值 |
+|----|-----|
+| HF source | `{hf_bridge.get('hf_source')}` |
+| hop_ratio / fired | `{hf_bridge.get('hop_ratio')}` / `{hf_bridge.get('fired_at_cut')}` |
+| fire_halluc biz / raw | `{hf_bridge.get('fire_halluc_biz')}` / `{hf_bridge.get('raw_fire_halluc')}` |
+| ignore ticket/refund bump | `{hf_bridge.get('ignore_ticket_bump')}` / `{hf_bridge.get('ignore_refund_bump')}` |
+| rag_low / ok / thr | `{hf_bridge.get('rag_low')}` / `{hf_bridge.get('rag_ok')}` / `{hf_bridge.get('rag_threshold')}` |
+| 工单 quiet→ignored→acted | {hf_bridge.get('ticket_rate_quiet_pct')}% → {hf_bridge.get('ticket_rate_ignored_pct')}% → {hf_bridge.get('ticket_rate_acted_pct')}% |
+| 承接 quiet→ignored→acted | {hf_bridge.get('contain_rate_quiet_pct')}% → {hf_bridge.get('contain_rate_ignored_pct')}% → {hf_bridge.get('contain_rate_acted_pct')}% |
+| bridge_status | **{hf_bridge.get('bridge_status')}** |
+
+桥接一句：{hf_bridge.get('external_one_liner_cn') or '（重跑 demo）'}
 
 ## 周归因贡献（财务对账）
 
