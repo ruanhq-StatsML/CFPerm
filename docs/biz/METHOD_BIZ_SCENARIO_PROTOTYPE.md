@@ -169,3 +169,6 @@ python3 scripts/agod/method_biz_scenario_prototype.py
 
 延伸阅读（推理 / 对齐落地 + **动作回本 / 周归因** 详解）：
 `docs/biz/METHOD_LANDING_ROADMAP.md`
+
+落地场景 · **多承接逻辑** · 方法异同 · 迭代更新：
+`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`

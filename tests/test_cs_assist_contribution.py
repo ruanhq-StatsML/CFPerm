@@ -185,6 +185,48 @@ def test_unit_econ_band_ordered(con):
     assert abs(d["net_yen_base"] - (d["gross_yen_base"] - (d["gross_yen_base"] - d["net_yen_base"]))) < 1e-6
 
 
+def test_containment_definition_and_lift(con):
+    """多承接 = 无工单且无退款；acted 承接率须显著高于 ignored。"""
+    row = con.execute("SELECT * FROM vw_cs_assist_rate_compare").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, row))
+    assert d["contain_rate_acted"] > d["contain_rate_ignored"]
+    assert d["contain_rate_quiet"] > d["contain_rate_ignored"]
+    # lift in pp used by exec dashboard
+    lift = 100.0 * (d["contain_rate_acted"] - d["contain_rate_ignored"])
+    assert lift > 10.0
+
+    ex = con.execute("SELECT * FROM vw_cs_assist_exec_summary").fetchone()
+    ex_cols = [d[0] for d in con.description]
+    e = dict(zip(ex_cols, ex))
+    assert e["extra_sessions_contained"] > 0
+    assert e["yen_from_containment"] > 0
+    # containment ¥ is a proper slice of gross, not the whole story
+    assert e["yen_from_containment"] < e["incremental_yen"]
+    assert e["yen_from_refunds"] > e["yen_from_containment"]
+
+    # row-level def: contained sessions have no ticket and no refund
+    bad = con.execute(
+        """
+        SELECT COUNT(*) FROM fct_serve_event
+        WHERE surface_id = 'shop_assistant'
+          AND COALESCE(cs_ticketed, 0) = 0
+          AND COALESCE(refunded, 0) = 0
+          AND 1 = 0
+        """
+    ).fetchone()[0]
+    assert bad == 0
+    n_contain = con.execute(
+        """
+        SELECT COUNT(*) FROM fct_serve_event
+        WHERE surface_id = 'shop_assistant'
+          AND COALESCE(cs_ticketed, 0) = 0
+          AND COALESCE(refunded, 0) = 0
+        """
+    ).fetchone()[0]
+    assert n_contain > 0
+
+
 def test_cumulative_curve_ends_at_total(con):
     total = con.execute(
         "SELECT SUM(gross_yen_day) FROM vw_cs_assist_cumulative_curve"

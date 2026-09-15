@@ -802,6 +802,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "`docs/biz/METHOD_BIZ_SCENARIO_PROTOTYPE.md`\n"
             "方法论落地 Roadmap（推理/对齐 + 回本/周归因详解）："
             "`docs/biz/METHOD_LANDING_ROADMAP.md`\n"
+            "落地场景 · 多承接 · 方法异同 · 迭代更新："
+            "`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`\n"
         )
         docs_biz.write_text(docs_biz.read_text() + pointer)
         (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(

@@ -346,6 +346,7 @@ pytest -q tests/test_cs_assist_contribution.py
 | 文件 | 用途 |
 |------|------|
 | `docs/biz/METHOD_LANDING_ROADMAP.md` | 本文：创新 + 推理/对齐 + 回本/周归因 |
+| `docs/biz/LANDING_CONTAIN_METHOD_ITER.md` | 落地场景 · 多承接 · 异同 · 迭代环 |
 | `docs/biz/METHOD_BIZ_SCENARIO_PROTOTYPE.md` | 方法×情景×单位经济异同 |
 | `docs/biz/CS_ASSISTANT_CONTRIBUTION.md` | 完整贡献数字 |
 | `docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md` | 周会粘贴简报 |

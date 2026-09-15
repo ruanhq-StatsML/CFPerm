@@ -30,3 +30,5 @@ OnlineRFPerm 决定「哪段日子算跳变对照窗」；hop 情景把跳变强
 See CN full report: `docs/biz/METHOD_BIZ_SCENARIO_PROTOTYPE.md`
 
 Roadmap (inference / alignment / payback / week-attr): `docs/biz/METHOD_LANDING_ROADMAP.md`
+
+Landing · containment · same/diff · iteration: `docs/biz/LANDING_CONTAIN_METHOD_ITER.md`
