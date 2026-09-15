@@ -60,6 +60,8 @@ scen AS (
     ('ticket_minus20', 1.00),
     ('refund_plus20', 1.00),
     ('refund_minus20', 1.00),
+    ('contain_plus50', 1.00),
+    ('contain_minus50', 1.00),
     ('all_plus20', 1.20),
     ('all_minus20', 0.80)
   ) AS t(scenario, dummy)
@@ -82,6 +84,8 @@ SELECT
     ELSE b.base_refund_cost
   END, 2) AS refund_cost,
   ROUND(CASE
+    WHEN s.scenario = 'contain_plus50' THEN b.base_contain_value * 1.50
+    WHEN s.scenario = 'contain_minus50' THEN b.base_contain_value * 0.50
     WHEN s.scenario = 'all_plus20' THEN b.base_contain_value * 1.20
     WHEN s.scenario = 'all_minus20' THEN b.base_contain_value * 0.80
     ELSE b.base_contain_value
@@ -105,6 +109,8 @@ SELECT
       ELSE b.base_refund_cost
     END
     + b.extra_contained * CASE
+      WHEN s.scenario = 'contain_plus50' THEN b.base_contain_value * 1.50
+      WHEN s.scenario = 'contain_minus50' THEN b.base_contain_value * 0.50
       WHEN s.scenario = 'all_plus20' THEN b.base_contain_value * 1.20
       WHEN s.scenario = 'all_minus20' THEN b.base_contain_value * 0.80
       ELSE b.base_contain_value
@@ -126,6 +132,8 @@ SELECT
       ELSE b.base_refund_cost
     END
     + b.extra_contained * CASE
+      WHEN s.scenario = 'contain_plus50' THEN b.base_contain_value * 1.50
+      WHEN s.scenario = 'contain_minus50' THEN b.base_contain_value * 0.50
       WHEN s.scenario = 'all_plus20' THEN b.base_contain_value * 1.20
       WHEN s.scenario = 'all_minus20' THEN b.base_contain_value * 0.80
       ELSE b.base_contain_value

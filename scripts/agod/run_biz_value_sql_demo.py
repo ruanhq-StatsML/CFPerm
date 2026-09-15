@@ -833,6 +833,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "落地场景 · 多承接 · 方法异同 · 迭代更新："
             "`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`\n"
             "不动作留白 / 盈亏平衡：见贡献账对应章节\n"
+            "HH tidy流 + OnlineRFPerm 连续检测："
+            "`docs/biz/HH_ONLINE_RFPERM_STREAM.md`\n"
         )
         docs_biz.write_text(docs_biz.read_text() + pointer)
         (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(
