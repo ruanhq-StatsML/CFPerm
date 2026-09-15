@@ -446,6 +446,7 @@ def main() -> int:
         "11_cs_week_split_coverage.sql",
         "12_cs_payback_contain.sql",
         "13_cs_hf_knob_bridge.sql",
+        "14_cs_marginal_day.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -602,6 +603,8 @@ def main() -> int:
     dump(cs_pay_contain, OUT / "cs_assist_action_payback_contain.json")
     cs_hf_bridge = con.execute("SELECT * FROM vw_cs_assist_hf_knob_bridge").fetchdf()
     dump(cs_hf_bridge, OUT / "cs_assist_hf_knob_bridge.json")
+    cs_marginal = con.execute("SELECT * FROM vw_cs_assist_marginal_day").fetchdf()
+    dump(cs_marginal, OUT / "cs_assist_marginal_day.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -731,6 +734,7 @@ def main() -> int:
         "\n".join(pay_contain_rows) if pay_contain_rows else "| (none) ||||||"
     )
     hf_bridge = cs_hf_bridge.iloc[0].to_dict() if len(cs_hf_bridge) else {}
+    marginal = cs_marginal.iloc[0].to_dict() if len(cs_marginal) else {}
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -881,6 +885,19 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 | bridge_status | **{hf_bridge.get('bridge_status')}** |
 
 桥接一句：{hf_bridge.get('external_one_liner_cn') or '（重跑 demo）'}
+
+## 边际动作日贡献（多动作一天值多少）
+
+| 项 | 值 |
+|----|-----|
+| 已动作 / 未动作天 | {marginal.get('days_acted')} / {marginal.get('days_ignored')} |
+| 日均会话（acted） | {marginal.get('sessions_per_acted_day')} |
+| 每动作日 毛/净/承接¥ | **¥{int(marginal.get('gross_yen_per_acted_day') or 0)}** / **¥{int(marginal.get('net_yen_per_acted_day') or 0)}** / ¥{int(marginal.get('contain_yen_per_acted_day') or 0)} |
+| 每动作日 少工单/退款/承接 | {marginal.get('tickets_per_acted_day')} / {marginal.get('refunds_per_acted_day')} / {marginal.get('contain_per_acted_day')} |
+| 再动作 1 天期望毛/净 | **¥{int(marginal.get('expected_gross_if_one_more_acted_day') or 0)}** / **¥{int(marginal.get('expected_net_if_one_more_acted_day') or 0)}** |
+| 仍余 ignored 日 / 留白毛 | {marginal.get('remaining_ignored_days')} / ¥{int(marginal.get('remaining_opportunity_gross_yen') or 0):,} |
+
+边际一句：{marginal.get('external_one_liner_cn') or '（重跑 demo）'}
 
 ## 周归因贡献（财务对账）
 

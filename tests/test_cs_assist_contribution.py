@@ -38,6 +38,7 @@ def con():
         "11_cs_week_split_coverage.sql",
         "12_cs_payback_contain.sql",
         "13_cs_hf_knob_bridge.sql",
+        "14_cs_marginal_day.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -242,6 +243,23 @@ def test_cumulative_curve_ends_at_total(con):
     ).fetchone()
     assert abs(last[0] - total) <= 2.0
     assert abs(last[1] - 100.0) < 0.2
+
+
+def test_marginal_acted_day_positive(con):
+    """每动作日净贡献 > 0；再动作一天期望毛 ≈ 留白/ignored天数。"""
+    row = con.execute("SELECT * FROM vw_cs_assist_marginal_day").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, row))
+    assert d["gross_yen_per_acted_day"] > 0
+    assert d["net_yen_per_acted_day"] > 0
+    assert d["contain_yen_per_acted_day"] > 0
+    assert d["expected_gross_if_one_more_acted_day"] > 0
+    assert d["remaining_ignored_days"] >= 1
+    assert "每动作日" in d["external_one_liner_cn"]
+    # with symmetric seed, one more day ≈ realized per-day gross
+    assert abs(
+        d["expected_gross_if_one_more_acted_day"] - d["gross_yen_per_acted_day"]
+    ) <= 5.0
 
 
 def test_hf_knob_bridge_aligns(con):
