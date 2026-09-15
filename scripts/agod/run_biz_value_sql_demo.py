@@ -419,6 +419,7 @@ def main() -> int:
         "09_cs_opportunity_breakeven.sql",
         "10_cs_action_contain_split.sql",
         "11_cs_week_split_coverage.sql",
+        "12_cs_payback_contain.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -565,6 +566,10 @@ def main() -> int:
     dump(cs_week_split_chk, OUT / "cs_assist_week_split_check.json")
     dump(cs_cover, OUT / "cs_assist_coverage_expansion.json")
     dump(cs_cover_dec, OUT / "cs_assist_coverage_decision.json")
+    cs_pay_contain = con.execute(
+        "SELECT * FROM vw_cs_assist_action_payback_contain ORDER BY payback_days"
+    ).fetchdf()
+    dump(cs_pay_contain, OUT / "cs_assist_action_payback_contain.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -678,6 +683,21 @@ def main() -> int:
             f"¥{int(row['incremental_gross_vs_now']):,} |"
         )
     cover_table = "\n".join(cover_rows) if cover_rows else "| (none) ||||"
+
+    pay_contain_rows = []
+    for _, row in cs_pay_contain.iterrows():
+        pay_contain_rows.append(
+            f"| {row['action_type']} | {row['payback_days']} 天 | "
+            f"¥{int(row['yen_from_tickets'])}/¥{int(row['yen_from_refunds'])}/"
+            f"**¥{int(row['yen_from_containment'])}** | "
+            f"{row['contain_share_pct_of_gross']}% | "
+            f"**{row['payback_days_contain_only']} 天** | "
+            f"{row['contain_payback_bucket']} | "
+            f"{row['contain_roi_vs_action_cost']}x |"
+        )
+    pay_contain_table = (
+        "\n".join(pay_contain_rows) if pay_contain_rows else "| (none) ||||||"
+    )
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -883,6 +903,14 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 {cover_table}
 
 读法：现覆盖 {cover_dec.get('fire_day_coverage_pct')}%；拉满可多拿毛约 ¥{int(cover_dec.get('gross_uplift_if_full_coverage') or 0):,}。
+
+## 回本分子拆分（承接进回本）
+
+| 动作 | 全口径回本 | 毛拆分 工单/退款/承接¥ | 承接占毛% | 仅承接回本 | 承接回本分档 | 承接ROI |
+|------|------------|------------------------|-----------|------------|--------------|---------|
+{pay_contain_table}
+
+读法：全口径回本用全部毛¥；「仅承接回本」= 动作日成本 / 日均承接¥——回答「自助率这一项能不能单独把动作成本赚回来」。
 
 ## 成本 / 单价盈亏平衡
 

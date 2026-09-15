@@ -36,6 +36,7 @@ def con():
         "09_cs_opportunity_breakeven.sql",
         "10_cs_action_contain_split.sql",
         "11_cs_week_split_coverage.sql",
+        "12_cs_payback_contain.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -240,6 +241,26 @@ def test_cumulative_curve_ends_at_total(con):
     ).fetchone()
     assert abs(last[0] - total) <= 2.0
     assert abs(last[1] - 100.0) < 0.2
+
+
+def test_payback_contain_numerator(con):
+    """回本分子含承接拆分；仅承接回本 ≥ 全口径回本。"""
+    rows = con.execute(
+        "SELECT action_type, payback_days, payback_days_contain_only, "
+        "yen_from_containment, gross_yen, contain_share_pct_of_gross, "
+        "contain_payback_bucket FROM vw_cs_assist_action_payback_contain"
+    ).fetchall()
+    assert len(rows) >= 2
+    for action, pb, pb_c, yen_c, gross, share, bucket in rows:
+        assert yen_c > 0, action
+        assert 0 < share < 50, action
+        assert pb_c >= pb - 1e-9, action  # thinner numerator → slower/equal payback
+        assert bucket in (
+            "same_day_from_contain",
+            "within_3_days_from_contain",
+            "slow_from_contain",
+            "no_contain_payback",
+        ), action
 
 
 def test_week_value_split_and_coverage_expansion(con):
