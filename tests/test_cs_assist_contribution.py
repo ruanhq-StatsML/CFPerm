@@ -195,3 +195,40 @@ def test_cumulative_curve_ends_at_total(con):
     ).fetchone()
     assert abs(last[0] - total) <= 2.0
     assert abs(last[1] - 100.0) < 0.2
+
+
+def test_method_biz_scenario_prototype_chain(tmp_path, monkeypatch):
+    """Method↔biz↔unit-econ prototype must render same/diff + relevance chain."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "method_biz_proto",
+        ROOT / "scripts" / "agod" / "method_biz_scenario_prototype.py",
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    # Redirect writes into tmp so pytest stays side-effect light
+    monkeypatch.setattr(mod, "OUT", tmp_path / "out")
+    monkeypatch.setattr(mod, "DOCS", tmp_path / "docs")
+    assert mod.main() == 0
+
+    payload = mod.build_payload()
+    assert payload["method"]["halu"]["fired"] == 1
+    assert payload["biz_scenarios"]["hop_band"]["base_net"] > 0
+    assert (
+        payload["unit_econ"]["band"]["net_yen_low"]
+        < payload["unit_econ"]["band"]["net_yen_base"]
+        < payload["unit_econ"]["band"]["net_yen_high"]
+    )
+    assert len(payload["chain"]) >= 6
+    assert payload["same_diff"]["same"]
+    assert payload["same_diff"]["different"]
+    assert "跳变" in payload["same_diff"]["relevance_one_liner"]
+
+    md = (tmp_path / "docs" / "METHOD_BIZ_SCENARIO_PROTOTYPE.md").read_text()
+    assert "相同" in md
+    assert "单位经济" in md
+    assert "relevance" in md.lower()
+    en = (tmp_path / "docs" / "METHOD_BIZ_SCENARIO_PROTOTYPE_EN.md").read_text()
+    assert "Relevance chain" in en
