@@ -33,6 +33,7 @@ def con():
         "06_cs_exec_dashboard.sql",
         "07_cs_week_attribution_payback.sql",
         "08_cs_unit_econ_cumulative.sql",
+        "09_cs_opportunity_breakeven.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -237,6 +238,37 @@ def test_cumulative_curve_ends_at_total(con):
     ).fetchone()
     assert abs(last[0] - total) <= 2.0
     assert abs(last[1] - 100.0) < 0.2
+
+
+def test_ignored_opportunity_and_breakeven(con):
+    """不动作留白¥ > 0；捕获率 ∈ (0,100]；审计单价上限 > 现价。"""
+    opp = con.execute("SELECT * FROM vw_cs_assist_ignored_opportunity").fetchone()
+    cols = [d[0] for d in con.description]
+    o = dict(zip(cols, opp))
+    assert o["opportunity_gross_yen"] > 0
+    assert o["contain_left_on_table"] > 0
+    assert o["tickets_left_on_table"] > 0
+    assert 0 < o["yen_capture_pct"] <= 100.0
+    assert abs(
+        o["potential_full_coverage_gross_yen"]
+        - (o["realized_gross_yen"] + o["opportunity_gross_yen"])
+    ) <= 2.0
+    assert o["fire_day_coverage_pct"] == 50.0  # 7 acted / 7 ignored in seed
+
+    be = con.execute("SELECT * FROM vw_cs_assist_cost_breakeven").fetchone()
+    bcols = [d[0] for d in con.description]
+    b = dict(zip(bcols, be))
+    assert b["max_audit_unit_cost_at_net0"] > b["audit_unit_cost_now"]
+    assert b["price_cut_headroom_pct"] > 90.0  # audit tiny vs gross
+    assert b["min_price_scale_at_net0"] < 0.05
+
+    one = con.execute("SELECT * FROM vw_cs_assist_business_oneliner").fetchone()
+    ocols = [d[0] for d in con.description]
+    line = dict(zip(ocols, one))
+    assert "Before→After" in line["external_one_liner_cn"]
+    assert "多承接" in line["external_one_liner_cn"]
+    assert "留白" in line["external_one_liner_cn"]
+    assert line["contain_rate_lift_pp"] > 10
 
 
 def test_method_biz_scenario_prototype_chain(tmp_path, monkeypatch):

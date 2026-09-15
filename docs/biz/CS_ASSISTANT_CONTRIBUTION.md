@@ -143,13 +143,31 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 财务日账 CSV：`results/agod/biz_value_sql/cs_assist_finance_daily.csv`
 
+## 不动作留白（机会成本）
+
+火情日覆盖 **50.0%**（acted 7 / ignored 7）。  
+若 ignored 日按 acted 费率，桌上还留：
+
+| 项 | 已实现 | 留白（若当时动作） |
+|----|--------|-------------------|
+| 少工单 | 206.0 | **206.0** |
+| 少退款 | 130.0 | **130.0** |
+| 多承接 | 316.0 | **316.0** |
+| 毛¥ | ¥16656 | **¥16656** |
+
+全覆盖潜在毛¥ **¥33,312**；已捕获 **50.0%**。
+
+## 成本 / 单价盈亏平衡
+
+| 项 | 值 |
+|----|-----|
+| 现审计单价 | ¥6.0 |
+| 净=0 时审计单价上限 | **¥1514.2**（余量 ×252.4） |
+| 单价整体还可下砍 | **99.6%** 仍净>0 |
+
 ## 一句对外
 
-客服助手在幻觉制度跳变的 7 个动作日里，相对同条件不动作：少了
-206.0 单工单、130.0 单退款，
-多承接 316.0 次会话；毛贡献约 ¥16656.0，
-扣审计人力后净贡献约 ¥16590.0。
-生产中等流量（日 1 万会话）见上表 `prod_mid`。
+Before→After：工单率 15.86%→1.14%，承接率 75.21%→97.79%（+22.57pp）；少工单 206.0 / 少退款 130.0 / 多承接 316.0；净¥16590；不动作留白毛¥16656（火情日覆盖 50.0%）；优先 model_rollback。
 
 
 ---
@@ -159,5 +177,6 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 周归因 / 回本：见贡献账内「周归因贡献」「动作回本天数」
 单位经济带 / 累计曲线 / 财务CSV：见贡献账对应章节
 方法论 × 业务情景 × 单位经济对照原型：`docs/biz/METHOD_BIZ_SCENARIO_PROTOTYPE.md`
-方法论落地 Roadmap（推理/对齐创新 + 回本/周归因详解）：`docs/biz/METHOD_LANDING_ROADMAP.md`
-落地场景 · 多承接 · 方法异同 · 迭代更新详解：`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`
+方法论落地 Roadmap（推理/对齐 + 回本/周归因详解）：`docs/biz/METHOD_LANDING_ROADMAP.md`
+落地场景 · 多承接 · 方法异同 · 迭代更新：`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`
+不动作留白 / 盈亏平衡：见贡献账对应章节

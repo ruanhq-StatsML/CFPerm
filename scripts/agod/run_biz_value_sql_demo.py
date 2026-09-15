@@ -416,6 +416,7 @@ def main() -> int:
         "06_cs_exec_dashboard.sql",
         "07_cs_week_attribution_payback.sql",
         "08_cs_unit_econ_cumulative.sql",
+        "09_cs_opportunity_breakeven.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -532,6 +533,12 @@ def main() -> int:
     dump(cs_curve, OUT / "cs_assist_cumulative_curve.json")
     dump(cs_unit, OUT / "cs_assist_unit_econ_sensitivity.json")
     dump(cs_band, OUT / "cs_assist_unit_econ_band.json")
+    cs_opp = con.execute("SELECT * FROM vw_cs_assist_ignored_opportunity").fetchdf()
+    cs_be = con.execute("SELECT * FROM vw_cs_assist_cost_breakeven").fetchdf()
+    cs_oneliner = con.execute("SELECT * FROM vw_cs_assist_business_oneliner").fetchdf()
+    dump(cs_opp, OUT / "cs_assist_ignored_opportunity.json")
+    dump(cs_be, OUT / "cs_assist_cost_breakeven.json")
+    dump(cs_oneliner, OUT / "cs_assist_business_oneliner.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -599,6 +606,9 @@ def main() -> int:
         )
     unit_table = "\n".join(unit_rows) if unit_rows else "| (none) |||||"
     band = cs_band.iloc[0].to_dict() if len(cs_band) else {}
+    opp = cs_opp.iloc[0].to_dict() if len(cs_opp) else {}
+    be = cs_be.iloc[0].to_dict() if len(cs_be) else {}
+    one = cs_oneliner.iloc[0].to_dict() if len(cs_oneliner) else {}
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -767,13 +777,31 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 财务日账 CSV：`results/agod/biz_value_sql/cs_assist_finance_daily.csv`
 
+## 不动作留白（机会成本）
+
+火情日覆盖 **{opp.get('fire_day_coverage_pct')}%**（acted {opp.get('days_acted')} / ignored {opp.get('days_ignored')}）。  
+若 ignored 日按 acted 费率，桌上还留：
+
+| 项 | 已实现 | 留白（若当时动作） |
+|----|--------|-------------------|
+| 少工单 | {opp.get('tickets_realized')} | **{opp.get('tickets_left_on_table')}** |
+| 少退款 | {opp.get('refunds_realized')} | **{opp.get('refunds_left_on_table')}** |
+| 多承接 | {opp.get('contain_realized')} | **{opp.get('contain_left_on_table')}** |
+| 毛¥ | ¥{int(opp.get('realized_gross_yen') or 0)} | **¥{int(opp.get('opportunity_gross_yen') or 0)}** |
+
+全覆盖潜在毛¥ **¥{int(opp.get('potential_full_coverage_gross_yen') or 0):,}**；已捕获 **{opp.get('yen_capture_pct')}%**。
+
+## 成本 / 单价盈亏平衡
+
+| 项 | 值 |
+|----|-----|
+| 现审计单价 | ¥{be.get('audit_unit_cost_now')} |
+| 净=0 时审计单价上限 | **¥{be.get('max_audit_unit_cost_at_net0')}**（余量 ×{be.get('audit_unit_headroom_multiple')}） |
+| 单价整体还可下砍 | **{be.get('price_cut_headroom_pct')}%** 仍净>0 |
+
 ## 一句对外
 
-客服助手在幻觉制度跳变的 {c.get('days_acted')} 个动作日里，相对同条件不动作：少了
-{c.get('tickets_avoided')} 单工单、{c.get('refunds_avoided')} 单退款，
-多承接 {c.get('extra_sessions_contained')} 次会话；毛贡献约 ¥{c.get('incremental_yen')}，
-扣审计人力后净贡献约 ¥{n.get('net_incremental_yen')}。
-生产中等流量（日 1 万会话）见上表 `prod_mid`。
+{one.get('external_one_liner_cn') or '（重跑 demo 生成）'}
 """
     (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(cs_report)
     docs_biz = ROOT / "docs" / "biz" / "CS_ASSISTANT_CONTRIBUTION.md"
@@ -804,6 +832,7 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "`docs/biz/METHOD_LANDING_ROADMAP.md`\n"
             "落地场景 · 多承接 · 方法异同 · 迭代更新："
             "`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`\n"
+            "不动作留白 / 盈亏平衡：见贡献账对应章节\n"
         )
         docs_biz.write_text(docs_biz.read_text() + pointer)
         (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(
