@@ -1,35 +1,11 @@
 [
   {
     "source":"halluc",
-    "dt":"2026-09-18T00:00:00.000",
-    "surface_id":"shop_assistant",
-    "bucket":"generation_regime",
-    "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":1890.0
-  },
-  {
-    "source":"halluc",
-    "dt":"2026-09-28T00:00:00.000",
-    "surface_id":"shop_assistant",
-    "bucket":"retrieval_gap",
-    "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
-    "severity_proxy":1645.0
-  },
-  {
-    "source":"halluc",
     "dt":"2026-09-20T00:00:00.000",
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
     "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":1625.0
-  },
-  {
-    "source":"halluc",
-    "dt":"2026-09-22T00:00:00.000",
-    "surface_id":"shop_assistant",
-    "bucket":"retrieval_gap",
-    "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
-    "severity_proxy":1540.0
+    "severity_proxy":2735.0
   },
   {
     "source":"halluc",
@@ -37,15 +13,31 @@
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
     "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":1410.0
+    "severity_proxy":2670.0
   },
   {
     "source":"halluc",
-    "dt":"2026-09-26T00:00:00.000",
+    "dt":"2026-09-18T00:00:00.000",
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
     "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":1300.0
+    "severity_proxy":2620.0
+  },
+  {
+    "source":"halluc",
+    "dt":"2026-09-22T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "bucket":"retrieval_gap",
+    "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
+    "severity_proxy":2455.0
+  },
+  {
+    "source":"halluc",
+    "dt":"2026-09-28T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "bucket":"retrieval_gap",
+    "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
+    "severity_proxy":2430.0
   },
   {
     "source":"halluc",
@@ -53,23 +45,15 @@
     "surface_id":"shop_assistant",
     "bucket":"retrieval_gap",
     "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
-    "severity_proxy":1245.0
+    "severity_proxy":2400.0
   },
   {
     "source":"halluc",
-    "dt":"2026-09-25T00:00:00.000",
-    "surface_id":"shop_assistant",
-    "bucket":"retrieval_gap",
-    "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
-    "severity_proxy":445.0
-  },
-  {
-    "source":"halluc",
-    "dt":"2026-09-27T00:00:00.000",
+    "dt":"2026-09-26T00:00:00.000",
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
     "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":420.0
+    "severity_proxy":2000.0
   },
   {
     "source":"halluc",
@@ -81,11 +65,19 @@
   },
   {
     "source":"halluc",
-    "dt":"2026-09-23T00:00:00.000",
+    "dt":"2026-09-27T00:00:00.000",
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
     "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":345.0
+    "severity_proxy":315.0
+  },
+  {
+    "source":"halluc",
+    "dt":"2026-09-25T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "bucket":"retrieval_gap",
+    "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
+    "severity_proxy":315.0
   },
   {
     "source":"halluc",
@@ -93,7 +85,7 @@
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
     "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":290.0
+    "severity_proxy":240.0
   },
   {
     "source":"halluc",
@@ -105,11 +97,19 @@
   },
   {
     "source":"halluc",
+    "dt":"2026-09-23T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "bucket":"generation_regime",
+    "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
+    "severity_proxy":185.0
+  },
+  {
+    "source":"halluc",
     "dt":"2026-09-15T00:00:00.000",
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
     "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":205.0
+    "severity_proxy":100.0
   },
   {
     "source":"style",

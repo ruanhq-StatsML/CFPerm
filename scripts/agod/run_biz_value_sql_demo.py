@@ -16,6 +16,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 SQL_DIR = ROOT / "sql" / "biz_value"
 OUT = ROOT / "results" / "agod" / "biz_value_sql"
+HF_HOP_PATH = ROOT / "results" / "agod" / "hf_landing" / "halu_regime_rag.json"
 
 
 def _require_duckdb():
@@ -30,10 +31,67 @@ def _require_duckdb():
     return duckdb
 
 
-def seed(con) -> None:
+def load_hf_hop(path: Path = HF_HOP_PATH) -> dict:
+    """Map HaluEval hop JSON → seed fire/rag intensity knobs."""
+    defaults = {
+        "source": "defaults",
+        "quiet_halluc": 0.07,
+        "fire_halluc": 0.41,
+        "acted_halluc_scale": 0.40,
+        "hop_ratio": 3.0,
+        "rag_low": 0.22,
+        "rag_ok": 0.60,
+        "rag_threshold": 0.35,
+        "precision_at_10": 0.7,
+        "fired_at_cut": 0,
+    }
+    if not path.exists():
+        return defaults
+    raw = json.loads(path.read_text())
+    hop = raw.get("hop_at_cut") or raw.get("hop_at_cut") or {}
+    quiet = raw.get("hop_quiet") or raw.get("hop_quiet") or {}
+    hop_rank = hop.get("ranking") or {}
+    quiet_rank = quiet.get("ranking") or {}
+    quiet_h = float(quiet_rank.get("halluc_rate", defaults["quiet_halluc"]))
+    fire_h = float(hop_rank.get("halluc_rate", 0.82))
+    # Business surface is milder than raw label hop; keep proportional.
+    fire_h_biz = float(np.clip(fire_h * 0.5, quiet_h + 0.05, 0.55))
+    ratio = float(
+        hop.get("ratio")
+        or (raw.get("rate_after", 3.0) / max(raw.get("rate_before", 0.08), 1e-6))
+    )
+    rag_top = float(
+        hop_rank.get("mean_rag_hit_top10")
+        or hop_rank.get("mean_rag_hit_top10")
+        or 1.0
+    )
+    # High HF top-10 rag ⇒ generation hop dominates; still keep a low-rag
+    # retrieval-refresh arm on every 3rd fire day for action split.
+    rag_ok = float(np.clip(0.35 + 0.4 * rag_top, 0.45, 0.75))
+    rag_low = float(np.clip(rag_ok - 0.40, 0.12, 0.30))
+    return {
+        "source": str(path.relative_to(ROOT)),
+        "quiet_halluc": quiet_h,
+        "fire_halluc": fire_h_biz,
+        "acted_halluc_scale": float(np.clip(1.0 / max(ratio, 1.0), 0.25, 0.55)),
+        "hop_ratio": ratio,
+        "rag_low": rag_low,
+        "rag_ok": rag_ok,
+        "rag_threshold": 0.35,
+        "precision_at_10": float(hop_rank.get("precision_at_10", 0.7)),
+        "fired_at_cut": int(hop.get("fired", 0)),
+        "raw_fire_halluc": fire_h,
+        "dataset": raw.get("dataset") or raw.get("scenario"),
+        "rate_before": float(raw.get("rate_before", quiet_h)),
+        "rate_after": float(raw.get("rate_after", fire_h)),
+    }
+
+
+def seed(con, hop: dict | None = None) -> None:
     rng = np.random.default_rng(7)
     start = date(2026, 9, 1)
     days = 28
+    hop = hop or load_hf_hop()
 
     con.execute(
         """
@@ -50,12 +108,15 @@ def seed(con) -> None:
           (?, 'shop_assistant', 'refund_unit_cost', 80.0, 'CNY', 'finance 2026Q3'),
           (?, 'shop_assistant', 'contained_session_value', 3.5, 'CNY', 'ops: avoided human handle'),
           (?, 'shop_assistant', 'audit_unit_cost', 6.0, 'CNY', 'ops: human audit per sample'),
+          (?, 'shop_assistant', 'action_cost_retrieval_refresh_day', 40.0, 'CNY', 'ops: index/RAG refresh day'),
+          (?, 'shop_assistant', 'action_cost_model_rollback_day', 80.0, 'CNY', 'ops: rollback+canary day'),
+          (?, 'shop_assistant', 'action_cost_audit_topk_day', 20.0, 'CNY', 'ops: queue setup (excl per-sample)'),
           (?, 'feed_caption', 'value_per_ctr_point', 1200.0, 'CNY', 'growth proxy'),
           (?, 'feed_caption', 'brand_incident_cost', 50.0, 'CNY', 'brand ops'),
           (?, 'ad_creative', 'value_per_ctr_point', 2500.0, 'CNY', 'ads proxy'),
           (?, 'ad_creative', 'brand_incident_cost', 120.0, 'CNY', 'brand ops')
         """,
-        [start] * 8,
+        [start] * 11,
     )
 
     # creatives / style clusters
@@ -69,54 +130,63 @@ def seed(con) -> None:
     signal_rows = []
     audit_rows = []
 
+    q_h = float(hop["quiet_halluc"])
+    f_h = float(hop["fire_halluc"])
+    acted_scale = float(hop["acted_halluc_scale"])
+    rag_low = float(hop["rag_low"])
+    rag_ok = float(hop["rag_ok"])
+    rag_thr = float(hop["rag_threshold"])
+    # Stronger hop ⇒ larger ticket/refund blow-up when ignored.
+    ignore_ticket_bump = float(np.clip(0.03 + 0.01 * hop["hop_ratio"], 0.04, 0.12))
+    ignore_refund_bump = float(np.clip(0.02 + 0.005 * hop["hop_ratio"], 0.025, 0.08))
+
     for d in range(days):
         dt = start + timedelta(days=d)
-        # Hallucination surface: concept hop after day 14
+        # Hallucination surface: concept hop after day 14 (HF cut analogue)
         fired = 1 if d >= 14 else 0
         acted = 1 if (fired and d % 2 == 0) else 0
-        # Route action by retrieval health (mirrors HF hop RAG split)
-        rag = 0.55 if d < 14 else (0.20 if d % 3 == 0 else 0.60)
+        # Route action by retrieval health (HF hop RAG split)
+        rag = (q_h + 0.48) if d < 14 else (rag_low if d % 3 == 0 else rag_ok)
         if not fired:
             notes = None
             action = None
             act_ticket_cut = 0.0
             act_refund_cut = 0.0
-            act_halluc = 0.18
+            act_halluc = q_h
         elif not acted:
             notes = "ignored"
             action = None
             act_ticket_cut = 0.0
             act_refund_cut = 0.0
-            act_halluc = 0.42
-        elif rag < 0.35:
+            act_halluc = f_h
+        elif rag < rag_thr:
             notes = "acted:retrieval_refresh"
             action = "retrieval_refresh"
             act_ticket_cut = 0.028
             act_refund_cut = 0.014
-            act_halluc = 0.14
+            act_halluc = f_h * acted_scale * 0.85
         elif d % 4 == 0:
             notes = "acted:audit_topk"
             action = "audit_topk"
             act_ticket_cut = 0.018
             act_refund_cut = 0.009
-            act_halluc = 0.20
+            act_halluc = f_h * acted_scale * 1.15
         else:
             notes = "acted:model_rollback"
             action = "model_rollback"
             act_ticket_cut = 0.022
             act_refund_cut = 0.011
-            act_halluc = 0.16
+            act_halluc = f_h * acted_scale
         n = 200
         for i in range(n):
-            # Clear incremental effect: after regime hop, ignoring mitigation
-            # drives tickets/refunds; acting contains more sessions in-bot.
-            halluc = int(rng.random() < (0.04 if d < 14 else act_halluc))
+            # HF-driven rates: quiet / fire_ignored / fire_acted
+            halluc = int(rng.random() < (q_h * 0.6 if d < 14 else act_halluc))
             ticket = int(
                 rng.random()
                 < (
                     0.012
                     + 0.10 * halluc
-                    + (0.055 if (fired and not acted) else 0.0)
+                    + (ignore_ticket_bump if (fired and not acted) else 0.0)
                     - act_ticket_cut
                 )
             )
@@ -125,7 +195,7 @@ def seed(con) -> None:
                 < (
                     0.004
                     + 0.07 * halluc
-                    + (0.035 if (fired and not acted) else 0.0)
+                    + (ignore_refund_bump if (fired and not acted) else 0.0)
                     - act_refund_cut
                 )
             )
@@ -358,7 +428,11 @@ def main() -> int:
     ]:
         con.execute(f"DELETE FROM {t}")
 
-    seed(con)
+    hop = load_hf_hop()
+    (OUT / "hf_hop_knobs.json").write_text(
+        json.dumps(hop, ensure_ascii=False, indent=2)
+    )
+    seed(con, hop=hop)
 
     halluc = con.execute("SELECT * FROM vw_halluc_roi_rollup").fetchdf()
     style = con.execute("SELECT * FROM vw_style_roi_rollup").fetchdf()
@@ -382,6 +456,9 @@ def main() -> int:
     cs_rates = con.execute("SELECT * FROM vw_cs_assist_rate_compare").fetchdf()
     cs_actions = con.execute(
         "SELECT * FROM vw_cs_assist_action_increment ORDER BY incremental_yen DESC"
+    ).fetchdf()
+    cs_action_net = con.execute(
+        "SELECT * FROM vw_cs_assist_action_net ORDER BY net_yen_after_action_cost DESC"
     ).fetchdf()
     cs_traffic = con.execute(
         "SELECT * FROM vw_cs_assist_traffic_scenarios ORDER BY daily_sessions"
@@ -418,6 +495,7 @@ def main() -> int:
     dump(cs_arms, OUT / "cs_assist_arms.json")
     dump(cs_rates, OUT / "cs_assist_rates.json")
     dump(cs_actions, OUT / "cs_assist_actions.json")
+    dump(cs_action_net, OUT / "cs_assist_action_net.json")
     dump(cs_traffic, OUT / "cs_assist_traffic.json")
     dump(cs_net, OUT / "cs_assist_net.json")
     dump(cs_week, OUT / "cs_assist_weekly.json")
@@ -438,12 +516,21 @@ def main() -> int:
     action_rows = []
     for _, row in cs_actions.iterrows():
         action_rows.append(
-            f"| {row['action_type']} | {int(row['n_days'])} | {int(row['sessions'])} | "
+            f"| {row['action_type']} | {int(row.get('n_days', row.get('days', 0)))} | {int(row['sessions'])} | "
             f"{row['tickets_avoided']} | {row['refunds_avoided']} | "
             f"{row['extra_contained']} | **¥{int(row['incremental_yen'])}** | "
             f"{row['avg_rag_hit']:.2f} |"
         )
     action_table = "\n".join(action_rows) if action_rows else "| (none) ||||||"
+
+    action_net_rows = []
+    for _, row in cs_action_net.iterrows():
+        action_net_rows.append(
+            f"| {row['action_type']} | {int(row['n_days'])} | "
+            f"¥{int(row['gross_yen'])} | ¥{int(row['action_day_cost_yen'])} | "
+            f"**¥{int(row['net_yen_after_action_cost'])}** |"
+        )
+    action_net_table = "\n".join(action_net_rows) if action_net_rows else "| (none) ||||"
 
     traffic_rows = []
     for _, row in cs_traffic.iterrows():
@@ -469,20 +556,28 @@ def main() -> int:
     hf_path = ROOT / "results" / "agod" / "hf_landing" / "halu_regime_rag.json"
     if hf_path.exists():
         hf = json.loads(hf_path.read_text())
-        hop = hf.get("hop_at_cut", {})
-        ranking = hop.get("ranking", {})
+        hop_cut = hf.get("hop_at_cut") or hf.get("hop_at_cut") or {}
+        ranking = hop_cut.get("ranking") or {}
         hf_note = f"""
 ## 与 HF 幻觉子集的衔接（证据链）
 
 HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
-- cut 处 `fired={hop.get('fired')}`，ratio≈`{hop.get('ratio')}`
+- cut 处 `fired={hop_cut.get('fired')}`，ratio≈`{hop_cut.get('ratio')}`
 - 跳变后幻觉率 ≈ `{ranking.get('halluc_rate')}`；`po_risk0` P@10=`{ranking.get('precision_at_10')}`
 - Top-10 平均 `rag_hit`=`{ranking.get('mean_rag_hit_top10')}` → 路由：检索缺口 vs 生成制度
 
 本账动作拆分与之对齐：`avg_rag_hit` 低 → `retrieval_refresh`；否则 → `model_rollback` / `audit_topk`。
 """
 
+    hop_source = hop.get("source")
+    hop_quiet = hop.get("quiet_halluc")
+    hop_fire = hop.get("fire_halluc")
+    hop_ratio = hop.get("hop_ratio")
+    hop_acted_scale = hop.get("acted_halluc_scale")
+    hop_rag_low = hop.get("rag_low")
+    hop_rag_ok = hop.get("rag_ok")
+    hop_rag_thr = hop.get("rag_threshold")
     cs_report = f"""# 客服助手增量贡献账（可复现）
 
 产品面：`shop_assistant`（客服助手）。  
@@ -526,6 +621,12 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 |------|------|------|--------|--------|--------|-------|-------------|
 {action_table}
 
+## 扣动作成本后净贡献
+
+| 动作 | 天数 | 毛增量¥ | 动作日成本¥ | 净贡献¥ |
+|------|------|---------|-------------|---------|
+{action_net_table}
+
 ## 流量情景（月贡献外推 · 毛）
 
 | 情景 | 日会话 | 月增量¥ | 月少工单 | 月少退款 | 月多承接 |
@@ -549,6 +650,13 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 净增量¥ = 毛增量¥ − acted 侧审计人力成本
          （审计单价 × acted 日审计件数；不把 ignored 多烧的审计算进贡献）
 ```
+
+## HF hop 驱动参数
+
+- source: `{hop_source}`
+- quiet_halluc / fire_halluc(biz): `{hop_quiet}` / `{hop_fire}`
+- hop_ratio: `{hop_ratio}`；acted_halluc_scale: `{hop_acted_scale}`
+- rag_low / rag_ok / thr: `{hop_rag_low}` / `{hop_rag_ok}` / `{hop_rag_thr}`
 
 ## 一句对外
 

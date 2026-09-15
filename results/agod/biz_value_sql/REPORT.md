@@ -2,20 +2,20 @@
 
 ## 客服助手增量贡献（主结果）
 
-- tickets avoided: `113.0`
-- refunds avoided: `69.0`
-- extra sessions contained: `179.0`
-- **gross incremental ¥: `8972.0`**
-- **net incremental ¥ (after audit): `8870.0`**
-- ¥ breakdown tickets/refunds/contain: `2825.0` / `5520.0` / `627.0`
-- monthly run-rate ¥ (gross): `38449.0`
+- tickets avoided: `206.0`
+- refunds avoided: `130.0`
+- extra sessions contained: `316.0`
+- **gross incremental ¥: `16656.0`**
+- **net incremental ¥ (after audit): `16590.0`**
+- ¥ breakdown tickets/refunds/contain: `5150.0` / `10400.0` / `1106.0`
+- monthly run-rate ¥ (gross): `71383.0`
 - action split: `cs_assist_actions.json`
 - traffic / weekly / net: `cs_assist_traffic.json` / `cs_assist_weekly.json` / `cs_assist_net.json`
 - detail: `CS_ASSISTANT_CONTRIBUTION.md` / `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
 
 ## Hallucination cost rollup (`shop_assistant`)
 
-- est daily save act vs ignore: `1192.142857142857` CNY
+- est daily save act vs ignore: `2221.428571428571` CNY
 
 ## Style / creative (`feed_caption`)
 

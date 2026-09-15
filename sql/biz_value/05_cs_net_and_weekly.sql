@@ -117,3 +117,58 @@ SELECT
 FROM vw_cs_assist_net_daily
 GROUP BY 1, 2
 ORDER BY 1, 2;
+
+-- 动作毛增量 − 动作日成本 − 审计件成本分摊（仅 audit_topk）
+CREATE OR REPLACE VIEW vw_cs_assist_action_net AS
+WITH costs AS (
+  SELECT
+    surface_id,
+    MAX(CASE WHEN metric = 'action_cost_retrieval_refresh_day' THEN unit_value END) AS cost_retrieval_day,
+    MAX(CASE WHEN metric = 'action_cost_model_rollback_day' THEN unit_value END) AS cost_rollback_day,
+    MAX(CASE WHEN metric = 'action_cost_audit_topk_day' THEN unit_value END) AS cost_audit_day,
+    MAX(CASE WHEN metric = 'audit_unit_cost' THEN unit_value END) AS audit_unit_cost
+  FROM dim_value_assumption
+  GROUP BY surface_id
+),
+aud AS (
+  SELECT surface_id, COUNT(*) AS n_audits
+  FROM fct_audit_queue
+  WHERE surface_id IN ('shop_assistant', 'cs_bot', 'rag_qa')
+  GROUP BY surface_id
+)
+SELECT
+  a.surface_id,
+  a.action_type,
+  a.n_days,
+  a.sessions,
+  a.tickets_avoided,
+  a.refunds_avoided,
+  a.extra_contained,
+  a.incremental_yen AS gross_yen,
+  ROUND(
+    a.n_days * CASE a.action_type
+      WHEN 'retrieval_refresh' THEN COALESCE(c.cost_retrieval_day, 0)
+      WHEN 'model_rollback' THEN COALESCE(c.cost_rollback_day, 0)
+      WHEN 'audit_topk' THEN COALESCE(c.cost_audit_day, 0)
+      ELSE 0
+    END
+  , 0) AS action_day_cost_yen,
+  ROUND(
+    a.incremental_yen
+    - a.n_days * CASE a.action_type
+        WHEN 'retrieval_refresh' THEN COALESCE(c.cost_retrieval_day, 0)
+        WHEN 'model_rollback' THEN COALESCE(c.cost_rollback_day, 0)
+        WHEN 'audit_topk' THEN COALESCE(c.cost_audit_day, 0)
+        ELSE 0
+      END
+    - CASE
+        WHEN a.action_type = 'audit_topk'
+          THEN COALESCE(aud.n_audits, 0) * COALESCE(c.audit_unit_cost, 0)
+             * a.sessions / NULLIF(SUM(a.sessions) OVER (PARTITION BY a.surface_id), 0)
+        ELSE 0
+      END
+  , 0) AS net_yen_after_action_cost,
+  a.avg_rag_hit
+FROM vw_cs_assist_action_increment a
+LEFT JOIN costs c ON c.surface_id = a.surface_id
+LEFT JOIN aud ON aud.surface_id = a.surface_id;

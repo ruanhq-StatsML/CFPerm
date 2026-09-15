@@ -4,10 +4,10 @@
     "surface_id":"shop_assistant",
     "n_fire_acted_days":7.0,
     "n_fire_ignored_days":7.0,
-    "avg_cost_fire_acted":330.0,
-    "avg_cost_fire_ignored":1522.1428571429,
+    "avg_cost_fire_acted":251.4285714286,
+    "avg_cost_fire_ignored":2472.8571428571,
     "avg_cost_quiet":172.1428571429,
-    "primary_value_proxy":1192.1428571429,
+    "primary_value_proxy":2221.4285714286,
     "style_only_days":null,
     "avg_ctr_style_only":null
   },

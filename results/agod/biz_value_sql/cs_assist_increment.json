@@ -1,22 +1,22 @@
 [
   {
     "surface_id":"shop_assistant",
-    "tickets_avoided":113.0,
-    "refunds_avoided":69.0,
-    "extra_sessions_contained":179.0,
-    "incremental_yen":8972.0,
-    "incremental_yen_per_1k_sessions":6408.0,
-    "tickets_avoided_per_1k":80.7,
-    "refunds_avoided_per_1k":49.3,
-    "containment_rate_lift_pp":12.79,
-    "yen_from_tickets":2825.0,
-    "yen_from_refunds":5520.0,
-    "yen_from_containment":627.0,
+    "tickets_avoided":206.0,
+    "refunds_avoided":130.0,
+    "extra_sessions_contained":316.0,
+    "incremental_yen":16656.0,
+    "incremental_yen_per_1k_sessions":11897.0,
+    "tickets_avoided_per_1k":147.1,
+    "refunds_avoided_per_1k":92.9,
+    "containment_rate_lift_pp":22.57,
+    "yen_from_tickets":5150.0,
+    "yen_from_refunds":10400.0,
+    "yen_from_containment":1106.0,
     "days_acted":7,
     "days_ignored":7,
     "sessions_acted":1400.0,
-    "monthly_runrate_yen":38449.0,
-    "monthly_tickets_avoided":484.3,
-    "monthly_refunds_avoided":295.7
+    "monthly_runrate_yen":71383.0,
+    "monthly_tickets_avoided":882.9,
+    "monthly_refunds_avoided":557.1
   }
 ]
