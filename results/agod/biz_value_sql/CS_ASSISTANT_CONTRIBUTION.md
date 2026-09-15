@@ -226,6 +226,22 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 读法：全口径回本用全部毛¥；「仅承接回本」= 动作日成本 / 日均承接¥——回答「自助率这一项能不能单独把动作成本赚回来」。
 
+## 承接单价承压（仅靠多承接还能回本吗）
+
+业务问题：自助会话价值从 ¥3.5 砍到 ¥1.75（-50%）时，各动作是否仍能 **只靠多承接** 当天回本。
+
+| 动作 | 情景 | 承接单价 | 日均承接¥ | 日成本¥ | 仅承接回本 | 分档 | 承接ROI |
+|------|------|----------|-----------|---------|------------|------|---------|
+| audit_topk | contain_price_minus50 | ¥1.75 | ¥79 | ¥20 | **0.253 天** | same_day_from_contain | 4.0x |
+| audit_topk | contain_price_base | ¥3.5 | ¥158 | ¥20 | **0.127 天** | same_day_from_contain | 7.9x |
+| model_rollback | contain_price_minus50 | ¥1.75 | ¥79 | ¥80 | **1.011 天** | within_3_days_from_contain | 1.0x |
+| model_rollback | contain_price_base | ¥3.5 | ¥158 | ¥80 | **0.505 天** | same_day_from_contain | 2.0x |
+| retrieval_refresh | contain_price_minus50 | ¥1.75 | ¥79 | ¥40 | **0.506 天** | same_day_from_contain | 2.0x |
+| retrieval_refresh | contain_price_base | ¥3.5 | ¥158 | ¥40 | **0.253 天** | same_day_from_contain | 4.0x |
+
+摘要：承接单价 -50% 时，仅靠多承接回本：最快 0.253 天 / 最慢 1.011 天；2/3 臂仍当天回本。  
+状态：`some_arms_need_ticket_refund_to_payback`（-50% 下 2.0/3 臂当天回本）。
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -249,4 +265,6 @@ Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%（+22.57pp）；�
 方法论落地 Roadmap（推理/对齐 + 回本/周归因详解）：`docs/biz/METHOD_LANDING_ROADMAP.md`
 落地场景 · 多承接 · 方法异同 · 迭代更新：`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`
 不动作留白 / 盈亏平衡：见贡献账对应章节
+承接单价承压（仅承接回本 ±50%）：见贡献账「承接单价承压」；`results/agod/biz_value_sql/cs_assist_payback_contain_price_stress.json`
 HH tidy流 + OnlineRFPerm 连续检测：`docs/biz/HH_ONLINE_RFPERM_STREAM.md`
+大模型落地 use-case（业务逻辑）：`docs/biz/LLM_LANDING_USECASES_BIZ.md`

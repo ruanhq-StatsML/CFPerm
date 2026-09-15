@@ -447,6 +447,7 @@ def main() -> int:
         "12_cs_payback_contain.sql",
         "13_cs_hf_knob_bridge.sql",
         "14_cs_marginal_day.sql",
+        "15_cs_payback_contain_price_stress.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -605,6 +606,17 @@ def main() -> int:
     dump(cs_hf_bridge, OUT / "cs_assist_hf_knob_bridge.json")
     cs_marginal = con.execute("SELECT * FROM vw_cs_assist_marginal_day").fetchdf()
     dump(cs_marginal, OUT / "cs_assist_marginal_day.json")
+    cs_contain_stress = con.execute(
+        """
+        SELECT * FROM vw_cs_assist_payback_contain_price_stress
+        ORDER BY action_type, contain_unit_price
+        """
+    ).fetchdf()
+    cs_contain_stress_sum = con.execute(
+        "SELECT * FROM vw_cs_assist_payback_contain_stress_summary"
+    ).fetchdf()
+    dump(cs_contain_stress, OUT / "cs_assist_payback_contain_price_stress.json")
+    dump(cs_contain_stress_sum, OUT / "cs_assist_payback_contain_stress_summary.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -735,6 +747,25 @@ def main() -> int:
     )
     hf_bridge = cs_hf_bridge.iloc[0].to_dict() if len(cs_hf_bridge) else {}
     marginal = cs_marginal.iloc[0].to_dict() if len(cs_marginal) else {}
+    contain_stress_sum = (
+        cs_contain_stress_sum.iloc[0].to_dict() if len(cs_contain_stress_sum) else {}
+    )
+
+    stress_rows = []
+    # 只展示 -50% 承压行（业务问题主句）+ base 对照
+    stress_view = cs_contain_stress[
+        cs_contain_stress["scenario"].isin(
+            ["contain_price_base", "contain_price_minus50"]
+        )
+    ] if len(cs_contain_stress) else cs_contain_stress
+    for _, row in stress_view.iterrows():
+        stress_rows.append(
+            f"| {row['action_type']} | {row['scenario']} | ¥{row['contain_unit_price']} | "
+            f"¥{int(row['contain_yen_per_day'])} | ¥{int(row['cost_yen_per_day'])} | "
+            f"**{row['payback_days_contain_only']} 天** | {row['contain_payback_bucket']} | "
+            f"{row['contain_roi_vs_action_cost']}x |"
+        )
+    stress_table = "\n".join(stress_rows) if stress_rows else "| (none) |||||||"
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -977,6 +1008,17 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 读法：全口径回本用全部毛¥；「仅承接回本」= 动作日成本 / 日均承接¥——回答「自助率这一项能不能单独把动作成本赚回来」。
 
+## 承接单价承压（仅靠多承接还能回本吗）
+
+业务问题：自助会话价值从 ¥3.5 砍到 ¥1.75（-50%）时，各动作是否仍能 **只靠多承接** 当天回本。
+
+| 动作 | 情景 | 承接单价 | 日均承接¥ | 日成本¥ | 仅承接回本 | 分档 | 承接ROI |
+|------|------|----------|-----------|---------|------------|------|---------|
+{stress_table}
+
+摘要：{contain_stress_sum.get('external_one_liner_cn') or '（重跑 demo）'}  
+状态：`{contain_stress_sum.get('stress_status')}`（-50% 下 {contain_stress_sum.get('n_same_day_at_minus50')}/{contain_stress_sum.get('n_actions')} 臂当天回本）。
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -1019,8 +1061,12 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "落地场景 · 多承接 · 方法异同 · 迭代更新："
             "`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`\n"
             "不动作留白 / 盈亏平衡：见贡献账对应章节\n"
+            "承接单价承压（仅承接回本 ±50%）：见贡献账「承接单价承压」；"
+            "`results/agod/biz_value_sql/cs_assist_payback_contain_price_stress.json`\n"
             "HH tidy流 + OnlineRFPerm 连续检测："
             "`docs/biz/HH_ONLINE_RFPERM_STREAM.md`\n"
+            "大模型落地 use-case（业务逻辑）："
+            "`docs/biz/LLM_LANDING_USECASES_BIZ.md`\n"
         )
         docs_biz.write_text(docs_biz.read_text() + pointer)
         (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(

@@ -14,6 +14,13 @@ Primary landing surface: **客服助手 incremental contribution** (tickets / re
 | `06_cs_exec_dashboard.sql` | 经营总看板 + 动作推荐 |
 | `07_cs_week_attribution_payback.sql` | 周归因贡献账 + 动作回本天数 |
 | `08_cs_unit_econ_cumulative.sql` | 单位经济敏感度带 + 累计贡献曲线 |
+| `09_cs_opportunity_breakeven.sql` | 不动作留白 + 成本盈亏平衡 |
+| `10_cs_action_contain_split.sql` | 按动作拆多承接 |
+| `11_cs_week_split_coverage.sql` | 周三项拆分 + 覆盖率外推 |
+| `12_cs_payback_contain.sql` | 回本分子含承接 |
+| `13_cs_hf_knob_bridge.sql` | HF hop 参数桥接 |
+| `14_cs_marginal_day.sql` | 边际动作日贡献 |
+| `15_cs_payback_contain_price_stress.sql` | 承接单价 ±50% 仅承接回本承压 |
 
 ```bash
 pip install duckdb pandas
