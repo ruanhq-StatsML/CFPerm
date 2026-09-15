@@ -467,6 +467,9 @@ def main() -> int:
     cs_week = con.execute(
         "SELECT * FROM vw_cs_assist_weekly ORDER BY week_start"
     ).fetchdf()
+    cs_wow = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly_wow ORDER BY week_start"
+    ).fetchdf()
     cs_ledger = con.execute(
         """
         SELECT arm,
@@ -499,6 +502,7 @@ def main() -> int:
     dump(cs_traffic, OUT / "cs_assist_traffic.json")
     dump(cs_net, OUT / "cs_assist_net.json")
     dump(cs_week, OUT / "cs_assist_weekly.json")
+    dump(cs_wow, OUT / "cs_assist_weekly_wow.json")
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
 
     h = halluc.iloc[0].to_dict() if len(halluc) else {}
@@ -667,10 +671,32 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 生产中等流量（日 1 万会话）见上表 `prod_mid`。
 """
     (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(cs_report)
-
-    # Stable docs copy for PR / biz review
     docs_biz = ROOT / "docs" / "biz" / "CS_ASSISTANT_CONTRIBUTION.md"
     docs_biz.write_text(cs_report)
+
+    # Weekly ops brief (paste-ready for biz review)
+    try:
+        import importlib.util
+
+        brief_path = ROOT / "scripts" / "agod" / "cs_assist_weekly_ops_brief.py"
+        spec = importlib.util.spec_from_file_location("cs_ops_brief", brief_path)
+        brief_mod = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(brief_mod)
+        brief = brief_mod.build_brief()
+        (OUT / "CS_ASSISTANT_WEEKLY_OPS_BRIEF.md").write_text(brief)
+        (ROOT / "docs" / "biz" / "CS_ASSISTANT_WEEKLY_OPS_BRIEF.md").write_text(brief)
+        # Append pointer into contribution doc
+        pointer = (
+            "\n\n---\n\n周经营简报（WoW / 动作净贡献）："
+            "`docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`\n"
+        )
+        docs_biz.write_text(docs_biz.read_text() + pointer)
+        (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(
+            (OUT / "CS_ASSISTANT_CONTRIBUTION.md").read_text() + pointer
+        )
+    except Exception as e:  # noqa: BLE001 — brief is additive; don't fail demo
+        print(f"weekly ops brief skipped: {e}")
 
     report = f"""# Business-value SQL demo report
 

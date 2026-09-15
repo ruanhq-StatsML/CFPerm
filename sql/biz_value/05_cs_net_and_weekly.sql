@@ -118,6 +118,39 @@ FROM vw_cs_assist_net_daily
 GROUP BY 1, 2
 ORDER BY 1, 2;
 
+-- 火情周环比（WoW）：只看有 fire 的周，给经营简报用
+CREATE OR REPLACE VIEW vw_cs_assist_weekly_wow AS
+SELECT
+  week_start,
+  surface_id,
+  sessions,
+  tickets,
+  refunds,
+  contained,
+  ticket_rate,
+  refund_rate,
+  containment_rate,
+  net_contrib_yen,
+  days_acted,
+  days_ignored,
+  LAG(ticket_rate) OVER (PARTITION BY surface_id ORDER BY week_start) AS prev_ticket_rate,
+  LAG(containment_rate) OVER (PARTITION BY surface_id ORDER BY week_start) AS prev_containment_rate,
+  LAG(net_contrib_yen) OVER (PARTITION BY surface_id ORDER BY week_start) AS prev_net_contrib_yen,
+  ROUND(
+    ticket_rate - LAG(ticket_rate) OVER (PARTITION BY surface_id ORDER BY week_start),
+    4
+  ) AS delta_ticket_rate,
+  ROUND(
+    containment_rate - LAG(containment_rate) OVER (PARTITION BY surface_id ORDER BY week_start),
+    4
+  ) AS delta_containment_rate,
+  ROUND(
+    net_contrib_yen - LAG(net_contrib_yen) OVER (PARTITION BY surface_id ORDER BY week_start),
+    0
+  ) AS delta_net_contrib_yen
+FROM vw_cs_assist_weekly
+WHERE days_acted + days_ignored > 0;
+
 -- 动作毛增量 − 动作日成本 − 审计件成本分摊（仅 audit_topk）
 CREATE OR REPLACE VIEW vw_cs_assist_action_net AS
 WITH costs AS (

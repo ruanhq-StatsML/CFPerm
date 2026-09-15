@@ -107,3 +107,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 多承接 316.0 次会话；毛贡献约 ¥16656.0，
 扣审计人力后净贡献约 ¥16590.0。
 生产中等流量（日 1 万会话）见上表 `prod_mid`。
+
+
+---
+
+周经营简报（WoW / 动作净贡献）：`docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`

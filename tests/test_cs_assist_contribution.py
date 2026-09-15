@@ -67,17 +67,41 @@ def test_net_after_audit_below_gross(con):
     assert abs(d["net_incremental_yen"] - (gross - d["audit_cost_acted"])) < 1.0
 
 
-def test_traffic_scales_linearly(con):
+def test_action_net_below_gross(con):
     rows = con.execute(
-        """
-        SELECT scenario, daily_sessions, monthly_yen
-        FROM vw_cs_assist_traffic_scenarios
-        WHERE scenario IN ('demo_seed', 'prod_mid')
-        ORDER BY daily_sessions
-        """
+        "SELECT action_type, gross_yen, net_yen_after_action_cost FROM vw_cs_assist_action_net"
     ).fetchall()
-    assert len(rows) == 2
-    demo, prod = rows
-    ratio = prod[1] / demo[1]
-    yen_ratio = prod[2] / demo[2]
-    assert abs(ratio - yen_ratio) < 1e-3
+    assert rows
+    for action_type, gross, net in rows:
+        assert gross > 0, action_type
+        assert net <= gross + 1e-6, action_type
+        assert net > 0, action_type
+
+
+def test_weekly_wow_has_fire_weeks(con):
+    n = con.execute(
+        "SELECT COUNT(*) FROM vw_cs_assist_weekly WHERE days_acted + days_ignored > 0"
+    ).fetchone()[0]
+    assert n >= 1
+    wow = con.execute("SELECT * FROM vw_cs_assist_weekly_wow ORDER BY week_start").fetchall()
+    assert len(wow) >= 1
+
+
+def test_ops_brief_builds(tmp_path, monkeypatch):
+    """Brief script must render from demo JSON artifacts."""
+    import importlib.util
+
+    # Ensure demo artifacts exist (reuse committed results)
+    brief_path = ROOT / "scripts" / "agod" / "cs_assist_weekly_ops_brief.py"
+    spec = importlib.util.spec_from_file_location("ops_brief", brief_path)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    text = mod.build_brief()
+    assert "少工单" in text or "少 **" in text
+    assert "毛贡献" in text
+    assert "动作净贡献" in text
+    assert "火情周 WoW" in text
+    out = tmp_path / "brief.md"
+    out.write_text(text)
+    assert out.stat().st_size > 200

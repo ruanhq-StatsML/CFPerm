@@ -65,18 +65,18 @@
   },
   {
     "source":"halluc",
-    "dt":"2026-09-27T00:00:00.000",
-    "surface_id":"shop_assistant",
-    "bucket":"generation_regime",
-    "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":315.0
-  },
-  {
-    "source":"halluc",
     "dt":"2026-09-25T00:00:00.000",
     "surface_id":"shop_assistant",
     "bucket":"retrieval_gap",
     "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
+    "severity_proxy":315.0
+  },
+  {
+    "source":"halluc",
+    "dt":"2026-09-27T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "bucket":"generation_regime",
+    "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
     "severity_proxy":315.0
   },
   {
