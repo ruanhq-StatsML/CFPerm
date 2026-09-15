@@ -34,6 +34,7 @@ def con():
         "07_cs_week_attribution_payback.sql",
         "08_cs_unit_econ_cumulative.sql",
         "09_cs_opportunity_breakeven.sql",
+        "10_cs_action_contain_split.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -238,6 +239,28 @@ def test_cumulative_curve_ends_at_total(con):
     ).fetchone()
     assert abs(last[0] - total) <= 2.0
     assert abs(last[1] - 100.0) < 0.2
+
+
+def test_action_contain_split_reconciles(con):
+    """多承接按动作拆分须对上总账；承接¥为毛的一部分。"""
+    rows = con.execute(
+        "SELECT action_type, extra_contained, yen_from_containment, gross_yen, "
+        "contain_share_pct_of_action_gross FROM vw_cs_assist_action_value_split"
+    ).fetchall()
+    assert len(rows) >= 2
+    for action, extra, yen_c, gross, share in rows:
+        assert extra > 0, action
+        assert yen_c > 0, action
+        assert yen_c <= gross + 1e-6, action
+        assert 0 < share < 50, action  # contain is minority vs refunds
+
+    chk = con.execute(
+        "SELECT * FROM vw_cs_assist_contain_attribution_check"
+    ).fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, chk))
+    assert abs(d["contain_count_gap"]) <= 1.0
+    assert abs(d["contain_yen_gap"]) <= 2.0
 
 
 def test_ignored_opportunity_and_breakeven(con):

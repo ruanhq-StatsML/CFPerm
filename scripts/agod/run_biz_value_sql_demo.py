@@ -417,6 +417,7 @@ def main() -> int:
         "07_cs_week_attribution_payback.sql",
         "08_cs_unit_econ_cumulative.sql",
         "09_cs_opportunity_breakeven.sql",
+        "10_cs_action_contain_split.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -539,6 +540,14 @@ def main() -> int:
     dump(cs_opp, OUT / "cs_assist_ignored_opportunity.json")
     dump(cs_be, OUT / "cs_assist_cost_breakeven.json")
     dump(cs_oneliner, OUT / "cs_assist_business_oneliner.json")
+    cs_contain_split = con.execute(
+        "SELECT * FROM vw_cs_assist_action_value_split ORDER BY yen_from_containment DESC"
+    ).fetchdf()
+    cs_contain_check = con.execute(
+        "SELECT * FROM vw_cs_assist_contain_attribution_check"
+    ).fetchdf()
+    dump(cs_contain_split, OUT / "cs_assist_action_contain_split.json")
+    dump(cs_contain_check, OUT / "cs_assist_contain_attribution_check.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -609,6 +618,23 @@ def main() -> int:
     opp = cs_opp.iloc[0].to_dict() if len(cs_opp) else {}
     be = cs_be.iloc[0].to_dict() if len(cs_be) else {}
     one = cs_oneliner.iloc[0].to_dict() if len(cs_oneliner) else {}
+    contain_chk = (
+        cs_contain_check.iloc[0].to_dict() if len(cs_contain_check) else {}
+    )
+
+    contain_split_rows = []
+    for _, row in cs_contain_split.iterrows():
+        contain_split_rows.append(
+            f"| {row['action_type']} | {int(row['n_days'])} | "
+            f"{row['extra_contained']} | **¥{int(row['yen_from_containment'])}** | "
+            f"{row['contain_share_pct_of_action_gross']}% | "
+            f"{row['pct_of_total_extra_contained']}% | "
+            f"{row['pct_of_total_contain_yen']}% | "
+            f"¥{int(row['contain_yen_per_day'])}/日 |"
+        )
+    contain_split_table = (
+        "\n".join(contain_split_rows) if contain_split_rows else "| (none) |||||||"
+    )
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -790,6 +816,14 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 | 毛¥ | ¥{int(opp.get('realized_gross_yen') or 0)} | **¥{int(opp.get('opportunity_gross_yen') or 0)}** |
 
 全覆盖潜在毛¥ **¥{int(opp.get('potential_full_coverage_gross_yen') or 0):,}**；已捕获 **{opp.get('yen_capture_pct')}%**。
+
+## 按动作拆多承接（自助率贡献）
+
+| 动作 | 天数 | 多承接 | 承接¥ | 占该动作毛% | 占总承接次% | 占总承接¥% | 日均承接¥ |
+|------|------|--------|-------|-------------|-------------|------------|-----------|
+{contain_split_table}
+
+承接对账缺口：次数 {contain_chk.get('contain_count_gap')} / ¥{contain_chk.get('contain_yen_gap')}（应为 ~0）。
 
 ## 成本 / 单价盈亏平衡
 
