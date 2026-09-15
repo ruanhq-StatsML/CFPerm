@@ -250,3 +250,4 @@ Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%（+22.57pp）；�
 落地场景 · 多承接 · 方法异同 · 迭代更新：`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`
 不动作留白 / 盈亏平衡：见贡献账对应章节
 HH tidy流 + OnlineRFPerm 连续检测：`docs/biz/HH_ONLINE_RFPERM_STREAM.md`
+大模型落地 use-case（业务逻辑，无算法）：`docs/biz/LLM_LANDING_USECASES_BIZ.md`

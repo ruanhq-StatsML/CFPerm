@@ -1,8 +1,11 @@
 # LLM 推理/对齐：OnlineRFPerm 在线检测 use-case
 
-> **定位**：这是把已有 OnlineRFPerm 接到大模型**推理 / 对齐**流上的一个应用场景，
-> **不涉及大模型本身的方法论创新**。算法在 stationary DGP 上的 robustness 已论证；
-> 这批数据只看 detection delay。PO-risk 仍用 BOCPD。
+> **定位**：这是把已有方法接到大模型业务流上的 **use-case**，  
+> **不涉及大模型本身的方法论创新**。  
+> - **推理质量在线监控** → OnlineRFPerm  
+> - **数据对齐 / 合并门禁** → RFPerm（批式）  
+> - **实例谁先审（PO-risk）** → BOCPD  
+> 本页只演示推理流上的连续时间 form + detection delay；业务总览见 `LLM_LANDING_USECASES_BIZ.md`。
 
 ## 数据 form（就这一列时间流）
 
