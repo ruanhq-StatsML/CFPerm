@@ -30,6 +30,7 @@ def con():
         "03_value_dashboard.sql",
         "04_cs_assistant_contribution.sql",
         "05_cs_net_and_weekly.sql",
+        "06_cs_exec_dashboard.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -105,3 +106,47 @@ def test_ops_brief_builds(tmp_path, monkeypatch):
     out = tmp_path / "brief.md"
     out.write_text(text)
     assert out.stat().st_size > 200
+
+
+def test_exec_dashboard_before_after(con):
+    row = con.execute("SELECT * FROM vw_cs_assist_exec_dashboard").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, row))
+    assert d["tickets_avoided"] > 0
+    assert d["gross_yen"] > 0
+    assert d["net_yen"] <= d["gross_yen"] + 1e-6
+    assert d["ticket_rate_ignored_pct"] > d["ticket_rate_acted_pct"]
+    assert d["top_action"]
+    assert d["top_action_net_yen_per_day"] > 0
+
+
+def test_action_recommend_ranked(con):
+    rows = con.execute(
+        "SELECT recommend_rank, net_yen_per_day FROM vw_cs_assist_action_recommend ORDER BY recommend_rank"
+    ).fetchall()
+    assert len(rows) >= 1
+    assert rows[0][0] == 1
+    # ranks decrease or equal in net/day
+    nets = [r[1] for r in rows]
+    assert nets == sorted(nets, reverse=True)
+
+
+def test_hop_sensitivity_monotonic_net():
+    import importlib.util
+    import duckdb
+    import numpy as np
+
+    spec = importlib.util.spec_from_file_location(
+        "sens", ROOT / "scripts" / "agod" / "cs_assist_hop_sensitivity.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    demo = mod._load_demo()
+    base = demo.load_hf_hop()
+    weak = {**base, "scenario": "weak_hop", "fire_halluc": max(base["quiet_halluc"]+0.05, base["fire_halluc"]*0.5), "hop_ratio": max(2.0, base["hop_ratio"]*0.35)}
+    strong = {**base, "scenario": "strong_hop", "fire_halluc": min(0.55, base["fire_halluc"]*1.3), "hop_ratio": base["hop_ratio"]*1.4}
+    w = mod._run_scenario(demo, duckdb, weak)
+    s = mod._run_scenario(demo, duckdb, strong)
+    # stronger hop should not yield lower net contribution
+    assert s["net_yen"] >= w["net_yen"] - 1.0

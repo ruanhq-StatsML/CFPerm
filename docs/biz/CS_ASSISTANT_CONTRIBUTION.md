@@ -112,3 +112,4 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 ---
 
 周经营简报（WoW / 动作净贡献）：`docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`
+经营总看板 / hop 情景：`docs/biz/CS_ASSISTANT_EXEC_DASHBOARD.md`

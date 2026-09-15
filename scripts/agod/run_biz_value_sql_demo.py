@@ -413,6 +413,7 @@ def main() -> int:
         "03_value_dashboard.sql",
         "04_cs_assistant_contribution.sql",
         "05_cs_net_and_weekly.sql",
+        "06_cs_exec_dashboard.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -503,6 +504,10 @@ def main() -> int:
     dump(cs_net, OUT / "cs_assist_net.json")
     dump(cs_week, OUT / "cs_assist_weekly.json")
     dump(cs_wow, OUT / "cs_assist_weekly_wow.json")
+    cs_exec = con.execute("SELECT * FROM vw_cs_assist_exec_dashboard").fetchdf()
+    cs_rec = con.execute("SELECT * FROM vw_cs_assist_action_recommend ORDER BY recommend_rank").fetchdf()
+    dump(cs_exec, OUT / "cs_assist_exec_dashboard.json")
+    dump(cs_rec, OUT / "cs_assist_action_recommend.json")
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
 
     h = halluc.iloc[0].to_dict() if len(halluc) else {}
@@ -690,6 +695,7 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
         pointer = (
             "\n\n---\n\n周经营简报（WoW / 动作净贡献）："
             "`docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`\n"
+            "经营总看板 / hop 情景：`docs/biz/CS_ASSISTANT_EXEC_DASHBOARD.md`\n"
         )
         docs_biz.write_text(docs_biz.read_text() + pointer)
         (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(

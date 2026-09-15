@@ -216,3 +216,8 @@ PYTHONPATH=. python3 scripts/agod/run_biz_value_sql_demo.py
 | **客服助手** | 少 113 工单 / 69 退款 / 多承接 179，增量 **¥16,656**；日 1 万会话 ≈ **¥1.92M/月** |
 | 文风 | style-only 日 CTR 低于 quiet，品牌标记成本高于 quiet → 调素材配比，不重训偏好 |
 | 对齐发布 | `judge_err_ratio≥1.5` 或 concept-fire → 暂缓偏好更新上线 |
+
+
+### 客服助手 hop 情景带（大迭代）
+
+弱→基→强净贡献：¥9,156 → ¥16,590 → ¥17,990；日1万会话月净约 ¥3.56M（base）。详见 `CS_ASSISTANT_EXEC_DASHBOARD.md`。
