@@ -1,0 +1,361 @@
+% !TEX program = pdflatex
+% English report: RFPerm / OnlineRFPerm / PO-learner / FSDS / multi-layer graph methods
+% Landing scenarios for LLM inference, prediction, alignment, and data-quality consistency
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,longtable,tabularx,enumitem,hyperref,xcolor}
+\usepackage{titlesec}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black,citecolor=blue!50!black}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=0.25em,topsep=0.3em}
+\newcommand{\meth}[1]{\textbf{#1}}
+
+\title{\textbf{Toolkit Landing Report}\\[0.35em]
+\large RFPerm / OnlineRFPerm / PO-learner / FSDS / Multi-layer Feature Graphs\\
+Direct Landing Scenarios for LLM Inference, Alignment, and Data-Quality Consistency}
+\author{Internal methods briefing (open-source PDFs, shipped code, ready datasets)\\
+Date: 2026-09-15}
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This report inventories an open, implemented toolkit for distribution-shift diagnosis and adaptation, and answers a product question: in LLM \textbf{inference/prediction, alignment, hallucination monitoring, synthetic-data quality, and representation consistency}, what can land now, how, and what must not be over-claimed.
+
+Five capability layers: (i)~\meth{RFPerm}---model-agnostic predictive-degradation permutation tests; (ii)~\meth{OnlineRFPerm}---streaming monitoring with online FDR; (iii)~\meth{PO-learner / CFPerm / DRPerm / RRPerm}---treat batches as \(T\in\{0,1\}\) and use causal objective functions as distributional distances plus OOD variable importance; (iv)~\meth{FSDS}---feature selection under covariate shift \(P(X)\) and concept drift \(P(Y\mid X)\); (v)~\meth{multi-layer / multi-scenario / feature-bank graph methods}---ASSOC/HSIC chains and hierarchical subset localization across user--item--session or modality towers.
+
+\textbf{Non-negotiable stance.} These tools \textbf{detect, localize, reweight/gate, and schedule compute}. They are \textbf{not} fact checkers, and they do \textbf{not} uniquely decompose covariate vs.\ concept to single features without extra structure. KL additivity does not transfer to arbitrary distances; full-space unique attribution is impossible---\textbf{subset localization} is the correct production move.
+
+\textbf{Priority landings (data ready):}
+\begin{enumerate}
+  \item Streaming hallucination / error-rate \textbf{regime} monitors (OnlineRFPerm + \(\texttt{po\_risk0}\) ranking);
+  \item Synthetic vs.\ human preference \textbf{quality gates} (RFPerm-as-Judge);
+  \item Representation batch geometry (embedding PC1--PC3) before predictive-shift tests;
+  \item Multimodal towers---\emph{which layer moved} \(\to\) KV refresh / LoRA budget;
+  \item RecSys feature banks (TencentGR-class): RF-domain for \(P(X)\), PO-risk for \(Y\)-gap;
+  \item Gated \(\sqrt{\mathrm{PO}}\) reweighting: uniform when quiet; heat on concept hops; anneal.
+\end{enumerate}
+\end{abstract}
+
+\tableofcontents
+\vspace{0.6em}
+\noindent\rule{\textwidth}{0.4pt}
+
+\section{Problem and boundaries}
+\label{sec:boundary}
+
+\subsection{Four product questions}
+\begin{enumerate}
+  \item \textbf{Is inference/prediction drifting?} When must a deployed \(\hat f\) refresh on streaming \((X_t,Y_t)\)?
+  \item \textbf{Is alignment consistent?} Human prefs, synthetic prefs, judge models, online feedback---same law?
+  \item \textbf{Did hallucination/error enter a new regime?} Not row-wise true/false---did \(P(Y\mid X)\) jump?
+  \item \textbf{Is data quality consistent?} Feature stores, embedding batches, modality towers, synthetic corpora vs.\ reference.
+\end{enumerate}
+
+\subsection{Claims we refuse}
+\begin{itemize}
+  \item No story ``feature \(j\) causes hallucination.''
+  \item No unique full-space split of \(P(X)\) vs.\ \(P(Y\mid X)\) from raw error alone.
+  \item DRE / PSI / KL are not sufficient statistics for concept drift.
+  \item \(\texttt{po\_risk0}\) is residual strength vs.\ the previous probe---not a factuality score.
+\end{itemize}
+
+\subsection{Open-source and local anchors}
+\begin{center}
+\begin{tabular}{@{}llp{7.0cm}@{}}
+\toprule
+Component & Repo / doc & Role \\
+\midrule
+RFPerm & \url{https://github.com/ruanhq-StatsML/RFPerm} & OOB vs.\ predictive-error permutation test \\
+OnlineRFPerm & \url{https://github.com/ruanhq-StatsML/OnlineRFPerm} & Streaming + online FDR \\
+PO-learner & \url{https://github.com/ruanhq-StatsML/Causal_Objective_Permutation_Test} & DR/R objective permutation tests \\
+FSDS & \url{https://github.com/ruanhq-StatsML/FSDS-FeatureSelection_for_DistributionShift} & Feature-level shift selection \\
+Multi-layer PDF & same repo \texttt{FSDS\_Sep14\_MultiLayerFeatureSelection\_Metrics.pdf} & Multi-scenario feature banks / ASSOC \\
+Gated PO (local) & \texttt{docs/po\_risk/PO\_risk\_reweight\_method.tex} & \(\sqrt{\mathrm{PO}}\) anneal reweight \\
+Hallucination proto & \texttt{scripts/agod/rfperm\_hallucination\_proto.py} (feature branch) & Regime fire + \(\texttt{po\_risk0}\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Toolkit map: how the five layers lock}
+\label{sec:toolkit}
+
+\begin{center}
+\begin{tabular}{@{}p{2.6cm}p{4.0cm}p{5.6cm}@{}}
+\toprule
+Layer & I/O & One-line LLM reading \\
+\midrule
+\textbf{1. RFPerm} &
+\((X,Y)\) reference vs.\ new; reject predictive degradation &
+``Did this batch of answers/labels get significantly worse?'' \\
+\textbf{2. OnlineRFPerm} &
+Streaming error \(p\)-values + SAFFRON/ADDIS &
+``When should we refresh the model/judge online?'' \\
+\textbf{3. PO / R / CF} &
+\(T=0/1\), PO-/R-risk, VIMP &
+``Mapping shift vs.\ traffic mix? Which dims carry the gap?'' \\
+\textbf{4. FSDS} &
+Covariate: RF-domain / MMD-LOCO; concept: PermuCATE / DRPerm &
+``Which feature family moved---fix features or retrain the head?'' \\
+\textbf{5. Multi-layer graph} &
+Families, towers, user--item hierarchy; HSIC/ASSOC chains &
+``Cross-scenario coupled drift; drill to a subset, then act.'' \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Default production pipeline.}
+\begin{enumerate}
+  \item \textbf{Geometry pre-check:} PCA (PC1--PC3) + domain AUC on embeddings---alignment viz, not the final call.
+  \item \textbf{Regime test:} OnlineRFPerm (or gated consecutive OOS ratio) decides fire.
+  \item \textbf{Axis diagnosis:} stop if quiet; if fire, RF-domain (\(P(X)\)) and PO/R (\(P(Y\mid X)\) proxy) in parallel.
+  \item \textbf{Feature/layer localization:} FSDS top-\(k\) + family mass; multi-layer \(\Rightarrow\) leave-one-group-out.
+  \item \textbf{Action:} quiet \(\to\) uniform; heterogeneous concept \(\to\) \(\sqrt{\mathrm{PO}}\) weights; global map flip \(\to\) drop-old; modality drift \(\to\) refresh that tower's KV / update budget.
+  \item \textbf{Anneal:} next hop's \(e_{\mathrm{prev}}\) is large, ratio falls, return to uniform.
+\end{enumerate}
+
+\section{Method cards}
+\label{sec:cards}
+
+\subsection{RFPerm}
+Compares validation/OOB error on a reference batch to predictive error on a new batch via permutation. Density-aware; sensitive to both covariate and concept; does \textbf{not} name the axis alone.
+
+\textbf{LLM use.} Prompts/representations as \(X\); correctness / preference / hallucination labels as \(Y\). Strong at \(n\sim 30\)--\(40\); fits per-observation synthetic-data gates (RFPerm-as-Judge).
+
+\subsection{OnlineRFPerm}
+Streaming extremity of predictive error vs.\ the deployed model; online FDR (SAFFRON/ADDIS, async variants) controls false alarms. Modality-agnostic whenever a predictive model and labels (or proxies) exist.
+
+\textbf{LLM use.} Online judge scores, tool-success, refusal rate, hallucination rate as \textbf{regime} monitors; optional clever-covariate injection into a light adapter.
+
+\subsection{PO-learner (DRPerm / RRPerm / CFPerm)}
+Old batch \(T=0\), new \(T=1\). Doubly robust / R-learner objectives with permute-then-refit; VIMP reads as \textbf{OOD variable importance}. Meta-learners estimate distances, not causal effects. R-risk is more \(P(X)\)-insensitive under projection heuristics---a concept-axis proxy, not a uniqueness theorem.
+
+\textbf{LLM use.} Alignment shift (same prompt law, changed preference/correctness map) vs.\ traffic mix shift. Instance \(\texttt{po\_risk0}_i=|Y_i-\mu_0(X_i)|\) (or \(1-p\) for class) drives ranking and gated weights.
+
+\subsection{Gated \(\sqrt{\mathrm{PO}}\) reweighting (shipped locally)}
+Fire only if consecutive OOS \(e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma\) (default \(1.5\)); on fire, \(T=1\) gets \(w=\sqrt{\texttt{po\_risk0}}\) (mean 1); quiet \(\Rightarrow w=1\). Under squared loss, excess risk \(\Delta_t^2=\mathbb{E}_t[(\mu_t^\star-\mu_0)^2]\)---the gate opens only when concept OOD is large relative to noise. DRE sees only \(p(x)\): near-uniform on pure concept; can hurt on covariate. Two levers: soft \textbf{reweight} vs.\ hard \textbf{drop-old}. No always-on IPTW; no ultra-thin PO-tail subsets.
+
+\subsection{FSDS}
+\textbf{Covariate:} RF-domain OOB-VIMP, MMD/HSIC-LOCO, Boruta/ShadowVIMP---strong and often cheaper than FSL-Net/DataFix.
+
+\textbf{Concept:} PermuCATE, DRPerm-LOCO, GRF VIMP, R-risk LOCO, Delta-Shapley, Knockoff/L1---meta-learners shine on nonlinear concept drift.
+
+\textbf{Reading discipline.} Rank VIMP, then post-hoc \(\mathbb{E}[X\mid Q_1]\) vs.\ \(\mathbb{E}[X\mid Q_4]\); mass + directional means describe ``who arrived later,'' not causation. Empirically on TencentGR clocks: cross / decay / in-session conversion carry the gap; last-touch attribution families are not the shift source.
+
+\subsection{Multi-layer / multi-scenario / feature-bank graphs}
+Feature stores are hierarchical (user / item / session / merchant; or audio / image / text). Unique single-feature attribution on the full space is impossible; \textbf{hierarchical subset localization} is the right move.
+
+\textbf{ASSOC / HSIC chains.} Pairwise HSIC across layered metrics; threshold to edges; connected components are metric chains (e.g., delivery--rating--orders--GMV). Association only---no directed causal claim.
+
+\textbf{Leave-one-group-out.} Block/modality contribution to shift; conditional drill (region then category) avoids confounding levels.
+
+\textbf{Continuous multimodal inference.} FSDS shares \(\pi_m\) decide which tower to re-encode per window, which KV to invalidate, which tower gets test-time update budget; static captions encode-once. Attribution-Guided Online Distillation (AGOD) routes student losses with modality gaps as clever covariates.
+
+\section{Direct landing scenario matrix (LLM-centric)}
+\label{sec:scenarios}
+
+All rows assume: code exists, inputs extractable from current pipes, outputs wire to alerts / gates / reweight / schedulers. \(\star\) = ready in this repo or proto.
+
+\subsection{A. Inference and prediction monitoring}
+\begin{longtable}{@{}p{3.2cm}p{3.4cm}p{5.6cm}@{}}
+\toprule
+Scenario & Primary tools & Landing action \\
+\midrule
+\endhead
+A1 Online task accuracy / tool-success regime jump \(\star\) &
+OnlineRFPerm + gated OOS &
+fire \(\to\) alert; online FDR; optional drop-old on judge head \\
+A2 Delayed feedback (like/complaint) concept jump &
+PO-risk stream + RRPerm &
+Refresh preference head only if mapping moved; resample if mix moved \\
+A3 Multi-task router misfires &
+FSDS on task one-hots + reps &
+High-VIMP task block \(\to\) retrain that expert only \\
+A4 RAG hit-rate vs.\ answer correctness &
+RF-domain (retrieval feats) + PO (correctness) &
+Retrieval drift \(\neq\) generation drift; fix index vs.\ generator separately \\
+\bottomrule
+\end{longtable}
+
+\subsection{B. Hallucination and ``looks like an answer''}
+\begin{itemize}
+  \item \textbf{B1 Regime-level hallucination-rate monitor \(\star\).} Synthetic concept cut: quiet then noisy. OnlineRFPerm/gate fires at the cut; instance \(\texttt{po\_risk0}\) ranks audit candidates (proto AUROC \(\sim 0.63\)--\(0.64\)). \textbf{Not} fact checking.
+  \item \textbf{B2 Hallucination-labeler drift.} Same generations, human/auto \(Y\) changes \(\to\) PO/R; generation mix changes \(\to\) RF-domain.
+  \item \textbf{B3 Refusal / safety-policy hops.} Safety action as \(Y\); monitor whether the policy head entered a new operating point---do not confuse traffic mix with ``model got worse.''
+\end{itemize}
+
+\subsection{C. Alignment and preference consistency}
+\begin{itemize}
+  \item \textbf{C1 Human vs.\ synthetic preference.} RFPerm-as-Judge: small-\(n\) test that synthetic prefs are not predictively off the human batch.
+  \item \textbf{C2 SFT/RLHF/DPO version gates.} Old vs.\ candidate preference data: FSDS lists which prompt features carry the gap; fail closed on merge.
+  \item \textbf{C3 Judge-model calibration.} Judge score as \(Y\); OnlineRFPerm vs.\ a gold set; high PO \(\Rightarrow\) sample audit, not full relabel.
+  \item \textbf{C4 Instruction-following vs.\ style covariates.} Style/length/language mix \(\to\) RF-domain; correctness map \(\to\) PO. Do not explain accuracy drops with PSI(length).
+\end{itemize}
+
+\subsection{D. Data quality and representation alignment}
+\begin{itemize}
+  \item \textbf{D1 Embedding batch geometry \(\star\).} Point-cloud / text / multimodal embeddings: PC1--PC3 + domain AUC; only then RFPerm/FSDS. Fix the pipe if geometry is broken.
+  \item \textbf{D2 Feature-bank health (TencentGR-class) \(\star\).} Combinatorial features \(\to\) FSDS: RF for cohort portrait, PO for conversion gap; family mass drives feature workorders.
+  \item \textbf{D3 Synthetic corpus diversity vs.\ toxic patterns.} RFPerm on quality labels; FSDS localizes toxic pattern features (length, template \(n\)-grams, embedding clusters).
+  \item \textbf{D4 Train--serve feature parity.} Same feature names offline vs.\ online as \(T=0/1\); high RF-domain VIMP = pipeline-bug suspect list.
+\end{itemize}
+
+\subsection{E. Multimodal and continuous-inference scheduling}
+\begin{itemize}
+  \item \textbf{E1 Tower attribution (MSR-VTT / ChronoBerg-class) \(\star\).} Block FSDS + PO; shares \(\pi_v,\pi_a,\pi_t\) set re-encode and update masks.
+  \item \textbf{E2 Continuous VLM inference.} Static text encode-once; vision/audio refresh per window; KV invalidation on session-clustered monitors (avoid global pooled cancellation).
+  \item \textbf{E3 AGOD distillation routing.} \(\alpha_m=\mathrm{softmax}(g_m/\tau)\) with \(g_m\) from domain AUC\(\cdot\)VIMP + \(\gamma\cdot\)PO-risk; fall back to RF-domain under poor overlap.
+\end{itemize}
+
+\subsection{F. Multi-layer business graphs (recs / risk / commerce)}
+\begin{itemize}
+  \item \textbf{F1 Hierarchical subset localization.} Significant week batch \(\to\) user-region first, then category; emit \{\texttt{subset}, \texttt{split rule}, \texttt{stability}\} to owners.
+  \item \textbf{F2 ASSOC metric chains.} HSIC edges surface cross-layer coupling (fulfillment--rating--orders--GMV); alert on chains, not single KPIs.
+  \item \textbf{F3 Fraud mix vs.\ fraud tactic.} Matches the open PDFs: cohort mix = covariate; tactic = concept; separate tickets.
+\end{itemize}
+
+\section{Ready data and minimum viable experiments}
+\label{sec:data}
+
+\begin{center}
+\begin{tabular}{@{}p{3.4cm}p{3.8cm}p{5.0cm}@{}}
+\toprule
+Data & Shape & Suggested experiment \\
+\midrule
+\texttt{data/public/*.npz} & Public time-series packs & Gated \(\sqrt{\mathrm{PO}}\) vs.\ DRE vs.\ uniform (board exists) \\
+\texttt{data/tencent\_subset/} & RecSys sequences + feature bank & FSDS on time/business clocks; family mass \\
+ChronoBerg / FMoW / WhyShift & Public FSDS benchmarks & Reproduce covariate/concept feature selection \\
+MSR-VTT packed reps & video\|audio\|text & Modality attribution + AGOD routing \\
+Hallucination synth stream & Proto script & fire@cut + \(\texttt{po\_risk0}\) ranking \\
+OpenML tabular (FSDS) & 8 tabular sets & RF-domain vs.\ FSL-Net compute compare \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Minimum local commands.}
+\begin{verbatim}
+# Hallucination regime proto (branch cursor/rfperm-hallucination-92f8)
+python3 scripts/agod/rfperm_hallucination_proto.py
+
+# Gated PO method notes:
+#   docs/agod/AGOD_online_rfperm.md
+#   docs/po_risk/PO_risk_reweight_method.tex
+
+# Tencent feature selection (time clock)
+python3 scripts/tencent_gr/run_fsds_time.py
+\end{verbatim}
+
+\section{Scenario \(\times\) method cheat sheet}
+\label{sec:matrix}
+
+\begin{center}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Scenario cluster & RFPerm & Online & PO/R & FSDS/graph \\
+\midrule
+Inference regime monitor & \(\bullet\) & \(\bullet\!\!\bullet\) & \(\bullet\) & \\
+Hallucination candidate rank & & \(\bullet\) & \(\bullet\!\!\bullet\) & \\
+Alignment / pref gates & \(\bullet\!\!\bullet\) & \(\bullet\) & \(\bullet\) & \(\bullet\) \\
+Representation geometry & \(\bullet\) & & & \(\bullet\) \\
+Feature-bank quality & & & \(\bullet\!\!\bullet\) & \(\bullet\!\!\bullet\) \\
+Multimodal scheduling & & \(\bullet\) & \(\bullet\) & \(\bullet\!\!\bullet\) \\
+Multi-layer business drill & & & \(\bullet\) & \(\bullet\!\!\bullet\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+{\small \(\bullet\!\!\bullet\)=primary; \(\bullet\)=support.}
+
+\section{Executable playbooks}
+\label{sec:playbook}
+
+\subsection{Playbook 1: LLM output-quality stream}
+\begin{enumerate}
+  \item Define \(Y\in\{0,1\}\): correct / non-hallucinated / preference win (labels or weak supervision).
+  \item \(X=\) prompt embedding + light metadata (length, tool calls).
+  \item Fit shallow RF probe \(\mu_0\) on reference window; stream \(e_{\mathrm{now}}/e_{\mathrm{prev}}\).
+  \item On fire: alert + Top-\(k\) audit by \(\texttt{po\_risk0}\); optional \(\sqrt{\mathrm{PO}}\) refit of a light head.
+  \item Attach online FDR so diurnal traffic jitter does not page on-call.
+\end{enumerate}
+
+\subsection{Playbook 2: Alignment data version gate}
+\begin{enumerate}
+  \item Old preference set \(T=0\); candidate merge set \(T=1\).
+  \item RF-domain: very high AUC with top feature ``source=synthetic'' \(\Rightarrow\) portrait contamination.
+  \item DRPerm/PermuCATE: significant concept axis \(\Rightarrow\) preference map moved; human review, no silent merge.
+  \item Merge only if both axes quiet (or only explained covariates with owner sign-off).
+\end{enumerate}
+
+\subsection{Playbook 3: Multimodal continuous inference}
+\begin{enumerate}
+  \item Per window extract \(X_v,X_a,X_t\); block RF-domain + PO vs.\ reference.
+  \item Obtain \(\pi_m\); if \(\pi_t\approx 0\), caption encode-once.
+  \item High \(\pi_v\) \(\Rightarrow\) refresh vision KV / raise vision update steps.
+  \item Spurious text VIMP rise is a \textbf{leakage diagnostic}, not a reason to spend budget on the language tower.
+\end{enumerate}
+
+\subsection{Playbook 4: Feature-bank drift workorder}
+\begin{enumerate}
+  \item Fix a business clock (time quantiles / experiment buckets).
+  \item Emit RF-mass and PO-mass by family with Q1\(\to\)Q4 means.
+  \item Families with negative LOGO \(\Delta\) are not ``root causes.''
+  \item Ticket only high-mass families with readable direction (decay clicks, in-session conversion, crosses).
+\end{enumerate}
+
+\section{Engineering conclusions aligned with impossibility}
+\label{sec:impossibility}
+
+\begin{enumerate}
+  \item \textbf{Unique error decomposition is impossible:} model change vs.\ data change without structure.
+  \item \textbf{Unique axis decomposition is impossible:} except special divergences (e.g., KL), raw error does not uniquely split \(P(X)\) vs.\ \(P(Y\mid X)\).
+  \item \textbf{Unique single-feature decomposition is impossible:} ship VIMP + subset localization; never ``feature \(j\) is 23\% of the drift'' as a KPI.
+  \item \textbf{What remains feasible:} jointly sensitive tests (RFPerm); axis proxies (R/PO vs.\ domain); subset/layer localization; gated adaptation.
+\end{enumerate}
+
+\section{Risks, fallbacks, MLOps hooks}
+\label{sec:mlops}
+
+\begin{itemize}
+  \item \textbf{Poor overlap:} unstable meta-learners---fall back to RF-domain / refuse fire / widen reference.
+  \item \textbf{Empty-room denominators:} classification \(e_{\mathrm{prev}}\approx 0\) false-fires---set \(e_{\mathrm{floor}}\).
+  \item \textbf{Always-on IPTW:} loses to uniform on quiet clocks---default uniform; heat only on gate.
+  \item \textbf{Parallelism:} permutation tests parallelize; literature cites \(\sim 60\)--\(70\%\) wall-clock cuts.
+  \item \textbf{Hooks:} feature-quality boards, merge gates, online alerts, multimodal schedulers, synthetic-data acceptance.
+\end{itemize}
+
+\section{Priority roadmap (``can run now'')}
+\label{sec:roadmap}
+
+\begin{enumerate}
+  \item \textbf{P0 (this week):} keep public-clock gated-PO board; wire hallucination proto to real judge labels; freeze TencentGR FSDS workorder template.
+  \item \textbf{P1:} alignment data version gate (human vs.\ synthetic prefs) in CI.
+  \item \textbf{P1:} MSR-VTT / multimodal \(\pi_m\) \(\to\) inference scheduler config.
+  \item \textbf{P2:} ASSOC chains onto business KPI graphs.
+  \item \textbf{P2:} Online FDR onto the production alert bus.
+\end{enumerate}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+RFPerm / OnlineRFPerm / PO-learner / FSDS / multi-layer graphs already form a closed loop:
+\textbf{test \(\to\) localize \(\to\) gated adapt \(\to\) schedule}.
+In LLM settings the valuable artifact is not ``another hallucination score,'' but:
+
+\begin{quote}
+With data and labels ready: regime detection under statistical gating, interpretable feature/modality localization, spend reweighting and compute only on true fires, and anneal on the next hop.
+\end{quote}
+
+FSDS is the default diagnostic layer for \textbf{feature-bank and multi-tower consistency}; PO-learner for \textbf{alignment maps} and \textbf{concept hops}; OnlineRFPerm for \textbf{online regimes}; multi-layer ASSOC for \textbf{cross-scenario drills}. Keep ``detection \(\neq\) causation, localization \(\neq\) unique decomposition,'' and the toolkit ships to production instead of staying in paper figures.
+
+\vspace{1em}
+\noindent\textit{Chinese edition:} \texttt{LLM\_FSDS\_Landing\_Report\_CN.tex}.
+
+\section*{Build}
+\begin{verbatim}
+cd docs/reports
+xelatex LLM_FSDS_Landing_Report_CN.tex
+pdflatex LLM_FSDS_Landing_Report_EN.tex
+\end{verbatim}
+
+\end{document}
