@@ -1,0 +1,16 @@
+{
+  "form": [
+    "t",
+    "question",
+    "answer",
+    "embedding(p,1)",
+    "score"
+  ],
+  "method_changepoint": "OnlineRFPerm",
+  "method_po_risk_recommended": "BOCPD (per prior experiments; not OnlineRFPerm)",
+  "gate": 1.2,
+  "halu_fires": 1,
+  "hh_fires": 8,
+  "halu_first_fire": 4,
+  "hh_first_fire": 4
+}

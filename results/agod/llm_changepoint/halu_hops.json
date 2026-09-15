@@ -1,0 +1,112 @@
+[
+  {
+    "batch_t": 1,
+    "t_start": 100,
+    "t_end": 199,
+    "fired": false,
+    "ratio": 1.0,
+    "e_now": 0.030000000000000027,
+    "e_prev": null,
+    "pos_rate": 0.03
+  },
+  {
+    "batch_t": 2,
+    "t_start": 200,
+    "t_end": 299,
+    "fired": false,
+    "ratio": 1.0,
+    "e_now": 0.030000000000000027,
+    "e_prev": 0.030000000000000027,
+    "pos_rate": 0.03
+  },
+  {
+    "batch_t": 3,
+    "t_start": 300,
+    "t_end": 399,
+    "fired": false,
+    "ratio": 1.0,
+    "e_now": 0.030000000000000027,
+    "e_prev": 0.030000000000000027,
+    "pos_rate": 0.03
+  },
+  {
+    "batch_t": 4,
+    "t_start": 400,
+    "t_end": 499,
+    "fired": true,
+    "ratio": 30.66666666666664,
+    "e_now": 0.92,
+    "e_prev": 0.030000000000000027,
+    "pos_rate": 0.92
+  },
+  {
+    "batch_t": 5,
+    "t_start": 500,
+    "t_end": 599,
+    "fired": false,
+    "ratio": 0.08695652173913039,
+    "e_now": 0.07999999999999996,
+    "e_prev": 0.92,
+    "pos_rate": 0.92
+  },
+  {
+    "batch_t": 6,
+    "t_start": 600,
+    "t_end": 699,
+    "fired": false,
+    "ratio": 1.0,
+    "e_now": 0.07999999999999996,
+    "e_prev": 0.07999999999999996,
+    "pos_rate": 0.92
+  },
+  {
+    "batch_t": 7,
+    "t_start": 700,
+    "t_end": 799,
+    "fired": false,
+    "ratio": 0.8749999999999998,
+    "e_now": 0.06999999999999995,
+    "e_prev": 0.07999999999999996,
+    "pos_rate": 0.93
+  },
+  {
+    "batch_t": 8,
+    "t_start": 800,
+    "t_end": 899,
+    "fired": false,
+    "ratio": 1.142857142857143,
+    "e_now": 0.07999999999999996,
+    "e_prev": 0.06999999999999995,
+    "pos_rate": 0.92
+  },
+  {
+    "batch_t": 9,
+    "t_start": 900,
+    "t_end": 999,
+    "fired": false,
+    "ratio": 0.8749999999999998,
+    "e_now": 0.06999999999999995,
+    "e_prev": 0.07999999999999996,
+    "pos_rate": 0.93
+  },
+  {
+    "batch_t": 10,
+    "t_start": 1000,
+    "t_end": 1099,
+    "fired": false,
+    "ratio": 1.142857142857143,
+    "e_now": 0.07999999999999996,
+    "e_prev": 0.06999999999999995,
+    "pos_rate": 0.92
+  },
+  {
+    "batch_t": 11,
+    "t_start": 1100,
+    "t_end": 1199,
+    "fired": false,
+    "ratio": 1.0,
+    "e_now": 0.07999999999999996,
+    "e_prev": 0.07999999999999996,
+    "pos_rate": 0.92
+  }
+]
