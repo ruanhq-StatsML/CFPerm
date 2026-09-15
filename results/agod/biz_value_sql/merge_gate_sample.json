@@ -1,6 +1,6 @@
 [
   {
-    "dt":1790553600000,
+    "dt":"2026-09-28T00:00:00.000",
     "surface_id":"feed_caption",
     "model_version":"cap_v1",
     "judge_err_ratio":1.7,
@@ -9,7 +9,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790553600000,
+    "dt":"2026-09-28T00:00:00.000",
     "surface_id":"shop_assistant",
     "model_version":"m_v2",
     "judge_err_ratio":null,
@@ -18,7 +18,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790467200000,
+    "dt":"2026-09-27T00:00:00.000",
     "surface_id":"feed_caption",
     "model_version":"cap_v1",
     "judge_err_ratio":1.7,
@@ -27,7 +27,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790467200000,
+    "dt":"2026-09-27T00:00:00.000",
     "surface_id":"shop_assistant",
     "model_version":"m_v2",
     "judge_err_ratio":null,
@@ -36,7 +36,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790380800000,
+    "dt":"2026-09-26T00:00:00.000",
     "surface_id":"feed_caption",
     "model_version":"cap_v1",
     "judge_err_ratio":1.7,
@@ -45,7 +45,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790380800000,
+    "dt":"2026-09-26T00:00:00.000",
     "surface_id":"shop_assistant",
     "model_version":"m_v2",
     "judge_err_ratio":null,
@@ -54,7 +54,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790294400000,
+    "dt":"2026-09-25T00:00:00.000",
     "surface_id":"shop_assistant",
     "model_version":"m_v2",
     "judge_err_ratio":null,
@@ -63,7 +63,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790294400000,
+    "dt":"2026-09-25T00:00:00.000",
     "surface_id":"feed_caption",
     "model_version":"cap_v1",
     "judge_err_ratio":1.7,
@@ -72,7 +72,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790208000000,
+    "dt":"2026-09-24T00:00:00.000",
     "surface_id":"shop_assistant",
     "model_version":"m_v2",
     "judge_err_ratio":null,
@@ -81,7 +81,7 @@
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
-    "dt":1790208000000,
+    "dt":"2026-09-24T00:00:00.000",
     "surface_id":"feed_caption",
     "model_version":"cap_v1",
     "judge_err_ratio":1.7,

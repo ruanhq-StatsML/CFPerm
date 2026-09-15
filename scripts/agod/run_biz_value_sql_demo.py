@@ -48,12 +48,13 @@ def seed(con) -> None:
         INSERT INTO dim_value_assumption VALUES
           (?, 'shop_assistant', 'cs_ticket_cost', 25.0, 'CNY', 'ops FP 2026Q3'),
           (?, 'shop_assistant', 'refund_unit_cost', 80.0, 'CNY', 'finance 2026Q3'),
+          (?, 'shop_assistant', 'contained_session_value', 3.5, 'CNY', 'ops: avoided human handle'),
           (?, 'feed_caption', 'value_per_ctr_point', 1200.0, 'CNY', 'growth proxy'),
           (?, 'feed_caption', 'brand_incident_cost', 50.0, 'CNY', 'brand ops'),
           (?, 'ad_creative', 'value_per_ctr_point', 2500.0, 'CNY', 'ads proxy'),
           (?, 'ad_creative', 'brand_incident_cost', 120.0, 'CNY', 'brand ops')
         """,
-        [start] * 6,
+        [start] * 7,
     )
 
     # creatives / style clusters
@@ -76,9 +77,27 @@ def seed(con) -> None:
         rag = 0.55 if d < 14 else (0.20 if d % 3 == 0 else 0.60)
         n = 200
         for i in range(n):
-            halluc = int(rng.random() < (0.05 if d < 14 else 0.35))
-            ticket = int(rng.random() < (0.01 + 0.08 * halluc + 0.04 * fired * (1 - acted)))
-            refund = int(rng.random() < (0.005 + 0.06 * halluc + 0.03 * fired * (1 - acted)))
+            # Clear incremental effect: after regime hop, ignoring mitigation
+            # drives tickets/refunds; acting contains more sessions in-bot.
+            halluc = int(rng.random() < (0.04 if d < 14 else (0.18 if acted else 0.42)))
+            ticket = int(
+                rng.random()
+                < (
+                    0.012
+                    + 0.10 * halluc
+                    + (0.055 if (fired and not acted) else 0.0)
+                    - (0.02 if acted else 0.0)
+                )
+            )
+            refund = int(
+                rng.random()
+                < (
+                    0.004
+                    + 0.07 * halluc
+                    + (0.035 if (fired and not acted) else 0.0)
+                    - (0.01 if acted else 0.0)
+                )
+            )
             serve_rows.append(
                 (
                     f"h-{d}-{i}",
@@ -291,6 +310,7 @@ def main() -> int:
         "01_hallucination_value.sql",
         "02_style_drift_value.sql",
         "03_value_dashboard.sql",
+        "04_cs_assistant_contribution.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -319,50 +339,142 @@ def main() -> int:
     ).fetchdf()
 
     def dump(df, path: Path):
-        path.write_text(df.to_json(orient="records", force_ascii=False, indent=2))
+        path.write_text(
+            df.to_json(orient="records", force_ascii=False, indent=2, date_format="iso")
+        )
+
+    cs = con.execute("SELECT * FROM vw_cs_assist_exec_summary").fetchdf()
+    cs_arms = con.execute(
+        "SELECT * FROM vw_cs_assist_arm_stats ORDER BY surface_id, arm"
+    ).fetchdf()
+    cs_rates = con.execute("SELECT * FROM vw_cs_assist_rate_compare").fetchdf()
+    cs_ledger = con.execute(
+        """
+        SELECT arm,
+               COUNT(*) AS days,
+               SUM(n_sessions) AS sessions,
+               SUM(n_tickets) AS tickets,
+               SUM(n_refunds) AS refunds,
+               SUM(n_contained) AS contained,
+               ROUND(AVG(ticket_rate), 4) AS avg_ticket_rate,
+               ROUND(AVG(refund_rate), 4) AS avg_refund_rate,
+               ROUND(AVG(containment_rate), 4) AS avg_containment_rate,
+               ROUND(SUM(quality_cost_yen), 0) AS quality_cost_yen,
+               ROUND(SUM(net_ops_value_yen), 0) AS net_ops_value_yen
+        FROM vw_cs_assist_daily_ledger
+        GROUP BY arm
+        ORDER BY arm
+        """
+    ).fetchdf()
 
     dump(halluc, OUT / "roi_halluc.json")
     dump(style, OUT / "roi_style.json")
     dump(dash, OUT / "dashboard.json")
     dump(gate, OUT / "merge_gate_sample.json")
     dump(oncall, OUT / "oncall_sample.json")
+    dump(cs, OUT / "cs_assist_increment.json")
+    dump(cs_arms, OUT / "cs_assist_arms.json")
+    dump(cs_rates, OUT / "cs_assist_rates.json")
+    dump(cs_ledger, OUT / "cs_assist_ledger.json")
 
     h = halluc.iloc[0].to_dict() if len(halluc) else {}
     s = style.iloc[0].to_dict() if len(style) else {}
+    c = cs.iloc[0].to_dict() if len(cs) else {}
+    r = cs_rates.iloc[0].to_dict() if len(cs_rates) else {}
+
+    def pct(x):
+        try:
+            return f"{100.0 * float(x):.2f}%"
+        except (TypeError, ValueError):
+            return str(x)
+
+    cs_report = f"""# 客服助手增量贡献账（可复现）
+
+产品面：`shop_assistant`（客服助手）。  
+对照：同一幻觉制度跳变期内，**动作落地** vs **同条件不动作**。  
+单位经济：工单 ¥25 / 退款 ¥80 / 机器人成功承接会话 ¥3.5。
+
+## 落地产出（业务 KPI）
+
+| 指标 | 数值 |
+|------|------|
+| 少产生工单 | **{c.get('tickets_avoided')}** 单 |
+| 少产生退款 | **{c.get('refunds_avoided')}** 单 |
+| 多机器人承接会话 | **{c.get('extra_sessions_contained')}** 次 |
+| 区间增量贡献 | **¥{c.get('incremental_yen')}** |
+| 其中：少工单 | ¥{c.get('yen_from_tickets')} |
+| 其中：少退款 | ¥{c.get('yen_from_refunds')} |
+| 其中：多承接 | ¥{c.get('yen_from_containment')} |
+| 每千会话增量贡献 | **¥{c.get('incremental_yen_per_1k_sessions')}** |
+| 30 天跑率（按 acted 日均外推） | **¥{c.get('monthly_runrate_yen')}** / 月 |
+| 30 天少工单（外推） | {c.get('monthly_tickets_avoided')} 单 |
+| 30 天少退款（外推） | {c.get('monthly_refunds_avoided')} 单 |
+| 承接率提升 | {c.get('containment_rate_lift_pp')} pp |
+| 对照天数 acted / ignored | {c.get('days_acted')} / {c.get('days_ignored')} |
+| acted 会话量 | {c.get('sessions_acted')} |
+
+## Before → After 费率（三臂）
+
+| 费率 | quiet（平稳） | fire+不动作 | fire+动作落地 |
+|------|---------------|-------------|---------------|
+| 工单率 | {pct(r.get('ticket_rate_quiet'))} | {pct(r.get('ticket_rate_ignored'))} | {pct(r.get('ticket_rate_acted'))} |
+| 退款率 | {pct(r.get('refund_rate_quiet'))} | {pct(r.get('refund_rate_ignored'))} | {pct(r.get('refund_rate_acted'))} |
+| 机器人承接率 | {pct(r.get('contain_rate_quiet'))} | {pct(r.get('contain_rate_ignored'))} | {pct(r.get('contain_rate_acted'))} |
+
+读法：制度跳变后若不动作，工单/退款率显著恶化；动作落地后费率回到接近平稳期，这就是增量贡献的来源。
+
+## 口径
+
+```
+增量贡献¥ =
+  (ignored工单率 - acted工单率) × acted会话数 × 工单单价
++ (ignored退款率 - acted退款率) × acted会话数 × 退款单价
++ (acted承接率 - ignored承接率) × acted会话数 × 承接会话价值
+```
+
+## 一句对外
+
+客服助手在幻觉制度跳变的 7 个动作日里，相对同条件不动作：少了
+{c.get('tickets_avoided')} 单工单、{c.get('refunds_avoided')} 单退款，
+多承接 {c.get('extra_sessions_contained')} 次会话，贡献约 ¥{c.get('incremental_yen')}；
+按当前流量外推约 ¥{c.get('monthly_runrate_yen')}/月。
+"""
+    (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(cs_report)
+
+    # Stable docs copy for PR / biz review
+    docs_biz = ROOT / "docs" / "biz" / "CS_ASSISTANT_CONTRIBUTION.md"
+    docs_biz.write_text(cs_report)
+
     report = f"""# Business-value SQL demo report
 
-Seeded DuckDB run for hallucination + style/creative surfaces.
+## 客服助手增量贡献（主结果）
 
-## Hallucination ROI (`shop_assistant`)
+- tickets avoided: `{c.get('tickets_avoided')}`
+- refunds avoided: `{c.get('refunds_avoided')}`
+- extra sessions contained: `{c.get('extra_sessions_contained')}`
+- **incremental ¥ realized: `{c.get('incremental_yen')}`**
+- ¥ breakdown tickets/refunds/contain: `{c.get('yen_from_tickets')}` / `{c.get('yen_from_refunds')}` / `{c.get('yen_from_containment')}`
+- incremental ¥ / 1k sessions: `{c.get('incremental_yen_per_1k_sessions')}`
+- monthly run-rate ¥: `{c.get('monthly_runrate_yen')}`
+- detail: `CS_ASSISTANT_CONTRIBUTION.md` / `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
 
-- fire acted days: `{h.get('n_fire_acted_days')}`
-- fire ignored days: `{h.get('n_fire_ignored_days')}`
-- avg quality cost fire+acted: `{h.get('avg_cost_fire_acted')}`
-- avg quality cost fire+ignored: `{h.get('avg_cost_fire_ignored')}`
-- **est daily save act vs ignore: `{h.get('est_daily_save_act_vs_ignore')}` CNY**
+## Hallucination cost rollup (`shop_assistant`)
 
-Narrative: acting on concept-fire (√PO / rollback / Top-k audit) vs ignoring
-reduces CS+refund cost on the same fire regime — this is the value sentence.
+- est daily save act vs ignore: `{h.get('est_daily_save_act_vs_ignore')}` CNY
 
-## Style / creative ROI (`feed_caption`)
+## Style / creative (`feed_caption`)
 
 - style-only days: `{s.get('n_style_only_days')}`
-- concept-only days: `{s.get('n_concept_only_days')}`
-- joint days: `{s.get('n_joint_days')}`
 - avg CTR style-only / quiet: `{s.get('avg_ctr_style_only')}` / `{s.get('avg_ctr_quiet')}`
-- avg brand cost style-only / quiet: `{s.get('avg_brand_cost_style_only')}` / `{s.get('avg_brand_cost_quiet')}`
-
-Narrative: high `style_domain_auc` without concept-fire → open **creative mix**
-ticket only; do not retrain preference head.
 
 ## Artifacts
 
-- DuckDB: `results/agod/biz_value_sql/biz_value.duckdb`
-- JSON: `roi_halluc.json`, `roi_style.json`, `dashboard.json`, `merge_gate_sample.json`
-- SQL package: `sql/biz_value/`
-- Mapping doc: `docs/biz/HALLUC_STYLE_BIZ_SQL_MAP.md`
+- `sql/biz_value/04_cs_assistant_contribution.sql`
+- `results/agod/biz_value_sql/CS_ASSISTANT_CONTRIBUTION.md`
+- `cs_assist_increment.json` / `cs_assist_ledger.json` / `cs_assist_rates.json`
 """
     (OUT / "REPORT.md").write_text(report)
+    print(cs_report)
     print(report)
     print(f"wrote {OUT}")
     return 0

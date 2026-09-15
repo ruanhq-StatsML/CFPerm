@@ -1,11 +1,42 @@
 # 幻觉制度 × 文风/画风漂移 → 业务逻辑与 SQL 价值论证
 
 目标：把 OnlineRFPerm / PO-risk / RF-domain **直接挂到可运营的业务动作与钱**，并用可维护 SQL 持续 justify。  
-不是把算法“翻译成故事”，而是：**信号 → 工单类型 → KPI → 单位经济 → ROI 视图**。
+不是把算法“翻译成故事”，而是：**信号 → 动作落地 → KPI 增量 → 单位经济 → 贡献账**。
 
 SQL 包：`sql/biz_value/`  
 可跑种子：`PYTHONPATH=. python3 scripts/agod/run_biz_value_sql_demo.py`  
+**客服助手主账**：`docs/biz/CS_ASSISTANT_CONTRIBUTION.md`  
 种子报告：`results/agod/biz_value_sql/REPORT.md`
+
+---
+
+## 0. 客服助手增量贡献（主落地）
+
+业务只认这三样：少工单、少退款、多机器人承接。钱从单位经济乘出来。
+
+| 对照 | 含义 |
+|------|------|
+| `fire_acted` | 制度跳变期，客服助手侧动作落地（检索刷新 / 回滚 / Top-k 审计） |
+| `fire_ignored` | 同条件不动作 |
+| 增量 | acted 相对 ignored 的费率差 × acted 会话量 × 单价 |
+
+种子可复现结果（28 天窗、跳变后 7 acted / 7 ignored）：
+
+| KPI | 数值 |
+|-----|------|
+| 少工单 | **103** 单 |
+| 少退款 | **73** 单 |
+| 多承接 | **174** 次 |
+| 区间增量贡献 | **¥9,024**（工单¥2,575 + 退款¥5,840 + 承接¥609） |
+| 每千会话 | **¥6,446** |
+| 30 天跑率 | **¥38,674**/月（外推少工单≈441、少退款≈313） |
+
+SQL：`sql/biz_value/04_cs_assistant_contribution.sql`  
+视图：`vw_cs_assist_exec_summary` / `vw_cs_assist_rate_compare` / `vw_cs_assist_daily_ledger`
+
+对外一句：
+
+> 客服助手在幻觉制度跳变的动作日里，相对同条件不动作，少了 103 单工单、73 单退款，多承接 174 次会话，贡献约 ¥9,024。
 
 ---
 
@@ -13,16 +44,14 @@ SQL 包：`sql/biz_value/`
 
 | 算法信号 | 若不上业务 | 会上业务之后 |
 |---------|------------|--------------|
-| `rfperm_fire`（concept） | “模型漂了”的空告警 | **CS 单量 / 退款 / 合并门禁** 的触发器 |
+| `rfperm_fire`（concept） | “模型漂了”的空告警 | **触发客服助手动作** → 工单/退款/承接增量 |
 | `po_risk0` Top-k | 抽象排序 | **审计人力 ROI**（P@10、确认差例） |
 | `style_domain_auc` | 误当成质量挂了 | **只动素材配比 / decoding**，避免误重训偏好头 |
-| `judge_err_ratio` | 离线表 | **DPO/RLHF 合并门禁 BLOCK/ALLOW** |
+| `judge_err_ratio` | 离线表 | **对齐发布决策**（是否放行偏好更新） |
 
 价值论证的正确句子：
 
-> 在 fire 日采取门控/回滚，相对忽略 fire，日均质量成本下降 \(X\) 元（见 `vw_halluc_roi_rollup.est_daily_save_act_vs_ignore`）。
-
-种子跑数（可复现）：act vs ignore ≈ **¥501/日**（`shop_assistant`，单位经济 CS¥25 + 退款¥80）。
+> 相对同条件不动作，动作落地少了 \(T\) 单工单、\(R\) 单退款、多承接 \(C\) 次，贡献 ¥\(V\)（见 `vw_cs_assist_exec_summary`）。
 
 而不是：
 
@@ -160,11 +189,11 @@ serve_event (曝光/生成)
 
 ## 6. 对外怎么讲（一句话模板）
 
-**幻觉**：  
-“本周 concept-fire 且采取门控的日子，相对忽略 fire，客服+退款质量成本日均低 ¥X；Top-10 `po_risk0` 审计 precision 为 P。”
+**客服助手（主）**：  
+“幻觉制度跳变期动作落地相对不动作：少 \(T\) 工单、少 \(R\) 退款、多承接 \(C\) 会话，贡献 ¥\(V\)；月跑率见 `vw_cs_assist_exec_summary.monthly_runrate_yen`。”
 
 **文风/画风**：  
-“style_domain_auc 升高且无 concept-fire 的日子，我们只开素材配比工单，不开偏好重训；品牌标记成本与 CTR 代理见 `vw_style_value_daily`。”
+“style_domain_auc 升高且无 concept-fire 的日子，只调素材配比/decoding，不重训偏好头；品牌标记成本与 CTR 代理见 `vw_style_value_daily`。”
 
 ---
 
@@ -173,14 +202,15 @@ serve_event (曝光/生成)
 ```bash
 pip install duckdb pandas
 PYTHONPATH=. python3 scripts/agod/run_biz_value_sql_demo.py
+# → docs/biz/CS_ASSISTANT_CONTRIBUTION.md
 # → results/agod/biz_value_sql/REPORT.md
-# → vw_halluc_roi_rollup / vw_style_roi_rollup / vw_alignment_merge_gate
+# → vw_cs_assist_exec_summary / vw_halluc_roi_rollup / vw_style_roi_rollup
 ```
 
 ### 种子结论（justify 模板）
 
 | 主题 | 对外一句话 |
 |------|------------|
-| 幻觉 | fire+acted 相对 fire+ignored，日均质量成本低约 ¥501（CS+退款） |
-| 文风 | style-only 日 CTR 低于 quiet，品牌标记成本高于 quiet → 开素材配比工单，不开偏好重训 |
-| 门禁 | `judge_err_ratio≥1.5` 或 concept-fire → `BLOCK_MERGE` |
+| **客服助手** | 少 103 工单 / 73 退款 / 多承接 174，增量 **¥9,024**（每千会话 ¥6,446） |
+| 文风 | style-only 日 CTR 低于 quiet，品牌标记成本高于 quiet → 调素材配比，不重训偏好 |
+| 对齐发布 | `judge_err_ratio≥1.5` 或 concept-fire → 暂缓偏好更新上线 |

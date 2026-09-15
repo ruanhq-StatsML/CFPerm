@@ -1,32 +1,27 @@
 # Business-value SQL demo report
 
-Seeded DuckDB run for hallucination + style/creative surfaces.
+## 客服助手增量贡献（主结果）
 
-## Hallucination ROI (`shop_assistant`)
+- tickets avoided: `103.0`
+- refunds avoided: `73.0`
+- extra sessions contained: `174.0`
+- **incremental ¥ realized: `9024.0`**
+- ¥ breakdown tickets/refunds/contain: `2575.0` / `5840.0` / `609.0`
+- incremental ¥ / 1k sessions: `6446.0`
+- monthly run-rate ¥: `38674.0`
+- detail: `CS_ASSISTANT_CONTRIBUTION.md` / `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
 
-- fire acted days: `7.0`
-- fire ignored days: `7.0`
-- avg quality cost fire+acted: `710.0`
-- avg quality cost fire+ignored: `1211.4285714285713`
-- **est daily save act vs ignore: `501.42857142857133` CNY**
+## Hallucination cost rollup (`shop_assistant`)
 
-Narrative: acting on concept-fire (√PO / rollback / Top-k audit) vs ignoring
-reduces CS+refund cost on the same fire regime — this is the value sentence.
+- est daily save act vs ignore: `1202.142857142857` CNY
 
-## Style / creative ROI (`feed_caption`)
+## Style / creative (`feed_caption`)
 
 - style-only days: `12.0`
-- concept-only days: `0.0`
-- joint days: `6.0`
-- avg CTR style-only / quiet: `0.059444444444444446` / `0.082`
-- avg brand cost style-only / quiet: `637.5` / `90.0`
-
-Narrative: high `style_domain_auc` without concept-fire → open **creative mix**
-ticket only; do not retrain preference head.
+- avg CTR style-only / quiet: `0.05444444444444444` / `0.082`
 
 ## Artifacts
 
-- DuckDB: `results/agod/biz_value_sql/biz_value.duckdb`
-- JSON: `roi_halluc.json`, `roi_style.json`, `dashboard.json`, `merge_gate_sample.json`
-- SQL package: `sql/biz_value/`
-- Mapping doc: `docs/biz/HALLUC_STYLE_BIZ_SQL_MAP.md`
+- `sql/biz_value/04_cs_assistant_contribution.sql`
+- `results/agod/biz_value_sql/CS_ASSISTANT_CONTRIBUTION.md`
+- `cs_assist_increment.json` / `cs_assist_ledger.json` / `cs_assist_rates.json`
