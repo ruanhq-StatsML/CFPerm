@@ -217,6 +217,12 @@ def build_payload() -> dict:
     }
 
 
+def _reading(obj) -> str:
+    if isinstance(obj, dict):
+        return "；".join(f"{k}: {v}" for k, v in obj.items())
+    return str(obj) if obj is not None else ""
+
+
 def render_cn(p: dict) -> str:
     m = p["method"]["halu"]
     hh = p["method"]["hh_style"]
@@ -318,7 +324,7 @@ def render_cn(p: dict) -> str:
 | po_risk0 P@10 / AUROC | `{m.get('po_p10')}` / `{m.get('po_auroc')}` |
 | Top-10 rag_hit | `{m.get('rag_top10')}` |
 
-读法（方法层）：{m.get('reading')}
+读法（方法层）：{_reading(m.get('reading'))}
 
 **与业务的衔接：** `fired+ratio` → seed 的 `fire_halluc/hop_ratio`；`rag_hit` → `retrieval_refresh` vs `model_rollback`；`P@10` → 审计成本进入净贡献。
 
@@ -330,7 +336,7 @@ def render_cn(p: dict) -> str:
 | judge_err_ratio | `{hh.get('judge_err_ratio')}` |
 | concept fire | `{(hh.get('fired'))}` |
 
-读法：{hh.get('reading')}
+读法：{_reading(hh.get('reading'))}
 
 **relevance：** 高 style_auc + 有/无 concept-fire 决定「只调素材」还是「动偏好」——**钱走 CTR/品牌路径，不是客服工单路径**。本原型把它放在对照列，防止方法论信号被当成同一本账。
 

@@ -60,7 +60,7 @@ OnlineRFPerm 决定「哪段日子算跳变对照窗」；hop 情景把跳变强
 | po_risk0 P@10 / AUROC | `1.0` / `1.0` |
 | Top-10 rag_hit | `1.0` |
 
-读法（方法层）：{'regime': 'OnlineRFPerm fire at cut => hallucination label law hopped', 'ranking': 'po_risk0 sorts audit candidates under shift (not a fact checker)', 'rag': 'low rag_hit among Top-k => retrieval-support gap, separate from generation hop', 'router': 'task_shift guides which expert/route to refresh next'}
+读法（方法层）：regime: OnlineRFPerm fire at cut => hallucination label law hopped；ranking: po_risk0 sorts audit candidates under shift (not a fact checker)；rag: low rag_hit among Top-k => retrieval-support gap, separate from generation hop；router: task_shift guides which expert/route to refresh next
 
 **与业务的衔接：** `fired+ratio` → seed 的 `fire_halluc/hop_ratio`；`rag_hit` → `retrieval_refresh` vs `model_rollback`；`P@10` → 审计成本进入净贡献。
 
@@ -72,7 +72,7 @@ OnlineRFPerm 决定「哪段日子算跳变对照窗」；hop 情景把跳变强
 | judge_err_ratio | `3.670675300647549` |
 | concept fire | `1` |
 
-读法：{'style_axis': 'style_domain_auc high => register/文风 portrait moved (P(X))', 'preference_axis': 'judge_err_ratio / OnlineRFPerm fire => preference map P(Y|X) moved', 'action': 'quiet->uniform; fire->audit Top-k by po_risk0; optional sqrt(PO) on T=1', 'not_a_claim': 'not a moral judge; not causal feature attribution'}
+读法：style_axis: style_domain_auc high => register/文风 portrait moved (P(X))；preference_axis: judge_err_ratio / OnlineRFPerm fire => preference map P(Y|X) moved；action: quiet->uniform; fire->audit Top-k by po_risk0; optional sqrt(PO) on T=1；not_a_claim: not a moral judge; not causal feature attribution
 
 **relevance：** 高 style_auc + 有/无 concept-fire 决定「只调素材」还是「动偏好」——**钱走 CTR/品牌路径，不是客服工单路径**。本原型把它放在对照列，防止方法论信号被当成同一本账。
 
