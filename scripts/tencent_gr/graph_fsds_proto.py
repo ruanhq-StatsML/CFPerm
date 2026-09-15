@@ -3,6 +3,7 @@
 
 φ=(Y-μ)(W-e) 是早/晚对 Y 的距离，不是 treatment effect。
 图谱只是另一包 X：左窗行为 → networkx 度数 / 投影 PageRank / 同场共点。
+关联定义见 ASSOC / assoc_edges：catalog、hit、hop、proj、coclick。
 不是 GNN，不是 DFS。漏斗列仍在；graph 当 hop 给 LOGO/LOCO。
 
   python3 scripts/tencent_gr/graph_fsds_proto.py
@@ -54,6 +55,43 @@ def _mid(x) -> str:
     return f"m{int(x)}"
 
 
+# 关联定义。先定 G：节点、时间、边。边 = 业务层，不是随便连。
+# 节点 u 人 / i 货 / m 店。单号不是节点（单是粒，挂 Y）。店名不是边。
+# 时间：只左窗。曝光不是边。
+ASSOC = [
+    {
+        "name": "catalog",
+        "edge": "item—merchant",
+        "when": "上架，行为之前",
+        "rule": "join item→merchant。货在店上，不是点出来的。",
+    },
+    {
+        "name": "hit",
+        "edge": "user—item",
+        "when": "左窗 clk 或 cnv，去重",
+        "rule": "有过点击或转化才连。曝光不是边。没点就买仍因 cnv 连。",
+    },
+    {
+        "name": "hop",
+        "edge": "user—merchant",
+        "when": "hit ⋈ catalog",
+        "rule": "人到店是 hop，不是新观察。",
+    },
+    {
+        "name": "proj",
+        "edge": "merchant—merchant",
+        "when": "user—merchant 二部投影",
+        "rule": "两个店至少有一个共同买家。不是店名相似。",
+    },
+    {
+        "name": "coclick",
+        "edge": "item—item",
+        "when": "同场共点，clk only",
+        "rule": "相邻 Δt≤30min 一场，一场里点过的货两两连。cnv/exp 不进。",
+    },
+]
+
+
 def session_pairs(clk: pd.DataFrame) -> list[tuple[int, int]]:
     """同场共点：一场里点过的货两两连边。"""
     if clk.empty:
@@ -71,31 +109,56 @@ def session_pairs(clk: pd.DataFrame) -> list[tuple[int, int]]:
     return pairs
 
 
-def graph_tables(left: pd.DataFrame, imap: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """左窗点击/转化 → 三张度数表。曝光不连边。"""
-    hit = left.loc[left.act.isin([CLK, CNV]), ["user_id", "item_id", "ts"]].copy()
-    hit = hit.merge(imap, on="item_id", how="left")
-    clk_only = left.loc[left.act.eq(CLK), ["user_id", "item_id", "ts"]]
+def assoc_edges(ev: pd.DataFrame, imap: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """五层关联。传入左窗则无未来泄漏。"""
+    cat = imap.drop_duplicates(["item_id", "merchant_id"])[["item_id", "merchant_id"]].copy()
+    hit = ev.loc[ev.act.isin([CLK, CNV]), ["user_id", "item_id"]].drop_duplicates()
+    hit = hit.merge(cat, on="item_id", how="left")
+    ui = hit[["user_id", "item_id"]].drop_duplicates()
+    um = hit.dropna(subset=["merchant_id"]).drop_duplicates(["user_id", "merchant_id"])[
+        ["user_id", "merchant_id"]
+    ]
+    pairs = []
+    for _, g in um.groupby("user_id"):
+        ms = sorted({int(x) for x in g.merchant_id})
+        for a, b in combinations(ms, 2):
+            pairs.append((a, b))
+    proj = (
+        pd.DataFrame(pairs, columns=["merchant_a", "merchant_b"]).drop_duplicates()
+        if pairs
+        else pd.DataFrame(columns=["merchant_a", "merchant_b"])
+    )
+    clk_only = ev.loc[ev.act.eq(CLK), ["user_id", "item_id", "ts"]]
+    co = pd.DataFrame(session_pairs(clk_only), columns=["item_a", "item_b"])
+    if len(co):
+        co = co.drop_duplicates()
+    else:
+        co = pd.DataFrame(columns=["item_a", "item_b"])
+    return {"catalog": cat, "hit": ui, "hop": um, "proj": proj, "coclick": co}
 
-    ui = hit.drop_duplicates(["user_id", "item_id"])
-    G_ui = nx.from_pandas_edgelist(
-        pd.DataFrame({"s": ui.user_id.map(_uid), "t": ui.item_id.map(_iid)}),
+
+def _nx_edges(df: pd.DataFrame, s: str, t: str, smap, tmap) -> nx.Graph:
+    if df is None or len(df) == 0:
+        return nx.Graph()
+    return nx.from_pandas_edgelist(
+        pd.DataFrame({"s": df[s].map(smap), "t": df[t].map(tmap)}),
         "s",
         "t",
     )
-    um = hit.dropna(subset=["merchant_id"]).drop_duplicates(["user_id", "merchant_id"])
-    G_um = nx.from_pandas_edgelist(
-        pd.DataFrame({"s": um.user_id.map(_uid), "t": um.merchant_id.map(_mid)}),
-        "s",
-        "t",
-    )
+
+
+def graph_tables(left: pd.DataFrame, imap: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """左窗点击/转化 → 三张度数表。曝光不连边。边定义见 ASSOC / assoc_edges。"""
+    E = assoc_edges(left, imap)
+    G_ui = _nx_edges(E["hit"], "user_id", "item_id", _uid, _iid)
+    G_um = _nx_edges(E["hop"], "user_id", "merchant_id", _uid, _mid)
     m_nodes = [n for n in G_um.nodes if str(n).startswith("m")]
     G_m = nx.bipartite.projected_graph(G_um, m_nodes) if m_nodes else nx.Graph()
     pr = nx.pagerank(G_m, max_iter=50) if G_m.number_of_nodes() else {}
     clust = nx.clustering(G_m) if G_m.number_of_nodes() else {}
 
     G_co = nx.Graph()
-    G_co.add_edges_from((_iid(a), _iid(b)) for a, b in session_pairs(clk_only))
+    G_co.add_edges_from((_iid(a), _iid(b)) for a, b in E["coclick"].itertuples(index=False))
 
     def deg(G, prefix, key):
         rows = []
@@ -136,9 +199,14 @@ def demo() -> None:
     left = pd.DataFrame(rows, columns=["user_id", "item_id", "act", "ts"])
     imap = pd.DataFrame({"item_id": [10, 11, 12], "merchant_id": [0, 0, 1]})
     u, i, m = graph_tables(left, imap)
+    E = assoc_edges(left, imap)
     assert float(u.loc[u.user_id.eq(1), "g_u_item_deg"].iloc[0]) == 2.0
     assert float(i.loc[i.item_id.eq(10), "g_i_user_deg"].iloc[0]) == 2.0
+    assert len(E["coclick"]) == 1
+    assert set(E["coclick"].iloc[0]) == {10, 11}
+    assert len(E["hit"]) == 4  # (1,10)(1,11)(2,10)(3,12)
     print("nx demo", u.to_string(index=False))
+    print("assoc", {k: len(v) for k, v in E.items()})
     print(m.to_string(index=False))
 
 
@@ -199,10 +267,16 @@ def main() -> None:
         "# Funnel FSDS + networkx graph features",
         "",
         "PO-risk **没有因果性**。φ=(Y−μ)(W−e) 是早/晚对买后 Y 的距离，不是谁导致转化。",
-        "图谱：左窗 clk/cnv 的 user—item、user—merchant 二部图，店投影 PageRank/聚类，同场共点。",
-        "LOGO 把 graph 整包拿掉。不是 GNN，不是 DFS。",
+        "不是 GNN，不是 DFS。LOGO 把 graph 整包拿掉。",
+        "",
+        "## 关联定义",
+        "",
+        "节点 `u` 人 / `i` 货 / `m` 店。单号不是节点。店名不是边。只左窗。曝光不是边。",
         "",
     ]
+    for a in ASSOC:
+        md.append(f"- **{a['name']}** `{a['edge']}` — {a['when']}。{a['rule']}")
+    md += ["", ""]
     md += _md_board("订单粒 漏斗 ∪ graph", rec)
     (OUT / "GRAPH_FSDS.md").write_text("\n".join(md), encoding="utf-8")
     print("wrote", OUT / "GRAPH_FSDS.md")
