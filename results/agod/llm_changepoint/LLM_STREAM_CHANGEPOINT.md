@@ -1,4 +1,8 @@
-# LLM 推理变点：两数据集 manipulation → OnlineRFPerm
+# LLM 推理/对齐：OnlineRFPerm 在线检测 use-case
+
+> **定位**：这是把已有 OnlineRFPerm 接到大模型**推理 / 对齐**流上的一个应用场景，
+> **不涉及大模型本身的方法论创新**。算法在 stationary DGP 上的 robustness 已论证；
+> 这批数据只看 detection delay。PO-risk 仍用 BOCPD。
 
 ## 数据 form（就这一列时间流）
 
@@ -16,10 +20,10 @@
 
 | 问题 | 方法 | 本原型 |
 |------|------|--------|
-| **大模型推理有没有制度/质量变点？** | **OnlineRFPerm** | ✅ 两数据集已跑 |
-| 实例风险排序 / PO-risk | **BOCPD**（你们实验已论证更好） | 不在此硬塞 OnlineRFPerm |
+| 推理/对齐流有没有制度变点？（在线检测 use-case） | **OnlineRFPerm** | ✅ 两数据集已跑 |
+| 实例风险排序 / PO-risk | **BOCPD** | 不在此硬塞 OnlineRFPerm |
 
-Stationary-DGP robustness 已在算法侧论证过；**这批数据只看 detection delay**（true cut → first fire），没什么玄学。
+Stationary-DGP robustness 已在算法侧论证过；**这批数据只看 detection delay**（true cut → first fire）。
 
 ```python
 # stream: list[dict] with embedding + score
@@ -29,7 +33,7 @@ from agod.online_rfperm import fit_online_probe, probe_err, hop_fires, error_flo
 # delay_batch = first_fire_batch - cut_batch
 ```
 
-> PO-risk 实例排序请用 **BOCPD**（实验已论证）；本脚本只做 OnlineRFPerm 变点。
+> PO-risk 实例排序请用 **BOCPD**（实验已论证）；本脚本只做 OnlineRFPerm 变点 use-case。
 
 ## Detection delay（本跑）
 

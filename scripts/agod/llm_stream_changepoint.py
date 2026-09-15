@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""LLM 推理变点检测 prototype：两数据集 → 连续时间流 → OnlineRFPerm。
+"""LLM 推理/对齐上的 OnlineRFPerm **use-case**（不是大模型方法论创新）。
+
+定位::
+
+  - 算法（OnlineRFPerm）在 stationary DGP 上的 robustness 已论证
+  - 这里只是把同一套在线变点检测接到 LLM 推理 / 对齐流上
+  - 看的是 detection delay 之类的落地指标，不发明新的 LLM 训练/对齐方法
+  - 实例 PO-risk 排序仍用 BOCPD（实验已论证更好）
 
 你要的数据 form（一行一个时刻）::
 
@@ -15,11 +22,6 @@
 
   1) HaluEval QA  — 推理幻觉制度变点（主）
   2) HH-RLHF      — 对齐/偏好映射变点（对照）
-
-方法::
-
-  变点 / 制度跳变  →  OnlineRFPerm（本脚本）
-  实例 PO-risk 排序 →  你们实验已论证用 BOCPD 更好（这里不硬塞 OnlineRFPerm 做 PO）
 
 Usage::
 
@@ -399,7 +401,11 @@ def render_md(results: dict) -> str:
         for name, r in results.items()
     )
 
-    return f"""# LLM 推理变点：两数据集 manipulation → OnlineRFPerm
+    return f"""# LLM 推理/对齐：OnlineRFPerm 在线检测 use-case
+
+> **定位**：这是把已有 OnlineRFPerm 接到大模型**推理 / 对齐**流上的一个应用场景，
+> **不涉及大模型本身的方法论创新**。算法在 stationary DGP 上的 robustness 已论证；
+> 这批数据只看 detection delay。PO-risk 仍用 BOCPD。
 
 ## 数据 form（就这一列时间流）
 
@@ -417,10 +423,10 @@ def render_md(results: dict) -> str:
 
 | 问题 | 方法 | 本原型 |
 |------|------|--------|
-| **大模型推理有没有制度/质量变点？** | **OnlineRFPerm** | ✅ 两数据集已跑 |
-| 实例风险排序 / PO-risk | **BOCPD**（你们实验已论证更好） | 不在此硬塞 OnlineRFPerm |
+| 推理/对齐流有没有制度变点？（在线检测 use-case） | **OnlineRFPerm** | ✅ 两数据集已跑 |
+| 实例风险排序 / PO-risk | **BOCPD** | 不在此硬塞 OnlineRFPerm |
 
-Stationary-DGP robustness 已在算法侧论证过；**这批数据只看 detection delay**（true cut → first fire），没什么玄学。
+Stationary-DGP robustness 已在算法侧论证过；**这批数据只看 detection delay**（true cut → first fire）。
 
 ```python
 # stream: list[dict] with embedding + score
@@ -430,7 +436,7 @@ from agod.online_rfperm import fit_online_probe, probe_err, hop_fires, error_flo
 # delay_batch = first_fire_batch - cut_batch
 ```
 
-> PO-risk 实例排序请用 **BOCPD**（实验已论证）；本脚本只做 OnlineRFPerm 变点。
+> PO-risk 实例排序请用 **BOCPD**（实验已论证）；本脚本只做 OnlineRFPerm 变点 use-case。
 
 ## Detection delay（本跑）
 
@@ -525,9 +531,16 @@ def main() -> int:
     hh_d = results["HH-RLHF（偏好映射变点）"]["delay"]
     summary = {
         "form": ["t", "question", "answer", "embedding(p,1)", "score"],
+        "positioning": (
+            "online-detection use-case on LLM inference/alignment streams; "
+            "not LLM methodological innovation"
+        ),
         "method_changepoint": "OnlineRFPerm",
         "method_po_risk_recommended": "BOCPD (per prior experiments; not OnlineRFPerm)",
-        "note": "stationary-DGP robustness already established; this run reports detection delay",
+        "note": (
+            "stationary-DGP robustness already established; "
+            "this run reports detection delay only"
+        ),
         "gate": args.gate,
         "halu": halu_d,
         "hh": hh_d,

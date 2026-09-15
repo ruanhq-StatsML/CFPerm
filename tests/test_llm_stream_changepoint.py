@@ -95,6 +95,7 @@ def test_cached_artifacts_roundtrip():
     )
     assert summary["method_changepoint"] == "OnlineRFPerm"
     assert summary["method_po_risk_recommended"].startswith("BOCPD")
+    assert "not LLM methodological innovation" in summary["positioning"]
     assert summary["form"] == ["t", "question", "answer", "embedding(p,1)", "score"]
     assert summary["halu_fires"] >= 1
     assert summary["hh_fires"] >= 1

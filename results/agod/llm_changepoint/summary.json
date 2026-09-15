@@ -6,9 +6,10 @@
     "embedding(p,1)",
     "score"
   ],
+  "positioning": "online-detection use-case on LLM inference/alignment streams; not LLM methodological innovation",
   "method_changepoint": "OnlineRFPerm",
   "method_po_risk_recommended": "BOCPD (per prior experiments; not OnlineRFPerm)",
-  "note": "stationary-DGP robustness already established; this run reports detection delay",
+  "note": "stationary-DGP robustness already established; this run reports detection delay only",
   "gate": 1.2,
   "halu": {
     "cut_batch": 4,
