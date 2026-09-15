@@ -49,12 +49,13 @@ def seed(con) -> None:
           (?, 'shop_assistant', 'cs_ticket_cost', 25.0, 'CNY', 'ops FP 2026Q3'),
           (?, 'shop_assistant', 'refund_unit_cost', 80.0, 'CNY', 'finance 2026Q3'),
           (?, 'shop_assistant', 'contained_session_value', 3.5, 'CNY', 'ops: avoided human handle'),
+          (?, 'shop_assistant', 'audit_unit_cost', 6.0, 'CNY', 'ops: human audit per sample'),
           (?, 'feed_caption', 'value_per_ctr_point', 1200.0, 'CNY', 'growth proxy'),
           (?, 'feed_caption', 'brand_incident_cost', 50.0, 'CNY', 'brand ops'),
           (?, 'ad_creative', 'value_per_ctr_point', 2500.0, 'CNY', 'ads proxy'),
           (?, 'ad_creative', 'brand_incident_cost', 120.0, 'CNY', 'brand ops')
         """,
-        [start] * 7,
+        [start] * 8,
     )
 
     # creatives / style clusters
@@ -341,6 +342,7 @@ def main() -> int:
         "02_style_drift_value.sql",
         "03_value_dashboard.sql",
         "04_cs_assistant_contribution.sql",
+        "05_cs_net_and_weekly.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -384,6 +386,10 @@ def main() -> int:
     cs_traffic = con.execute(
         "SELECT * FROM vw_cs_assist_traffic_scenarios ORDER BY daily_sessions"
     ).fetchdf()
+    cs_net = con.execute("SELECT * FROM vw_cs_assist_net_increment").fetchdf()
+    cs_week = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly ORDER BY week_start"
+    ).fetchdf()
     cs_ledger = con.execute(
         """
         SELECT arm,
@@ -413,12 +419,15 @@ def main() -> int:
     dump(cs_rates, OUT / "cs_assist_rates.json")
     dump(cs_actions, OUT / "cs_assist_actions.json")
     dump(cs_traffic, OUT / "cs_assist_traffic.json")
+    dump(cs_net, OUT / "cs_assist_net.json")
+    dump(cs_week, OUT / "cs_assist_weekly.json")
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
 
     h = halluc.iloc[0].to_dict() if len(halluc) else {}
     s = style.iloc[0].to_dict() if len(style) else {}
     c = cs.iloc[0].to_dict() if len(cs) else {}
     r = cs_rates.iloc[0].to_dict() if len(cs_rates) else {}
+    n = cs_net.iloc[0].to_dict() if len(cs_net) else {}
 
     def pct(x):
         try:
@@ -445,6 +454,16 @@ def main() -> int:
         )
     traffic_table = "\n".join(traffic_rows)
 
+    week_rows = []
+    for _, row in cs_week.iterrows():
+        week_rows.append(
+            f"| {row['week_start']} | {int(row['sessions'])} | {int(row['tickets'])} | "
+            f"{int(row['refunds'])} | {pct(row['ticket_rate'])} | "
+            f"{pct(row['containment_rate'])} | ¥{int(row['net_contrib_yen'])} | "
+            f"{int(row['days_acted'])}/{int(row['days_ignored'])} |"
+        )
+    week_table = "\n".join(week_rows)
+
     # Pull HF hop evidence if present (justify which action bucket)
     hf_note = ""
     hf_path = ROOT / "results" / "agod" / "hf_landing" / "halu_regime_rag.json"
@@ -468,7 +487,7 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 产品面：`shop_assistant`（客服助手）。  
 对照：同一幻觉制度跳变期内，**动作落地** vs **同条件不动作**。  
-单位经济：工单 ¥25 / 退款 ¥80 / 机器人成功承接会话 ¥3.5。
+单位经济：工单 ¥25 / 退款 ¥80 / 机器人成功承接会话 ¥3.5 / 审计件 ¥6。
 
 ## 落地产出（业务 KPI）
 
@@ -477,14 +496,16 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 | 少产生工单 | **{c.get('tickets_avoided')}** 单 |
 | 少产生退款 | **{c.get('refunds_avoided')}** 单 |
 | 多机器人承接会话 | **{c.get('extra_sessions_contained')}** 次 |
-| 区间增量贡献 | **¥{c.get('incremental_yen')}** |
+| 区间增量贡献（毛） | **¥{c.get('incremental_yen')}** |
 | 其中：少工单 | ¥{c.get('yen_from_tickets')} |
 | 其中：少退款 | ¥{c.get('yen_from_refunds')} |
 | 其中：多承接 | ¥{c.get('yen_from_containment')} |
-| 每千会话增量贡献 | **¥{c.get('incremental_yen_per_1k_sessions')}** |
-| 30 天跑率（按 acted 日均外推） | **¥{c.get('monthly_runrate_yen')}** / 月 |
-| 30 天少工单（外推） | {c.get('monthly_tickets_avoided')} 单 |
-| 30 天少退款（外推） | {c.get('monthly_refunds_avoided')} 单 |
+| **扣审计后净增量** | **¥{n.get('net_incremental_yen')}** |
+| 审计件数 / 成本（acted） | {n.get('audits_acted')} / ¥{n.get('audit_cost_acted')} |
+| 审计 precision 代理 | {n.get('avg_audit_precision')} |
+| 每千会话毛增量 | **¥{c.get('incremental_yen_per_1k_sessions')}** |
+| 每千会话净增量 | **¥{n.get('net_yen_per_1k_sessions')}** |
+| 30 天跑率（毛，acted 日均外推） | **¥{c.get('monthly_runrate_yen')}** / 月 |
 | 承接率提升 | {c.get('containment_rate_lift_pp')} pp |
 | 对照天数 acted / ignored | {c.get('days_acted')} / {c.get('days_ignored')} |
 | acted 会话量 | {c.get('sessions_acted')} |
@@ -505,29 +526,36 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 |------|------|------|--------|--------|--------|-------|-------------|
 {action_table}
 
-## 流量情景（月贡献外推）
-
-按每千会话增量单价缩放；业务选型用。
+## 流量情景（月贡献外推 · 毛）
 
 | 情景 | 日会话 | 月增量¥ | 月少工单 | 月少退款 | 月多承接 |
 |------|--------|---------|----------|----------|----------|
 {traffic_table}
+
+## 周经营看板
+
+| 周起始 | 会话 | 工单 | 退款 | 工单率 | 承接率 | 净贡献¥ | acted/ignored 天 |
+|--------|------|------|------|--------|--------|---------|------------------|
+{week_table}
 {hf_note}
 ## 口径
 
 ```
-增量贡献¥ =
+毛增量¥ =
   (ignored工单率 - acted工单率) × acted会话数 × 工单单价
 + (ignored退款率 - acted退款率) × acted会话数 × 退款单价
 + (acted承接率 - ignored承接率) × acted会话数 × 承接会话价值
+
+净增量¥ = 毛增量¥ − acted 侧审计人力成本
+         （审计单价 × acted 日审计件数；不把 ignored 多烧的审计算进贡献）
 ```
 
 ## 一句对外
 
 客服助手在幻觉制度跳变的 {c.get('days_acted')} 个动作日里，相对同条件不动作：少了
 {c.get('tickets_avoided')} 单工单、{c.get('refunds_avoided')} 单退款，
-多承接 {c.get('extra_sessions_contained')} 次会话，贡献约 ¥{c.get('incremental_yen')}；
-按当前流量外推约 ¥{c.get('monthly_runrate_yen')}/月。
+多承接 {c.get('extra_sessions_contained')} 次会话；毛贡献约 ¥{c.get('incremental_yen')}，
+扣审计人力后净贡献约 ¥{n.get('net_incremental_yen')}。
 生产中等流量（日 1 万会话）见上表 `prod_mid`。
 """
     (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(cs_report)
@@ -543,12 +571,12 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 - tickets avoided: `{c.get('tickets_avoided')}`
 - refunds avoided: `{c.get('refunds_avoided')}`
 - extra sessions contained: `{c.get('extra_sessions_contained')}`
-- **incremental ¥ realized: `{c.get('incremental_yen')}`**
+- **gross incremental ¥: `{c.get('incremental_yen')}`**
+- **net incremental ¥ (after audit): `{n.get('net_incremental_yen')}`**
 - ¥ breakdown tickets/refunds/contain: `{c.get('yen_from_tickets')}` / `{c.get('yen_from_refunds')}` / `{c.get('yen_from_containment')}`
-- incremental ¥ / 1k sessions: `{c.get('incremental_yen_per_1k_sessions')}`
-- monthly run-rate ¥: `{c.get('monthly_runrate_yen')}`
+- monthly run-rate ¥ (gross): `{c.get('monthly_runrate_yen')}`
 - action split: `cs_assist_actions.json`
-- traffic scenarios: `cs_assist_traffic.json`
+- traffic / weekly / net: `cs_assist_traffic.json` / `cs_assist_weekly.json` / `cs_assist_net.json`
 - detail: `CS_ASSISTANT_CONTRIBUTION.md` / `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
 
 ## Hallucination cost rollup (`shop_assistant`)
@@ -563,8 +591,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 ## Artifacts
 
 - `sql/biz_value/04_cs_assistant_contribution.sql`
+- `sql/biz_value/05_cs_net_and_weekly.sql`
 - `results/agod/biz_value_sql/CS_ASSISTANT_CONTRIBUTION.md`
-- `cs_assist_increment.json` / `cs_assist_actions.json` / `cs_assist_traffic.json`
 """
     (OUT / "REPORT.md").write_text(report)
     print(cs_report)
