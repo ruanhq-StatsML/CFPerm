@@ -1,0 +1,155 @@
+{
+  "gate": 1.25,
+  "seed": 0,
+  "judge": {
+    "scenario": "hh_rlhf_rfperm_as_judge_style",
+    "dataset": "Anthropic/hh-rlhf@helpful-base",
+    "n": 4000,
+    "n_batches": 50,
+    "n_per": 80,
+    "cut_batch": 4,
+    "gate": 1.25,
+    "flip_rate_after": 0.85125,
+    "formality_early": 0.0025,
+    "formality_late": 0.0033152173913043475,
+    "style_domain_auc": 0.9988925576901218,
+    "text_domain_auc": 0.49423823668296024,
+    "judge_err_pre": 0.14687499999999998,
+    "judge_err_post": 0.5391304347826087,
+    "judge_err_ratio": 3.670675300647549,
+    "judge_post_po_auroc": 0.5605913279773157,
+    "fire_rate": 0.10416666666666667,
+    "first_fire_t": 4,
+    "fires": [
+      {
+        "t": 4,
+        "ratio": 1.342857142857143,
+        "mean_r0": 0.4375,
+        "mean_r1": 0.5875
+      },
+      {
+        "t": 7,
+        "ratio": 1.342857142857143,
+        "mean_r0": 0.4375,
+        "mean_r1": 0.5875
+      },
+      {
+        "t": 20,
+        "ratio": 1.4999999999999998,
+        "mean_r0": 0.4,
+        "mean_r1": 0.6
+      },
+      {
+        "t": 33,
+        "ratio": 1.2903225806451615,
+        "mean_r0": 0.38749999999999996,
+        "mean_r1": 0.5
+      },
+      {
+        "t": 47,
+        "ratio": 1.3125,
+        "mean_r0": 0.4,
+        "mean_r1": 0.525
+      }
+    ],
+    "hop_at_cut": {
+      "t": 4,
+      "fired": 1,
+      "ratio": 1.342857142857143,
+      "ranking": {
+        "n_t1": 80,
+        "pos_rate": 0.5875,
+        "auroc_po_risk0": 0.5409413281753708,
+        "precision_at_10": 0.5,
+        "mean_po_t1": 0.5458825483558659
+      }
+    },
+    "hop_quiet": {
+      "t": 2,
+      "fired": 0,
+      "ratio": 1.0263157894736843,
+      "ranking": {
+        "n_t1": 80,
+        "pos_rate": 0.475,
+        "auroc_po_risk0": 0.5081453634085213,
+        "precision_at_10": 0.8,
+        "mean_po_t1": 0.5024964816276234
+      }
+    },
+    "reading": {
+      "style_axis": "style_domain_auc high => register/\u6587\u98ce portrait moved (P(X))",
+      "preference_axis": "judge_err_ratio / OnlineRFPerm fire => preference map P(Y|X) moved",
+      "action": "quiet->uniform; fire->audit Top-k by po_risk0; optional sqrt(PO) on T=1",
+      "not_a_claim": "not a moral judge; not causal feature attribution"
+    }
+  },
+  "halluc": {
+    "scenario": "halueval_hallucination_regime_rag",
+    "dataset": "pminervini/HaluEval@qa_samples",
+    "n": 2400,
+    "n_batches": 24,
+    "n_per": 100,
+    "cut_batch": 4,
+    "gate": 1.25,
+    "rate_before": 0.08,
+    "rate_after": 0.942,
+    "fire_rate": 0.09090909090909091,
+    "first_fire_t": 4,
+    "fires": [
+      {
+        "t": 4,
+        "ratio": 11.714285714285724,
+        "mean_r0": 0.06999999999999995,
+        "mean_r1": 0.8200000000000001
+      },
+      {
+        "t": 9,
+        "ratio": 1.461538461538461,
+        "mean_r0": 0.13,
+        "mean_r1": 0.18999999999999995
+      }
+    ],
+    "hop_at_cut": {
+      "t": 4,
+      "fired": 1,
+      "ratio": 11.714285714285724,
+      "ranking": {
+        "n_t1": 100,
+        "auroc_po_risk0": 1.0,
+        "precision_at_10": 1.0,
+        "mean_po_t1": 1.041720734126984,
+        "halluc_rate": 0.82,
+        "mean_rag_hit_top10": 1.0
+      }
+    },
+    "hop_quiet": {
+      "t": 2,
+      "fired": 0,
+      "ratio": 0.6999999999999996,
+      "ranking": {
+        "n_t1": 100,
+        "auroc_po_risk0": 1.0,
+        "precision_at_10": 0.7,
+        "mean_po_t1": 0.15728792594094895,
+        "halluc_rate": 0.07,
+        "mean_rag_hit_top10": 1.0
+      }
+    },
+    "instance_probe_auroc_post": 1.0,
+    "router_task_shift": {
+      "task0_rate_pre": 0.54,
+      "task0_rate_post": 0.5665,
+      "halluc_by_task_post": {
+        "task0": 0.941747572815534,
+        "task1": 0.9423298731257209
+      },
+      "domain_auc_pre_post": 0.811158934252631
+    },
+    "reading": {
+      "regime": "OnlineRFPerm fire at cut => hallucination label law hopped",
+      "ranking": "po_risk0 sorts audit candidates under shift (not a fact checker)",
+      "rag": "low rag_hit among Top-k => retrieval-support gap, separate from generation hop",
+      "router": "task_shift guides which expert/route to refresh next"
+    }
+  }
+}
