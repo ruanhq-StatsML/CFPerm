@@ -28,6 +28,7 @@ SQL_FILES = [
     "05_cs_net_and_weekly.sql",
     "06_cs_exec_dashboard.sql",
     "07_cs_week_attribution_payback.sql",
+    "08_cs_unit_econ_cumulative.sql",
 ]
 
 

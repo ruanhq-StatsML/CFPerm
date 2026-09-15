@@ -32,6 +32,7 @@ def con():
         "05_cs_net_and_weekly.sql",
         "06_cs_exec_dashboard.sql",
         "07_cs_week_attribution_payback.sql",
+        "08_cs_unit_econ_cumulative.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -173,3 +174,24 @@ def test_action_payback_same_day(con):
         assert days is not None and days < 1.0, action
         assert bucket == "same_day_payback", action
         assert roi > 1.0, action
+
+
+def test_unit_econ_band_ordered(con):
+    row = con.execute("SELECT * FROM vw_cs_assist_unit_econ_band").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, row))
+    assert d["net_yen_low"] < d["net_yen_base"] < d["net_yen_high"]
+    assert d["gross_yen_low"] < d["gross_yen_base"] < d["gross_yen_high"]
+    assert abs(d["net_yen_base"] - (d["gross_yen_base"] - (d["gross_yen_base"] - d["net_yen_base"]))) < 1e-6
+
+
+def test_cumulative_curve_ends_at_total(con):
+    total = con.execute(
+        "SELECT SUM(gross_yen_day) FROM vw_cs_assist_cumulative_curve"
+    ).fetchone()[0]
+    last = con.execute(
+        "SELECT cumulative_gross_yen, cumulative_pct_of_total "
+        "FROM vw_cs_assist_cumulative_curve ORDER BY dt DESC LIMIT 1"
+    ).fetchone()
+    assert abs(last[0] - total) <= 2.0
+    assert abs(last[1] - 100.0) < 0.2

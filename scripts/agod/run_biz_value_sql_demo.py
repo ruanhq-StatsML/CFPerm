@@ -415,6 +415,7 @@ def main() -> int:
         "05_cs_net_and_weekly.sql",
         "06_cs_exec_dashboard.sql",
         "07_cs_week_attribution_payback.sql",
+        "08_cs_unit_econ_cumulative.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -521,6 +522,18 @@ def main() -> int:
     dump(cs_week_attr, OUT / "cs_assist_week_attribution.json")
     dump(cs_payback, OUT / "cs_assist_action_payback.json")
     dump(cs_attr_check, OUT / "cs_assist_attribution_check.json")
+    cs_curve = con.execute(
+        "SELECT * FROM vw_cs_assist_cumulative_curve ORDER BY dt"
+    ).fetchdf()
+    cs_unit = con.execute(
+        "SELECT * FROM vw_cs_assist_unit_econ_sensitivity ORDER BY scenario"
+    ).fetchdf()
+    cs_band = con.execute("SELECT * FROM vw_cs_assist_unit_econ_band").fetchdf()
+    dump(cs_curve, OUT / "cs_assist_cumulative_curve.json")
+    dump(cs_unit, OUT / "cs_assist_unit_econ_sensitivity.json")
+    dump(cs_band, OUT / "cs_assist_unit_econ_band.json")
+    # Finance CSV: day-level contribution for ledger import
+    cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
 
     h = halluc.iloc[0].to_dict() if len(halluc) else {}
@@ -576,6 +589,25 @@ def main() -> int:
 
     attr_gap = float(cs_attr_check.iloc[0]["attribution_gap_yen"]) if len(cs_attr_check) else 0
     attr_gap_pct = float(cs_attr_check.iloc[0]["attribution_gap_pct"]) if len(cs_attr_check) else 0
+
+    unit_rows = []
+    for _, row in cs_unit.iterrows():
+        unit_rows.append(
+            f"| {row['scenario']} | ¥{row['ticket_cost']} | ¥{row['refund_cost']} | "
+            f"¥{row['contain_value']} | **¥{int(row['gross_yen'])}** | "
+            f"**¥{int(row['net_yen'])}** |"
+        )
+    unit_table = "\n".join(unit_rows) if unit_rows else "| (none) |||||"
+    band = cs_band.iloc[0].to_dict() if len(cs_band) else {}
+
+    curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
+    curve_rows = []
+    for _, row in curve_tail.iterrows():
+        curve_rows.append(
+            f"| {str(row['dt'])[:10]} | ¥{int(row['gross_yen_day'])} | "
+            f"**¥{int(row['cumulative_gross_yen'])}** | {row['cumulative_pct_of_total']}% |"
+        )
+    curve_table = "\n".join(curve_rows) if curve_rows else "| (none) |||"
 
     traffic_rows = []
     for _, row in cs_traffic.iterrows():
@@ -719,6 +751,22 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 读法：回本天数 < 1 = 当天回本；净ROI = 动作净贡献 / 动作日成本合计。
 
+## 单位经济敏感度（量固定，扫单价）
+
+| 情景 | 工单单价 | 退款单价 | 承接单价 | 毛¥ | 净¥ |
+|------|----------|----------|----------|-----|-----|
+{unit_table}
+
+单价全 ±20% 净贡献带：**¥{int(band.get('net_yen_low') or 0):,} → ¥{int(band.get('net_yen_base') or 0):,} → ¥{int(band.get('net_yen_high') or 0):,}**（带宽相对 base ≈ {band.get('net_band_width_vs_base')}）。
+
+## 累计贡献曲线（末三日）
+
+| 日期 | 当日毛¥ | 累计毛¥ | 累计占比 |
+|------|---------|---------|----------|
+{curve_table}
+
+财务日账 CSV：`results/agod/biz_value_sql/cs_assist_finance_daily.csv`
+
 ## 一句对外
 
 客服助手在幻觉制度跳变的 {c.get('days_acted')} 个动作日里，相对同条件不动作：少了
@@ -749,6 +797,7 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "`docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`\n"
             "经营总看板 / hop 情景：`docs/biz/CS_ASSISTANT_EXEC_DASHBOARD.md`\n"
             "周归因 / 回本：见贡献账内「周归因贡献」「动作回本天数」\n"
+            "单位经济带 / 累计曲线 / 财务CSV：见贡献账对应章节\n"
         )
         docs_biz.write_text(docs_biz.read_text() + pointer)
         (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(

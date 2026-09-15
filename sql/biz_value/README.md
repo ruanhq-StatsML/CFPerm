@@ -13,6 +13,7 @@ Primary landing surface: **客服助手 incremental contribution** (tickets / re
 | `05_cs_net_and_weekly.sql` | 扣审计人力净贡献 + 周经营看板 |
 | `06_cs_exec_dashboard.sql` | 经营总看板 + 动作推荐 |
 | `07_cs_week_attribution_payback.sql` | 周归因贡献账 + 动作回本天数 |
+| `08_cs_unit_econ_cumulative.sql` | 单位经济敏感度带 + 累计贡献曲线 |
 
 ```bash
 pip install duckdb pandas
