@@ -11,17 +11,17 @@ Primary landing surface: **客服助手 incremental contribution** (tickets / re
 | `03_value_dashboard.sql` | exec dashboard + merge gate + on-call queue |
 | `04_cs_assistant_contribution.sql` | **客服助手贡献账**：费率对照、增量¥、月跑率、动作拆分 |
 | `05_cs_net_and_weekly.sql` | 扣审计人力净贡献 + 周经营看板 |
-| `05_cs_net_and_weekly.sql` | 扣审计人力净贡献 + 周经营看板 |
+| `06_cs_exec_dashboard.sql` | 经营总看板 + 动作推荐 |
+| `07_cs_week_attribution_payback.sql` | 周归因贡献账 + 动作回本天数 |
 
 ```bash
 pip install duckdb pandas
 PYTHONPATH=. python3 scripts/agod/run_biz_value_sql_demo.py
-# → docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md
 python3 scripts/agod/cs_assist_weekly_ops_brief.py
-# → docs/biz/CS_ASSISTANT_CONTRIBUTION.md
+python3 scripts/agod/cs_assist_hop_sensitivity.py
 ```
 
-Narrative map (CN): `docs/biz/HALLUC_STYLE_BIZ_SQL_MAP.md`  
-CS contribution (CN): `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
-
-Weekly ops brief (CN): `docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`
+- Narrative map: `docs/biz/HALLUC_STYLE_BIZ_SQL_MAP.md`
+- CS contribution: `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
+- Weekly ops brief: `docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`
+- Exec dashboard: `docs/biz/CS_ASSISTANT_EXEC_DASHBOARD.md`

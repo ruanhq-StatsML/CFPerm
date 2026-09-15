@@ -414,6 +414,7 @@ def main() -> int:
         "04_cs_assistant_contribution.sql",
         "05_cs_net_and_weekly.sql",
         "06_cs_exec_dashboard.sql",
+        "07_cs_week_attribution_payback.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -508,6 +509,18 @@ def main() -> int:
     cs_rec = con.execute("SELECT * FROM vw_cs_assist_action_recommend ORDER BY recommend_rank").fetchdf()
     dump(cs_exec, OUT / "cs_assist_exec_dashboard.json")
     dump(cs_rec, OUT / "cs_assist_action_recommend.json")
+    cs_week_attr = con.execute(
+        "SELECT * FROM vw_cs_assist_week_attribution ORDER BY week_start"
+    ).fetchdf()
+    cs_payback = con.execute(
+        "SELECT * FROM vw_cs_assist_action_payback ORDER BY payback_days"
+    ).fetchdf()
+    cs_attr_check = con.execute(
+        "SELECT * FROM vw_cs_assist_attribution_check"
+    ).fetchdf()
+    dump(cs_week_attr, OUT / "cs_assist_week_attribution.json")
+    dump(cs_payback, OUT / "cs_assist_action_payback.json")
+    dump(cs_attr_check, OUT / "cs_assist_attribution_check.json")
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
 
     h = halluc.iloc[0].to_dict() if len(halluc) else {}
@@ -540,6 +553,29 @@ def main() -> int:
             f"**¥{int(row['net_yen_after_action_cost'])}** |"
         )
     action_net_table = "\n".join(action_net_rows) if action_net_rows else "| (none) ||||"
+
+    week_attr_rows = []
+    for _, row in cs_week_attr.iterrows():
+        week_attr_rows.append(
+            f"| {str(row['week_start'])[:10]} | {int(row['days_acted'])} | "
+            f"{int(row['sessions_acted'])} | {row['tickets_avoided']} | "
+            f"{row['refunds_avoided']} | {row['extra_contained']} | "
+            f"**¥{int(row['gross_yen'])}** | {row['pct_of_total_gross']}% |"
+        )
+    week_attr_table = "\n".join(week_attr_rows) if week_attr_rows else "| (none) |||||||"
+
+    payback_rows = []
+    for _, row in cs_payback.iterrows():
+        payback_rows.append(
+            f"| {row['action_type']} | {int(row['n_days'])} | "
+            f"¥{int(row['gross_yen_per_day'])} | ¥{int(row['cost_yen_per_day'])} | "
+            f"**{row['payback_days']} 天** | {row['payback_bucket']} | "
+            f"{row['net_roi_multiple']}x |"
+        )
+    payback_table = "\n".join(payback_rows) if payback_rows else "| (none) ||||||"
+
+    attr_gap = float(cs_attr_check.iloc[0]["attribution_gap_yen"]) if len(cs_attr_check) else 0
+    attr_gap_pct = float(cs_attr_check.iloc[0]["attribution_gap_pct"]) if len(cs_attr_check) else 0
 
     traffic_rows = []
     for _, row in cs_traffic.iterrows():
@@ -667,6 +703,22 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 - hop_ratio: `{hop_ratio}`；acted_halluc_scale: `{hop_acted_scale}`
 - rag_low / rag_ok / thr: `{hop_rag_low}` / `{hop_rag_ok}` / `{hop_rag_thr}`
 
+## 周归因贡献（财务对账）
+
+| 周起始 | acted天 | 会话 | 少工单 | 少退款 | 多承接 | 毛¥ | 占总毛% |
+|--------|---------|------|--------|--------|--------|-----|---------|
+{week_attr_table}
+
+周归因合计 vs 总账缺口：¥{attr_gap}（{attr_gap_pct}%）——应为 ~0。
+
+## 动作回本天数
+
+| 动作 | 天数 | 日均毛¥ | 日均成本¥ | 回本 | 分档 | 净ROI |
+|------|------|---------|-----------|------|------|-------|
+{payback_table}
+
+读法：回本天数 < 1 = 当天回本；净ROI = 动作净贡献 / 动作日成本合计。
+
 ## 一句对外
 
 客服助手在幻觉制度跳变的 {c.get('days_acted')} 个动作日里，相对同条件不动作：少了
@@ -696,6 +748,7 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "\n\n---\n\n周经营简报（WoW / 动作净贡献）："
             "`docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`\n"
             "经营总看板 / hop 情景：`docs/biz/CS_ASSISTANT_EXEC_DASHBOARD.md`\n"
+            "周归因 / 回本：见贡献账内「周归因贡献」「动作回本天数」\n"
         )
         docs_biz.write_text(docs_biz.read_text() + pointer)
         (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(

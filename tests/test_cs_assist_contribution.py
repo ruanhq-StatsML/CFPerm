@@ -31,6 +31,7 @@ def con():
         "04_cs_assistant_contribution.sql",
         "05_cs_net_and_weekly.sql",
         "06_cs_exec_dashboard.sql",
+        "07_cs_week_attribution_payback.sql",
     ]:
         c.execute((SQL / name).read_text())
     mod.seed(c)
@@ -150,3 +151,25 @@ def test_hop_sensitivity_monotonic_net():
     s = mod._run_scenario(demo, duckdb, strong)
     # stronger hop should not yield lower net contribution
     assert s["net_yen"] >= w["net_yen"] - 1.0
+
+
+def test_week_attribution_reconciles(con):
+    row = con.execute("SELECT * FROM vw_cs_assist_attribution_check").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, row))
+    assert abs(d["attribution_gap_yen"]) <= 1.0
+    assert d["attribution_gap_pct"] <= 0.1
+    weeks = con.execute("SELECT COUNT(*) FROM vw_cs_assist_week_attribution").fetchone()[0]
+    assert weeks >= 1
+
+
+def test_action_payback_same_day(con):
+    rows = con.execute(
+        "SELECT action_type, payback_days, payback_bucket, net_roi_multiple "
+        "FROM vw_cs_assist_action_payback"
+    ).fetchall()
+    assert rows
+    for action, days, bucket, roi in rows:
+        assert days is not None and days < 1.0, action
+        assert bucket == "same_day_payback", action
+        assert roi > 1.0, action

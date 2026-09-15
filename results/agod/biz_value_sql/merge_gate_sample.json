@@ -19,19 +19,19 @@
   },
   {
     "dt":"2026-09-27T00:00:00.000",
-    "surface_id":"feed_caption",
-    "model_version":"cap_v1",
-    "judge_err_ratio":1.7,
-    "style_domain_auc":0.82,
+    "surface_id":"shop_assistant",
+    "model_version":"m_v2",
+    "judge_err_ratio":null,
+    "style_domain_auc":null,
     "concept_fired":1,
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
   {
     "dt":"2026-09-27T00:00:00.000",
-    "surface_id":"shop_assistant",
-    "model_version":"m_v2",
-    "judge_err_ratio":null,
-    "style_domain_auc":null,
+    "surface_id":"feed_caption",
+    "model_version":"cap_v1",
+    "judge_err_ratio":1.7,
+    "style_domain_auc":0.82,
     "concept_fired":1,
     "merge_decision":"BLOCK_MERGE — concept\/preference hop"
   },
