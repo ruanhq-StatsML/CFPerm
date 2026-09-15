@@ -117,6 +117,27 @@ from .stack_track import (
 )
 from .shift import decompose_hybrid, decompose_mmd, decompose_rf
 from .mmd import rbf_mmd2, whiten_pair
+from .online_portrait import (
+    OnlinePortrait,
+    align_from_snapshot,
+    honest_portrait_step,
+    mmoe_gate,
+    votes_from_snapshot,
+)
+from .three_tower import (
+    CATS,
+    NegPool,
+    TOWERS,
+    agod_from_triplet,
+    tower_vote_vectors,
+    cat_match,
+    count_confidence,
+    honest_three_tower_step,
+    item_tower,
+    pool_eval,
+    score_triplet,
+    user_tower,
+)
 from .recsys_features import (
     TRAIN_END,
     VALID_END,
@@ -238,6 +259,23 @@ __all__ = [
     "agod_concat_blob",
     "leak_report",
     "shortcut_gap",
+    "OnlinePortrait",
+    "votes_from_snapshot",
+    "align_from_snapshot",
+    "honest_portrait_step",
+    "mmoe_gate",
+    "NegPool",
+    "user_tower",
+    "item_tower",
+    "cat_match",
+    "count_confidence",
+    "score_triplet",
+    "pool_eval",
+    "agod_from_triplet",
+    "tower_vote_vectors",
+    "honest_three_tower_step",
+    "CATS",
+    "TOWERS",
 ]
 
 __version__ = "0.1.0"
