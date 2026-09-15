@@ -164,3 +164,8 @@ python3 scripts/agod/method_biz_scenario_prototype.py
 1. OnlineRFPerm / PO-risk **不是**事实核查器，也**不是**因果归因。
 2. 业务增量是 **fire 期内 acted vs ignored 的对照代理**，不是 RCT。
 3. 单位经济带只扫单价；流量情景只缩放会话量——两者正交，不要合成一个「玄学 AUROC¥」。
+
+---
+
+延伸阅读（推理 / 对齐落地 + **动作回本 / 周归因** 详解）：
+`docs/biz/METHOD_LANDING_ROADMAP.md`

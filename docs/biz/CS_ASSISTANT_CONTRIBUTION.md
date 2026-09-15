@@ -159,3 +159,4 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 周归因 / 回本：见贡献账内「周归因贡献」「动作回本天数」
 单位经济带 / 累计曲线 / 财务CSV：见贡献账对应章节
 方法论 × 业务情景 × 单位经济对照原型：`docs/biz/METHOD_BIZ_SCENARIO_PROTOTYPE.md`
+方法论落地 Roadmap（推理/对齐创新 + 回本/周归因详解）：`docs/biz/METHOD_LANDING_ROADMAP.md`

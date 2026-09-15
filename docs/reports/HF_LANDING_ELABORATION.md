@@ -83,8 +83,10 @@ FSDS / PO 轴诊断（P(X) vs P(Y|X) 代理）
 - 映射说明：`docs/biz/HALLUC_STYLE_BIZ_SQL_MAP.md`
 - SQL 包：`sql/biz_value/`（schema + halluc value + style value + dashboard）
 - 种子跑数：`PYTHONPATH=. python3 scripts/agod/run_biz_value_sql_demo.py`
+- **落地 Roadmap（推理/对齐创新 + 动作回本/周归因）**：`docs/biz/METHOD_LANDING_ROADMAP.md`
 
 对外价值句式：fire+acted vs fire+ignored 的日均质量成本差；style-only 日只开素材工单。
+周归因 gap≈0 + 动作 same_day_payback 是「可对账 / 可排仓位」的硬条件。
 
 ## Run
 
