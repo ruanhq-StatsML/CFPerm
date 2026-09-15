@@ -72,13 +72,17 @@ def test_stream_schema_and_rfperm_fires():
     )
     assert hh[0]["embedding"].shape[0] == 10 + 32 + 1  # style10 + hash + pref
 
-    for stream, seed in ((halu, 0), (hh, 1)):
+    for stream, seed, n_per in ((halu, 0, 50), (hh, 1, 40)):
         hops = mod.online_rfperm_changepoints(stream, gate=1.15, seed=seed)
         assert len(hops) >= 2
         fires = [h for h in hops if h["fired"]]
         assert fires, "expected at least one OnlineRFPerm fire after cut"
         # first strong fire should not be far before the cut
         assert fires[0]["batch_t"] >= cut - 1
+        d = mod.detection_delay(hops, cut_batch=cut, n_per=n_per)
+        assert d["delay_batch"] is not None
+        assert d["delay_batch"] >= -1  # allow one-batch early noise at most
+        assert d["delay_t"] == d["delay_batch"] * n_per
 
 
 @pytest.mark.skipif(
@@ -94,5 +98,7 @@ def test_cached_artifacts_roundtrip():
     assert summary["form"] == ["t", "question", "answer", "embedding(p,1)", "score"]
     assert summary["halu_fires"] >= 1
     assert summary["hh_fires"] >= 1
+    assert summary["halu_delay_batch"] == 0
+    assert summary["hh_delay_batch"] == 0
     emb = np.load(ROOT / "results" / "agod" / "llm_changepoint" / "halu_stream.npy")
     assert emb.ndim == 2 and emb.shape[0] > 0

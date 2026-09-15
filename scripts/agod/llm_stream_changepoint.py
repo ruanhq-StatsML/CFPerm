@@ -298,6 +298,30 @@ def online_rfperm_changepoints(
     return hops
 
 
+def detection_delay(hops: list[dict], *, cut_batch: int, n_per: int) -> dict:
+    """True cut → first fire. Stationary robustness已论证；这里只看 delay。"""
+    fires = [h for h in hops if h["fired"]]
+    first = fires[0] if fires else None
+    if first is None:
+        return {
+            "cut_batch": int(cut_batch),
+            "first_fire_batch": None,
+            "delay_batch": None,
+            "delay_t": None,
+            "ratio_at_first_fire": None,
+            "n_fires": 0,
+        }
+    delay_b = int(first["batch_t"]) - int(cut_batch)
+    return {
+        "cut_batch": int(cut_batch),
+        "first_fire_batch": int(first["batch_t"]),
+        "delay_batch": delay_b,
+        "delay_t": delay_b * int(n_per),
+        "ratio_at_first_fire": float(first["ratio"]),
+        "n_fires": len(fires),
+    }
+
+
 def save_stream_parquet(stream: list[dict], path: Path) -> None:
     """落盘时 embedding 存 list；另存 npy。"""
     rows = []
@@ -336,6 +360,7 @@ def render_md(results: dict) -> str:
             for h in hops[:12]
         )
         ex = r["example"]
+        delay = r["delay"]
         blocks.append(
             f"""### {name}
 
@@ -345,7 +370,9 @@ def render_md(results: dict) -> str:
 | n / p / n_per | {r['n']} / {r['p']} / {r['n_per']} |
 | cut_batch | {r['cut_batch']} |
 | fires | {len(fires)} / {len(hops)} |
-| first_fire_batch | {(fires[0]['batch_t'] if fires else None)} |
+| first_fire_batch | {delay['first_fire_batch']} |
+| **detection_delay** | **{delay['delay_batch']} batch**（{delay['delay_t']} 条） |
+| ratio@first_fire | {delay['ratio_at_first_fire']} |
 
 样例时刻 t={ex['t']}::
 
@@ -364,6 +391,13 @@ def render_md(results: dict) -> str:
 {hop_tbl}
 """
         )
+
+    delay_rows = "\n".join(
+        f"| {name} | {r['delay']['cut_batch']} | {r['delay']['first_fire_batch']} | "
+        f"{r['delay']['delay_batch']} | {r['delay']['delay_t']} | "
+        f"{r['delay']['ratio_at_first_fire']} |"
+        for name, r in results.items()
+    )
 
     return f"""# LLM 推理变点：两数据集 manipulation → OnlineRFPerm
 
@@ -386,14 +420,23 @@ def render_md(results: dict) -> str:
 | **大模型推理有没有制度/质量变点？** | **OnlineRFPerm** | ✅ 两数据集已跑 |
 | 实例风险排序 / PO-risk | **BOCPD**（你们实验已论证更好） | 不在此硬塞 OnlineRFPerm |
 
+Stationary-DGP robustness 已在算法侧论证过；**这批数据只看 detection delay**（true cut → first fire），没什么玄学。
+
 ```python
 # stream: list[dict] with embedding + score
 from agod.online_rfperm import fit_online_probe, probe_err, hop_fires, error_floor
 # 每个新 batch：用上一窗拟合探针 → 本窗算 e_now → 与 e_prev 比 → fire?
 # fired == 变点/制度火
+# delay_batch = first_fire_batch - cut_batch
 ```
 
 > PO-risk 实例排序请用 **BOCPD**（实验已论证）；本脚本只做 OnlineRFPerm 变点。
+
+## Detection delay（本跑）
+
+| 流 | cut | first fire | delay (batch) | delay (t) | ratio@fire |
+|----|----:|----------:|--------------:|----------:|-----------:|
+{delay_rows}
 
 ## 本跑
 
@@ -407,6 +450,7 @@ from agod.online_rfperm import fit_online_probe, probe_err, hop_fires, error_flo
 | `results/agod/llm_changepoint/halu_stream.npy` | embedding 矩阵 |
 | `results/agod/llm_changepoint/hh_stream.parquet` | HH 时间流 |
 | `results/agod/llm_changepoint/*_hops.json` | OnlineRFPerm fire 表 |
+| `results/agod/llm_changepoint/summary.json` | delay / fires |
 
 ```bash
 PYTHONPATH=. python3 scripts/agod/llm_stream_changepoint.py
@@ -442,6 +486,7 @@ def main() -> int:
         "n_per": 100,
         "cut_batch": 4,
         "hops": halu_hops,
+        "delay": detection_delay(halu_hops, cut_batch=4, n_per=100),
         "example": {
             "t": ex0["t"],
             "question": ex0["question"],
@@ -466,6 +511,7 @@ def main() -> int:
         "n_per": 80,
         "cut_batch": 4,
         "hops": hh_hops,
+        "delay": detection_delay(hh_hops, cut_batch=4, n_per=80),
         "example": {
             "t": ex1["t"],
             "question": ex1["question"],
@@ -475,15 +521,22 @@ def main() -> int:
         },
     }
 
+    halu_d = results["HaluEval（推理幻觉变点）"]["delay"]
+    hh_d = results["HH-RLHF（偏好映射变点）"]["delay"]
     summary = {
         "form": ["t", "question", "answer", "embedding(p,1)", "score"],
         "method_changepoint": "OnlineRFPerm",
         "method_po_risk_recommended": "BOCPD (per prior experiments; not OnlineRFPerm)",
+        "note": "stationary-DGP robustness already established; this run reports detection delay",
         "gate": args.gate,
-        "halu_fires": sum(1 for h in halu_hops if h["fired"]),
-        "hh_fires": sum(1 for h in hh_hops if h["fired"]),
-        "halu_first_fire": next((h["batch_t"] for h in halu_hops if h["fired"]), None),
-        "hh_first_fire": next((h["batch_t"] for h in hh_hops if h["fired"]), None),
+        "halu": halu_d,
+        "hh": hh_d,
+        "halu_fires": halu_d["n_fires"],
+        "hh_fires": hh_d["n_fires"],
+        "halu_first_fire": halu_d["first_fire_batch"],
+        "hh_first_fire": hh_d["first_fire_batch"],
+        "halu_delay_batch": halu_d["delay_batch"],
+        "hh_delay_batch": hh_d["delay_batch"],
     }
     (OUT / "summary.json").write_text(json.dumps(summary, indent=2))
 

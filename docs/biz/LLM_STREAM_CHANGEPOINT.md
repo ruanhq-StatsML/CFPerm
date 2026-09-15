@@ -19,14 +19,24 @@
 | **大模型推理有没有制度/质量变点？** | **OnlineRFPerm** | ✅ 两数据集已跑 |
 | 实例风险排序 / PO-risk | **BOCPD**（你们实验已论证更好） | 不在此硬塞 OnlineRFPerm |
 
+Stationary-DGP robustness 已在算法侧论证过；**这批数据只看 detection delay**（true cut → first fire），没什么玄学。
+
 ```python
 # stream: list[dict] with embedding + score
 from agod.online_rfperm import fit_online_probe, probe_err, hop_fires, error_floor
 # 每个新 batch：用上一窗拟合探针 → 本窗算 e_now → 与 e_prev 比 → fire?
 # fired == 变点/制度火
+# delay_batch = first_fire_batch - cut_batch
 ```
 
 > PO-risk 实例排序请用 **BOCPD**（实验已论证）；本脚本只做 OnlineRFPerm 变点。
+
+## Detection delay（本跑）
+
+| 流 | cut | first fire | delay (batch) | delay (t) | ratio@fire |
+|----|----:|----------:|--------------:|----------:|-----------:|
+| HaluEval（推理幻觉变点） | 4 | 4 | 0 | 0 | 30.66666666666664 |
+| HH-RLHF（偏好映射变点） | 4 | 4 | 0 | 0 | 31.999999999999975 |
 
 ## 本跑
 
@@ -39,6 +49,8 @@ from agod.online_rfperm import fit_online_probe, probe_err, hop_fires, error_flo
 | cut_batch | 4 |
 | fires | 1 / 11 |
 | first_fire_batch | 4 |
+| **detection_delay** | **0 batch**（0 条） |
+| ratio@first_fire | 30.66666666666664 |
 
 样例时刻 t=0::
 
@@ -75,6 +87,8 @@ from agod.online_rfperm import fit_online_probe, probe_err, hop_fires, error_flo
 | cut_batch | 4 |
 | fires | 8 / 24 |
 | first_fire_batch | 4 |
+| **detection_delay** | **0 batch**（0 条） |
+| ratio@first_fire | 31.999999999999975 |
 
 样例时刻 t=0::
 
@@ -112,6 +126,7 @@ from agod.online_rfperm import fit_online_probe, probe_err, hop_fires, error_flo
 | `results/agod/llm_changepoint/halu_stream.npy` | embedding 矩阵 |
 | `results/agod/llm_changepoint/hh_stream.parquet` | HH 时间流 |
 | `results/agod/llm_changepoint/*_hops.json` | OnlineRFPerm fire 表 |
+| `results/agod/llm_changepoint/summary.json` | delay / fires |
 
 ```bash
 PYTHONPATH=. python3 scripts/agod/llm_stream_changepoint.py
