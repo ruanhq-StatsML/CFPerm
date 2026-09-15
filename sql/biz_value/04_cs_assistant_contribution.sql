@@ -31,9 +31,14 @@ SELECT
   d.*,
   MAX(CASE WHEN s.signal_type = 'rfperm_fire' AND s.axis = 'concept'
            THEN s.fired ELSE 0 END) AS regime_fired,
-  MAX(CASE WHEN s.notes = 'acted' THEN 1 ELSE 0 END) AS acted,
+  MAX(CASE WHEN s.notes LIKE 'acted%' THEN 1 ELSE 0 END) AS acted,
   MAX(CASE WHEN s.signal_type = 'rfperm_fire' AND s.axis = 'concept'
-           THEN s.score END) AS fire_ratio
+           THEN s.score END) AS fire_ratio,
+  MAX(CASE
+        WHEN s.notes LIKE 'acted:%' THEN regexp_extract(s.notes, 'acted:(.*)', 1)
+        WHEN s.notes LIKE 'acted%' THEN 'acted'
+        ELSE NULL
+      END) AS action_type
 FROM vw_cs_assist_daily d
 LEFT JOIN fct_shift_signal s
   ON s.dt = d.dt
@@ -61,6 +66,76 @@ SELECT
     ELSE 'quiet'
   END AS arm
 FROM vw_cs_assist_rates;
+
+-- 按动作类型拆分：检索刷新 / 模型回滚 / Top-k 审计 各自贡献多少
+CREATE OR REPLACE VIEW vw_cs_assist_action_stats AS
+SELECT
+  surface_id,
+  COALESCE(action_type, 'none') AS action_type,
+  COUNT(*) AS n_days,
+  SUM(n_sessions) AS sessions,
+  SUM(n_tickets) AS tickets,
+  SUM(n_refunds) AS refunds,
+  SUM(n_contained) AS contained,
+  SUM(n_tickets) * 1.0 / NULLIF(SUM(n_sessions), 0) AS ticket_per_session,
+  SUM(n_refunds) * 1.0 / NULLIF(SUM(n_sessions), 0) AS refund_per_session,
+  SUM(n_contained) * 1.0 / NULLIF(SUM(n_sessions), 0) AS contained_per_session,
+  AVG(avg_rag_hit) AS avg_rag_hit
+FROM vw_cs_assist_arms
+WHERE arm = 'fire_acted'
+GROUP BY surface_id, COALESCE(action_type, 'none');
+
+CREATE OR REPLACE VIEW vw_cs_assist_action_increment AS
+WITH baseline AS (
+  SELECT * FROM vw_cs_assist_arm_stats WHERE arm = 'fire_ignored'
+),
+v AS (
+  SELECT
+    surface_id,
+    MAX(CASE WHEN metric = 'cs_ticket_cost' THEN unit_value END) AS cs_ticket_cost,
+    MAX(CASE WHEN metric = 'refund_unit_cost' THEN unit_value END) AS refund_unit_cost,
+    MAX(CASE WHEN metric = 'contained_session_value' THEN unit_value END) AS contained_session_value
+  FROM dim_value_assumption
+  GROUP BY surface_id
+)
+SELECT
+  a.surface_id,
+  a.action_type,
+  a.n_days,
+  a.sessions,
+  a.avg_rag_hit,
+  ROUND((b.ticket_per_session - a.ticket_per_session) * a.sessions, 1) AS tickets_avoided,
+  ROUND((b.refund_per_session - a.refund_per_session) * a.sessions, 1) AS refunds_avoided,
+  ROUND((a.contained_per_session - b.contained_per_session) * a.sessions, 1) AS extra_contained,
+  ROUND(
+    (b.ticket_per_session - a.ticket_per_session) * a.sessions * COALESCE(v.cs_ticket_cost, 0)
+    + (b.refund_per_session - a.refund_per_session) * a.sessions * COALESCE(v.refund_unit_cost, 0)
+    + (a.contained_per_session - b.contained_per_session) * a.sessions * COALESCE(v.contained_session_value, 0)
+  , 0) AS incremental_yen,
+  ROUND(a.ticket_per_session, 4) AS ticket_rate,
+  ROUND(b.ticket_per_session, 4) AS ticket_rate_ignored
+FROM vw_cs_assist_action_stats a
+JOIN baseline b ON a.surface_id = b.surface_id
+LEFT JOIN v ON a.surface_id = v.surface_id;
+
+-- 流量情景：按每千会话单价 × 日会话量外推
+CREATE OR REPLACE VIEW vw_cs_assist_traffic_scenarios AS
+SELECT
+  i.surface_id,
+  s.daily_sessions,
+  s.scenario,
+  ROUND(i.incremental_yen_per_1k_sessions * s.daily_sessions * 30 / 1000.0, 0) AS monthly_yen,
+  ROUND(i.tickets_avoided_per_1k_sessions * s.daily_sessions * 30 / 1000.0, 1) AS monthly_tickets,
+  ROUND(i.refunds_avoided_per_1k_sessions * s.daily_sessions * 30 / 1000.0, 1) AS monthly_refunds,
+  ROUND(i.extra_contained_per_1k_sessions * s.daily_sessions * 30 / 1000.0, 1) AS monthly_extra_contained
+FROM vw_cs_assist_increment i
+CROSS JOIN (
+  SELECT 200 AS daily_sessions, 'demo_seed' AS scenario
+  UNION ALL SELECT 500, 'pilot_small'
+  UNION ALL SELECT 2000, 'pilot_mid'
+  UNION ALL SELECT 10000, 'prod_mid'
+  UNION ALL SELECT 50000, 'prod_large'
+) s;
 
 CREATE OR REPLACE VIEW vw_cs_assist_arm_stats AS
 SELECT

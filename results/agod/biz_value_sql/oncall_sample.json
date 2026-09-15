@@ -33,19 +33,19 @@
   },
   {
     "source":"halluc",
-    "dt":"2026-09-26T00:00:00.000",
-    "surface_id":"shop_assistant",
-    "bucket":"generation_regime",
-    "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":1435.0
-  },
-  {
-    "source":"halluc",
     "dt":"2026-09-24T00:00:00.000",
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
     "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
     "severity_proxy":1410.0
+  },
+  {
+    "source":"halluc",
+    "dt":"2026-09-26T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "bucket":"generation_regime",
+    "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
+    "severity_proxy":1300.0
   },
   {
     "source":"halluc",
@@ -61,7 +61,7 @@
     "surface_id":"shop_assistant",
     "bucket":"retrieval_gap",
     "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
-    "severity_proxy":545.0
+    "severity_proxy":445.0
   },
   {
     "source":"halluc",
@@ -81,11 +81,11 @@
   },
   {
     "source":"halluc",
-    "dt":"2026-09-19T00:00:00.000",
+    "dt":"2026-09-23T00:00:00.000",
     "surface_id":"shop_assistant",
-    "bucket":"retrieval_gap",
-    "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
-    "severity_proxy":365.0
+    "bucket":"generation_regime",
+    "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
+    "severity_proxy":345.0
   },
   {
     "source":"halluc",
@@ -97,6 +97,14 @@
   },
   {
     "source":"halluc",
+    "dt":"2026-09-19T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "bucket":"retrieval_gap",
+    "recommended_action":"Refresh retriever\/index; do NOT full SFT yet",
+    "severity_proxy":235.0
+  },
+  {
+    "source":"halluc",
     "dt":"2026-09-15T00:00:00.000",
     "surface_id":"shop_assistant",
     "bucket":"generation_regime",
@@ -104,19 +112,11 @@
     "severity_proxy":205.0
   },
   {
-    "source":"halluc",
-    "dt":"2026-09-23T00:00:00.000",
-    "surface_id":"shop_assistant",
-    "bucket":"generation_regime",
-    "recommended_action":"Gate sqrt(PO) \/ rollback model_version; Top-k po_risk0 audit",
-    "severity_proxy":180.0
-  },
-  {
     "source":"style",
-    "dt":"2026-09-18T00:00:00.000",
+    "dt":"2026-09-25T00:00:00.000",
     "surface_id":"feed_caption",
-    "bucket":"style_only_portrait",
-    "recommended_action":"Rebalance creative mix \/ decoding; do NOT retrain preference head",
+    "bucket":"joint_style_and_concept",
+    "recommended_action":"Two tickets: (1) style mix (2) preference map — do not conflate",
     "severity_proxy":0.0466666667
   }
 ]

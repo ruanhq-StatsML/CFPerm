@@ -35,7 +35,7 @@ SELECT
   MAX(CASE WHEN s.signal_type = 'style_domain_auc' THEN s.score END) AS style_domain_auc,
   MAX(CASE WHEN s.signal_type = 'rfperm_fire' AND s.axis = 'covariate' THEN s.fired ELSE 0 END) AS covar_fired,
   MAX(CASE WHEN s.signal_type = 'rfperm_fire' AND s.axis = 'concept' THEN s.fired ELSE 0 END) AS concept_fired,
-  MAX(CASE WHEN s.notes = 'acted' THEN 1 ELSE 0 END) AS acted
+  MAX(CASE WHEN s.notes LIKE 'acted%' THEN 1 ELSE 0 END) AS acted
 FROM vw_style_daily d
 LEFT JOIN fct_shift_signal s
   ON s.dt = d.dt AND s.surface_id = d.surface_id

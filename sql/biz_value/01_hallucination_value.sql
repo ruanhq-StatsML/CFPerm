@@ -41,7 +41,7 @@ SELECT
   MAX(CASE WHEN s.signal_type = 'rfperm_fire' AND s.axis = 'concept' THEN s.score END) AS fire_ratio,
   MAX(CASE WHEN s.signal_type = 'judge_err_ratio' THEN s.score END) AS judge_err_ratio,
   AVG(CASE WHEN s.signal_type = 'po_risk0' THEN s.score END) AS mean_po_risk0,
-  MAX(CASE WHEN s.notes = 'acted' THEN 1 ELSE 0 END) AS acted
+  MAX(CASE WHEN s.notes LIKE 'acted%' THEN 1 ELSE 0 END) AS acted
 FROM vw_halluc_daily d
 LEFT JOIN fct_shift_signal s
   ON s.dt = d.dt

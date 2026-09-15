@@ -73,20 +73,50 @@ def seed(con) -> None:
         # Hallucination surface: concept hop after day 14
         fired = 1 if d >= 14 else 0
         acted = 1 if (fired and d % 2 == 0) else 0
-        notes = "acted" if acted else ("ignored" if fired else None)
+        # Route action by retrieval health (mirrors HF hop RAG split)
         rag = 0.55 if d < 14 else (0.20 if d % 3 == 0 else 0.60)
+        if not fired:
+            notes = None
+            action = None
+            act_ticket_cut = 0.0
+            act_refund_cut = 0.0
+            act_halluc = 0.18
+        elif not acted:
+            notes = "ignored"
+            action = None
+            act_ticket_cut = 0.0
+            act_refund_cut = 0.0
+            act_halluc = 0.42
+        elif rag < 0.35:
+            notes = "acted:retrieval_refresh"
+            action = "retrieval_refresh"
+            act_ticket_cut = 0.028
+            act_refund_cut = 0.014
+            act_halluc = 0.14
+        elif d % 4 == 0:
+            notes = "acted:audit_topk"
+            action = "audit_topk"
+            act_ticket_cut = 0.018
+            act_refund_cut = 0.009
+            act_halluc = 0.20
+        else:
+            notes = "acted:model_rollback"
+            action = "model_rollback"
+            act_ticket_cut = 0.022
+            act_refund_cut = 0.011
+            act_halluc = 0.16
         n = 200
         for i in range(n):
             # Clear incremental effect: after regime hop, ignoring mitigation
             # drives tickets/refunds; acting contains more sessions in-bot.
-            halluc = int(rng.random() < (0.04 if d < 14 else (0.18 if acted else 0.42)))
+            halluc = int(rng.random() < (0.04 if d < 14 else act_halluc))
             ticket = int(
                 rng.random()
                 < (
                     0.012
                     + 0.10 * halluc
                     + (0.055 if (fired and not acted) else 0.0)
-                    - (0.02 if acted else 0.0)
+                    - act_ticket_cut
                 )
             )
             refund = int(
@@ -95,7 +125,7 @@ def seed(con) -> None:
                     0.004
                     + 0.07 * halluc
                     + (0.035 if (fired and not acted) else 0.0)
-                    - (0.01 if acted else 0.0)
+                    - act_refund_cut
                 )
             )
             serve_rows.append(
@@ -348,6 +378,12 @@ def main() -> int:
         "SELECT * FROM vw_cs_assist_arm_stats ORDER BY surface_id, arm"
     ).fetchdf()
     cs_rates = con.execute("SELECT * FROM vw_cs_assist_rate_compare").fetchdf()
+    cs_actions = con.execute(
+        "SELECT * FROM vw_cs_assist_action_increment ORDER BY incremental_yen DESC"
+    ).fetchdf()
+    cs_traffic = con.execute(
+        "SELECT * FROM vw_cs_assist_traffic_scenarios ORDER BY daily_sessions"
+    ).fetchdf()
     cs_ledger = con.execute(
         """
         SELECT arm,
@@ -375,6 +411,8 @@ def main() -> int:
     dump(cs, OUT / "cs_assist_increment.json")
     dump(cs_arms, OUT / "cs_assist_arms.json")
     dump(cs_rates, OUT / "cs_assist_rates.json")
+    dump(cs_actions, OUT / "cs_assist_actions.json")
+    dump(cs_traffic, OUT / "cs_assist_traffic.json")
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
 
     h = halluc.iloc[0].to_dict() if len(halluc) else {}
@@ -387,6 +425,44 @@ def main() -> int:
             return f"{100.0 * float(x):.2f}%"
         except (TypeError, ValueError):
             return str(x)
+
+    action_rows = []
+    for _, row in cs_actions.iterrows():
+        action_rows.append(
+            f"| {row['action_type']} | {int(row['n_days'])} | {int(row['sessions'])} | "
+            f"{row['tickets_avoided']} | {row['refunds_avoided']} | "
+            f"{row['extra_contained']} | **¥{int(row['incremental_yen'])}** | "
+            f"{row['avg_rag_hit']:.2f} |"
+        )
+    action_table = "\n".join(action_rows) if action_rows else "| (none) ||||||"
+
+    traffic_rows = []
+    for _, row in cs_traffic.iterrows():
+        traffic_rows.append(
+            f"| {row['scenario']} | {int(row['daily_sessions']):,} | "
+            f"**¥{int(row['monthly_yen']):,}** | {row['monthly_tickets']} | "
+            f"{row['monthly_refunds']} | {row['monthly_extra_contained']} |"
+        )
+    traffic_table = "\n".join(traffic_rows)
+
+    # Pull HF hop evidence if present (justify which action bucket)
+    hf_note = ""
+    hf_path = ROOT / "results" / "agod" / "hf_landing" / "halu_regime_rag.json"
+    if hf_path.exists():
+        hf = json.loads(hf_path.read_text())
+        hop = hf.get("hop_at_cut", {})
+        ranking = hop.get("ranking", {})
+        hf_note = f"""
+## 与 HF 幻觉子集的衔接（证据链）
+
+HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
+
+- cut 处 `fired={hop.get('fired')}`，ratio≈`{hop.get('ratio')}`
+- 跳变后幻觉率 ≈ `{ranking.get('halluc_rate')}`；`po_risk0` P@10=`{ranking.get('precision_at_10')}`
+- Top-10 平均 `rag_hit`=`{ranking.get('mean_rag_hit_top10')}` → 路由：检索缺口 vs 生成制度
+
+本账动作拆分与之对齐：`avg_rag_hit` 低 → `retrieval_refresh`；否则 → `model_rollback` / `audit_topk`。
+"""
 
     cs_report = f"""# 客服助手增量贡献账（可复现）
 
@@ -423,6 +499,20 @@ def main() -> int:
 
 读法：制度跳变后若不动作，工单/退款率显著恶化；动作落地后费率回到接近平稳期，这就是增量贡献的来源。
 
+## 按动作类型拆贡献（增量来源）
+
+| 动作 | 天数 | 会话 | 少工单 | 少退款 | 多承接 | 增量¥ | avg_rag_hit |
+|------|------|------|--------|--------|--------|-------|-------------|
+{action_table}
+
+## 流量情景（月贡献外推）
+
+按每千会话增量单价缩放；业务选型用。
+
+| 情景 | 日会话 | 月增量¥ | 月少工单 | 月少退款 | 月多承接 |
+|------|--------|---------|----------|----------|----------|
+{traffic_table}
+{hf_note}
 ## 口径
 
 ```
@@ -434,10 +524,11 @@ def main() -> int:
 
 ## 一句对外
 
-客服助手在幻觉制度跳变的 7 个动作日里，相对同条件不动作：少了
+客服助手在幻觉制度跳变的 {c.get('days_acted')} 个动作日里，相对同条件不动作：少了
 {c.get('tickets_avoided')} 单工单、{c.get('refunds_avoided')} 单退款，
 多承接 {c.get('extra_sessions_contained')} 次会话，贡献约 ¥{c.get('incremental_yen')}；
 按当前流量外推约 ¥{c.get('monthly_runrate_yen')}/月。
+生产中等流量（日 1 万会话）见上表 `prod_mid`。
 """
     (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(cs_report)
 
@@ -456,6 +547,8 @@ def main() -> int:
 - ¥ breakdown tickets/refunds/contain: `{c.get('yen_from_tickets')}` / `{c.get('yen_from_refunds')}` / `{c.get('yen_from_containment')}`
 - incremental ¥ / 1k sessions: `{c.get('incremental_yen_per_1k_sessions')}`
 - monthly run-rate ¥: `{c.get('monthly_runrate_yen')}`
+- action split: `cs_assist_actions.json`
+- traffic scenarios: `cs_assist_traffic.json`
 - detail: `CS_ASSISTANT_CONTRIBUTION.md` / `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
 
 ## Hallucination cost rollup (`shop_assistant`)
@@ -471,7 +564,7 @@ def main() -> int:
 
 - `sql/biz_value/04_cs_assistant_contribution.sql`
 - `results/agod/biz_value_sql/CS_ASSISTANT_CONTRIBUTION.md`
-- `cs_assist_increment.json` / `cs_assist_ledger.json` / `cs_assist_rates.json`
+- `cs_assist_increment.json` / `cs_assist_actions.json` / `cs_assist_traffic.json`
 """
     (OUT / "REPORT.md").write_text(report)
     print(cs_report)

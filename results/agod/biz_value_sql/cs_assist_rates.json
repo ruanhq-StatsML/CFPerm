@@ -2,13 +2,13 @@
   {
     "surface_id":"shop_assistant",
     "ticket_rate_quiet":0.015,
-    "ticket_rate_ignored":0.0957142857,
-    "ticket_rate_acted":0.0221428571,
+    "ticket_rate_ignored":0.0964285714,
+    "ticket_rate_acted":0.0157142857,
     "refund_rate_quiet":0.0060714286,
-    "refund_rate_ignored":0.0664285714,
-    "refund_rate_acted":0.0142857143,
+    "refund_rate_ignored":0.065,
+    "refund_rate_acted":0.0157142857,
     "contain_rate_quiet":0.9789285714,
-    "contain_rate_ignored":0.8421428571,
-    "contain_rate_acted":0.9664285714
+    "contain_rate_ignored":0.8428571429,
+    "contain_rate_acted":0.9707142857
   }
 ]
