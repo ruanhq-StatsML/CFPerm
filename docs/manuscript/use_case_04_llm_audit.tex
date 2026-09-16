@@ -22,7 +22,9 @@ BeaverTails \(\texttt{is\_safe}\) (\texttt{xy\_beavertails.csv}),
 WildGuard \(\texttt{response\_harm\_label}\) (\texttt{xy\_wildguard.csv}),
 and ToxicChat human toxicity (\texttt{xy\_toxicchat.csv});
 \texttt{xy\_real\_two\_stream.csv} stacks BeaverTails against ToxicChat as two queues.
-Rebuild with \texttt{python3 scripts/build\_llm\_audit\_xy.py}.
+Multi-step tables (\texttt{xy\_hh\_multistep\_*.csv}) keep the same \(Y\): one row per assistant hop, plus \texttt{x\_step}.
+Episode success is not \(Y\). Rebuild with \texttt{python3 scripts/build\_llm\_audit\_xy.py}
+or \texttt{python3 scripts/build\_llm\_audit\_multistep\_xy.py}.
 Raw prompts are not stored.
 
 \paragraph{Read-out.}

@@ -79,6 +79,16 @@ BLOCKS = [
         "gate": True,
     },
     {
+        "id": "judge_multistep",
+        "facet": "审核 / judge（多步）",
+        "y": "pass / fail on this hop",
+        "table": "results/manuscript/llm_audit/xy_hh_multistep_consistent.csv",
+        "n_rows": 1200,
+        "features": JUDGE_X + [("x_step", "hop index in the episode (scaled)")],
+        "note": "One row per assistant turn. X is this hop's geometry. HH chosen is not Y. Episode success is not Y.",
+        "gate": True,
+    },
+    {
         "id": "graph_query",
         "facet": "Graph-RAG 子图（一问一行）",
         "y": "supporting titles sit in the served pack",

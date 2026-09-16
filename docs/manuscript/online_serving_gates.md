@@ -15,7 +15,7 @@ These are product use-cases. One hop:
    fire:  current pack is not gold → cheapest swap → reset
 ```
 
-Nothing else.
+Nothing else. Audit can be multi-step: one row per assistant hop, \(Y\) still pass/fail for that hop. Episode success is not \(Y\).
 
 Drop-in LaTeX: `docs/manuscript/online_serving_gates.tex`.
 Chinese: `online_serving_gates_zh.md`, `online_serving_gates_zh.html`.

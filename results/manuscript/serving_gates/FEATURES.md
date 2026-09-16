@@ -25,6 +25,29 @@ Y = pass / fail. Same 13 X on BeaverTails / WildGuard / ToxicChat. HH chosen is 
 | `x_please` | please |
 | `x_thank` | thank |
 
+## 审核 / judge（多步）
+
+`results/manuscript/llm_audit/xy_hh_multistep_consistent.csv` · n=1200 · 14 X · live gate
+
+Y = pass / fail on this hop. One row per assistant turn. X is this hop's geometry. HH chosen is not Y. Episode success is not Y.
+
+| column | meaning |
+|---|---|
+| `x_n_toks` | token count (scaled) |
+| `x_n_chars` | character count (scaled) |
+| `x_avg_word` | mean word length |
+| `x_qmark` | question marks |
+| `x_bang` | exclamation marks |
+| `x_hedge` | hedge phrases (maybe / I think / …) |
+| `x_formal` | formal connectives (therefore / however / …) |
+| `x_i_count` | first-person I |
+| `x_newlines` | newline count |
+| `x_upper` | uppercase fraction |
+| `x_refuse` | refusal phrases (I can't / I'm sorry / …) |
+| `x_please` | please |
+| `x_thank` | thank |
+| `x_step` | hop index in the episode (scaled) |
+
 ## Graph-RAG 子图（一问一行）
 
 `results/manuscript/graph_rag_batches/xy_graph_query.csv` · n=1200 · 7 X · live gate

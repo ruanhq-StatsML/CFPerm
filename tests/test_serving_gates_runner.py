@@ -22,6 +22,9 @@ class ServingGatesRunnerTests(unittest.TestCase):
         )
         self.assertTrue(any(s["regime"] == "quiet" for s in STREAMS))
         self.assertTrue(any(s["regime"] == "hop" for s in STREAMS))
+        names = {s["name"] for s in STREAMS}
+        self.assertIn("judge_multistep_quiet", names)
+        self.assertIn("judge_multistep_hop", names)
 
     def test_load_xy_uses_all_x_cols_and_rejects_chosen(self):
         path = ROOT / "results" / "manuscript" / "llm_audit" / "xy_beavertails.csv"

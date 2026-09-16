@@ -27,6 +27,8 @@ PYTHONPATH=. python3 scripts/run_serving_gates.py
 | `x_please` | please |
 | `x_thank` | thank |
 
+多步表 `xy_hh_multistep_*.csv` 多一列 `x_step`（这一跳在线程里的位置）。一行一跳，Y 仍是过/不过。整段成功不是 Y。
+
 ## Graph-RAG 子图（7，窗上再聚合）
 
 一问一行：`graph_rag_batches/xy_graph_query.csv`。闸打在这张 0/1 表上。

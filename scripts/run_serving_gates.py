@@ -5,6 +5,7 @@ Same object, same gates, different Y. Live facets today:
 
   审核 / judge     llm_audit/xy_hh_helpful_{consistent,hop}.csv
                    llm_audit/xy_wildguard.csv
+                   llm_audit/xy_hh_multistep_{consistent,hop}.csv
   Graph-RAG        graph_rag_batches/xy_graph_query{,_hop}.csv
   混合检索         hybrid_retrieval/xy_hotpot_hybrid{,_hop}.csv
 
@@ -80,6 +81,28 @@ STREAMS = [
         "path": AUDIT / "xy_wildguard.csv",
         "regime": "quiet",
         "labeled_cut": False,
+    },
+    {
+        "facet": "审核 / judge",
+        "y_meaning": "过 / 不过（这一跳）",
+        "fire_means": "政策包或 judge 换代",
+        "not_means": "拒绝率；HH chosen；整段对话成功",
+        "name": "judge_multistep_quiet",
+        "title": "HH multi-step, consistent",
+        "path": AUDIT / "xy_hh_multistep_consistent.csv",
+        "regime": "quiet",
+        "labeled_cut": False,
+    },
+    {
+        "facet": "审核 / judge",
+        "y_meaning": "过 / 不过（这一跳）",
+        "fire_means": "政策包或 judge 换代",
+        "not_means": "拒绝率；HH chosen；整段对话成功",
+        "name": "judge_multistep_hop",
+        "title": "HH multi-step, policy hop",
+        "path": AUDIT / "xy_hh_multistep_hop.csv",
+        "regime": "hop",
+        "labeled_cut": True,
     },
     {
         "facet": "Graph-RAG 子图",
@@ -179,11 +202,12 @@ def compact(rec: dict, spec: dict) -> dict:
 def plot_deltas(runs: list[tuple[dict, dict]], path: Path) -> None:
     pairs = [
         ("judge", "judge_helpful_quiet", "judge_helpful_hop"),
+        ("judge-multistep", "judge_multistep_quiet", "judge_multistep_hop"),
         ("Graph-RAG", "graphrag_local_quiet", "graphrag_community_hop"),
         ("hybrid", "hybrid_fused_quiet", "hybrid_dense_hop"),
     ]
     by_name = {rec["name"]: rec for rec, _spec in runs}
-    fig, axes = plt.subplots(len(pairs), 2, figsize=(9.4, 7.2), sharex=True)
+    fig, axes = plt.subplots(len(pairs), 2, figsize=(9.4, 9.4), sharex=True)
     for i, (facet, quiet, hop) in enumerate(pairs):
         for j, name in enumerate((quiet, hop)):
             ax = axes[i, j]
@@ -250,9 +274,8 @@ def render_report(rows: list[dict]) -> str:
     lines += [
         "",
         "Quiet streams should stay near Δ = 0. Labeled hops should lift Δ and, when the adjacent-window ratio clears γ, fire last-two at the cut.",
+        "Multi-step audit is the same map: one row per assistant hop, Y = pass/fail for that hop, not the whole thread.",
         "Graph-RAG and hybrid Hotpot tables are pool snapshots: `batch` is file/window index, not wall-clock time.",
-        "",
-        "Facets not on disk yet (same gates, swap the csv): reasoning smoothness, agent next step, synthetic gold, serving refresh, CUPED.",
         "",
     ]
     return "\n".join(lines)

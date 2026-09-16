@@ -22,6 +22,29 @@
     "gate": true
   },
   {
+    "id": "judge_multistep",
+    "facet": "\u5ba1\u6838 / judge\uff08\u591a\u6b65\uff09",
+    "table": "results/manuscript/llm_audit/xy_hh_multistep_consistent.csv",
+    "n_x": 14,
+    "x": [
+      "x_n_toks",
+      "x_n_chars",
+      "x_avg_word",
+      "x_qmark",
+      "x_bang",
+      "x_hedge",
+      "x_formal",
+      "x_i_count",
+      "x_newlines",
+      "x_upper",
+      "x_refuse",
+      "x_please",
+      "x_thank",
+      "x_step"
+    ],
+    "gate": true
+  },
+  {
     "id": "graph_query",
     "facet": "Graph-RAG \u5b50\u56fe\uff08\u4e00\u95ee\u4e00\u884c\uff09",
     "table": "results/manuscript/graph_rag_batches/xy_graph_query.csv",

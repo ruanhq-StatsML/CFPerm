@@ -25,8 +25,11 @@ Anthropic HH-RLHF `chosen`/`rejected` is **not** \(Y\). Those fields only label 
 | WildGuard | `response_harm_label = unharmful` | `xy_wildguard.csv` | 1200 | 0.92 |
 | ToxicChat | human `toxicity = 0` | `xy_toxicchat.csv` | 1200 | 0.78 |
 | BeaverTails vs ToxicChat | real labels, two queues | `xy_real_two_stream.csv` | 2400 | — |
+| HH multi-step | this hop pass/fail | `xy_hh_multistep_{consistent,hop}.csv` | 1200 | per-hop auditor |
 
 A hop of \(P(Y\mid X)\) is a policy-pack / judge swap, not “this feature caused the fail.” After a fire: Top-\(k\) re-review, do not treat the current judge as gold.
+
+**Multi-step.** Same map, one row per assistant turn. Observe pack → write this reply → Y = 过/不过 for *this* hop. `x_step` is where we are in the thread. Episode success is not Y. HH chosen is not Y. Rebuild: `PYTHONPATH=. python3 scripts/build_llm_audit_multistep_xy.py`.
 
 **Two streaming gates (same table, not interchangeable).**
 
@@ -56,6 +59,8 @@ Rebuild: `python3 scripts/build_llm_audit_xy.py`. Raw prompts are not stored; on
 HH 的 chosen/rejected **不当 \(Y\)**。那只说明流量从 helpful 还是 harmless 队列来。\(Y\) 是部署审核器当场写的过/不过。
 
 **现成 prototype A** 在 `xy_hh_*.csv`。**更像真审核的标签** 用 BeaverTails / WildGuard / ToxicChat，仍然是同一张预测表，见 `xy_beavertails.csv`、`xy_wildguard.csv`、`xy_toxicchat.csv`，以及两路真标签 `xy_real_two_stream.csv`。
+
+**多步。** 同一张地图，对话里的每一跳一行：观察当前包 → 写这一轮回复 → 这一跳的 Y = 过/不过。`x_step` 是线程位置。整段对话成功不是 Y。HH chosen 不是 Y。表在 `xy_hh_multistep_*.csv`。
 
 补真 \(Y\) 之后，probe 仍然只学 \(P(Y\mid X)\)。hop = 政策包 / judge 换代。不要把 13 个 \(x\) 当成审核逻辑的归因维。
 

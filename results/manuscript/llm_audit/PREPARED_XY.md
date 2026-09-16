@@ -22,10 +22,14 @@ HH **chosen/rejected is not Y**. Those fields only say which traffic queue the r
 | `xy_wildguard.csv` | 1200 | `response_harm_label==unharmful` | real response-harm labels |
 | `xy_toxicchat.csv` | 1200 | human `toxicity==0` | real moderation-queue labels |
 | `xy_real_two_stream.csv` | 2400 | real labels | `T=0` BeaverTails, `T=1` ToxicChat |
+| `xy_hh_multistep_consistent.csv` | 1200 | this hop pass/fail | multi-step HH; `x_step` |
+| `xy_hh_multistep_hop.csv` | 1200 | same X; Y flipped after cut | multi-step HH hop |
 
 Schema of `xy_*.csv` (except the `*_two_stream.csv` files):
 
 `y,batch,x_n_toks,x_n_chars,x_avg_word,x_qmark,x_bang,x_hedge,x_formal,x_i_count,x_newlines,x_upper,x_refuse,x_please,x_thank`
+
+Multi-step files also have `episode,step,x_step`. One row is one assistant hop. Chosen/rejected and raw text are not stored.
 
 Online bootstrap + last-two overlay on every label file:
 
@@ -39,6 +43,7 @@ Rebuild (parquet cache under `data/hf_cache/audit/`, not committed):
 
 ```bash
 python3 scripts/build_llm_audit_xy.py
+PYTHONPATH=. python3 scripts/build_llm_audit_multistep_xy.py
 ```
 
 ## How CFPerm reads it

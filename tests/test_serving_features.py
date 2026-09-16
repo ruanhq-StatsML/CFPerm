@@ -22,6 +22,12 @@ class ServingFeatureCatalogTests(unittest.TestCase):
         self.assertEqual(len(names), 13)
         self.assertNotIn("chosen", names)
 
+    def test_multistep_adds_x_step(self):
+        names = cols("judge_multistep")
+        self.assertEqual(names[-1], "x_step")
+        self.assertEqual(len(names), 14)
+        self.assertTrue(names[:-1] == cols("judge"))
+
     def test_graph_batch_is_mean_and_std(self):
         q = cols("graph_query")
         b = cols("graph_batch")
