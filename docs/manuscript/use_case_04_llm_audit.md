@@ -8,7 +8,7 @@ Drop-in manuscript section. One prediction table: **one Y, many X**. Not attribu
 
 **Table.** \(Y\in\{0,1\}\) is pass/fail. \(X=(x_{\mathrm{n\_toks}},\ldots,x_{\mathrm{refuse}},\ldots,x_{\mathrm{thank}})\) are reply features. Arrival windows are `batch`. For CFPerm, two reviewer queues are encoded as \(T\in\{0,1\}\).
 
-The shared architecture (same gates, eight \(Y\)s) is `docs/manuscript/online_serving_gates.tex`.
+The shared architecture (continuous-time audit and agent reasoning; Graph-RAG / hybrid as ordinary serving) is `docs/manuscript/online_serving_gates.tex`.
 
 Anthropic HH-RLHF `chosen`/`rejected` is **not** \(Y\). Those fields only label which queue the row came from (helpfulness vs harmlessness). The deployed auditor’s pass/fail is \(Y\).
 
@@ -61,5 +61,4 @@ HH 的 chosen/rejected **不当 \(Y\)**。那只说明流量从 helpful 还是 h
 
 **两个闸，同一张表，不要混。** 冻参考窗的 Palm–Nagler online AR-bootstrap：\(\Delta_t=s_t-\mu_{\mathrm{ref}}\)，\(\mathrm{CI}_{\mathrm{lo}}>0\) 才叫显著变差。Last-two `hop_fires`：相邻窗 OOS 比 \(\ge\gamma\) 才叫 map hop。CI 至少要两个 trail 点；last-two 的第一跳永远 quiet。原型脚本 `scripts/llm_audit_online_bootstrap_prototype.py`。
 
-连续时间 serving 的同一套表（Graph-RAG / 混合检索 / Agent 下一步）见 `docs/manuscript/use_case_05_rag_agent_stream.md`。
-八个面的总表见 `docs/manuscript/online_serving_gates_zh.md`。
+连续时间审核与 agent 推理的总表见 `docs/manuscript/online_serving_gates_zh.md`。

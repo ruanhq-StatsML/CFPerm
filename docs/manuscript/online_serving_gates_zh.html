@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>在线 serving 闸：一张地图，多种标签</title>
+<title>在线 serving 闸：连续时间审核，和 agent 推理</title>
 <style>
 :root {
   --ink: #1b1f24;
@@ -56,9 +56,9 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
 
 <section class="slide on" data-title="封面">
   <div class="kicker">OnlineRFPerm / frozen probe</div>
-  <h1>一张地图，多种标签</h1>
+  <h1>两件连续时间的事</h1>
   <p class="lead">检测的是 P(Y | X) 还是不是同一张 serving 地图。<br>
-  八个面共用两个闸，只换 Y。图包换代：一个 batch 把图特征聚合起来就够了。</p>
+  我们做的是<strong>连续时间审核</strong>，和 <strong>agent 推理</strong>。其余按普通 serving，同一套闸。</p>
 </section>
 
 <section class="slide" data-title="对象">
@@ -88,19 +88,24 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
   </div>
 </section>
 
-<section class="slide" data-title="八个面">
-  <div class="kicker">架构</div>
-  <h2>同一套闸，换 Y</h2>
-  <div class="facets">
-    <div class="box"><b>推理 smoothness</b>路径/跳合法</div>
-    <div class="box"><b>审核 / judge</b>过 / 不过</div>
-    <div class="box"><b>Graph-RAG 子图</b>支撑节点在包里</div>
-    <div class="box"><b>混合检索</b>融合后答案成立</div>
-    <div class="box"><b>Agent 下一步</b>schema / 不 loop</div>
-    <div class="box"><b>合成数据金标</b>还能当观测样本</div>
-    <div class="box"><b>Serving 刷新</b>当前包还能预测成功</div>
-    <div class="box"><b>实验 CUPED</b>协变量调整还有效</div>
+<section class="slide" data-title="两件事">
+  <div class="kicker">主任务</div>
+  <h2>连续时间审核，和 agent 推理</h2>
+  <div class="row">
+    <div class="box">
+      <b>连续时间审核</b>
+      <p>Y = 过 / 不过。<br>
+      Fire = 政策包或 judge 换代。<br>
+      不是拒绝率，不是 HH chosen。</p>
+    </div>
+    <div class="box">
+      <b>Agent 推理</b>
+      <p>Y = 这一跳 / 路径是否合法。<br>
+      Fire = 推理断了，或开始空转。<br>
+      不是幻觉率，不是任务最终成功。</p>
+    </div>
   </div>
+  <p class="small" style="margin-top:16px">Graph-RAG、混合检索：同一套闸，只换 Y，按普通 serving 写。</p>
 </section>
 
 <section class="slide" data-title="对照表">
@@ -111,14 +116,10 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
       <tr><th>面</th><th>Y</th><th>Fire 表示什么</th><th>不表示什么</th></tr>
     </thead>
     <tbody>
-      <tr><td>推理 smoothness</td><td>这一跳 / 路径是否合法</td><td class="fire">推理链断了</td><td class="not">幻觉率</td></tr>
-      <tr><td>审核 / judge</td><td>过 / 不过</td><td class="fire">政策包或 judge 换代</td><td class="not">拒绝率；HH chosen</td></tr>
+      <tr><td>连续时间审核</td><td>过 / 不过</td><td class="fire">政策包或 judge 换代</td><td class="not">拒绝率；HH chosen</td></tr>
+      <tr><td>Agent 推理</td><td>这一跳 / 路径是否合法</td><td class="fire">推理断了，或开始空转</td><td class="not">幻觉率；任务最终成功</td></tr>
       <tr><td>Graph-RAG 子图</td><td>引用落在边上；支撑节点在图包里</td><td class="fire">图包或 community 换代</td><td class="not">单点相关性</td></tr>
       <tr><td>混合检索</td><td>融合后的答案成不成立</td><td class="fire">某一路索引或融合坏了</td><td class="not">单路 Recall</td></tr>
-      <tr><td>Agent 下一步</td><td>schema 合法、工具可调用、不 loop</td><td class="fire">协议断了，或开始空转</td><td class="not">任务最终成功</td></tr>
-      <tr><td>合成数据金标</td><td>还能不能当观测样本</td><td class="fire">合成分布漂了</td><td class="not">「像不像人写的」</td></tr>
-      <tr><td>Serving 刷新时刻</td><td>当前模板+检索+生成还能否预测成功</td><td class="fire">该换包了</td><td class="not">大模型该不该微调</td></tr>
-      <tr><td>实验 CUPED</td><td>协变量调整还有效</td><td class="fire">该重做回归</td><td class="not">A/B 谁赢了</td></tr>
     </tbody>
   </table>
 </section>
@@ -139,8 +140,8 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
 </section>
 
 <section class="slide" data-title="Graph-RAG">
-  <div class="kicker">唯一需要多写一句的面</div>
-  <h2>图包换代：batch = 图特征聚合</h2>
+  <div class="kicker">普通 serving</div>
+  <h2>图包：batch = 图特征聚合</h2>
   <p>每条请求一张子图：节点、边、平均度、连通片、query seed、seed 比例、最大片。</p>
   <p>一个到达窗把这些特征 <b>aggregate</b> 起来，就是这一窗的 X。<br>
   Y = 支撑节点落在 seed ∪ 一跳邻居。</p>
@@ -164,8 +165,8 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
   <h2>一条命令，三张已有的表</h2>
   <div class="box">
     <p><code>PYTHONPATH=. python3 scripts/run_serving_gates.py</code></p>
-    <p>审核 · Graph-RAG 图包 · 混合检索。同一套闸，只换 Y。</p>
-    <p class="small">其余面换 csv 即可。Hotpot 仍是题库快照，不是墙上时间。</p>
+    <p>连续时间审核已在盘上。同一套闸也可以打 Graph-RAG / 混合检索。</p>
+    <p class="small">Hotpot 仍是题库快照，不是墙上时间。</p>
   </div>
 </section>
 

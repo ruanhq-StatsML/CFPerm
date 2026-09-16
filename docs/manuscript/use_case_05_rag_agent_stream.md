@@ -3,7 +3,7 @@
 Drop-in manuscript section. Same object as use-case 4: **one \(Y\), many \(X\), arrival windows**. Any stream whose data-generating map moves in continuous time can be written as \((X,Y,\mathrm{batch})\) and watched with the same two gates. Not attribution. Not a generation model.
 
 The three scenes below are the same serving loop. Only the meaning of a hop changes.
-The eight-facet table (smoothness, judge, Graph-RAG, hybrid, agent, synthetic gold, serving refresh, CUPED) is `docs/manuscript/online_serving_gates.tex`.
+The two continuous-time jobs (audit, agent reasoning) and ordinary serving maps (Graph-RAG, hybrid) are `docs/manuscript/online_serving_gates.tex`.
 
 ## Shared loop
 
@@ -117,12 +117,12 @@ If the agent retrieves a graph or a hybrid index before the tool call, this scen
 
 ## 中文
 
-**凡是连续时间在变的数据，只要能写成 \((X,Y,\mathrm{batch})\)，都可以走这一套。** 冻住 serving 策略，看预测误差相对自己的历史池是否已经极端。Graph-RAG、混合检索、Agent 下一步是同一条流水线，只有 hop 的含义不同。
+**凡是连续时间在变的数据，只要能写成 \((X,Y,\mathrm{batch})\)，都可以走这一套。** 我们真正按连续时间做的是审核和 agent 推理；Graph-RAG、混合检索是同一套闸下的普通 serving。
 
-**Graph-RAG。** \(Y=\) 引用落在边上，或支撑节点在图包里。一个 serving batch 把窗内子图特征聚合起来（节点、边、度、连通片、query seed、最大片）。Fire = 图包 / community 换代（切点后 drop 或 rewire 边，再聚合），当前子图不当金标。不要盯单点相关性。Refresh 从模板 → 检索 → 重抽图，影子流量下一窗误差回来且 last-two quiet 才晋升，然后整池 reset。表形 prototype：`scripts/prototype_graph_pack_batch_agg.py`。八个面的总表：`docs/manuscript/online_serving_gates_zh.md`。
+**Graph-RAG。** \(Y=\) 引用落在边上，或支撑节点在图包里。一个 serving batch 把窗内子图特征聚合起来（节点、边、度、连通片、query seed、最大片）。Fire = 图包 / community 换代。总表：`docs/manuscript/online_serving_gates_zh.md`。
 
 **混合检索。** 一次请求：改写 → 稀疏+稠密并行 → 融合/重排 → 生成。\(Y\) 必须打在 **融合后的答案** 上，不要打在单一通道 Recall。Hop = embedding / 切块 / 重排 / 融合权重把冻住的包用坏了。稀疏看起来还行、稠密已经跳，正是要盯融合 \(Y\) 的原因。下一步评估是影子对照 + last-two，不是 Recall@\(k\) 单独涨了就上线。
 
-**Agent 下一步。** 每跳 observe → 选工具 → 调用。\(Y_{\mathrm{hop}}=\) 这一跳合不合法（schema、可调用、不打转），到跳结束就能写。任务成功是更慢的另一条 \(Y\)，不能替代。Fire = 工具协议/模板断了或开始 loop：停自动提交，轨迹不进金标。检索闸管「上下文还能不能信」，工具闸管「下一步还能不能做」；Graph-RAG agent 可以两闸叠上，不要合成一个分数。
+**Agent 推理。** 每跳 observe → 选工具 → 调用。\(Y=\) 这一跳 / 路径是否合法，到跳结束就能写。任务成功和幻觉率都不是这条 \(Y\)。Fire = 推理断了或开始空转。
 
 幻觉率、拒绝率、单路 Recall 都不是这套 \(Y\)。读数仍是：光滑不火，断裂在 onset 火，refresh 后 reset 再 quiet。
