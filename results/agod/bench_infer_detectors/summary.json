@@ -1,0 +1,312 @@
+{
+  "stance": "OnlineRFPerm vs onlinePermOOB baselines (BOCPD/PH/ADWIN/frouros)",
+  "source_algo": "onlinePermOOB_algo_ab85.py",
+  "results": {
+    "halueval": [
+      {
+        "method": "OnlineRFPerm",
+        "first_fire_batch": 3,
+        "detection_delay": 0,
+        "quiet_false_fires": 0,
+        "n_fires": 1,
+        "fires": [
+          {
+            "batch": 0,
+            "fired": false,
+            "score": null
+          },
+          {
+            "batch": 1,
+            "fired": false,
+            "score": 3.0
+          },
+          {
+            "batch": 2,
+            "fired": false,
+            "score": 0.3333333333333335
+          },
+          {
+            "batch": 3,
+            "fired": true,
+            "score": 3.9999999999999987
+          },
+          {
+            "batch": 4,
+            "fired": false,
+            "score": 0.49999999999999983
+          },
+          {
+            "batch": 5,
+            "fired": false,
+            "score": 0.5000000000000003
+          }
+        ],
+        "dataset": "halueval",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.3055555555555556
+      },
+      {
+        "method": "BOCPD",
+        "first_fire_batch": 3,
+        "detection_delay": 0,
+        "quiet_false_fires": 0,
+        "n_fires": 4,
+        "first_t": 41,
+        "dataset": "halueval",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.3055555555555556
+      },
+      {
+        "method": "PageHinkley",
+        "first_fire_batch": 3,
+        "detection_delay": 0,
+        "quiet_false_fires": 0,
+        "n_fires": 2,
+        "first_t": 42,
+        "dataset": "halueval",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.3055555555555556
+      },
+      {
+        "method": "ADWIN",
+        "first_fire_batch": null,
+        "detection_delay": null,
+        "quiet_false_fires": 0,
+        "n_fires": 0,
+        "first_t": null,
+        "dataset": "halueval",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.3055555555555556
+      },
+      {
+        "method": "DDM",
+        "first_fire_batch": 3,
+        "detection_delay": 0,
+        "quiet_false_fires": 0,
+        "n_fires": 30,
+        "first_t": 42,
+        "dataset": "halueval",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.3055555555555556
+      },
+      {
+        "method": "STEPD",
+        "first_fire_batch": 5,
+        "detection_delay": 2,
+        "quiet_false_fires": 0,
+        "n_fires": 11,
+        "first_t": 61,
+        "dataset": "halueval",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.3055555555555556
+      },
+      {
+        "method": "HDDMA",
+        "first_fire_batch": null,
+        "detection_delay": null,
+        "quiet_false_fires": 0,
+        "n_fires": 0,
+        "first_t": null,
+        "dataset": "halueval",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.3055555555555556
+      },
+      {
+        "method": "ECDDWT",
+        "first_fire_batch": 3,
+        "detection_delay": 0,
+        "quiet_false_fires": 0,
+        "n_fires": 7,
+        "first_t": 45,
+        "dataset": "halueval",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.3055555555555556
+      }
+    ],
+    "squad": [
+      {
+        "method": "OnlineRFPerm",
+        "first_fire_batch": 5,
+        "detection_delay": 2,
+        "quiet_false_fires": 0,
+        "n_fires": 1,
+        "fires": [
+          {
+            "batch": 0,
+            "fired": false,
+            "score": null
+          },
+          {
+            "batch": 1,
+            "fired": false,
+            "score": 3.0
+          },
+          {
+            "batch": 2,
+            "fired": false,
+            "score": 0.0
+          },
+          {
+            "batch": 3,
+            "fired": false,
+            "score": 0.0
+          },
+          {
+            "batch": 4,
+            "fired": false,
+            "score": 1.0000000000000004
+          },
+          {
+            "batch": 5,
+            "fired": true,
+            "score": 1.9999999999999987
+          }
+        ],
+        "dataset": "squad",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.08333333333333333
+      },
+      {
+        "method": "BOCPD",
+        "first_fire_batch": 4,
+        "detection_delay": 1,
+        "quiet_false_fires": 0,
+        "n_fires": 5,
+        "first_t": 55,
+        "dataset": "squad",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.08333333333333333
+      },
+      {
+        "method": "PageHinkley",
+        "first_fire_batch": 4,
+        "detection_delay": 1,
+        "quiet_false_fires": 0,
+        "n_fires": 2,
+        "first_t": 56,
+        "dataset": "squad",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.08333333333333333
+      },
+      {
+        "method": "ADWIN",
+        "first_fire_batch": null,
+        "detection_delay": null,
+        "quiet_false_fires": 0,
+        "n_fires": 0,
+        "first_t": null,
+        "dataset": "squad",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.08333333333333333
+      },
+      {
+        "method": "DDM",
+        "first_fire_batch": 4,
+        "detection_delay": 1,
+        "quiet_false_fires": 0,
+        "n_fires": 16,
+        "first_t": 56,
+        "dataset": "squad",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.08333333333333333
+      },
+      {
+        "method": "STEPD",
+        "first_fire_batch": null,
+        "detection_delay": null,
+        "quiet_false_fires": 0,
+        "n_fires": 0,
+        "first_t": null,
+        "dataset": "squad",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.08333333333333333
+      },
+      {
+        "method": "HDDMA",
+        "first_fire_batch": null,
+        "detection_delay": null,
+        "quiet_false_fires": 0,
+        "n_fires": 0,
+        "first_t": null,
+        "dataset": "squad",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.08333333333333333
+      },
+      {
+        "method": "ECDDWT",
+        "first_fire_batch": 4,
+        "detection_delay": 1,
+        "quiet_false_fires": 0,
+        "n_fires": 2,
+        "first_t": 56,
+        "dataset": "squad",
+        "n": 72,
+        "n_per": 12,
+        "cut": 3,
+        "ref_end": 36,
+        "mse_mean_quiet": 0.0,
+        "mse_mean_hop": 0.08333333333333333
+      }
+    ]
+  }
+}

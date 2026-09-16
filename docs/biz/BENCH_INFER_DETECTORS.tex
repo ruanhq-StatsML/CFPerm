@@ -1,0 +1,42 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath}
+\title{OnlineRFPerm vs BOCPD / ADWIN / PageHinkley / frouros\\(LLM infer streams)}
+\author{CFPerm benchmark (onlinePermOOB baselines)}
+\date{\today}
+\begin{document}
+\maketitle
+
+\paragraph{Setup.}
+HaluEval + SQuAD CPU live-infer streams. Quiet ref fits a frozen RF probe; trail yields a 1-d error/MSE stream. Baselines follow \texttt{onlinePermOOB\_algo.py}: BOCPD (\texttt{bayesian\_changepoint\_detection}), PageHinkley/ADWIN (\texttt{river}), DDM/STEPD/HDDMA/ECDDWT (\texttt{frouros}). OnlineRFPerm uses consecutive OOS error-ratio on the same $(X,y)$. KPI: delay (batches after cut) and quiet false fires.
+
+\begin{table}[h]
+\centering
+\caption{Detector comparison on two LLM inference streams.}
+\begin{tabular}{llrrr}
+\toprule dataset & method & delay & quiet FF & $\#$fires \\
+\midrule
+halueval & OnlineRFPerm & 0 & 0 & 1 \\
+halueval & BOCPD & 0 & 0 & 4 \\
+halueval & PageHinkley & 0 & 0 & 2 \\
+halueval & ADWIN & --- & 0 & 0 \\
+halueval & DDM & 0 & 0 & 30 \\
+halueval & STEPD & 2 & 0 & 11 \\
+halueval & HDDMA & --- & 0 & 0 \\
+halueval & ECDDWT & 0 & 0 & 7 \\
+squad & OnlineRFPerm & 2 & 0 & 1 \\
+squad & BOCPD & 1 & 0 & 5 \\
+squad & PageHinkley & 1 & 0 & 2 \\
+squad & ADWIN & --- & 0 & 0 \\
+squad & DDM & 1 & 0 & 16 \\
+squad & STEPD & --- & 0 & 0 \\
+squad & HDDMA & --- & 0 & 0 \\
+squad & ECDDWT & 1 & 0 & 2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Takeaway.}
+Read delay jointly with quiet false fires. OnlineRFPerm watches $P(Y\mid X)$ hops; BOCPD/ADWIN/PH/frouros watch a scalar error stream from a frozen probe---the comparison the OOB algo script is built for.
+
+\end{document}
