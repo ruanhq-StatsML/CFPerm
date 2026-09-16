@@ -31,14 +31,32 @@ last-two consecutive OOS 应对得上 → **quiet**。
 Gate γ 可换，不是要优化的 objective。
 domain AUC 说的是 P(X) 好不好分，跟置换距离不是同一个问题，这里不算。
 
-### 为什么 Y 用部署审核策略，而不是直接拿 Anthropic 人标去翻
+### 预测表：一个 Y，一堆 X（不是归因）
 
-Last-two 探针是浅层 RF（20 棵、深度 4），只能看见它能表示的映射 hop。
-HH-RLHF 人标是高容量噪声偏好；用 prompt+reply hash ⊕ 文风去拟合，OOS error 已经在 chance 附近（~0.45–0.55）。
-这时把人标 92% 翻转，e_now 也还在 chance，ratio 过不了闸——**不是没 hop，是探针看不见**。
-线上要盯的本来就是 **当前部署的审核器**（规则 / 分类器 / judge checkpoint），它就是 X 上的一个可表示策略。
-所以：两条 HH 队列提供真实到达流量；Y 是该队列上的部署策略（文风/拒绝规则 + 少量噪声，避免 e_prev 真空）。
-hop = 落地脚本同一刀：cut 后 p=0.92 翻转 Y（审核员一夜换制度）。
+方法侧只看见一张监督表：
+
+- **Y**：一列，审核决定（过 / 不过）。要预测的就是它。
+- **X**：一堆特征（回复长度、套话、拒绝用语…）。用来预测 Y。
+- probe `fit_online_probe(X, y)` = 用上一窗的 (X, Y) 学 P(Y|X)。
+- hop = 这个预测关系变了，不是某一维的贡献变了，也不是 VIMP/归因。
+
+权重向量只出现在造标签的时候（DGP）。OnlineRFPerm 拿不到权重，只拿 `(X, y)`。
+HH chosen/rejected 不当 Y：那是人标，浅层探针预测不了；这里的 Y 是部署审核器当场写的决定。
+
+表在 `results/agod/llm_audit_consistency/xy_*.csv`，列就是 `y, batch, x_n_toks, …, x_thank`。
+
+前几行（`hh_helpful` / `consistent`）：
+
+| y | batch | x_n_toks | x_n_chars | x_avg_word | x_qmark | ... |
+|---:|---:|---:|---:|---:|---:|---|
+| 1 | 0 | 0.840 | 1.180 | 3.543 | 1.600 | ... |
+| 1 | 0 | 2.240 | 2.710 | 2.943 | 1.600 | ... |
+| 0 | 0 | 0.560 | 0.860 | 4.000 | 0.000 | ... |
+| 1 | 0 | 6.240 | 9.840 | 3.779 | 1.600 | ... |
+| 1 | 0 | 0.120 | 0.150 | 3.200 | 0.000 | ... |
+| 1 | 0 | 1.080 | 1.380 | 3.200 | 1.600 | ... |
+
+probe 做的事：用这些 X 预测这一列 Y。fire = 这个预测关系 hop 了。
 
 ## 2. 跟落地脚本同一段
 
@@ -158,4 +176,5 @@ PYTHONPATH=. python3 scripts/agod/llm_audit_consistency_prototype.py
 ```
 
 Caches: `data/hf_cache/audit/`. Numbers: `results/agod/llm_audit_consistency/`.
+Prediction tables (one Y, many X): `results/agod/llm_audit_consistency/xy_*.csv`.
 

@@ -9,11 +9,9 @@ Datasets (two reviewer queues, real HH-RLHF traffic):
 1. Anthropic/hh-rlhf ``helpful-base``  — helpfulness queue
 2. Anthropic/hh-rlhf ``harmless-base`` — harmlessness / safety queue
 
-X comes from the dataset (prompt + reply). Y is the *deployed auditor*
-on that traffic: a noisy policy on observable register / refusal cues.
-That is the live object last-two OnlineRFPerm can actually see. Raw
-Anthropic human labels sit at chance for the shallow probe, so a flip
-of those labels is invisible — not a map hop the gate can fire on.
+X comes from the dataset (prompt + reply features). Y is one binary
+audit decision. The method is prediction: fit P(Y|X), then watch whether
+that map hops. Not attribution / VIMP.
 
 Two regimes per dataset (same X, same batching):
 
@@ -31,6 +29,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import csv
 import gzip
 import json
 import re
@@ -62,9 +61,25 @@ from agod.po_refit import Stream  # noqa: E402
 
 HF_BASE = "https://huggingface.co/datasets/Anthropic/hh-rlhf/resolve/main"
 
-# Register / refusal weights for the deployed auditor. Column order matches
-# style_vector(). Helpfulness prefers longer, specific, less hedge-y replies.
-# Safety prefers refusal / caution. Both are functions of observables in X.
+# X columns for prediction (not an attribution of Y). One binary Y, these Xs.
+X_DIMS = [
+    "n_toks",
+    "n_chars",
+    "avg_word",
+    "qmark",
+    "bang",
+    "hedge",
+    "formal",
+    "i_count",
+    "newlines",
+    "upper",
+    "refuse",
+    "please",
+    "thank",
+]
+
+# DGP only: how a simulated judge writes Y. The probe never sees these weights.
+# It only gets the table (y, x_n_toks, ..., x_thank) and predicts y from x.
 HELPFUL_POLICY = np.asarray(
     [1.4, 1.1, 0.2, 0.0, 0.0, -1.0, 0.5, -0.2, 0.1, 0.0, -0.8, 0.4, 0.4],
     dtype=float,
@@ -261,7 +276,7 @@ def load_jsonl(path: Path, n: int | None = None) -> list[dict]:
 
 
 def policy_labels(styles: np.ndarray, weights: np.ndarray, *, noise: float, seed: int):
-    """Deployed auditor: threshold a linear policy on register cues, then noise.
+    """Write a single binary Y. Not attribution — just the label to predict.
 
     Noise keeps e_prev off the vacuous floor (OnlineRFPerm refuses e_prev~0).
     """
@@ -327,11 +342,40 @@ def build_audit_xy(
         "X": X,
         "y": y,
         "batch": batch,
-        "styles": styles,
+        "x_pred": styles,
+        "x_names": list(X_DIMS),
         "n_text": int(n_features),
         "style_scale": float(style_scale),
         "policy_noise": float(policy_noise),
     }
+
+
+def write_xy_table(path: Path, *, y, X, batch, x_names):
+    """Prediction table: one Y, a pile of X. No attribution columns."""
+    y = np.asarray(y).ravel()
+    X = np.asarray(X, dtype=float)
+    batch = np.asarray(batch, dtype=int).ravel()
+    names = list(x_names)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["y", "batch", *[f"x_{n}" for n in names]])
+        for i in range(len(y)):
+            w.writerow(
+                [int(y[i]), int(batch[i]), *[f"{float(X[i, j]):.6g}" for j in range(X.shape[1])]]
+            )
+    return path
+
+
+def xy_preview(y, X, batch, x_names, n=6) -> str:
+    names = [f"x_{n}" for n in x_names[:4]]
+    lines = ["| y | batch | " + " | ".join(names) + " | ... |", "|---:|---:|" + "---:|" * 4 + "---|"]
+    for i in range(min(int(n), len(y))):
+        cells = [str(int(y[i])), str(int(batch[i]))]
+        cells += [f"{float(X[i, j]):.3f}" for j in range(min(4, X.shape[1]))]
+        cells.append("...")
+        lines.append("| " + " | ".join(cells) + " |")
+    return "\n".join(lines)
 
 
 def slim_history(hops):
@@ -448,6 +492,11 @@ def run_one(
             "on_quiet": "audit logic consistent; keep judge as gold; w=1",
             "on_fire": "audit logic hopped; judge is not gold; Top-k po_risk0 human re-review; cap DPO merge",
         },
+        "prediction": {
+            "target": "y",
+            "n_features": int(np.asarray(X).shape[1]),
+            "not_attribution": True,
+        },
     }
 
 
@@ -503,15 +552,32 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
         "Gate γ 可换，不是要优化的 objective。",
         "domain AUC 说的是 P(X) 好不好分，跟置换距离不是同一个问题，这里不算。",
         "",
-        "### 为什么 Y 用部署审核策略，而不是直接拿 Anthropic 人标去翻",
+        "### 预测表：一个 Y，一堆 X（不是归因）",
         "",
-        "Last-two 探针是浅层 RF（20 棵、深度 4），只能看见它能表示的映射 hop。",
-        "HH-RLHF 人标是高容量噪声偏好；用 prompt+reply hash ⊕ 文风去拟合，OOS error 已经在 chance 附近（~0.45–0.55）。",
-        "这时把人标 92% 翻转，e_now 也还在 chance，ratio 过不了闸——**不是没 hop，是探针看不见**。",
-        "线上要盯的本来就是 **当前部署的审核器**（规则 / 分类器 / judge checkpoint），它就是 X 上的一个可表示策略。",
-        "所以：两条 HH 队列提供真实到达流量；Y 是该队列上的部署策略（文风/拒绝规则 + 少量噪声，避免 e_prev 真空）。",
-        "hop = 落地脚本同一刀：cut 后 p=0.92 翻转 Y（审核员一夜换制度）。",
+        "方法侧只看见一张监督表：",
         "",
+        "- **Y**：一列，审核决定（过 / 不过）。要预测的就是它。",
+        "- **X**：一堆特征（回复长度、套话、拒绝用语…）。用来预测 Y。",
+        "- probe `fit_online_probe(X, y)` = 用上一窗的 (X, Y) 学 P(Y|X)。",
+        "- hop = 这个预测关系变了，不是某一维的贡献变了，也不是 VIMP/归因。",
+        "",
+        "权重向量只出现在造标签的时候（DGP）。OnlineRFPerm 拿不到权重，只拿 `(X, y)`。",
+        "HH chosen/rejected 不当 Y：那是人标，浅层探针预测不了；这里的 Y 是部署审核器当场写的决定。",
+        "",
+        "表在 `results/agod/llm_audit_consistency/xy_*.csv`，列就是 `y, batch, x_n_toks, …, x_thank`。",
+        "",
+    ]
+    shown = next((r for r in runs if r.get("xy_preview")), None)
+    if shown:
+        lines += [
+            f"前几行（`{shown['dataset']}` / `{shown['regime']}`）：",
+            "",
+            shown["xy_preview"],
+            "",
+            "probe 做的事：用这些 X 预测这一列 Y。fire = 这个预测关系 hop 了。",
+            "",
+        ]
+    lines += [
         "## 2. 跟落地脚本同一段",
         "",
         "```python",
@@ -623,6 +689,7 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
         "```",
         "",
         "Caches: `data/hf_cache/audit/`. Numbers: `results/agod/llm_audit_consistency/`.",
+        "Prediction tables (one Y, many X): `results/agod/llm_audit_consistency/xy_*.csv`.",
         "",
     ]
     return "\n".join(lines) + "\n"
@@ -674,6 +741,27 @@ def main() -> int:
             )
             rec["data"] = str(path.relative_to(ROOT))
             rec["cite"] = spec["cite"]
+            x_names = pack.get("x_names") or [f"f{j}" for j in range(pack["X"].shape[1])]
+            y_use = pack["y"]
+            if hop:
+                y_use = apply_preference_hop(
+                    pack["y"],
+                    pack["batch"],
+                    cut_batch=args.cut_batch,
+                    flip_rate=args.flip_rate,
+                    seed=ds_seed + 17,
+                )[0]
+            xy_path = OUT / f"xy_{spec['key']}_{rec['regime']}.csv"
+            write_xy_table(
+                xy_path,
+                y=y_use,
+                X=pack["X"],
+                batch=pack["batch"],
+                x_names=x_names,
+            )
+            rec["xy_table"] = str(xy_path.relative_to(ROOT))
+            rec["xy_preview"] = xy_preview(y_use, pack["X"], pack["batch"], x_names)
+            rec["x_names"] = list(x_names)
             runs.append(rec)
             (OUT / f"{spec['key']}_{rec['regime']}.json").write_text(
                 json.dumps(jsonable(rec), ensure_ascii=False, indent=2)
@@ -690,11 +778,33 @@ def main() -> int:
         "cut_batch": args.cut_batch,
         "flip_rate": args.flip_rate,
         "objective": "audit_map_hop_fire",
-        "not_the_objective": ["ratio", "auc", "reject_rate", "hallucination_rate"],
-        "y_construction": "deployed_auditor_policy_on_hh_traffic",
+        "not_the_objective": ["ratio", "auc", "reject_rate", "hallucination_rate", "attribution", "vimp"],
+        "y_construction": "single_binary_y",
+        "x": "feature_matrix",
+        "task": "predict_y_from_x",
         "runs": jsonable(runs),
     }
     (OUT / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2))
+    prepared = [
+        "# Prediction table — one Y, many X",
+        "",
+        "Not attribution. Not VIMP. A supervised table:",
+        "",
+        "- `y`: binary audit decision (the thing to predict)",
+        "- `x_*`: features of the reply (the predictors)",
+        "- `batch`: arrival window",
+        "",
+        "OnlineRFPerm: `fit_online_probe(X, y)` predicts y from x on the last window,",
+        "then checks whether that map still predicts the next window.",
+        "",
+        "Files:",
+        "",
+    ]
+    for r in runs:
+        if r.get("xy_table"):
+            prepared.append(f"- `{r['xy_table']}`  n={r['n']}  regime={r['regime']}")
+    prepared += ["", "Schema: `y,batch,x_n_toks,x_n_chars,...,x_thank`", ""]
+    (OUT / "PREPARED_XY.md").write_text("\n".join(prepared) + "\n")
     md = render_md(
         runs, gate=args.gate, flip_rate=args.flip_rate, cut_batch=args.cut_batch
     )
