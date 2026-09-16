@@ -65,4 +65,5 @@ Bulletin 总跑板仍见：`scripts/agod/bulletin_landing_attr.py`（三类场�
 
 - Bulletin：`LANDING_BULLETIN_POLISH.md`
 - 图谱两级：`MERCHANT_AUTHOR_PRODUCT_ORDER_GRAPH_ATTR.md`
+- **图谱刻画与评估**：`GRAPH_USECASE_EVAL.md`
 - 周更·安全·图→FSDS：`WEEKLY_AUDIT_SAFETY_GRAPH_FSDS.md`
