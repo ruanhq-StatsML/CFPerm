@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Recsys prototype: graph localization, then a two-step drill.
+"""Recsys prototype: graph localization by entity, then a two-step drill.
 
-These families are enough — no extra grains:
+Entities (enough — no extra grains):
 
-  user_connectivity / item_connectivity / merchant_structure
-  video_tower / audio_tower   (messy merchant attach → user pool)
+  user / item / merchant
+  video_tower / audio_tower   (attach on merchant → pool to user)
 
+FSDS cannot multi-step-localize; online+LOGO needs these entity names.
 Use:
-  1) LOCALIZE (no Y): each family vs clock W. Moved = RF-domain AUC ≥ 0.55.
-  2) Two-step FSDS drill (with Y), only on the few moved families:
-       step 1  LOGO among those families
+  1) LOCALIZE (no Y): each entity vs clock W. Moved = RF-domain AUC ≥ 0.55.
+  2) Two-step FSDS drill (with Y), only on the few moved entities:
+       step 1  LOGO among those entities
        step 2  LOCO columns inside them (top-k if a 64-d tower)
 
 Not causal. Not GNN. Fake towers are DGP, not production embeddings.
