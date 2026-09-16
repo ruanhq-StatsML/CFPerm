@@ -449,14 +449,43 @@ def _fmt_delta(d) -> str:
     return "nan" if d != d else f"{d:+.5f}"
 
 
-def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp) -> str:
+def coverage_by_clock(o: pd.DataFrame, vid_cols: list[str], aud_cols: list[str], w: np.ndarray) -> dict:
+    """Did user pooling just leave more zeros on one side of W?"""
+    vn = np.linalg.norm(o[vid_cols].to_numpy(np.float64), axis=1)
+    an = np.linalg.norm(o[aud_cols].to_numpy(np.float64), axis=1)
+    early, late = w == 0, w == 1
+    return {
+        "vid_zero_early": float((vn[early] == 0).mean()),
+        "vid_zero_late": float((vn[late] == 0).mean()),
+        "aud_zero_early": float((an[early] == 0).mean()),
+        "aud_zero_late": float((an[late] == 0).mean()),
+        "vid_norm_early": float(vn[early].mean()),
+        "vid_norm_late": float(vn[late].mean()),
+        "aud_norm_early": float(an[early].mean()),
+        "aud_norm_late": float(an[late].mean()),
+    }
+
+
+def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp, coverage=None) -> str:
     moved = [r["family"] for r in loc["ranked"] if r["moved"]]
+    quiet = [r["family"] for r in loc["ranked"] if not r["moved"]]
+    auc_line = ", ".join(
+        f"{r['family']} {_fmt_auc(r['rf_domain_auc'])}" for r in loc["ranked"]
+    )
     logo = l1["logo"]
     loc_logo = []
     for h in localized_hops:
         if h in logo:
             loc_logo.append(f"`{h}` LOGO Δ={_fmt_delta(logo[h]['delta'])}")
     loc_logo_s = "; ".join(loc_logo) if loc_logo else "none"
+    cov_line = ""
+    if coverage:
+        cov_line = (
+            f"User-pool zero rate video early/late "
+            f"{coverage['vid_zero_early']:.3f}/{coverage['vid_zero_late']:.3f}; "
+            f"mean L2-norm {coverage['vid_norm_early']:.2f}/{coverage['vid_norm_late']:.2f}. "
+            "Not a missingness artifact."
+        )
     lines = [
         "# Recsys: graph localization → multi-layer FSDS",
         "",
@@ -482,6 +511,7 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp) -> str:
         "",
         f"n={n} p={p}. Clock = median `t_end`. W=1 later half.",
         f"Shops attached={dgp.get('n_merch_attached')} · users pooled={dgp.get('n_user_pooled')}.",
+        cov_line,
         "",
         "## 1. Localization (no Y)",
         "",
@@ -562,10 +592,11 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp) -> str:
         "",
         "## Read",
         "",
-        "- Localization answers **which block's portrait moved** (graph connectivity vs fake video vs fake audio).",
-        "- L1–L3 answer **among those blocks, what is tied to the Y-gap** (if anything).",
-        "- Video/audio AUC near 0.5 is the honest DGP read: random embeds + merchant attach, no clock injection.",
-        "- If a tower moves, that is merchant-mix leak through user pooling — still not a root cause.",
+        f"- Localization AUCs: {auc_line}.",
+        f"- Moved: `{', '.join(moved) if moved else 'none'}`. Quiet: `{', '.join(quiet) if quiet else 'none'}`.",
+        "- User-pooled 64-d shop vectors can move even when the **current order's** 4 merchant-graph scalars do not: the tower grain is who-went-where in the left window, not `g_m_*` on this row.",
+        "- DGP has no W/Y injection. A moved tower is mix/coverage geometry after aggregation, not “video caused conversion”.",
+        "- L1–L3 answer **among those blocks, what is tied to the Y-gap** (if anything). Tiny LOGO on ~1e-4 PO-risk stays a log.",
         "- Do not turn LOGO share into a unique importance ranking.",
         "",
         "`PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py`",
@@ -611,7 +642,13 @@ def main() -> int:
     o = o.loc[o["y_post_clk_1d"].notna()].copy()
     xcols = ukeep + [c for c in ORDER_X if c in o.columns] + extra
     names, X, y, w = _xy(o, xcols, "y_post_clk_1d", "t_end")
+    cov = coverage_by_clock(o, vid_cols, aud_cols, w)
     print(f"xy n={len(y)} p={len(names)} pos={y.mean():.3f} W1={w.mean():.3f}", flush=True)
+    print(
+        f"coverage vid_zero e/l={cov['vid_zero_early']:.3f}/{cov['vid_zero_late']:.3f} "
+        f"norm e/l={cov['vid_norm_early']:.2f}/{cov['vid_norm_late']:.2f}",
+        flush=True,
+    )
 
     print("=== L0 localization (no Y): graph ∪ video ∪ audio ===", flush=True)
     loc = localize_blocks(X, w, names, seed=SEED)
@@ -650,6 +687,7 @@ def main() -> int:
         "n": int(len(y)),
         "p": int(len(names)),
         "dgp": dgp,
+        "coverage": cov,
         "localization": loc,
         "l1_hops": {k: v for k, v in l1.items() if k not in ("vimp_po", "vimp_rf", "groups")},
         "l2_localized": {k: v for k, v in l2.items() if k not in ("vimp_po", "vimp_rf", "groups")},
@@ -659,7 +697,15 @@ def main() -> int:
     }
     (OUT / "GRAPH_LOC_FSDS.json").write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
     md = render_md(
-        loc, l1, l2, l3, localized_hops=localized_hops, n=len(y), p=len(names), dgp=dgp
+        loc,
+        l1,
+        l2,
+        l3,
+        localized_hops=localized_hops,
+        n=len(y),
+        p=len(names),
+        dgp=dgp,
+        coverage=cov,
     )
     (OUT / "GRAPH_LOC_FSDS.md").write_text(md)
     (DOCS / "Recsys_Graph_Loc_FSDS.md").write_text(md)

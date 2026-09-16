@@ -3,9 +3,82 @@
   "not_causal": true,
   "y": "y_post_clk_1d",
   "n": 12564,
-  "p": 18,
+  "p": 146,
+  "dgp": {
+    "n_catalog": 10000,
+    "emb_dim": 64,
+    "video_ids": "randint(0, 1e10, 10000)",
+    "video_emb": "student_t_df3",
+    "audio_ids": "randint(0, 1e10, 10000)",
+    "audio_emb": "uniform_minus1_1",
+    "merchant_attach": "zipf_subset_k4_15_plus_theme16_plus_t_bias",
+    "user_agg": "left_window_clk_cnv_visit_mean_pool",
+    "not_real_embeddings": true,
+    "n_video_ids": 10000,
+    "n_audio_ids": 10000,
+    "n_merch_attached": 400,
+    "n_user_pooled": 3808,
+    "video_id_min": 428264,
+    "video_id_max": 9998364784,
+    "audio_id_min": 274232,
+    "audio_id_max": 9996982677
+  },
   "localization": {
     "ranked": [
+      {
+        "family": "audio_tower",
+        "n_feat": 64,
+        "rf_domain_auc": 0.853292197923577,
+        "moved": true,
+        "cols": [
+          "aud_00",
+          "aud_01",
+          "aud_02",
+          "aud_03",
+          "aud_04",
+          "aud_05",
+          "aud_06",
+          "aud_07",
+          "\u2026"
+        ],
+        "rf_vimp_top": {
+          "aud_06": 0.04321526958920978,
+          "aud_47": 0.036361543664007484,
+          "aud_24": 0.03626026376280532,
+          "aud_48": 0.03390001537879613,
+          "aud_46": 0.031678023370623934,
+          "aud_53": 0.030284722610195842,
+          "aud_57": 0.0280957752924172,
+          "aud_55": 0.027485414653284468
+        }
+      },
+      {
+        "family": "video_tower",
+        "n_feat": 64,
+        "rf_domain_auc": 0.8288504157709757,
+        "moved": true,
+        "cols": [
+          "vid_00",
+          "vid_01",
+          "vid_02",
+          "vid_03",
+          "vid_04",
+          "vid_05",
+          "vid_06",
+          "vid_07",
+          "\u2026"
+        ],
+        "rf_vimp_top": {
+          "vid_29": 0.04560212111548223,
+          "vid_24": 0.041224819917735425,
+          "vid_21": 0.03548463255361605,
+          "vid_20": 0.033852335166265284,
+          "vid_16": 0.031621842986282046,
+          "vid_18": 0.02963747227049155,
+          "vid_56": 0.02867471388692362,
+          "vid_60": 0.027871696272491413
+        }
+      },
       {
         "family": "user_connectivity",
         "n_feat": 2,
@@ -15,7 +88,7 @@
           "g_u_item_deg",
           "g_u_merch_deg"
         ],
-        "rf_vimp": {
+        "rf_vimp_top": {
           "g_u_item_deg": 0.5531163363798047,
           "g_u_merch_deg": 0.44688366362019527
         }
@@ -29,7 +102,7 @@
           "g_i_user_deg",
           "g_i_coclick_deg"
         ],
-        "rf_vimp": {
+        "rf_vimp_top": {
           "g_i_user_deg": 0.9534791163859612,
           "g_i_coclick_deg": 0.04652088361403876
         }
@@ -45,70 +118,88 @@
           "g_m_clust",
           "g_m_proj_deg"
         ],
-        "rf_vimp": {
-          "g_m_user_deg": 0.21718945307207724,
-          "g_m_pr": 0.25199296929643894,
+        "rf_vimp_top": {
           "g_m_clust": 0.30590044188574667,
-          "g_m_proj_deg": 0.22491713574573724
+          "g_m_pr": 0.25199296929643894,
+          "g_m_proj_deg": 0.22491713574573724,
+          "g_m_user_deg": 0.21718945307207724
         }
       }
     ],
     "localized_families": [
+      "audio_tower",
+      "video_tower",
       "user_connectivity"
     ]
   },
   "l1_hops": {
-    "rf_domain_auc": 0.7808276759860816,
-    "po_risk": 0.00017849265424499969,
+    "rf_domain_auc": 0.8461254268356977,
+    "po_risk": 0.00016419222936309518,
     "family_n": {
       "funnel_order": 5,
       "funnel_user": 5,
       "graph_item": 2,
       "graph_merchant": 4,
-      "graph_user": 2
+      "graph_user": 2,
+      "tower_audio": 64,
+      "tower_video": 64
     },
     "po_mass": {
-      "funnel_order": 0.17277901827683895,
-      "funnel_user": 0.5205648742798588,
-      "graph_item": 0.04357846428913374,
-      "graph_merchant": 0.212165377640128,
-      "graph_user": 0.05091226551304042
+      "funnel_order": 0.08362604287342774,
+      "funnel_user": 0.2005748334797136,
+      "graph_item": 0.0021566356093870266,
+      "graph_merchant": 0.07769592286249331,
+      "graph_user": 0.007725320954979267,
+      "tower_audio": 0.31796916129955183,
+      "tower_video": 0.3102520829194472
     },
     "rf_mass": {
-      "funnel_order": 0.16213182265810433,
-      "funnel_user": 0.6618297917680177,
-      "graph_item": 0.004045763371369218,
-      "graph_merchant": 0.019557266330356798,
-      "graph_user": 0.15243535587115178
+      "funnel_order": 0.0750919109236159,
+      "funnel_user": 0.25201755201465803,
+      "graph_item": 0.0,
+      "graph_merchant": 0.0013113837199676685,
+      "graph_user": 0.055623414210547555,
+      "tower_audio": 0.30793799737284944,
+      "tower_video": 0.3080177417573614
     },
     "logo": {
       "funnel_order": {
-        "R_minus": 0.00015406643480539534,
-        "delta": 2.4426219439604345e-05
+        "R_minus": 0.0001672745754893284,
+        "delta": -3.0823461262332067e-06
       },
       "funnel_user": {
-        "R_minus": 0.0004146956483976687,
-        "delta": -0.00023620299415266901
+        "R_minus": 0.00039086980233543275,
+        "delta": -0.00022667757297233757
       },
       "graph_item": {
-        "R_minus": 0.00015024014822396213,
-        "delta": 2.8252506021037558e-05
+        "R_minus": 0.0001700831226006632,
+        "delta": -5.8908932375680175e-06
       },
       "graph_merchant": {
-        "R_minus": 0.00016189652613315624,
-        "delta": 1.6596128111843442e-05
+        "R_minus": 0.0001435930416889815,
+        "delta": 2.0599187674113687e-05
       },
       "graph_user": {
-        "R_minus": 0.00018529973480316305,
-        "delta": -6.807080558163362e-06
+        "R_minus": 0.00020711362968618284,
+        "delta": -4.292140032308766e-05
+      },
+      "tower_audio": {
+        "R_minus": 0.00013474702785588568,
+        "delta": 2.9445201507209505e-05
+      },
+      "tower_video": {
+        "R_minus": 0.00015082260906167428,
+        "delta": 1.3369620301420906e-05
       }
     },
     "logo_share": {
-      "funnel_order": 0.3525986390061074,
+      "funnel_order": 0.0,
       "funnel_user": 0.0,
-      "graph_item": 0.4078320509713335,
-      "graph_merchant": 0.23956929558730694,
-      "graph_user": 0.0
+      "graph_item": 0.0,
+      "graph_merchant": 0.3248365387601378,
+      "graph_user": 0.0,
+      "tower_audio": 0.46433274418469384,
+      "tower_video": 0.21083070128578257
     },
     "names": [
       "life_ctr",
@@ -128,48 +219,372 @@
       "g_m_user_deg",
       "g_m_pr",
       "g_m_clust",
-      "g_m_proj_deg"
+      "g_m_proj_deg",
+      "vid_00",
+      "vid_01",
+      "vid_02",
+      "vid_03",
+      "vid_04",
+      "vid_05",
+      "vid_06",
+      "vid_07",
+      "vid_08",
+      "vid_09",
+      "vid_10",
+      "vid_11",
+      "vid_12",
+      "vid_13",
+      "vid_14",
+      "vid_15",
+      "vid_16",
+      "vid_17",
+      "vid_18",
+      "vid_19",
+      "vid_20",
+      "vid_21",
+      "vid_22",
+      "vid_23",
+      "vid_24",
+      "vid_25",
+      "vid_26",
+      "vid_27",
+      "vid_28",
+      "vid_29",
+      "vid_30",
+      "vid_31",
+      "vid_32",
+      "vid_33",
+      "vid_34",
+      "vid_35",
+      "vid_36",
+      "vid_37",
+      "vid_38",
+      "vid_39",
+      "vid_40",
+      "vid_41",
+      "vid_42",
+      "vid_43",
+      "vid_44",
+      "vid_45",
+      "vid_46",
+      "vid_47",
+      "vid_48",
+      "vid_49",
+      "vid_50",
+      "vid_51",
+      "vid_52",
+      "vid_53",
+      "vid_54",
+      "vid_55",
+      "vid_56",
+      "vid_57",
+      "vid_58",
+      "vid_59",
+      "vid_60",
+      "vid_61",
+      "vid_62",
+      "vid_63",
+      "aud_00",
+      "aud_01",
+      "aud_02",
+      "aud_03",
+      "aud_04",
+      "aud_05",
+      "aud_06",
+      "aud_07",
+      "aud_08",
+      "aud_09",
+      "aud_10",
+      "aud_11",
+      "aud_12",
+      "aud_13",
+      "aud_14",
+      "aud_15",
+      "aud_16",
+      "aud_17",
+      "aud_18",
+      "aud_19",
+      "aud_20",
+      "aud_21",
+      "aud_22",
+      "aud_23",
+      "aud_24",
+      "aud_25",
+      "aud_26",
+      "aud_27",
+      "aud_28",
+      "aud_29",
+      "aud_30",
+      "aud_31",
+      "aud_32",
+      "aud_33",
+      "aud_34",
+      "aud_35",
+      "aud_36",
+      "aud_37",
+      "aud_38",
+      "aud_39",
+      "aud_40",
+      "aud_41",
+      "aud_42",
+      "aud_43",
+      "aud_44",
+      "aud_45",
+      "aud_46",
+      "aud_47",
+      "aud_48",
+      "aud_49",
+      "aud_50",
+      "aud_51",
+      "aud_52",
+      "aud_53",
+      "aud_54",
+      "aud_55",
+      "aud_56",
+      "aud_57",
+      "aud_58",
+      "aud_59",
+      "aud_60",
+      "aud_61",
+      "aud_62",
+      "aud_63"
     ]
   },
   "l2_localized": {
-    "rf_domain_auc": 0.6347983804919504,
-    "po_risk": 0.0005994511158083901,
+    "rf_domain_auc": 0.8420799228682128,
+    "po_risk": 0.00040674291409525216,
     "family_n": {
-      "user_connectivity": 2
+      "audio_tower": 64,
+      "user_connectivity": 2,
+      "video_tower": 64
     },
     "po_mass": {
-      "user_connectivity": 0.9999999999989999
+      "audio_tower": 0.49271627367798404,
+      "user_connectivity": 0.07182337274079688,
+      "video_tower": 0.43546035358021895
     },
     "rf_mass": {
-      "user_connectivity": 0.9999999999989999
+      "audio_tower": 0.4856862168415601,
+      "user_connectivity": 0.09039920903840441,
+      "video_tower": 0.4239145741190354
     },
     "logo": {
+      "audio_tower": {
+        "R_minus": 0.00046739053564779265,
+        "delta": -6.064762155254049e-05
+      },
       "user_connectivity": {
-        "R_minus": NaN,
-        "delta": NaN
+        "R_minus": 0.00047619690080094996,
+        "delta": -6.94539867056978e-05
+      },
+      "video_tower": {
+        "R_minus": 0.0004173085554093417,
+        "delta": -1.0565641314089539e-05
       }
     },
     "logo_share": {
-      "user_connectivity": NaN
+      "audio_tower": 0.0,
+      "user_connectivity": 0.0,
+      "video_tower": 0.0
     },
     "names": [
       "g_u_item_deg",
-      "g_u_merch_deg"
+      "g_u_merch_deg",
+      "vid_00",
+      "vid_01",
+      "vid_02",
+      "vid_03",
+      "vid_04",
+      "vid_05",
+      "vid_06",
+      "vid_07",
+      "vid_08",
+      "vid_09",
+      "vid_10",
+      "vid_11",
+      "vid_12",
+      "vid_13",
+      "vid_14",
+      "vid_15",
+      "vid_16",
+      "vid_17",
+      "vid_18",
+      "vid_19",
+      "vid_20",
+      "vid_21",
+      "vid_22",
+      "vid_23",
+      "vid_24",
+      "vid_25",
+      "vid_26",
+      "vid_27",
+      "vid_28",
+      "vid_29",
+      "vid_30",
+      "vid_31",
+      "vid_32",
+      "vid_33",
+      "vid_34",
+      "vid_35",
+      "vid_36",
+      "vid_37",
+      "vid_38",
+      "vid_39",
+      "vid_40",
+      "vid_41",
+      "vid_42",
+      "vid_43",
+      "vid_44",
+      "vid_45",
+      "vid_46",
+      "vid_47",
+      "vid_48",
+      "vid_49",
+      "vid_50",
+      "vid_51",
+      "vid_52",
+      "vid_53",
+      "vid_54",
+      "vid_55",
+      "vid_56",
+      "vid_57",
+      "vid_58",
+      "vid_59",
+      "vid_60",
+      "vid_61",
+      "vid_62",
+      "vid_63",
+      "aud_00",
+      "aud_01",
+      "aud_02",
+      "aud_03",
+      "aud_04",
+      "aud_05",
+      "aud_06",
+      "aud_07",
+      "aud_08",
+      "aud_09",
+      "aud_10",
+      "aud_11",
+      "aud_12",
+      "aud_13",
+      "aud_14",
+      "aud_15",
+      "aud_16",
+      "aud_17",
+      "aud_18",
+      "aud_19",
+      "aud_20",
+      "aud_21",
+      "aud_22",
+      "aud_23",
+      "aud_24",
+      "aud_25",
+      "aud_26",
+      "aud_27",
+      "aud_28",
+      "aud_29",
+      "aud_30",
+      "aud_31",
+      "aud_32",
+      "aud_33",
+      "aud_34",
+      "aud_35",
+      "aud_36",
+      "aud_37",
+      "aud_38",
+      "aud_39",
+      "aud_40",
+      "aud_41",
+      "aud_42",
+      "aud_43",
+      "aud_44",
+      "aud_45",
+      "aud_46",
+      "aud_47",
+      "aud_48",
+      "aud_49",
+      "aud_50",
+      "aud_51",
+      "aud_52",
+      "aud_53",
+      "aud_54",
+      "aud_55",
+      "aud_56",
+      "aud_57",
+      "aud_58",
+      "aud_59",
+      "aud_60",
+      "aud_61",
+      "aud_62",
+      "aud_63"
     ]
   },
   "l3_loco": [
     {
+      "name": "aud_30",
+      "hop": "tower_audio",
+      "loco_dR": 2.9411277883706653e-05
+    },
+    {
+      "name": "vid_28",
+      "hop": "tower_video",
+      "loco_dR": 6.122892167027545e-06
+    },
+    {
+      "name": "vid_08",
+      "hop": "tower_video",
+      "loco_dR": -3.957873272686873e-07
+    },
+    {
       "name": "g_u_item_deg",
       "hop": "graph_user",
-      "loco_dR": 1.6556347496088743e-05
+      "loco_dR": -4.480020751568823e-06
     },
     {
       "name": "g_u_merch_deg",
       "hop": "graph_user",
-      "loco_dR": 1.2094992140688869e-05
+      "loco_dR": -1.0283764233234892e-05
+    },
+    {
+      "name": "vid_00",
+      "hop": "tower_video",
+      "loco_dR": -1.546147613683575e-05
+    },
+    {
+      "name": "aud_55",
+      "hop": "tower_audio",
+      "loco_dR": -1.6643980952505555e-05
+    },
+    {
+      "name": "aud_43",
+      "hop": "tower_audio",
+      "loco_dR": -1.7942914764611782e-05
     }
   ],
+  "l3_loco_names": [
+    "g_u_merch_deg",
+    "g_u_item_deg",
+    "aud_55",
+    "aud_43",
+    "vid_08",
+    "vid_28",
+    "vid_00",
+    "aud_30"
+  ],
   "localized_hops": [
+    "tower_audio",
+    "tower_video",
     "graph_user"
-  ]
+  ],
+  "coverage": {
+    "vid_zero_early": 0.034998409163219855,
+    "vid_zero_late": 0.04730805989168525,
+    "aud_zero_early": 0.034998409163219855,
+    "aud_zero_late": 0.04730805989168525,
+    "vid_norm_early": 2.7903748733759253,
+    "vid_norm_late": 3.06872955838309,
+    "aud_norm_early": 2.0102275927500934,
+    "aud_norm_late": 2.2048475896688795
+  }
 }
