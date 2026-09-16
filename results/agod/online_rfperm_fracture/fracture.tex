@@ -1,0 +1,35 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath}
+\title{OnlineRFPerm fracture perturbations:\\detecting inference breaks}
+\author{CFPerm}
+\date{\today}
+\begin{document}
+\maketitle
+No fire on a quiet stream $\approx$ inference looks fine under the RF probe. A mid-stream fracture / concept-drift change should fire---timestamping an inference break.
+Clock: $n=200$, $n_{\mathrm{ref}}=100$, win$=20$, $\gamma=1.25$.
+\begin{table}[h]\centering
+\caption{Fracture detection delay (trail observation index).}
+\begin{tabular}{lllrr}
+\toprule dataset & perturbation & $y$ & freeze & slide \\
+\midrule
+halueval & invent\_fracture & 0.00$\to$1.00 & 0 & 1 \\
+halueval & label\_flip & 0.00$\to$1.00 & 0 & 1 \\
+halueval & answer\_corrupt & 0.00$\to$1.00 & 0 & 1 \\
+squad & invent\_fracture & 0.00$\to$1.00 & 0 & 1 \\
+squad & label\_flip & 0.00$\to$1.00 & 0 & 1 \\
+squad & answer\_corrupt & 0.00$\to$1.00 & 0 & 1 \\
+hotpotqa & invent\_fracture & 0.00$\to$1.00 & 0 & 1 \\
+hotpotqa & label\_flip & 0.00$\to$1.00 & 0 & 1 \\
+hotpotqa & answer\_corrupt & 0.00$\to$1.00 & 0 & 1 \\
+truthfulqa & invent\_fracture & 0.00$\to$1.00 & 0 & 1 \\
+truthfulqa & label\_flip & 0.00$\to$1.00 & 0 & 1 \\
+truthfulqa & answer\_corrupt & 0.00$\to$1.00 & 0 & 1 \\
+boolq & invent\_fracture & 0.00$\to$1.00 & 0 & 1 \\
+boolq & label\_flip & 0.00$\to$1.00 & 0 & 1 \\
+boolq & answer\_corrupt & 0.00$\to$1.00 & 0 & 1 \\
+nq_open & invent\_fracture & 0.00$\to$1.00 & 0 & 1 \\
+nq_open & label\_flip & 0.00$\to$1.00 & 0 & 1 \\
+nq_open & answer\_corrupt & 0.00$\to$1.00 & 0 & 1 \\
+\bottomrule\end{tabular}\end{table}
+\end{document}

@@ -159,3 +159,22 @@ PYTHONPATH=. python3 scripts/agod/online_rfperm_multi_datasets.py \
 
 1. 前提是 $Y$/特征诚实（answer-precision 等）。标签烂也会「假丝滑」。  
 2. smooth_control 不火 = gate 没胡乱报警；hop 火 + control 静 = RF 真看到了制度差。
+
+---
+
+## 7. Fracture（推理断裂）— 简单但实用
+
+> 不火 ≈ 推理正常；中间突然 fracture / concept drift → 给断裂打时间戳。
+
+脚本：`scripts/agod/online_rfperm_fracture_perturb.py`  
+报告：`docs/biz/ONLINERFPERM_FRACTURE_PERTURB.md`
+
+扰动（$t=n_{\mathrm{ref}}$ 起突然变）：
+
+| kind | 断裂类型 |
+|------|----------|
+| `invent_fracture` | 生成制度断：invent + 去 grounding |
+| `label_flip` | concept drift：$Y$ 翻转 |
+| `answer_corrupt` | 忠实度断：答案打乱 |
+
+六套卡（HaluEval / SQuAD / Hotpot / TruthfulQA / BoolQ / NQ-open）× 三种扰动：freeze delay=0，slide delay=1；smooth 全静。

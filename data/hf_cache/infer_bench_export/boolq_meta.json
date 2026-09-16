@@ -1,0 +1,9 @@
+{
+  "dataset": "boolq",
+  "n": 200,
+  "fields": [
+    "question",
+    "knowledge",
+    "gold"
+  ]
+}
