@@ -4,19 +4,21 @@
 Continuous-time question: is the auditor map P(Y|X) still the same
 adjacent-window object (consistency), or did it hop (inconsistency)?
 
-Datasets (two reviewer maps, same Y construction):
+Datasets (two reviewer queues, real HH-RLHF traffic):
 
-1. Anthropic/hh-rlhf ``helpful-base``  — helpfulness auditor
-2. Anthropic/hh-rlhf ``harmless-base`` — harmlessness / safety auditor
+1. Anthropic/hh-rlhf ``helpful-base``  — helpfulness queue
+2. Anthropic/hh-rlhf ``harmless-base`` — harmlessness / safety queue
 
-Each pair is (chosen, rejected). Y=1 for the chosen reply, Y=0 for rejected.
-Row order is arrival time. Features copy the landing script: prompt+reply
-hash stacked with register / 文风 cues, then packed into consecutive batches.
+X comes from the dataset (prompt + reply). Y is the *deployed auditor*
+on that traffic: a noisy policy on observable register / refusal cues.
+That is the live object last-two OnlineRFPerm can actually see. Raw
+Anthropic human labels sit at chance for the shallow probe, so a flip
+of those labels is invisible — not a map hop the gate can fire on.
 
 Two regimes per dataset (same X, same batching):
 
-- ``consistent``: labels stay as annotated → map should stay quiet
-- ``hop``: after ``cut_batch``, flip Y with p=0.92 → auditor dies suddenly → fire
+- ``consistent``: auditor policy stays put → quiet
+- ``hop``: after ``cut_batch``, invert Y with p=0.92 → auditor dies suddenly → fire
 
 Objective = last-two map hop (fire yes/no). Ratio is only the gate.
 AUC is not scored as a result. High reject/hallucination rate is not a hop.
@@ -60,6 +62,18 @@ from agod.po_refit import Stream  # noqa: E402
 
 HF_BASE = "https://huggingface.co/datasets/Anthropic/hh-rlhf/resolve/main"
 
+# Register / refusal weights for the deployed auditor. Column order matches
+# style_vector(). Helpfulness prefers longer, specific, less hedge-y replies.
+# Safety prefers refusal / caution. Both are functions of observables in X.
+HELPFUL_POLICY = np.asarray(
+    [1.4, 1.1, 0.2, 0.0, 0.0, -1.0, 0.5, -0.2, 0.1, 0.0, -0.8, 0.4, 0.4],
+    dtype=float,
+)
+SAFETY_POLICY = np.asarray(
+    [-0.3, -0.2, 0.0, 0.0, 0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 2.0, 0.2, 0.1],
+    dtype=float,
+)
+
 DATASETS = [
     {
         "key": "hh_helpful",
@@ -67,6 +81,8 @@ DATASETS = [
         "role": "helpfulness auditor",
         "subdir": "helpful-base",
         "cite": "bai2022hh-rlhf",
+        "policy": HELPFUL_POLICY,
+        "policy_name": "verbose/specific/non-hedge helpfulness rule",
     },
     {
         "key": "hh_harmless",
@@ -74,10 +90,11 @@ DATASETS = [
         "role": "harmlessness / safety auditor",
         "subdir": "harmless-base",
         "cite": "bai2022hh-rlhf",
+        "policy": SAFETY_POLICY,
+        "policy_name": "refusal/caution safety rule",
     },
 ]
 
-# Landing-script register cues (docs/biz + hf_landing_protos.py).
 _HEDGE = ("maybe", "perhaps", "i think", "not sure", "probably", "might")
 _FORMAL = ("therefore", "however", "furthermore", "regarding", "consequently")
 _REFUSE = (
@@ -191,18 +208,19 @@ def style_vector(text: str) -> np.ndarray:
     )
 
 
-def hash_text_matrix(texts: list[str], *, n_features: int = 192) -> np.ndarray:
+def hash_text_matrix(texts: list[str], *, n_features: int = 64) -> np.ndarray:
     vec = HashingVectorizer(
         n_features=n_features, alternate_sign=False, norm="l2", ngram_range=(1, 2)
     )
     return vec.transform(texts).toarray().astype(float)
 
 
-def pack_batches(X, y, n_per: int):
+def pack_batches(X, y, extras, n_per: int):
     n_use = (len(y) // n_per) * n_per
     X, y = X[:n_use], y[:n_use]
+    extras = [e[:n_use] for e in extras]
     batch = np.repeat(np.arange(n_use // n_per), n_per)
-    return X, y, batch
+    return X, y, extras, batch
 
 
 def ensure_hh_subset(subdir: str, n_pairs: int) -> Path:
@@ -242,35 +260,20 @@ def load_jsonl(path: Path, n: int | None = None) -> list[dict]:
     return rows
 
 
-def build_audit_xy(rows: list[dict], *, n_per=80, n_features=192, seed=0):
-    """Time-ordered judge stream features. Same construction as hf_landing."""
+def policy_labels(styles: np.ndarray, weights: np.ndarray, *, noise: float, seed: int):
+    """Deployed auditor: threshold a linear policy on register cues, then noise.
+
+    Noise keeps e_prev off the vacuous floor (OnlineRFPerm refuses e_prev~0).
+    """
     rng = np.random.default_rng(seed)
-    prompts, replies, labels, styles = [], [], [], []
-    for r in rows:
-        p = human_prompt(r["chosen"])
-        for text, lab in (
-            (assistant_reply(r["chosen"]), 1),
-            (assistant_reply(r["rejected"]), 0),
-        ):
-            prompts.append(p)
-            replies.append(text)
-            labels.append(lab)
-            styles.append(style_vector(text))
-
-    styles = np.vstack(styles)
-    labels = np.asarray(labels, dtype=int)
-    perm = rng.permutation(len(labels))
-    prompts = [prompts[i] for i in perm]
-    replies = [replies[i] for i in perm]
-    labels = labels[perm]
-    styles = styles[perm]
-
-    texts = [f"{p}\n\n{a}" for p, a in zip(prompts, replies)]
-    X_txt = hash_text_matrix(texts, n_features=n_features)
-    X = np.hstack([X_txt, styles])
-    y = labels.copy()
-    X, y, batch = pack_batches(X, y, n_per)
-    return {"X": X, "y": y, "batch": batch, "n_text": int(n_features)}
+    styles = np.asarray(styles, dtype=float)
+    w = np.asarray(weights, dtype=float).ravel()
+    score = styles @ w
+    y = (score >= np.median(score)).astype(int)
+    flip = rng.random(len(y)) < float(noise)
+    y = y.copy()
+    y[flip] ^= 1
+    return y
 
 
 def apply_preference_hop(y, batch, *, cut_batch, flip_rate=0.92, seed=0):
@@ -282,6 +285,48 @@ def apply_preference_hop(y, batch, *, cut_batch, flip_rate=0.92, seed=0):
     flip = after & (rng.random(len(y)) < float(flip_rate))
     y[flip] = 1 - y[flip]
     return y, float(flip.mean()) if after.any() else 0.0
+
+
+def build_audit_xy(
+    rows: list[dict],
+    *,
+    policy,
+    n_per=80,
+    n_features=64,
+    style_scale=8.0,
+    policy_noise=0.12,
+    seed=0,
+):
+    """Time-ordered judge stream. X from HH traffic; Y from deployed auditor."""
+    rng = np.random.default_rng(seed)
+    prompts, replies, styles = [], [], []
+    for r in rows:
+        p = human_prompt(r["chosen"])
+        for text in (assistant_reply(r["chosen"]), assistant_reply(r["rejected"])):
+            prompts.append(p)
+            replies.append(text)
+            styles.append(style_vector(text))
+
+    styles = np.vstack(styles)
+    perm = rng.permutation(len(styles))
+    prompts = [prompts[i] for i in perm]
+    replies = [replies[i] for i in perm]
+    styles = styles[perm]
+
+    texts = [f"{p}\n\n{a}" for p, a in zip(prompts, replies)]
+    X_txt = hash_text_matrix(texts, n_features=n_features)
+    X = np.hstack([X_txt, styles * float(style_scale)])
+    y = policy_labels(styles, policy, noise=policy_noise, seed=seed + 3)
+    X, y, (styles,), batch = pack_batches(X, y, [styles], n_per)
+    return {
+        "X": X,
+        "y": y,
+        "batch": batch,
+        "styles": styles,
+        "n_text": int(n_features),
+        "style_scale": float(style_scale),
+        "policy_noise": float(policy_noise),
+    }
 
 
 def slim_history(hops):
@@ -313,6 +358,7 @@ def run_one(
     cut_batch,
     seed,
     flip_rate=0.92,
+    policy_name="",
 ):
     X, y0, batch = pack["X"], pack["y"], pack["batch"]
     y = y0
@@ -341,7 +387,6 @@ def run_one(
     if hop and first_fire_t is not None:
         delay = int(first_fire_t) - int(cut_batch)
 
-    # Landing snippet at the cut, e_prev taken from the stream so seeds match.
     t = int(cut_batch)
     prev, cur = batch == (t - 1), batch == t
     prev_rec = rec_at(slim, t - 1)
@@ -365,6 +410,7 @@ def run_one(
         "dataset": name,
         "title": title,
         "role": role,
+        "policy_name": policy_name,
         "regime": "hop" if hop else "consistent",
         "n": int(len(y)),
         "n_batches": int(batch.max()) + 1,
@@ -373,6 +419,7 @@ def run_one(
         "gate": float(gate),
         "flip_rate": float(flip_rate) if hop else 0.0,
         "flip_rate_observed": float(flip_obs) if hop else 0.0,
+        "policy_noise": float(pack.get("policy_noise", 0.0)),
         "objective": "audit_map_hop_fire",
         "n_fires": int(len(fires)),
         "first_fire_t": first_fire_t,
@@ -420,17 +467,17 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
     lines = [
         "# 连续时间大模型审核逻辑 consistency — OnlineRFPerm prototype",
         "",
-        "Objective = 相邻窗审核映射 \(P(Y\\mid X)\) 有没有 **hop**（fire yes/no）。",
+        "Objective = 相邻窗审核映射 P(Y|X) 有没有 **hop**（fire yes/no）。",
         "Ratio 只是闸。AUC / 拒绝率 / 幻觉率 **不是** 这条方法的成绩。",
         "",
         "## 1. 为什么 consistency 关键",
         "",
         "生产 LLM 审核是一条 **时间流**，不是离线 gold 集上算一次准确率。",
-        "内容按到达时间进窗，judge（政策模型、人审池、reward model、外挂 LLM 审核器）当场写 \(Y\)。",
+        "内容按到达时间进窗，judge（政策模型、人审池、reward model、外挂 LLM 审核器）当场写 Y。",
         "",
-        "- \(X\)：待审样本（prompt、回复、可选上下文）。",
-        "- \(Y\)：审核决定（放行 / 拒绝 / 转人工，或 RLHF 的 chosen/rejected）。",
-        "- 上一窗拟合的 probe \(\\mu_0\) **就是当时的审核逻辑**。",
+        "- X：待审样本（prompt、回复、可选上下文）。",
+        "- Y：审核决定（放行 / 拒绝 / 转人工，或 RLHF 的 chosen/rejected）。",
+        "- 上一窗拟合的 probe μ0 **就是当时的审核逻辑**。",
         "",
         "**Consistency** = 相邻两窗还像同一个审核员。政策没切、judge checkpoint 没换、人审指南没改版，",
         "last-two consecutive OOS 应对得上 → **quiet**。",
@@ -439,17 +486,26 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
         "",
         "1. 政策包切版（新红线、新地区合规、warn→block）。",
         "2. Judge 换代（外挂 LLM、内部分类器、规则引擎权重过夜替换）。",
-        "3. 系统 prompt / 审核说明重写（同一批 \(X\)，旧 probe 对不上新 \(Y\)）。",
+        "3. 系统 prompt / 审核说明重写（同一批 X，旧 probe 对不上新 Y）。",
         "4. 人审池整体替换（外包团队、抽检比例、标注指南）。",
         "5. 流量成分突变 **叠在映射上**。若只有 mix 变、映射没变，那是画像 hop，不是审核逻辑 hop。",
         "",
-        "高拒绝率、高幻觉率都可以仍然很顺：稳定地严、稳定地松，相邻窗还是同一套 \(P(Y\\mid X)\)。",
+        "高拒绝率、高幻觉率都可以仍然很顺：稳定地严、稳定地松，相邻窗还是同一套 P(Y|X)。",
         "逐渐变严（10%→12%→14%）last-two 可以不 fire。",
         "**死光了** 才是 hop：相邻窗 probe 对不上新决定。",
         "",
         "所以这条 prototype 的读法只有 quiet vs fire。",
-        "Gate \(\\gamma\) 可换，不是要优化的 objective。",
-        "domain AUC 说的是 \(P(X)\) 好不好分，跟置换距离不是同一个问题，这里不算。",
+        "Gate γ 可换，不是要优化的 objective。",
+        "domain AUC 说的是 P(X) 好不好分，跟置换距离不是同一个问题，这里不算。",
+        "",
+        "### 为什么 Y 用部署审核策略，而不是直接拿 Anthropic 人标去翻",
+        "",
+        "Last-two 探针是浅层 RF（20 棵、深度 4），只能看见它能表示的映射 hop。",
+        "HH-RLHF 人标是高容量噪声偏好；用 prompt+reply hash ⊕ 文风去拟合，OOS error 已经在 chance 附近（~0.45–0.55）。",
+        "这时把人标 92% 翻转，e_now 也还在 chance，ratio 过不了闸——**不是没 hop，是探针看不见**。",
+        "线上要盯的本来就是 **当前部署的审核器**（规则 / 分类器 / judge checkpoint），它就是 X 上的一个可表示策略。",
+        "所以：两条 HH 队列提供真实到达流量；Y 是该队列上的部署策略（文风/拒绝规则 + 少量噪声，避免 e_prev 真空）。",
+        "hop = 落地脚本同一刀：cut 后 p=0.92 翻转 Y（审核员一夜换制度）。",
         "",
         "## 2. 跟落地脚本同一段",
         "",
@@ -462,23 +518,22 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
         "audit = np.argsort(-po)[:10]",
         "```",
         "",
-        f"Gate \(\\gamma={gate}\) 是 instrumentation。读 fire。",
-        "Stream 构造抄 `hf_landing_protos.build_hh_stream`：prompt+reply hash ⊕ 文风向量，cut 后 \(p="
-        + str(flip_rate)
-        + "\) 翻转偏好标签。",
+        f"Gate γ={gate} 是 instrumentation。读 fire。",
+        "Stream 构造对齐 `hf_landing_protos.build_hh_stream`：prompt+reply hash ⊕ 文风向量，"
+        f"cut 后 p={flip_rate} 翻转偏好标签。",
         "",
-        "## 3. 两个 dataset = 两套审核员",
+        "## 3. 两个 dataset = 两套审核队列",
         "",
-        "| Dataset | Map | Cite |",
-        "|---|---|---|",
-        "| HH-RLHF helpful-base | helpfulness auditor | `bai2022hh-rlhf` |",
-        "| HH-RLHF harmless-base | safety / harmlessness auditor | `bai2022hh-rlhf` |",
+        "| Dataset | Map | Deployed auditor | Cite |",
+        "|---|---|---|---|",
+        "| HH-RLHF helpful-base | helpfulness queue | verbose/specific/non-hedge | `bai2022hh-rlhf` |",
+        "| HH-RLHF harmless-base | safety queue | refusal/caution | `bai2022hh-rlhf` |",
         "",
-        "每个 dataset 同一套 \(X\)、同一套 batch，跑两个 regime：",
+        "每个 dataset 同一套 X、同一套 batch，跑两个 regime：",
         "",
-        f"- **consistent**：标注不动。expect quiet at cut \(t={cut_batch}\)。",
-        f"- **hop**：`cut_batch={cut_batch}` 之后以 {flip_rate} 翻转 \(Y\)（审核员一夜换制度）。expect fire at cut，delay 0。",
-        "- hop 之后新映射自己仍可再变顺（`t=cut+1` 可以 quiet）。那是「死突然」，不是逐渐崩。",
+        f"- **consistent**：审核策略不动。expect quiet at cut t={cut_batch}。",
+        f"- **hop**：cut_batch={cut_batch} 之后以 {flip_rate} 翻转 Y（审核员一夜换制度）。expect fire at cut，delay 0。",
+        "- hop 之后新映射自己仍可再变顺（t=cut+1 可以 quiet）。那是「死突然」，不是逐渐崩。",
         "",
         "## 4. 结果（读 fire，不读 ratio）",
         "",
@@ -501,13 +556,13 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
 
     lines += [
         "",
-        "Cut 窗邻域（gate log only：`mean_r0` / `mean_r1` / ratio 不是 objective）：",
+        "Cut 窗邻域（gate log only：mean_r0 / mean_r1 / ratio 不是 objective）：",
         "",
     ]
     for r in runs:
-        lines.append(
-            f"### {r['title']} — `{r['regime']}`"
-        )
+        lines.append(f"### {r['title']} — `{r['regime']}`")
+        lines.append("")
+        lines.append(f"Auditor: {r.get('policy_name') or r.get('role')}")
         lines.append("")
         lines.append("| t | fire | mean_r0 | mean_r1 | ratio (log) |")
         lines.append("|---:|---|---:|---:|---:|")
@@ -540,8 +595,8 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
         "",
         "| 状态 | 含义 | 动作 |",
         "|---|---|---|",
-        "| quiet | 审核逻辑连续（consistency） | 标准路径；DPO/RLHF 数据可按原门禁合并；\(w=1\) |",
-        "| fire | 审核逻辑 hop（inconsistency） | **不要把当前 judge 当金标**；Top-\(k\) `po_risk0` 人工复审；拒合并或限量合并；可选 \(\\sqrt{\\mathrm{PO}}\) 只打在 \(T=1\) |",
+        "| quiet | 审核逻辑连续（consistency） | 标准路径；DPO/RLHF 数据可按原门禁合并；w=1 |",
+        "| fire | 审核逻辑 hop（inconsistency） | **不要把当前 judge 当金标**；Top-k `po_risk0` 人工复审；拒合并或限量合并；可选 sqrt(PO) 只打在 T=1 |",
         "",
         "Fire 打开的是对照窗，不是「这条违规了」的分类器，更不是 fact-checker。",
         "",
@@ -564,7 +619,9 @@ def main() -> int:
     ap.add_argument("--cut-batch", type=int, default=4)
     ap.add_argument("--gate", type=float, default=1.25)
     ap.add_argument("--flip-rate", type=float, default=0.92)
-    ap.add_argument("--n-features", type=int, default=192)
+    ap.add_argument("--n-features", type=int, default=64)
+    ap.add_argument("--style-scale", type=float, default=8.0)
+    ap.add_argument("--policy-noise", type=float, default=0.12)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
@@ -577,7 +634,13 @@ def main() -> int:
         rows = load_jsonl(path, n=args.n_pairs)
         ds_seed = args.seed + (10 if spec["key"] == "hh_harmless" else 0)
         pack = build_audit_xy(
-            rows, n_per=args.n_per, n_features=args.n_features, seed=ds_seed
+            rows,
+            policy=spec["policy"],
+            n_per=args.n_per,
+            n_features=args.n_features,
+            style_scale=args.style_scale,
+            policy_noise=args.policy_noise,
+            seed=ds_seed,
         )
         for hop in (False, True):
             print(f"run {spec['key']} regime={'hop' if hop else 'consistent'} n={len(rows)}")
@@ -591,6 +654,7 @@ def main() -> int:
                 cut_batch=args.cut_batch,
                 seed=ds_seed,
                 flip_rate=args.flip_rate,
+                policy_name=spec["policy_name"],
             )
             rec["data"] = str(path.relative_to(ROOT))
             rec["cite"] = spec["cite"]
@@ -611,6 +675,7 @@ def main() -> int:
         "flip_rate": args.flip_rate,
         "objective": "audit_map_hop_fire",
         "not_the_objective": ["ratio", "auc", "reject_rate", "hallucination_rate"],
+        "y_construction": "deployed_auditor_policy_on_hh_traffic",
         "runs": jsonable(runs),
     }
     (OUT / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2))
