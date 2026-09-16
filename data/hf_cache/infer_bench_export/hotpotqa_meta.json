@@ -1,11 +1,11 @@
 {
-  "dataset": "halueval",
+  "dataset": "hotpotqa",
   "n": 300,
   "fields": [
     "question",
     "knowledge",
     "gold"
   ],
-  "path": "/workspace/data/hf_cache/infer_bench_export/halueval.jsonl",
+  "path": "/workspace/data/hf_cache/infer_bench_export/hotpotqa.jsonl",
   "note": "quiet=knowledge in prompt; hop=drop knowledge + invent"
 }

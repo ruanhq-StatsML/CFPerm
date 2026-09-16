@@ -1,0 +1,26 @@
+{
+  "n_ref_min": 100,
+  "recommended": {
+    "n_per": 20,
+    "cut_batch": 5,
+    "n_batches": 10
+  },
+  "datasets": {
+    "halueval": {
+      "n": 300,
+      "path": "/workspace/data/hf_cache/infer_bench_export/halueval.jsonl"
+    },
+    "squad": {
+      "n": 300,
+      "path": "/workspace/data/hf_cache/infer_bench_export/squad.jsonl"
+    },
+    "hotpotqa": {
+      "n": 300,
+      "path": "/workspace/data/hf_cache/infer_bench_export/hotpotqa.jsonl"
+    },
+    "truthfulqa": {
+      "n": 300,
+      "path": "/workspace/data/hf_cache/infer_bench_export/truthfulqa.jsonl"
+    }
+  }
+}
