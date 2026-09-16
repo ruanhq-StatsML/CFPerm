@@ -1,0 +1,232 @@
+% =============================================================================
+% OnlineRFPerm on LLM inference streams --- draft for editing
+% Four datasets as tidy DataFrames; n_ref >= 100; manuscript first_k tables.
+% You can rewrite freely on top of this scaffold.
+% =============================================================================
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath,hyperref,enumitem}
+\usepackage[T1]{fontenc}
+\title{OnlineRFPerm on LLM Inference Streams:\\
+Four QA Datasets as Tidy DataFrames}
+\author{CFPerm use-case draft (edit freely)}
+\date{\today}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note is a blunt serving use-case, not a new LLM method.
+We cast four public QA corpora into the same tidy stream form
+\texttt{t\_idx / batch / question / answer / y}, freeze a shallow probe on a
+reference window with $n_{\mathrm{ref}}\ge 100$, and run OnlineRFPerm as an
+online regime clock on the trail.
+Quiet batches keep knowledge/context in the prompt; hop batches drop context
+and force invent-style decoding, inducing a quality-law change.
+We report fire index and detection delay, and (optionally) compare to the
+\texttt{onlinePermOOB} baseline bank under the manuscript
+\texttt{first}$_k$ counting rule.
+Numbers below are from the current CPU/mock scaffold and are meant as a
+starting point for your edits---not a final claim set.
+\end{abstract}
+
+\section{What this is / is not}
+\paragraph{Is.}
+A production-shaped wiring:
+live (or simulated) LLM answers $\to$ tidy dataframe $\to$ OnlineRFPerm fire
+$\to$ action route (\texttt{model\_rollback} / \texttt{retrieval\_refresh} /
+\texttt{audit\_topk}).
+\paragraph{Is not.}
+A fact checker, a causal root-cause engine, or an LLM training paper.
+Fire only opens a contrast window and a gate.
+
+\section{Data form: tidy DataFrame}
+All four datasets are stored as pandas DataFrames (parquet), matching the HH
+tidy stream convention discussed earlier:
+
+\begin{verbatim}
+t_idx | batch | dataset | question | answer | y | hopped | rag_hit | faith | ...
+\end{verbatim}
+
+\begin{center}\small
+\begin{tabular}{lll}
+\toprule
+layer & path & role \\
+\midrule
+source QA & \texttt{results/agod/infer\_dataframes/*\_source.parquet}
+  & question / knowledge / gold \\
+serving stream & \texttt{results/agod/infer\_dataframes/*\_stream\_table.parquet}
+  & generated answer + $y$ + batch clock \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Production swap: keep the parquet schema; replace \texttt{answer} with your
+serving log and \texttt{y} with human correction / judge / escalation.
+
+\section{Datasets}
+We use four inference-oriented QA sets (each materialized with $n=300$ source
+rows; streams below use $n=200$ with $n_{\mathrm{ref}}=100$):
+
+\begin{table}[h]
+\centering
+\caption{Dataset card.}
+\begin{tabular}{lll}
+\toprule
+dataset & knowledge / context & role \\
+\midrule
+HaluEval & knowledge snippet & hallucination / faithfulness \\
+SQuAD & passage context & grounded extractive QA \\
+HotpotQA & multi-paragraph context & multi-hop grounded QA \\
+TruthfulQA & correct-answer bank as knowledge & misconception / faithfulness \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Regime construction (shared).}
+\begin{itemize}[leftmargin=1.2em]
+\item \textbf{Quiet} (batch $<$ cut): system $=$ faithful; prompt includes knowledge.
+\item \textbf{Hop} (batch $\ge$ cut): system $=$ invent; knowledge removed.
+\item Label $y=1$ (bad) from low token-overlap faithfulness vs.\ knowledge
+(plus light invent-style heuristics on the hop window).
+\end{itemize}
+
+\section{Protocol}
+\paragraph{Clock.}
+$n_{\mathrm{per}}=20$, $\mathrm{cut}=5$ $\Rightarrow$
+$n_{\mathrm{ref}}=n_{\mathrm{per}}\times\mathrm{cut}=100$ (meets the
+$n_{\mathrm{ref}}\ge 100$ requirement). Total $n_{\mathrm{batches}}=10$ so the
+trail has length $100$ observations / $5$ batches.
+
+\paragraph{OnlineRFPerm (batch).}
+On consecutive batches $B_{t-1},B_t$:
+\begin{align*}
+\mu_0 &\leftarrow \mathrm{fit\_online\_probe}(X_{t-1},Y_{t-1}),\\
+e_t &= \mathrm{err}(\mu_0; X_t,Y_t),\\
+\mathrm{fire}_t &\iff e_{t-1}\ge e_{\mathrm{floor}}
+  \;\wedge\; e_t/e_{t-1}\ge \gamma.
+\end{align*}
+Reported: first fire batch, detection delay $=\mathrm{fire}-\mathrm{cut}$,
+and quiet/hop mean $y$.
+
+\paragraph{Manuscript \texttt{first}$_k$ (for baseline tables).}
+Let \texttt{det} be the boolean trail (batches \emph{after} cut only). Then
+\begin{verbatim}
+def first_k_consecutive(det, k):
+    det = np.asarray(det, dtype=bool)
+    for i in range(len(det) - k + 1):
+        if det[i:i+k].all():
+            return i   # trail batch index; 0 = first batch after cut
+    return None
+\end{verbatim}
+So \texttt{first}$_2$ $=$ ``从第几个 trail batch 开始，头一回连续两个 fire''.
+
+\section{Main OnlineRFPerm table}
+Current scaffold run (mock backend on the four streams; replace with
+transformers/vLLM when regenerating):
+
+\begin{table}[h]
+\centering
+\caption{OnlineRFPerm on four infer datasets
+($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$).}
+\begin{tabular}{lrrrrrl}
+\toprule
+dataset & $n$ & $n_{\mathrm{ref}}$ & cut & fire & delay & $y_{\mathrm{bad}}$ quiet$\to$hop \\
+\midrule
+halueval   & 200 & 100 & 5 & 5   & 0   & 0.00$\to$1.00 \\
+squad      & 200 & 100 & 5 & 5   & 0   & 0.00$\to$1.00 \\
+hotpotqa   & 200 & 100 & 5 & --- & --- & 1.00$\to$1.00 \\
+truthfulqa & 200 & 100 & 5 & 5   & 0   & 0.00$\to$0.98 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Read (draft).}
+On HaluEval / SQuAD / TruthfulQA the hop is sharp: quiet $y$ near zero, hop $y$
+near one, and OnlineRFPerm fires at cut (delay $0$).
+HotpotQA in this mock scaffold is already saturated in the quiet window
+($y\approx 1$), so there is no usable contrast---treat as a negative control /
+featurization TODO (long contexts $\Rightarrow$ overlap labels need tightening),
+not as a method failure.
+
+\section{Baseline bank (optional; OOB recipe)}
+Following \texttt{onlinePermOOB\_algo.py}: freeze a probe on the reference
+window, build a scalar error stream, then run BOCPD / Page--Hinkley / ADWIN /
+frouros (DDM, STEPD, HDDMA, ECDDWT).
+Report manuscript Table~1/2 style \texttt{first}$_k$ on \emph{trail batches}.
+(Paste updated numbers here after re-running
+\texttt{scripts/agod/bench\_infer\_detectors.py} on the $n_{\mathrm{ref}}=100$
+streams.)
+
+\begin{table}[h]
+\centering
+\caption{Placeholder --- Table 1 style: first rejection ($k=1$), trail batch index.}
+\begin{tabular}{lrrrr}
+\toprule
+Method & HaluEval & SQuAD & HotpotQA & TruthfulQA \\
+\midrule
+OnlineRFPerm & 0 & 0 & --- & 0 \\
+BOCPD &  &  &  &  \\
+Page--Hinkley &  &  &  &  \\
+ADWIN &  &  &  &  \\
+DDM / STEPD / HDDMA / ECDDWT &  &  &  &  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Placeholder --- Table 2 style: sustained onsets $k=2$ / $k=3$.}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+ & \multicolumn{2}{c}{HaluEval} & \multicolumn{2}{c}{SQuAD}
+ & \multicolumn{2}{c}{HotpotQA} & \multicolumn{2}{c}{TruthfulQA} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Method & $k=2$ & $k=3$ & $k=2$ & $k=3$ & $k=2$ & $k=3$ & $k=2$ & $k=3$ \\
+\midrule
+OnlineRFPerm &  &  &  &  &  &  &  &  \\
+\ldots &  &  &  &  &  &  &  &  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Action routing (product sentence)}
+On fire:
+\begin{itemize}[leftmargin=1.2em]
+\item low \texttt{rag\_hit} $\to$ \texttt{retrieval\_refresh};
+\item fire with adequate retrieval support $\to$
+\texttt{model\_rollback} / canary + \texttt{audit\_topk} via \texttt{po\_risk0}.
+\end{itemize}
+Quiet $\to$ standard path, weights anneal to uniform.
+
+\section{Draft conclusion (for you to sharpen)}
+\begin{enumerate}[leftmargin=1.2em]
+\item The use-case is intentionally blunt: dataframe streams + OnlineRFPerm clock.
+\item With $n_{\mathrm{ref}}=100$, three of four datasets show delay-$0$ fires at
+the injected hop; HotpotQA needs label/context handling before it is diagnostic.
+\item Baselines should be scored with the same \texttt{first}$_k$ trail-batch
+rule as the PointCloud note; delay alone is not enough.
+\item Next edits: regenerate streams with a real CPU/transformers (or vLLM)
+backend; fill baseline tables; tighten Hotpot faithfulness; optionally attach
+acted-vs-ignored ¥ only if a ledger is back on.
+\end{enumerate}
+
+\section{Reproduce}
+\begin{verbatim}
+PYTHONPATH=. python3 scripts/agod/prepare_infer_datasets.py --n 300
+PYTHONPATH=. python3 scripts/agod/online_rfperm_multi_datasets.py \
+  --backend mock --n-per 20 --cut-batch 5 --n-batches 10
+# DataFrames: results/agod/infer_dataframes/*_{source,stream_table}.parquet
+\end{verbatim}
+
+\paragraph{Paths.}
+\begin{itemize}[leftmargin=1.2em]
+\item Source / stream dataframes:
+\texttt{results/agod/infer\_dataframes/}
+\item Multi-run summaries:
+\texttt{results/agod/online\_rfperm\_multi\_datasets/}
+\item This draft:
+\texttt{docs/biz/ONLINERFPERM\_INFER\_DRAFT.tex}
+\end{itemize}
+
+\end{document}

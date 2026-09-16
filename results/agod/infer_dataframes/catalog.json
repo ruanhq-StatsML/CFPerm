@@ -1,0 +1,16 @@
+{
+  "form": "tidy DataFrame: t_idx | batch | dataset | question | answer | y | ...",
+  "n_ref": 100,
+  "n_per": 20,
+  "cut_batch": 5,
+  "files": [
+    "halueval_source.parquet",
+    "halueval_stream_table.parquet",
+    "hotpotqa_source.parquet",
+    "hotpotqa_stream_table.parquet",
+    "squad_source.parquet",
+    "squad_stream_table.parquet",
+    "truthfulqa_source.parquet",
+    "truthfulqa_stream_table.parquet"
+  ]
+}
