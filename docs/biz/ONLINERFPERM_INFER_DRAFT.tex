@@ -7,28 +7,26 @@
 \usepackage{booktabs,amsmath,amssymb,hyperref,enumitem}
 \usepackage[T1]{fontenc}
 \title{OnlineRFPerm on LLM Inference Streams:\\
-Four QA Datasets under a Shared Serving Form}
+Justifying a Shared Tidy Serving Form}
 \author{CFPerm}
 \date{\today}
 \begin{document}
 \maketitle
 
 \begin{abstract}
-We treat OnlineRFPerm as a \emph{serving monitor}, not as a new language-model
-method. Four public QA corpora---HaluEval, SQuAD, HotpotQA, and TruthfulQA---are
-cast into one tidy stream
-\texttt{t\_idx / batch / question / answer / y}.
-A shallow probe is frozen on a reference window with
-$n_{\mathrm{ref}}=100$, and OnlineRFPerm is run as an online regime clock on
-the trail. Quiet batches keep knowledge in the prompt; hop batches drop context
-and force invent-style decoding, inducing a quality-law change.
-We report fire index, detection delay, quiet/hop label rates, and a full
-\texttt{first}$_k$ comparison against the \texttt{onlinePermOOB} detector bank
-(BOCPD, Page--Hinkley, ADWIN, DDM, STEPD, HDDMA, ECDDWT) under the manuscript
-trail-batch consecutive-fire rule.
-On three of four datasets OnlineRFPerm fires at the hop (delay~$0$).
-HotpotQA is a negative control under the current overlap label: quiet $y$ is
-already saturated, so there is no regime contrast to detect.
+The contribution of this note is a \emph{data formulation}, not a new
+detector. Four public QA corpora---HaluEval, SQuAD, HotpotQA, and
+TruthfulQA---are cast into one tidy serving stream
+\texttt{t\_idx / batch / question / answer / y}, isomorphic to the HH
+preference stream already used with OnlineRFPerm.
+Once the table exists, the rest is standard: freeze a shallow probe on a
+reference window with $n_{\mathrm{ref}}=100$, run OnlineRFPerm as an online
+regime clock on the trail, and score manuscript \texttt{first}$_k$ against the
+\texttt{onlinePermOOB} bank.
+Quiet batches keep knowledge in the prompt; hop batches drop context and force
+invent-style decoding.
+On three of four datasets OnlineRFPerm fires at the hop (delay~$0$);
+HotpotQA is a negative control under saturated quiet labels.
 \end{abstract}
 
 \section{Scope}
@@ -53,56 +51,117 @@ answer is factually wrong.
 Those are adjacent product layers; they are not required to make the monitor
 claim.
 
-\section{Data form}
-All four datasets share the same pandas/parquet schema
-(aligned with the HH tidy stream convention):
-\begin{verbatim}
-t_idx | batch | dataset | question | answer | y | hopped | rag_hit | faith | ...
-\end{verbatim}
+\section{Formulation of data (the justify)}
+\label{sec:form}
+\paragraph{Why formulate at all.}
+OnlineRFPerm consumes a \emph{batch-indexed labeled stream}
+$(X_t,Y_t)_{t=0}^{T-1}$, not raw JSONL and not an LLM leaderboard.
+Heterogeneous QA corpora only become a serving-monitor use-case after they are
+rewritten into that object. The formulation below is the isomorphism that makes
+HaluEval / SQuAD / HotpotQA / TruthfulQA (and a production assistant log) the
+\emph{same} input as the HH tidy preference stream.
 
+\paragraph{Atomic row.}
+One row $=$ one served turn:
+\begin{verbatim}
+t_idx | batch | question | answer | y
+\end{verbatim}
 \begin{center}\small
 \begin{tabular}{lll}
 \toprule
-layer & path & role \\
+column & meaning & OnlineRFPerm role \\
 \midrule
-source QA & \texttt{results/agod/infer\_dataframes/*\_source.parquet}
-  & question / knowledge / gold \\
-serving stream & \texttt{results/agod/infer\_dataframes/*\_stream\_table.parquet}
-  & generated answer + $y$ + batch clock \\
+\texttt{t\_idx} & stream time (serving order) & index of the online clock \\
+\texttt{batch} & $\lfloor t_{\mathrm{idx}}/n_{\mathrm{per}}\rfloor$
+  & window $B_t$ for fit / OOS error \\
+\texttt{question} & user / query text & builds $X$ (with answer) \\
+\texttt{answer} & model output at $t$ & builds $X$; production log swap \\
+$y$ & badness label in $\{0,1\}$ & $Y$ for the probe \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
-Production swap: keep the schema; replace \texttt{answer} with the serving log
-and $y$ with human correction, judge score, or escalation.
+Auxiliary columns (\texttt{dataset}, \texttt{hopped}, \texttt{rag\_hit},
+\texttt{faith}, \texttt{knowledge}, \texttt{gold}, \texttt{system}) are
+\emph{audit / routing} fields. They are not required for the fire rule; they
+justify how $y$ was built and which arm to pull after fire.
 
-\section{Datasets and regime construction}
+\paragraph{Two layers, one schema.}
+\begin{center}\small
+\begin{tabular}{lll}
+\toprule
+layer & path & role \\
+\midrule
+source QA & \texttt{*\_source.parquet}
+  & \texttt{question / knowledge / gold} (static card) \\
+serving stream & \texttt{*\_stream\_table.parquet}
+  & generated \texttt{answer} + $y$ + batch clock \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Isomorphism with HH.}
+The HH preference stream is already
+\texttt{t\_idx | batch | question | answer | y | feature}.
+Inference QA uses the same skeleton; only the \emph{semantics} of $y$ change
+(preference $\to$ faithfulness / correction / escalation). Feature construction
+($X$) may be hash, style$\oplus$hash, or embeddings---swap the matrix, keep the
+table. That is the justify sentence: \emph{LLM serving enters OnlineRFPerm by
+becoming an HH-shaped tidy stream}.
+
+\paragraph{Why four corpora collapse.}
+Public QA sets differ in knowledge packaging (snippet, passage, multi-paragraph,
+answer bank), but every turn still has a query, a generated answer, and a
+gradable quality bit. Casting them into one schema is what lets a single
+protocol ($n_{\mathrm{per}}$, cut, $n_{\mathrm{ref}}$, \texttt{first}$_k$) be
+reported once rather than as four ad-hoc scripts.
+
+\paragraph{Regime construction inside the form.}
+Quiet / hop is a \emph{column discipline}, not a separate file format:
+\begin{itemize}[leftmargin=1.2em]
+\item \textbf{Quiet} (batch $<$ cut): faithful system; knowledge present;
+\texttt{hopped}=False.
+\item \textbf{Hop} (batch $\ge$ cut): invent system; knowledge removed;
+\texttt{hopped}=True.
+\item $y=1$ from low token-overlap faithfulness vs.\ knowledge (plus light
+invent-style heuristics on the hop window).
+\end{itemize}
+Reference length is then automatic:
+$n_{\mathrm{ref}}=n_{\mathrm{per}}\times\mathrm{cut}$.
+With $n_{\mathrm{per}}=20$, cut$=5$, one gets $n_{\mathrm{ref}}=100$ without
+changing the schema.
+
+\paragraph{Production swap (same form).}
+Keep the parquet columns. Replace \texttt{answer} with the serving log and $y$
+with the best available label source, in priority order
+\texttt{human\_correction} $>$ judge score $>$ escalation $>$ synthetic
+faithfulness. Do \emph{not} invent a second table shape for ``real'' traffic.
+
+\paragraph{What the form refuses to encode.}
+The tidy stream does not claim factual correctness of a single answer, does not
+encode causal root cause, and does not carry ¥. Those attach \emph{after} fire
+(contrast window, route, optional ledger). Formulation stops at making the
+monitor applicable.
+
+\section{Datasets under the form}
 Each source set is materialized with $n=300$ rows; streams below use $n=200$
 with $n_{\mathrm{ref}}=100$.
 
 \begin{table}[h]
 \centering
-\caption{Dataset card.}
+\caption{Dataset card (all share the Section~\ref{sec:form} schema).}
 \begin{tabular}{lll}
 \toprule
-dataset & knowledge / context & role in this note \\
+dataset & knowledge / context & role under the form \\
 \midrule
-HaluEval & knowledge snippet & hallucination / faithfulness \\
+HaluEval & knowledge snippet & hallucination / faithfulness $y$ \\
 SQuAD & passage context & grounded extractive QA \\
-HotpotQA & multi-paragraph context & multi-hop grounded QA \\
+HotpotQA & multi-paragraph context & multi-hop; label stress test \\
 TruthfulQA & correct-answer bank as knowledge & misconception / faithfulness \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\paragraph{Shared regime.}
-\begin{itemize}[leftmargin=1.2em]
-\item \textbf{Quiet} (batch $<$ cut): faithful system prompt; knowledge included.
-\item \textbf{Hop} (batch $\ge$ cut): invent system prompt; knowledge removed.
-\item Label $y=1$ (bad) from low token-overlap faithfulness against knowledge,
-with light invent-style heuristics on the hop window.
-\end{itemize}
 
 \section{Protocol}
 \paragraph{Clock.}
@@ -254,15 +313,17 @@ a free win: a serving monitor that stays permanently on is operationally costly.
 
 \section{Conclusion}
 \begin{enumerate}[leftmargin=1.2em]
-\item The use-case is intentionally narrow: tidy inference streams + OnlineRFPerm
-as a regime clock.
-\item With $n_{\mathrm{ref}}=100$, three of four datasets show delay-$0$ fires at
-the injected hop; HotpotQA needs label/context handling before it is diagnostic.
+\item The hard justify is the data form:
+\texttt{t\_idx / batch / question / answer / y} makes LLM serving isomorphic to
+the HH OnlineRFPerm stream. Detectors, gates, and routes then reuse existing
+machinery.
+\item With that form and $n_{\mathrm{ref}}=100$, three of four datasets show
+delay-$0$ fires at the injected hop; HotpotQA needs label/context handling
+before it is diagnostic.
 \item Baselines must be scored with the same trail-batch \texttt{first}$_k$ rule;
 raw delay alone is not enough for manuscript comparison.
-\item The next hardening steps are a real generator backend, tighter Hotpot
-faithfulness, and quiet-window false-fire calibration---not a new detector
-family.
+\item Remaining work is hardening inside the form (real generator, Hotpot $y$,
+quiet false-fire calibration)---not inventing a new table shape.
 \end{enumerate}
 
 \section{Reproduce}
