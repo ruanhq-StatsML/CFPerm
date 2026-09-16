@@ -1,11 +1,33 @@
 % LLM judge / audit-logic hop. Requires booktabs.
-% Numbers: HH-RLHF helpful-base OnlineRFPerm, gate γ=1.25, cut B4.
+% Objective = map hop (RFPerm/PO). Ratio = gate. AUC = sidecar, not the objective.
+
+\begin{table}[ht]
+\centering
+\caption{Objective versus instrumentation. The method asks whether the
+audit map hopped. Ratio is a trigger. AUC scores a different problem.}
+\label{tab:llm-audit-objective}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Object & Role & Matches the objective? \\
+\midrule
+Last-two fire / RFPerm vs launch probe &
+did \(P(Y\mid X)\) hop / drift & yes \\
+\(e_{\mathrm{now}}/e_{\mathrm{prev}}\) &
+engineering gate only & no \\
+Domain AUC / \(\texttt{po\_risk0}\) AUROC &
+separability sidecar & no \\
+Reject rate / pos-rate &
+level of \(Y\), not a map hop & no \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[ht]
 \centering
 \caption{Two layers for LLM audit. Smoothness is consecutive-window
 changepoint; trustworthiness is degradation versus a frozen launch probe.
-A slowly stricter policy can stay smooth; a overnight policy/judge swap is the hop.}
+A slowly stricter policy can stay smooth; an overnight policy/judge swap is the hop.}
 \label{tab:llm-audit-two-layers}
 \small
 \begin{tabular}{@{}p{3.4cm}p{4.2cm}p{5.2cm}@{}}
@@ -13,11 +35,11 @@ A slowly stricter policy can stay smooth; a overnight policy/judge swap is the h
 Question & Statistic & Audit reading \\
 \midrule
 Is the audit chain still smooth? &
-Last-two hop: \(e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma\) &
-Same rubric, same judge: do adjacent batches still look like one map? \\
+last-two hop (fire yes/no) &
+same rubric, same judge: do adjacent batches still look like one map? \\
 Is the auditor still trustworthy? &
 RFPerm vs frozen launch probe &
-Even a silky tightening can be caught before the old gold label is unusable. \\
+even a silky tightening can be caught before the old gold label is unusable. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -25,40 +47,36 @@ Even a silky tightening can be caught before the old gold label is unusable. \\
 \begin{table}[ht]
 \centering
 \caption{RFPerm-as-Judge on Anthropic HH-RLHF helpful-base
-(\(n=4000\), 50 batches \(\times\) 80, cut \(B_4\), \(\gamma=1.25\)).
-Quiet \(t=2\) does not fire; the cut hop fires in the same window (delay 0).
-Judge error \(0.147\to 0.539\) is the regime, not ``the judge suddenly became stupid.''}
+(\(n=4000\), 50 batches \(\times\) 80, cut \(B_4\)).
+Read fire, not the ratio. Quiet \(t=2\) silent; cut hops in-window (delay 0).}
 \label{tab:llm-audit-hh}
 \small
 \setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}l c c c c@{}}
+\begin{tabular}{@{}l c l@{}}
 \toprule
-Window & Fired & Ratio & Judge err / mix & Reading \\
+Window & Fire & Reading \\
 \midrule
-Quiet \(t=2\) & no & \(1.03\) & pos-rate \(0.48\) & audit map still smooth \\
-Cut \(t=4\) & yes & \(1.34\) & pos-rate \(0.59\) & preference map hopped \\
-Post-cut regime & --- & \(3.67\) & \(0.147\to 0.539\) & new audit law, then can be smooth again \\
+Quiet \(t=2\) & no & audit map still smooth \\
+Cut \(t=4\) & yes & preference map hopped \\
+Post-cut & --- & new audit law, then can be smooth again \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[ht]
 \centering
-\caption{What moved on the HH-RLHF cut. Style-domain AUC flags a \(P(X)\)
-register shift; last-two fire + judge-err ratio flags \(P(Y\mid X)\).
-Text-domain AUC near \(1/2\) says this was not a bag-of-words topic swap.}
+\caption{Sidecars on the HH-RLHF cut (not the objective).
+Style AUC says a \(P(X)\) register also moved; text AUC near \(1/2\)
+says this was not a bag-of-words topic swap. Neither is the hop test.}
 \label{tab:llm-audit-axes}
 \small
-\begin{tabular}{@{}l c l@{}}
+\begin{tabular}{@{}l l@{}}
 \toprule
-Axis & Number & Action if this axis dominates \\
+Sidecar & What it is allowed to say \\
 \midrule
-Audit map \(P(Y\mid X)\) & hop ratio \(1.34\); err ratio \(3.67\) &
-do not treat current judge as gold; Top-\(k\) \(\texttt{po\_risk0}\) re-review; block DPO merge \\
-Register \(P(X)\) & style AUC \(0.999\) &
-refresh the portrait / routing features, not necessarily the rubric \\
-Lexical mix & text AUC \(0.494\) &
-no action from bag-of-words domain shift \\
+Style-domain AUC & register portrait moved; refresh routing features \\
+Text-domain AUC & lexical mix did not drive the call \\
+Gate ratio / err ratio & log of the trigger, not a score we optimize \\
 \bottomrule
 \end{tabular}
 \end{table}
