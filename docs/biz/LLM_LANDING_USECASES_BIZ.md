@@ -292,6 +292,7 @@ Net(a) = V(a) − V(ignore) − cost_day(a)
 |------|------|
 | 本文 | use-case 地图 + 客服业务逻辑（无算法） |
 | `SUBSET_LOCALIZATION_AUDIT_TOWERS.md` | 子集定位 · 多塔/三塔 · 大模型审核场景 |
+| `WEEKLY_AUDIT_SAFETY_GRAPH_FSDS.md` | 周更审核 · 安全拒答 · 图谱→FSDS 两级定位 |
 | `CS_ASSISTANT_CONTRIBUTION.md` | 客服可复现贡献账数字 |
 | `CS_ASSISTANT_WEEKLY_OPS_BRIEF.md` | 周经营简报 |
 | `LANDING_CONTAIN_METHOD_ITER.md` | 落地场景清单 · 多承接 · 迭代 |
