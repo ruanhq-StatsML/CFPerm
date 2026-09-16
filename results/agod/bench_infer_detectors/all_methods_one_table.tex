@@ -1,0 +1,44 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.8in]{geometry}
+\usepackage{booktabs,amsmath}
+\title{All-method \texttt{first}$_k$ on four LLM inference streams}
+\author{CFPerm}
+\date{\today}
+\begin{document}
+\maketitle
+
+\noindent
+Trail-batch \texttt{first}$_k$ after cut
+($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$; answer-precision $Y$).
+Index $0$ $=$ first batch after cut; --- $=$ never.
+
+\begin{table}[h]
+\centering
+\small
+\caption{All methods: first$_k$ consecutive fires on trail batches.}
+\begin{tabular}{lrrrrrrrrrrrr}
+\toprule
+Method & \multicolumn{3}{c}{HaluEval} & \multicolumn{3}{c}{SQuAD}
+ & \multicolumn{3}{c}{HotpotQA} & \multicolumn{3}{c}{TruthfulQA} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
+ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$
+ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ \\
+\midrule
+OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+BOCPD        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+Page--Hinkley& 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+ADWIN        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+DDM          & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
+STEPD        & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
+HDDMA        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Notes.}
+Onset ($k{=}1$) aligns at index~$0$ on all four streams under answer-precision.
+Sustained $k{=}2,3$ stays hot mainly for DDM/STEPD/ECDDWT; ORF fires once then
+quiets. Default clock is $n_{\mathrm{per}}=20$ (not streaming $n_{\mathrm{per}}=1$).
+
+\end{document}

@@ -1,0 +1,56 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,hyperref,amsmath}
+\title{OnlineRFPerm on Live LLM Inference\\(Two Datasets, CPU)}
+\author{CFPerm use-case note}
+\date{\today}
+\begin{document}
+\maketitle
+
+\paragraph{Setup.}
+Blunt serving use-case only: generate with a small CPU model (\texttt{transformers}/\texttt{SmolLM2-135M-Instruct}), label faithfulness vs.\ context, run OnlineRFPerm, route \texttt{model\_rollback\_or\_audit\_topk} / \texttt{retrieval\_refresh}. Quiet batches keep context in the prompt; hop batches drop context and force invent-style decoding. Gate $\gamma=1.25$, $n_{\mathrm{per}}=12$, $B=6$, cut$=3$.
+
+\paragraph{Datasets.}
+(i)~\textbf{HaluEval} QA with knowledge snippets (\texttt{halueval\_qa\_3000.jsonl}); (ii)~\textbf{SQuAD} validation contexts (\texttt{squad\_val\_500.jsonl}).
+
+\begin{table}[h]
+\centering
+\caption{OnlineRFPerm on CPU live infer (two datasets).}
+\begin{tabular}{lrrrrlll}
+\toprule
+dataset & $n$ & cut & fire & delay & $y_{\mathrm{bad}}$ & rag\_hit & first action \\
+\midrule
+halueval & 72 & 3 & 3 & 0 & 0.19$\to$0.31 & 0.27$\to$0.22 & \texttt{model\_rollback\_or\_audit\_topk} \\
+squad & 72 & 3 & 5 & 2 & 0.75$\to$0.92 & 0.13$\to$0.07 & \texttt{model\_rollback\_or\_audit\_topk} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{halueval.} cut$=3$, first fire$=3$, delay$=0$.
+\begin{center}\small
+\begin{tabular}{rllrrrl}
+\toprule batch & regime & fired & ratio & $y_{\mathrm{bad}}$ & rag & action \\ \midrule
+0 & quiet & False & --- & 0.25 & 0.25 & \texttt{quiet\_pass} \\
+1 & quiet & False & 3.00 & 0.25 & 0.27 & \texttt{quiet\_pass} \\
+2 & quiet & False & 0.33 & 0.08 & 0.29 & \texttt{quiet\_pass} \\
+3 & hop & True & 4.00 & 0.33 & 0.26 & \texttt{model\_rollback\_or\_audit\_topk} \\
+4 & hop & False & 0.50 & 0.25 & 0.24 & \texttt{quiet\_pass} \\
+5 & hop & False & 0.50 & 0.33 & 0.17 & \texttt{quiet\_pass} \\
+\bottomrule\end{tabular}\end{center}
+
+\paragraph{squad.} cut$=3$, first fire$=5$, delay$=2$.
+\begin{center}\small
+\begin{tabular}{rllrrrl}
+\toprule batch & regime & fired & ratio & $y_{\mathrm{bad}}$ & rag & action \\ \midrule
+0 & quiet & False & --- & 0.67 & 0.15 & \texttt{quiet\_pass} \\
+1 & quiet & False & 3.00 & 0.67 & 0.15 & \texttt{quiet\_pass} \\
+2 & quiet & False & 0.00 & 0.92 & 0.10 & \texttt{quiet\_pass} \\
+3 & hop & False & 0.00 & 1.00 & 0.04 & \texttt{quiet\_pass} \\
+4 & hop & False & 1.00 & 0.92 & 0.08 & \texttt{quiet\_pass} \\
+5 & hop & True & 2.00 & 0.83 & 0.10 & \texttt{model\_rollback\_or\_audit\_topk} \\
+\bottomrule\end{tabular}\end{center}
+
+\paragraph{Takeaway.}
+Same wiring on both sets: \emph{live generate $\to$ OnlineRFPerm fire $\to$ action}. No new LLM method---only a timestamped quality hop on a real inference stream.
+
+\end{document}

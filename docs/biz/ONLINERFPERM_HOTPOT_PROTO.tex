@@ -1,0 +1,24 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath}
+\title{HotpotQA faithfulness prototype for OnlineRFPerm}
+\author{CFPerm}
+\date{\today}
+\begin{document}
+\maketitle
+\paragraph{Problem.}
+Default Jaccard-vs-full-distractor labeling saturates quiet $y\approx 1$ on Hotpot (long $K$, short $A$).
+\paragraph{Fix.}
+Use Hotpot \texttt{supporting\_facts} as \texttt{knowledge\_support}; label with answer-precision $|A\cap S|/|A|$ plus gold-hit.
+Clock: $n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$.
+\begin{table}[h]\centering
+\caption{Labeler contrast $\to$ OnlineRFPerm fire.}
+\begin{tabular}{lrrr}
+\toprule labeler & $y$ quiet$\to$hop & fire & delay \\
+\midrule
+y\_jaccard\_full & 1.00$\to$1.00 & --- & --- \\
+y\_jaccard\_support & 0.01$\to$0.99 & 5 & 0 \\
+y\_prec\_support & 0.00$\to$1.00 & 5 & 0 \\
+y\_prec\_and\_gold & 0.00$\to$1.00 & 5 & 0 \\
+\bottomrule\end{tabular}\end{table}
+\end{document}

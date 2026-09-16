@@ -1,0 +1,21 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath}
+\title{OnlineRFPerm multi-dataset LLM infer\\($n_{\mathrm{ref}}\ge 100$)}
+\author{CFPerm}
+\date{\today}
+\begin{document}
+\maketitle
+\paragraph{Datasets.}
+HaluEval, SQuAD, HotpotQA, TruthfulQA. Clock: $n_{\mathrm{per}}=20$, cut$=5$ $\Rightarrow n_{\mathrm{ref}}=100$.
+\begin{table}[h]\centering
+\caption{OnlineRFPerm on four infer datasets.}
+\begin{tabular}{lrrrrrl}
+\toprule dataset & $n$ & $n_{\mathrm{ref}}$ & cut & fire & delay & $y_{\mathrm{bad}}$ \\
+\midrule
+halueval & 200 & 100 & 5 & 5 & 0 & 0.00$\to$1.00 \\
+squad & 200 & 100 & 5 & 5 & 0 & 0.00$\to$1.00 \\
+hotpotqa & 200 & 100 & 5 & 5 & 0 & 0.00$\to$1.00 \\
+truthfulqa & 200 & 100 & 5 & 5 & 0 & 0.00$\to$1.00 \\
+\bottomrule\end{tabular}\end{table}
+\end{document}

@@ -1,0 +1,127 @@
+{
+  "hops": [
+    {
+      "batch": 0,
+      "fired": false,
+      "ratio": null,
+      "e_now": null,
+      "e_prev": null,
+      "mean_y_bad": 0.125,
+      "mean_rag_hit": 0.31439645593545684,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "quiet"
+    },
+    {
+      "batch": 1,
+      "fired": false,
+      "ratio": 4.0,
+      "e_now": 0.25,
+      "e_prev": 0.0,
+      "mean_y_bad": 0.25,
+      "mean_rag_hit": 0.26790644131971975,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "quiet"
+    },
+    {
+      "batch": 2,
+      "fired": false,
+      "ratio": 0.5,
+      "e_now": 0.125,
+      "e_prev": 0.25,
+      "mean_y_bad": 0.125,
+      "mean_rag_hit": 0.3397480447785079,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "quiet"
+    },
+    {
+      "batch": 3,
+      "fired": true,
+      "ratio": 2.5,
+      "e_now": 0.3125,
+      "e_prev": 0.125,
+      "mean_y_bad": 0.3125,
+      "mean_rag_hit": 0.22712141048957582,
+      "action": "model_rollback_or_audit_topk",
+      "audit_t": [
+        63,
+        62,
+        50,
+        60,
+        48
+      ],
+      "regime": "hop"
+    },
+    {
+      "batch": 4,
+      "fired": false,
+      "ratio": 0.8,
+      "e_now": 0.25,
+      "e_prev": 0.3125,
+      "mean_y_bad": 0.25,
+      "mean_rag_hit": 0.22716185040520587,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "hop"
+    },
+    {
+      "batch": 5,
+      "fired": true,
+      "ratio": 1.25,
+      "e_now": 0.3125,
+      "e_prev": 0.25,
+      "mean_y_bad": 0.4375,
+      "mean_rag_hit": 0.20036658524708087,
+      "action": "model_rollback_or_audit_topk",
+      "audit_t": [
+        87,
+        88,
+        91,
+        82,
+        83
+      ],
+      "regime": "hop"
+    }
+  ],
+  "cut_batch": 3,
+  "first_fire_batch": 3,
+  "detection_delay_batch": 0,
+  "X_dim": 73,
+  "n": 96,
+  "n_per": 16,
+  "n_batches": 6,
+  "gate": 1.25,
+  "audit_k": 5,
+  "mean_y_bad_quiet": 0.16666666666666666,
+  "mean_y_bad_hop": 0.3333333333333333,
+  "mean_rag_quiet": 0.3073503140112282,
+  "mean_rag_hop": 0.21821661538062087,
+  "backend": "transformers",
+  "model": "/workspace/data/models/SmolLM2-135M-Instruct",
+  "base_url": null,
+  "gen_seconds": 58.01902747154236,
+  "faith_thr": 0.18,
+  "stance": "live LLM infer stream \u2192 OnlineRFPerm fire \u2192 action route",
+  "samples": [
+    {
+      "batch": 0,
+      "regime": "quiet",
+      "question": "Which magazine was started first Arthur's Magazine or First for Women?",
+      "answer": "First for Women was started by Bauer Media Group in the USA.",
+      "faith": 0.39285714285714285,
+      "y_bad": 0.0,
+      "rag_hit": 0.39285714285714285
+    },
+    {
+      "batch": 3,
+      "regime": "hop",
+      "question": "What male actor starred in The Messenger?",
+      "answer": "The Messenger.",
+      "faith": 0.05263157894736842,
+      "y_bad": 1.0,
+      "rag_hit": 0.05263157894736842
+    }
+  ]
+}

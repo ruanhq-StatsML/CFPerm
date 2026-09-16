@@ -22,7 +22,8 @@
 4. 风格归因与图谱归因 **先并成特征维度**，再 L1→L2。
 
 **OnlineRFPerm → LLM 推理（low-hanging fruit）**：justify + 分阶段 roadmap 见  
-`ONLINERFPERM_LLM_INFER_ROADMAP.md`（接线 form → 路由 → Top-k 审计；不依赖客服账）。
+`ONLINERFPERM_LLM_INFER_ROADMAP.md`（接线 form → 路由 → Top-k 审计；不依赖客服账）。  
+**真推理流 use-case（transformers / vLLM）**：`ONLINERFPERM_LIVE_INFER.md` / `scripts/agod/online_rfperm_live_infer.py`。
 
 ---
 
@@ -187,6 +188,7 @@
 |--------|--------|--------|
 | **P0** | 保持 P1+P5+P6+**P6b** 可复现，对外用 §3 bulletin 表 | 三类落地 + 并维 + **画风迭代**已齐 |
 | **P0** | **OnlineRFPerm→LLM 推理 roadmap R0–R1**：生产 log adapter + 路由表 | low-hanging；详见 `ONLINERFPERM_LLM_INFER_ROADMAP.md` |
+| **P0** | **真推理流 use-case** `online_rfperm_live_infer.py`（transformers/vLLM） | HaluEval 真生成 → fire delay=0；见 `ONLINERFPERM_LIVE_INFER.md` |
 | **P1** | 加强 S4/S6：真实 embedding 替换 hash；path/tool 指标接生产日志 | 路由轴与智能体路径是误动作成本最高处 |
 | **P1** | S8 用一窗真实商户·作者·商品·订单切片跑 P6 `--alias graph` | 把「能实时」从示意变成业务维证据 |
 | **P2** | S10 周更/安全双跑最小门禁板（批式 RFPerm + 漏拒/误拒分列） | 防损高频，但不依赖客服账 |

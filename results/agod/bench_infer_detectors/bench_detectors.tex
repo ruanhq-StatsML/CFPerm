@@ -1,0 +1,59 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.8in]{geometry}
+\usepackage{booktabs,amsmath}
+\title{Detector bench: manuscript \texttt{first}$_k$ on LLM infer streams}
+\author{CFPerm}
+\date{\today}
+\begin{document}
+\maketitle
+
+\noindent
+Trail-batch \texttt{first}$_k$ after cut
+($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$; answer-precision $Y$).
+Index $0$ $=$ first batch after cut; --- $=$ never.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Table~1 style: first rejection ($k{=}1$), trail batch index.}
+\begin{tabular}{lrrrr}
+\toprule
+Method & HaluEval & SQuAD & HotpotQA & TruthfulQA \\
+\midrule
+OnlineRFPerm  & 0 & 0 & 0 & 0 \\
+BOCPD         & 0 & 0 & 0 & 0 \\
+Page--Hinkley & 0 & 0 & 0 & 0 \\
+ADWIN         & 0 & 0 & 0 & 0 \\
+DDM           & 0 & 0 & 0 & 0 \\
+STEPD         & 0 & 0 & 0 & 0 \\
+HDDMA         & 0 & 0 & 0 & 0 \\
+ECDDWT        & 0 & 0 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Table~2 style: sustained onsets ($k{=}2$ / $k{=}3$).}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+ & \multicolumn{2}{c}{HaluEval} & \multicolumn{2}{c}{SQuAD}
+ & \multicolumn{2}{c}{HotpotQA} & \multicolumn{2}{c}{TruthfulQA} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Method & $k{=}2$ & $k{=}3$ & $k{=}2$ & $k{=}3$
+ & $k{=}2$ & $k{=}3$ & $k{=}2$ & $k{=}3$ \\
+\midrule
+OnlineRFPerm  & --- & --- & --- & --- & --- & --- & --- & --- \\
+BOCPD         & --- & --- & --- & --- & --- & --- & --- & --- \\
+Page--Hinkley & --- & --- & --- & --- & --- & --- & --- & --- \\
+ADWIN         & --- & --- & --- & --- & --- & --- & --- & --- \\
+DDM           & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   \\
+STEPD         & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   \\
+HDDMA         & --- & --- & --- & --- & --- & --- & --- & --- \\
+ECDDWT        & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
