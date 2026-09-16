@@ -1,0 +1,113 @@
+% =============================================================================
+% SQuAD  —  local export: data/hf_cache/infer_bench_export/squad.jsonl (n=300)
+%
+% Recommended citation (SQuAD 1.1, published venue):
+%   \cite{rajpurkar-etal-2016-squad}
+%
+% If the export is SQuAD 2.0 / unanswerable questions, also cite:
+%   \cite{rajpurkar-etal-2018-know}
+% =============================================================================
+
+% --- primary: SQuAD 1.1, EMNLP 2016 -----------------------------------------
+@inproceedings{rajpurkar-etal-2016-squad,
+  title         = {{SQuAD}: 100,000+ Questions for Machine Comprehension of Text},
+  author        = {Rajpurkar, Pranav and Zhang, Jian and Lopyrev, Konstantin and Liang, Percy},
+  editor        = {Su, Jian and Duh, Kevin and Carreras, Xavier},
+  booktitle     = {Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing},
+  month         = nov,
+  year          = {2016},
+  address       = {Austin, Texas},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {2383--2392},
+  isbn          = {978-1-945626-25-8},
+  doi           = {10.18653/v1/D16-1264},
+  url           = {https://aclanthology.org/D16-1264/},
+  eprint        = {1606.05250},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  eprinttype    = {arxiv},
+  eprintclass   = {cs.CL},
+  pdf           = {https://aclanthology.org/D16-1264.pdf},
+  anthology     = {D16-1264},
+  dblp          = {https://dblp.org/rec/conf/emnlp/RajpurkarZLL16},
+  keywords      = {question answering, reading comprehension, Wikipedia, extractive QA, SQuAD},
+  abstract      = {We present the Stanford Question Answering Dataset (SQuAD), a new reading comprehension dataset consisting of 100,000+ questions posed by crowdworkers on a set of Wikipedia articles, where the answer to each question is a segment of text from the corresponding reading passage. We analyze the dataset to understand the types of reasoning required to answer the questions, leaning heavily on dependency and constituency trees. We build a strong logistic regression model, which achieves an F1 score of 51.0\%, a significant improvement over a simple baseline (20\%). However, human performance (86.8\%) is much higher, indicating that the dataset presents a good challenge problem for future research.},
+  note          = {Homepage: \url{https://rajpurkar.github.io/SQuAD-explorer/}. Hugging Face: \url{https://huggingface.co/datasets/rajpurkar/squad}. License: {CC BY-SA 4.0}. Local 300-example export: \texttt{data/hf\_cache/infer\_bench\_export/squad.jsonl}.}
+}
+
+@misc{rajpurkar2016squad-arxiv,
+  title         = {{SQuAD}: 100,000+ Questions for Machine Comprehension of Text},
+  author        = {Pranav Rajpurkar and Jian Zhang and Konstantin Lopyrev and Percy Liang},
+  year          = {2016},
+  eprint        = {1606.05250},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/1606.05250},
+  doi           = {10.48550/arXiv.1606.05250},
+  note          = {Preprint of rajpurkar-etal-2016-squad. Prefer the EMNLP 2016 venue citation.}
+}
+
+% --- SQuAD 2.0 / SQuADRUn, ACL 2018 -----------------------------------------
+@inproceedings{rajpurkar-etal-2018-know,
+  title         = {Know What You Don{'}t Know: Unanswerable Questions for {SQuAD}},
+  author        = {Rajpurkar, Pranav and Jia, Robin and Liang, Percy},
+  editor        = {Gurevych, Iryna and Miyao, Yusuke},
+  booktitle     = {Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers)},
+  month         = jul,
+  year          = {2018},
+  address       = {Melbourne, Australia},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {784--789},
+  isbn          = {978-1-948087-34-6},
+  doi           = {10.18653/v1/P18-2124},
+  url           = {https://aclanthology.org/P18-2124/},
+  eprint        = {1806.03822},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  pdf           = {https://aclanthology.org/P18-2124.pdf},
+  anthology     = {P18-2124},
+  dblp          = {https://dblp.org/rec/conf/acl/RajpurkarJL18},
+  keywords      = {question answering, unanswerable questions, SQuAD 2.0, reading comprehension},
+  abstract      = {Extractive reading comprehension systems can often locate the correct answer to a question in a context document, but they also tend to make unreliable guesses on questions for which the correct answer is not stated in the context. Existing datasets either focus exclusively on answerable questions, or use automatically generated unanswerable questions that are easy to identify. To address these weaknesses, we present SQuAD 2.0, the latest version of the Stanford Question Answering Dataset (SQuAD). SQuAD 2.0 combines existing SQuAD data with over 50,000 unanswerable questions written adversarially by crowdworkers to look similar to answerable ones. To do well on SQuAD 2.0, systems must not only answer questions when possible, but also determine when no answer is supported by the paragraph and abstain from answering. SQuAD 2.0 is a challenging natural language understanding task for existing models: a strong neural system that gets 86\% F1 on SQuAD 1.1 achieves only 66\% F1 on SQuAD 2.0.},
+  note          = {SQuAD 2.0 / SQuADRUn. Hugging Face: \url{https://huggingface.co/datasets/rajpurkar/squad\_v2}. License: {CC BY-SA 4.0}.}
+}
+
+@misc{rajpurkar2018squad2-arxiv,
+  title         = {Know What You Don{'}t Know: Unanswerable Questions for {SQuAD}},
+  author        = {Pranav Rajpurkar and Robin Jia and Percy Liang},
+  year          = {2018},
+  eprint        = {1806.03822},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/1806.03822},
+  doi           = {10.48550/arXiv.1806.03822},
+  note          = {Preprint of rajpurkar-etal-2018-know. Prefer the ACL 2018 venue citation.}
+}
+
+% --- resources --------------------------------------------------------------
+@misc{squad-explorer,
+  title        = {{SQuAD} Explorer},
+  author       = {Rajpurkar, Pranav and Zhang, Jian and Lopyrev, Konstantin and Liang, Percy},
+  year         = {2016},
+  howpublished = {\url{https://rajpurkar.github.io/SQuAD-explorer/}},
+  url          = {https://rajpurkar.github.io/SQuAD-explorer/},
+  note         = {Official SQuAD homepage, explorer, and leaderboard.}
+}
+
+@misc{squad-hf,
+  title        = {{SQuAD} ({Hugging Face} Datasets)},
+  author       = {Rajpurkar, Pranav and Zhang, Jian and Lopyrev, Konstantin and Liang, Percy},
+  year         = {2016},
+  howpublished = {\url{https://huggingface.co/datasets/rajpurkar/squad}},
+  url          = {https://huggingface.co/datasets/rajpurkar/squad},
+  note         = {SQuAD 1.1 on the Hugging Face Hub. License: {CC BY-SA 4.0}. Train 87{,}599 / validation 10{,}570.}
+}
+
+@misc{squadv2-hf,
+  title        = {{SQuAD} v2 ({Hugging Face} Datasets)},
+  author       = {Rajpurkar, Pranav and Jia, Robin and Liang, Percy},
+  year         = {2018},
+  howpublished = {\url{https://huggingface.co/datasets/rajpurkar/squad_v2}},
+  url          = {https://huggingface.co/datasets/rajpurkar/squad_v2},
+  note         = {SQuAD 2.0 on the Hugging Face Hub. License: {CC BY-SA 4.0}.}
+}
