@@ -25,6 +25,7 @@ Primary landing surface: **客服助手 incremental contribution** (tickets / re
 | `17_cs_fully_loaded_capture.sql` | 全成本净（扣审计+动作日）+ 留白捕获 + 周动作净 |
 | `18_cs_ops_onepager.sql` | 值班一页纸：Before/After + 全成本 + delay + 优先动作 |
 | `19_cs_weekly_fully_loaded.sql` | 周全成本净周报：周毛−审计−动作日 + WoW + 对账 |
+| `20_cs_hf_hop_yen_band.sql` | HF hop/rag 重 seed 贡献带：全成本净 + retrieval 混比 |
 
 ```bash
 pip install duckdb pandas

@@ -43,6 +43,7 @@ def demo_bundle():
         "17_cs_fully_loaded_capture.sql",
         "18_cs_ops_onepager.sql",
         "19_cs_weekly_fully_loaded.sql",
+        "20_cs_hf_hop_yen_band.sql",
     ]:
         c.execute((SQL / name).read_text())
     hop = mod.load_hf_hop()
@@ -157,7 +158,6 @@ def test_action_recommend_ranked(con):
 def test_hop_sensitivity_monotonic_net():
     import importlib.util
     import duckdb
-    import numpy as np
 
     spec = importlib.util.spec_from_file_location(
         "sens", ROOT / "scripts" / "agod" / "cs_assist_hop_sensitivity.py"
@@ -167,12 +167,23 @@ def test_hop_sensitivity_monotonic_net():
     spec.loader.exec_module(mod)
     demo = mod._load_demo()
     base = demo.load_hf_hop()
-    weak = {**base, "scenario": "weak_hop", "fire_halluc": max(base["quiet_halluc"]+0.05, base["fire_halluc"]*0.5), "hop_ratio": max(2.0, base["hop_ratio"]*0.35)}
-    strong = {**base, "scenario": "strong_hop", "fire_halluc": min(0.55, base["fire_halluc"]*1.3), "hop_ratio": base["hop_ratio"]*1.4}
-    w = mod._run_scenario(demo, duckdb, weak)
-    s = mod._run_scenario(demo, duckdb, strong)
-    # stronger hop should not yield lower net contribution
+    weak = {
+        **base,
+        "scenario": "weak_hop",
+        "fire_halluc": max(base["quiet_halluc"] + 0.05, base["fire_halluc"] * 0.5),
+        "hop_ratio": max(2.0, base["hop_ratio"] * 0.35),
+    }
+    strong = {
+        **base,
+        "scenario": "strong_hop",
+        "fire_halluc": min(0.55, base["fire_halluc"] * 1.3),
+        "hop_ratio": base["hop_ratio"] * 1.4,
+    }
+    w = mod.run_scenario(demo, duckdb, weak)
+    s = mod.run_scenario(demo, duckdb, strong)
+    # stronger hop should not yield lower net / fully-loaded contribution
     assert s["net_yen"] >= w["net_yen"] - 1.0
+    assert s["fully_loaded_net_yen"] >= w["fully_loaded_net_yen"] - 1.0
 
 
 def test_week_attribution_reconciles(con):
@@ -615,3 +626,83 @@ def test_weekly_fully_loaded_reconciles(con):
     s = dict(zip(scols, summ))
     assert s["latest_fully_loaded_net_yen"] > 0
     assert "全成本净" in s["external_one_liner_cn"]
+
+
+def test_hf_hop_rag_seed_yen_band():
+    """HF hop/rag knobs re-seed: strong≥base≥weak fully-loaded; rag_worse↑ retrieval share."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "cs_hop_sens_test",
+        ROOT / "scripts" / "agod" / "cs_assist_hop_sensitivity.py",
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    band = mod.run_band()
+    by = {r["scenario"]: r for r in band["rows"]}
+    assert set(by) >= {
+        "weak_hop",
+        "base_hop",
+        "strong_hop",
+        "rag_worse",
+        "rag_better",
+    }
+    assert by["strong_hop"]["fully_loaded_net_yen"] >= by["base_hop"]["fully_loaded_net_yen"] - 1
+    assert by["base_hop"]["fully_loaded_net_yen"] >= by["weak_hop"]["fully_loaded_net_yen"] - 1
+    assert by["base_hop"]["delta_fully_loaded_vs_base"] == 0
+    assert by["rag_worse"]["retrieval_day_share"] >= by["base_hop"]["retrieval_day_share"] - 1e-9
+    assert by["rag_better"]["retrieval_day_share"] <= by["base_hop"]["retrieval_day_share"] + 1e-9
+    assert "全成本净" in band["summary"]["external_one_liner_cn"]
+    assert "retrieval" in band["summary"]["external_one_liner_cn"]
+
+
+def test_hop_yen_band_sql_after_insert(con, demo_bundle):
+    """Demo fixture DB can hold hop band rows and reconcile summary view."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "cs_hop_sens_sql",
+        ROOT / "scripts" / "agod" / "cs_assist_hop_sensitivity.py",
+    )
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    band = mod.run_band()
+    con.execute("DELETE FROM fct_hop_scenario_yen")
+    for r in band["rows"]:
+        con.execute(
+            """
+            INSERT INTO fct_hop_scenario_yen VALUES (
+              'shop_assistant', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
+            """,
+            [
+                r["scenario"],
+                r["hop_ratio"],
+                r["fire_halluc"],
+                r["rag_low"],
+                r["rag_ok"],
+                r["rag_threshold"],
+                r["tickets_avoided"],
+                r["refunds_avoided"],
+                r["extra_sessions_contained"],
+                r["gross_yen"],
+                r["net_yen"],
+                r["fully_loaded_net_yen"],
+                r["retrieval_day_share"],
+                r["top_action"],
+                r["delta_gross_vs_base"],
+                r["delta_net_vs_base"],
+                r["delta_fully_loaded_vs_base"],
+                r["delta_retrieval_share_vs_base"],
+            ],
+        )
+    n = con.execute("SELECT COUNT(*) FROM vw_cs_assist_hop_yen_band").fetchone()[0]
+    assert n == 5
+    s = con.execute("SELECT * FROM vw_cs_assist_hop_yen_band_summary").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, s))
+    assert d["strong_fully_loaded_net_yen"] >= d["weak_fully_loaded_net_yen"]
+    assert d["rag_worse_retrieval_share_pct"] >= d["base_retrieval_share_pct"] - 0.1
+    assert "HF hop" in d["external_one_liner_cn"]

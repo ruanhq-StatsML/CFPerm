@@ -1,0 +1,15 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "weak_fully_loaded_net_yen":8796.0,
+    "base_fully_loaded_net_yen":16230.0,
+    "strong_fully_loaded_net_yen":17630.0,
+    "base_net_yen":16590.0,
+    "base_retrieval_share_pct":28.6,
+    "rag_worse_retrieval_share_pct":100.0,
+    "rag_better_retrieval_share_pct":0.0,
+    "rag_worse_fully_loaded_net_yen":16917.0,
+    "rag_better_fully_loaded_net_yen":15986.0,
+    "external_one_liner_cn":"HF hop 弱→强：全成本净¥8796→16230→17630；rag 变差时 retrieval 天占比 29.0%→100.0%，变好时→0.0%。"
+  }
+]

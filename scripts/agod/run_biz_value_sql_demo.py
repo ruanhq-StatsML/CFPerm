@@ -452,6 +452,7 @@ def main() -> int:
         "17_cs_fully_loaded_capture.sql",
         "18_cs_ops_onepager.sql",
         "19_cs_weekly_fully_loaded.sql",
+        "20_cs_hf_hop_yen_band.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -659,6 +660,67 @@ def main() -> int:
     dump(cs_week_full, OUT / "cs_assist_weekly_fully_loaded.json")
     dump(cs_week_full_chk, OUT / "cs_assist_weekly_fully_loaded_check.json")
     dump(cs_week_full_sum, OUT / "cs_assist_weekly_fully_loaded_summary.json")
+
+    # HF hop / rag re-seed band → insert into this DB for SQL views
+    hop_band = {"rows": [], "summary": {}}
+    try:
+        import importlib.util as _ilu
+
+        _hs = ROOT / "scripts" / "agod" / "cs_assist_hop_sensitivity.py"
+        _spec = _ilu.spec_from_file_location("cs_hop_sens", _hs)
+        _mod = _ilu.module_from_spec(_spec)
+        assert _spec.loader is not None
+        _spec.loader.exec_module(_mod)
+        hop_band = _mod.run_band()
+        con.execute("DELETE FROM fct_hop_scenario_yen")
+        for r in hop_band["rows"]:
+            con.execute(
+                """
+                INSERT INTO fct_hop_scenario_yen VALUES (
+                  'shop_assistant', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )
+                """,
+                [
+                    r["scenario"],
+                    r["hop_ratio"],
+                    r["fire_halluc"],
+                    r["rag_low"],
+                    r["rag_ok"],
+                    r["rag_threshold"],
+                    r["tickets_avoided"],
+                    r["refunds_avoided"],
+                    r["extra_sessions_contained"],
+                    r["gross_yen"],
+                    r["net_yen"],
+                    r["fully_loaded_net_yen"],
+                    r["retrieval_day_share"],
+                    r["top_action"],
+                    r["delta_gross_vs_base"],
+                    r["delta_net_vs_base"],
+                    r["delta_fully_loaded_vs_base"],
+                    r["delta_retrieval_share_vs_base"],
+                ],
+            )
+        (OUT / "cs_assist_hop_sensitivity.json").write_text(
+            json.dumps(hop_band["rows"], ensure_ascii=False, indent=2, default=str)
+        )
+        (OUT / "cs_assist_hop_yen_band_summary.json").write_text(
+            json.dumps(hop_band["summary"], ensure_ascii=False, indent=2, default=str)
+        )
+        exec_md = _mod.render_exec_dashboard(hop_band)
+        (OUT / "CS_ASSISTANT_EXEC_DASHBOARD.md").write_text(exec_md)
+        (ROOT / "docs" / "biz" / "CS_ASSISTANT_EXEC_DASHBOARD.md").write_text(exec_md)
+    except Exception as e:  # noqa: BLE001
+        print(f"hop yen band skipped: {e}")
+
+    cs_hop_band = con.execute(
+        "SELECT * FROM vw_cs_assist_hop_yen_band"
+    ).fetchdf()
+    cs_hop_band_sum = con.execute(
+        "SELECT * FROM vw_cs_assist_hop_yen_band_summary"
+    ).fetchdf()
+    dump(cs_hop_band, OUT / "cs_assist_hop_yen_band.json")
+    dump(cs_hop_band_sum, OUT / "cs_assist_hop_yen_band_sql_summary.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -801,6 +863,9 @@ def main() -> int:
     week_full_chk = (
         cs_week_full_chk.iloc[0].to_dict() if len(cs_week_full_chk) else {}
     )
+    hop_band_sql = (
+        cs_hop_band_sum.iloc[0].to_dict() if len(cs_hop_band_sum) else {}
+    )
 
     stress_rows = []
     # 只展示 -50% 承压行（业务问题主句）+ base 对照
@@ -851,6 +916,29 @@ def main() -> int:
     week_full_table = (
         "\n".join(week_full_rows) if week_full_rows else "| (none) ||||||"
     )
+
+    hop_band_section = ""
+    if hop_band.get("rows"):
+        try:
+            import importlib.util as _ilu2
+
+            _hs2 = ROOT / "scripts" / "agod" / "cs_assist_hop_sensitivity.py"
+            _sp2 = _ilu2.spec_from_file_location("cs_hop_sens2", _hs2)
+            _m2 = _ilu2.module_from_spec(_sp2)
+            assert _sp2.loader is not None
+            _sp2.loader.exec_module(_m2)
+            hop_band_section = _m2.contribution_section(hop_band)
+        except Exception:
+            hop_band_section = (
+                hop_band_sql.get("external_one_liner_cn")
+                and f"## HF hop / rag 驱动 seed → 贡献带（可对账）\n\n"
+                f"对外一句：{hop_band_sql.get('external_one_liner_cn')}\n"
+            ) or ""
+    elif hop_band_sql.get("external_one_liner_cn"):
+        hop_band_section = (
+            f"## HF hop / rag 驱动 seed → 贡献带（可对账）\n\n"
+            f"对外一句：{hop_band_sql.get('external_one_liner_cn')}\n"
+        )
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -1173,6 +1261,7 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 对外一句：{week_full_sum.get('external_one_liner_cn') or '（重跑 demo）'}
 
+{hop_band_section}
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -1225,6 +1314,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "`results/agod/biz_value_sql/cs_assist_ops_onepager.json`\n"
             "周全成本净周报（扣审计+动作日+WoW）：见贡献账「周全成本净周报」；"
             "`results/agod/biz_value_sql/cs_assist_weekly_fully_loaded.json`\n"
+            "HF hop/rag 重 seed 贡献带：见贡献账「HF hop / rag 驱动 seed」；"
+            "`results/agod/biz_value_sql/cs_assist_hop_yen_band_summary.json`\n"
             "HH tidy流 + OnlineRFPerm 连续检测："
             "`docs/biz/HH_ONLINE_RFPERM_STREAM.md`\n"
             "大模型落地 use-case（业务逻辑）："

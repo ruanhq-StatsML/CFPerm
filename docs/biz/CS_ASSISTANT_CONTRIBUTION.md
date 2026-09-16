@@ -316,6 +316,24 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 对外一句：最近一周（2026-09-21）全成本净¥9231（毛¥9467−审计¥30−动作¥206）；较上周 +¥2232；周合计 vs 总账缺口¥0。
 
+## HF hop / rag 驱动 seed → 贡献带（可对账）
+
+口径：同一套 SQL，只改 HF knobs 重 seed；Δ 相对 `base_hop`。
+
+| 情景 | fire_halluc | hop_ratio | 少工单 | 少退款 | 多承接 | 毛¥ | 净¥ | 全成本净¥ | Δ全成本 |
+|------|-------------|-----------|--------|--------|--------|-----|-----|-----------|---------|
+| weak_hop | 0.23 | 4.1 | 125.0 | 68.0 | 186.0 | **¥9216** | **¥9156** | **¥8796** | ¥-7434 |
+| base_hop | 0.41 | 11.7 | 206.0 | 130.0 | 316.0 | **¥16656** | **¥16590** | **¥16230** | ¥+0 |
+| strong_hop | 0.51 | 15.8 | 223.0 | 141.0 | 338.0 | **¥18038** | **¥17990** | **¥17630** | ¥+1400 |
+
+| 情景 | rag_low/ok | thr | retrieval天占比 | 优先动作 | 全成本净¥ | Δ retrieval占比 |
+|------|------------|-----|-----------------|----------|-----------|-----------------|
+| rag_worse | 0.12/0.30 | 0.55 | 100% | retrieval_refresh | **¥16917** | +71% |
+| base_hop | 0.30/0.75 | 0.35 | 29% | model_rollback | **¥16230** | +0% |
+| rag_better | 0.55/0.90 | 0.25 | 0% | model_rollback | **¥15986** | -29% |
+
+对外一句：HF hop 弱→强：全成本净¥8796→16230→17630；rag 变差时 retrieval 天占比 29%→100%，变好时→0%。
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -344,5 +362,6 @@ Early detection delay→利润差：见贡献账「Early detection」；`results
 全成本净 + 总捕获：见贡献账「全成本净贡献」；`results/agod/biz_value_sql/cs_assist_fully_loaded_capture.json`
 值班一页纸：见贡献账「值班一页纸」；`results/agod/biz_value_sql/cs_assist_ops_onepager.json`
 周全成本净周报（扣审计+动作日+WoW）：见贡献账「周全成本净周报」；`results/agod/biz_value_sql/cs_assist_weekly_fully_loaded.json`
+HF hop/rag 重 seed 贡献带：见贡献账「HF hop / rag 驱动 seed」；`results/agod/biz_value_sql/cs_assist_hop_yen_band_summary.json`
 HH tidy流 + OnlineRFPerm 连续检测：`docs/biz/HH_ONLINE_RFPERM_STREAM.md`
 大模型落地 use-case（业务逻辑）：`docs/biz/LLM_LANDING_USECASES_BIZ.md`
