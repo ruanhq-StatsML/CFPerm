@@ -10,9 +10,8 @@ SQL = ROOT / "sql" / "biz_value"
 
 
 @pytest.fixture(scope="module")
-def con():
+def demo_bundle():
     duckdb = pytest.importorskip("duckdb")
-    # Import seed via running demo pieces
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
@@ -39,10 +38,23 @@ def con():
         "12_cs_payback_contain.sql",
         "13_cs_hf_knob_bridge.sql",
         "14_cs_marginal_day.sql",
+        "15_cs_payback_contain_price_stress.sql",
+        "16_cs_detection_delay_profit.sql",
     ]:
         c.execute((SQL / name).read_text())
-    mod.seed(c)
-    return c
+    hop = mod.load_hf_hop()
+    mod.seed(c, hop=hop)
+    return {"con": c, "mod": mod, "hop": hop}
+
+
+@pytest.fixture(scope="module")
+def con(demo_bundle):
+    return demo_bundle["con"]
+
+
+@pytest.fixture(scope="module")
+def hf_hop(demo_bundle):
+    return demo_bundle["hop"]
 
 
 def test_cs_increment_positive_and_formula(con):
@@ -418,3 +430,88 @@ def test_method_biz_scenario_prototype_chain(tmp_path, monkeypatch):
     assert "relevance" in md.lower()
     en = (tmp_path / "docs" / "METHOD_BIZ_SCENARIO_PROTOTYPE_EN.md").read_text()
     assert "Relevance chain" in en
+
+
+def test_hf_landing_json_drives_knobs(hf_hop):
+    """真实 HF landing JSON 须驱动 hop 强度（非纯 defaults）。"""
+    assert hf_hop["hop_ratio"] >= 2.0
+    assert hf_hop["fired_at_cut"] == 1
+    assert hf_hop["fire_halluc"] > hf_hop["quiet_halluc"]
+    assert "halu" in str(hf_hop.get("source", "")).lower() or hf_hop.get("dataset")
+
+
+def test_before_after_rates_and_increment_lock(con):
+    """Before/After 费率 + 增量公式硬锁（对外一句的数字底座）。"""
+    rates = con.execute("SELECT * FROM vw_cs_assist_rate_compare").fetchone()
+    rcols = [d[0] for d in con.description]
+    r = dict(zip(rcols, rates))
+    assert r["ticket_rate_ignored"] > r["ticket_rate_acted"]
+    assert r["ticket_rate_ignored"] > r["ticket_rate_quiet"]
+    assert r["contain_rate_acted"] > r["contain_rate_ignored"]
+
+    inc = con.execute("SELECT * FROM vw_cs_assist_increment").fetchone()
+    icols = [d[0] for d in con.description]
+    i = dict(zip(icols, inc))
+    # exact accounting identity
+    expected = (
+        i["tickets_avoided_realized"] * i["cs_ticket_cost"]
+        + i["refunds_avoided_realized"] * i["refund_unit_cost"]
+        + i["extra_contained_realized"] * i["contained_session_value"]
+    )
+    assert abs(i["incremental_yen_realized"] - expected) < 1e-6
+    # rate×N identity for tickets (within float noise)
+    tickets_from_rates = (
+        (r["ticket_rate_ignored"] - r["ticket_rate_acted"]) * i["sessions_acted"]
+    )
+    assert abs(tickets_from_rates - i["tickets_avoided_realized"]) < 1.5
+
+
+def test_contain_price_stress_minus50(con):
+    """承接单价 -50%：至少一臂仍可仅靠承接当天回本；回滚臂可变慢。"""
+    rows = con.execute(
+        """
+        SELECT action_type, payback_days_contain_only, contain_payback_bucket
+        FROM vw_cs_assist_payback_contain_price_stress
+        WHERE scenario = 'contain_price_minus50'
+        """
+    ).fetchall()
+    assert len(rows) >= 2
+    buckets = {a: b for a, _d, b in rows}
+    assert any(b == "same_day_from_contain" for b in buckets.values())
+    summ = con.execute(
+        "SELECT * FROM vw_cs_assist_payback_contain_stress_summary"
+    ).fetchone()
+    scols = [d[0] for d in con.description]
+    s = dict(zip(scols, summ))
+    assert s["n_same_day_at_minus50"] >= 1
+    assert "承接单价" in s["external_one_liner_cn"]
+
+
+def test_detection_delay_profit_linear(con):
+    """Early detection：delay 利润差 = delay × 每动作日贡献；0 延迟损失为 0。"""
+    rows = con.execute(
+        """
+        SELECT delay_days, lost_gross_yen, lost_net_yen,
+               gross_yen_per_acted_day, net_yen_per_acted_day
+        FROM vw_cs_assist_detection_delay_profit
+        ORDER BY delay_days
+        """
+    ).fetchall()
+    assert [r[0] for r in rows] == [0, 1, 2, 3]
+    gpd, npd = rows[0][3], rows[0][4]
+    assert gpd > 0 and npd > 0
+    for delay, lost_g, lost_n, g, n in rows:
+        assert abs(lost_g - delay * g) <= 1.0
+        assert abs(lost_n - delay * n) <= 1.0
+    assert rows[0][1] == 0 and rows[0][2] == 0
+    assert rows[3][1] > rows[1][1]
+
+    summ = con.execute(
+        "SELECT * FROM vw_cs_assist_detection_delay_summary"
+    ).fetchone()
+    scols = [d[0] for d in con.description]
+    s = dict(zip(scols, summ))
+    assert s["lost_gross_at_delay0"] == 0
+    assert s["lost_gross_at_delay1"] > 0
+    assert "Early detection" in s["external_one_liner_cn"]
+    assert "Before→After" in s["external_one_liner_cn"]

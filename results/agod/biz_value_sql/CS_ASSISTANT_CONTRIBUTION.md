@@ -242,6 +242,24 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 摘要：承接单价 -50% 时，仅靠多承接回本：最快 0.253 天 / 最慢 1.011 天；2/3 臂仍当天回本。  
 状态：`some_arms_need_ticket_refund_to_payback`（-50% 下 2.0/3 臂当天回本）。
 
+## Early detection：delay → 利润差
+
+口径：`lost_¥(delay) = delay × 每动作日贡献`。零延迟吃满对照窗增量；晚发现一天 ≈ 少拿一个动作日。
+
+| Before → After（火情窗） | 不动作 | 动作落地 |
+|--------------------------|--------|----------|
+| 工单率 | 15.86% | 1.14% |
+| 承接率 | 75.21% | 97.79% |
+
+| delay（天） | 每动作日毛¥ | 少拿毛¥ | 少拿净¥ | 分档 |
+|------------:|------------:|--------:|--------:|------|
+| 0 | ¥2379 | **¥0** | **¥0** | zero_delay_full_capture |
+| 1 | ¥2379 | **¥2379** | **¥2370** | one_day_late |
+| 2 | ¥2379 | **¥4758** | **¥4740** | multi_day_late |
+| 3 | ¥2379 | **¥7137** | **¥7110** | multi_day_late |
+
+对外一句：Early detection：delay 0→1→3 天少拿毛¥0/2379/7137（每动作日≈¥2379）；Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%。
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -266,5 +284,6 @@ Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%（+22.57pp）；�
 落地场景 · 多承接 · 方法异同 · 迭代更新：`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`
 不动作留白 / 盈亏平衡：见贡献账对应章节
 承接单价承压（仅承接回本 ±50%）：见贡献账「承接单价承压」；`results/agod/biz_value_sql/cs_assist_payback_contain_price_stress.json`
+Early detection delay→利润差：见贡献账「Early detection」；`results/agod/biz_value_sql/cs_assist_detection_delay_profit.json`
 HH tidy流 + OnlineRFPerm 连续检测：`docs/biz/HH_ONLINE_RFPERM_STREAM.md`
 大模型落地 use-case（业务逻辑）：`docs/biz/LLM_LANDING_USECASES_BIZ.md`

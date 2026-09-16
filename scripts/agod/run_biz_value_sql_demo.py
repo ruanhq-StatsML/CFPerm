@@ -448,6 +448,7 @@ def main() -> int:
         "13_cs_hf_knob_bridge.sql",
         "14_cs_marginal_day.sql",
         "15_cs_payback_contain_price_stress.sql",
+        "16_cs_detection_delay_profit.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -617,6 +618,14 @@ def main() -> int:
     ).fetchdf()
     dump(cs_contain_stress, OUT / "cs_assist_payback_contain_price_stress.json")
     dump(cs_contain_stress_sum, OUT / "cs_assist_payback_contain_stress_summary.json")
+    cs_delay = con.execute(
+        "SELECT * FROM vw_cs_assist_detection_delay_profit ORDER BY delay_days"
+    ).fetchdf()
+    cs_delay_sum = con.execute(
+        "SELECT * FROM vw_cs_assist_detection_delay_summary"
+    ).fetchdf()
+    dump(cs_delay, OUT / "cs_assist_detection_delay_profit.json")
+    dump(cs_delay_sum, OUT / "cs_assist_detection_delay_summary.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -750,6 +759,7 @@ def main() -> int:
     contain_stress_sum = (
         cs_contain_stress_sum.iloc[0].to_dict() if len(cs_contain_stress_sum) else {}
     )
+    delay_sum = cs_delay_sum.iloc[0].to_dict() if len(cs_delay_sum) else {}
 
     stress_rows = []
     # 只展示 -50% 承压行（业务问题主句）+ base 对照
@@ -766,6 +776,15 @@ def main() -> int:
             f"{row['contain_roi_vs_action_cost']}x |"
         )
     stress_table = "\n".join(stress_rows) if stress_rows else "| (none) |||||||"
+
+    delay_rows = []
+    for _, row in cs_delay.iterrows():
+        delay_rows.append(
+            f"| {int(row['delay_days'])} | ¥{int(row['gross_yen_per_acted_day'])} | "
+            f"**¥{int(row['lost_gross_yen'])}** | **¥{int(row['lost_net_yen'])}** | "
+            f"{row['delay_bucket']} |"
+        )
+    delay_table = "\n".join(delay_rows) if delay_rows else "| (none) ||||"
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -1019,6 +1038,21 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 摘要：{contain_stress_sum.get('external_one_liner_cn') or '（重跑 demo）'}  
 状态：`{contain_stress_sum.get('stress_status')}`（-50% 下 {contain_stress_sum.get('n_same_day_at_minus50')}/{contain_stress_sum.get('n_actions')} 臂当天回本）。
 
+## Early detection：delay → 利润差
+
+口径：`lost_¥(delay) = delay × 每动作日贡献`。零延迟吃满对照窗增量；晚发现一天 ≈ 少拿一个动作日。
+
+| Before → After（火情窗） | 不动作 | 动作落地 |
+|--------------------------|--------|----------|
+| 工单率 | {delay_sum.get('ticket_rate_ignored_pct')}% | {delay_sum.get('ticket_rate_acted_pct')}% |
+| 承接率 | {delay_sum.get('contain_rate_ignored_pct')}% | {delay_sum.get('contain_rate_acted_pct')}% |
+
+| delay（天） | 每动作日毛¥ | 少拿毛¥ | 少拿净¥ | 分档 |
+|------------:|------------:|--------:|--------:|------|
+{delay_table}
+
+对外一句：{delay_sum.get('external_one_liner_cn') or '（重跑 demo）'}
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -1063,6 +1097,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "不动作留白 / 盈亏平衡：见贡献账对应章节\n"
             "承接单价承压（仅承接回本 ±50%）：见贡献账「承接单价承压」；"
             "`results/agod/biz_value_sql/cs_assist_payback_contain_price_stress.json`\n"
+            "Early detection delay→利润差：见贡献账「Early detection」；"
+            "`results/agod/biz_value_sql/cs_assist_detection_delay_profit.json`\n"
             "HH tidy流 + OnlineRFPerm 连续检测："
             "`docs/biz/HH_ONLINE_RFPERM_STREAM.md`\n"
             "大模型落地 use-case（业务逻辑）："
