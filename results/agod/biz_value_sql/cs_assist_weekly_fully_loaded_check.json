@@ -1,0 +1,15 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "total_gross":16656.0,
+    "total_audit":66.0,
+    "total_action":360.0,
+    "total_fully_loaded":16230.0,
+    "week_gross_sum":16656.0,
+    "week_audit_sum":66.0,
+    "week_action_sum":360.0,
+    "week_fully_loaded_sum":16230.0,
+    "fully_loaded_gap_yen":0.0,
+    "external_one_liner_cn":"周全成本净合计¥16230 vs 总账¥16230（缺口¥0）；两周毛¥16656−审计¥66−动作¥360。"
+  }
+]

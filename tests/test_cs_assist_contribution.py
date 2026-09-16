@@ -42,6 +42,7 @@ def demo_bundle():
         "16_cs_detection_delay_profit.sql",
         "17_cs_fully_loaded_capture.sql",
         "18_cs_ops_onepager.sql",
+        "19_cs_weekly_fully_loaded.sql",
     ]:
         c.execute((SQL / name).read_text())
     hop = mod.load_hf_hop()
@@ -566,3 +567,51 @@ def test_ops_onepager_before_after_and_delay(con):
     assert "全成本净" in line
     assert "delay0/1/3" in line
     assert d["top_action"] in line
+
+
+def test_weekly_fully_loaded_reconciles(con):
+    """周全成本净 = 周毛−审计−动作；合计≈总账；WoW 有环比。"""
+    weeks = con.execute(
+        """
+        SELECT days_acted, gross_yen, audit_cost_yen_alloc,
+               action_day_cost_yen_alloc, fully_loaded_net_yen
+        FROM vw_cs_assist_weekly_fully_loaded
+        ORDER BY week_start
+        """
+    ).fetchall()
+    assert weeks
+    for days, gross, audit, action, net in weeks:
+        assert days >= 1
+        assert abs((gross - audit - action) - net) <= 2.0
+        assert net > 0
+        assert audit >= 0 and action >= 0
+
+    chk = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly_fully_loaded_check"
+    ).fetchone()
+    ccols = [d[0] for d in con.description]
+    c = dict(zip(ccols, chk))
+    assert abs(c["fully_loaded_gap_yen"]) <= 2.0
+    assert abs(c["week_fully_loaded_sum"] - c["total_fully_loaded"]) <= 2.0
+    assert "周全成本净" in c["external_one_liner_cn"]
+
+    wow = con.execute(
+        """
+        SELECT fully_loaded_net_yen, delta_fully_loaded_net_yen
+        FROM vw_cs_assist_weekly_fully_loaded_wow
+        ORDER BY week_start
+        """
+    ).fetchall()
+    assert len(wow) >= 2
+    assert wow[0][1] is None or (isinstance(wow[0][1], float) and wow[0][1] != wow[0][1])
+    # second week should have a numeric WoW delta
+    assert wow[1][1] is not None
+    assert abs(wow[1][0] - (wow[0][0] + wow[1][1])) <= 2.0
+
+    summ = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly_fully_loaded_summary"
+    ).fetchone()
+    scols = [d[0] for d in con.description]
+    s = dict(zip(scols, summ))
+    assert s["latest_fully_loaded_net_yen"] > 0
+    assert "全成本净" in s["external_one_liner_cn"]

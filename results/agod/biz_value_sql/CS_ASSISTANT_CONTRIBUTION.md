@@ -299,6 +299,23 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 对外一句：Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%（+22.57pp）；全成本净¥16230（毛¥16656−审计¥66−动作¥360）；捕获 50.0%；delay0/1/3 少拿毛¥0/2379/7137；优先 model_rollback（日净≈¥2351）。
 
+## 周全成本净周报（扣审计 + 动作日）
+
+口径：`周全成本净 = 周毛 − 当周 acted 审计件 − 动作日成本按天分摊`；环比看净贡献周变化。
+
+| 周 | acted天 | 毛¥ | 审计分摊¥ | 动作成本分摊¥ | 全成本净¥ | WoW Δ净 |
+|----|--------:|----:|----------:|---------------:|----------:|--------:|
+| 2026-09-14 | 3 | ¥7189 | ¥36 | ¥154 | **¥6999** | — |
+| 2026-09-21 | 4 | ¥9467 | ¥30 | ¥206 | **¥9231** | ¥+2232 |
+
+| 对账 | 值 |
+|------|-----|
+| 周全成本净合计 | **¥16230** |
+| 总账全成本净 | ¥16230 |
+| 缺口 | ¥0 |
+
+对外一句：最近一周（2026-09-21）全成本净¥9231（毛¥9467−审计¥30−动作¥206）；较上周 +¥2232；周合计 vs 总账缺口¥0。
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -326,5 +343,6 @@ Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%（+22.57pp）；�
 Early detection delay→利润差：见贡献账「Early detection」；`results/agod/biz_value_sql/cs_assist_detection_delay_profit.json`
 全成本净 + 总捕获：见贡献账「全成本净贡献」；`results/agod/biz_value_sql/cs_assist_fully_loaded_capture.json`
 值班一页纸：见贡献账「值班一页纸」；`results/agod/biz_value_sql/cs_assist_ops_onepager.json`
+周全成本净周报（扣审计+动作日+WoW）：见贡献账「周全成本净周报」；`results/agod/biz_value_sql/cs_assist_weekly_fully_loaded.json`
 HH tidy流 + OnlineRFPerm 连续检测：`docs/biz/HH_ONLINE_RFPERM_STREAM.md`
 大模型落地 use-case（业务逻辑）：`docs/biz/LLM_LANDING_USECASES_BIZ.md`

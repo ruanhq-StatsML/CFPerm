@@ -451,6 +451,7 @@ def main() -> int:
         "16_cs_detection_delay_profit.sql",
         "17_cs_fully_loaded_capture.sql",
         "18_cs_ops_onepager.sql",
+        "19_cs_weekly_fully_loaded.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -643,6 +644,21 @@ def main() -> int:
         "SELECT * FROM vw_cs_assist_ops_onepager"
     ).fetchdf()
     dump(cs_onepager, OUT / "cs_assist_ops_onepager.json")
+    cs_week_full = con.execute(
+        """
+        SELECT * FROM vw_cs_assist_weekly_fully_loaded_wow
+        ORDER BY week_start
+        """
+    ).fetchdf()
+    cs_week_full_chk = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly_fully_loaded_check"
+    ).fetchdf()
+    cs_week_full_sum = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly_fully_loaded_summary"
+    ).fetchdf()
+    dump(cs_week_full, OUT / "cs_assist_weekly_fully_loaded.json")
+    dump(cs_week_full_chk, OUT / "cs_assist_weekly_fully_loaded_check.json")
+    dump(cs_week_full_sum, OUT / "cs_assist_weekly_fully_loaded_summary.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -779,6 +795,12 @@ def main() -> int:
     delay_sum = cs_delay_sum.iloc[0].to_dict() if len(cs_delay_sum) else {}
     full_cap = cs_full.iloc[0].to_dict() if len(cs_full) else {}
     onepager = cs_onepager.iloc[0].to_dict() if len(cs_onepager) else {}
+    week_full_sum = (
+        cs_week_full_sum.iloc[0].to_dict() if len(cs_week_full_sum) else {}
+    )
+    week_full_chk = (
+        cs_week_full_chk.iloc[0].to_dict() if len(cs_week_full_chk) else {}
+    )
 
     stress_rows = []
     # 只展示 -50% 承压行（业务问题主句）+ base 对照
@@ -814,6 +836,20 @@ def main() -> int:
         )
     week_act_table = (
         "\n".join(week_act_rows) if week_act_rows else "| (none) ||||"
+    )
+
+    week_full_rows = []
+    for _, row in cs_week_full.iterrows():
+        delta = row.get("delta_fully_loaded_net_yen")
+        delta_s = "—" if delta is None or (isinstance(delta, float) and delta != delta) else f"¥{int(delta):+d}"
+        week_full_rows.append(
+            f"| {str(row['week_start'])[:10]} | {int(row['days_acted'])} | "
+            f"¥{int(row['gross_yen'])} | ¥{int(row['audit_cost_yen_alloc'])} | "
+            f"¥{int(row['action_day_cost_yen_alloc'])} | "
+            f"**¥{int(row['fully_loaded_net_yen'])}** | {delta_s} |"
+        )
+    week_full_table = (
+        "\n".join(week_full_rows) if week_full_rows else "| (none) ||||||"
     )
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
@@ -1121,6 +1157,22 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 对外一句：{onepager.get('external_one_liner_cn') or '（重跑 demo）'}
 
+## 周全成本净周报（扣审计 + 动作日）
+
+口径：`周全成本净 = 周毛 − 当周 acted 审计件 − 动作日成本按天分摊`；环比看净贡献周变化。
+
+| 周 | acted天 | 毛¥ | 审计分摊¥ | 动作成本分摊¥ | 全成本净¥ | WoW Δ净 |
+|----|--------:|----:|----------:|---------------:|----------:|--------:|
+{week_full_table}
+
+| 对账 | 值 |
+|------|-----|
+| 周全成本净合计 | **¥{int(week_full_chk.get('week_fully_loaded_sum') or 0)}** |
+| 总账全成本净 | ¥{int(week_full_chk.get('total_fully_loaded') or 0)} |
+| 缺口 | ¥{int(week_full_chk.get('fully_loaded_gap_yen') or 0)} |
+
+对外一句：{week_full_sum.get('external_one_liner_cn') or '（重跑 demo）'}
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -1171,6 +1223,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "`results/agod/biz_value_sql/cs_assist_fully_loaded_capture.json`\n"
             "值班一页纸：见贡献账「值班一页纸」；"
             "`results/agod/biz_value_sql/cs_assist_ops_onepager.json`\n"
+            "周全成本净周报（扣审计+动作日+WoW）：见贡献账「周全成本净周报」；"
+            "`results/agod/biz_value_sql/cs_assist_weekly_fully_loaded.json`\n"
             "HH tidy流 + OnlineRFPerm 连续检测："
             "`docs/biz/HH_ONLINE_RFPERM_STREAM.md`\n"
             "大模型落地 use-case（业务逻辑）："
