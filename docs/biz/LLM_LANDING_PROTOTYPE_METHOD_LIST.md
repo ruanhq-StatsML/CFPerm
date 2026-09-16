@@ -21,6 +21,9 @@
 3. 多塔/三塔 = **子集定位形状**，不是做推荐系统。  
 4. 风格归因与图谱归因 **先并成特征维度**，再 L1→L2。
 
+**OnlineRFPerm → LLM 推理（low-hanging fruit）**：justify + 分阶段 roadmap 见  
+`ONLINERFPERM_LLM_INFER_ROADMAP.md`（接线 form → 路由 → Top-k 审计；不依赖客服账）。
+
 ---
 
 ## 1. 可跑 Prototype 清单（证据链）
@@ -183,6 +186,7 @@
 | 优先级 | 做什么 | 为什么 |
 |--------|--------|--------|
 | **P0** | 保持 P1+P5+P6+**P6b** 可复现，对外用 §3 bulletin 表 | 三类落地 + 并维 + **画风迭代**已齐 |
+| **P0** | **OnlineRFPerm→LLM 推理 roadmap R0–R1**：生产 log adapter + 路由表 | low-hanging；详见 `ONLINERFPERM_LLM_INFER_ROADMAP.md` |
 | **P1** | 加强 S4/S6：真实 embedding 替换 hash；path/tool 指标接生产日志 | 路由轴与智能体路径是误动作成本最高处 |
 | **P1** | S8 用一窗真实商户·作者·商品·订单切片跑 P6 `--alias graph` | 把「能实时」从示意变成业务维证据 |
 | **P2** | S10 周更/安全双跑最小门禁板（批式 RFPerm + 漏拒/误拒分列） | 防损高频，但不依赖客服账 |
@@ -203,6 +207,7 @@
 | `MERCHANT_AUTHOR_PRODUCT_ORDER_GRAPH_ATTR.md` | 四维图两级归因 |
 | `GRAPH_USECASE_EVAL.md` | **图谱 use-case：刻画 + 评估（L1 Hit@K / L3 子集动作）** |
 | `METHOD_LANDING_ROADMAP.md` | 创新 A–E + 落地接口 |
+| `ONLINERFPERM_LLM_INFER_ROADMAP.md` | **OnlineRFPerm→LLM 推理 justify + low-hanging roadmap** |
 | `METHOD_BIZ_SCENARIO_PROTOTYPE.md` | 方法×情景 relevance |
 | `LLM_INFER_ALIGN_PROTOTYPE.md` | 最小 call 包结果 |
 

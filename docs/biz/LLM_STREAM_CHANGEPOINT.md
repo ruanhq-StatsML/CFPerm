@@ -5,7 +5,8 @@
 > - **推理质量在线监控** → OnlineRFPerm  
 > - **数据对齐 / 合并门禁** → RFPerm（批式）  
 > - **实例谁先审（PO-risk）** → BOCPD  
-> 本页只演示推理流上的连续时间 form + detection delay；业务总览见 `LLM_LANDING_USECASES_BIZ.md`。
+> 本页只演示推理流上的连续时间 form + detection delay；业务总览见 `LLM_LANDING_USECASES_BIZ.md`。  
+> **Justify + low-hanging roadmap**：`ONLINERFPERM_LLM_INFER_ROADMAP.md`。
 
 ## 数据 form（就这一列时间流）
 

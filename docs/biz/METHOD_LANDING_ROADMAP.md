@@ -15,7 +15,8 @@
 | 动作回本 | 全部 **same_day_payback**；净ROI 29×–113× |
 
 对照原型：`docs/biz/METHOD_BIZ_SCENARIO_PROTOTYPE.md`  
-贡献账：`docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
+贡献账：`docs/biz/CS_ASSISTANT_CONTRIBUTION.md`  
+**OnlineRFPerm → LLM 推理（low-hanging，可不接 ¥）**：`docs/biz/ONLINERFPERM_LLM_INFER_ROADMAP.md`
 
 ---
 
