@@ -78,5 +78,6 @@ PYTHONPATH=. python3 scripts/agod/llm_infer_align_prototype.py
 | 更重的 refit 流 | `agod.po_refit.run_refit_stream` |
 | 接到客服¥账 | `scripts/agod/run_biz_value_sql_demo.py` |
 | 方法×情景异同 | `docs/biz/METHOD_BIZ_SCENARIO_PROTOTYPE.md` |
+| **推理落地 roadmap** | `docs/biz/ONLINERFPERM_LLM_INFER_ROADMAP.md` |
 
 边界：不是事实核查器；不是因果归因；fire 只打开对照窗 / 门禁。

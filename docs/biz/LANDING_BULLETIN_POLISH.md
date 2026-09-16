@@ -73,6 +73,7 @@ PYTHONPATH=. python3 scripts/agod/feature_dim_attr.py --synth       # 风格+图
 - 可跑脚本：`scripts/agod/bulletin_landing_attr.py`
 - 特征维度并维：`FEATURE_DIM_UNIFIED_ATTR.md` / `scripts/agod/feature_dim_attr.py`
 - **Prototype × 方法论场景清单（Justify）**：`LLM_LANDING_PROTOTYPE_METHOD_LIST.md`
+- **OnlineRFPerm→LLM 推理 roadmap**：`ONLINERFPERM_LLM_INFER_ROADMAP.md`
 - **画风漂移迭代**：`STYLE_DRIFT_ITER_PROTOTYPE.md` / `scripts/agod/style_drift_iter_proto.py`
 - 总图：`LLM_LANDING_USECASES_BIZ.md`
 - 审核 / 多塔：`SUBSET_LOCALIZATION_AUDIT_TOWERS.md`
