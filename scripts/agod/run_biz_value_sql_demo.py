@@ -449,6 +449,7 @@ def main() -> int:
         "14_cs_marginal_day.sql",
         "15_cs_payback_contain_price_stress.sql",
         "16_cs_detection_delay_profit.sql",
+        "17_cs_fully_loaded_capture.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -626,6 +627,17 @@ def main() -> int:
     ).fetchdf()
     dump(cs_delay, OUT / "cs_assist_detection_delay_profit.json")
     dump(cs_delay_sum, OUT / "cs_assist_detection_delay_summary.json")
+    cs_full = con.execute(
+        "SELECT * FROM vw_cs_assist_fully_loaded_capture"
+    ).fetchdf()
+    cs_week_act_net = con.execute(
+        """
+        SELECT * FROM vw_cs_assist_weekly_action_cost_net
+        ORDER BY week_start
+        """
+    ).fetchdf()
+    dump(cs_full, OUT / "cs_assist_fully_loaded_capture.json")
+    dump(cs_week_act_net, OUT / "cs_assist_weekly_action_cost_net.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -760,6 +772,7 @@ def main() -> int:
         cs_contain_stress_sum.iloc[0].to_dict() if len(cs_contain_stress_sum) else {}
     )
     delay_sum = cs_delay_sum.iloc[0].to_dict() if len(cs_delay_sum) else {}
+    full_cap = cs_full.iloc[0].to_dict() if len(cs_full) else {}
 
     stress_rows = []
     # 只展示 -50% 承压行（业务问题主句）+ base 对照
@@ -785,6 +798,17 @@ def main() -> int:
             f"{row['delay_bucket']} |"
         )
     delay_table = "\n".join(delay_rows) if delay_rows else "| (none) ||||"
+
+    week_act_rows = []
+    for _, row in cs_week_act_net.iterrows():
+        week_act_rows.append(
+            f"| {str(row['week_start'])[:10]} | {int(row['days_acted'])} | "
+            f"¥{int(row['gross_yen'])} | ¥{int(row['action_day_cost_yen_alloc'])} | "
+            f"**¥{int(row['net_yen_after_action_cost_alloc'])}** |"
+        )
+    week_act_table = (
+        "\n".join(week_act_rows) if week_act_rows else "| (none) ||||"
+    )
 
     curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
     curve_rows = []
@@ -1053,6 +1077,30 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 
 对外一句：{delay_sum.get('external_one_liner_cn') or '（重跑 demo）'}
 
+## 全成本净贡献 + 总捕获
+
+口径：`全成本净 = 毛 − 审计件 − 动作日成本`；留白 = 火情 ignored 日未拿的毛。
+
+| 项 | 值 |
+|----|-----|
+| 毛增量 | **¥{int(full_cap.get('realized_gross_yen') or 0)}** |
+| 审计件成本 | ¥{int(full_cap.get('audit_cost_yen') or 0)} |
+| 动作日成本合计 | ¥{int(full_cap.get('action_day_cost_yen') or 0)} |
+| 扣审计净 | ¥{int(full_cap.get('net_after_audit_yen') or 0)} |
+| **全成本净** | **¥{int(full_cap.get('fully_loaded_net_yen') or 0)}** |
+| ignored 留白毛 | ¥{int(full_cap.get('uncaptured_ignored_gross_yen') or 0)} |
+| 总可寻址毛 | ¥{int(full_cap.get('total_addressable_gross_yen') or 0)} |
+| 毛捕获率 | **{full_cap.get('gross_capture_pct')}%** |
+| delay+1 天少拿毛 | ¥{int(full_cap.get('delay1_lost_gross_yen') or 0)} |
+
+对外一句：{full_cap.get('external_one_liner_cn') or '（重跑 demo）'}
+
+### 周毛 − 动作日成本分摊
+
+| 周 | acted天 | 毛¥ | 动作成本分摊¥ | 扣动作净¥ |
+|----|--------:|----:|---------------:|----------:|
+{week_act_table}
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -1099,6 +1147,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "`results/agod/biz_value_sql/cs_assist_payback_contain_price_stress.json`\n"
             "Early detection delay→利润差：见贡献账「Early detection」；"
             "`results/agod/biz_value_sql/cs_assist_detection_delay_profit.json`\n"
+            "全成本净 + 总捕获：见贡献账「全成本净贡献」；"
+            "`results/agod/biz_value_sql/cs_assist_fully_loaded_capture.json`\n"
             "HH tidy流 + OnlineRFPerm 连续检测："
             "`docs/biz/HH_ONLINE_RFPERM_STREAM.md`\n"
             "大模型落地 use-case（业务逻辑）："

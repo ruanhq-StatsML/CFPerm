@@ -22,6 +22,7 @@ Primary landing surface: **客服助手 incremental contribution** (tickets / re
 | `14_cs_marginal_day.sql` | 边际动作日贡献 |
 | `15_cs_payback_contain_price_stress.sql` | 承接单价 ±50% 仅承接回本承压 |
 | `16_cs_detection_delay_profit.sql` | Early detection：delay → 少拿毛/净¥ |
+| `17_cs_fully_loaded_capture.sql` | 全成本净（扣审计+动作日）+ 留白捕获 + 周动作净 |
 
 ```bash
 pip install duckdb pandas

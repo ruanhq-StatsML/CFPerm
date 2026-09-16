@@ -40,6 +40,7 @@ def demo_bundle():
         "14_cs_marginal_day.sql",
         "15_cs_payback_contain_price_stress.sql",
         "16_cs_detection_delay_profit.sql",
+        "17_cs_fully_loaded_capture.sql",
     ]:
         c.execute((SQL / name).read_text())
     hop = mod.load_hf_hop()
@@ -515,3 +516,31 @@ def test_detection_delay_profit_linear(con):
     assert s["lost_gross_at_delay1"] > 0
     assert "Early detection" in s["external_one_liner_cn"]
     assert "Before→After" in s["external_one_liner_cn"]
+
+
+def test_fully_loaded_capture_and_weekly_action_net(con):
+    """全成本净 = 毛−审计−动作日；周扣动作成本后仍 >0；捕获率≈50%。"""
+    row = con.execute("SELECT * FROM vw_cs_assist_fully_loaded_capture").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, row))
+    expected = d["realized_gross_yen"] - d["audit_cost_yen"] - d["action_day_cost_yen"]
+    assert abs(d["fully_loaded_net_yen"] - expected) <= 2.0
+    assert d["fully_loaded_net_yen"] > 0
+    assert d["fully_loaded_net_yen"] < d["net_after_audit_yen"] + 1e-6
+    assert d["uncaptured_ignored_gross_yen"] > 0
+    assert abs(d["gross_capture_pct"] - 50.0) < 1.0
+    assert d["delay1_lost_gross_yen"] > 0
+    assert "全成本净" in d["external_one_liner_cn"]
+
+    weeks = con.execute(
+        """
+        SELECT days_acted, gross_yen, action_day_cost_yen_alloc,
+               net_yen_after_action_cost_alloc
+        FROM vw_cs_assist_weekly_action_cost_net
+        """
+    ).fetchall()
+    assert weeks
+    for days, gross, cost, net in weeks:
+        assert days >= 1
+        assert abs((gross - cost) - net) <= 2.0
+        assert net > 0
