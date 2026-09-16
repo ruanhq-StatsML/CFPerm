@@ -41,6 +41,7 @@ def demo_bundle():
         "15_cs_payback_contain_price_stress.sql",
         "16_cs_detection_delay_profit.sql",
         "17_cs_fully_loaded_capture.sql",
+        "18_cs_ops_onepager.sql",
     ]:
         c.execute((SQL / name).read_text())
     hop = mod.load_hf_hop()
@@ -544,3 +545,24 @@ def test_fully_loaded_capture_and_weekly_action_net(con):
         assert days >= 1
         assert abs((gross - cost) - net) <= 2.0
         assert net > 0
+
+
+def test_ops_onepager_before_after_and_delay(con):
+    """值班一页纸：Before→After、全成本、delay0=0、优先动作、对外一句齐全。"""
+    row = con.execute("SELECT * FROM vw_cs_assist_ops_onepager").fetchone()
+    cols = [d[0] for d in con.description]
+    d = dict(zip(cols, row))
+    assert d["ticket_rate_ignored_pct"] > d["ticket_rate_acted_pct"]
+    assert d["contain_rate_acted_pct"] > d["contain_rate_ignored_pct"]
+    assert d["contain_lift_pp"] > 10
+    assert d["fully_loaded_net_yen"] > 0
+    assert d["delay0_lost_gross"] == 0
+    assert d["delay1_lost_gross"] > 0
+    assert d["delay3_lost_gross"] > d["delay1_lost_gross"]
+    assert d["top_action"] in ("model_rollback", "retrieval_refresh", "audit_topk")
+    assert d["top_action_net_yen_per_day"] > 0
+    line = d["external_one_liner_cn"]
+    assert "Before→After" in line
+    assert "全成本净" in line
+    assert "delay0/1/3" in line
+    assert d["top_action"] in line

@@ -450,6 +450,7 @@ def main() -> int:
         "15_cs_payback_contain_price_stress.sql",
         "16_cs_detection_delay_profit.sql",
         "17_cs_fully_loaded_capture.sql",
+        "18_cs_ops_onepager.sql",
     ]:
         sql = (SQL_DIR / name).read_text()
         con.execute(sql)
@@ -638,6 +639,10 @@ def main() -> int:
     ).fetchdf()
     dump(cs_full, OUT / "cs_assist_fully_loaded_capture.json")
     dump(cs_week_act_net, OUT / "cs_assist_weekly_action_cost_net.json")
+    cs_onepager = con.execute(
+        "SELECT * FROM vw_cs_assist_ops_onepager"
+    ).fetchdf()
+    dump(cs_onepager, OUT / "cs_assist_ops_onepager.json")
     # Finance CSV: day-level contribution for ledger import
     cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
     dump(cs_ledger, OUT / "cs_assist_ledger.json")
@@ -773,6 +778,7 @@ def main() -> int:
     )
     delay_sum = cs_delay_sum.iloc[0].to_dict() if len(cs_delay_sum) else {}
     full_cap = cs_full.iloc[0].to_dict() if len(cs_full) else {}
+    onepager = cs_onepager.iloc[0].to_dict() if len(cs_onepager) else {}
 
     stress_rows = []
     # 只展示 -50% 承压行（业务问题主句）+ base 对照
@@ -1101,6 +1107,20 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 |----|--------:|----:|---------------:|----------:|
 {week_act_table}
 
+## 值班一页纸（可对账）
+
+| 项 | 值 |
+|----|-----|
+| 工单 Before→After | {onepager.get('ticket_rate_ignored_pct')}% → **{onepager.get('ticket_rate_acted_pct')}%** |
+| 退款 Before→After | {onepager.get('refund_rate_ignored_pct')}% → **{onepager.get('refund_rate_acted_pct')}%** |
+| 承接 Before→After | {onepager.get('contain_rate_ignored_pct')}% → **{onepager.get('contain_rate_acted_pct')}%**（+{onepager.get('contain_lift_pp')}pp） |
+| 毛 / 扣审计净 / **全成本净** | ¥{int(onepager.get('realized_gross_yen') or 0)} / ¥{int(onepager.get('net_after_audit_yen') or 0)} / **¥{int(onepager.get('fully_loaded_net_yen') or 0)}** |
+| 捕获率 / ignored 留白毛 | {onepager.get('gross_capture_pct')}% / ¥{int(onepager.get('uncaptured_ignored_gross_yen') or 0)} |
+| delay 0/1/3 少拿毛 | ¥{int(onepager.get('delay0_lost_gross') or 0)} / **¥{int(onepager.get('delay1_lost_gross') or 0)}** / ¥{int(onepager.get('delay3_lost_gross') or 0)} |
+| 优先动作 | **{onepager.get('top_action')}**（日净≈¥{int(onepager.get('top_action_net_yen_per_day') or 0)}） |
+
+对外一句：{onepager.get('external_one_liner_cn') or '（重跑 demo）'}
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -1149,6 +1169,8 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
             "`results/agod/biz_value_sql/cs_assist_detection_delay_profit.json`\n"
             "全成本净 + 总捕获：见贡献账「全成本净贡献」；"
             "`results/agod/biz_value_sql/cs_assist_fully_loaded_capture.json`\n"
+            "值班一页纸：见贡献账「值班一页纸」；"
+            "`results/agod/biz_value_sql/cs_assist_ops_onepager.json`\n"
             "HH tidy流 + OnlineRFPerm 连续检测："
             "`docs/biz/HH_ONLINE_RFPERM_STREAM.md`\n"
             "大模型落地 use-case（业务逻辑）："

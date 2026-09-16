@@ -285,6 +285,20 @@ HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
 | 2026-09-14 | 3 | ¥7189 | ¥154 | **¥7035** |
 | 2026-09-21 | 4 | ¥9467 | ¥206 | **¥9261** |
 
+## 值班一页纸（可对账）
+
+| 项 | 值 |
+|----|-----|
+| 工单 Before→After | 15.86% → **1.14%** |
+| 退款 Before→After | 10.5% → **1.21%** |
+| 承接 Before→After | 75.21% → **97.79%**（+22.57pp） |
+| 毛 / 扣审计净 / **全成本净** | ¥16656 / ¥16590 / **¥16230** |
+| 捕获率 / ignored 留白毛 | 50.0% / ¥16656 |
+| delay 0/1/3 少拿毛 | ¥0 / **¥2379** / ¥7137 |
+| 优先动作 | **model_rollback**（日净≈¥2351） |
+
+对外一句：Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%（+22.57pp）；全成本净¥16230（毛¥16656−审计¥66−动作¥360）；捕获 50.0%；delay0/1/3 少拿毛¥0/2379/7137；优先 model_rollback（日净≈¥2351）。
+
 ## 成本 / 单价盈亏平衡
 
 | 项 | 值 |
@@ -311,5 +325,6 @@ Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%（+22.57pp）；�
 承接单价承压（仅承接回本 ±50%）：见贡献账「承接单价承压」；`results/agod/biz_value_sql/cs_assist_payback_contain_price_stress.json`
 Early detection delay→利润差：见贡献账「Early detection」；`results/agod/biz_value_sql/cs_assist_detection_delay_profit.json`
 全成本净 + 总捕获：见贡献账「全成本净贡献」；`results/agod/biz_value_sql/cs_assist_fully_loaded_capture.json`
+值班一页纸：见贡献账「值班一页纸」；`results/agod/biz_value_sql/cs_assist_ops_onepager.json`
 HH tidy流 + OnlineRFPerm 连续检测：`docs/biz/HH_ONLINE_RFPERM_STREAM.md`
 大模型落地 use-case（业务逻辑）：`docs/biz/LLM_LANDING_USECASES_BIZ.md`
