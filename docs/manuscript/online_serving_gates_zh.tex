@@ -1,0 +1,79 @@
+% 中文架构表。需要 \usepackage{booktabs,array}，中文稿件再加 ctex 或 xeCJK。
+\subsection{一张地图，多种标签}
+\label{sec:online-serving-gates-zh}
+对象只有一个：冻住的 serving 地图 \(P(Y\mid X)\) 在到达窗 \(\mathrm{batch}\) 上还是不是同一个东西。
+凡是能写成 \((X,Y,\mathrm{batch})\) 的流（可选队列 \(T\in\{0,1\}\)）都走同一套闸：
+冻参考窗探针（相对 \(D_{\mathrm{ref}}\) 的 lstsq MSE，在线 FDR）
+与相邻窗 \texttt{hop\_fires}。两闸不可互换。
+八个面共用闸，只换 \(Y\)。幻觉率、拒绝率、单路 Recall 都不是 \(Y\)。
+
+\begin{table}[t]
+\centering
+\caption{同一套闸，换 \(Y\)。Fire 是 \(P(Y\mid X)\) 的 hop，不是质量分。}
+\label{tab:serving-facets-zh}
+\setlength{\tabcolsep}{3.5pt}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.15\linewidth}
+                >{\raggedright\arraybackslash}p{0.27\linewidth}
+                >{\raggedright\arraybackslash}p{0.26\linewidth}
+                >{\raggedright\arraybackslash}p{0.22\linewidth}@{}}
+\toprule
+面 & \(Y\) & Fire 表示什么 & 不表示什么 \\
+\midrule
+推理 smoothness
+  & 这一跳 / 路径是否合法
+  & 推理链断了
+  & 幻觉率 \\
+审核 / judge
+  & 过 / 不过
+  & 政策包或 judge 换代
+  & 拒绝率；HH chosen \\
+Graph-RAG 子图
+  & 引用落在边上；
+    支撑节点在图包里
+  & 图包或 community 换代
+  & 单点相关性 \\
+混合检索
+  & 融合后的答案成不成立
+  & 某一路索引或融合坏了
+  & 单路 Recall \\
+Agent 下一步
+  & schema 合法、工具可调用、不 loop
+  & 协议断了，或开始空转
+  & 任务最终成功 \\
+合成数据金标
+  & 还能不能当观测样本
+  & 合成分布漂了
+  & 「像不像人写的」 \\
+Serving 刷新时刻
+  & 当前模板 + 检索 + 生成
+    还能否预测成功
+  & 该换包了
+  & 大模型该不该微调 \\
+实验 CUPED
+  & 协变量调整还有效
+  & 该重做回归
+  & A/B 谁赢了 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{共用循环。}
+\(D_{\mathrm{ref}}\) 上 burn-in。
+每窗：\(T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}\)，秩 \(p\) 值，在线 FDR
+（窗重叠则异步 ADDIS/SAFFRON）。
+Quiet：金标保留，误差入池。
+Fire：当前包不当金标；从最便宜的刷新做起；误差池、burn-in、FDR wealth 整池 reset。
+影子包晋升当且仅当下一窗误差回到 \(E_{\mathrm{ref}}\) 附近 \emph{且} last-two quiet。
+
+\paragraph{Graph-RAG 的 \(X\)。}
+这一面不需要奇怪坐标。
+一个 serving batch 把窗内请求的子图特征聚合起来即可
+（节点数、边数、平均度、连通片数、query seed 数、seed 比例、最大片比例的均值，可选再加标准差）。
+\(Y=\) 支撑节点落在 seed \(\cup\) 一跳邻居（或引用落在边上）。
+Community 换代：切点后把边丢掉或重接，再做同样的聚合。
+盘上的 Hotpot 是题库快照，\texttt{batch} 是题号，不是墙上时间。
+
+\paragraph{读数。}
+光滑不火；已知切点在 onset 附近火；真刷新之后 reset 再 quiet。
+上表八个面是同一句话，只换 \(Y\)。

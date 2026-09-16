@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prototype: formulate Hotpot's (1 query × 10 wiki paras) tensor shape.
+"""Prototype: formulate Hotpot's (1 query x 10 wiki paras) tensor shape.
 
 Raw distractor example
     question:  str

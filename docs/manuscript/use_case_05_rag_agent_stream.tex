@@ -5,6 +5,7 @@ Any stream whose data-generating map moves in continuous time can be written as 
 \((X,Y,\mathrm{batch})\).
 The estimand is whether the frozen serving policy \(P(Y\mid X)\) is still the same object.
 Hallucination rate, refusal rate, and single-channel Recall@\(k\) are not \(Y\).
+The eight-facet table is \texttt{docs/manuscript/online\_serving\_gates.tex}.
 
 \paragraph{Shared loop.}
 Fit a probe on a reference window of the deployed pack (prompt + retriever/graph/tools + generator).
@@ -15,17 +16,18 @@ On fire: stop treating the current context or tool trace as gold; refresh cheape
 burn-in, and testing wealth before the next cycle.
 
 \paragraph{Graph-RAG.}
-\(Y\) is whether this hop is valid (faithfulness, citation lands on a graph edge, task success).
-\(X\) is the query embedding plus subgraph geometry (entity count, path length, community coverage, edge fallback)
-and version ids of prompt/graph/retriever.
+\(Y\) is whether the citation lands on an edge, or the supporting nodes sit in the served pack.
+One serving batch is the aggregate of subgraph features on that window
+(node/edge counts, mean degree, connected components, query seeds, largest-component fraction).
 Optional \(T\in\{0,1\}\) separates local subgraph from global community queues.
-A hop is a graph-pack, community recompute, or prompt-pack swap---not ``this node caused the fail.''
+A hop is a graph-pack or community recompute (drop or rewire edges, then the same aggregate)---not single-node relevance.
 Refresh order: prompt, then retrieval routing, then re-extract/re-summarize the graph; generator last.
 Promote a shadow pack only if the next-window error recovers and last-two is quiet.
 
 Hotpot on disk is a Graph-RAG \emph{snapshot}, not a time stream
 (\texttt{xy\_hotpot\_pairs.csv}: 10 titles as nodes, \(Y=\) supporting title).
 The \texttt{batch} column is query index, not arrival time.
+Window-level aggregate tables: \texttt{scripts/prototype\_graph\_pack\_batch\_agg.py}.
 
 \paragraph{Hybrid retrieval.}
 One request rewrites, retrieves sparse and dense in parallel, fuses (e.g.\ RRF), reranks, and generates.

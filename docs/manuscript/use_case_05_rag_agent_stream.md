@@ -3,6 +3,7 @@
 Drop-in manuscript section. Same object as use-case 4: **one \(Y\), many \(X\), arrival windows**. Any stream whose data-generating map moves in continuous time can be written as \((X,Y,\mathrm{batch})\) and watched with the same two gates. Not attribution. Not a generation model.
 
 The three scenes below are the same serving loop. Only the meaning of a hop changes.
+The eight-facet table (smoothness, judge, Graph-RAG, hybrid, agent, synthetic gold, serving refresh, CUPED) is `docs/manuscript/online_serving_gates.tex`.
 
 ## Shared loop
 
@@ -28,18 +29,18 @@ for each batch:
 
 **Business.** A Graph-RAG stack answers from a frozen knowledge graph: extract entities, pull a subgraph (local neighbours or global community summaries), pack them into a prompt, generate with citations. Corpus, community summaries, and prompt packs jump in versions. The question is *when that serving map is no longer the same object*, not whether a single chunk is relevant.
 
-**Table.** One row per request (or per retrieval hop).
+**Table.** One row per request, or one row per arrival window after aggregating graph features.
 
 | | Graph-RAG |
 |---|---|
-| \(Y\) | this hop is valid: faithfulness / citation lands on an edge / downstream task success / human pass. Delayed labels are aligned by the time \(Y\) arrives |
-| \(X\) | query embedding; \(n\) hit entities; path length; community coverage; summary overlap; fraction of answer entities that fall back onto graph edges; prompt / graph / retriever version ids |
+| \(Y\) | citation lands on an edge / supporting nodes sit in the pack. Delayed labels are aligned by the time \(Y\) arrives |
+| \(X\) | **window aggregate** of title-graph features: nodes, edges, mean degree, connected components, query seeds, seed fraction, LCC fraction |
 | `batch` | arrival window. Overlapping community windows → async FDR with lag |
 | \(T\) (optional) | \(0=\) local subgraph, \(1=\) global community. Do not average the two queues |
 
-A hop of \(P(Y\mid X)\) is a graph pack / community recompute / prompt-pack swap. On fire: do not treat the current subgraph as gold; try refresh from cheap to expensive (prompt → retriever hops/community routing → re-extract graph / re-summarize → generator last). Promote a candidate only if a shadow copy of the *same* requests has lower window error **and** last-two is quiet; then reset.
+A hop of \(P(Y\mid X)\) is a graph pack / community recompute: drop or rewire edges, then aggregate again. Not single-node relevance. On fire: do not treat the current subgraph as gold; try refresh from cheap to expensive (prompt → retriever hops/community routing → re-extract graph / re-summarize → generator last). Promote a candidate only if a shadow copy of the *same* requests has lower window error **and** last-two is quiet; then reset.
 
-**Prototype sketch.** Quiet corpus + fixed graph: expect no fire. Injected fracture (stale entities, swapped community summaries, prompt-pack cut): fire at the cut. After a real refresh: new \(D_{\mathrm{ref}}\), subsequent windows quiet.
+**Prototype.** Quiet corpus + fixed graph: expect no fire. Injected fracture (rewired communities after a cut): fire at the cut. After a real refresh: new \(D_{\mathrm{ref}}\), subsequent windows quiet. Batch-aggregate tables: `scripts/prototype_graph_pack_batch_agg.py`.
 
 **Hotpot on disk is a Graph-RAG snapshot, not a time stream.** Titles in the distractor pool are nodes; a shared-token edge is the cheap co-mention graph; seeds overlap the query; \(Y_j=1\) if title \(j\) is supporting. File: `xy_hotpot_pairs.csv` (query × 10). The `batch` column is query index, not arrival time. Use this table to learn the graph shape. Continuous-time refresh still needs a timestamped request log.
 
@@ -118,7 +119,7 @@ If the agent retrieves a graph or a hybrid index before the tool call, this scen
 
 **凡是连续时间在变的数据，只要能写成 \((X,Y,\mathrm{batch})\)，都可以走这一套。** 冻住 serving 策略，看预测误差相对自己的历史池是否已经极端。Graph-RAG、混合检索、Agent 下一步是同一条流水线，只有 hop 的含义不同。
 
-**Graph-RAG。** \(Y=\) 这一跳答得是否成立（忠实 / 引用落在边上 / 任务成功）。\(X=\) 问句表示 + 子图几何 + 版本号。Fire = 图包 / community / 模板换代，当前子图不当金标。Refresh 从模板 → 检索 → 重抽图，影子流量下一窗误差回来且 last-two quiet 才晋升，然后整池 reset。
+**Graph-RAG。** \(Y=\) 引用落在边上，或支撑节点在图包里。一个 serving batch 把窗内子图特征聚合起来（节点、边、度、连通片、query seed、最大片）。Fire = 图包 / community 换代（切点后 drop 或 rewire 边，再聚合），当前子图不当金标。不要盯单点相关性。Refresh 从模板 → 检索 → 重抽图，影子流量下一窗误差回来且 last-two quiet 才晋升，然后整池 reset。表形 prototype：`scripts/prototype_graph_pack_batch_agg.py`。八个面的总表：`docs/manuscript/online_serving_gates_zh.md`。
 
 **混合检索。** 一次请求：改写 → 稀疏+稠密并行 → 融合/重排 → 生成。\(Y\) 必须打在 **融合后的答案** 上，不要打在单一通道 Recall。Hop = embedding / 切块 / 重排 / 融合权重把冻住的包用坏了。稀疏看起来还行、稠密已经跳，正是要盯融合 \(Y\) 的原因。下一步评估是影子对照 + last-two，不是 Recall@\(k\) 单独涨了就上线。
 

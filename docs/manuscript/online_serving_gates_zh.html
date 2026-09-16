@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>在线 serving 闸：一张地图，多种标签</title>
+<style>
+:root {
+  --ink: #1b1f24;
+  --muted: #5c6570;
+  --line: #d8dee6;
+  --accent: #1f4e79;
+  --fire: #9b2c2c;
+  --quiet: #276749;
+  --bg: #f4f1ea;
+  --card: #fffdf8;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+  font-family: "Source Han Sans SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; }
+.deck { height: 100%; display: flex; flex-direction: column; }
+.slide {
+  display: none; flex: 1; padding: 48px 64px 72px;
+  max-width: 1180px; margin: 0 auto; width: 100%;
+}
+.slide.on { display: flex; flex-direction: column; justify-content: center; }
+h1 { font-size: 42px; line-height: 1.2; margin: 0 0 16px; color: var(--accent); }
+h2 { font-size: 32px; line-height: 1.25; margin: 0 0 20px; color: var(--accent); }
+p, li { font-size: 22px; line-height: 1.45; color: var(--ink); }
+.lead { font-size: 26px; max-width: 42em; }
+.muted { color: var(--muted); }
+.kicker { letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  font-size: 13px; margin-bottom: 10px; font-weight: 700; }
+.bar { display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 24px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+.arch { display: grid; gap: 12px; }
+.box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+.facets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.facets .box { font-size: 16px; }
+.facets b { display: block; color: var(--accent); margin-bottom: 6px; }
+table { border-collapse: collapse; width: 100%; background: var(--card); font-size: 16px; }
+th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { color: var(--accent); font-weight: 700; }
+td.fire { color: var(--fire); }
+td.not { color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .92em; background: #eee8dc; padding: 1px 6px; border-radius: 4px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.eq { font-size: 24px; background: var(--card); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--line); }
+.small { font-size: 16px; color: var(--muted); }
+kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; border-radius: 4px; background: #fff; }
+</style>
+</head>
+<body>
+<div class="deck">
+
+<section class="slide on" data-title="封面">
+  <div class="kicker">OnlineRFPerm / frozen probe</div>
+  <h1>一张地图，多种标签</h1>
+  <p class="lead">检测的是 P(Y | X) 还是不是同一张 serving 地图。<br>
+  八个面共用两个闸，只换 Y。图包换代：一个 batch 把图特征聚合起来就够了。</p>
+</section>
+
+<section class="slide" data-title="对象">
+  <div class="kicker">对象</div>
+  <h2>冻住的地图还在不在</h2>
+  <p class="lead">不是归因，不是生成模型，也不是把旁路指标写成 Y。</p>
+  <div class="eq">表：(X, Y, batch)，可选队列 T ∈ {0,1}</div>
+  <p class="small" style="margin-top:18px">凡是连续时间在变、能写成这张表的流，都可以走这一套。</p>
+</section>
+
+<section class="slide" data-title="两个闸">
+  <div class="kicker">两个闸，不可互换</div>
+  <h2>冻参考窗，和相邻 hop</h2>
+  <div class="row">
+    <div class="box">
+      <b>冻参考窗</b>
+      <p>D<sub>ref</sub> 上 fit 一次。<br>
+      Δ<sub>t</sub> = MSE<sub>t</sub> − μ<sub>ref</sub><br>
+      Fire = 相对参考窗已经显著变差。</p>
+    </div>
+    <div class="box">
+      <b>Last-two <code>hop_fires</code></b>
+      <p>在 B<sub>t−1</sub> 上重 fit，打 B<sub>t</sub>。<br>
+      Fire = 相邻两窗的地图 hop 了。<br>
+      第一跳永远 quiet。</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="八个面">
+  <div class="kicker">架构</div>
+  <h2>同一套闸，换 Y</h2>
+  <div class="facets">
+    <div class="box"><b>推理 smoothness</b>路径/跳合法</div>
+    <div class="box"><b>审核 / judge</b>过 / 不过</div>
+    <div class="box"><b>Graph-RAG 子图</b>支撑节点在包里</div>
+    <div class="box"><b>混合检索</b>融合后答案成立</div>
+    <div class="box"><b>Agent 下一步</b>schema / 不 loop</div>
+    <div class="box"><b>合成数据金标</b>还能当观测样本</div>
+    <div class="box"><b>Serving 刷新</b>当前包还能预测成功</div>
+    <div class="box"><b>实验 CUPED</b>协变量调整还有效</div>
+  </div>
+</section>
+
+<section class="slide" data-title="对照表">
+  <div class="kicker">Table</div>
+  <h2>Fire 是 hop，不是质量分</h2>
+  <table>
+    <thead>
+      <tr><th>面</th><th>Y</th><th>Fire 表示什么</th><th>不表示什么</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>推理 smoothness</td><td>这一跳 / 路径是否合法</td><td class="fire">推理链断了</td><td class="not">幻觉率</td></tr>
+      <tr><td>审核 / judge</td><td>过 / 不过</td><td class="fire">政策包或 judge 换代</td><td class="not">拒绝率；HH chosen</td></tr>
+      <tr><td>Graph-RAG 子图</td><td>引用落在边上；支撑节点在图包里</td><td class="fire">图包或 community 换代</td><td class="not">单点相关性</td></tr>
+      <tr><td>混合检索</td><td>融合后的答案成不成立</td><td class="fire">某一路索引或融合坏了</td><td class="not">单路 Recall</td></tr>
+      <tr><td>Agent 下一步</td><td>schema 合法、工具可调用、不 loop</td><td class="fire">协议断了，或开始空转</td><td class="not">任务最终成功</td></tr>
+      <tr><td>合成数据金标</td><td>还能不能当观测样本</td><td class="fire">合成分布漂了</td><td class="not">「像不像人写的」</td></tr>
+      <tr><td>Serving 刷新时刻</td><td>当前模板+检索+生成还能否预测成功</td><td class="fire">该换包了</td><td class="not">大模型该不该微调</td></tr>
+      <tr><td>实验 CUPED</td><td>协变量调整还有效</td><td class="fire">该重做回归</td><td class="not">A/B 谁赢了</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="slide" data-title="Graph-RAG">
+  <div class="kicker">唯一需要多写一句的面</div>
+  <h2>图包换代：batch = 图特征聚合</h2>
+  <p>每条请求一张子图：节点、边、平均度、连通片、query seed、seed 比例、最大片。</p>
+  <p>一个到达窗把这些特征 <b>aggregate</b> 起来，就是这一窗的 X。<br>
+  Y = 支撑节点落在 seed ∪ 一跳邻居。</p>
+  <p>Community 换代：切点后 drop / rewire 边，再做同样的聚合。不要另造奇怪的 X。</p>
+  <p class="small">Hotpot 盘上是题库快照，没有墙上时间。Prototype 用文件顺序只演示表形。</p>
+</section>
+
+<section class="slide" data-title="循环">
+  <div class="kicker">Serving 循环</div>
+  <h2>Quiet 留金标，Fire 换包</h2>
+  <div class="box">
+    <p>burn-in → 每窗打 Δ<sub>t</sub> → 在线 FDR</p>
+    <p><b style="color:var(--quiet)">Quiet</b>：金标保留，误差入池。</p>
+    <p><b style="color:var(--fire)">Fire</b>：当前包不当金标；从最便宜的刷新做起；整池 reset。</p>
+    <p>晋升：影子窗误差回来 <b>且</b> last-two quiet。</p>
+  </div>
+</section>
+
+<section class="slide" data-title="读数">
+  <div class="kicker">读数</div>
+  <h2>三句话</h2>
+  <p class="lead">光滑不火。<br>断裂在 onset 火。<br>Refresh 之后 reset，再 quiet。</p>
+  <p class="small">Prototype：<code>PYTHONPATH=. python3 scripts/prototype_graph_pack_batch_agg.py</code></p>
+</section>
+
+</div>
+<div class="bar">
+  <span>在线 serving 闸</span>
+  <span><kbd>←</kbd> <kbd>→</kbd>　<span id="pos"></span></span>
+</div>
+<script>
+const slides = [...document.querySelectorAll(".slide")];
+let i = 0;
+function show(k) {
+  i = (k + slides.length) % slides.length;
+  slides.forEach((s, j) => s.classList.toggle("on", j === i));
+  document.getElementById("pos").textContent = (i + 1) + " / " + slides.length;
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); show(i + 1); }
+  if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); show(i - 1); }
+  if (e.key === "Home") show(0);
+  if (e.key === "End") show(slides.length - 1);
+});
+show(0);
+</script>
+</body>
+</html>

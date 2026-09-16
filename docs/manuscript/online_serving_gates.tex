@@ -1,0 +1,91 @@
+% Architecture exhibit. Paste before the numbered use-cases.
+% Needs \usepackage{booktabs,array}.
+\subsection{One map, many labels}
+\label{sec:online-serving-gates}
+The object is whether a frozen serving map \(P(Y\mid X)\) is still the same object
+on arrival windows \(\mathrm{batch}\).
+Write every stream as one prediction table \((X,Y,\mathrm{batch})\)
+(optional queue flag \(T\in\{0,1\}\)).
+Two gates read that table and are not interchangeable:
+a frozen-reference probe (lstsq MSE versus \(D_{\mathrm{ref}}\), online FDR)
+and last-two \texttt{hop\_fires} (adjacent-window OOS ratio).
+Facets share the gates and differ only in \(Y\).
+Side gauges---hallucination rate, refusal rate, single-channel Recall---are never \(Y\).
+
+\begin{table}[t]
+\centering
+\caption{Same gates, different \(Y\). Fire is a hop of \(P(Y\mid X)\), not a quality score.}
+\label{tab:serving-facets}
+\setlength{\tabcolsep}{4pt}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.16\linewidth}
+                >{\raggedright\arraybackslash}p{0.26\linewidth}
+                >{\raggedright\arraybackslash}p{0.26\linewidth}
+                >{\raggedright\arraybackslash}p{0.22\linewidth}@{}}
+\toprule
+Facet & \(Y\) & Fire means & Does not mean \\
+\midrule
+Reasoning smoothness
+  & this hop / path is legal
+  & the chain broke
+  & hallucination rate \\
+Auditor / judge
+  & pass / fail
+  & policy-pack or judge refresh
+  & refusal rate; HH chosen \\
+Graph-RAG pack
+  & citation lands on an edge;
+    supporting nodes sit in the pack
+  & graph-pack or community refresh
+  & single-node relevance \\
+Hybrid retrieval
+  & the fused answer is valid
+  & one channel, or the fusion, broke
+  & single-channel Recall \\
+Agent next step
+  & schema-ok, tool admitted, no loop
+  & the protocol broke, or the agent is spinning
+  & eventual task success \\
+Synthetic gold
+  & still usable as an observation
+  & the synthetic distribution drifted
+  & ``looks human-written'' \\
+Serving refresh
+  & current prompt + retrieval + generator
+    still predicts success
+  & time to swap the pack
+  & whether to fine-tune the LLM \\
+Experimental CUPED
+  & covariate adjustment is still valid
+  & re-fit the regression
+  & which A/B arm won \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Shared loop.}
+Burn-in on \(D_{\mathrm{ref}}\).
+For each batch: score \(T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}\), rank \(p\)-value, online FDR
+(ADDIS/SAFFRON; asynchronous if windows overlap).
+Quiet: keep gold, append \(T\).
+Fire: stop treating the current pack as gold; cheapest refresh that can recover;
+reset the error pool, burn-in, and testing wealth.
+Promote a shadow pack only if the next window is back near \(E_{\mathrm{ref}}\)
+\emph{and} last-two is quiet.
+
+\paragraph{Graph-RAG \(X\).}
+The non-generic facet is the graph pack.
+One serving batch is the aggregate of subgraph features on that window
+(mean, and optionally std, of node count, edge count, mean degree,
+connected components, query seeds, seed fraction, largest-component fraction).
+\(Y=\) supporting nodes lie in seed \(\cup\) 1-hop neighbours
+(or the citation lands on an edge).
+A community refresh is a drop or rewire of those edges, then the same aggregate.
+No extra coordinates.
+Hotpot on disk is a pool snapshot: \texttt{batch} is query index, not wall-clock time.
+
+\paragraph{Read-out.}
+Smooth stream: no fire.
+Fracture at a known cut: fire near onset.
+After a real refresh: reset, then quiet.
+The eight facets above are the same sentence with a different \(Y\).

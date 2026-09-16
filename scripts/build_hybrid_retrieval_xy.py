@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
 """Formulate hybrid-retrieval and Graph-RAG prediction tables from HotpotQA.
 
-Native shape is one query × 10 wiki paras (Hotpot distractor pool), not one
+Native shape is one query x 10 wiki paras (Hotpot distractor pool), not one
 row per question. Pair table: Y_j = 1 iff title j is a supporting fact.
 Collapsed fused Y is an optional readout of that ranking.
 
 Questions and paragraph text are not stored.
 
-Usage::
-
-    PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py
-    python3 scripts/build_hybrid_retrieval_xy.py
-"""
-
 Hybrid serving (what production logs):
   sparse = BM25 on the distractor candidate pool
   dense  = char-ngram hashing cosine (a second channel, not a GPU embedder)
   fuse   = Reciprocal Rank Fusion
-  Y      = 1 iff every gold supporting *title* is in the fused top-k
+  Y      = 1 iff every gold supporting title is in the fused top-k
   X      = query geometry + channel agreement. Gold hits are not features.
 
 Graph-RAG (same queries, extra X):
@@ -30,6 +24,7 @@ Two-stream CFPerm: T=0 sparse-only usable, T=1 dense-only usable, same X.
 
 Usage::
 
+    PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py
     python3 scripts/build_hybrid_retrieval_xy.py
 """
 from __future__ import annotations
@@ -261,7 +256,7 @@ def inv_rank(scores: np.ndarray) -> np.ndarray:
 
 
 def query_pool_tensors(question, context, supporting, *, fracture_dense: bool = False):
-    """The actual serving tensor: one query × 10 wiki paras.
+    """The actual serving tensor: one query x 10 wiki paras.
 
     Returns arrays all length ``N_CAND``::
 
