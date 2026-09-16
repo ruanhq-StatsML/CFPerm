@@ -1,0 +1,22 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath}
+\title{Streaming OnlineRFPerm on LLM infer streams}
+\author{CFPerm}
+\date{\today}
+\begin{document}
+\maketitle
+Continuous clock: win$=20$, $\gamma=1.25$. Freeze = RF on quiet + rolling error ratio; slide = consecutive OOS OnlineRFPerm with step 1.
+\begin{table}[h]\centering
+\caption{Streaming detection delay (trail observation index).}
+\begin{tabular}{lrrr}
+\toprule dataset & $y$ quiet$\to$hop & freeze delay & slide delay \\
+\midrule
+halueval & 0.00$\to$1.00 & 0 & 1 \\
+squad & 0.00$\to$1.00 & 0 & 1 \\
+hotpotqa & 0.00$\to$1.00 & 0 & 1 \\
+truthfulqa & 0.00$\to$1.00 & 0 & 1 \\
+\bottomrule\end{tabular}\end{table}
+\paragraph{Read.}
+RF component model should catch an injected quality hop. No fire $\Rightarrow$ chain looks smooth under this probe.
+\end{document}
