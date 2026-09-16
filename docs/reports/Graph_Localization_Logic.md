@@ -1,7 +1,10 @@
 # Graph-localization package
 
-FSDS 没法多步下钻，所以 **只讲 graph-localization**。  
-Package 很小，直观：做 data-manipulation，再搭一条 inference pipeline，按实体打 moved / quiet。够了。
+FSDS **最多两步下钻**（LOGO 丢实体 → LOCO 丢列），不能再往下走。所以 **只讲 graph-localization**。
+
+手工做完那几步特征之后，同一套 X 按到达切窗，就是 **连续 batch 对**。loc 还是每实体 P(W | X_实体)，只是 W 换成相邻 batch。
+
+Package 很小：data-manipulation + inference pipeline，按实体 moved / quiet。够了。
 
 不是 GNN。不是因果。不是 FSDS 包装。
 
@@ -25,10 +28,15 @@ Detector 半块是因为没有新数据、没有新模型，只是每实体一�
 
 ---
 
-## 为什么不讲 FSDS
+## FSDS 的硬限制（很明确）
 
-LOGO 一次丢掉一整块，不会自己按实体往下走。  
-所以 FSDS 不是 localization package 的一部分。它最多是 loc 出名单之后、有 Y 时的日志。本 package 不靠它讲故事。
+最多两步，没有第三步：
+
+1. LOGO：丢掉某一个 **实体**
+2. LOCO：丢掉该实体里的 **列**（塔只 top-k）
+
+不会按实体再 hop、再社区、再 2-hop。没有名单就连这两步也开不好。  
+所以 FSDS 不是 loc package 的零件，也不能拿它当多步定位器。有 Y 时的日志，到此为止。
 
 ---
 
@@ -46,7 +54,7 @@ LOGO 一次丢掉一整块，不会自己按实体往下走。
 video / audio 是 user 的 1-hop 属性，不是 merchant 实体。  
 聚合键写进口径，不要事后猜。
 
-时钟 W = `t_end` 中位。同一批行、五块 X 并排。这就是 manipulation 的全部。
+手工这几步做完，每行有五块实体 X。离线 W = `t_end` 中位；上线把行按到达切成 batch，相邻两窗就是连续 batch 对。特征口径不变。
 
 ---
 
@@ -74,15 +82,11 @@ quiet 的实体停住——不是再丢给 FSDS 打开。
 
 ## 还有其他的吗
 
-没有必须的第三块。
+**没有。** loc package 到 batch 对就齐了。
 
-| 可以后做 | 不进这个 package |
-|---|---|
-| 真 LLM pipeline 换掉假 DGP | GNN |
-| Detector 换成 last-two（online 窗） | 用 FSDS 当多步 loc |
-| 映射 fire 另列（要 Y） | 把 loc AUC 当成绩 |
+隔壁另列（不是这个包缺的零件）：映射 fire，要 Y，OnlineRFPerm。实体 loc 不替代 fire。
 
-Online training / LOGO 若做，组名仍是这五个实体；那是下一片，不是这个 package 里缺的零件。
+不进包：GNN、FSDS 第三步、更多实体、用 Y 训 encoder。
 
 `scripts/tencent_gr/graph_loc_fsds_drill.py`  
 实体口径仍按 user / item / merchant / video / audio。
