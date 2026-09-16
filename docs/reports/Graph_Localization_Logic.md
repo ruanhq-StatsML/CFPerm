@@ -88,5 +88,62 @@ quiet 的实体停住——不是再丢给 FSDS 打开。
 
 不进包：GNN、FSDS 第三步、更多实体、用 Y 训 encoder。
 
+---
+
+## 这里为什么不用 GNN
+
+图在这里是 **切实体的坐标**，不是要训一个过图的预测器。GNN 的 hop 是消息传递半径，不是定位，也不是 FSDS 下钻。
+
+别人在推荐图上掏 GNN，通常就这几条：
+
+| 想用 GNN 干什么 | 这里为什么不对 |
+|---|---|
+| 消息传递自动吃 k-hop，少手写特征 | 手工那几步度数 / pool 已经够出 batch 对；再传会把实体揉进一个 hidden |
+| 用图结构预测点击 / 转化 | 那是 P(Y\|X)，loc 问的是无 Y 的 P(W\|X_实体) |
+| embedding 漂了 = 图变了 | 漂的是混在一起的表征，说不出 user 动、merchant 静 |
+| GNNExplainer / 邻域重要性 | 读成归因；本包不做归因 |
+| 换一版 GNN checkpoint | 那是模型 hop，不是实体画像 hop |
+
+还有几条独立于「FSDS 只能两步」的原因：
+
+1. **实体被消息传递混掉。** loc 的刀是 user / item / merchant / video / audio 并排。GNN 一层聚合就把人、货、店折进同一个向量，对照表没了。
+2. **监督会把映射灌进 X。** GNN 几乎总是带着 Y 训。训完的向量不再是纯画像，不能当「无 Y 的 loc」。
+3. **向量槽已经被 inference pipeline 占了。** 店/货上的塔来自 LLM/编码器（现在是假 DGP）。GNN 是第二套图编码器，loc 不需要。
+4. **GNN 的 hop ≠ 变动。** 2-hop 邻居只是半径。变动是相邻 batch 上这块 X 像不像。半径写在特征口径里（度数是 0-hop，塔 pool 是 1-hop），不必用 GNN 再传一层。
+5. **Online 时更糟。** 每个 batch 重训/微调 GNN，表征自己先 hop，实体 loc 和模型 hop 分不开。
+
+所以：有图 ≠ 上 GNN。networkx 抽实体 X 就够。
+
+---
+
+## GNN 和 FSDS 的变动逻辑（不要混）
+
+三种「变了」不是一件事。
+
+| | **Graph-loc（本包）** | **FSDS** | **GNN** |
+|---|---|---|---|
+| 问 | 哪一 **实体画像** early vs late 不像 | 这块 X 和 **Y 缺口** 有没有关系 | 过图的 **表征/预测器** 换没换 |
+| Y | **不要** | **要** | 通常要（监督） |
+| 变动单位 | 实体（五块并排） | 事先切好的组：LOGO 实体、LOCO 列 | 节点 hidden / 一层权重 |
+| 能走几步 | 并排一次，quiet 停 | **最多两步**，没有第三步 | k-hop 是半径，不是下钻 |
+| hop 一词 | 不用 | 不是图 hop | 邻居半径 |
+| 读法 | moved / quiet | Δ 是日志，不是贡献 | 不能读成「哪座塔动了」 |
+
+**Loc 的变动：** 同一套手工实体 X，相邻 batch 对。P(W \| X_user) 分开了、P(W \| X_merchant) 没分开 → 人动店静。没有 Y。
+
+**FSDS 的变动：** 已经有 Y、已经有实体名单之后。φ=(Y−μ)(W−e)。LOGO 丢掉某一个实体看 R 降不降；LOCO 再丢掉一列。这是「Y 缺口绑没绑在这块 X 上」，**不是**「这块画像动了」。最多两步，所以不能拿 FSDS 当多步定位器，也不能替代 loc。
+
+**GNN 的变动：** 图一变或 checkpoint 一换，hidden 就变。那是表征漂了，还是预测器 hop 了，和「user 实体画像动了」不是同一句话。k-hop 只是聚合半径：2-hop GNN 不会告诉你第二步该下钻谁。若用 Y 训，变动里已经混进映射，loc 和 fire 分不开。
+
+对照（同一时钟）：
+
+```
+GNN embedding 漂了     ≠  user 实体 moved
+FSDS 某实体 LOGO Δ>0   ≠  该实体画像动了
+某实体 loc moved       ≠  该实体是 Y 缺口来源
+```
+
+三句都要留着。本包只做第一列 loc。FSDS 两步是有 Y 时的日志上限。GNN 不进包。
+
 `scripts/tencent_gr/graph_loc_fsds_drill.py`  
 实体口径仍按 user / item / merchant / video / audio。
