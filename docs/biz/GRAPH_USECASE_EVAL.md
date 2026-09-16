@@ -219,6 +219,7 @@ L3  开: 作者素材限流 + 订单空路径 Top-k
 | 步骤 | 仓库落点 |
 |------|----------|
 | 四维并成特征维 | `feature_dim_attr.py --alias graph` |
+| **TencentGR 实数：图定位→FSDS + 注入 Hit@K** | `scripts/tencent_gr/graph_loc_fsds.py` → `results/tencent_gr_fs150/graph_loc_fsds/` · `TENCENT_GRAPH_LOC_FSDS.md` |
 | LLM 同构四维 | `--alias llm`（rag/style/text/path） |
 | 风格挂作者维 | `FEATURE_DIM_UNIFIED_ATTR.md` |
 | 值班输出样例 | 本文 §2.6；原样例见商户图文档 §5 |

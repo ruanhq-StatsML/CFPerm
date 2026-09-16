@@ -1,0 +1,78 @@
+{
+  "rf_domain_auc": 0.7459450568990044,
+  "rf_mass": {
+    "product": 0.054388929183929825,
+    "user": 0.94561107081507
+  },
+  "logo_share": {
+    "product": 0.0,
+    "user": 0.0
+  },
+  "within_dim": {
+    "product": [
+      {
+        "rank": 1,
+        "name": "n_uniq_cnv_item",
+        "vimp": 0.02471087032172256
+      },
+      {
+        "rank": 2,
+        "name": "item_entropy_cnv",
+        "vimp": 0.02094722673855575
+      },
+      {
+        "rank": 3,
+        "name": "item_entropy_clk",
+        "vimp": 0.007742555345861008
+      },
+      {
+        "rank": 4,
+        "name": "n_uniq_clk_item",
+        "vimp": 0.0009882767778449126
+      }
+    ],
+    "user": [
+      {
+        "rank": 1,
+        "name": "ui_only_exp_share",
+        "vimp": 0.13742539196945838
+      },
+      {
+        "rank": 2,
+        "name": "30d_ctcvr",
+        "vimp": 0.07819365646008977
+      },
+      {
+        "rank": 3,
+        "name": "sess_cnv_sess_rate",
+        "vimp": 0.07816530049207909
+      },
+      {
+        "rank": 4,
+        "name": "life_cnv_share",
+        "vimp": 0.07778387445280018
+      },
+      {
+        "rank": 5,
+        "name": "ui_exp_per_item_mean",
+        "vimp": 0.06606551194738747
+      },
+      {
+        "rank": 6,
+        "name": "life_ctcvr",
+        "vimp": 0.04948615845511178
+      },
+      {
+        "rank": 7,
+        "name": "sess_depth_cnv_mean",
+        "vimp": 0.04266619051634107
+      },
+      {
+        "rank": 8,
+        "name": "ctvr_pay_per_expose",
+        "vimp": 0.04237287416531035
+      }
+    ]
+  },
+  "po_risk": 0.0018774117282300976
+}

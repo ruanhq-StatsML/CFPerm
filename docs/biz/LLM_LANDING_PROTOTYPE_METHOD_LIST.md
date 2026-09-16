@@ -124,9 +124,9 @@
 | | |
 |--|--|
 | **方法** | 图 localization（缩维）→ 维内 FSDS/LOGO |
-| **Prototype** | P6（`--alias graph`）；文档 `MERCHANT_AUTHOR_PRODUCT_ORDER_GRAPH_ATTR.md` |
+| **Prototype** | P6（`--alias graph`）；`MERCHANT_AUTHOR_PRODUCT_ORDER_GRAPH_ATTR.md`；**评估协议 `GRAPH_USECASE_EVAL.md`** |
 | **业务问题** | 近实时先报哪 2–3 个业务维有问题，再维内归因？ |
-| **Justify** | 全维细归因噪且贵；L1 缩到 2–3 维再 L2，才是可上线形态。与多塔/特征族同一句式。 |
+| **Justify** | 全维细归因噪且贵；L1 缩到 2–3 维再 L2，才是可上线形态。与多塔/特征族同一句式。主考题是 **L1 Hit@K**，不是边故事。 |
 | **动作** | 工单落到商户/作者/货盘/交易运营（只砸 S*） |
 
 ### S9 — **多塔 / 多路刷新预算**（子集定位，不是推荐）
@@ -201,6 +201,7 @@
 | `SUBSET_LOCALIZATION_AUDIT_TOWERS.md` | 子集定位 / 多塔 / 审核 |
 | `WEEKLY_AUDIT_SAFETY_GRAPH_FSDS.md` | 周更·安全·图→FSDS |
 | `MERCHANT_AUTHOR_PRODUCT_ORDER_GRAPH_ATTR.md` | 四维图两级归因 |
+| `GRAPH_USECASE_EVAL.md` | **图谱 use-case：刻画 + 评估（L1 Hit@K / L3 子集动作）** |
 | `METHOD_LANDING_ROADMAP.md` | 创新 A–E + 落地接口 |
 | `METHOD_BIZ_SCENARIO_PROTOTYPE.md` | 方法×情景 relevance |
 | `LLM_INFER_ALIGN_PROTOTYPE.md` | 最小 call 包结果 |
