@@ -67,3 +67,13 @@ PYTHONPATH=. python3 scripts/run_serving_gates.py
 ```
 
 连续时间审核的表已在 `results/manuscript/llm_audit/`。
+
+## 另一件：多组别归因（CFPerm）
+
+闸看时间。组别归因看 \(T\)：队列 / 检索路 / 第几跳。permute \(T\)，哪些 \(X_j\) 带着组间 \(P(Y\mid X)\) 差。不是把 13 个 \(x\) 当成时间 hop 的归因维。
+
+```bash
+PYTHONPATH=. python3 scripts/prototype_group_attribution.py
+```
+
+见 `docs/manuscript/group_attribution_zh.md`。Agent 推理仍无盘上表；其余产品面都已有表。

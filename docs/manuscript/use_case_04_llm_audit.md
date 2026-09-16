@@ -50,6 +50,8 @@ cfperm(X = X, Y = Y, T = T, n_perm = 30, vimp = "permuCATE",
 
 Rebuild: `python3 scripts/build_llm_audit_xy.py`. Raw prompts are not stored; only \((Y,X,\mathrm{batch})\).
 
+**Group attribution is a different table.** \(T\) is the reviewer queue (or hop bucket). CFPerm permutes \(T\) and asks which \(X_j\) carry the group CATE. Do not read those hits as the cause of a time hop. Prototype: `PYTHONPATH=. python3 scripts/prototype_group_attribution.py`.
+
 ## 中文
 
 **业务。** 审核员（人 / 政策模型 / 外挂 LLM）按到达时间写决定。要盯的是 \(P(Y\mid X)\) 还是不是同一套审核逻辑，不是拒绝率，也不是 HH 偏好对。

@@ -29,6 +29,9 @@ Chinese: `online_serving_gates_zh.md`, `online_serving_gates_zh.html`.
 
 Graph-RAG: one batch aggregates subgraph features (or a user-id list first). Nothing else.
 
+The other object is group attribution: \(T\) is the queue / channel / hop bucket. Permute \(T\), not \(X\). See `docs/manuscript/group_attribution_zh.md`.
+
 ```bash
 PYTHONPATH=. python3 scripts/run_serving_gates.py
+PYTHONPATH=. python3 scripts/prototype_group_attribution.py
 ```
