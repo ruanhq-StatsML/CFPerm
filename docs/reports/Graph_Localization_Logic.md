@@ -1,149 +1,102 @@
-# Graph-localization package
+# 图实体对照：接到现有口径，不是新方法
 
-FSDS **最多两步下钻**（LOGO 丢实体 → LOCO 丢列），不能再往下走。所以 **只讲 graph-localization**。
+不 call 一个 package，也不发明方法论。  
+推荐图这一片只是把 **已经有的** 对照 / loc / FSDS / fire 接到 Tencent-GR 的实体切上。
 
-手工做完那几步特征之后，同一套 X 按到达切窗，就是 **连续 batch 对**。loc 还是每实体 P(W | X_实体)，只是 W 换成相邻 batch。
+现有口径不动：
 
-Package 很小：data-manipulation + inference pipeline，按实体 moved / quiet。够了。
+- 一个 Y，一堆 X；不是归因
+- 对照 / loc：每块 X 对时钟 W，无 Y，moved / quiet
+- fire：有 Y，OnlineRFPerm last-two，P(Y|X) hop
+- FSDS：有 Y 之后最多两步（LOGO 组 → LOCO 列），Δ 是日志
+- AUC / ratio 不是成绩
 
-不是 GNN。不是因果。不是 FSDS 包装。
-
----
-
-## Package 里有哪几块
-
-就两块半。没有第三块业务。
-
-| # | 块 | 干什么 | 现在 prototype | 换成真的 |
-|---|---|---|---|---|
-| 1 | **Data-manipulation** | 左窗切图；按实体抽画像；店上 attach 的向量沿边聚到人 | `split_lr` + networkx 四张图 + mean-pool | 同一套；换边表即可 |
-| 2 | **Inference pipeline** | 给 item/merchant 打向量（视频/音频/文本） | 假 DGP：`randint` id + 64-d t/U | **LLM / 编码器 inference 一条 pipeline 就够** |
-| ½ | **Detector** | 每实体 P(W \| X_实体)，无 Y → moved / quiet | RF-domain AUC ≥ 0.55 | last-two / 同一句分类器 |
-
-没有：GNN、全图 embedding 当归因、FSDS 多步、online 训练器、社区发现。  
-Detector 半块是因为没有新数据、没有新模型，只是每实体一块 X 打时钟。
-
-**是的：data-manipulation + 一条 LLM-inference pipeline 就足够。**  
-假 DGP 占的就是 pipeline 那个槽。换成真推理，loc 口径不动。
+图只是 **切 X 的刀**（人 / 货 / 店 / 挂在店上再聚到人的塔）。不是 GNN，不是新 loc 算法。
 
 ---
 
-## FSDS 的硬限制（很明确）
+## 怎么接（同一套话，换切刀）
 
-最多两步，没有第三步：
+| 现有 | 审核落地 | 推荐图落地（这一片） |
+|---|---|---|
+| 切 X 的刀 | 长度 / 语气 / 拒绝，或视频塔 / 文本塔 | user / item / merchant / video / audio |
+| loc，无 Y | 这块文风 early vs late 像不像 | 这块实体画像像不像 |
+| 手工特征 → batch 对 | `xy_*.csv` 按到达切窗 | 度数 + pool 做完，按到达切窗 |
+| inference 槽 | style_vector / 审核器特征 | 店上的塔：假 DGP 或一条编码器 pipeline |
+| fire，有 Y | OnlineRFPerm 审核决定 | 同一句，Y=`y_post_clk_1d`（另列，本片没当主叙事） |
+| FSDS 两步 | 组 = 特征族 | 组 = loc 标成 moved 的实体；不能多步 |
 
-1. LOGO：丢掉某一个 **实体**
-2. LOCO：丢掉该实体里的 **列**（塔只 top-k）
-
-不会按实体再 hop、再社区、再 2-hop。没有名单就连这两步也开不好。  
-所以 FSDS 不是 loc package 的零件，也不能拿它当多步定位器。有 Y 时的日志，到此为止。
+Detector 还是 P(W | X_块)。没有新统计量。
 
 ---
 
-## Data-manipulation 具体做什么
+## 数据侧只要两步半（落地，不是零件清单）
 
-左窗 clk/cnv（曝光不成边）→ 三种节点实体：
+1. **手工特征：** 左窗图抽实体 X；塔 attach 在店、pool 到人。
+2. **Inference 槽：** `(店或货) → 向量`。现在假 DGP；换成 LLM/编码器 pipeline 即可。
+3. **同一句检测：** 每实体 moved / quiet。上线则相邻 batch 对。
 
-| 实体 | 抽出的 X | 接到行上的键 |
+FSDS 最多两步，所以 loc 故事不靠它。GNN 不接：会把实体揉进 hidden，还会把 Y 灌进 X。
+
+---
+
+## 结合时的建议（仍是原方法，不新造）
+
+1. **对外不要起新名字。** 不写 Graph-Loc-FSDS、不写 graph localization package。就写：实体切的塔/族对照，接到 OnlineRFPerm / FSDS。
+2. **一张表并排，不要合成一个分。** 和审核对照同一格式：
+
+   | 窗 | user | item | merchant | video | audio | 映射 fire |
+   |---|---|---|---|---|---|---|
+   | t | moved/quiet | … | … | … | … | yes/no |
+
+   loc 列无 Y。fire 列有 Y。缺 Y 就空着 fire，不要用 loc AUC 填。
+3. **LOGO 的组名 = loc 的实体名。** 不要另切一套 family。quiet 实体不要送进 FSDS。两步封顶写进工单，免得有人要第三步。
+4. **假 DGP 只占 inference 槽。** 真接法：encoder 写出 `(merchant_id, vec)`，后面 pool / loc 不动。不要用 Y 训这个 encoder，否则 loc 不再无 Y。
+5. **上线只换时钟，不换切刀。** 离线 W=`t_end` 中位；上线相邻 batch。实体五块、无 Y loc、有 Y fire，三句话原样。
+6. **审核和推荐用同一张对照语法。** 审核族、推荐实体，都是「一块 X、同一时钟、动/不动」。两份落地互证口径，不是两个方法。
+7. **日志分开放。** loc AUC、FSDS Δ、fire bit、拒绝率，四列。不加权合成「图谱健康度」。
+8. **GNN 若别人问起：** 图在这里是切刀；消息传递会毁掉实体对照。不接。不是「GNN 不 SOTA」，是和现有 loc 口径冲突。
+
+---
+
+## FSDS 两步（原限制，原样接）
+
+1. LOGO：丢掉某一个 **moved 实体**
+2. LOCO：丢掉该实体里的 **列**（塔 top-k）
+
+没有第三步。Δ 不是贡献。画像 moved ≠ Δ>0 ≠ 根因。
+
+---
+
+## 实体切（刀，不是新 loc）
+
+| 实体 | X | 接到行上 |
 |---|---|---|
 | user | 人—货度、人—店度 | `user_id` |
 | item | 货—人度、共点度 | 当前单 `item_id` |
-| merchant | 店—人度、投影 PR/聚类 | 当前单 `merchant_id` |
+| merchant | 当前店度数 / PR / 聚类 | 当前单 `merchant_id` |
+| video / audio | 店上向量 pool 到人 | `user_id` |
 
-塔：inference 打在 **店** 上 → 沿人—店边 pool 到 **人**。  
-video / audio 是 user 的 1-hop 属性，不是 merchant 实体。  
-聚合键写进口径，不要事后猜。
+video/audio 是 user 的 1-hop 属性，不是 merchant。所以店标量可以 quiet、人侧塔可以 moved。这是切刀不同，不是新发现。
 
-手工这几步做完，每行有五块实体 X。离线 W = `t_end` 中位；上线把行按到达切成 batch，相邻两窗就是连续 batch 对。特征口径不变。
-
----
-
-## Inference pipeline 具体要什么
-
-只要一张表：`(merchant_id 或 item_id) → 向量`。
-
-现在：1e4 个假 id，64 维噪声，乱七八糟 attach 到店。  
-换成 LLM-inference：对店的视频/音频/文案跑编码器，写出同一张表，后面 mean-pool 不用改。
-
-一条 pipeline 够：encode → attach 到图上的实体 → loc。  
-不要第二套训练、不要用 Y 去训这个 encoder 再回头说定位到了图。
+这次：user / video / audio moved；item / merchant quiet。quiet 停。
 
 ---
 
-## Detector（半块）
+## 三种变动（原方法里本来就分开）
 
-每实体：只有 `X_实体`，问 early vs late 像不像。  
-moved / quiet。AUC 是日志。  
-quiet 的实体停住——不是再丢给 FSDS 打开。
-
-这次：user / video / audio 动；item / merchant 静。
-
----
-
-## 还有其他的吗
-
-**没有。** loc package 到 batch 对就齐了。
-
-隔壁另列（不是这个包缺的零件）：映射 fire，要 Y，OnlineRFPerm。实体 loc 不替代 fire。
-
-不进包：GNN、FSDS 第三步、更多实体、用 Y 训 encoder。
-
----
-
-## 这里为什么不用 GNN
-
-图在这里是 **切实体的坐标**，不是要训一个过图的预测器。GNN 的 hop 是消息传递半径，不是定位，也不是 FSDS 下钻。
-
-别人在推荐图上掏 GNN，通常就这几条：
-
-| 想用 GNN 干什么 | 这里为什么不对 |
-|---|---|
-| 消息传递自动吃 k-hop，少手写特征 | 手工那几步度数 / pool 已经够出 batch 对；再传会把实体揉进一个 hidden |
-| 用图结构预测点击 / 转化 | 那是 P(Y\|X)，loc 问的是无 Y 的 P(W\|X_实体) |
-| embedding 漂了 = 图变了 | 漂的是混在一起的表征，说不出 user 动、merchant 静 |
-| GNNExplainer / 邻域重要性 | 读成归因；本包不做归因 |
-| 换一版 GNN checkpoint | 那是模型 hop，不是实体画像 hop |
-
-还有几条独立于「FSDS 只能两步」的原因：
-
-1. **实体被消息传递混掉。** loc 的刀是 user / item / merchant / video / audio 并排。GNN 一层聚合就把人、货、店折进同一个向量，对照表没了。
-2. **监督会把映射灌进 X。** GNN 几乎总是带着 Y 训。训完的向量不再是纯画像，不能当「无 Y 的 loc」。
-3. **向量槽已经被 inference pipeline 占了。** 店/货上的塔来自 LLM/编码器（现在是假 DGP）。GNN 是第二套图编码器，loc 不需要。
-4. **GNN 的 hop ≠ 变动。** 2-hop 邻居只是半径。变动是相邻 batch 上这块 X 像不像。半径写在特征口径里（度数是 0-hop，塔 pool 是 1-hop），不必用 GNN 再传一层。
-5. **Online 时更糟。** 每个 batch 重训/微调 GNN，表征自己先 hop，实体 loc 和模型 hop 分不开。
-
-所以：有图 ≠ 上 GNN。networkx 抽实体 X 就够。
-
----
-
-## GNN 和 FSDS 的变动逻辑（不要混）
-
-三种「变了」不是一件事。
-
-| | **Graph-loc（本包）** | **FSDS** | **GNN** |
+| | loc / 对照 | FSDS | GNN（不接） |
 |---|---|---|---|
-| 问 | 哪一 **实体画像** early vs late 不像 | 这块 X 和 **Y 缺口** 有没有关系 | 过图的 **表征/预测器** 换没换 |
-| Y | **不要** | **要** | 通常要（监督） |
-| 变动单位 | 实体（五块并排） | 事先切好的组：LOGO 实体、LOCO 列 | 节点 hidden / 一层权重 |
-| 能走几步 | 并排一次，quiet 停 | **最多两步**，没有第三步 | k-hop 是半径，不是下钻 |
-| hop 一词 | 不用 | 不是图 hop | 邻居半径 |
-| 读法 | moved / quiet | Δ 是日志，不是贡献 | 不能读成「哪座塔动了」 |
-
-**Loc 的变动：** 同一套手工实体 X，相邻 batch 对。P(W \| X_user) 分开了、P(W \| X_merchant) 没分开 → 人动店静。没有 Y。
-
-**FSDS 的变动：** 已经有 Y、已经有实体名单之后。φ=(Y−μ)(W−e)。LOGO 丢掉某一个实体看 R 降不降；LOCO 再丢掉一列。这是「Y 缺口绑没绑在这块 X 上」，**不是**「这块画像动了」。最多两步，所以不能拿 FSDS 当多步定位器，也不能替代 loc。
-
-**GNN 的变动：** 图一变或 checkpoint 一换，hidden 就变。那是表征漂了，还是预测器 hop 了，和「user 实体画像动了」不是同一句话。k-hop 只是聚合半径：2-hop GNN 不会告诉你第二步该下钻谁。若用 Y 训，变动里已经混进映射，loc 和 fire 分不开。
-
-对照（同一时钟）：
+| 问 | 这块 X 像不像 | 和 Y 缺口有没有关系 | 表征/预测器换没换 |
+| Y | 不要 | 要 | 通常要 |
+| 几步 | 并排一次 | 最多两步 | 半径 ≠ 下钻 |
 
 ```
-GNN embedding 漂了     ≠  user 实体 moved
-FSDS 某实体 LOGO Δ>0   ≠  该实体画像动了
-某实体 loc moved       ≠  该实体是 Y 缺口来源
+某实体 loc moved    ≠  该实体是 Y 缺口来源
+FSDS LOGO Δ>0       ≠  该实体画像动了
+GNN hidden 漂了     ≠  实体对照
 ```
 
-三句都要留着。本包只做第一列 loc。FSDS 两步是有 Y 时的日志上限。GNN 不进包。
+映射 fire 另列，OnlineRFPerm。loc 不替代 fire。
 
-`scripts/tencent_gr/graph_loc_fsds_drill.py`  
-实体口径仍按 user / item / merchant / video / audio。
+`scripts/tencent_gr/graph_loc_fsds_drill.py` 是落地脚本，不是新方法实现。

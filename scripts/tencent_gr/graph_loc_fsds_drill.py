@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""Graph-localization package: data-manipulation + inference, then per-entity moved/quiet.
+"""Tencent-GR landing of existing loc/contrast: entity-cut X, moved/quiet.
 
-FSDS cannot multi-step-localize — this script is the loc package, not an FSDS story.
-
-  1) Data-manipulation: left-window graphs, entity portraits, merchant→user pool.
-  2) Inference slot: fake 64-d DGP now; an LLM/encoder pipeline is enough to replace it.
-  3) Detector: each entity P(W|X_entity), no Y. Quiet entities stop.
-
-Entities: user / item / merchant / video_tower / audio_tower.
+Not a new package or method. Graph is the knife (user/item/merchant/towers).
+FSDS at most two steps after loc; GNN not used (would mix entities and leak Y).
 
   PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py
 """
