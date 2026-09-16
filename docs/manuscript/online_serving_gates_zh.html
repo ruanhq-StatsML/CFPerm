@@ -61,7 +61,15 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
   我们做的是<strong>连续时间审核</strong>，和 <strong>agent 推理</strong>。其余按普通 serving，同一套闸。</p>
 </section>
 
-<section class="slide" data-title="对象">
+<section class="slide" data-title="推理逻辑">
+  <div class="kicker">产品 use-case</div>
+  <h2>LLM 就是连续到达的一跳</h2>
+  <div class="box">
+    <p>观察当前包 → 走下一步（写回复 / 选工具 / 从子图引用）→ 写下这一跳的 Y。</p>
+    <p>冻住的 f<sub>ref</sub> 只预测 P(Y | X)。误差已经极端就 fire：当前推理包不当金标，换包，reset。</p>
+    <p class="small">没有别的对象。X 是 serving 几何，不是原文。</p>
+  </div>
+</section>
   <div class="kicker">对象</div>
   <h2>冻住的地图还在不在</h2>
   <p class="lead">不是归因，不是生成模型，也不是把旁路指标写成 Y。</p>

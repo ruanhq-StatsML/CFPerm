@@ -10,6 +10,15 @@ What we actually run in continuous time is \textbf{moderation} and \textbf{agent
 Graph-RAG packs and hybrid retrieval are ordinary serving maps under the same gates---swap \(Y\), nothing extra.
 Hallucination rate, refusal rate, single-channel Recall, and eventual task success are never \(Y\).
 
+\paragraph{LLM reasoning loop.}
+Traffic arrives one hop at a time:
+observe the current pack \(\to\) the model takes the next step (write a reply / pick a tool / cite the subgraph) \(\to\) write \(Y\) for that hop.
+\(X\) is serving geometry, not raw text.
+\(Y\) is whether the hop is valid (audit: pass/fail; reasoning: path/tool/no loop; graph pack: citation on an edge).
+The frozen \(f_{\mathrm{ref}}\) only predicts \(P(Y\mid X)\).
+If window error is already extreme versus the reference, fire: the current reasoning pack is not gold; swap the cheapest pack; reset.
+Nothing else.
+
 \begin{table}[t]
 \centering
 \caption{Same gates. Top two rows are the continuous-time jobs; bottom two are ordinary serving.
