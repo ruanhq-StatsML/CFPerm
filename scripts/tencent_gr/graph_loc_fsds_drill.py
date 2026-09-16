@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Tencent-GR landing of existing loc/contrast: entity-cut X, moved/quiet.
+"""Entity-grain localization: input X-blocks + clock, output moved/quiet.
 
-Not a new package or method. Graph is the knife (user/item/merchant/towers).
-FSDS at most two steps after loc; GNN not used (would mix entities and leak Y).
+No Y. Grain = user / item / merchant / video / audio.
+For each entity: RF-domain P(W|X_e), moved if AUC >= 0.55.
 
   PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py
 """
@@ -76,7 +76,7 @@ def hop_of(name: str) -> str:
 
 
 def block_family(name: str) -> str:
-    """Localization grain: graph blocks + fake media towers."""
+    """Loc grain: one entity per prefix."""
     if name.startswith("g_u_"):
         return "user_connectivity"
     if name.startswith("g_i_"):

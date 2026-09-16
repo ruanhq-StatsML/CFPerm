@@ -191,4 +191,4 @@ HaluEval 的 `task_id`（题长短切一刀）就是 mix 旁证：哪类题变�
 - 审核预测表 `xy_*.csv`：`x_n_toks…x_thank` 可按第 2 节切成长度/语气/拒绝三族做对照；`y` 只留给映射 fire。
 - HH 文风：特征打在 answer 上，见落地脚本 `style_vector`。prompt 不进文风块。
 - 推理：HaluEval 另加 rag overlap 当「检索块」，和生成文风块对照——检索块动了开刷索引，文风块动了开素材，映射 fire 才动模型。仍然不是归因。
-- 推荐图：同一套对照/loc，刀换成实体（user / item / merchant / video / audio）。不是新 package。FSDS 仍最多两步。见 `Graph_Localization_Logic.md`。
+- 推荐图 loc：输入按实体切开的 X + 时钟，输出每实体 moved/quiet。颗粒度 = user/item/merchant/video/audio。见 `Graph_Localization_Logic.md`。
