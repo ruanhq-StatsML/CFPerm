@@ -1,0 +1,175 @@
+{
+  "protocol": "graph_localize_then_fsds_drill",
+  "not_causal": true,
+  "y": "y_post_clk_1d",
+  "n": 12564,
+  "p": 18,
+  "localization": {
+    "ranked": [
+      {
+        "family": "user_connectivity",
+        "n_feat": 2,
+        "rf_domain_auc": 0.604797145232254,
+        "moved": true,
+        "cols": [
+          "g_u_item_deg",
+          "g_u_merch_deg"
+        ],
+        "rf_vimp": {
+          "g_u_item_deg": 0.5531163363798047,
+          "g_u_merch_deg": 0.44688366362019527
+        }
+      },
+      {
+        "family": "item_connectivity",
+        "n_feat": 2,
+        "rf_domain_auc": 0.5233685423156802,
+        "moved": false,
+        "cols": [
+          "g_i_user_deg",
+          "g_i_coclick_deg"
+        ],
+        "rf_vimp": {
+          "g_i_user_deg": 0.9534791163859612,
+          "g_i_coclick_deg": 0.04652088361403876
+        }
+      },
+      {
+        "family": "merchant_structure",
+        "n_feat": 4,
+        "rf_domain_auc": 0.5014776429719416,
+        "moved": false,
+        "cols": [
+          "g_m_user_deg",
+          "g_m_pr",
+          "g_m_clust",
+          "g_m_proj_deg"
+        ],
+        "rf_vimp": {
+          "g_m_user_deg": 0.21718945307207724,
+          "g_m_pr": 0.25199296929643894,
+          "g_m_clust": 0.30590044188574667,
+          "g_m_proj_deg": 0.22491713574573724
+        }
+      }
+    ],
+    "localized_families": [
+      "user_connectivity"
+    ]
+  },
+  "l1_hops": {
+    "rf_domain_auc": 0.7808276759860816,
+    "po_risk": 0.00017849265424499969,
+    "family_n": {
+      "funnel_order": 5,
+      "funnel_user": 5,
+      "graph_item": 2,
+      "graph_merchant": 4,
+      "graph_user": 2
+    },
+    "po_mass": {
+      "funnel_order": 0.17277901827683895,
+      "funnel_user": 0.5205648742798588,
+      "graph_item": 0.04357846428913374,
+      "graph_merchant": 0.212165377640128,
+      "graph_user": 0.05091226551304042
+    },
+    "rf_mass": {
+      "funnel_order": 0.16213182265810433,
+      "funnel_user": 0.6618297917680177,
+      "graph_item": 0.004045763371369218,
+      "graph_merchant": 0.019557266330356798,
+      "graph_user": 0.15243535587115178
+    },
+    "logo": {
+      "funnel_order": {
+        "R_minus": 0.00015406643480539534,
+        "delta": 2.4426219439604345e-05
+      },
+      "funnel_user": {
+        "R_minus": 0.0004146956483976687,
+        "delta": -0.00023620299415266901
+      },
+      "graph_item": {
+        "R_minus": 0.00015024014822396213,
+        "delta": 2.8252506021037558e-05
+      },
+      "graph_merchant": {
+        "R_minus": 0.00016189652613315624,
+        "delta": 1.6596128111843442e-05
+      },
+      "graph_user": {
+        "R_minus": 0.00018529973480316305,
+        "delta": -6.807080558163362e-06
+      }
+    },
+    "logo_share": {
+      "funnel_order": 0.3525986390061074,
+      "funnel_user": 0.0,
+      "graph_item": 0.4078320509713335,
+      "graph_merchant": 0.23956929558730694,
+      "graph_user": 0.0
+    },
+    "names": [
+      "life_ctr",
+      "life_cnv_share",
+      "dec_hl7d_dec_clk",
+      "sess_bounce_rate",
+      "post_clk_same_sess_rate",
+      "log1p_price",
+      "empty_any",
+      "sess_clk_before",
+      "n_prior_cnv",
+      "n_clk_before_1d",
+      "g_u_item_deg",
+      "g_u_merch_deg",
+      "g_i_user_deg",
+      "g_i_coclick_deg",
+      "g_m_user_deg",
+      "g_m_pr",
+      "g_m_clust",
+      "g_m_proj_deg"
+    ]
+  },
+  "l2_localized": {
+    "rf_domain_auc": 0.6347983804919504,
+    "po_risk": 0.0005994511158083901,
+    "family_n": {
+      "user_connectivity": 2
+    },
+    "po_mass": {
+      "user_connectivity": 0.9999999999989999
+    },
+    "rf_mass": {
+      "user_connectivity": 0.9999999999989999
+    },
+    "logo": {
+      "user_connectivity": {
+        "R_minus": NaN,
+        "delta": NaN
+      }
+    },
+    "logo_share": {
+      "user_connectivity": NaN
+    },
+    "names": [
+      "g_u_item_deg",
+      "g_u_merch_deg"
+    ]
+  },
+  "l3_loco": [
+    {
+      "name": "g_u_item_deg",
+      "hop": "graph_user",
+      "loco_dR": 1.6556347496088743e-05
+    },
+    {
+      "name": "g_u_merch_deg",
+      "hop": "graph_user",
+      "loco_dR": 1.2094992140688869e-05
+    }
+  ],
+  "localized_hops": [
+    "graph_user"
+  ]
+}

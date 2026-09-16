@@ -273,12 +273,13 @@ def logo_groups(X, y, w, names, group_fn, *, seed: int):
 
 def localize_graph(X, w, names, *, seed: int):
     """No Y. Per graph family: can W be read from this block alone?"""
+    off = {"user_connectivity": 1, "item_connectivity": 2, "merchant_structure": 3}
     rows = []
     for fam in ("user_connectivity", "item_connectivity", "merchant_structure"):
         ix = [i for i, n in enumerate(names) if graph_family(n) == fam]
         if not ix:
             continue
-        auc, vimp = rf_domain(X[:, ix], w, seed=seed + abs(hash(fam)) % 1000)
+        auc, vimp = rf_domain(X[:, ix], w, seed=seed + off[fam])
         rows.append(
             {
                 "family": fam,
@@ -363,23 +364,36 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p) -> str:
         "",
         f"Drill continues inside localized hops: `{', '.join(localized_hops)}`.",
         "",
+        "On this clock that pairing is the point: **user_connectivity moved**, but L1 LOGO Δ on `graph_user` is ≤0.",
+        "Portrait movement ≠ Y-gap source. Funnel_user has the RF-mass (later people look different) and also LOGO Δ<0.",
+        "Small LOGO+ on `graph_item` / `funnel_order` / `graph_merchant` sits on PO-risk ~1e-4 — log, not a story.",
+        "",
         "## 3. FSDS L2 — families inside localized hops",
         "",
-        f"RF-domain **{l2['rf_domain_auc']:.3f}** · PO-risk **{l2['po_risk']:.6f}**",
-        "",
-        "| family | n | RF-mass | PO-mass | LOGO Δ | share |",
-        "|---|---:|---:|---:|---:|---:|",
     ]
     fam2 = l2["logo_share"]
-    for g in sorted(fam2, key=lambda x: -fam2[x]):
-        d = l2["logo"][g]["delta"]
-        ds = "nan" if d != d else f"{d:+.5f}"
-        lines.append(
-            f"| {g} | {l2['family_n'][g]} | {l2['rf_mass'][g]:.3f} | "
-            f"{l2['po_mass'][g]:.3f} | {ds} | {fam2[g]:.3f} |"
-        )
+    if len(fam2) <= 1:
+        lines += [
+            "Only one family inside the localized hop, so L2 LOGO is vacuous (nothing to drop).",
+            "L3 LOCO on those columns is the drill.",
+            "",
+        ]
+    else:
+        lines += [
+            f"RF-domain **{l2['rf_domain_auc']:.3f}** · PO-risk **{l2['po_risk']:.6f}**",
+            "",
+            "| family | n | RF-mass | PO-mass | LOGO Δ | share |",
+            "|---|---:|---:|---:|---:|---:|",
+        ]
+        for g in sorted(fam2, key=lambda x: -fam2[x]):
+            d = l2["logo"][g]["delta"]
+            ds = "nan" if d != d else f"{d:+.5f}"
+            lines.append(
+                f"| {g} | {l2['family_n'][g]} | {l2['rf_mass'][g]:.3f} | "
+                f"{l2['po_mass'][g]:.3f} | {ds} | {fam2[g]:.3f} |"
+            )
+        lines.append("")
     lines += [
-        "",
         "## 4. FSDS L3 — LOCO on localized hop columns",
         "",
         "| feat | hop | LOCO ΔR |",
