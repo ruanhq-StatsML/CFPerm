@@ -78,6 +78,7 @@ Fire 是 \(P(Y\mid X)\) 的 hop，不是质量分。旁路指标可以挂在仪�
 
 **图包或 community 换代：** 切点后把边丢掉或按同样密度重接，再做同样的聚合。
 不要另造一套奇怪的 \(X\)。
+若日志是 `user_id → 图 list`：list 先聚合，GraphSAGE-mean 和这 7 维拼成 \(X\)，**只在这一面上**走 OnlineRFPerm。见 `docs/manuscript/graph_continuity_zh.md`。
 
 盘上 Hotpot distractor 是题库快照，没有到达顺序。`batch` 在 snapshot 表里是题号；
 下面 prototype 用文件顺序只演示 **表形**，不声称墙上时间。连续时间 serving 仍要带时间戳的请求日志。
