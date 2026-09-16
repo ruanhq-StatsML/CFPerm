@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""Recsys practice: graph localization, then multi-layer FSDS drill-down.
+"""Recsys prototype: graph localization, then a two-step drill.
 
-Tencent-GR events. Not causal. Not GNN. Fake media towers are DGP, not
-production embeddings.
+These families are enough — no extra grains:
 
-  1) Left-window user—item / user—merchant / co-click / shop projection.
-  2) Merchant-level messy video + audio attach (10k ids, 64-d fake embeds),
-     then mean-pool to users who touched those shops.
-  3) LOCALIZE: per block (graph families ∪ video_tower ∪ audio_tower),
-     RF-domain on W only (no Y) — did this portrait move early vs late?
-  4) DRILL: FSDS on the localized dimensions
-       L1 hops  LOGO
-       L2 families inside the localized hop
-       L3 LOCO columns inside that hop (top-k if a 64-d tower)
+  user_connectivity / item_connectivity / merchant_structure
+  video_tower / audio_tower   (messy merchant attach → user pool)
 
+Use:
+  1) LOCALIZE (no Y): each family vs clock W. Moved = RF-domain AUC ≥ 0.55.
+  2) Two-step FSDS drill (with Y), only on the few moved families:
+       step 1  LOGO among those families
+       step 2  LOCO columns inside them (top-k if a 64-d tower)
+
+Not causal. Not GNN. Fake towers are DGP, not production embeddings.
 φ=(Y−μ)(W−e) is early/late distance on post-click Y, not a treatment effect.
 
   PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py
@@ -38,7 +37,6 @@ from feat_proto import split_lr  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 EV = ROOT / "results/tencent_gr_fs150/tables/ev.parquet"
 POST = ROOT / "results/tencent_gr_fs150/tables/post.parquet"
-USER = ROOT / "results/tencent_gr_fs150/tables/user.parquet"
 IMAP = ROOT / "results/tencent_gr_fs150/hop/item_merchant.parquet"
 OUT = ROOT / "results/tencent_gr_fs150/hop"
 DOCS = ROOT / "docs" / "reports"
@@ -54,20 +52,6 @@ N_THEME = 16
 LOCO_TOPK = 8
 AUC_MOVED = 0.55
 
-USER_HOP = [
-    "life_ctr",
-    "life_cnv_share",
-    "dec_hl7d_dec_clk",
-    "sess_bounce_rate",
-    "post_clk_same_sess_rate",
-]
-ORDER_X = [
-    "log1p_price",
-    "empty_any",
-    "sess_clk_before",
-    "n_prior_cnv",
-    "n_clk_before_1d",
-]
 LOC_FAMILIES = (
     "user_connectivity",
     "item_connectivity",
@@ -75,13 +59,6 @@ LOC_FAMILIES = (
     "video_tower",
     "audio_tower",
 )
-FAM_TO_HOP = {
-    "user_connectivity": "graph_user",
-    "item_connectivity": "graph_item",
-    "merchant_structure": "graph_merchant",
-    "video_tower": "tower_video",
-    "audio_tower": "tower_audio",
-}
 DGP_META = {
     "n_catalog": N_CATALOG,
     "emb_dim": EMB_DIM,
@@ -106,9 +83,7 @@ def hop_of(name: str) -> str:
         return "tower_video"
     if name.startswith("aud_"):
         return "tower_audio"
-    if name in USER_HOP:
-        return "funnel_user"
-    return "funnel_order"
+    return "other"
 
 
 def block_family(name: str) -> str:
@@ -466,18 +441,12 @@ def coverage_by_clock(o: pd.DataFrame, vid_cols: list[str], aud_cols: list[str],
     }
 
 
-def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp, coverage=None) -> str:
+def render_md(loc, d1, d2, *, n, p, dgp, coverage=None) -> str:
     moved = [r["family"] for r in loc["ranked"] if r["moved"]]
     quiet = [r["family"] for r in loc["ranked"] if not r["moved"]]
     auc_line = ", ".join(
         f"{r['family']} {_fmt_auc(r['rf_domain_auc'])}" for r in loc["ranked"]
     )
-    logo = l1["logo"]
-    loc_logo = []
-    for h in localized_hops:
-        if h in logo:
-            loc_logo.append(f"`{h}` LOGO Δ={_fmt_delta(logo[h]['delta'])}")
-    loc_logo_s = "; ".join(loc_logo) if loc_logo else "none"
     cov_line = ""
     if coverage:
         cov_line = (
@@ -487,33 +456,29 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp, coverage=None) -> s
             "Not a missingness artifact."
         )
     lines = [
-        "# Recsys: graph localization → multi-layer FSDS",
+        "# Recsys: graph localization → two-step drill",
         "",
-        "Tencent-GR. Graph first (plus fake video/audio towers attached on shops),",
-        "then FSDS only drills what localization marked as moved.",
+        "These families are enough. No extra grains.",
+        "Use: **graph localization**, then a **two-step drill** only on the moved few.",
         "PO-risk is **not** causal. RF-domain is a **portrait log**, not the score to optimize.",
         "Video/audio are a messy DGP, not production embeddings.",
         "",
         "## Protocol",
         "",
         "1. Left-window clk/cnv → user—item, user—merchant, session co-click, shop projection.",
-        "2. Fake media DGP on the same graph:",
-        f"   - `{dgp['n_catalog']}` video_ids ~ `randint(0, 1e10)`; `{dgp['emb_dim']}`-d Student-t embeddings",
-        f"   - `{dgp['n_catalog']}` audio_ids the same way; `{dgp['emb_dim']}`-d Uniform[-1, 1]",
-        "   - Messy attach on each merchant: Zipf subset + 16 themes + t-bias (no W/Y coupling)",
-        "   - User mean-pool of merchants touched in the left window (visit-weighted)",
-        "3. **Localize** (no Y): each graph family ∪ `video_tower` ∪ `audio_tower` vs clock W.",
+        "2. Fake media DGP on the same graph (merchant attach → user mean-pool).",
+        "3. **Localize** (no Y) on five families:",
+        "   `user_connectivity` · `item_connectivity` · `merchant_structure` · `video_tower` · `audio_tower`.",
         f"   Moved = RF-domain AUC ≥ {AUC_MOVED}.",
-        "4. **Drill** with Y=`y_post_clk_1d`:",
-        "   - L1 hops (funnel ∪ graph ∪ towers) LOGO",
-        "   - L2 families inside the localized hops",
-        f"   - L3 LOCO columns inside those hops (top-{LOCO_TOPK} if a 64-d tower)",
+        "4. **Two-step drill** with Y=`y_post_clk_1d`, **only the moved families**:",
+        "   - Step 1: LOGO among those families",
+        f"   - Step 2: LOCO columns (top-{LOCO_TOPK} if a 64-d tower)",
         "",
         f"n={n} p={p}. Clock = median `t_end`. W=1 later half.",
         f"Shops attached={dgp.get('n_merch_attached')} · users pooled={dgp.get('n_user_pooled')}.",
         cov_line,
         "",
-        "## 1. Localization (no Y)",
+        "## 1. Graph localization (no Y)",
         "",
         "| family | n | RF-domain AUC | moved |",
         "|---|---:|---:|---|",
@@ -527,64 +492,46 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp, coverage=None) -> s
         "",
         "Localized families: `" + ", ".join(loc["localized_families"]) + "`.",
         "Moved = this block's portrait differs early vs late. Not “this tower caused conversion”.",
-        "Towers sit next to graph families on the same clock. Contrast is moved / not-moved.",
+        "Quiet families stop here. Drill does not open them.",
         "",
-        "## 2. FSDS L1 — hops (LOGO)",
-        "",
-        f"RF-domain (all X) **{l1['rf_domain_auc']:.3f}** · PO-risk **{l1['po_risk']:.6f}**",
-        "",
-        "| hop | n | RF-mass | PO-mass | LOGO Δ | share |",
-        "|---|---:|---:|---:|---:|---:|",
-    ]
-    fam = l1["logo_share"]
-    for g in sorted(fam, key=lambda x: -fam[x]):
-        lines.append(
-            f"| {g} | {l1['family_n'][g]} | {l1['rf_mass'][g]:.3f} | "
-            f"{l1['po_mass'][g]:.3f} | {_fmt_delta(l1['logo'][g]['delta'])} | {fam[g]:.3f} |"
-        )
-    lines += [
-        "",
-        "LOGO Δ>0: dropping the hop **lowers** R (tied to the early/late Y gap).",
-        "Δ≤0: this hop is not a concept-gap source on this clock. Read RF-mass for P(X).",
-        "",
-        f"Drill continues inside localized hops: `{', '.join(localized_hops)}`.",
-        f"Moved families: `{', '.join(moved) if moved else '(none; fallback to top AUC)'}`.",
-        f"L1 on those hops: {loc_logo_s}.",
-        "Portrait movement ≠ Y-gap source. Funnel hops stay on the L1 board so graph/towers are compared, not isolated.",
-        "PO-risk here is ~1e-4 scale — log, not a story.",
-        "",
-        "## 3. FSDS L2 — families inside localized hops",
+        "## 2. Drill step 1 — LOGO on the moved few",
         "",
     ]
-    fam2 = l2["logo_share"]
-    if len(fam2) <= 1:
+    fam1 = d1["logo_share"]
+    if len(fam1) <= 1:
         lines += [
-            "Only one family inside the localized hops, so L2 LOGO is vacuous (nothing to drop).",
-            "L3 LOCO on those columns is the drill.",
+            "Only one moved family, so step-1 LOGO is vacuous (nothing to drop).",
+            "Step 2 LOCO on those columns is the drill.",
             "",
         ]
     else:
         lines += [
-            f"RF-domain **{l2['rf_domain_auc']:.3f}** · PO-risk **{l2['po_risk']:.6f}**",
+            f"RF-domain **{d1['rf_domain_auc']:.3f}** · PO-risk **{d1['po_risk']:.6f}**",
             "",
             "| family | n | RF-mass | PO-mass | LOGO Δ | share |",
             "|---|---:|---:|---:|---:|---:|",
         ]
-        for g in sorted(fam2, key=lambda x: -fam2[x]):
+        for g in sorted(fam1, key=lambda x: -fam1[x]):
             lines.append(
-                f"| {g} | {l2['family_n'][g]} | {l2['rf_mass'][g]:.3f} | "
-                f"{l2['po_mass'][g]:.3f} | {_fmt_delta(l2['logo'][g]['delta'])} | {fam2[g]:.3f} |"
+                f"| {g} | {d1['family_n'][g]} | {d1['rf_mass'][g]:.3f} | "
+                f"{d1['po_mass'][g]:.3f} | {_fmt_delta(d1['logo'][g]['delta'])} | {fam1[g]:.3f} |"
             )
-        lines.append("")
+        lines += [
+            "",
+            "LOGO Δ>0: dropping the family **lowers** R (tied to the early/late Y gap).",
+            "Δ≤0: this family is not a concept-gap source on this clock. Read RF-mass for P(X).",
+            "Portrait movement ≠ Y-gap source. PO-risk ~1e-4 is a log, not a story.",
+            "",
+        ]
     lines += [
-        "## 4. FSDS L3 — LOCO on localized hop columns",
+        "## 3. Drill step 2 — LOCO on those columns",
         "",
-        f"If a 64-d tower is in the drill, LOCO is top-{LOCO_TOPK} by L1 RF-mass, not all 64 fits.",
+        f"If a 64-d tower is in the moved set, LOCO is top-{LOCO_TOPK} by step-1 RF-mass, not all 64 fits.",
         "",
         "| feat | hop | LOCO ΔR |",
         "|---|---|---:|",
     ]
-    for r in l3[:12]:
+    for r in d2[:12]:
         lines.append(f"| `{r['name']}` | {r['hop']} | {r['loco_dR']:+.6e} |")
     lines += [
         "",
@@ -593,10 +540,9 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp, coverage=None) -> s
         "## Read",
         "",
         f"- Localization AUCs: {auc_line}.",
-        f"- Moved: `{', '.join(moved) if moved else 'none'}`. Quiet: `{', '.join(quiet) if quiet else 'none'}`.",
-        "- User-pooled 64-d shop vectors can move even when the **current order's** 4 merchant-graph scalars do not: the tower grain is who-went-where in the left window, not `g_m_*` on this row.",
-        "- DGP has no W/Y injection. A moved tower is mix/coverage geometry after aggregation, not “video caused conversion”.",
-        "- L1–L3 answer **among those blocks, what is tied to the Y-gap** (if anything). Tiny LOGO on ~1e-4 PO-risk stays a log.",
+        f"- Moved (drill these): `{', '.join(moved) if moved else 'none'}`. Quiet (stop): `{', '.join(quiet) if quiet else 'none'}`.",
+        "- Five families are enough. Do not add community / extra hops / funnel into this prototype.",
+        "- Use is two sentences: localize on the graph; two-step drill on the moved few.",
         "- Do not turn LOGO share into a unique importance ranking.",
         "",
         "`PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py`",
@@ -614,7 +560,6 @@ def main() -> int:
 
     ev = pd.read_parquet(EV)
     post = pd.read_parquet(POST)
-    users = pd.read_parquet(USER)
     imap = pd.read_parquet(IMAP)[["item_id", "merchant_id"]].drop_duplicates()
 
     left, _, _ = split_lr(ev)
@@ -630,8 +575,6 @@ def main() -> int:
     )
 
     o = post.merge(imap, on="item_id", how="left")
-    ukeep = [c for c in USER_HOP if c in users.columns]
-    o = o.merge(users[["user_id"] + ukeep], on="user_id", how="left")
     o = o.merge(gu, on="user_id", how="left")
     o = o.merge(gi, on="item_id", how="left")
     o = o.merge(gm, on="merchant_id", how="left")
@@ -640,8 +583,7 @@ def main() -> int:
     for c in extra:
         o[c] = o[c].fillna(0.0)
     o = o.loc[o["y_post_clk_1d"].notna()].copy()
-    xcols = ukeep + [c for c in ORDER_X if c in o.columns] + extra
-    names, X, y, w = _xy(o, xcols, "y_post_clk_1d", "t_end")
+    names, X, y, w = _xy(o, extra, "y_post_clk_1d", "t_end")
     cov = coverage_by_clock(o, vid_cols, aud_cols, w)
     print(f"xy n={len(y)} p={len(names)} pos={y.mean():.3f} W1={w.mean():.3f}", flush=True)
     print(
@@ -650,38 +592,32 @@ def main() -> int:
         flush=True,
     )
 
-    print("=== L0 localization (no Y): graph ∪ video ∪ audio ===", flush=True)
+    print("=== graph localization (no Y) ===", flush=True)
     loc = localize_blocks(X, w, names, seed=SEED)
     for r in loc["ranked"]:
         print(f"  {r['family']:22s} AUC={r['rf_domain_auc']} moved={r['moved']}", flush=True)
 
-    localized_hops = [FAM_TO_HOP[f] for f in loc["localized_families"] if f in FAM_TO_HOP]
-
-    print("=== L1 FSDS hops ===", flush=True)
-    l1 = logo_groups(X, y, w, names, hop_of, seed=SEED)
-    for g, rec in l1["logo"].items():
-        print(f"  LOGO {g:16s} Δ={rec['delta']}", flush=True)
-
-    loc_cols = [n for n in names if hop_of(n) in set(localized_hops)]
+    loc_cols = [n for n in names if block_family(n) in set(loc["localized_families"])]
     if not loc_cols:
         loc_cols = [n for n in names if block_family(n) in set(LOC_FAMILIES)]
-        localized_hops = sorted({hop_of(n) for n in loc_cols})
 
-    print("=== L2 FSDS inside localized hops ===", flush=True)
+    print("=== drill step 1: LOGO on moved families ===", flush=True)
     X2 = o[loc_cols].replace([np.inf, -np.inf], np.nan).fillna(0.0).to_numpy(np.float64)
-    l2 = logo_groups(X2, y, w, loc_cols, block_family, seed=SEED + 3)
+    d1 = logo_groups(X2, y, w, loc_cols, block_family, seed=SEED + 3)
+    for g, rec in d1["logo"].items():
+        print(f"  LOGO {g:22s} Δ={rec['delta']}", flush=True)
 
-    rf_map = dict(zip(l1["names"], l1["vimp_rf"]))
-    print("=== L3 LOCO localized hop columns ===", flush=True)
-    l3, loco_names = loco_subset(
-        X, y, w, names, loc_cols, seed=SEED, full_risk=l1["po_risk"], vimp_rf=rf_map
+    rf_map = dict(zip(d1["names"], d1["vimp_rf"]))
+    print("=== drill step 2: LOCO on those columns ===", flush=True)
+    d2, loco_names = loco_subset(
+        X2, y, w, loc_cols, loc_cols, seed=SEED, full_risk=d1["po_risk"], vimp_rf=rf_map
     )
     print(f"  loco n={len(loco_names)} of loc_cols={len(loc_cols)}", flush=True)
-    for r in l3[:8]:
+    for r in d2[:8]:
         print(f"  LOCO {r['name']:22s} ΔR={r['loco_dR']:+.6e}", flush=True)
 
     payload = {
-        "protocol": "graph_localize_then_fsds_drill",
+        "protocol": "graph_localize_then_two_step_drill",
         "not_causal": True,
         "y": "y_post_clk_1d",
         "n": int(len(y)),
@@ -689,24 +625,13 @@ def main() -> int:
         "dgp": dgp,
         "coverage": cov,
         "localization": loc,
-        "l1_hops": {k: v for k, v in l1.items() if k not in ("vimp_po", "vimp_rf", "groups")},
-        "l2_localized": {k: v for k, v in l2.items() if k not in ("vimp_po", "vimp_rf", "groups")},
-        "l3_loco": l3,
-        "l3_loco_names": loco_names,
-        "localized_hops": localized_hops,
+        "drill1_logo": {k: v for k, v in d1.items() if k not in ("vimp_po", "vimp_rf", "groups")},
+        "drill2_loco": d2,
+        "drill2_loco_names": loco_names,
+        "localized_families": loc["localized_families"],
     }
     (OUT / "GRAPH_LOC_FSDS.json").write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
-    md = render_md(
-        loc,
-        l1,
-        l2,
-        l3,
-        localized_hops=localized_hops,
-        n=len(y),
-        p=len(names),
-        dgp=dgp,
-        coverage=cov,
-    )
+    md = render_md(loc, d1, d2, n=len(y), p=len(names), dgp=dgp, coverage=cov)
     (OUT / "GRAPH_LOC_FSDS.md").write_text(md)
     (DOCS / "Recsys_Graph_Loc_FSDS.md").write_text(md)
     print(md)
