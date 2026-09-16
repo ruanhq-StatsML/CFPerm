@@ -123,6 +123,21 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
   </table>
 </section>
 
+<section class="slide" data-title="特征">
+  <div class="kicker">盘上的 X，直接 prototype</div>
+  <h2>闸只读 x_*，没有奇怪的东西</h2>
+  <table>
+    <thead><tr><th>面</th><th>X</th><th>列数</th></tr></thead>
+    <tbody>
+      <tr><td>审核 / judge</td><td>长度、标点、hedge/formal、I、换行、大写、refuse/please/thank</td><td>13</td></tr>
+      <tr><td>Graph-RAG 子图</td><td>节点、边、度、连通片、query seed、seed 比例、最大片（窗上再 mean/std）</td><td>7 → 14</td></tr>
+      <tr><td>混合检索</td><td>问句大小、两路 overlap/相关/margin、RRF mass、k<sub>s</sub> k<sub>d</sub></td><td>14</td></tr>
+      <tr><td>一问 × 10 标题</td><td>BM25 / dense / RRF、逆秩、overlap、seed、度、槽位</td><td>9</td></tr>
+    </tbody>
+  </table>
+  <p class="small">不是特征：原文、gold 标记、HH chosen、单路 Recall、幻觉率。</p>
+</section>
+
 <section class="slide" data-title="Graph-RAG">
   <div class="kicker">唯一需要多写一句的面</div>
   <h2>图包换代：batch = 图特征聚合</h2>

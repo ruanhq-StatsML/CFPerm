@@ -56,6 +56,7 @@ Fire 是 \(P(Y\mid X)\) 的 hop，不是质量分。旁路指标可以挂在仪�
 
 其余面的 \(X\) 用各面自己的 serving 几何即可（回复特征、融合几何、工具 schema、协变量）。
 **只有 Graph-RAG 这一面需要多写一句：一个 batch 把图上的这些特征聚合起来，然后就够了。**
+盘上每一列 `x_*` 的清单：`docs/manuscript/serving_features_zh.md`。
 
 ## Graph-RAG：一个 batch = 图特征聚合
 
@@ -86,6 +87,7 @@ Fire 是 \(P(Y\mid X)\) 的 hop，不是质量分。旁路指标可以挂在仪�
 盘上已经有三面的 `(X,Y,batch)` 表。同一条命令、同一套闸：
 
 ```bash
+PYTHONPATH=. python3 scripts/list_serving_features.py
 PYTHONPATH=. python3 scripts/run_serving_gates.py
 ```
 
