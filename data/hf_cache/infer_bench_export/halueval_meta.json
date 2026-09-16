@@ -1,0 +1,9 @@
+{
+  "dataset": "halueval",
+  "n": 72,
+  "n_per": 12,
+  "cut_batch": 3,
+  "path_jsonl": "/workspace/data/hf_cache/infer_bench_export/halueval_stream.jsonl",
+  "path_csv": "/workspace/data/hf_cache/infer_bench_export/halueval_preview.csv",
+  "source": "data/hf_cache/halueval_qa_3000.jsonl"
+}
