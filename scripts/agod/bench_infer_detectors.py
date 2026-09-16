@@ -41,7 +41,6 @@ from agod.online_rfperm import (  # noqa: E402
     fit_online_probe,
     hop_fires,
     probe_err,
-    shift_ratio,
 )
 
 # Keep a copy of the user script next to results for provenance.
@@ -157,49 +156,49 @@ def det_frouros(mse: np.ndarray, Detector, *, burnin: int = 20, q: float = 90) -
     return np.asarray(out, dtype=bool)
 
 
-def summarize_stream_det(
-    det: np.ndarray, *, n_per: int, cut: int, method: str, k: int = 1
-) -> dict:
-    first_t = first_k_consecutive_rej(det, k=k)
+def oob_stats(det: np.ndarray, *, n_per: int, cut: int, method: str) -> dict:
+    """Stats matching onlinePermOOB_algo.py: SUM + first1/2/3 consecutive."""
+    det = np.asarray(det, dtype=bool)
     quiet_end = cut * n_per
-    quiet_ff = int(np.sum(det[:quiet_end])) if quiet_end > 0 else 0
-    if first_t is None:
-        first_batch = None
-        delay = None
-    else:
-        first_batch = int(first_t // n_per)
-        # only count as detection if at/after cut; else it's a quiet false fire
-        if first_batch < cut:
-            # look for first fire at/after cut
-            post = np.asarray(det[quiet_end:], dtype=bool)
-            rel = first_k_consecutive_rej(post, k=k)
-            if rel is None:
-                first_batch, delay = None, None
-            else:
-                first_batch = cut + int(rel // n_per)
-                delay = int(first_batch - cut)
-        else:
-            delay = int(first_batch - cut)
+    first1 = first_k_consecutive_rej(det, 1)
+    first2 = first_k_consecutive_rej(det, 2)
+    first3 = first_k_consecutive_rej(det, 3)
+
+    def _delay_batch(first_t: int | None) -> int | None:
+        if first_t is None:
+            return None
+        # delay in batches relative to cut (negative ⇒ quiet false alarm)
+        return int(first_t // n_per - cut)
+
     return {
         "method": method,
-        "first_fire_batch": first_batch,
-        "detection_delay": delay,
-        "quiet_false_fires": quiet_ff,
+        "SUM": int(np.sum(det)),
+        "first1": first1,
+        "first2": first2,
+        "first3": first3,
+        "delay1": _delay_batch(first1),
+        "delay2": _delay_batch(first2),
+        "delay3": _delay_batch(first3),
+        "quiet_false_fires": int(np.sum(det[:quiet_end])) if quiet_end > 0 else 0,
+        # keep old keys for tests
+        "first_fire_batch": None if first1 is None else int(first1 // n_per),
+        "detection_delay": _delay_batch(first1),
         "n_fires": int(np.sum(det)),
-        "first_t": first_t,
+        "first_t": first1,
     }
 
 
 def detect_online_rfperm(records: list[dict], *, n_per: int, cut: int, gate: float) -> dict:
+    """OnlineRFPerm batch fires → expand to per-t mask, then same first1/2/3 stats."""
     X, y = featurize_records(records)
-    fires = []
+    n_batches = len(records) // n_per
+    batch_fired = np.zeros(n_batches, dtype=bool)
     e_prev = None
     X_prev = y_prev = None
-    for b in range(len(records) // n_per):
+    for b in range(n_batches):
         sl = slice(b * n_per, (b + 1) * n_per)
         Xb, yb = X[sl], y[sl]
         fired = False
-        ratio = None
         if X_prev is not None:
             probe = fit_online_probe(X_prev, y_prev, task="acc", seed=b)
             e_now = probe_err(probe, Xb, yb, task="acc")
@@ -215,25 +214,16 @@ def detect_online_rfperm(records: list[dict], *, n_per: int, cut: int, gate: flo
                 and float(e_now) / fl >= gate
             ):
                 fired = True
-            ratio = float(shift_ratio(e_now, max(float(e_prev), fl), e_floor=fl))
             e_prev = float(e_now)
         else:
             probe = fit_online_probe(Xb, yb, task="acc", seed=b)
             e_prev = float(probe_err(probe, Xb, yb, task="acc"))
-        fires.append({"batch": int(b), "fired": bool(fired), "score": ratio})
+        batch_fired[b] = fired
         X_prev, y_prev = Xb, yb
 
-    quiet_ff = sum(1 for f in fires if f["batch"] < cut and f["fired"])
-    first = next((f["batch"] for f in fires if f["batch"] >= cut and f["fired"]), None)
-    delay = None if first is None else int(first - cut)
-    return {
-        "method": "OnlineRFPerm",
-        "first_fire_batch": first,
-        "detection_delay": delay,
-        "quiet_false_fires": int(quiet_ff),
-        "n_fires": int(sum(1 for f in fires if f["fired"])),
-        "fires": fires,
-    }
+    # expand: if batch fires, mark the whole batch True (for consecutive-k on t-grid)
+    det = np.repeat(batch_fired, n_per)
+    return oob_stats(det, n_per=n_per, cut=cut, method="OnlineRFPerm")
 
 
 def run_dataset(name: str, path: Path, *, gate: float) -> list[dict]:
@@ -257,57 +247,77 @@ def run_dataset(name: str, path: Path, *, gate: float) -> list[dict]:
         ("ECDDWT", det_frouros(mse, ECDDWT, burnin=max(15, ref_end // 2))),
     ]
     for method, det in specs:
-        rows.append(summarize_stream_det(det, n_per=n_per, cut=cut, method=method, k=1))
+        rows.append(oob_stats(det, n_per=n_per, cut=cut, method=method))
 
     for r in rows:
         r["dataset"] = name
         r["n"] = len(records)
         r["n_per"] = n_per
         r["cut"] = cut
+        r["cut_t"] = ref_end
         r["ref_end"] = ref_end
         r["mse_mean_quiet"] = float(np.mean(mse[:ref_end]))
         r["mse_mean_hop"] = float(np.mean(mse[ref_end:]))
     return rows
 
 
-def latex_escape(s: str) -> str:
-    return str(s).replace("_", "\\_").replace("%", "\\%").replace("&", "\\&")
+def _fmt(v) -> str:
+    return "---" if v is None else str(int(v))
 
 
 def write_latex(results: dict, out: Path) -> str:
+    """Two tables: (i) first1/2/3 indices  (ii) delay1/2/3 in batches after cut."""
     lines = [
         r"\documentclass[11pt]{article}",
         r"\usepackage[margin=1in]{geometry}",
         r"\usepackage{booktabs,amsmath}",
-        r"\title{OnlineRFPerm vs BOCPD / ADWIN / PageHinkley / frouros\\(LLM infer streams)}",
-        r"\author{CFPerm benchmark (onlinePermOOB baselines)}",
+        r"\title{OnlineRFPerm vs OOB baselines\\first$_1$/first$_2$/first$_3$}",
+        r"\author{CFPerm benchmark (onlinePermOOB\_algo stats)}",
         r"\date{\today}",
         r"\begin{document}",
         r"\maketitle",
         "",
         r"\paragraph{Setup.}",
         (
-            r"HaluEval + SQuAD CPU live-infer streams. Quiet ref fits a frozen RF probe; "
-            r"trail yields a 1-d error/MSE stream. Baselines follow "
-            r"\texttt{onlinePermOOB\_algo.py}: BOCPD "
-            r"(\texttt{bayesian\_changepoint\_detection}), PageHinkley/ADWIN (\texttt{river}), "
-            r"DDM/STEPD/HDDMA/ECDDWT (\texttt{frouros}). OnlineRFPerm uses consecutive OOS "
-            r"error-ratio on the same $(X,y)$. KPI: delay (batches after cut) and quiet false fires."
+            r"Same HaluEval/SQuAD CPU streams. Baselines from "
+            r"\texttt{onlinePermOOB\_algo.py}. Stats: "
+            r"\texttt{first}$_k=$ first index of $k$ consecutive rejections; "
+            r"\texttt{delay}$_k=$ batch delay vs cut ($t/n_{\mathrm{per}}-\mathrm{cut}$; "
+            r"negative $=$ quiet false alarm). Cut $t$ marked in caption."
         ),
         "",
         r"\begin{table}[h]",
         r"\centering",
-        r"\caption{Detector comparison on two LLM inference streams.}",
+        r"\caption{first$_1$/first$_2$/first$_3$ (stream index) and SUM.}",
+        r"\begin{tabular}{llrrrr}",
+        r"\toprule dataset & method & SUM & first$_1$ & first$_2$ & first$_3$ \\",
+        r"\midrule",
+    ]
+    for ds, methods in results.items():
+        cut_t = methods[0]["cut_t"]
+        lines.append(rf"\multicolumn{{6}}{{l}}{{\emph{{{latex_escape(ds)}}}, cut $t={cut_t}$}} \\")
+        for m in methods:
+            lines.append(
+                f"{latex_escape(ds)} & {latex_escape(m['method'])} & {m['SUM']} & "
+                f"{_fmt(m['first1'])} & {_fmt(m['first2'])} & {_fmt(m['first3'])} \\\\"
+            )
+    lines += [
+        r"\bottomrule",
+        r"\end{tabular}",
+        r"\end{table}",
+        "",
+        r"\begin{table}[h]",
+        r"\centering",
+        r"\caption{delay$_1$/delay$_2$/delay$_3$ (batches after cut).}",
         r"\begin{tabular}{llrrr}",
-        r"\toprule dataset & method & delay & quiet FF & $\#$fires \\",
+        r"\toprule dataset & method & delay$_1$ & delay$_2$ & delay$_3$ \\",
         r"\midrule",
     ]
     for ds, methods in results.items():
         for m in methods:
-            d = "---" if m["detection_delay"] is None else str(int(m["detection_delay"]))
             lines.append(
-                f"{latex_escape(ds)} & {latex_escape(m['method'])} & {d} & "
-                f"{m['quiet_false_fires']} & {m['n_fires']} \\\\"
+                f"{latex_escape(ds)} & {latex_escape(m['method'])} & "
+                f"{_fmt(m['delay1'])} & {_fmt(m['delay2'])} & {_fmt(m['delay3'])} \\\\"
             )
     lines += [
         r"\bottomrule",
@@ -316,9 +326,9 @@ def write_latex(results: dict, out: Path) -> str:
         "",
         r"\paragraph{Takeaway.}",
         (
-            r"Read delay jointly with quiet false fires. OnlineRFPerm watches "
-            r"$P(Y\mid X)$ hops; BOCPD/ADWIN/PH/frouros watch a scalar error stream "
-            r"from a frozen probe---the comparison the OOB algo script is built for."
+            r"Same counting rule as the OOB script: first$_1$/$_2$/$_3$. "
+            r"OnlineRFPerm expands a fired batch to $n_{\mathrm{per}}$ consecutive "
+            r"trues so the consecutive-$k$ stats stay on the same $t$-grid."
         ),
         "",
         r"\end{document}",
@@ -328,6 +338,10 @@ def write_latex(results: dict, out: Path) -> str:
     (out / "bench_detectors.tex").write_text(tex)
     (DOCS / "BENCH_INFER_DETECTORS.tex").write_text(tex)
     return tex
+
+
+def latex_escape(s: str) -> str:
+    return str(s).replace("_", "\\_").replace("%", "\\%").replace("&", "\\&")
 
 
 def main(argv=None) -> int:
@@ -361,15 +375,15 @@ def main(argv=None) -> int:
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2))
 
     md = [
-        "# Detector benchmark (onlinePermOOB baselines)\n",
-        "| dataset | method | delay | quiet FF | fires |",
-        "|---|---|---:|---:|---:|",
+        "# Detector benchmark (onlinePermOOB first1/2/3)\n",
+        "| dataset | method | SUM | first1 | first2 | first3 | delay1 | delay2 | delay3 |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for ds, methods in results.items():
         for m in methods:
             md.append(
-                f"| {ds} | {m['method']} | {m['detection_delay']} | "
-                f"{m['quiet_false_fires']} | {m['n_fires']} |"
+                f"| {ds} | {m['method']} | {m['SUM']} | {m['first1']} | {m['first2']} | "
+                f"{m['first3']} | {m['delay1']} | {m['delay2']} | {m['delay3']} |"
             )
     md.append("\nLaTeX: `docs/biz/BENCH_INFER_DETECTORS.tex`\n")
     (args.out / "REPORT.md").write_text("\n".join(md) + "\n")

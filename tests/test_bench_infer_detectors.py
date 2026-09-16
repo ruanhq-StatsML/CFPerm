@@ -29,5 +29,9 @@ def test_bench_oob_baselines_latex():
     assert "halueval" in summary["results"] and "squad" in summary["results"]
     methods = {m["method"] for m in summary["results"]["halueval"]}
     assert "OnlineRFPerm" in methods and "BOCPD" in methods and "ADWIN" in methods
+    row = next(m for m in summary["results"]["halueval"] if m["method"] == "BOCPD")
+    assert "first1" in row and "first2" in row and "first3" in row
+    assert "delay1" in row and "SUM" in row
     tex = (OUT / "bench_detectors.tex").read_text()
+    assert "first$_1$" in tex or "first" in tex
     assert "BOCPD" in tex and "OnlineRFPerm" in tex

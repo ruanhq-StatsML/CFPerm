@@ -1,42 +1,70 @@
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{booktabs,amsmath}
-\title{OnlineRFPerm vs BOCPD / ADWIN / PageHinkley / frouros\\(LLM infer streams)}
-\author{CFPerm benchmark (onlinePermOOB baselines)}
+\title{OnlineRFPerm vs OOB baselines\\first$_1$/first$_2$/first$_3$}
+\author{CFPerm benchmark (onlinePermOOB\_algo stats)}
 \date{\today}
 \begin{document}
 \maketitle
 
 \paragraph{Setup.}
-HaluEval + SQuAD CPU live-infer streams. Quiet ref fits a frozen RF probe; trail yields a 1-d error/MSE stream. Baselines follow \texttt{onlinePermOOB\_algo.py}: BOCPD (\texttt{bayesian\_changepoint\_detection}), PageHinkley/ADWIN (\texttt{river}), DDM/STEPD/HDDMA/ECDDWT (\texttt{frouros}). OnlineRFPerm uses consecutive OOS error-ratio on the same $(X,y)$. KPI: delay (batches after cut) and quiet false fires.
+Same HaluEval/SQuAD CPU streams. Baselines from \texttt{onlinePermOOB\_algo.py}. Stats: \texttt{first}$_k=$ first index of $k$ consecutive rejections; \texttt{delay}$_k=$ batch delay vs cut ($t/n_{\mathrm{per}}-\mathrm{cut}$; negative $=$ quiet false alarm). Cut $t$ marked in caption.
 
 \begin{table}[h]
 \centering
-\caption{Detector comparison on two LLM inference streams.}
-\begin{tabular}{llrrr}
-\toprule dataset & method & delay & quiet FF & $\#$fires \\
+\caption{first$_1$/first$_2$/first$_3$ (stream index) and SUM.}
+\begin{tabular}{llrrrr}
+\toprule dataset & method & SUM & first$_1$ & first$_2$ & first$_3$ \\
 \midrule
-halueval & OnlineRFPerm & 0 & 0 & 1 \\
-halueval & BOCPD & 0 & 0 & 4 \\
-halueval & PageHinkley & 0 & 0 & 2 \\
-halueval & ADWIN & --- & 0 & 0 \\
-halueval & DDM & 0 & 0 & 30 \\
-halueval & STEPD & 2 & 0 & 11 \\
-halueval & HDDMA & --- & 0 & 0 \\
-halueval & ECDDWT & 0 & 0 & 7 \\
-squad & OnlineRFPerm & 2 & 0 & 1 \\
-squad & BOCPD & 1 & 0 & 5 \\
-squad & PageHinkley & 1 & 0 & 2 \\
-squad & ADWIN & --- & 0 & 0 \\
-squad & DDM & 1 & 0 & 16 \\
-squad & STEPD & --- & 0 & 0 \\
-squad & HDDMA & --- & 0 & 0 \\
-squad & ECDDWT & 1 & 0 & 2 \\
+\multicolumn{6}{l}{\emph{halueval}, cut $t=36$} \\
+halueval & OnlineRFPerm & 12 & 36 & 36 & 36 \\
+halueval & BOCPD & 4 & 41 & 41 & --- \\
+halueval & PageHinkley & 2 & 42 & --- & --- \\
+halueval & ADWIN & 0 & --- & --- & --- \\
+halueval & DDM & 30 & 42 & 42 & 42 \\
+halueval & STEPD & 11 & 61 & 61 & 61 \\
+halueval & HDDMA & 0 & --- & --- & --- \\
+halueval & ECDDWT & 7 & 45 & 45 & 45 \\
+\multicolumn{6}{l}{\emph{squad}, cut $t=36$} \\
+squad & OnlineRFPerm & 12 & 60 & 60 & 60 \\
+squad & BOCPD & 5 & 55 & 55 & --- \\
+squad & PageHinkley & 2 & 56 & --- & --- \\
+squad & ADWIN & 0 & --- & --- & --- \\
+squad & DDM & 16 & 56 & 56 & 56 \\
+squad & STEPD & 0 & --- & --- & --- \\
+squad & HDDMA & 0 & --- & --- & --- \\
+squad & ECDDWT & 2 & 56 & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{delay$_1$/delay$_2$/delay$_3$ (batches after cut).}
+\begin{tabular}{llrrr}
+\toprule dataset & method & delay$_1$ & delay$_2$ & delay$_3$ \\
+\midrule
+halueval & OnlineRFPerm & 0 & 0 & 0 \\
+halueval & BOCPD & 0 & 0 & --- \\
+halueval & PageHinkley & 0 & --- & --- \\
+halueval & ADWIN & --- & --- & --- \\
+halueval & DDM & 0 & 0 & 0 \\
+halueval & STEPD & 2 & 2 & 2 \\
+halueval & HDDMA & --- & --- & --- \\
+halueval & ECDDWT & 0 & 0 & 0 \\
+squad & OnlineRFPerm & 2 & 2 & 2 \\
+squad & BOCPD & 1 & 1 & --- \\
+squad & PageHinkley & 1 & --- & --- \\
+squad & ADWIN & --- & --- & --- \\
+squad & DDM & 1 & 1 & 1 \\
+squad & STEPD & --- & --- & --- \\
+squad & HDDMA & --- & --- & --- \\
+squad & ECDDWT & 1 & --- & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Takeaway.}
-Read delay jointly with quiet false fires. OnlineRFPerm watches $P(Y\mid X)$ hops; BOCPD/ADWIN/PH/frouros watch a scalar error stream from a frozen probe---the comparison the OOB algo script is built for.
+Same counting rule as the OOB script: first$_1$/$_2$/$_3$. OnlineRFPerm expands a fired batch to $n_{\mathrm{per}}$ consecutive trues so the consecutive-$k$ stats stay on the same $t$-grid.
 
 \end{document}
