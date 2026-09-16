@@ -1,13 +1,18 @@
 \documentclass[11pt]{article}
 \usepackage[margin=0.8in]{geometry}
 \usepackage{booktabs,amsmath}
-\title{All-method first$_k$ on four LLM infer streams}
+\title{All-method \texttt{first}$_k$ on four LLM inference streams}
 \author{CFPerm}
 \date{\today}
 \begin{document}
 \maketitle
 
-Trail-batch \texttt{first}$_k$ after cut ($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$). Index 0 $=$ first batch after cut; --- $=$ never.
+\noindent
+Trail-batch \texttt{first}$_k$ after cut
+($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$).
+Index $0$ $=$ first batch after cut; --- $=$ never.
+OnlineRFPerm is scored on batch fires; baselines follow the
+\texttt{onlinePermOOB} OOB-error stream under the same counting rule.
 
 \begin{table}[h]
 \centering
@@ -15,20 +20,32 @@ Trail-batch \texttt{first}$_k$ after cut ($n_{\mathrm{per}}=20$, cut$=5$, $n_{\m
 \caption{All methods: first$_k$ consecutive fires on trail batches.}
 \begin{tabular}{lrrrrrrrrrrrr}
 \toprule
-Method & \multicolumn{3}{c}{halueval} & \multicolumn{3}{c}{squad} & \multicolumn{3}{c}{hotpotqa} & \multicolumn{3}{c}{truthfulqa} \\
+Method & \multicolumn{3}{c}{HaluEval} & \multicolumn{3}{c}{SQuAD}
+ & \multicolumn{3}{c}{HotpotQA} & \multicolumn{3}{c}{TruthfulQA} \\
 \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
- & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ \\
+ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$
+ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ \\
 \midrule
 OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-BOCPD & 0 & --- & --- & 0 & --- & --- & 4 & --- & --- & 0 & --- & --- \\
-PageHinkley & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & 0 & --- \\
-ADWIN & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-DDM & 0 & 0 & 0 & 0 & 0 & 0 & --- & --- & --- & 0 & 0 & 0 \\
-STEPD & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-HDDMA & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-ECDDWT & 0 & 0 & 0 & 0 & 0 & 0 & --- & --- & --- & 0 & 0 & 0 \\
+BOCPD        & 0 & --- & --- & 0 & --- & --- & 4   & --- & --- & 0 & --- & --- \\
+Page--Hinkley& 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & 0   & --- \\
+ADWIN        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
+DDM          & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
+STEPD        & 0 & 0   & 0   & 0 & 0   & 0   & 0   & 0   & 0   & 0 & 0   & 0   \\
+HDDMA        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
+ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\paragraph{Notes.}
+\begin{itemize}
+\item $k{=}1$: onset. OnlineRFPerm matches selective baselines at index~$0$ on
+HaluEval / SQuAD / TruthfulQA.
+\item $k{=}2,3$: sustained onset. OnlineRFPerm rarely stays on consecutive trail
+batches after a ratio-gate jump; DDM / STEPD / ECDDWT remain hot.
+\item HotpotQA: quiet $y$ saturated under overlap labels---not diagnostic until
+faithfulness is tightened.
+\end{itemize}
 
 \end{document}

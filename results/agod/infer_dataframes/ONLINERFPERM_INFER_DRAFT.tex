@@ -1,48 +1,61 @@
 % =============================================================================
-% OnlineRFPerm on LLM inference streams --- draft for editing
-% Four datasets as tidy DataFrames; n_ref >= 100; manuscript first_k tables.
-% You can rewrite freely on top of this scaffold.
+% OnlineRFPerm on LLM inference streams
+% Four QA datasets; n_ref = 100; manuscript first_k vs onlinePermOOB bank
 % =============================================================================
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{booktabs,amsmath,hyperref,enumitem}
+\usepackage{booktabs,amsmath,amssymb,hyperref,enumitem}
 \usepackage[T1]{fontenc}
 \title{OnlineRFPerm on LLM Inference Streams:\\
-Four QA Datasets as Tidy DataFrames}
-\author{CFPerm use-case draft (edit freely)}
+Four QA Datasets under a Shared Serving Form}
+\author{CFPerm}
 \date{\today}
 \begin{document}
 \maketitle
 
 \begin{abstract}
-This note is a blunt serving use-case, not a new LLM method.
-We cast four public QA corpora into the same tidy stream form
-\texttt{t\_idx / batch / question / answer / y}, freeze a shallow probe on a
-reference window with $n_{\mathrm{ref}}\ge 100$, and run OnlineRFPerm as an
-online regime clock on the trail.
-Quiet batches keep knowledge/context in the prompt; hop batches drop context
+We treat OnlineRFPerm as a \emph{serving monitor}, not as a new language-model
+method. Four public QA corpora---HaluEval, SQuAD, HotpotQA, and TruthfulQA---are
+cast into one tidy stream
+\texttt{t\_idx / batch / question / answer / y}.
+A shallow probe is frozen on a reference window with
+$n_{\mathrm{ref}}=100$, and OnlineRFPerm is run as an online regime clock on
+the trail. Quiet batches keep knowledge in the prompt; hop batches drop context
 and force invent-style decoding, inducing a quality-law change.
-We report fire index and detection delay, and (optionally) compare to the
-\texttt{onlinePermOOB} baseline bank under the manuscript
-\texttt{first}$_k$ counting rule.
-Numbers below are from the current CPU/mock scaffold and are meant as a
-starting point for your edits---not a final claim set.
+We report fire index, detection delay, quiet/hop label rates, and a full
+\texttt{first}$_k$ comparison against the \texttt{onlinePermOOB} detector bank
+(BOCPD, Page--Hinkley, ADWIN, DDM, STEPD, HDDMA, ECDDWT) under the manuscript
+trail-batch consecutive-fire rule.
+On three of four datasets OnlineRFPerm fires at the hop (delay~$0$).
+HotpotQA is a negative control under the current overlap label: quiet $y$ is
+already saturated, so there is no regime contrast to detect.
 \end{abstract}
 
-\section{What this is / is not}
-\paragraph{Is.}
+\section{Scope}
+\paragraph{What this delivers.}
 A production-shaped wiring:
-live (or simulated) LLM answers $\to$ tidy dataframe $\to$ OnlineRFPerm fire
+live or simulated LLM answers $\to$ tidy dataframe $\to$ OnlineRFPerm fire
 $\to$ action route (\texttt{model\_rollback} / \texttt{retrieval\_refresh} /
 \texttt{audit\_topk}).
-\paragraph{Is not.}
-A fact checker, a causal root-cause engine, or an LLM training paper.
-Fire only opens a contrast window and a gate.
+The product claim is a \emph{timestamped quality-regime hop}, which is the
+prerequisite for opening a contrast window and choosing an arm.
 
-\section{Data form: tidy DataFrame}
-All four datasets are stored as pandas DataFrames (parquet), matching the HH
-tidy stream convention discussed earlier:
+\paragraph{What this is not.}
+Not a fact checker, not a causal root-cause engine, and not an LLM training
+paper. A fire opens a window and a gate; it does not assert that any single
+answer is factually wrong.
 
+\paragraph{What else is deliberately out of scope here.}
+(i)~acted-vs-ignored ¥ ledgers (optional later, if a cost ledger returns);
+(ii)~agent path-subset localization (FSDS/LOGO on tool traces);
+(iii)~replacing RAG evaluation suites or human fact-check queues;
+(iv)~unsupervised ``semantic quality'' scores without a $Y$ source.
+Those are adjacent product layers; they are not required to make the monitor
+claim.
+
+\section{Data form}
+All four datasets share the same pandas/parquet schema
+(aligned with the HH tidy stream convention):
 \begin{verbatim}
 t_idx | batch | dataset | question | answer | y | hopped | rag_hit | faith | ...
 \end{verbatim}
@@ -61,19 +74,19 @@ serving stream & \texttt{results/agod/infer\_dataframes/*\_stream\_table.parquet
 \end{center}
 
 \noindent
-Production swap: keep the parquet schema; replace \texttt{answer} with your
-serving log and \texttt{y} with human correction / judge / escalation.
+Production swap: keep the schema; replace \texttt{answer} with the serving log
+and $y$ with human correction, judge score, or escalation.
 
-\section{Datasets}
-We use four inference-oriented QA sets (each materialized with $n=300$ source
-rows; streams below use $n=200$ with $n_{\mathrm{ref}}=100$):
+\section{Datasets and regime construction}
+Each source set is materialized with $n=300$ rows; streams below use $n=200$
+with $n_{\mathrm{ref}}=100$.
 
 \begin{table}[h]
 \centering
 \caption{Dataset card.}
 \begin{tabular}{lll}
 \toprule
-dataset & knowledge / context & role \\
+dataset & knowledge / context & role in this note \\
 \midrule
 HaluEval & knowledge snippet & hallucination / faithfulness \\
 SQuAD & passage context & grounded extractive QA \\
@@ -83,20 +96,19 @@ TruthfulQA & correct-answer bank as knowledge & misconception / faithfulness \\
 \end{tabular}
 \end{table}
 
-\paragraph{Regime construction (shared).}
+\paragraph{Shared regime.}
 \begin{itemize}[leftmargin=1.2em]
-\item \textbf{Quiet} (batch $<$ cut): system $=$ faithful; prompt includes knowledge.
-\item \textbf{Hop} (batch $\ge$ cut): system $=$ invent; knowledge removed.
-\item Label $y=1$ (bad) from low token-overlap faithfulness vs.\ knowledge
-(plus light invent-style heuristics on the hop window).
+\item \textbf{Quiet} (batch $<$ cut): faithful system prompt; knowledge included.
+\item \textbf{Hop} (batch $\ge$ cut): invent system prompt; knowledge removed.
+\item Label $y=1$ (bad) from low token-overlap faithfulness against knowledge,
+with light invent-style heuristics on the hop window.
 \end{itemize}
 
 \section{Protocol}
 \paragraph{Clock.}
 $n_{\mathrm{per}}=20$, $\mathrm{cut}=5$ $\Rightarrow$
-$n_{\mathrm{ref}}=n_{\mathrm{per}}\times\mathrm{cut}=100$ (meets the
-$n_{\mathrm{ref}}\ge 100$ requirement). Total $n_{\mathrm{batches}}=10$ so the
-trail has length $100$ observations / $5$ batches.
+$n_{\mathrm{ref}}=n_{\mathrm{per}}\times\mathrm{cut}=100$.
+Total $n_{\mathrm{batches}}=10$: trail length $=100$ observations / $5$ batches.
 
 \paragraph{OnlineRFPerm (batch).}
 On consecutive batches $B_{t-1},B_t$:
@@ -109,7 +121,7 @@ e_t &= \mathrm{err}(\mu_0; X_t,Y_t),\\
 Reported: first fire batch, detection delay $=\mathrm{fire}-\mathrm{cut}$,
 and quiet/hop mean $y$.
 
-\paragraph{Manuscript \texttt{first}$_k$ (for baseline tables).}
+\paragraph{Manuscript \texttt{first}$_k$.}
 Let \texttt{det} be the boolean trail (batches \emph{after} cut only). Then
 \begin{verbatim}
 def first_k_consecutive(det, k):
@@ -119,11 +131,19 @@ def first_k_consecutive(det, k):
             return i   # trail batch index; 0 = first batch after cut
     return None
 \end{verbatim}
-So \texttt{first}$_2$ $=$ ``从第几个 trail batch 开始，头一回连续两个 fire''.
+Index $0$ is the first trail batch; --- means never.
+\texttt{first}$_1$ is the headline onset; \texttt{first}$_2$/$_3$ are
+sustained-onset checks (consecutive trail fires).
 
-\section{Main OnlineRFPerm table}
-Current scaffold run (mock backend on the four streams; replace with
-transformers/vLLM when regenerating):
+\paragraph{Baseline bank.}
+Following \texttt{onlinePermOOB\_algo.py}: freeze a probe on the reference
+window, build a scalar OOB/error stream on the trail, then run BOCPD,
+Page--Hinkley, ADWIN, and frouros (DDM, STEPD, HDDMA, ECDDWT). All methods are
+scored with the same trail-batch \texttt{first}$_k$ rule.
+
+\section{OnlineRFPerm results}
+Current scaffold (mock backend on the four streams; regenerate with
+transformers/vLLM when swapping the generator):
 
 \begin{table}[h]
 \centering
@@ -133,82 +153,116 @@ transformers/vLLM when regenerating):
 \toprule
 dataset & $n$ & $n_{\mathrm{ref}}$ & cut & fire & delay & $y_{\mathrm{bad}}$ quiet$\to$hop \\
 \midrule
-halueval   & 200 & 100 & 5 & 5   & 0   & 0.00$\to$1.00 \\
-squad      & 200 & 100 & 5 & 5   & 0   & 0.00$\to$1.00 \\
-hotpotqa   & 200 & 100 & 5 & --- & --- & 1.00$\to$1.00 \\
-truthfulqa & 200 & 100 & 5 & 5   & 0   & 0.00$\to$0.98 \\
+HaluEval   & 200 & 100 & 5 & 5   & 0   & 0.00$\to$1.00 \\
+SQuAD      & 200 & 100 & 5 & 5   & 0   & 0.00$\to$1.00 \\
+HotpotQA   & 200 & 100 & 5 & --- & --- & 1.00$\to$1.00 \\
+TruthfulQA & 200 & 100 & 5 & 5   & 0   & 0.00$\to$0.98 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Read (draft).}
-On HaluEval / SQuAD / TruthfulQA the hop is sharp: quiet $y$ near zero, hop $y$
-near one, and OnlineRFPerm fires at cut (delay $0$).
-HotpotQA in this mock scaffold is already saturated in the quiet window
-($y\approx 1$), so there is no usable contrast---treat as a negative control /
-featurization TODO (long contexts $\Rightarrow$ overlap labels need tightening),
-not as a method failure.
+\paragraph{Read.}
+On HaluEval, SQuAD, and TruthfulQA the hop is sharp: quiet $y$ near zero, hop
+$y$ near one, and OnlineRFPerm fires at cut (delay~$0$).
+HotpotQA under this mock/overlap scaffold is already saturated in the quiet
+window ($y\approx 1$), so the probe sees no useful quiet$\to$hop contrast.
+Treat HotpotQA here as a \emph{negative control / featurization TODO}
+(long multi-paragraph contexts make token-overlap labels too harsh), not as a
+method failure.
 
-\section{Baseline bank (optional; OOB recipe)}
-Following \texttt{onlinePermOOB\_algo.py}: freeze a probe on the reference
-window, build a scalar error stream, then run BOCPD / Page--Hinkley / ADWIN /
-frouros (DDM, STEPD, HDDMA, ECDDWT).
-Report manuscript Table~1/2 style \texttt{first}$_k$ on \emph{trail batches}.
-(Paste updated numbers here after re-running
-\texttt{scripts/agod/bench\_infer\_detectors.py} on the $n_{\mathrm{ref}}=100$
-streams.)
-
+\section{All-method \texttt{first}$_k$ table}
 \begin{table}[h]
 \centering
-\caption{Placeholder --- Table 1 style: first rejection ($k=1$), trail batch index.}
-\begin{tabular}{lrrrr}
+\small
+\caption{Trail-batch \texttt{first}$_k$ after cut
+($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$).
+Index $0$ $=$ first batch after cut; --- $=$ never.}
+\begin{tabular}{lrrrrrrrrrrrr}
 \toprule
-Method & HaluEval & SQuAD & HotpotQA & TruthfulQA \\
+Method & \multicolumn{3}{c}{HaluEval} & \multicolumn{3}{c}{SQuAD}
+ & \multicolumn{3}{c}{HotpotQA} & \multicolumn{3}{c}{TruthfulQA} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
+ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$
+ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ \\
 \midrule
-OnlineRFPerm & 0 & 0 & --- & 0 \\
-BOCPD &  &  &  &  \\
-Page--Hinkley &  &  &  &  \\
-ADWIN &  &  &  &  \\
-DDM / STEPD / HDDMA / ECDDWT &  &  &  &  \\
+OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
+BOCPD        & 0 & --- & --- & 0 & --- & --- & 4   & --- & --- & 0 & --- & --- \\
+Page--Hinkley& 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & 0   & --- \\
+ADWIN        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
+DDM          & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
+STEPD        & 0 & 0   & 0   & 0 & 0   & 0   & 0   & 0   & 0   & 0 & 0   & 0   \\
+HDDMA        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
+ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{table}[h]
-\centering
-\caption{Placeholder --- Table 2 style: sustained onsets $k=2$ / $k=3$.}
-\begin{tabular}{lrrrrrrrr}
-\toprule
- & \multicolumn{2}{c}{HaluEval} & \multicolumn{2}{c}{SQuAD}
- & \multicolumn{2}{c}{HotpotQA} & \multicolumn{2}{c}{TruthfulQA} \\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
-Method & $k=2$ & $k=3$ & $k=2$ & $k=3$ & $k=2$ & $k=3$ & $k=2$ & $k=3$ \\
-\midrule
-OnlineRFPerm &  &  &  &  &  &  &  &  \\
-\ldots &  &  &  &  &  &  &  &  \\
-\bottomrule
-\end{tabular}
-\end{table}
+\paragraph{How to read the grid.}
+\begin{itemize}[leftmargin=1.2em]
+\item \textbf{Onset ($k=1$).}
+On HaluEval / SQuAD / TruthfulQA, OnlineRFPerm, BOCPD, Page--Hinkley, ADWIN,
+and HDDMA all report onset at trail index~$0$---aligned with the injected hop.
+\item \textbf{Sustained onset ($k=2,3$).}
+OnlineRFPerm typically fires once at the hop then returns quiet on later trail
+batches (error ratio collapses after the jump). That is expected for a
+ratio-gate clock: headline delay is~$0$, but consecutive multi-batch fires are
+rare. DDM / STEPD / ECDDWT stay hot across the trail ($k=2,3=0$), which is a
+different operating point---more sensitive, less selective.
+\item \textbf{HotpotQA.}
+No usable quiet$\to$hop contrast under the current label. OnlineRFPerm and most
+baselines do not fire; STEPD fires throughout (vacuous under saturation);
+BOCPD reports a late singleton ($k=1=4$). Do not score methods on this column
+until faithfulness labeling is tightened.
+\end{itemize}
 
-\section{Action routing (product sentence)}
+\section{Action routing}
 On fire:
 \begin{itemize}[leftmargin=1.2em]
 \item low \texttt{rag\_hit} $\to$ \texttt{retrieval\_refresh};
 \item fire with adequate retrieval support $\to$
 \texttt{model\_rollback} / canary + \texttt{audit\_topk} via \texttt{po\_risk0}.
 \end{itemize}
-Quiet $\to$ standard path, weights anneal to uniform.
+Quiet $\to$ standard path; audit weights anneal toward uniform.
 
-\section{Draft conclusion (for you to sharpen)}
+\section{Discussion}
+\paragraph{Claim that is supported.}
+Under a shared serving form and $n_{\mathrm{ref}}=100$, OnlineRFPerm provides a
+delay-$0$ hop timestamp on three QA streams with a sharp quiet$\to$hop label
+change, and matches the manuscript onset of the stronger selective baselines.
+
+\paragraph{Caveats.}
 \begin{enumerate}[leftmargin=1.2em]
-\item The use-case is intentionally blunt: dataframe streams + OnlineRFPerm clock.
+\item Numbers in this note use the mock generator scaffold unless otherwise
+stated. Swap to transformers/vLLM for production-facing regeneration; keep the
+same parquet schema and \texttt{first}$_k$ scoring.
+\item HotpotQA is not diagnostic until overlap-based $y$ is replaced or
+calibrated for long contexts.
+\item Sustained-fire ($k\ge 2$) is not OnlineRFPerm's primary claim; the primary
+claim is onset delay. Report both, as in the PointCloud tables.
+\item DDM/STEPD/ECDDWT consecutive fires should be read as sensitivity, not as
+a free win: a serving monitor that stays permanently on is operationally costly.
+\end{enumerate}
+
+\paragraph{What else (adjacent, not required for this claim).}
+\begin{enumerate}[leftmargin=1.2em]
+\item Production log adapter + $Y$-source dictionary
+(\texttt{human\_correction} $>$ judge $>$ escalation $>$ synthetic).
+\item Gate / $e_{\mathrm{floor}}$ calibration on quiet false-fire rate.
+\item Path-subset localization after fire (agent tool traces).
+\item Optional acted-vs-ignored cost ledger once unit economics exist.
+\end{enumerate}
+
+\section{Conclusion}
+\begin{enumerate}[leftmargin=1.2em]
+\item The use-case is intentionally narrow: tidy inference streams + OnlineRFPerm
+as a regime clock.
 \item With $n_{\mathrm{ref}}=100$, three of four datasets show delay-$0$ fires at
 the injected hop; HotpotQA needs label/context handling before it is diagnostic.
-\item Baselines should be scored with the same \texttt{first}$_k$ trail-batch
-rule as the PointCloud note; delay alone is not enough.
-\item Next edits: regenerate streams with a real CPU/transformers (or vLLM)
-backend; fill baseline tables; tighten Hotpot faithfulness; optionally attach
-acted-vs-ignored ¥ only if a ledger is back on.
+\item Baselines must be scored with the same trail-batch \texttt{first}$_k$ rule;
+raw delay alone is not enough for manuscript comparison.
+\item The next hardening steps are a real generator backend, tighter Hotpot
+faithfulness, and quiet-window false-fire calibration---not a new detector
+family.
 \end{enumerate}
 
 \section{Reproduce}
@@ -216,7 +270,9 @@ acted-vs-ignored ¥ only if a ledger is back on.
 PYTHONPATH=. python3 scripts/agod/prepare_infer_datasets.py --n 300
 PYTHONPATH=. python3 scripts/agod/online_rfperm_multi_datasets.py \
   --backend mock --n-per 20 --cut-batch 5 --n-batches 10
+PYTHONPATH=. python3 scripts/agod/bench_infer_detectors.py
 # DataFrames: results/agod/infer_dataframes/*_{source,stream_table}.parquet
+# Bench:      results/agod/bench_infer_detectors/
 \end{verbatim}
 
 \paragraph{Paths.}
@@ -225,7 +281,9 @@ PYTHONPATH=. python3 scripts/agod/online_rfperm_multi_datasets.py \
 \texttt{results/agod/infer\_dataframes/}
 \item Multi-run summaries:
 \texttt{results/agod/online\_rfperm\_multi\_datasets/}
-\item This draft:
+\item All-method table:
+\texttt{docs/biz/ALL\_METHODS\_ONE\_TABLE.tex}
+\item This note:
 \texttt{docs/biz/ONLINERFPERM\_INFER\_DRAFT.tex}
 \end{itemize}
 
