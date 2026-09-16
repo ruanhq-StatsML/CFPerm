@@ -5,10 +5,10 @@
 | 车道 | 问的问题 | 方法 | 数据形态 |
 |---|---|---|---|
 | **A 映射监控** | P(Y\|X) 还是不是同一套（consistency / hop） | OnlineRFPerm last-two fire | 流：`(X, y, batch)` |
-| **B 画像** | P(X) 变了没（文风 / 画风 / mix） | domain AUC / FSDS covariate | 只有 X，或 X 的塔 |
-| **C 归因** | 哪个塔 / 哪族特征 / 哪个 KPI 先坏 | CFPerm · FSDS · VIMP | X 分块 + 一个指标 |
+| **B 画像** | P(X) 变了没（文风 / 画风 / mix） | 分块 last-two / 域对照 | 只有 X，或 X 的塔 |
+| **对照** | 哪座塔 / 哪族特征的画像先不像了 | 同一时钟，切块并排 | X 分块；**不是归因** |
 
-A 不是归因。C 才是归因。B 不能替代 A 的 fire。
+A 不是归因。塔/族是画像对照。B 不能替代 A 的 fire。
 
 ---
 
@@ -22,8 +22,8 @@ A 不是归因。C 才是归因。B 不能替代 A 的 fire。
 | 4 | 大模型审核 | A | 审核决定：过 / 不过 | 待审样本特征 | **HH helpful / harmless**、BeaverTails、WildGuard、ToxicChat | 审核到达窗 |
 | 5 | 画风检测 | **B** | 通常 **没有** 业务 Y；要预测时 Y=风格类 | 图像/文案风格特征 | WikiArt、DiffusionDB、HH 文风向量、BAM | 素材批次 |
 | 6 | 多模态连续学习 | A | 该任务标签：检索命中、匹配、caption 对错 | 各塔表征拼起来 | **MSR-VTT**、Fashion-IQ、COCO caption、WebVid | 任务/时间切窗 |
-| 7 | 多模态归因 | **C** | 同一个下游指标 | X **分塔**（视频/文本/音频） | 与 6 同一批，但按塔切块 | 同窗对比塔 |
-| 8 | 指标异动归因 | **C** | 一个 KPI 的变化（工单率、CTR、幻觉率） | 特征族 / 动作臂 / 流量切片 | 客服账 SQL、Tencent-GR、Amazon 日聚合 | 日 / 周 |
+| 7 | 多模态塔对照 | **对照** | 无（或另有任务 Y 只给 A） | X 分塔并排 | 与 6 同一批，切开视频/文本 | 同窗 |
+| 8 | 特征族 / 流量切片对照 | **对照** | 无 | 按族切开的 X | 审核 `x_*` 族、Tencent-GR 族 | 日 / 窗 |
 | 9 | 模型迭代更新 | A | 新模型输出是否还服从旧映射；或「可合并」 | 同一批 X，新旧预测或偏好 | 同 prompt 两版本输出、HH 合并门禁、AlpacaEval 对 | 版本切面 |
 
 下面按条展开：Y 是什么、X 从哪来、公开数据怎么切成流、不要把哪条误接到哪条车道。
@@ -167,37 +167,25 @@ HH 的 chosen/rejected **不当 Y**（浅探针预测不了）。chosen/rejected
 
 ---
 
-## 7. 多模态归因 — 车道 C（这里才是归因）
+## 7. 多模态塔对照 — 并排，不是归因
 
-和 6 用 **同一批数据**，问题换成：Y 的预测误差里，视频塔 / 文本塔 / 音频塔谁在贡献。
+和 6 同一批数据，X 切开：`X_video | X_text | X_audio`。  
+每块只用自己的 X，问上一窗和这一窗还像不像。两块并排：谁动了、谁没动。
 
-- 不要用 OnlineRFPerm 的 fire 当归因分数。
-- X 必须 **分块**：`X_video | X_text | X_audio`。
-- 方法：CFPerm / FSDS / 塔级 VIMP。objective 是哪一块，不是 fire yes/no。
-
-数据优先复用 MSR-VTT、Fashion-IQ：已经有塔。没有分塔表征就不要硬做第 7 条。
-
-读法：6 说「该不该动连续学习」；7 说「动哪一座塔」。先 6 后 7。
+不把「视频动了」写成「视频导致了 Y」。没有分塔表征就空着这一列。细节：`docs/reports/Tower_Style_Mix_Contrast.md`。
 
 ---
 
-## 8. 指标异动归因 — 车道 C
+## 8. 特征族 / mix 对照 — 并排，不是归因
 
-业务：工单率、CTR、幻觉率、退款率 **动了**，财务要问是哪一族、哪一个动作、哪类流量。
+审核表按长度 / 语气 / 拒绝切开；推荐按序列 / 交叉 / 上下文切开。  
+mix 是来源和任务占比，不是风格向量。
 
-这里的「Y」其实是 **KPI 的变化**，不是单条样本的审核决定。X 是特征族、渠道、模型版本、动作臂。
-
-| 数据 | KPI | 可归因的块 |
-|---|---|---|
-| 已有客服 SQL 原型（HaluEval 火情账） | 工单 / 退款 / 承接 | 动作臂 `audit_topk` / `retrieval_refresh` / `model_rollback` |
-| Tencent-GR / 电商日志 | CTR、GMV | 序列特征族、召回通道 |
-| Amazon 日聚合 | 评分、销量 | 类目、评论文风、星级 mix |
-
-**不要**把 KPI 曲线直接喂 OnlineRFPerm 当 Y。可以：先用 A 在样本流上 fire，打开对照窗，**再** 在窗里做第 8 条归因。异动归因吃的是「窗 + 分块 X + 一个 KPI」，不是再训一个审核器。
+三列可以各动各的：mix 换了、文风还在、映射仍 quiet。只有映射 fire 才动审核/回滚。细节同上对照笔记。
 
 ---
 
-## 9. 模型迭代更新 — 车道 A（门禁）+ 偶尔 C
+## 9. 模型迭代更新 — 车道 A（门禁）
 
 业务：新 checkpoint / 新 DPO 合并 / 新 judge **能不能替换旧的**。
 
@@ -216,7 +204,7 @@ HH 的 chosen/rejected **不当 Y**（浅探针预测不了）。chosen/rejected
 | AlpacaEval / Arena 同 prompt 两模型 | Y=哪边赢，或各模型自己的裁判分 |
 | 自有 A/B：v1/v2 serving 日志 | 最真；X 对齐 request_id |
 
-迭代更新还可以叠加第 7/8 条：fire 之后才问「哪座塔、哪个 KPI」该随版本一起动。没有 fire 就不要为了迭代去做归因。
+迭代之后若要看「视频塔动了还是文案动了」，用第 7/8 条对照，不要写成版本更新的根因。
 
 ---
 
@@ -235,7 +223,7 @@ HH 的 chosen/rejected **不当 Y**（浅探针预测不了）。chosen/rejected
 1. **BeaverTails 或 WildGuard** → 审核 Y 换成真人/专业安全标签（场景 4）。
 2. **RAGTruth** → 推理监控带上检索轴，避免把 RAG 缺口当成生成 hop（场景 2）。
 3. **WikiArt 或 DiffusionDB 子集** → 画风只走车道 B（场景 5）。
-4. **MSR-VTT 子集** → 场景 6 的 (Y, X) 流；同一份分塔后才做场景 7。
+4. **MSR-VTT 子集** → 场景 6 的 (Y, X) 流；同一份切开视频/文本做塔对照（场景 7）。
 5. **Amazon Reviews 带时间戳** → 场景 1 的经典 ML 上线流。
 
 ---
@@ -249,12 +237,10 @@ HH 的 chosen/rejected **不当 Y**（浅探针预测不了）。chosen/rejected
         │                         quiet → Y 仍可当金标，w=1
         │                         fire  → 对照窗；Top-k po_risk0；cap 合并
         │
-        ├─ B P(X) 文风/画风 ── 素材工单（另账）
+        ├─ B P(X) 文风/画风/mix ── 动/不动并排（另账）
         │
-        └─ C 分块 X + KPI ── 多模态归因 / 指标异动归因
-                            （只在需要「动哪一块」时开，不是 objective 替代 fire）
+        └─ 塔 / 特征族切开 ── 同一时钟谁的画像不像了（对照，不是归因）
 ```
 
 场景 1–4、6、9：先把 **一个 Y、一堆 X** 的 csv/parquet 排出来，和现在的 `xy_hh_*.csv` 同一形态。  
-场景 5：多数时候不要硬造 Y。  
-场景 7–8：同一份数据加分块，换方法，不要改写 A 的 objective。
+场景 5、7、8：文风/画风/mix 和塔/族，都是画像对照，详见 `docs/reports/Tower_Style_Mix_Contrast.md`。
