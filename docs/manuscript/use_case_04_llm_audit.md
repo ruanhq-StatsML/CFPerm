@@ -58,3 +58,5 @@ HH 的 chosen/rejected **不当 \(Y\)**。那只说明流量从 helpful 还是 h
 补真 \(Y\) 之后，probe 仍然只学 \(P(Y\mid X)\)。hop = 政策包 / judge 换代。不要把 13 个 \(x\) 当成审核逻辑的归因维。
 
 **两个闸，同一张表，不要混。** 冻参考窗的 Palm–Nagler online AR-bootstrap：\(\Delta_t=s_t-\mu_{\mathrm{ref}}\)，\(\mathrm{CI}_{\mathrm{lo}}>0\) 才叫显著变差。Last-two `hop_fires`：相邻窗 OOS 比 \(\ge\gamma\) 才叫 map hop。CI 至少要两个 trail 点；last-two 的第一跳永远 quiet。原型脚本 `scripts/llm_audit_online_bootstrap_prototype.py`。
+
+连续时间 serving 的同一套表（Graph-RAG / 混合检索 / Agent 下一步）见 `docs/manuscript/use_case_05_rag_agent_stream.md`。

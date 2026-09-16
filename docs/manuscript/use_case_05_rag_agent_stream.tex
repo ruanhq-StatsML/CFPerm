@@ -1,0 +1,39 @@
+% Use-case 5: continuous serving streams. Paste into the manuscript use-cases section.
+\subsection{Graph-RAG, hybrid retrieval, and agent next-step}
+\label{sec:usecase-rag-agent}
+Any stream whose data-generating map moves in continuous time can be written as one prediction table
+\((X,Y,\mathrm{batch})\).
+The estimand is whether the frozen serving policy \(P(Y\mid X)\) is still the same object.
+Hallucination rate, refusal rate, and single-channel Recall@\(k\) are not \(Y\).
+
+\paragraph{Shared loop.}
+Fit a probe on a reference window of the deployed pack (prompt + retriever/graph/tools + generator).
+For each arrival batch, score excess error against that baseline, form a rank \(p\)-value, and apply online FDR
+(ADDIS/SAFFRON; asynchronous if retrieval windows overlap).
+Last-two \texttt{hop\_fires} is the adjacent-window gate.
+On fire: stop treating the current context or tool trace as gold; refresh cheapest-first; reset the error pool,
+burn-in, and testing wealth before the next cycle.
+
+\paragraph{Graph-RAG.}
+\(Y\) is whether this hop is valid (faithfulness, citation lands on a graph edge, task success).
+\(X\) is the query embedding plus subgraph geometry (entity count, path length, community coverage, edge fallback)
+and version ids of prompt/graph/retriever.
+Optional \(T\in\{0,1\}\) separates local subgraph from global community queues.
+A hop is a graph-pack, community recompute, or prompt-pack swap---not ``this node caused the fail.''
+Refresh order: prompt, then retrieval routing, then re-extract/re-summarize the graph; generator last.
+Promote a shadow pack only if the next-window error recovers and last-two is quiet.
+
+\paragraph{Hybrid retrieval.}
+One request rewrites, retrieves sparse and dense in parallel, fuses (e.g.\ RRF), reranks, and generates.
+\(Y\) is validity of the answer given the \emph{fused} context, not BM25-only or dense-only recall.
+\(X\) includes channel overlap, rerank margin, \(k_s,k_d\), and embedding/reranker/prompt ids.
+A hop is an index, chunker, embedding-model, or fusion-weight change that breaks the frozen pack.
+Next-step evaluation is a live/shadow promotion test on the same queries, not a Recall@\(k\) leaderboard.
+
+\paragraph{Agent next step.}
+Each hop is observe \(\to\) choose tool \(\to\) call.
+\(Y_{\mathrm{hop}}\) is hop legality (schema, admitted tool, no loop) and is available at hop end.
+Episode success \(Y_{\mathrm{task}}\) is a slower, separate stream.
+\(X\) is the observation embedding, last tool id, argument shape, hop index, and tool-schema version.
+A hop is a schema/prompt fracture or a loop; on fire, do not auto-commit and do not write the trace into gold.
+If the agent first retrieves a graph or hybrid index, retrieval fire and tool fire are stacked gates, not one score.
