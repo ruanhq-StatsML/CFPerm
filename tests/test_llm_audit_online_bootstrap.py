@@ -14,6 +14,7 @@ from scripts.llm_audit_online_bootstrap_prototype import (
     apply_preference_hop,
     freeze_and_score,
     last_two_hops,
+    linear_mse,
     load_xy,
 )
 
@@ -75,6 +76,15 @@ class LlmAuditBootstrapPrototypeTests(unittest.TestCase):
         y = np.ones(10, dtype=int)
         probe = fit_online_rf(X, y, seed=0, task="acc")
         self.assertLess(brier_score(probe, X, y), 1e-9)
+
+    def test_linear_probe_recovers_easy_map(self):
+        rng = np.random.default_rng(1)
+        X = rng.normal(size=(200, 3))
+        y = (X[:, 0] > 0).astype(int)
+        batch = np.repeat(np.arange(5), 40)
+        out = freeze_and_score(X, y, batch, n_ref_batches=2, seed=0)
+        self.assertLess(out["mu_ref"], 0.2)
+        self.assertTrue(np.isfinite(linear_mse(out["probe"], X, y)))
 
 
 if __name__ == "__main__":

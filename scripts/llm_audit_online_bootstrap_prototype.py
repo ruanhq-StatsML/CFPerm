@@ -3,12 +3,13 @@
 
 Aligns the concept-board protocol with the audit tables:
 
-    μ_ref = mean frozen-probe Brier on D_ref mini-batches
+    μ_ref = mean frozen-probe MSE on D_ref mini-batches
     Δ_t   = s_t − μ_ref
     fire  iff online AR-bootstrap CI_lo(Δ) > 0
 
 Last-two OnlineRFPerm ``hop_fires`` is reported on the same stream as a
-related but distinct gate (refit every hop, ratio ≥ γ).
+related but distinct gate (refit every hop, ratio ≥ γ). Frozen-ref uses
+the concept-board lstsq probe; last-two keeps the shallow RF.
 
 Streams
 -------
@@ -45,7 +46,6 @@ from agod.online_ar_bootstrap import (  # noqa: E402
     run_delta_bootstrap,
 )
 from agod.rf_probe import (  # noqa: E402
-    brier_score,
     error_floor,
     fit_online_rf,
     hop_fires,
@@ -124,29 +124,56 @@ def apply_preference_hop(y, batch, *, cut_batch, flip_rate=0.92, seed=0):
     return y, float(flip.mean()) if after.any() else 0.0
 
 
-def freeze_and_score(X, y, batch, *, n_ref_batches: int, seed: int):
-    """Frozen-ref Brier, concept-board protocol, classification probe."""
+def _design(X) -> np.ndarray:
+    """Intercept + X. Concept board is lstsq on mean-zero DGP; audit Y is 0/1."""
+    X = np.asarray(X, dtype=float)
+    return np.column_stack([np.ones(len(X)), X])
+
+
+def fit_linear_probe(X, y):
+    """Same frozen probe as the concept-board ``freeze_and_score`` (lstsq)."""
+    y = np.asarray(y, dtype=float).ravel()
+    beta, *_ = np.linalg.lstsq(_design(X), y, rcond=None)
+    return beta
+
+
+def linear_mse(beta, X, y) -> float:
+    pred = _design(X) @ np.asarray(beta, dtype=float)
+    y = np.asarray(y, dtype=float).ravel()
+    return float(np.mean((y - pred) ** 2))
+
+
+def freeze_and_score(X, y, batch, *, n_ref_batches: int, seed: int = 0):
+    """Frozen-ref MSE, concept-board protocol (linear probe, not last-two RF).
+
+    ``seed`` is unused; kept so call sites match the RF last-two overlay.
+    """
+    del seed
     batch = np.asarray(batch, dtype=int)
     ref = batch < int(n_ref_batches)
     if not np.any(ref) or np.all(ref):
         raise RuntimeError("need both D_ref and a trail")
-    probe = fit_online_rf(X[ref], y[ref], seed=seed, task="acc")
+    beta = fit_linear_probe(X[ref], y[ref])
 
     def one_score(b: int) -> float:
         m = batch == int(b)
-        return brier_score(probe, X[m], y[m])
+        return linear_mse(beta, X[m], y[m])
 
     ref_batches = sorted(int(b) for b in np.unique(batch[ref]))
     ref_scores = [one_score(b) for b in ref_batches]
     mu_ref = float(np.mean(ref_scores))
     trail_batches = sorted(int(b) for b in np.unique(batch[~ref]))
     scores = np.asarray([one_score(b) for b in trail_batches], dtype=float)
+    pred_all = _design(X) @ beta
     err01 = np.asarray(
-        [probe_err(probe, X[batch == b], y[batch == b], task="acc") for b in trail_batches],
+        [
+            float(np.mean(((pred_all[batch == b] >= 0.5).astype(int) != np.asarray(y[batch == b], int))))
+            for b in trail_batches
+        ],
         dtype=float,
     )
     return {
-        "probe": probe,
+        "probe": beta,
         "mu_ref": mu_ref,
         "ref_scores": [float(s) for s in ref_scores],
         "ref_batches": ref_batches,
@@ -281,7 +308,7 @@ def run_stream(
         "beta": float(BETA),
         "n_boot": N_BOOT,
         "alpha": ALPHA,
-        "score": "frozen_rf_brier",
+        "score": "frozen_linear_mse",
         "mu_ref": frozen["mu_ref"],
         "ref_scores": frozen["ref_scores"],
         "bootstrap": boot_sum,
@@ -318,8 +345,8 @@ def render_md(runs, *, n_ref_batches, cut_batch, gate, flip_rate) -> str:
         "| | Frozen-ref online AR-bootstrap | Last-two `hop_fires` |",
         "|---|---|---|",
         "| Probe | Fit once on `D_ref` (batches `< n_ref`) | Refit on `B_{t-1}` every hop |",
-        "| Score `s_t` | Brier of the frozen RF on `B_t` | 0-1 OOS error `e_now` |",
-        r"| Null | \(\mu_{\mathrm{ref}}\) = mean Brier on `D_ref` mini-batches | previous hop `e_prev` |",
+        "| Score `s_t` | MSE of frozen lstsq on `B_t` (concept-board probe) | 0-1 OOS error `e_now` |",
+        r"| Null | \(\mu_{\mathrm{ref}}\) = mean lstsq MSE on `D_ref` mini-batches | previous hop `e_prev` |",
         r"| Statistic | \(\Delta_t = s_t - \mu_{\mathrm{ref}}\) | `e_now / e_prev` |",
         "| UQ | Palm & Nagler AR-bootstrap CI | none (hard gate) |",
         r"| Fire | \(\mathrm{CI}_{\mathrm{lo}} > 0\) | ratio \(\ge \gamma\) and `e_prev ≥ e_floor` |",
@@ -354,8 +381,17 @@ def render_md(runs, *, n_ref_batches, cut_batch, gate, flip_rate) -> str:
         )
     lines += [
         "",
-        "Hop regime: expect CI_lo>0 after the cut (delay can be 1+ because the CI needs two trail points) "
-        "and last-two fire at the cut. Consistent / native: CI should cover 0; last-two should stay mostly quiet.",
+        "Hop regime: expect a *level* shift in Δ (CI sits above 0) and last-two fire at the cut. "
+        "Consistent / native: Δ near 0. On 11 trail batches a 0.04 in-sample gap can still make "
+        "`n_fires` look large — read mean Δ and the plot, not the raw fire count.",
+        "",
+        "## What the labels did",
+        "",
+        "- **HH hop vs consistent.** Frozen Δ jumps from ~0.04 to ~0.28–0.30. Last-two fires at the cut only on hop.",
+        "- **WildGuard** is the clean real-label pair: native Δ≈0 (0 bootstrap fires); Y-flip hop Δ≈0.75 and last-two fires at the cut.",
+        "- **BeaverTails** style-X is a weak map for `is_safe` (μ_ref≈0.23, near Bernoulli variance). Hop overlay moves Δ from 0.02 to 0.08 so the bootstrap can call excess, but last-two ratio at cut is 1.35 < γ=1.5.",
+        "- **ToxicChat** native is already non-quiet on last-two (human toxicity on these X is not a stationary map). Hop overlay still lifts frozen Δ (0.01 → 0.12).",
+        "- Bootstrap delay is at least 1 batch because a CI needs two trail updates. Last-two can fire on the first post-cut window.",
         "",
         "## Cut-window last-two log",
         "",
@@ -445,7 +481,7 @@ def write_tex_table(runs, dest: Path):
         r"\begin{table}[ht]",
         r"\centering",
         r"\caption{LLM-audit streams. Frozen-ref Palm--Nagler AR-bootstrap on "
-        r"$\Delta_t=s_t-\mu_{\mathrm{ref}}$ (Brier of a shallow RF fitted on $D_{\mathrm{ref}}$). "
+        r"$\Delta_t=s_t-\mu_{\mathrm{ref}}$ (lstsq MSE fitted on $D_{\mathrm{ref}}$, concept-board probe). "
         r"Fire $=$ $\mathrm{CI}_{\mathrm{lo}}>0$. Delay $=$ batches from the labeled cut to the first fire. "
         r"Last-two hop@cut is the OnlineRFPerm consecutive-OOS gate, not the bootstrap.}",
         r"\label{tab:llm-audit-online-bootstrap}",

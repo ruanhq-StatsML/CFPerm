@@ -29,9 +29,9 @@ On fire: Top-\(k\) re-review; do not treat the current judge as gold.
 The coordinates of \(X\) are predictors, not an attribution of the fail.
 
 \paragraph{Two gates.}
-Frozen-ref Palm--Nagler online AR-bootstrap: fit once on \(D_{\mathrm{ref}}\),
-\(s_t=\) Brier of that probe on batch \(t\), \(\Delta_t=s_t-\mu_{\mathrm{ref}}\),
-fire iff \(\mathrm{CI}_{\mathrm{lo}}>0\).
+Frozen-ref Palm--Nagler online AR-bootstrap: lstsq once on \(D_{\mathrm{ref}}\)
+(same probe as the concept-drift board), \(s_t=\) MSE on batch \(t\),
+\(\Delta_t=s_t-\mu_{\mathrm{ref}}\), fire iff \(\mathrm{CI}_{\mathrm{lo}}>0\).
 Last-two \texttt{hop\_fires} (OnlineRFPerm): refit on \(B_{t-1}\), fire iff
 \(e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma\) with an error floor.
 They answer different questions and are not interchangeable.

@@ -33,7 +33,7 @@ Online bootstrap + last-two overlay on every label file:
 PYTHONPATH=. python3 scripts/llm_audit_online_bootstrap_prototype.py
 ```
 
-Numbers: `results/manuscript/llm_audit_online_bootstrap/`. Frozen-ref \(\Delta_t=s_t-\mu_{\mathrm{ref}}\), fire on \(\mathrm{CI}_{\mathrm{lo}}>0\). Last-two `hop_fires` is the other gate.
+Numbers: `results/manuscript/llm_audit_online_bootstrap/`. Frozen-ref lstsq \(\Delta_t=s_t-\mu_{\mathrm{ref}}\), fire on \(\mathrm{CI}_{\mathrm{lo}}>0\). Last-two `hop_fires` (RF) is the other gate.
 
 Rebuild (parquet cache under `data/hf_cache/audit/`, not committed):
 

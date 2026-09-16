@@ -28,7 +28,7 @@ A hop of \(P(Y\mid X)\) is a policy-pack / judge swap, not “this feature cause
 
 **Two streaming gates (same table, not interchangeable).**
 
-1. **Frozen-ref online AR-bootstrap** (Palm & Nagler; same protocol as the concept-drift board). Fit the shallow RF once on \(D_{\mathrm{ref}}\) (first `n_ref` batches). \(s_t\) is its Brier on trail batch \(t\), \(\mu_{\mathrm{ref}}\) is the mean Brier on the \(D_{\mathrm{ref}}\) mini-batches, \(\Delta_t=s_t-\mu_{\mathrm{ref}}\). Fire when the online AR-bootstrap \(\mathrm{CI}_{\mathrm{lo}}(\Delta)>0\). Needs two trail updates before a CI exists.
+1. **Frozen-ref online AR-bootstrap** (Palm & Nagler; same protocol as the concept-drift board). Fit lstsq once on \(D_{\mathrm{ref}}\) (first `n_ref` batches). \(s_t\) is that probe’s MSE on trail batch \(t\), \(\mu_{\mathrm{ref}}\) is the mean MSE on the \(D_{\mathrm{ref}}\) mini-batches, \(\Delta_t=s_t-\mu_{\mathrm{ref}}\). Fire when the online AR-bootstrap \(\mathrm{CI}_{\mathrm{lo}}(\Delta)>0\). Needs two trail updates before a CI exists. The last-two gate still uses the shallow RF.
 2. **Last-two `hop_fires`** (OnlineRFPerm). Refit on \(B_{t-1}\), score \(B_t\). Fire iff \(e_{\mathrm{prev}}\ge e_{\mathrm{floor}}\) and \(e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma\). First hop is always quiet.
 
 Prototype (HH consistent/hop + BeaverTails / WildGuard / ToxicChat native and Y-flip overlay): `PYTHONPATH=. python3 scripts/llm_audit_online_bootstrap_prototype.py`. Numbers and CI plots live in `results/manuscript/llm_audit_online_bootstrap/`.
