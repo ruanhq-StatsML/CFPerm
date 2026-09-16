@@ -25,6 +25,15 @@ python3 scripts/infer_bench/write_tex.py
 
 HH-RLHF is **not** a fifth 300-export. It is the alignment counterpart already run in the HF landing prototype.
 
+## LLM audit-logic hop
+
+审核逻辑突变（judge / 政策 / 人审池一夜换制度）写在：
+
+- `docs/reports/LLM_Judge_Audit_Hop.md`
+- `docs/reports/LLM_Judge_Audit_Hop.tex`
+
+Last-two 问的是审核链路还顺不顺；相对上线参考问的是这套审核还信不信得过。HH-RLHF 上 quiet \(t=2\) 不响，cut \(t=4\) 当窗 fire。
+
 ## LaTeX
 
 Paste-ready tables: `docs/reports/Infer_Bench_tables_only.tex`  

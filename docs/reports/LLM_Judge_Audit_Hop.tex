@@ -1,0 +1,50 @@
+% LLM audit-logic hop note.
+% pdflatex LLM_Judge_Audit_Hop.tex && bibtex LLM_Judge_Audit_Hop && pdflatex LLM_Judge_Audit_Hop.tex && pdflatex LLM_Judge_Audit_Hop.tex
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,xcolor}
+\usepackage[round,authoryear]{natbib}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black,citecolor=blue!50!black}
+
+\title{\textbf{LLM audit-logic hop}\\[0.3em]
+\large Detecting a sudden change in the reviewer map \(P(Y\mid X)\)}
+\author{OnlineRFPerm landing note (RFPerm-as-Judge)}
+\date{2026-09-16}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+The LLM \textbf{audit / moderation / preference-judge} stream is the alignment counterpart of hallucination regime detection.
+Here \(Y\) is the reviewer decision (pass/reject, or chosen/rejected), not a factuality bit.
+Last-two OnlineRFPerm asks whether the \textbf{audit map} hopped between adjacent windows.
+A slowly stricter policy can remain smooth.
+A overnight judge swap, policy-pack cut, or annotator-pool replacement is the changepoint---``the reviewer died suddenly'', not ``the model forgot how to write.''
+We post the HH-RLHF~\citep{bai2022hh-rlhf} RFPerm-as-Judge numbers already shipped: quiet \(t=2\) silent, cut \(t=4\) fires with delay 0, judge error \(0.147\to 0.539\).
+\end{abstract}
+
+\section{What is being tested}
+Each batch is \((X_t,Y_t)\): content to review, and the current auditor's label.
+The previous-window probe \(\mu_0\) \emph{is} yesterday's audit logic.
+The hop gate is consecutive OOS, \(\gamma=1.25\):
+\[
+\mathrm{fire}_t=\mathbf{1}\!\{e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma\}.
+\]
+High reject rate is not a hop. A stable-strict auditor is still smooth.
+The peculiar jump is when adjacent maps stop looking like one another.
+
+\input{LLM_Judge_Audit_Hop_tables_only}
+
+\section{Two layers}
+\textbf{Smoothness} (last-two): did the rubric break between \(t-1\) and \(t\)?
+\textbf{Trustworthiness} (frozen launch probe): even a silky week-by-week tightening can be rejected versus the original gold before the auditor is unusable.
+Keeping only last-two would miss the boiling-frog. Keeping only the launch probe would call every slow tightening a crash.
+The robust serving rule uses both.
+
+\section{What fire is allowed to mean}
+On fire: the current judge is not gold; open a human contrast window on Top-\(k\) \(\texttt{po\_risk0}\); cap or refuse DPO/RLHF merges from that window.
+On quiet: standard path, \(w=1\).
+\(\texttt{po\_risk0}\) is residual strength versus the previous probe---not a violation score, not a moral verdict, not unique causal attribution.
+
+\bibliographystyle{plainnat}
+\bibliography{../../data/hf_cache/infer_bench_export/recommended}
+\end{document}
