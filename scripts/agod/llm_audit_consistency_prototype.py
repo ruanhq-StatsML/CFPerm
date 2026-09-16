@@ -314,8 +314,13 @@ def build_audit_xy(
     styles = styles[perm]
 
     texts = [f"{p}\n\n{a}" for p, a in zip(prompts, replies)]
-    X_txt = hash_text_matrix(texts, n_features=n_features)
-    X = np.hstack([X_txt, styles * float(style_scale)])
+    # Hash is optional. Depth-4 RF overfits 64–192 hashed n-grams on n=80 and
+    # last-two false-fires even when the auditor map is fixed. Default is
+    # register/refusal features — the observables the deployed auditor uses.
+    parts = [styles * float(style_scale)]
+    if int(n_features) > 0:
+        parts.insert(0, hash_text_matrix(texts, n_features=n_features))
+    X = np.hstack(parts)
     y = policy_labels(styles, policy, noise=policy_noise, seed=seed + 3)
     X, y, (styles,), batch = pack_batches(X, y, [styles], n_per)
     return {
@@ -518,9 +523,9 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
         "audit = np.argsort(-po)[:10]",
         "```",
         "",
-        f"Gate γ={gate} 是 instrumentation。读 fire。",
-        "Stream 构造对齐 `hf_landing_protos.build_hh_stream`：prompt+reply hash ⊕ 文风向量，"
-        f"cut 后 p={flip_rate} 翻转偏好标签。",
+        f"Gate γ={gate} 是 instrumentation（包默认 1.5；落地伪代码常写 1.25）。读 fire，不读 γ。",
+        "X 默认是审核员用的文风/拒绝特征（hash 可选；高维 hash 会让浅树过拟合、consistent 误火）。",
+        f"hop 仍是落地脚本那一刀：cut 后 p={flip_rate} 翻转 Y。",
         "",
         "## 3. 两个 dataset = 两套审核队列",
         "",
@@ -554,7 +559,18 @@ def render_md(runs: list[dict], *, gate: float, flip_rate: float, cut_batch: int
             )
         )
 
+    hop_ok = all(r.get("fire_at_cut") for r in runs if r.get("regime") == "hop")
+    cons_ok = not any(r.get("fire_at_cut") for r in runs if r.get("regime") == "consistent")
     lines += [
+        "",
+        "**Cut 对照才是成绩**（quiet vs fire），不是全流 n_fires，更不是 ratio：",
+        "",
+        f"- hop @ cut：{'两条队列都 fire，delay 0' if hop_ok else '见上表'}。"
+        " 审核员一夜换制度，last-two 对不上。",
+        f"- consistent @ cut：{'两条队列都 quiet' if cons_ok else '见上表'}。"
+        " 策略没切，相邻窗还是同一个审核员。",
+        "- hop 后 t=cut+1 可以立刻 quiet：新审核制度自己再变顺。这就是「死突然」，不是慢慢崩。",
+        "- 后面窗 n=80 的二项抖动可以再扣闸；那不是 objective，γ 也不是要优化的数。",
         "",
         "Cut 窗邻域（gate log only：mean_r0 / mean_r1 / ratio 不是 objective）：",
         "",
@@ -617,9 +633,9 @@ def main() -> int:
     ap.add_argument("--n-pairs", type=int, default=600)
     ap.add_argument("--n-per", type=int, default=80)
     ap.add_argument("--cut-batch", type=int, default=4)
-    ap.add_argument("--gate", type=float, default=1.25)
+    ap.add_argument("--gate", type=float, default=1.5)
     ap.add_argument("--flip-rate", type=float, default=0.92)
-    ap.add_argument("--n-features", type=int, default=64)
+    ap.add_argument("--n-features", type=int, default=0)
     ap.add_argument("--style-scale", type=float, default=8.0)
     ap.add_argument("--policy-noise", type=float, default=0.12)
     ap.add_argument("--seed", type=int, default=0)
