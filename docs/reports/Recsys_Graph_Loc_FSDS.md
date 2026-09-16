@@ -97,4 +97,6 @@ LOCO ΔR>0: dropping the column lowers R. Still not a treatment effect.
 - L1–L3 answer **among those blocks, what is tied to the Y-gap** (if anything). Tiny LOGO on ~1e-4 PO-risk stays a log.
 - Do not turn LOGO share into a unique importance ranking.
 
+Graph localization 的粒（实体 / 关系 / 半径 / 边类型 / 社区 / 图对图）见 `docs/reports/Graph_Localization_Logic.md`。localization 无 Y；FSDS 只接 moved。
+
 `PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py`
