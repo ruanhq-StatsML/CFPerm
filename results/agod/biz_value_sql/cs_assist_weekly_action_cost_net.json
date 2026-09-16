@@ -1,0 +1,24 @@
+[
+  {
+    "week_start":"2026-09-14T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "days_acted":3,
+    "gross_yen":7189.0,
+    "action_day_cost_yen_alloc":154.0,
+    "net_yen_after_action_cost_alloc":7035.0,
+    "yen_from_tickets":2154.0,
+    "yen_from_refunds":4560.0,
+    "yen_from_containment":475.0
+  },
+  {
+    "week_start":"2026-09-21T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "days_acted":4,
+    "gross_yen":9467.0,
+    "action_day_cost_yen_alloc":206.0,
+    "net_yen_after_action_cost_alloc":9261.0,
+    "yen_from_tickets":2996.0,
+    "yen_from_refunds":5840.0,
+    "yen_from_containment":631.0
+  }
+]

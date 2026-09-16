@@ -1,0 +1,11 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "n_actions":3,
+    "n_same_day_at_minus50":2.0,
+    "best_contain_payback_days":0.253,
+    "worst_contain_payback_days":1.011,
+    "stress_status":"some_arms_need_ticket_refund_to_payback",
+    "external_one_liner_cn":"承接单价 -50% 时，仅靠多承接回本：最快 0.253 天 \/ 最慢 1.011 天；2\/3 臂仍当天回本。"
+  }
+]

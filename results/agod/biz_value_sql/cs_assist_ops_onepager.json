@@ -1,0 +1,27 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "ticket_rate_ignored_pct":15.86,
+    "ticket_rate_acted_pct":1.14,
+    "refund_rate_ignored_pct":10.5,
+    "refund_rate_acted_pct":1.21,
+    "contain_rate_ignored_pct":75.21,
+    "contain_rate_acted_pct":97.79,
+    "contain_lift_pp":22.57,
+    "realized_gross_yen":16656.0,
+    "audit_cost_yen":66.0,
+    "action_day_cost_yen":360.0,
+    "net_after_audit_yen":16590.0,
+    "fully_loaded_net_yen":16230.0,
+    "uncaptured_ignored_gross_yen":16656.0,
+    "gross_capture_pct":50.0,
+    "gross_yen_per_acted_day":2379.0,
+    "delay0_lost_gross":0.0,
+    "delay1_lost_gross":2379.0,
+    "delay3_lost_gross":7137.0,
+    "top_action":"model_rollback",
+    "top_action_net_yen":7054.0,
+    "top_action_net_yen_per_day":2351.0,
+    "external_one_liner_cn":"Before→After 工单 15.86%→1.14%，承接 75.21%→97.79%（+22.57pp）；全成本净¥16230（毛¥16656−审计¥66−动作¥360）；捕获 50.0%；delay0\/1\/3 少拿毛¥0\/2379\/7137；优先 model_rollback（日净≈¥2351）。"
+  }
+]

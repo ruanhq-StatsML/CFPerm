@@ -1,0 +1,14 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "ticket_rate_quiet":0.015,
+    "ticket_rate_ignored":0.1585714286,
+    "ticket_rate_acted":0.0114285714,
+    "refund_rate_quiet":0.0060714286,
+    "refund_rate_ignored":0.105,
+    "refund_rate_acted":0.0121428571,
+    "contain_rate_quiet":0.9789285714,
+    "contain_rate_ignored":0.7521428571,
+    "contain_rate_acted":0.9778571429
+  }
+]

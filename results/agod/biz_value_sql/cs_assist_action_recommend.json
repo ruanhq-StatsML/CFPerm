@@ -1,0 +1,53 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "action_type":"model_rollback",
+    "n_days":3,
+    "sessions":600.0,
+    "tickets_avoided":87.1,
+    "refunds_avoided":58.0,
+    "extra_contained":135.7,
+    "gross_yen":7294.0,
+    "action_day_cost_yen":240.0,
+    "net_yen":7054.0,
+    "net_yen_per_day":2351.0,
+    "gross_yen_per_day":2431.0,
+    "avg_rag_hit":0.7503626089,
+    "playbook":"生成制度跳变 → 回滚\/切稳定版",
+    "recommend_rank":1
+  },
+  {
+    "surface_id":"shop_assistant",
+    "action_type":"retrieval_refresh",
+    "n_days":2,
+    "sessions":400.0,
+    "tickets_avoided":57.4,
+    "refunds_avoided":37.0,
+    "extra_contained":90.1,
+    "gross_yen":4711.0,
+    "action_day_cost_yen":80.0,
+    "net_yen":4631.0,
+    "net_yen_per_day":2316.0,
+    "gross_yen_per_day":2356.0,
+    "avg_rag_hit":0.3043942194,
+    "playbook":"avg_rag_hit 低 → 先刷检索\/索引",
+    "recommend_rank":2
+  },
+  {
+    "surface_id":"shop_assistant",
+    "action_type":"audit_topk",
+    "n_days":2,
+    "sessions":400.0,
+    "tickets_avoided":61.4,
+    "refunds_avoided":35.0,
+    "extra_contained":90.1,
+    "gross_yen":4651.0,
+    "action_day_cost_yen":40.0,
+    "net_yen":4510.0,
+    "net_yen_per_day":2255.0,
+    "gross_yen_per_day":2326.0,
+    "avg_rag_hit":0.7534301215,
+    "playbook":"po_risk Top-k 人工审计清差例",
+    "recommend_rank":3
+  }
+]

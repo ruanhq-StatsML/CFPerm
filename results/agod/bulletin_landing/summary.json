@@ -1,0 +1,406 @@
+{
+  "bulletin": "\u5c06\u5206\u5e03\u6f02\u79fb\u68c0\u6d4b\u4e0e\u5b50\u96c6\u5b9a\u4f4d\u5e94\u7528\u4e8e AI \u667a\u80fd\u4f53\u8fde\u7eed\u63a8\u7406\u8def\u5f84\u3001\u4eba\u5de5/\u5408\u6210\u6570\u636e\u8d28\u91cf\u68c0\u6d4b\u4e0e\u5ba1\u6838\uff0c\u4ee5\u53ca\u753b\u98ce/\u6587\u98ce\u6f02\u79fb\u76d1\u6d4b\uff1b\u5728\u63a8\u7406\u8d28\u91cf\u8870\u51cf\u65f6\uff0c\u80fd\u628a\u95ee\u9898\u5f52\u56e0\u5230\u6587\u672c\u6307\u6807\u4e0e\u7279\u5f81\u5c42\u9762\uff0c\u5e76\u76f4\u63a5\u63a5\u5230\u5237\u65b0\u3001\u5ba1\u6838\u4e0e\u7ecf\u8425\u52a8\u4f5c\uff0c\u5177\u5907\u53ef\u843d\u5730\u7684\u751f\u4ea7\u4ef7\u503c\u3002",
+  "source": "synth",
+  "gate": 1.2,
+  "seed": 0,
+  "agent_path": {
+    "bulletin_domain": "AI\u667a\u80fd\u4f53\u8fde\u7eed\u63a8\u7406\u8def\u5f84",
+    "method": "OnlineRFPerm + FSDS-lite (RF-domain mass / LOGO)",
+    "detection": {
+      "first_fire_t": 4,
+      "fire_rate": 0.2,
+      "rate_before": 0.08125,
+      "rate_after": 1.0,
+      "hop_at_cut": {
+        "t": 4,
+        "fired": 1,
+        "ratio": 19.999999999999982,
+        "ranking": {
+          "n_t1": 80,
+          "auroc_po_risk0": null,
+          "precision_at_10": 1.0,
+          "mean_po_t1": 1.3873784827152016,
+          "halluc_rate": 1.0,
+          "mean_rag_hit_top10": 0.42857142857142855
+        }
+      }
+    },
+    "attribution": {
+      "rf_domain_auc": 1.0,
+      "rf_mass": {
+        "text_hash": 0.32784670438333896,
+        "rag": 0.0004482828738203791,
+        "style": 0.26287552995543634,
+        "path": 0.40882948278640435
+      },
+      "po_risk": 4.78917026361089e-06,
+      "logo_share": {
+        "text_hash": 0.6226427396544791,
+        "rag": 0.0,
+        "style": 0.3773567659189267,
+        "path": 0.0
+      },
+      "logo": {
+        "text_hash": {
+          "delta": 1.2593229143769113e-06,
+          "R_minus": 3.529847349233979e-06
+        },
+        "rag": {
+          "delta": -1.7685982961565428e-06,
+          "R_minus": 6.557768559767433e-06
+        },
+        "style": {
+          "delta": 7.632210125513991e-07,
+          "R_minus": 4.025949251059491e-06
+        },
+        "path": {
+          "delta": -0.00038077297314154134,
+          "R_minus": 0.0003855621434051522
+        }
+      },
+      "top_family": "text_hash",
+      "top_features_rf": [
+        {
+          "rank": 1,
+          "name": "char_len",
+          "vimp": 0.17900247534397346
+        },
+        {
+          "rank": 2,
+          "name": "step_depth",
+          "vimp": 0.16163704496859577
+        },
+        {
+          "rank": 3,
+          "name": "hash_20",
+          "vimp": 0.09544909487218664
+        },
+        {
+          "rank": 4,
+          "name": "retry_rate",
+          "vimp": 0.09542954366488451
+        },
+        {
+          "rank": 5,
+          "name": "tool_call_rate",
+          "vimp": 0.08955808323945251
+        },
+        {
+          "rank": 6,
+          "name": "route_entropy",
+          "vimp": 0.0622048109138804
+        },
+        {
+          "rank": 7,
+          "name": "tok_len",
+          "vimp": 0.044064845732993435
+        },
+        {
+          "rank": 8,
+          "name": "hash_82",
+          "vimp": 0.04006878610218643
+        }
+      ],
+      "text_metric_shifts": [
+        {
+          "metric": "avg_word",
+          "mean_pre": 0.44125000000000003,
+          "mean_post": 0.37999999999999995,
+          "delta": -0.06125000000000008,
+          "abs_delta": 0.06125000000000008
+        },
+        {
+          "metric": "tok_len",
+          "mean_pre": 0.020624999999999998,
+          "mean_post": 0.025000000000000005,
+          "delta": 0.004375000000000007,
+          "abs_delta": 0.004375000000000007
+        },
+        {
+          "metric": "char_len",
+          "mean_pre": 0.03742187499999999,
+          "mean_post": 0.03994791666666666,
+          "delta": 0.002526041666666666,
+          "abs_delta": 0.002526041666666666
+        },
+        {
+          "metric": "qmark",
+          "mean_pre": 0.0,
+          "mean_post": 0.0,
+          "delta": 0.0,
+          "abs_delta": 0.0
+        },
+        {
+          "metric": "bang",
+          "mean_pre": 0.0,
+          "mean_post": 0.0,
+          "delta": 0.0,
+          "abs_delta": 0.0
+        }
+      ],
+      "path_metric_shifts": [
+        {
+          "metric": "step_depth",
+          "mean_pre": 0.2283509634803261,
+          "mean_post": 0.5630478911773241,
+          "delta": 0.334696927696998,
+          "abs_delta": 0.334696927696998
+        },
+        {
+          "metric": "tool_call_rate",
+          "mean_pre": 0.12192245630944627,
+          "mean_post": 0.42860587025272867,
+          "delta": 0.3066834139432824,
+          "abs_delta": 0.3066834139432824
+        },
+        {
+          "metric": "retry_rate",
+          "mean_pre": 0.05125865805215511,
+          "mean_post": 0.29248987528035375,
+          "delta": 0.24123121722819862,
+          "abs_delta": 0.24123121722819862
+        },
+        {
+          "metric": "route_entropy",
+          "mean_pre": 0.3219224583515731,
+          "mean_post": 0.553527415532281,
+          "delta": 0.2316049571807079,
+          "abs_delta": 0.2316049571807079
+        }
+      ]
+    },
+    "action": {
+      "primary": "\u62bd\u5ba1 Top-k \u4f1a\u8bdd\uff1b\u5fc5\u8981\u65f6 canary / \u56de\u6eda\u751f\u6210\u4fa7",
+      "ledger": "\u5ba2\u670d/\u52a9\u624b\u4e3b\u8d26\uff08\u5de5\u5355\u00b7\u9000\u6b3e\u00b7\u627f\u63a5\uff09",
+      "not": "\u4e0d\u662f\u65b0\u7684 LLM \u8bad\u7ec3\u6cd5\uff1b\u4e0d\u662f\u5168\u7a7a\u95f4\u552f\u4e00\u56e0\u679c"
+    }
+  },
+  "data_audit": {
+    "bulletin_domain": "\u4eba\u5de5/\u5408\u6210\u6570\u636e\u8d28\u91cf\u68c0\u6d4b\u4e0e\u5ba1\u6838",
+    "method": "RFPerm-as-Judge + PO Top-k + style/preference split",
+    "detection": {
+      "first_fire_t": null,
+      "fire_rate": 0.0,
+      "judge_err_pre": 0.0,
+      "judge_err_post": 0.9416666666666667,
+      "judge_err_ratio": 941666.6666666667,
+      "style_domain_auc": 1.0,
+      "hop_ranking": {
+        "n_t1": 60,
+        "pos_rate": 0.65,
+        "auroc_po_risk0": 0.539072039072039,
+        "precision_at_10": 0.8,
+        "mean_po_t1": 1.2989583333333337
+      }
+    },
+    "attribution": {
+      "rf_domain_auc": 0.5073303167420814,
+      "rf_mass": {
+        "text_hash": 0.9685517239934753,
+        "style": 0.03144827600552459
+      },
+      "po_risk": 0.0387877140024443,
+      "logo_share": {
+        "text_hash": 0.0,
+        "style": 0.9999999983993761
+      },
+      "logo": {
+        "text_hash": {
+          "delta": -0.011860661282209896,
+          "R_minus": 0.0506483752846542
+        },
+        "style": {
+          "delta": 0.0006247564183816667,
+          "R_minus": 0.038162957584062636
+        }
+      },
+      "top_family": "style",
+      "preference_vs_style": {
+        "preference_signal": "judge_err_ratio / OnlineRFPerm fire",
+        "style_signal": "style_domain_auc (P(X) portrait)",
+        "split": "\u4e24\u672c\u8d26\uff1a\u504f\u597d\u95e8\u7981 \u2260 \u6587\u98ce\u5de5\u5355"
+      },
+      "top_features_rf": [
+        {
+          "rank": 1,
+          "name": "hash_43",
+          "vimp": 0.06792837664493445
+        },
+        {
+          "rank": 2,
+          "name": "hash_33",
+          "vimp": 0.04946657928696614
+        },
+        {
+          "rank": 3,
+          "name": "hash_20",
+          "vimp": 0.03998982082494313
+        },
+        {
+          "rank": 4,
+          "name": "hash_84",
+          "vimp": 0.037648304547787385
+        },
+        {
+          "rank": 5,
+          "name": "hash_82",
+          "vimp": 0.03761198073311035
+        },
+        {
+          "rank": 6,
+          "name": "hash_89",
+          "vimp": 0.0359078342524188
+        },
+        {
+          "rank": 7,
+          "name": "hash_24",
+          "vimp": 0.03486999628501836
+        },
+        {
+          "rank": 8,
+          "name": "hash_12",
+          "vimp": 0.030269740164525605
+        }
+      ]
+    },
+    "action": {
+      "primary": "\u504f\u597d\u6620\u5c04\u95e8\u7981\uff1a\u62d2\u5408\u5e76 / \u9650\u91cf / Top-k \u4eba\u5de5\u590d\u6838",
+      "primary_family": "text_hash (preference map)",
+      "topk_note": "fire \u540e\u6309 po_risk0 Top-k \u4eba\u5de5\u590d\u6838\uff1b\u5b89\u9759\u56de\u5747\u5300\u62bd\u68c0",
+      "ledger": "\u5bf9\u9f50/\u5408\u5e76\u95e8\u7981\u9632\u635f\u8d26"
+    }
+  },
+  "style_drift": {
+    "bulletin_domain": "\u753b\u98ce/\u6587\u98ce\u6f02\u79fb\u76d1\u6d4b",
+    "method": "style domain AUC + metric LOGO (covariate board)",
+    "detection": {
+      "style_domain_auc": 1.0,
+      "n_lo": 320,
+      "n_hi": 220
+    },
+    "attribution": {
+      "rf_mass": {
+        "length": 0.3749999999996251,
+        "punct": 0.074999999999925,
+        "register": 0.54999999999945
+      },
+      "logo_share": {
+        "length": 0.0,
+        "punct": 0.0,
+        "register": 0.0
+      },
+      "logo": {
+        "length": {
+          "delta": 0.0,
+          "R_minus": 0.0
+        },
+        "punct": {
+          "delta": 0.0,
+          "R_minus": 0.0
+        },
+        "register": {
+          "delta": 0.0,
+          "R_minus": 0.0
+        }
+      },
+      "top_family": "register",
+      "top_metric": "bang",
+      "text_metric_shifts": [
+        {
+          "metric": "bang",
+          "mean_pre": 0.5999999999999999,
+          "mean_post": 0.0,
+          "delta": -0.5999999999999999,
+          "abs_delta": 0.5999999999999999
+        },
+        {
+          "metric": "formal",
+          "mean_pre": 0.0,
+          "mean_post": 0.4,
+          "delta": 0.4,
+          "abs_delta": 0.4
+        },
+        {
+          "metric": "hedge",
+          "mean_pre": 0.39999999999999997,
+          "mean_post": 0.0,
+          "delta": -0.39999999999999997,
+          "abs_delta": 0.39999999999999997
+        },
+        {
+          "metric": "avg_word",
+          "mean_pre": 0.35999999999999993,
+          "mean_post": 0.5777777777777776,
+          "delta": 0.21777777777777768,
+          "abs_delta": 0.21777777777777768
+        },
+        {
+          "metric": "first_person",
+          "mean_pre": 0.0,
+          "mean_post": 0.1,
+          "delta": 0.1,
+          "abs_delta": 0.1
+        },
+        {
+          "metric": "char_len",
+          "mean_pre": 0.0358203125,
+          "mean_post": 0.08125000000000003,
+          "delta": 0.04542968750000003,
+          "abs_delta": 0.04542968750000003
+        }
+      ],
+      "top_features_rf": [
+        {
+          "rank": 1,
+          "name": "formal",
+          "vimp": 0.25
+        },
+        {
+          "rank": 2,
+          "name": "avg_word",
+          "vimp": 0.15
+        },
+        {
+          "rank": 3,
+          "name": "first_person",
+          "vimp": 0.15
+        },
+        {
+          "rank": 4,
+          "name": "char_len",
+          "vimp": 0.125
+        },
+        {
+          "rank": 5,
+          "name": "tok_len",
+          "vimp": 0.1
+        },
+        {
+          "rank": 6,
+          "name": "hedge",
+          "vimp": 0.075
+        },
+        {
+          "rank": 7,
+          "name": "bang",
+          "vimp": 0.075
+        },
+        {
+          "rank": 8,
+          "name": "upper_ratio",
+          "vimp": 0.075
+        }
+      ]
+    },
+    "action": {
+      "primary": "\u6539 bang/register \u5bf9\u5e94\u7684\u6a21\u677f\u6216 decoding",
+      "ledger": "CTR/\u54c1\u724c\u53e6\u8d26 \u2014 \u6c38\u4e0d\u5e76\u8fdb\u5ba2\u670d\u4e3b\u8d26",
+      "not": "\u4e0d\u8981\u628a\u6587\u98ce\u4fe1\u53f7\u62ff\u53bb\u8bef\u4f24\u504f\u597d\u5934\u6216\u5ba2\u670d\u56de\u6eda"
+    }
+  },
+  "landing_map": {
+    "\u68c0\u6d4b": "OnlineRFPerm / RFPerm / style domain AUC",
+    "\u5f52\u56e0": "\u6587\u672c\u6307\u6807\u6f02\u79fb\u8868 + \u7279\u5f81\u65cf RF-mass / LOGO share",
+    "\u52a8\u4f5c": "\u5237\u65b0\u68c0\u7d22\u00b7\u5ba1\u8def\u5f84\u00b7Top-k \u5ba1\u6838\u00b7\u6587\u98ce\u53e6\u8d26"
+  }
+}

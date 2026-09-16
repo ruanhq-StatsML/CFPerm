@@ -1,0 +1,15 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "ledger_gross_yen":16656.0,
+    "ledger_tickets_yen":5150.0,
+    "ledger_refunds_yen":10400.0,
+    "ledger_contain_yen":1106.0,
+    "week_sum_gross":16656.0,
+    "week_sum_tickets":5150.0,
+    "week_sum_refunds":10400.0,
+    "week_sum_contain":1106.0,
+    "gross_gap":0.0,
+    "contain_yen_gap":0.0
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "realized_gross_yen":16656.0,
+    "audit_cost_yen":66.0,
+    "action_day_cost_yen":360.0,
+    "net_after_audit_yen":16590.0,
+    "fully_loaded_net_yen":16230.0,
+    "uncaptured_ignored_gross_yen":16656.0,
+    "days_ignored":7,
+    "total_addressable_gross_yen":33312.0,
+    "gross_capture_pct":50.0,
+    "delay1_lost_gross_yen":2379.0,
+    "external_one_liner_cn":"全成本净¥16230（毛¥16656−审计¥66−动作日¥360）；已捕获 50.0%，ignored 留白毛¥16656；delay+1 天再少拿毛¥2379。"
+  }
+]

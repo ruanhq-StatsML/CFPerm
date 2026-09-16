@@ -1,0 +1,25 @@
+{
+  "data": "data/hf_cache/hh_rlhf_helpful_base_2500.jsonl",
+  "featurizer": "style10+hash128",
+  "n_rows": 2000,
+  "n_batches": 25,
+  "n_per": 80,
+  "cut_batch": 4,
+  "gate": 1.2,
+  "n_fires": 4,
+  "first_fire_batch": 4,
+  "columns": [
+    "t_idx",
+    "batch",
+    "question",
+    "answer",
+    "y",
+    "feature"
+  ],
+  "package": "agod.online_rfperm + agod.po_iptw",
+  "artifacts": {
+    "parquet": "results/agod/hh_online_stream/stream_table.parquet",
+    "feature_npy": "results/agod/hh_online_stream/feature_matrix.npy",
+    "hop_history": "results/agod/hh_online_stream/hop_history.json"
+  }
+}

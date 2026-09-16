@@ -1,0 +1,33 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "hf_source":"results\/agod\/hf_landing\/halu_regime_rag.json",
+    "hf_dataset":"pminervini\/HaluEval@qa_samples",
+    "quiet_halluc":0.07,
+    "fire_halluc_biz":0.41,
+    "raw_fire_halluc":0.82,
+    "acted_halluc_scale":0.25,
+    "hop_ratio":11.7142857143,
+    "rag_low":0.3,
+    "rag_ok":0.75,
+    "rag_threshold":0.35,
+    "precision_at_10":1.0,
+    "fired_at_cut":1,
+    "ignore_ticket_bump":0.12,
+    "ignore_refund_bump":0.0785714286,
+    "ticket_rate_quiet_pct":1.5,
+    "ticket_rate_ignored_pct":15.86,
+    "ticket_rate_acted_pct":1.14,
+    "contain_rate_quiet_pct":97.89,
+    "contain_rate_ignored_pct":75.21,
+    "contain_rate_acted_pct":97.79,
+    "contain_lift_pp":22.57,
+    "tickets_avoided":206.0,
+    "refunds_avoided":130.0,
+    "extra_sessions_contained":316.0,
+    "gross_yen":16656.0,
+    "net_yen":16590.0,
+    "bridge_status":"knobs_align_with_rates",
+    "external_one_liner_cn":"HF knobs（hop_ratio≈11.7, fire_halluc=0.41, rag_thr=0.35）→ 工单率 15.86%→1.14%，承接 +22.57pp；净¥16590。"
+  }
+]

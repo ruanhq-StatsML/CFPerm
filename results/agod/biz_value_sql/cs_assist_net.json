@@ -1,0 +1,15 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "days_acted":7,
+    "days_ignored":7,
+    "sessions_acted":1400.0,
+    "audits_acted":11.0,
+    "avg_audit_precision":0.631,
+    "audit_cost_acted":66.0,
+    "quality_cost_saved":15550.0,
+    "ops_value_lift":16657.0,
+    "net_incremental_yen":16590.0,
+    "net_yen_per_1k_sessions":11850.0
+  }
+]

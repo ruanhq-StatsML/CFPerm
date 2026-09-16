@@ -1,0 +1,242 @@
+[
+  {
+    "batch_t": 1,
+    "t_start": 80,
+    "t_end": 159,
+    "fired": false,
+    "ratio": 1.0,
+    "e_now": 0.22499999999999998,
+    "e_prev": null,
+    "pos_rate": 0.375
+  },
+  {
+    "batch_t": 2,
+    "t_start": 160,
+    "t_end": 239,
+    "fired": false,
+    "ratio": 0.5555555555555556,
+    "e_now": 0.125,
+    "e_prev": 0.22499999999999998,
+    "pos_rate": 0.5125
+  },
+  {
+    "batch_t": 3,
+    "t_start": 240,
+    "t_end": 319,
+    "fired": false,
+    "ratio": 0.20000000000000018,
+    "e_now": 0.025000000000000022,
+    "e_prev": 0.125,
+    "pos_rate": 0.5375
+  },
+  {
+    "batch_t": 4,
+    "t_start": 320,
+    "t_end": 399,
+    "fired": true,
+    "ratio": 31.999999999999975,
+    "e_now": 0.8,
+    "e_prev": 0.025000000000000022,
+    "pos_rate": 0.5375
+  },
+  {
+    "batch_t": 5,
+    "t_start": 400,
+    "t_end": 479,
+    "fired": false,
+    "ratio": 0.46875,
+    "e_now": 0.375,
+    "e_prev": 0.8,
+    "pos_rate": 0.4125
+  },
+  {
+    "batch_t": 6,
+    "t_start": 480,
+    "t_end": 559,
+    "fired": false,
+    "ratio": 0.4000000000000001,
+    "e_now": 0.15000000000000002,
+    "e_prev": 0.375,
+    "pos_rate": 0.5375
+  },
+  {
+    "batch_t": 7,
+    "t_start": 560,
+    "t_end": 639,
+    "fired": true,
+    "ratio": 2.916666666666666,
+    "e_now": 0.4375,
+    "e_prev": 0.15000000000000002,
+    "pos_rate": 0.5125
+  },
+  {
+    "batch_t": 8,
+    "t_start": 640,
+    "t_end": 719,
+    "fired": false,
+    "ratio": 0.42857142857142855,
+    "e_now": 0.1875,
+    "e_prev": 0.4375,
+    "pos_rate": 0.5
+  },
+  {
+    "batch_t": 9,
+    "t_start": 720,
+    "t_end": 799,
+    "fired": true,
+    "ratio": 1.2666666666666668,
+    "e_now": 0.23750000000000004,
+    "e_prev": 0.1875,
+    "pos_rate": 0.4625
+  },
+  {
+    "batch_t": 10,
+    "t_start": 800,
+    "t_end": 879,
+    "fired": true,
+    "ratio": 1.4736842105263155,
+    "e_now": 0.35,
+    "e_prev": 0.23750000000000004,
+    "pos_rate": 0.475
+  },
+  {
+    "batch_t": 11,
+    "t_start": 880,
+    "t_end": 959,
+    "fired": false,
+    "ratio": 0.6428571428571428,
+    "e_now": 0.22499999999999998,
+    "e_prev": 0.35,
+    "pos_rate": 0.475
+  },
+  {
+    "batch_t": 12,
+    "t_start": 960,
+    "t_end": 1039,
+    "fired": false,
+    "ratio": 1.1666666666666665,
+    "e_now": 0.26249999999999996,
+    "e_prev": 0.22499999999999998,
+    "pos_rate": 0.5
+  },
+  {
+    "batch_t": 13,
+    "t_start": 1040,
+    "t_end": 1119,
+    "fired": false,
+    "ratio": 0.6190476190476191,
+    "e_now": 0.16249999999999998,
+    "e_prev": 0.26249999999999996,
+    "pos_rate": 0.4875
+  },
+  {
+    "batch_t": 14,
+    "t_start": 1120,
+    "t_end": 1199,
+    "fired": false,
+    "ratio": 0.9230769230769234,
+    "e_now": 0.15000000000000002,
+    "e_prev": 0.16249999999999998,
+    "pos_rate": 0.5125
+  },
+  {
+    "batch_t": 15,
+    "t_start": 1200,
+    "t_end": 1279,
+    "fired": true,
+    "ratio": 2.4999999999999996,
+    "e_now": 0.375,
+    "e_prev": 0.15000000000000002,
+    "pos_rate": 0.425
+  },
+  {
+    "batch_t": 16,
+    "t_start": 1280,
+    "t_end": 1359,
+    "fired": true,
+    "ratio": 1.3333333333333333,
+    "e_now": 0.5,
+    "e_prev": 0.375,
+    "pos_rate": 0.475
+  },
+  {
+    "batch_t": 17,
+    "t_start": 1360,
+    "t_end": 1439,
+    "fired": false,
+    "ratio": 0.4750000000000001,
+    "e_now": 0.23750000000000004,
+    "e_prev": 0.5,
+    "pos_rate": 0.45
+  },
+  {
+    "batch_t": 18,
+    "t_start": 1440,
+    "t_end": 1519,
+    "fired": false,
+    "ratio": 0.4736842105263159,
+    "e_now": 0.11250000000000004,
+    "e_prev": 0.23750000000000004,
+    "pos_rate": 0.6
+  },
+  {
+    "batch_t": 19,
+    "t_start": 1520,
+    "t_end": 1599,
+    "fired": true,
+    "ratio": 2.999999999999999,
+    "e_now": 0.3375,
+    "e_prev": 0.11250000000000004,
+    "pos_rate": 0.5
+  },
+  {
+    "batch_t": 20,
+    "t_start": 1600,
+    "t_end": 1679,
+    "fired": false,
+    "ratio": 1.0,
+    "e_now": 0.3375,
+    "e_prev": 0.3375,
+    "pos_rate": 0.425
+  },
+  {
+    "batch_t": 21,
+    "t_start": 1680,
+    "t_end": 1759,
+    "fired": true,
+    "ratio": 1.333333333333333,
+    "e_now": 0.44999999999999996,
+    "e_prev": 0.3375,
+    "pos_rate": 0.45
+  },
+  {
+    "batch_t": 22,
+    "t_start": 1760,
+    "t_end": 1839,
+    "fired": false,
+    "ratio": 0.6944444444444445,
+    "e_now": 0.3125,
+    "e_prev": 0.44999999999999996,
+    "pos_rate": 0.5125
+  },
+  {
+    "batch_t": 23,
+    "t_start": 1840,
+    "t_end": 1919,
+    "fired": false,
+    "ratio": 1.08,
+    "e_now": 0.3375,
+    "e_prev": 0.3125,
+    "pos_rate": 0.5125
+  },
+  {
+    "batch_t": 24,
+    "t_start": 1920,
+    "t_end": 1999,
+    "fired": false,
+    "ratio": 0.7777777777777776,
+    "e_now": 0.26249999999999996,
+    "e_prev": 0.3375,
+    "pos_rate": 0.4875
+  }
+]

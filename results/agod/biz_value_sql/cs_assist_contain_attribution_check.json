@@ -1,0 +1,11 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "ledger_extra_contained":316.0,
+    "ledger_contain_yen":1106.0,
+    "action_sum_extra_contained":315.9,
+    "action_sum_contain_yen":1107.0,
+    "contain_count_gap":-0.1,
+    "contain_yen_gap":1.0
+  }
+]

@@ -1,0 +1,16 @@
+{
+  "source": "results/agod/hf_landing/halu_regime_rag.json",
+  "quiet_halluc": 0.07,
+  "fire_halluc": 0.41,
+  "acted_halluc_scale": 0.25,
+  "hop_ratio": 11.714285714285724,
+  "rag_low": 0.3,
+  "rag_ok": 0.75,
+  "rag_threshold": 0.35,
+  "precision_at_10": 1.0,
+  "fired_at_cut": 1,
+  "raw_fire_halluc": 0.82,
+  "dataset": "pminervini/HaluEval@qa_samples",
+  "rate_before": 0.08,
+  "rate_after": 0.942
+}

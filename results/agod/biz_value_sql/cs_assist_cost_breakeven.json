@@ -1,0 +1,19 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "gross_yen":16656.0,
+    "net_yen":16590.0,
+    "audits_acted":11.0,
+    "audit_cost_acted":66.0,
+    "audit_unit_cost_now":6.0,
+    "cs_ticket_cost":25.0,
+    "refund_unit_cost":80.0,
+    "contained_session_value":3.5,
+    "max_audit_unit_cost_at_net0":1514.2,
+    "audit_unit_headroom_multiple":252.4,
+    "max_audit_spend_at_net0":16656.0,
+    "min_price_scale_at_net0":0.004,
+    "price_cut_headroom_frac":0.996,
+    "price_cut_headroom_pct":99.6
+  }
+]

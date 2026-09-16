@@ -1,0 +1,19 @@
+{
+  "base_gross_yen": 16656.0,
+  "base_net_yen": 16590.0,
+  "base_fully_loaded_net_yen": 16230.0,
+  "weak_to_strong_net_band": [
+    9156.0,
+    16590.0,
+    17990.0
+  ],
+  "weak_to_strong_fully_loaded_band": [
+    8796.0,
+    16230.0,
+    17630.0
+  ],
+  "rag_worse_retrieval_share": 1.0,
+  "rag_better_retrieval_share": 0.0,
+  "base_retrieval_share": 0.286,
+  "external_one_liner_cn": "HF hop 弱→强：全成本净¥8796→16230→17630；rag 变差时 retrieval 天占比 29%→100%，变好时→0%。"
+}
