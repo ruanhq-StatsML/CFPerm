@@ -76,4 +76,14 @@ PYTHONPATH=. python3 scripts/run_serving_gates.py
 PYTHONPATH=. python3 scripts/prototype_group_attribution.py
 ```
 
-见 `docs/manuscript/group_attribution_zh.md`。Agent 推理仍无盘上表；其余产品面都已有表。
+见 `docs/manuscript/group_attribution_zh.md`。
+
+## 再一件：多模态归因（CFPerm，单位是块）
+
+同一套 permute \(T\)。\(X\) 按模态拼起来（文本 / dense 或视觉 / 图 / 融合），报告的是哪一块带着组间差，不是单列 \(x_*\)，不是像素。
+
+```bash
+PYTHONPATH=. python3 scripts/prototype_multimodal_attribution.py
+```
+
+见 `docs/manuscript/multimodal_attribution_zh.md`。Agent 推理仍无盘上表；其余产品面都已有表。

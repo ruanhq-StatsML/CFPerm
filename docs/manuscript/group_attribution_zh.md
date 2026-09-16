@@ -36,7 +36,7 @@ T \in \{0,1,\ldots,K-1\}
 PYTHONPATH=. python3 scripts/prototype_group_attribution.py
 ```
 
-读数：`results/manuscript/group_attribution/REPORT.md`。
+读数：`results/manuscript/group_attribution/REPORT.md`。多模态是同一套循环、单位换成块：`docs/manuscript/multimodal_attribution_zh.md`。
 
 Planted：三组里只有组 2 依赖 `x1`，应 reject 且 top 是 `x1`。Null：\(Y\) 只靠 \(X\)、不靠 \(T\)，应 quiet。
 

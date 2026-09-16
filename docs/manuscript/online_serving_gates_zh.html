@@ -168,6 +168,26 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
   <p class="small">Hotpot 盘上是题库快照，没有墙上时间。Prototype 用文件顺序只演示表形。</p>
 </section>
 
+<section class="slide" data-title="组别归因">
+  <div class="kicker">CFPerm · 不是时间闸</div>
+  <h2>多组别归因：permute T</h2>
+  <div class="box">
+    <p>T = 队列 / 检索路 / 第几跳。打乱 T，不打乱 X。</p>
+    <p>问哪些 x<sub>j</sub> 带着组间 P(Y | X) 差。不是哪一维造成了时间 hop。</p>
+    <p class="small"><code>PYTHONPATH=. python3 scripts/prototype_group_attribution.py</code></p>
+  </div>
+</section>
+
+<section class="slide" data-title="多模态归因">
+  <div class="kicker">CFPerm · 单位是块</div>
+  <h2>多模态归因：同一套循环，报告模态</h2>
+  <div class="box">
+    <p>X = [text | vision/dense | graph | fusion]。T 仍是包版本 / 组别。</p>
+    <p>块内把 importance 加起来。命中的是模态，不是像素，不是单列 x_*。</p>
+    <p class="small"><code>PYTHONPATH=. python3 scripts/prototype_multimodal_attribution.py</code></p>
+  </div>
+</section>
+
 <section class="slide" data-title="循环">
   <div class="kicker">Serving 循环</div>
   <h2>Quiet 留金标，Fire 换包</h2>
