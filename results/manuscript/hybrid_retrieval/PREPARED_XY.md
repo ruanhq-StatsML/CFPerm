@@ -1,54 +1,30 @@
-# Prediction table — hybrid retrieval / Graph-RAG
+# Graph-RAG pool snapshot (Hotpot)
 
 HotpotQA distractor validation. **Questions and wiki text are not stored.**
 
-## Native shape: one query × 10 wiki paras
+This is a **graph snapshot**, not a continuous-time stream. Validation queries have no arrival order; the `batch` column is the query index, not wall-clock time. Do not feed this table to OnlineRFPerm as if it were serving traffic.
 
-Almost every distractor example is already a rectangular pool of 10 titles/paragraphs
-and exactly 2 supporting titles. That tensor is the serving object::
+## Shape: one query × 10 wiki titles
 
-    titles, docs          (10,)
-    sparse BM25           (10,)
-    dense char-ngram cos  (10,)
-    RRF                   (10,)
-    y_pair                (10,)   1 iff this title is supporting
-    X_pair                (10, 9) channel scores, not gold flags
-    batch                 query id, repeated 10 times
+Almost every distractor example is a rectangular pool of 10 titles and exactly 2 supporting titles::
 
-`xy_hotpot_pairs.csv` is this tensor flattened: **1200 queries × 10 rows**.
+    titles                 (10,)     nodes
+    y_pair                 (10,)     1 iff this title is supporting
+    title-graph X          seed / degree / slot
+    channel scores         BM25 / cosine / RRF on the same 10 nodes
+
+`xy_hotpot_pairs.csv` flattens that: **1200 queries × 10 rows**. \(X\) is graph geometry on those titles (plus the two ranking channels used to pack the subgraph). Nothing else.
+
 Print three examples (no paragraph text):
 
 ```bash
 PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py
 ```
 
-## Collapsed query-level table (optional readout)
-
-Same pool, one row per query: \(Y=1\) iff **all** gold titles landed in fused top-5.
-That is a collapse of the (10,) ranking, not the native shape.
-
-Graph-RAG extra \(X\) on the collapsed \(Y\): titles = nodes, shared-token edges, query-overlapping titles = seeds.
-
-Hop: after query `i // 80 >= 4`, flip dense scores (embedding-pack swap). Pair \(Y\) stays the gold mask; pair \(X\) moves. Collapsed fused \(Y\) can change.
-
-## Files
-
-| File | n | shape | Y |
-|---|---:|---|---|
-| `xy_hotpot_pairs.csv` | 12000 | query × 10 paras | this para is supporting |
-| `xy_hotpot_pairs_hop.csv` | 12000 | same, dense flipped after cut | same gold mask |
-| `xy_hotpot_hybrid.csv` | 1200 | 1 row / query | all gold titles in fused top-5 |
-| `xy_hotpot_hybrid_hop.csv` | 1200 | collapsed + dense fracture | fused coverage |
-| `xy_hotpot_graph.csv` | 1200 | collapsed + title-graph X | fused coverage |
-| `xy_hotpot_two_stream.csv` | 2400 | `T=0` sparse-only, `T=1` dense-only | channel usable |
-
-Pair schema:
-
-`y,batch,x_bm25,x_dense,x_rrf,x_rank_sp,x_rank_de,x_q_overlap,x_title_seed,x_title_deg,x_slot`
+Collapsed one-row-per-query files (`xy_hotpot_hybrid.csv`, `xy_hotpot_graph.csv`) are optional readouts of the same pool. A time-ordered Graph-RAG serving gate still needs a real request log.
 
 Rebuild:
 
 ```bash
-PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py
 python3 scripts/build_hybrid_retrieval_xy.py
 ```

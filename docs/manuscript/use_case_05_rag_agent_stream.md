@@ -41,7 +41,7 @@ A hop of \(P(Y\mid X)\) is a graph pack / community recompute / prompt-pack swap
 
 **Prototype sketch.** Quiet corpus + fixed graph: expect no fire. Injected fracture (stale entities, swapped community summaries, prompt-pack cut): fire at the cut. After a real refresh: new \(D_{\mathrm{ref}}\), subsequent windows quiet.
 
-**Hotpot formulation (on disk).** Titles in the distractor pool are nodes. An edge exists when two titles share a token. Seeds are titles that overlap the query. Same fused \(Y\) as hybrid — the subgraph pack is usable iff supporting titles made the fused top-\(k\). Extra \(X\): `x_n_nodes`, `x_n_edges`, `x_mean_deg`, `x_n_cc`, `x_n_q_seeds`, `x_seed_frac`, `x_lcc_frac`. File: `results/manuscript/hybrid_retrieval/xy_hotpot_graph.csv`.
+**Hotpot on disk is a Graph-RAG snapshot, not a time stream.** Titles in the distractor pool are nodes; a shared-token edge is the cheap co-mention graph; seeds overlap the query; \(Y_j=1\) if title \(j\) is supporting. File: `xy_hotpot_pairs.csv` (query × 10). The `batch` column is query index, not arrival time. Use this table to learn the graph shape. Continuous-time refresh still needs a timestamped request log.
 
 ---
 
@@ -76,7 +76,7 @@ A hop of \(P(Y\mid X)\) is a graph pack / community recompute / prompt-pack swap
 
 Cheapest refresh first: fusion weights / \(k\) → reranker → re-embed corpus → generator.
 
-**Hotpot formulation (prototype, this is the 10-para shape).** Each distractor example is already `(1 query × 10 wiki paras)`. Scores are length-10 vectors (BM25, char-ngram cosine, RRF). Pair table: 10 rows, \(Y_j=1\) iff title \(j\) is supporting; `batch` = query id. Flattened file `xy_hotpot_pairs.csv` (\(1200\times 10\)). Collapsed one-row-per-query fused \(Y\) is optional. Rebuild: `PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py` then `python3 scripts/build_hybrid_retrieval_xy.py`.
+Hotpot’s 10-para pool is **not** this serving stream (no time order). It is the Graph-RAG snapshot in 5a.
 
 ---
 
