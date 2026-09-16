@@ -1,0 +1,69 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath}
+\title{OnlineRFPerm: quiet (smooth) vs fracture (fire)}
+\author{CFPerm}
+\date{\today}
+\begin{document}
+\maketitle
+
+\noindent
+Same tidy stream and continuous RF probe
+($n{=}200$, $n_{\mathrm{ref}}{=}100$, win${=}20$, $\gamma{=}1.25$).
+\textbf{Smooth} $=$ all-quiet control (no mid break).
+\textbf{Fracture} $=$ sudden break at $t{=}n_{\mathrm{ref}}$.
+Index $0$ $=$ first trail observation; --- $=$ never.
+
+\begin{table}[h]
+\centering
+\caption{Quiet stays silent; mid-stream fracture fires
+(freeze delay / slide delay).}
+\begin{tabular}{llcrr}
+\toprule
+dataset & perturbation & $y$ quiet$\to$frac
+ & smooth (fr/sl) & fracture (fr/sl) \\
+\midrule
+HaluEval   & invent\_fracture & 0.00$\to$1.00 & ---/--- & 0/1 \\
+HaluEval   & label\_flip      & 0.00$\to$1.00 & ---/--- & 0/1 \\
+HaluEval   & answer\_corrupt  & 0.00$\to$1.00 & ---/--- & 0/1 \\
+SQuAD      & invent\_fracture & 0.00$\to$1.00 & ---/--- & 0/1 \\
+SQuAD      & label\_flip      & 0.00$\to$1.00 & ---/--- & 0/1 \\
+SQuAD      & answer\_corrupt  & 0.00$\to$1.00 & ---/--- & 0/1 \\
+HotpotQA   & invent\_fracture & 0.00$\to$1.00 & ---/--- & 0/1 \\
+HotpotQA   & label\_flip      & 0.00$\to$1.00 & ---/--- & 0/1 \\
+HotpotQA   & answer\_corrupt  & 0.00$\to$1.00 & ---/--- & 0/1 \\
+TruthfulQA & invent\_fracture & 0.00$\to$1.00 & ---/--- & 0/1 \\
+TruthfulQA & label\_flip      & 0.00$\to$1.00 & ---/--- & 0/1 \\
+TruthfulQA & answer\_corrupt  & 0.00$\to$1.00 & ---/--- & 0/1 \\
+BoolQ      & invent\_fracture & 0.00$\to$1.00 & ---/--- & 0/1 \\
+BoolQ      & label\_flip      & 0.00$\to$1.00 & ---/--- & 0/1 \\
+BoolQ      & answer\_corrupt  & 0.00$\to$1.00 & ---/--- & 0/1 \\
+NQ-open    & invent\_fracture & 0.00$\to$1.00 & ---/--- & 0/1 \\
+NQ-open    & label\_flip      & 0.00$\to$1.00 & ---/--- & 0/1 \\
+NQ-open    & answer\_corrupt  & 0.00$\to$1.00 & ---/--- & 0/1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Headline (one quiet vs one fire).}
+\begin{table}[h]
+\centering
+\caption{Minimal contrast: smooth quiet vs invent fracture (freeze delay).}
+\begin{tabular}{lrrr}
+\toprule
+dataset & smooth & invent fracture & read \\
+\midrule
+HaluEval   & --- & 0 & break timestamped \\
+SQuAD      & --- & 0 & break timestamped \\
+HotpotQA   & --- & 0 & break timestamped \\
+TruthfulQA & --- & 0 & break timestamped \\
+BoolQ      & --- & 0 & break timestamped \\
+NQ-open    & --- & 0 & break timestamped \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Read: no fire $\approx$ inference looks fine; mid fracture / concept drift $\to$ fire.
+
+\end{document}

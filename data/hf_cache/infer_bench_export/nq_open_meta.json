@@ -1,0 +1,9 @@
+{
+  "dataset": "nq_open",
+  "n": 200,
+  "fields": [
+    "question",
+    "knowledge",
+    "gold"
+  ]
+}

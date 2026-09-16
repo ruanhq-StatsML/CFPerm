@@ -1,0 +1,155 @@
+{
+  "stance": "continuous streaming OnlineRFPerm; RF component; smooth=no-fire",
+  "win": 20,
+  "gate": 1.25,
+  "datasets": [
+    {
+      "dataset": "halueval",
+      "n": 200,
+      "n_per_source": 20,
+      "cut_batch": 5,
+      "ref_end": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_hop": 1.0,
+      "orf_freeze": {
+        "mode": "orf_freeze",
+        "first1": 0,
+        "first2": 0,
+        "first3": 0,
+        "n_trail_fires": 100,
+        "detection_delay_obs": 0,
+        "quiet_err_mean": 0.0,
+        "hop_err_mean": 1.0
+      },
+      "orf_slide": {
+        "mode": "orf_slide",
+        "first1": 1,
+        "first2": 1,
+        "first3": 1,
+        "n_trail_fires": 5,
+        "detection_delay_obs": 1
+      },
+      "smooth_control": {
+        "freeze_first1": null,
+        "slide_first1": null,
+        "freeze_n_fires": 0,
+        "slide_n_fires": 0,
+        "read": "smooth_control_should_stay_quiet"
+      },
+      "read": "hop_caught_smooth_control_quiet \u2014 RF component sees the law change"
+    },
+    {
+      "dataset": "squad",
+      "n": 200,
+      "n_per_source": 20,
+      "cut_batch": 5,
+      "ref_end": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_hop": 1.0,
+      "orf_freeze": {
+        "mode": "orf_freeze",
+        "first1": 0,
+        "first2": 0,
+        "first3": 0,
+        "n_trail_fires": 100,
+        "detection_delay_obs": 0,
+        "quiet_err_mean": 0.0,
+        "hop_err_mean": 1.0
+      },
+      "orf_slide": {
+        "mode": "orf_slide",
+        "first1": 1,
+        "first2": 1,
+        "first3": 1,
+        "n_trail_fires": 4,
+        "detection_delay_obs": 1
+      },
+      "smooth_control": {
+        "freeze_first1": null,
+        "slide_first1": null,
+        "freeze_n_fires": 0,
+        "slide_n_fires": 0,
+        "read": "smooth_control_should_stay_quiet"
+      },
+      "read": "hop_caught_smooth_control_quiet \u2014 RF component sees the law change"
+    },
+    {
+      "dataset": "hotpotqa",
+      "n": 200,
+      "n_per_source": 20,
+      "cut_batch": 5,
+      "ref_end": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_hop": 1.0,
+      "orf_freeze": {
+        "mode": "orf_freeze",
+        "first1": 0,
+        "first2": 0,
+        "first3": 0,
+        "n_trail_fires": 100,
+        "detection_delay_obs": 0,
+        "quiet_err_mean": 0.0,
+        "hop_err_mean": 1.0
+      },
+      "orf_slide": {
+        "mode": "orf_slide",
+        "first1": 1,
+        "first2": 1,
+        "first3": 1,
+        "n_trail_fires": 5,
+        "detection_delay_obs": 1
+      },
+      "smooth_control": {
+        "freeze_first1": null,
+        "slide_first1": null,
+        "freeze_n_fires": 0,
+        "slide_n_fires": 0,
+        "read": "smooth_control_should_stay_quiet"
+      },
+      "read": "hop_caught_smooth_control_quiet \u2014 RF component sees the law change"
+    },
+    {
+      "dataset": "truthfulqa",
+      "n": 200,
+      "n_per_source": 20,
+      "cut_batch": 5,
+      "ref_end": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_hop": 1.0,
+      "orf_freeze": {
+        "mode": "orf_freeze",
+        "first1": 0,
+        "first2": 0,
+        "first3": 0,
+        "n_trail_fires": 100,
+        "detection_delay_obs": 0,
+        "quiet_err_mean": 0.0,
+        "hop_err_mean": 1.0
+      },
+      "orf_slide": {
+        "mode": "orf_slide",
+        "first1": 1,
+        "first2": 1,
+        "first3": 1,
+        "n_trail_fires": 4,
+        "detection_delay_obs": 1
+      },
+      "smooth_control": {
+        "freeze_first1": null,
+        "slide_first1": null,
+        "freeze_n_fires": 0,
+        "slide_n_fires": 0,
+        "read": "smooth_control_should_stay_quiet"
+      },
+      "read": "hop_caught_smooth_control_quiet \u2014 RF component sees the law change"
+    }
+  ]
+}

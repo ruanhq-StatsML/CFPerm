@@ -133,4 +133,48 @@ PYTHONPATH=. python3 scripts/agod/online_rfperm_multi_datasets.py \
 若要真正的 streaming 与 manuscript `onlinePermOOB` 对齐：  
 **冻结** reference 上的探针 → 对 trail 打 OOB/error 标量流 → BOCPD/PH/ADWIN/`first_k`（`batch_size=1`），而不是每步用 1 个点重 fit ORF。
 
-**就这样**：prototype 默认钉在 $n_{\mathrm{per}}=20$；streaming 是同一 form 的另一种钟，另开对照，不混进主表。
+**就这样**：batch 主表仍钉 $n_{\mathrm{per}}=20$；连续 streaming 另开正式对照（见下）。
+
+---
+
+## 6. Streaming testing（连续弄法）— 已 prototype
+
+脚本：`scripts/agod/online_rfperm_streaming_test.py`  
+报告：`docs/biz/ONLINERFPERM_STREAMING_TEST.md`
+
+| 模式 | 连续怎么走 |
+|------|------------|
+| **orf_freeze** | quiet 上 fit 浅层 RF；trail 逐点打 0/1 error；滚动均值 / quiet ≥ γ → fire |
+| **orf_slide** | 窗长 `win`、步长 1；OnlineRFPerm 连续 OOS ratio-gate |
+| **smooth_control** | 把 hop 行换成 quiet 重采样；应 **不火** |
+
+当前四套（win=20, γ=1.25）：freeze delay=0，slide delay=1；smooth 全静。
+
+### 怎么理解（你说的那句）
+
+> 用 Random Forest 做 component model，有质量制度 hop 就该检出；  
+> **哪个不火，说明在这个探针下推理链路很丝滑**（没有可用的 $P(Y\mid X)$ 跳变）。
+
+对，可以这样读——附加两句边界：
+
+1. 前提是 $Y$/特征诚实（answer-precision 等）。标签烂也会「假丝滑」。  
+2. smooth_control 不火 = gate 没胡乱报警；hop 火 + control 静 = RF 真看到了制度差。
+
+---
+
+## 7. Fracture（推理断裂）— 简单但实用
+
+> 不火 ≈ 推理正常；中间突然 fracture / concept drift → 给断裂打时间戳。
+
+脚本：`scripts/agod/online_rfperm_fracture_perturb.py`  
+报告：`docs/biz/ONLINERFPERM_FRACTURE_PERTURB.md`
+
+扰动（$t=n_{\mathrm{ref}}$ 起突然变）：
+
+| kind | 断裂类型 |
+|------|----------|
+| `invent_fracture` | 生成制度断：invent + 去 grounding |
+| `label_flip` | concept drift：$Y$ 翻转 |
+| `answer_corrupt` | 忠实度断：答案打乱 |
+
+六套卡（HaluEval / SQuAD / Hotpot / TruthfulQA / BoolQ / NQ-open）× 三种扰动：freeze delay=0，slide delay=1；smooth 全静。

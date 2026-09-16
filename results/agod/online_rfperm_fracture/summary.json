@@ -1,0 +1,893 @@
+{
+  "stance": "no fire \u2248 fine; mid fracture / concept drift \u2192 fire (inference break)",
+  "n": 200,
+  "n_ref": 100,
+  "win": 20,
+  "gate": 1.25,
+  "n_caught": 18,
+  "n_cases": 18,
+  "cases": [
+    {
+      "dataset": "halueval",
+      "perturbation": "invent_fracture",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 4
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "halueval",
+      "perturbation": "label_flip",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "halueval",
+      "perturbation": "answer_corrupt",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "squad",
+      "perturbation": "invent_fracture",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 4
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "squad",
+      "perturbation": "label_flip",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 4
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "squad",
+      "perturbation": "answer_corrupt",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 7
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "hotpotqa",
+      "perturbation": "invent_fracture",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "hotpotqa",
+      "perturbation": "label_flip",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "hotpotqa",
+      "perturbation": "answer_corrupt",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "truthfulqa",
+      "perturbation": "invent_fracture",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 4
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "truthfulqa",
+      "perturbation": "label_flip",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "truthfulqa",
+      "perturbation": "answer_corrupt",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "boolq",
+      "perturbation": "invent_fracture",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 4
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "boolq",
+      "perturbation": "label_flip",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 4
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "boolq",
+      "perturbation": "answer_corrupt",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "nq_open",
+      "perturbation": "invent_fracture",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 4
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "nq_open",
+      "perturbation": "label_flip",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    },
+    {
+      "dataset": "nq_open",
+      "perturbation": "answer_corrupt",
+      "n": 200,
+      "n_ref": 100,
+      "win": 20,
+      "gate": 1.25,
+      "y_quiet": 0.0,
+      "y_fracture": 1.0,
+      "smooth": {
+        "orf_freeze": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 0.0
+        },
+        "orf_slide": {
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "detection_delay_obs": null,
+          "n_trail_fires": 0
+        }
+      },
+      "fracture": {
+        "orf_freeze": {
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "detection_delay_obs": 0,
+          "n_trail_fires": 100,
+          "quiet_err_mean": 0.0,
+          "hop_err_mean": 1.0
+        },
+        "orf_slide": {
+          "first1": 1,
+          "first2": 1,
+          "first3": 1,
+          "detection_delay_obs": 1,
+          "n_trail_fires": 5
+        }
+      },
+      "caught": true,
+      "smooth_quiet": true,
+      "read": "fracture_caught_smooth_quiet \u2014 inference break timestamped"
+    }
+  ]
+}
