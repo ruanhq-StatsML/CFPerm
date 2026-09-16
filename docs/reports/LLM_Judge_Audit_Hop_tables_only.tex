@@ -1,0 +1,101 @@
+% LLM judge / audit-logic hop. Requires booktabs.
+% Objective = map hop (RFPerm/PO). Ratio = gate. AUC = sidecar, not the objective.
+
+\begin{table}[ht]
+\centering
+\caption{Objective versus instrumentation. The method asks whether the
+audit map hopped. Ratio is a trigger. AUC scores a different problem.}
+\label{tab:llm-audit-objective}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Object & Role & Matches the objective? \\
+\midrule
+Last-two fire / RFPerm vs launch probe &
+did \(P(Y\mid X)\) hop / drift & yes \\
+\(e_{\mathrm{now}}/e_{\mathrm{prev}}\) &
+engineering gate only & no \\
+Domain AUC / \(\texttt{po\_risk0}\) AUROC &
+separability sidecar & no \\
+Reject rate / pos-rate &
+level of \(Y\), not a map hop & no \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Two layers for LLM audit. Smoothness is consecutive-window
+changepoint; trustworthiness is degradation versus a frozen launch probe.
+A slowly stricter policy can stay smooth; an overnight policy/judge swap is the hop.}
+\label{tab:llm-audit-two-layers}
+\small
+\begin{tabular}{@{}p{3.4cm}p{4.2cm}p{5.2cm}@{}}
+\toprule
+Question & Statistic & Audit reading \\
+\midrule
+Is the audit chain still smooth? &
+last-two hop (fire yes/no) &
+same rubric, same judge: do adjacent batches still look like one map? \\
+Is the auditor still trustworthy? &
+RFPerm vs frozen launch probe &
+even a silky tightening can be caught before the old gold label is unusable. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{RFPerm-as-Judge on Anthropic HH-RLHF helpful-base
+(\(n=4000\), 50 batches \(\times\) 80, cut \(B_4\)).
+Read fire, not the ratio. Quiet \(t=2\) silent; cut hops in-window (delay 0).}
+\label{tab:llm-audit-hh}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}l c l@{}}
+\toprule
+Window & Fire & Reading \\
+\midrule
+Quiet \(t=2\) & no & audit map still smooth \\
+Cut \(t=4\) & yes & preference map hopped \\
+Post-cut & --- & new audit law, then can be smooth again \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Sidecars on the HH-RLHF cut (not the objective).
+Style AUC says a \(P(X)\) register also moved; text AUC near \(1/2\)
+says this was not a bag-of-words topic swap. Neither is the hop test.}
+\label{tab:llm-audit-axes}
+\small
+\begin{tabular}{@{}l l@{}}
+\toprule
+Sidecar & What it is allowed to say \\
+\midrule
+Style-domain AUC & register portrait moved; refresh routing features \\
+Text-domain AUC & lexical mix did not drive the call \\
+Gate ratio / err ratio & log of the trigger, not a score we optimize \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Serving gate. Fire opens a contrast window; it is not a
+violation classifier. \(\texttt{po\_risk0}\) only ranks rows after a hop.}
+\label{tab:llm-audit-gate}
+\small
+\begin{tabular}{@{}l p{5.4cm} p{5.4cm}@{}}
+\toprule
+State & Meaning & Action \\
+\midrule
+quiet & consecutive audit logic holds &
+standard path; merge prefs under the old gate; \(w=1\) \\
+fire & audit logic hopped &
+current judge is not gold; human Top-\(k\); refuse or cap DPO merge;
+optional \(\sqrt{\mathrm{PO}}\) on \(T=1\) only \\
+\bottomrule
+\end{tabular}
+\end{table}
