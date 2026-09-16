@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """Recsys practice: graph localization, then multi-layer FSDS drill-down.
 
-Tencent-GR events. Not causal. Not GNN.
+Tencent-GR events. Not causal. Not GNN. Fake media towers are DGP, not
+production embeddings.
 
   1) Left-window user—item / user—merchant / co-click / shop projection.
-  2) LOCALIZE: per graph family, RF-domain on W only (no Y) — did this
-     portrait move early vs late?
-  3) DRILL: FSDS on the localized dimensions
+  2) Merchant-level messy video + audio attach (10k ids, 64-d fake embeds),
+     then mean-pool to users who touched those shops.
+  3) LOCALIZE: per block (graph families ∪ video_tower ∪ audio_tower),
+     RF-domain on W only (no Y) — did this portrait move early vs late?
+  4) DRILL: FSDS on the localized dimensions
        L1 hops  LOGO
        L2 families inside the localized hop
-       L3 LOCO columns inside that hop
+       L3 LOCO columns inside that hop (top-k if a 64-d tower)
 
 φ=(Y−μ)(W−e) is early/late distance on post-click Y, not a treatment effect.
 
@@ -45,6 +48,11 @@ SESS_GAP = 30 * 60
 TREES = 20
 DEPTH = 5
 FOLDS = 2
+N_CATALOG = 10_000
+EMB_DIM = 64
+N_THEME = 16
+LOCO_TOPK = 8
+AUC_MOVED = 0.55
 
 USER_HOP = [
     "life_ctr",
@@ -60,6 +68,31 @@ ORDER_X = [
     "n_prior_cnv",
     "n_clk_before_1d",
 ]
+LOC_FAMILIES = (
+    "user_connectivity",
+    "item_connectivity",
+    "merchant_structure",
+    "video_tower",
+    "audio_tower",
+)
+FAM_TO_HOP = {
+    "user_connectivity": "graph_user",
+    "item_connectivity": "graph_item",
+    "merchant_structure": "graph_merchant",
+    "video_tower": "tower_video",
+    "audio_tower": "tower_audio",
+}
+DGP_META = {
+    "n_catalog": N_CATALOG,
+    "emb_dim": EMB_DIM,
+    "video_ids": "randint(0, 1e10, 10000)",
+    "video_emb": "student_t_df3",
+    "audio_ids": "randint(0, 1e10, 10000)",
+    "audio_emb": "uniform_minus1_1",
+    "merchant_attach": "zipf_subset_k4_15_plus_theme16_plus_t_bias",
+    "user_agg": "left_window_clk_cnv_visit_mean_pool",
+    "not_real_embeddings": True,
+}
 
 
 def hop_of(name: str) -> str:
@@ -69,20 +102,28 @@ def hop_of(name: str) -> str:
         return "graph_item"
     if name.startswith("g_m_"):
         return "graph_merchant"
+    if name.startswith("vid_"):
+        return "tower_video"
+    if name.startswith("aud_"):
+        return "tower_audio"
     if name in USER_HOP:
         return "funnel_user"
     return "funnel_order"
 
 
-def graph_family(name: str) -> str:
-    """Localization grain: only graph columns."""
+def block_family(name: str) -> str:
+    """Localization grain: graph blocks + fake media towers."""
     if name.startswith("g_u_"):
         return "user_connectivity"
     if name.startswith("g_i_"):
         return "item_connectivity"
     if name.startswith("g_m_"):
         return "merchant_structure"
-    return "not_graph"
+    if name.startswith("vid_"):
+        return "video_tower"
+    if name.startswith("aud_"):
+        return "audio_tower"
+    return "not_block"
 
 
 def _uid(x) -> str:
@@ -160,6 +201,93 @@ def graph_tables(left: pd.DataFrame, imap: pd.DataFrame):
             columns=["merchant_id", "g_m_user_deg", "g_m_pr", "g_m_clust", "g_m_proj_deg"]
         )
     return users.fillna(0.0), items.fillna(0.0), merch.fillna(0.0)
+
+
+def _zipf_pop(n: int, rng: np.random.Generator) -> np.ndarray:
+    rank = np.arange(1, n + 1, dtype=np.float64)
+    pop = 1.0 / np.power(rank, 0.8)
+    pop = pop / pop.sum()
+    perm = rng.permutation(n)
+    out = np.empty(n, dtype=np.float64)
+    out[perm] = pop
+    return out
+
+
+def media_catalog(rng: np.random.Generator, *, kind: str):
+    """Fake asset catalog. IDs are random 0..1e10; embeds are noise, not a model."""
+    ids = rng.integers(0, int(1e10), size=N_CATALOG, dtype=np.int64)
+    if kind == "video":
+        emb = rng.standard_t(df=3.0, size=(N_CATALOG, EMB_DIM))
+    else:
+        emb = rng.random((N_CATALOG, EMB_DIM)) * 2.0 - 1.0
+    return ids, emb, _zipf_pop(N_CATALOG, rng)
+
+
+def attach_media_to_merchants(
+    mids: np.ndarray,
+    emb: np.ndarray,
+    pop: np.ndarray,
+    rng: np.random.Generator,
+    *,
+    prefix: str,
+) -> pd.DataFrame:
+    """Messy shop-level attach: Zipf subset + latent theme + Student-t bias.
+
+    Not coupled to W or Y. Merchant mix can still leak through user pooling.
+    """
+    mids = np.asarray(mids, dtype=np.int64)
+    n_m = int(len(mids))
+    theme = rng.integers(0, N_THEME, size=n_m)
+    theme_center = rng.normal(0.0, 0.35, size=(N_THEME, EMB_DIM))
+    k = rng.integers(4, 16, size=n_m)
+    M = np.zeros((n_m, EMB_DIM), dtype=np.float64)
+    for i in range(n_m):
+        ix = rng.choice(N_CATALOG, size=int(k[i]), replace=False, p=pop)
+        raw = emb[ix].mean(axis=0)
+        bias = theme_center[theme[i]] + 0.25 * rng.standard_t(df=4.0, size=EMB_DIM)
+        M[i] = raw + bias
+    cols = {f"{prefix}_{j:02d}": M[:, j] for j in range(EMB_DIM)}
+    return pd.DataFrame({"merchant_id": mids, **cols})
+
+
+def user_pool_media(
+    left: pd.DataFrame, imap: pd.DataFrame, merch_emb: pd.DataFrame, cols: list[str]
+) -> pd.DataFrame:
+    """Visit-weighted mean of merchant media for users who clk/cnv in the left window."""
+    hit = left.loc[left.act.isin([CLK, CNV]), ["user_id", "item_id"]]
+    hit = hit.merge(imap, on="item_id", how="left").dropna(subset=["merchant_id"])
+    if hit.empty:
+        return pd.DataFrame(columns=["user_id"] + cols)
+    t = hit.merge(merch_emb[["merchant_id"] + cols], on="merchant_id", how="left")
+    return t.groupby("user_id", sort=False)[cols].mean().reset_index()
+
+
+def media_user_tables(left: pd.DataFrame, imap: pd.DataFrame, *, seed: int):
+    """Build fake video/audio towers: catalog → messy merchant attach → user pool."""
+    rng_v = np.random.default_rng(seed + 101)
+    rng_a = np.random.default_rng(seed + 202)
+    mids = np.sort(imap.merchant_id.dropna().unique().astype(np.int64))
+    vid_ids, vid_emb, vid_pop = media_catalog(rng_v, kind="video")
+    aud_ids, aud_emb, aud_pop = media_catalog(rng_a, kind="audio")
+    merch_v = attach_media_to_merchants(mids, vid_emb, vid_pop, rng_v, prefix="vid")
+    merch_a = attach_media_to_merchants(mids, aud_emb, aud_pop, rng_a, prefix="aud")
+    vid_cols = [f"vid_{j:02d}" for j in range(EMB_DIM)]
+    aud_cols = [f"aud_{j:02d}" for j in range(EMB_DIM)]
+    user_v = user_pool_media(left, imap, merch_v, vid_cols)
+    user_a = user_pool_media(left, imap, merch_a, aud_cols)
+    users = user_v.merge(user_a, on="user_id", how="outer") if len(user_a) else user_v
+    meta = {
+        **DGP_META,
+        "n_video_ids": int(len(vid_ids)),
+        "n_audio_ids": int(len(aud_ids)),
+        "n_merch_attached": int(len(mids)),
+        "n_user_pooled": int(len(users)),
+        "video_id_min": int(vid_ids.min()) if len(vid_ids) else None,
+        "video_id_max": int(vid_ids.max()) if len(vid_ids) else None,
+        "audio_id_min": int(aud_ids.min()) if len(aud_ids) else None,
+        "audio_id_max": int(aud_ids.max()) if len(aud_ids) else None,
+    }
+    return users.fillna(0.0), vid_cols, aud_cols, meta
 
 
 def rf_domain(X, W, *, seed: int):
@@ -265,29 +393,30 @@ def logo_groups(X, y, w, names, group_fn, *, seed: int):
         "logo": logo,
         "logo_share": share,
         "vimp_po": po_v.tolist(),
-        "vimp_rf": rf_v.tolist(),
+        "vimp_rf": v_rf.tolist(),
         "names": names,
         "groups": {g: groups[g] for g in families},
     }
 
 
-def localize_graph(X, w, names, *, seed: int):
-    """No Y. Per graph family: can W be read from this block alone?"""
-    off = {"user_connectivity": 1, "item_connectivity": 2, "merchant_structure": 3}
+def localize_blocks(X, w, names, *, seed: int):
+    """No Y. Per block: can W be read from this family alone?"""
     rows = []
-    for fam in ("user_connectivity", "item_connectivity", "merchant_structure"):
-        ix = [i for i, n in enumerate(names) if graph_family(n) == fam]
+    for fam in LOC_FAMILIES:
+        ix = [i for i, n in enumerate(names) if block_family(n) == fam]
         if not ix:
             continue
-        auc, vimp = rf_domain(X[:, ix], w, seed=seed + off[fam])
+        auc, vimp = rf_domain(X[:, ix], w, seed=seed + 1 + LOC_FAMILIES.index(fam))
+        order = np.argsort(-vimp)
+        top = {names[ix[int(j)]]: float(vimp[int(j)]) for j in order[:8]}
         rows.append(
             {
                 "family": fam,
                 "n_feat": int(len(ix)),
                 "rf_domain_auc": None if auc != auc else float(auc),
-                "moved": bool(auc == auc and auc >= 0.55),
-                "cols": [names[i] for i in ix],
-                "rf_vimp": {names[i]: float(v) for i, v in zip(ix, vimp)},
+                "moved": bool(auc == auc and auc >= AUC_MOVED),
+                "cols": [names[i] for i in ix] if len(ix) <= 8 else [names[i] for i in ix[:8]] + ["…"],
+                "rf_vimp_top": top,
             }
         )
     rows.sort(key=lambda r: -(r["rf_domain_auc"] or 0.0))
@@ -297,7 +426,11 @@ def localize_graph(X, w, names, *, seed: int):
     return {"ranked": rows, "localized_families": localized}
 
 
-def loco_subset(X, y, w, names, keep_names, *, seed: int, full_risk: float):
+def loco_subset(X, y, w, names, keep_names, *, seed: int, full_risk: float, vimp_rf=None):
+    keep_names = [n for n in names if n in set(keep_names)]
+    if vimp_rf is not None and len(keep_names) > LOCO_TOPK:
+        score = {n: float(vimp_rf.get(n, 0.0)) for n in keep_names}
+        keep_names = sorted(keep_names, key=lambda n: -score[n])[:LOCO_TOPK]
     ix = [i for i, n in enumerate(names) if n in set(keep_names)]
     out = []
     for j in ix:
@@ -305,42 +438,66 @@ def loco_subset(X, y, w, names, keep_names, *, seed: int, full_risk: float):
         rm = po_risk_fit(X[:, keep], y, w, seed=seed + 80 + j)["risk"]
         out.append({"name": names[j], "hop": hop_of(names[j]), "loco_dR": float(full_risk - rm)})
     out.sort(key=lambda r: -r["loco_dR"])
-    return out
+    return out, keep_names
 
 
-def render_md(loc, l1, l2, l3, *, localized_hops, n, p) -> str:
+def _fmt_auc(auc) -> str:
+    return "—" if auc is None else f"{auc:.3f}"
+
+
+def _fmt_delta(d) -> str:
+    return "nan" if d != d else f"{d:+.5f}"
+
+
+def render_md(loc, l1, l2, l3, *, localized_hops, n, p, dgp) -> str:
+    moved = [r["family"] for r in loc["ranked"] if r["moved"]]
+    logo = l1["logo"]
+    loc_logo = []
+    for h in localized_hops:
+        if h in logo:
+            loc_logo.append(f"`{h}` LOGO Δ={_fmt_delta(logo[h]['delta'])}")
+    loc_logo_s = "; ".join(loc_logo) if loc_logo else "none"
     lines = [
         "# Recsys: graph localization → multi-layer FSDS",
         "",
-        "Tencent-GR. Graph first, then FSDS only drills what the graph localized.",
+        "Tencent-GR. Graph first (plus fake video/audio towers attached on shops),",
+        "then FSDS only drills what localization marked as moved.",
         "PO-risk is **not** causal. RF-domain is a **portrait log**, not the score to optimize.",
+        "Video/audio are a messy DGP, not production embeddings.",
         "",
         "## Protocol",
         "",
         "1. Left-window clk/cnv → user—item, user—merchant, session co-click, shop projection.",
-        "2. **Localize** (no Y): each graph family vs early/late clock W. Moved = RF-domain AUC ≥ 0.55.",
-        "3. **Drill** with Y=`y_post_clk_1d`:",
-        "   - L1 hops (funnel ∪ graph) LOGO",
-        "   - L2 families inside the localized graph hop",
-        "   - L3 LOCO columns inside that hop",
+        "2. Fake media DGP on the same graph:",
+        f"   - `{dgp['n_catalog']}` video_ids ~ `randint(0, 1e10)`; `{dgp['emb_dim']}`-d Student-t embeddings",
+        f"   - `{dgp['n_catalog']}` audio_ids the same way; `{dgp['emb_dim']}`-d Uniform[-1, 1]",
+        "   - Messy attach on each merchant: Zipf subset + 16 themes + t-bias (no W/Y coupling)",
+        "   - User mean-pool of merchants touched in the left window (visit-weighted)",
+        "3. **Localize** (no Y): each graph family ∪ `video_tower` ∪ `audio_tower` vs clock W.",
+        f"   Moved = RF-domain AUC ≥ {AUC_MOVED}.",
+        "4. **Drill** with Y=`y_post_clk_1d`:",
+        "   - L1 hops (funnel ∪ graph ∪ towers) LOGO",
+        "   - L2 families inside the localized hops",
+        f"   - L3 LOCO columns inside those hops (top-{LOCO_TOPK} if a 64-d tower)",
         "",
         f"n={n} p={p}. Clock = median `t_end`. W=1 later half.",
+        f"Shops attached={dgp.get('n_merch_attached')} · users pooled={dgp.get('n_user_pooled')}.",
         "",
-        "## 1. Graph localization (no Y)",
+        "## 1. Localization (no Y)",
         "",
         "| family | n | RF-domain AUC | moved |",
         "|---|---:|---:|---|",
     ]
     for r in loc["ranked"]:
-        auc = r["rf_domain_auc"]
-        auc_s = "—" if auc is None else f"{auc:.3f}"
         lines.append(
-            f"| {r['family']} | {r['n_feat']} | {auc_s} | {'yes' if r['moved'] else 'no'} |"
+            f"| {r['family']} | {r['n_feat']} | {_fmt_auc(r['rf_domain_auc'])} | "
+            f"{'yes' if r['moved'] else 'no'} |"
         )
     lines += [
         "",
         "Localized families: `" + ", ".join(loc["localized_families"]) + "`.",
-        "Moved = this block's connectivity portrait differs early vs late. Not “this tower caused conversion”.",
+        "Moved = this block's portrait differs early vs late. Not “this tower caused conversion”.",
+        "Towers sit next to graph families on the same clock. Contrast is moved / not-moved.",
         "",
         "## 2. FSDS L1 — hops (LOGO)",
         "",
@@ -351,11 +508,9 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p) -> str:
     ]
     fam = l1["logo_share"]
     for g in sorted(fam, key=lambda x: -fam[x]):
-        d = l1["logo"][g]["delta"]
-        ds = "nan" if d != d else f"{d:+.5f}"
         lines.append(
             f"| {g} | {l1['family_n'][g]} | {l1['rf_mass'][g]:.3f} | "
-            f"{l1['po_mass'][g]:.3f} | {ds} | {fam[g]:.3f} |"
+            f"{l1['po_mass'][g]:.3f} | {_fmt_delta(l1['logo'][g]['delta'])} | {fam[g]:.3f} |"
         )
     lines += [
         "",
@@ -363,10 +518,10 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p) -> str:
         "Δ≤0: this hop is not a concept-gap source on this clock. Read RF-mass for P(X).",
         "",
         f"Drill continues inside localized hops: `{', '.join(localized_hops)}`.",
-        "",
-        "On this clock that pairing is the point: **user_connectivity moved**, but L1 LOGO Δ on `graph_user` is ≤0.",
-        "Portrait movement ≠ Y-gap source. Funnel_user has the RF-mass (later people look different) and also LOGO Δ<0.",
-        "Small LOGO+ on `graph_item` / `funnel_order` / `graph_merchant` sits on PO-risk ~1e-4 — log, not a story.",
+        f"Moved families: `{', '.join(moved) if moved else '(none; fallback to top AUC)'}`.",
+        f"L1 on those hops: {loc_logo_s}.",
+        "Portrait movement ≠ Y-gap source. Funnel hops stay on the L1 board so graph/towers are compared, not isolated.",
+        "PO-risk here is ~1e-4 scale — log, not a story.",
         "",
         "## 3. FSDS L2 — families inside localized hops",
         "",
@@ -374,7 +529,7 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p) -> str:
     fam2 = l2["logo_share"]
     if len(fam2) <= 1:
         lines += [
-            "Only one family inside the localized hop, so L2 LOGO is vacuous (nothing to drop).",
+            "Only one family inside the localized hops, so L2 LOGO is vacuous (nothing to drop).",
             "L3 LOCO on those columns is the drill.",
             "",
         ]
@@ -386,15 +541,15 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p) -> str:
             "|---|---:|---:|---:|---:|---:|",
         ]
         for g in sorted(fam2, key=lambda x: -fam2[x]):
-            d = l2["logo"][g]["delta"]
-            ds = "nan" if d != d else f"{d:+.5f}"
             lines.append(
                 f"| {g} | {l2['family_n'][g]} | {l2['rf_mass'][g]:.3f} | "
-                f"{l2['po_mass'][g]:.3f} | {ds} | {fam2[g]:.3f} |"
+                f"{l2['po_mass'][g]:.3f} | {_fmt_delta(l2['logo'][g]['delta'])} | {fam2[g]:.3f} |"
             )
         lines.append("")
     lines += [
         "## 4. FSDS L3 — LOCO on localized hop columns",
+        "",
+        f"If a 64-d tower is in the drill, LOCO is top-{LOCO_TOPK} by L1 RF-mass, not all 64 fits.",
         "",
         "| feat | hop | LOCO ΔR |",
         "|---|---|---:|",
@@ -407,9 +562,10 @@ def render_md(loc, l1, l2, l3, *, localized_hops, n, p) -> str:
         "",
         "## Read",
         "",
-        "- Localization answers **which graph block's portrait moved**.",
+        "- Localization answers **which block's portrait moved** (graph connectivity vs fake video vs fake audio).",
         "- L1–L3 answer **among those blocks, what is tied to the Y-gap** (if anything).",
-        "- Funnel hops stay on the L1 board so graph is compared, not isolated.",
+        "- Video/audio AUC near 0.5 is the honest DGP read: random embeds + merchant attach, no clock injection.",
+        "- If a tower moves, that is merchant-mix leak through user pooling — still not a root cause.",
         "- Do not turn LOGO share into a unique importance ranking.",
         "",
         "`PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py`",
@@ -435,31 +591,34 @@ def main() -> int:
     gu, gi, gm = graph_tables(left, imap)
     print(f"graph users={len(gu)} items={len(gi)} shops={len(gm)}", flush=True)
 
+    u_media, vid_cols, aud_cols, dgp = media_user_tables(left, imap, seed=SEED)
+    print(
+        f"dgp video_ids={dgp['n_video_ids']} audio_ids={dgp['n_audio_ids']} "
+        f"dim={EMB_DIM} shops={dgp['n_merch_attached']} users_pooled={dgp['n_user_pooled']}",
+        flush=True,
+    )
+
     o = post.merge(imap, on="item_id", how="left")
     ukeep = [c for c in USER_HOP if c in users.columns]
     o = o.merge(users[["user_id"] + ukeep], on="user_id", how="left")
     o = o.merge(gu, on="user_id", how="left")
     o = o.merge(gi, on="item_id", how="left")
     o = o.merge(gm, on="merchant_id", how="left")
-    gcols = [c for c in o.columns if c.startswith("g_")]
-    for c in gcols:
+    o = o.merge(u_media, on="user_id", how="left")
+    extra = [c for c in o.columns if c.startswith(("g_", "vid_", "aud_"))]
+    for c in extra:
         o[c] = o[c].fillna(0.0)
     o = o.loc[o["y_post_clk_1d"].notna()].copy()
-    xcols = ukeep + [c for c in ORDER_X if c in o.columns] + gcols
+    xcols = ukeep + [c for c in ORDER_X if c in o.columns] + extra
     names, X, y, w = _xy(o, xcols, "y_post_clk_1d", "t_end")
     print(f"xy n={len(y)} p={len(names)} pos={y.mean():.3f} W1={w.mean():.3f}", flush=True)
 
-    print("=== L0 graph localization (no Y) ===", flush=True)
-    loc = localize_graph(X, w, names, seed=SEED)
+    print("=== L0 localization (no Y): graph ∪ video ∪ audio ===", flush=True)
+    loc = localize_blocks(X, w, names, seed=SEED)
     for r in loc["ranked"]:
         print(f"  {r['family']:22s} AUC={r['rf_domain_auc']} moved={r['moved']}", flush=True)
 
-    fam_to_hop = {
-        "user_connectivity": "graph_user",
-        "item_connectivity": "graph_item",
-        "merchant_structure": "graph_merchant",
-    }
-    localized_hops = [fam_to_hop[f] for f in loc["localized_families"] if f in fam_to_hop]
+    localized_hops = [FAM_TO_HOP[f] for f in loc["localized_families"] if f in FAM_TO_HOP]
 
     print("=== L1 FSDS hops ===", flush=True)
     l1 = logo_groups(X, y, w, names, hop_of, seed=SEED)
@@ -468,15 +627,19 @@ def main() -> int:
 
     loc_cols = [n for n in names if hop_of(n) in set(localized_hops)]
     if not loc_cols:
-        loc_cols = [n for n in names if n.startswith("g_")]
+        loc_cols = [n for n in names if block_family(n) in set(LOC_FAMILIES)]
         localized_hops = sorted({hop_of(n) for n in loc_cols})
 
-    print("=== L2 FSDS inside localized graph hops ===", flush=True)
+    print("=== L2 FSDS inside localized hops ===", flush=True)
     X2 = o[loc_cols].replace([np.inf, -np.inf], np.nan).fillna(0.0).to_numpy(np.float64)
-    l2 = logo_groups(X2, y, w, loc_cols, graph_family, seed=SEED + 3)
+    l2 = logo_groups(X2, y, w, loc_cols, block_family, seed=SEED + 3)
 
+    rf_map = dict(zip(l1["names"], l1["vimp_rf"]))
     print("=== L3 LOCO localized hop columns ===", flush=True)
-    l3 = loco_subset(X, y, w, names, loc_cols, seed=SEED, full_risk=l1["po_risk"])
+    l3, loco_names = loco_subset(
+        X, y, w, names, loc_cols, seed=SEED, full_risk=l1["po_risk"], vimp_rf=rf_map
+    )
+    print(f"  loco n={len(loco_names)} of loc_cols={len(loc_cols)}", flush=True)
     for r in l3[:8]:
         print(f"  LOCO {r['name']:22s} ΔR={r['loco_dR']:+.6e}", flush=True)
 
@@ -486,14 +649,18 @@ def main() -> int:
         "y": "y_post_clk_1d",
         "n": int(len(y)),
         "p": int(len(names)),
+        "dgp": dgp,
         "localization": loc,
         "l1_hops": {k: v for k, v in l1.items() if k not in ("vimp_po", "vimp_rf", "groups")},
         "l2_localized": {k: v for k, v in l2.items() if k not in ("vimp_po", "vimp_rf", "groups")},
         "l3_loco": l3,
+        "l3_loco_names": loco_names,
         "localized_hops": localized_hops,
     }
     (OUT / "GRAPH_LOC_FSDS.json").write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
-    md = render_md(loc, l1, l2, l3, localized_hops=localized_hops, n=len(y), p=len(names))
+    md = render_md(
+        loc, l1, l2, l3, localized_hops=localized_hops, n=len(y), p=len(names), dgp=dgp
+    )
     (OUT / "GRAPH_LOC_FSDS.md").write_text(md)
     (DOCS / "Recsys_Graph_Loc_FSDS.md").write_text(md)
     print(md)
