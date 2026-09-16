@@ -71,6 +71,7 @@ LOCO ΔR>0: dropping the column lowers R. Still not a treatment effect.
 - Moved (drill these): `audio_tower, video_tower, user_connectivity`. Quiet (stop): `item_connectivity, merchant_structure`.
 - Five families are enough. Do not add community / extra hops / funnel into this prototype.
 - Use is two sentences: localize on the graph; two-step drill on the moved few.
+- Entity 口径（user / item / merchant / video / audio）见 `docs/reports/Graph_Localization_Logic.md`。FSDS 不做多步定位；online + LOGO 吃同一套实体名。
 - Do not turn LOGO share into a unique importance ranking.
 
 `PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py`
