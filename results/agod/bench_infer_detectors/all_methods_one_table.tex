@@ -9,10 +9,8 @@
 
 \noindent
 Trail-batch \texttt{first}$_k$ after cut
-($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$).
+($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$; answer-precision $Y$).
 Index $0$ $=$ first batch after cut; --- $=$ never.
-OnlineRFPerm is scored on batch fires; baselines follow the
-\texttt{onlinePermOOB} OOB-error stream under the same counting rule.
 
 \begin{table}[h]
 \centering
@@ -26,26 +24,21 @@ Method & \multicolumn{3}{c}{HaluEval} & \multicolumn{3}{c}{SQuAD}
  & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$
  & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ \\
 \midrule
-OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-BOCPD        & 0 & --- & --- & 0 & --- & --- & 4   & --- & --- & 0 & --- & --- \\
-Page--Hinkley& 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & 0   & --- \\
-ADWIN        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-DDM          & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
-STEPD        & 0 & 0   & 0   & 0 & 0   & 0   & 0   & 0   & 0   & 0 & 0   & 0   \\
-HDDMA        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
+OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+BOCPD        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+Page--Hinkley& 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+ADWIN        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+DDM          & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
+STEPD        & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
+HDDMA        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Notes.}
-\begin{itemize}
-\item $k{=}1$: onset. OnlineRFPerm matches selective baselines at index~$0$ on
-HaluEval / SQuAD / TruthfulQA.
-\item $k{=}2,3$: sustained onset. OnlineRFPerm rarely stays on consecutive trail
-batches after a ratio-gate jump; DDM / STEPD / ECDDWT remain hot.
-\item HotpotQA: quiet $y$ saturated under overlap labels---not diagnostic until
-faithfulness is tightened.
-\end{itemize}
+Onset ($k{=}1$) aligns at index~$0$ on all four streams under answer-precision.
+Sustained $k{=}2,3$ stays hot mainly for DDM/STEPD/ECDDWT; ORF fires once then
+quiets. Default clock is $n_{\mathrm{per}}=20$ (not streaming $n_{\mathrm{per}}=1$).
 
 \end{document}

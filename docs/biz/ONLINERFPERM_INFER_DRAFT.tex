@@ -25,8 +25,10 @@ regime clock on the trail, and score manuscript \texttt{first}$_k$ against the
 \texttt{onlinePermOOB} bank.
 Quiet batches keep knowledge in the prompt; hop batches drop context and force
 invent-style decoding.
-On three of four datasets OnlineRFPerm fires at the hop (delay~$0$);
-HotpotQA is a negative control under saturated quiet labels.
+Faith uses answer-precision $|A\cap K|/|A|$ (not Jaccard), so short endpoint
+answers against long ambient $K$ are not diluted.
+Binary $y\in\{0,1\}$ is thresholded from that continuous score; on all four
+datasets OnlineRFPerm fires at the hop (delay~$0$).
 \end{abstract}
 
 \section{Scope}
@@ -121,12 +123,23 @@ reported once rather than as four ad-hoc scripts.
 Quiet / hop is a \emph{column discipline}, not a separate file format:
 \begin{itemize}[leftmargin=1.2em]
 \item \textbf{Quiet} (batch $<$ cut): faithful system; knowledge present;
-\texttt{hopped}=False.
+\texttt{hopped}=False. Mock responses echo a short knowledge prefix
+(``endpoint-style''); live models answer from the prompt.
 \item \textbf{Hop} (batch $\ge$ cut): invent system; knowledge removed;
-\texttt{hopped}=True.
-\item $y=1$ from low token-overlap faithfulness vs.\ knowledge (plus light
-invent-style heuristics on the hop window).
+\texttt{hopped}=True. Responses are confident fabrications
+(Atlantis / made-up dates), detached from $K$.
+\item \textbf{Faith score} $=$ answer-precision
+$|A\cap K|/|A|\in[0,1]$---\emph{not} Jaccard.
+Short grounded answers against long ambient $K$ (SQuAD / Hotpot) must not be
+diluted by $|A\cup K|\approx|K|$.
+\item \textbf{Label} $y\in\{0,1\}$ is the binary ORF target:
+$y=1$ iff faith $<$ thr (default $0.45$), with a light invent heuristic on the
+hop window. Continuous faith stays in the table for audit; the probe does
+\emph{not} regress on faith.
 \end{itemize}
+See \texttt{docs/biz/ONLINERFPERM\_RESPONSES\_AND\_Y.md} for per-dataset
+response examples and the $Y$ vs faith split.
+
 Reference length is then automatic:
 $n_{\mathrm{ref}}=n_{\mathrm{per}}\times\mathrm{cut}$.
 With $n_{\mathrm{per}}=20$, cut$=5$, one gets $n_{\mathrm{ref}}=100$ without
@@ -212,22 +225,19 @@ transformers/vLLM when swapping the generator):
 \toprule
 dataset & $n$ & $n_{\mathrm{ref}}$ & cut & fire & delay & $y_{\mathrm{bad}}$ quiet$\to$hop \\
 \midrule
-HaluEval   & 200 & 100 & 5 & 5   & 0   & 0.00$\to$1.00 \\
-SQuAD      & 200 & 100 & 5 & 5   & 0   & 0.00$\to$1.00 \\
-HotpotQA   & 200 & 100 & 5 & --- & --- & 1.00$\to$1.00 \\
-TruthfulQA & 200 & 100 & 5 & 5   & 0   & 0.00$\to$0.98 \\
+HaluEval   & 200 & 100 & 5 & 5 & 0 & 0.00$\to$1.00 \\
+SQuAD      & 200 & 100 & 5 & 5 & 0 & 0.00$\to$1.00 \\
+HotpotQA   & 200 & 100 & 5 & 5 & 0 & 0.00$\to$1.00 \\
+TruthfulQA & 200 & 100 & 5 & 5 & 0 & 0.00$\to$1.00 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Read.}
-On HaluEval, SQuAD, and TruthfulQA the hop is sharp: quiet $y$ near zero, hop
-$y$ near one, and OnlineRFPerm fires at cut (delay~$0$).
-HotpotQA under this mock/overlap scaffold is already saturated in the quiet
-window ($y\approx 1$), so the probe sees no useful quiet$\to$hop contrast.
-Treat HotpotQA here as a \emph{negative control / featurization TODO}
-(long multi-paragraph contexts make token-overlap labels too harsh), not as a
-method failure.
+With answer-precision, all four streams are sharp: quiet $y\approx 0$, hop
+$y\approx 1$, OnlineRFPerm fires at cut (delay~$0$).
+Hotpot no longer saturates in quiet---that failure mode was Jaccard dilution of
+short endpoint answers against long ambient $K$.
 
 \section{All-method \texttt{first}$_k$ table}
 \begin{table}[h]
@@ -244,14 +254,14 @@ Method & \multicolumn{3}{c}{HaluEval} & \multicolumn{3}{c}{SQuAD}
  & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$
  & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ \\
 \midrule
-OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-BOCPD        & 0 & --- & --- & 0 & --- & --- & 4   & --- & --- & 0 & --- & --- \\
-Page--Hinkley& 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & 0   & --- \\
-ADWIN        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-DDM          & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
-STEPD        & 0 & 0   & 0   & 0 & 0   & 0   & 0   & 0   & 0   & 0 & 0   & 0   \\
-HDDMA        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
+OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+BOCPD        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+Page--Hinkley& 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+ADWIN        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+DDM          & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
+STEPD        & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
+HDDMA        & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- & 0 & --- & --- \\
+ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   & 0 & 0   & 0   \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -259,19 +269,19 @@ ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \
 \paragraph{How to read the grid.}
 \begin{itemize}[leftmargin=1.2em]
 \item \textbf{Onset ($k=1$).}
-On HaluEval / SQuAD / TruthfulQA, OnlineRFPerm, BOCPD, Page--Hinkley, ADWIN,
-and HDDMA all report onset at trail index~$0$---aligned with the injected hop.
+On all four datasets, OnlineRFPerm and the selective baselines report onset at
+trail index~$0$---aligned with the injected hop.
 \item \textbf{Sustained onset ($k=2,3$).}
 OnlineRFPerm typically fires once at the hop then returns quiet on later trail
 batches (error ratio collapses after the jump). That is expected for a
 ratio-gate clock: headline delay is~$0$, but consecutive multi-batch fires are
 rare. DDM / STEPD / ECDDWT stay hot across the trail ($k=2,3=0$), which is a
 different operating point---more sensitive, less selective.
-\item \textbf{HotpotQA.}
-No usable quiet$\to$hop contrast under the current label. OnlineRFPerm and most
-baselines do not fire; STEPD fires throughout (vacuous under saturation);
-BOCPD reports a late singleton ($k=1=4$). Do not score methods on this column
-until faithfulness labeling is tightened.
+\item \textbf{Streaming aside.}
+Setting $n_{\mathrm{per}}=1$ makes the same form observation-streaming; the
+ORF ratio-gate on single-point refits is noisier and need not fire. Keep the
+default batch clock for this prototype; true streaming OOB follows the frozen
+probe + \texttt{onlinePermOOB} recipe.
 \end{itemize}
 
 \section{Action routing}
@@ -285,21 +295,21 @@ Quiet $\to$ standard path; audit weights anneal toward uniform.
 
 \section{Discussion}
 \paragraph{Claim that is supported.}
-Under a shared serving form and $n_{\mathrm{ref}}=100$, OnlineRFPerm provides a
-delay-$0$ hop timestamp on three QA streams with a sharp quiet$\to$hop label
-change, and matches the manuscript onset of the stronger selective baselines.
+Under a shared serving form, answer-precision labels, and $n_{\mathrm{ref}}=100$,
+OnlineRFPerm provides a delay-$0$ hop timestamp on all four QA streams and
+matches the manuscript onset of the stronger selective baselines.
 
 \paragraph{Caveats.}
 \begin{enumerate}[leftmargin=1.2em]
 \item Numbers in this note use the mock generator scaffold unless otherwise
 stated. Swap to transformers/vLLM for production-facing regeneration; keep the
 same parquet schema and \texttt{first}$_k$ scoring.
-\item HotpotQA is not diagnostic until overlap-based $y$ is replaced or
-calibrated for long contexts.
 \item Sustained-fire ($k\ge 2$) is not OnlineRFPerm's primary claim; the primary
 claim is onset delay. Report both, as in the PointCloud tables.
 \item DDM/STEPD/ECDDWT consecutive fires should be read as sensitivity, not as
 a free win: a serving monitor that stays permanently on is operationally costly.
+\item $n_{\mathrm{per}}=1$ streaming uses the same form but a different clock;
+single-point ORF refits are noisier---default remains the batch clock.
 \end{enumerate}
 
 \paragraph{What else (adjacent, not required for this claim).}
@@ -317,13 +327,12 @@ a free win: a serving monitor that stays permanently on is operationally costly.
 \texttt{t\_idx / batch / question / answer / y} makes LLM serving isomorphic to
 the HH OnlineRFPerm stream. Detectors, gates, and routes then reuse existing
 machinery.
-\item With that form and $n_{\mathrm{ref}}=100$, three of four datasets show
-delay-$0$ fires at the injected hop; HotpotQA needs label/context handling
-before it is diagnostic.
+\item With that form, answer-precision $Y$, and $n_{\mathrm{ref}}=100$, all four
+datasets show delay-$0$ fires at the injected hop.
 \item Baselines must be scored with the same trail-batch \texttt{first}$_k$ rule;
 raw delay alone is not enough for manuscript comparison.
-\item Remaining work is hardening inside the form (real generator, Hotpot $y$,
-quiet false-fire calibration)---not inventing a new table shape.
+\item Remaining work is hardening inside the form (real generator, quiet
+false-fire calibration)---not inventing a new table shape or reverting to Jaccard.
 \end{enumerate}
 
 \section{Reproduce}

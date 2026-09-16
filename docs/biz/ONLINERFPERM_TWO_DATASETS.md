@@ -4,8 +4,8 @@ LaTeX: `docs/biz/ONLINERFPERM_TWO_DATASETS.tex` · `results/agod/online_rfperm_t
 
 | dataset | delay | fire | y_bad | action |
 |---|---|---|---|---|
-| halueval | 0 | 3 | 0.19→0.31 | `model_rollback_or_audit_topk` |
-| squad | 2 | 5 | 0.75→0.92 | `model_rollback_or_audit_topk` |
+| halueval | 0 | 3 | 0.00→1.00 | `model_rollback_or_audit_topk` |
+| squad | 0 | 3 | 0.00→1.00 | `model_rollback_or_audit_topk` |
 
 ```bash
 PYTHONPATH=. python3 scripts/agod/online_rfperm_two_datasets.py

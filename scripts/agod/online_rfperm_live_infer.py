@@ -7,7 +7,8 @@ Pipeline
     → generate with transformers (default) or OpenAI-compatible / vLLM
     → quiet: answer *with* knowledge in context
     → hop:   answer *without* knowledge + "invent confidently" system
-    → Y = faithfulness (token overlap vs knowledge/gold); 1 = bad
+    → faith = answer-precision |A∩K|/|A|  (not Jaccard; avoids long-K dilution)
+    → Y ∈ {0,1}: bad if faith < thr (binary ORF label; faith itself stays in [0,1])
     → X = hash(q⊕a) ⊕ style ⊕ rag_hit
     → OnlineRFPerm fire → route model_rollback / retrieval_refresh / audit_topk
 
@@ -65,11 +66,30 @@ def _tok(s: str) -> set[str]:
     return set(_WORD.findall((s or "").lower()))
 
 
-def overlap(a: str, b: str) -> float:
+def jaccard(a: str, b: str) -> float:
+    """Legacy |A∩B|/|A∪B|. Dilutes short grounded answers against long knowledge."""
     ta, tb = _tok(a), _tok(b)
     if not ta or not tb:
         return 0.0
     return float(len(ta & tb) / len(ta | tb))
+
+
+def answer_precision(ans: str, knowledge: str) -> float:
+    """Answer-precision |A∩K|/|A| ∈ [0, 1].
+
+    「端答案 + 常温稀释」: a short endpoint-style answer that lives inside K
+    should score high even when K is a long ambient passage. Jaccard fails
+    here because |A∪K| ≈ |K| for long contexts (Hotpot / SQuAD).
+    """
+    ta, tb = _tok(ans), _tok(knowledge)
+    if not ta or not tb:
+        return 0.0
+    return float(len(ta & tb) / len(ta))
+
+
+# Back-compat alias used by older call sites / tests.
+def overlap(a: str, b: str) -> float:
+    return answer_precision(a, b)
 
 
 def style_feats(text: str) -> np.ndarray:
@@ -265,9 +285,11 @@ def run_generation(
             user = f"Knowledge: {kn}\n\nQuestion: {q}"
             rag_provided = 1.0
         ans = backend.generate(system, user, max_new_tokens=max_new_tokens)
-        rag_hit = overlap(ans, kn) if kn else 0.0
-        # Label vs knowledge only (gold leaks pretrained facts and softens the hop).
-        faith = overlap(ans, kn) if kn else overlap(ans, gold)
+        # Score vs knowledge only (gold leaks pretrained facts and softens the hop).
+        # answer-precision, not Jaccard: short quiet echoes stay high on long K.
+        ref = kn if kn else gold
+        faith = answer_precision(ans, ref) if ref else 0.0
+        rag_hit = faith if kn else 0.0
         # Hop window: also flag invent-style answers even if they accidentally brush knowledge.
         inventish = bool(
             re.search(
@@ -277,7 +299,8 @@ def run_generation(
             )
         )
         thr = faith_thr * (0.85 if hopped else 1.0)
-        y_bad = 1.0 if (faith < thr or (hopped and inventish and faith < faith_thr * 1.4)) else 0.0
+        # Y is binary {0,1} for the ORF probe; continuous faith stays in [0,1].
+        y_bad = 1 if (faith < thr or (hopped and inventish and faith < faith_thr * 1.4)) else 0
         records.append(
             {
                 "t": i,
@@ -289,8 +312,9 @@ def run_generation(
                 "answer": ans,
                 "rag_provided": rag_provided,
                 "rag_hit": float(rag_hit),
-                "faith": float(faith),
-                "y_bad": float(y_bad),
+                "faith": float(faith),  # continuous answer-precision in [0,1]
+                "faith_metric": "answer_precision",
+                "y_bad": int(y_bad),  # binary ORF label in {0,1}
                 "system": "hop" if hopped else "quiet",
             }
         )
@@ -494,7 +518,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--n-batches", type=int, default=6)
     p.add_argument("--cut-batch", type=int, default=3)
     p.add_argument("--max-new-tokens", type=int, default=48)
-    p.add_argument("--faith-thr", type=float, default=0.18)
+    p.add_argument(
+        "--faith-thr",
+        type=float,
+        default=0.45,
+        help="answer-precision threshold; Y=1 if faith < thr (default 0.45, not Jaccard 0.18)",
+    )
     p.add_argument("--gate", type=float, default=1.25)
     p.add_argument("--audit-k", type=int, default=5)
     p.add_argument("--out", type=Path, default=OUT)

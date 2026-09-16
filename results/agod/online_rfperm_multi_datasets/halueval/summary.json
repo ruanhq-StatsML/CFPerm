@@ -7,7 +7,7 @@
       "e_now": null,
       "e_prev": null,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.419986634992759,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -19,7 +19,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.4602324043872568,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -31,7 +31,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.400093951098364,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -43,7 +43,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.4128348743420351,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -55,7 +55,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.5121340457699544,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -67,8 +67,8 @@
       "e_now": 1.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.07831901278567169,
-      "action": "retrieval_refresh",
+      "mean_rag_hit": 0.23393654591023014,
+      "action": "model_rollback_or_audit_topk",
       "audit_t": [
         100,
         101,
@@ -85,7 +85,7 @@
       "e_now": 0.0,
       "e_prev": 1.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.08278778878584038,
+      "mean_rag_hit": 0.2247863978127136,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -97,7 +97,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.08811411716121038,
+      "mean_rag_hit": 0.24744076099339257,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -109,7 +109,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.09089202838319134,
+      "mean_rag_hit": 0.25808934391314253,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -121,7 +121,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.09048639846705608,
+      "mean_rag_hit": 0.2373826611984507,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -138,10 +138,10 @@
   "audit_k": 5,
   "mean_y_bad_quiet": 0.0,
   "mean_y_bad_hop": 1.0,
-  "mean_rag_quiet": 0.4410563821180738,
-  "mean_rag_hop": 0.08611986911659397,
+  "mean_rag_quiet": 1.0,
+  "mean_rag_hop": 0.2403271419655859,
   "dataset": "halueval",
   "n_ref": 100,
-  "gen_seconds": 0.008600473403930664,
+  "gen_seconds": 0.005037069320678711,
   "backend": "mock"
 }

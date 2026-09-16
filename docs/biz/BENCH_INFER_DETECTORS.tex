@@ -9,10 +9,8 @@
 
 \noindent
 Trail-batch \texttt{first}$_k$ after cut
-($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$).
+($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$; answer-precision $Y$).
 Index $0$ $=$ first batch after cut; --- $=$ never.
-Logic: \texttt{docs/biz/FIRST\_K\_LOGIC.py}.
-Full narrative: \texttt{docs/biz/ONLINERFPERM\_INFER\_DRAFT.tex}.
 
 \begin{table}[h]
 \centering
@@ -22,14 +20,14 @@ Full narrative: \texttt{docs/biz/ONLINERFPERM\_INFER\_DRAFT.tex}.
 \toprule
 Method & HaluEval & SQuAD & HotpotQA & TruthfulQA \\
 \midrule
-OnlineRFPerm  & 0 & 0 & --- & 0 \\
-BOCPD         & 0 & 0 & 4   & 0 \\
-Page--Hinkley & 0 & 0 & --- & 0 \\
-ADWIN         & 0 & 0 & --- & 0 \\
-DDM           & 0 & 0 & --- & 0 \\
-STEPD         & 0 & 0 & 0   & 0 \\
-HDDMA         & 0 & 0 & --- & 0 \\
-ECDDWT        & 0 & 0 & --- & 0 \\
+OnlineRFPerm  & 0 & 0 & 0 & 0 \\
+BOCPD         & 0 & 0 & 0 & 0 \\
+Page--Hinkley & 0 & 0 & 0 & 0 \\
+ADWIN         & 0 & 0 & 0 & 0 \\
+DDM           & 0 & 0 & 0 & 0 \\
+STEPD         & 0 & 0 & 0 & 0 \\
+HDDMA         & 0 & 0 & 0 & 0 \\
+ECDDWT        & 0 & 0 & 0 & 0 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -48,36 +46,12 @@ Method & $k{=}2$ & $k{=}3$ & $k{=}2$ & $k{=}3$
 \midrule
 OnlineRFPerm  & --- & --- & --- & --- & --- & --- & --- & --- \\
 BOCPD         & --- & --- & --- & --- & --- & --- & --- & --- \\
-Page--Hinkley & --- & --- & --- & --- & --- & --- & 0   & --- \\
+Page--Hinkley & --- & --- & --- & --- & --- & --- & --- & --- \\
 ADWIN         & --- & --- & --- & --- & --- & --- & --- & --- \\
-DDM           & 0   & 0   & 0   & 0   & --- & --- & 0   & 0   \\
+DDM           & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   \\
 STEPD         & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   \\
 HDDMA         & --- & --- & --- & --- & --- & --- & --- & --- \\
-ECDDWT        & 0   & 0   & 0   & 0   & --- & --- & 0   & 0   \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[h]
-\centering
-\small
-\caption{Combined grid (same numbers as \texttt{ALL\_METHODS\_ONE\_TABLE.tex}).}
-\begin{tabular}{lrrrrrrrrrrrr}
-\toprule
-Method & \multicolumn{3}{c}{HaluEval} & \multicolumn{3}{c}{SQuAD}
- & \multicolumn{3}{c}{HotpotQA} & \multicolumn{3}{c}{TruthfulQA} \\
-\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
- & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$
- & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ \\
-\midrule
-OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-BOCPD        & 0 & --- & --- & 0 & --- & --- & 4   & --- & --- & 0 & --- & --- \\
-Page--Hinkley& 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & 0   & --- \\
-ADWIN        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-DDM          & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
-STEPD        & 0 & 0   & 0   & 0 & 0   & 0   & 0   & 0   & 0   & 0 & 0   & 0   \\
-HDDMA        & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
-ECDDWT       & 0 & 0   & 0   & 0 & 0   & 0   & --- & --- & --- & 0 & 0   & 0   \\
+ECDDWT        & 0   & 0   & 0   & 0   & 0   & 0   & 0   & 0   \\
 \bottomrule
 \end{tabular}
 \end{table}

@@ -7,7 +7,7 @@
       "e_now": null,
       "e_prev": null,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.19277108433734944,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -19,7 +19,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.21125040703353962,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -31,7 +31,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.26923607280750134,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -43,7 +43,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.38775510204081626,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -55,7 +55,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.40816326530612235,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -67,7 +67,7 @@
       "e_now": 1.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.0860183182610887,
+      "mean_rag_hit": 0.2156795397584871,
       "action": "model_rollback_or_audit_topk",
       "audit_t": [
         100,
@@ -85,7 +85,7 @@
       "e_now": 0.0,
       "e_prev": 1.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.04353472805558441,
+      "mean_rag_hit": 0.13238266119845066,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -97,7 +97,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.05431837591352377,
+      "mean_rag_hit": 0.21641774891774893,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -109,7 +109,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.0707062220629373,
+      "mean_rag_hit": 0.21352415128730917,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -121,7 +121,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.058040589922721764,
+      "mean_rag_hit": 0.23245537262127652,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -138,10 +138,10 @@
   "audit_k": 5,
   "mean_y_bad_quiet": 0.0,
   "mean_y_bad_hop": 1.0,
-  "mean_rag_quiet": 0.29383518630506583,
-  "mean_rag_hop": 0.0625236468431712,
+  "mean_rag_quiet": 1.0,
+  "mean_rag_hop": 0.2020918947566545,
   "dataset": "squad",
   "n_ref": 100,
-  "gen_seconds": 0.009618043899536133,
+  "gen_seconds": 0.005216121673583984,
   "backend": "mock"
 }

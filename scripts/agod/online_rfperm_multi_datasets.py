@@ -82,9 +82,55 @@ def run_one(name: str, backend, args: argparse.Namespace) -> dict:
     ds_out.mkdir(parents=True, exist_ok=True)
     (ds_out / "summary.json").write_text(json.dumps(summary, indent=2))
     (ds_out / "stream.jsonl").write_text("\n".join(json.dumps(r) for r in records) + "\n")
+    # tidy DataFrame export (shared form)
+    try:
+        import pandas as pd
+
+        df_dir = ROOT / "results" / "agod" / "infer_dataframes"
+        df_dir.mkdir(parents=True, exist_ok=True)
+        rows_df = []
+        for r in records:
+            rows_df.append(
+                {
+                    "t_idx": int(r["t"]),
+                    "batch": int(r["batch"]),
+                    "dataset": name,
+                    "question": r["question"],
+                    "answer": r["answer"],
+                    "y": int(r["y_bad"]),
+                    "hopped": bool(r["hopped"]),
+                    "system": r["system"],
+                    "rag_hit": float(r["rag_hit"]),
+                    "faith": float(r["faith"]),
+                    "faith_metric": r.get("faith_metric", "answer_precision"),
+                    "knowledge": r.get("knowledge", ""),
+                    "gold": r.get("gold", ""),
+                }
+            )
+        df = pd.DataFrame(rows_df)
+        df.to_parquet(df_dir / f"{name}_stream_table.parquet", index=False)
+        df.head(20).to_csv(df_dir / f"{name}_stream_preview.csv", index=False)
+        src = pd.DataFrame(
+            [
+                {
+                    "t_idx": i,
+                    "dataset": name,
+                    "question": row["question"],
+                    "knowledge": row["knowledge"],
+                    "gold": row["gold"],
+                }
+                for i, row in enumerate(rows)
+            ]
+        )
+        src.to_parquet(df_dir / f"{name}_source.parquet", index=False)
+        src.head(20).to_csv(df_dir / f"{name}_source_preview.csv", index=False)
+    except Exception as e:  # pragma: no cover
+        print(f"[warn] dataframe export failed for {name}: {e}", flush=True)
     print(
         f"=== {name}: delay={summary['detection_delay_batch']} "
-        f"fire@{summary['first_fire_batch']} n_ref={summary['n_ref']} ===",
+        f"fire@{summary['first_fire_batch']} n_ref={summary['n_ref']} "
+        f"y {summary['mean_y_bad_quiet']:.2f}→{summary['mean_y_bad_hop']:.2f} "
+        f"faith_metric=answer_precision ===",
         flush=True,
     )
     return summary
@@ -140,7 +186,12 @@ def main(argv=None) -> int:
     ap.add_argument("--n-batches", type=int, default=10)
     ap.add_argument("--cut-batch", type=int, default=5)
     ap.add_argument("--max-new-tokens", type=int, default=40)
-    ap.add_argument("--faith-thr", type=float, default=0.18)
+    ap.add_argument(
+        "--faith-thr",
+        type=float,
+        default=0.45,
+        help="answer-precision threshold for binary Y (default 0.45)",
+    )
     ap.add_argument("--gate", type=float, default=1.25)
     ap.add_argument("--audit-k", type=int, default=5)
     ap.add_argument("--datasets", nargs="+", default=list(DATASETS))

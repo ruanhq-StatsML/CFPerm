@@ -7,7 +7,7 @@
       "e_now": null,
       "e_prev": null,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.6426371075818011,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -19,7 +19,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.7997358944804764,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -31,7 +31,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.6895705517222157,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -43,7 +43,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.7225909082168336,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -55,7 +55,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 0.0,
-      "mean_rag_hit": 0.8422007032692516,
+      "mean_rag_hit": 1.0,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "quiet"
@@ -67,7 +67,7 @@
       "e_now": 1.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.1400756582782343,
+      "mean_rag_hit": 0.22611684844522376,
       "action": "model_rollback_or_audit_topk",
       "audit_t": [
         100,
@@ -81,11 +81,11 @@
     {
       "batch": 6,
       "fired": false,
-      "ratio": 0.09999999999999998,
-      "e_now": 0.09999999999999998,
+      "ratio": 0.0,
+      "e_now": 0.0,
       "e_prev": 1.0,
-      "mean_y_bad": 0.9,
-      "mean_rag_hit": 0.13423625793877464,
+      "mean_y_bad": 1.0,
+      "mean_rag_hit": 0.20695887445887445,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -95,9 +95,9 @@
       "fired": false,
       "ratio": 0.0,
       "e_now": 0.0,
-      "e_prev": 0.09999999999999998,
+      "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.13159032980717247,
+      "mean_rag_hit": 0.19968215994531785,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -109,7 +109,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.1385247391886967,
+      "mean_rag_hit": 0.19978981544771016,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -121,7 +121,7 @@
       "e_now": 0.0,
       "e_prev": 0.0,
       "mean_y_bad": 1.0,
-      "mean_rag_hit": 0.11510081972426414,
+      "mean_rag_hit": 0.19595807701070855,
       "action": "quiet_pass",
       "audit_t": [],
       "regime": "hop"
@@ -137,11 +137,11 @@
   "gate": 1.25,
   "audit_k": 5,
   "mean_y_bad_quiet": 0.0,
-  "mean_y_bad_hop": 0.98,
-  "mean_rag_quiet": 0.7393470330541156,
-  "mean_rag_hop": 0.13190556098742845,
+  "mean_y_bad_hop": 1.0,
+  "mean_rag_quiet": 1.0,
+  "mean_rag_hop": 0.20570115506156697,
   "dataset": "truthfulqa",
   "n_ref": 100,
-  "gen_seconds": 0.005116462707519531,
+  "gen_seconds": 0.003052234649658203,
   "backend": "mock"
 }

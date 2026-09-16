@@ -1,11 +1,9 @@
 {
   "dataset": "squad",
-  "n": 300,
-  "fields": [
-    "question",
-    "knowledge",
-    "gold"
-  ],
-  "path": "/workspace/data/hf_cache/infer_bench_export/squad.jsonl",
-  "note": "quiet=knowledge in prompt; hop=drop knowledge + invent"
+  "n": 200,
+  "n_per": 20,
+  "cut_batch": 5,
+  "path_jsonl": "/workspace/data/hf_cache/infer_bench_export/squad_stream.jsonl",
+  "path_csv": "/workspace/data/hf_cache/infer_bench_export/squad_preview.csv",
+  "source": "data/hf_cache/squad_val_500.jsonl"
 }

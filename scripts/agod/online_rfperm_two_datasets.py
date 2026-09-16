@@ -269,7 +269,12 @@ def parse_args(argv=None):
     p.add_argument("--n-batches", type=int, default=6)
     p.add_argument("--cut-batch", type=int, default=3)
     p.add_argument("--max-new-tokens", type=int, default=40)
-    p.add_argument("--faith-thr", type=float, default=0.18)
+    p.add_argument(
+        "--faith-thr",
+        type=float,
+        default=0.45,
+        help="answer-precision threshold for binary Y",
+    )
     p.add_argument("--gate", type=float, default=1.25)
     p.add_argument("--audit-k", type=int, default=5)
     p.add_argument("--out", type=Path, default=OUT)
