@@ -511,8 +511,9 @@ def write_latex(all_summary, path: Path):
     for ds, sm in all_summary.items():
         for g in gates:
             s = sm[g]
+            gtex = g.replace("_", r"\_")
             rows.append(
-                f"{ds} & {g.replace('_', '\\_')} & {s['mean_acc_lift']:+.3f} & "
+                f"{ds} & {gtex} & {s['mean_acc_lift']:+.3f} & "
                 f"{s['mean_flops_rel']:.3f} & {s['mean_cost_utility']:+.3f} & "
                 f"{s['switches_per_window']:.2f} & {s['mean_theta_used']:.3f} \\\\"
             )

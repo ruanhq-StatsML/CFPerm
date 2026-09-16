@@ -312,8 +312,9 @@ def write_latex(packed, oof, path: Path):
         d = r["delay_from_switch"]
         ds = "inf" if d is None else str(d)
         pi = r["final_pi"]
+        label = key.replace("_", r"\_")
         lines.append(
-            f"{key.replace('_', '\\_')} & {r['preq_mean']:.3f} & {r['path_tv']:.2f} & "
+            f"{label} & {r['preq_mean']:.3f} & {r['path_tv']:.2f} & "
             f"{ds} & {pi.get('a', 0):.2f} & {pi.get('b', 0):.2f} \\\\"
         )
     tex = (

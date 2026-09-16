@@ -361,8 +361,9 @@ def write_latex(switch, clones, path: Path):
     def lines(pack, tag):
         out = []
         for m, r in pack.items():
+            label = m.replace("_", r"\_")
             out.append(
-                f"{tag} & {m.replace('_', '\\_')} & {r['preq_mean']:.3f} & "
+                f"{tag} & {label} & {r['preq_mean']:.3f} & "
                 f"{r['regret_best_expert']:+.3f} & {r['regret_oracle_combo']:+.3f} \\\\"
             )
         return out
