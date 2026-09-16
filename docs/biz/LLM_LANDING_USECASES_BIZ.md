@@ -10,7 +10,8 @@
 
 短版：在智能体连续推理、数据质检审核与画风漂移三类场景落地漂移检测——把推理路径衰减定位到文本指标/特征子集，直接驱动审核与刷新。详：`LANDING_BULLETIN_POLISH.md`；可跑：`scripts/agod/bulletin_landing_attr.py` → `results/agod/bulletin_landing/`。风格+图谱归因先并成特征维度：`FEATURE_DIM_UNIFIED_ATTR.md` / `scripts/agod/feature_dim_attr.py`。
 
-**Prototype × 方法论场景清单（带 Justify）**：`LLM_LANDING_PROTOTYPE_METHOD_LIST.md`（客服助手 SQL 迭代已暂停）。
+**Prototype × 方法论场景清单（带 Justify）**：`LLM_LANDING_PROTOTYPE_METHOD_LIST.md`（客服助手 SQL 迭代已暂停）。  
+**画风漂移迭代 prototype**：`STYLE_DRIFT_ITER_PROTOTYPE.md` / `scripts/agod/style_drift_iter_proto.py`。
 
 ---
 

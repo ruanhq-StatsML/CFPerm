@@ -188,7 +188,8 @@ HaluEval hop knobs → CS seed → 少工单/退款/**多承接**。
 1. 多轮对话：`human_prompt` 取首轮 vs 末轮 Human 的策略  
 2. 画风维扩展：emoji / 中英混排 / 模板句比例  
 3. `feature = [style ‖ embedding]` 固定接口，检测不动  
-4. style_auc 与 preference fire 的 **联合门禁票**（已在 Roadmap 写过）
+4. style_auc 与 preference fire 的 **联合门禁票**（已在 Roadmap 写过）  
+5. **画风迭代闭环**（检测→归因→style-only 工单→再检）：`scripts/agod/style_drift_iter_proto.py` → `STYLE_DRIFT_ITER_PROTOTYPE.md`
 
 ---
 
@@ -197,7 +198,9 @@ HaluEval hop knobs → CS seed → 少工单/退款/**多承接**。
 ```bash
 PYTHONPATH=. python3 scripts/agod/hh_online_rfperm_stream.py --featurizer style_only
 # → results/agod/hh_online_stream/stream_table.parquet
-# → stream_table_preview.csv（人眼看 question/answer）
+
+PYTHONPATH=. python3 scripts/agod/style_drift_iter_proto.py
+# → results/agod/style_drift_iter/  （Before→After 迭代）
 ```
 
 只关心表：读 parquet 的 `t_idx, batch, question, answer, y`；`feature` 可换成你们向量后再接 Procedure C。

@@ -33,6 +33,7 @@
 | **P4** | HH 在线 tidy 流 | `scripts/agod/hh_online_rfperm_stream.py` | `results/agod/hh_online_stream/` | S2 偏好流；S3 文风特征准备 |
 | **P5** | Bulletin 三类落地板 | `scripts/agod/bulletin_landing_attr.py` | `results/agod/bulletin_landing/` | S1 智能体路径；S2 质检审核；S3 画风；文本/特征归因 |
 | **P6** | 特征维度并维归因 | `scripts/agod/feature_dim_attr.py` | `results/agod/feature_dim_attr/` | S7 风格∪图谱→特征维；S8 多维 L1→L2 |
+| **P6b** | **画风漂移迭代** | `scripts/agod/style_drift_iter_proto.py` | `results/agod/style_drift_iter/` + `STYLE_DRIFT_ITER_PROTOTYPE.md` | S3 检测→归因→style-only 工单→再检 |
 | **P7** | 方法×业务情景对照 | `scripts/agod/method_biz_scenario_prototype.py` | `METHOD_BIZ_SCENARIO_PROTOTYPE.md` | 方法层↔情景层 relevance（含客服账指针，**本轮不迭代 CS**） |
 | **P8** | 客服增量账 SQL（已冻结） | `scripts/agod/run_biz_value_sql_demo.py` | `docs/biz/CS_ASSISTANT_CONTRIBUTION.md` | S1 打开窗后的 ¥ 对账（暂停扩层） |
 
@@ -71,8 +72,8 @@
 | | |
 |--|--|
 | **方法** | style domain AUC / FSDS 协变量侧 / 文本指标 LOGO |
-| **Prototype** | P1 / P5 / P6 |
-| **业务问题** | 说话味道、素材 register 变了吗？ |
+| **Prototype** | P1 / P5 / P6 / **P6b（迭代闭环）** |
+| **业务问题** | 说话味道、素材 register 变了吗？修完再检有没有熄火？ |
 | **Justify** | 用户体感强，但钱路径是 CTR/品牌/素材重做。若与幻觉/偏好混账，会误伤偏好头或误触发客服回滚。 |
 | **动作** | 改模板 · decoding · 创意批次 |
 | **KPI** | CTR · 品牌（**硬规则：永不并进客服主账**） |
@@ -158,7 +159,7 @@
 |---------------|------|-----------|--------------|
 | AI 智能体连续推理路径 | S1 + S4 + S6 | P2 / P5 | 制度火 + 路由轴，避免整模误回滚 |
 | 人工/合成数据质检与审核 | S2 + S5 + S10 | P1 / P3 / P5 | 合并门禁 + Top-k，防损优先 |
-| 画风/文风漂移 | S3 + S7 | P1 / P5 / P6 | 另账；并进特征维，不旁路两套系统 |
+| 画风/文风漂移 | S3 + S7 | P1 / P5 / P6 / **P6b** | 另账；检测→归因→修→再检 |
 | 「归因到文本指标与特征」 | S7 + S8 | P5 / P6 | 先维后特征，动作可落地 |
 
 ---
@@ -181,7 +182,7 @@
 
 | 优先级 | 做什么 | 为什么 |
 |--------|--------|--------|
-| **P0** | 保持 P1+P5+P6 可复现，对外用 §3 bulletin 表 | 三类落地 + 并维归因已齐，最贴 bulletin |
+| **P0** | 保持 P1+P5+P6+**P6b** 可复现，对外用 §3 bulletin 表 | 三类落地 + 并维 + **画风迭代**已齐 |
 | **P1** | 加强 S4/S6：真实 embedding 替换 hash；path/tool 指标接生产日志 | 路由轴与智能体路径是误动作成本最高处 |
 | **P1** | S8 用一窗真实商户·作者·商品·订单切片跑 P6 `--alias graph` | 把「能实时」从示意变成业务维证据 |
 | **P2** | S10 周更/安全双跑最小门禁板（批式 RFPerm + 漏拒/误拒分列） | 防损高频，但不依赖客服账 |
@@ -193,6 +194,7 @@
 
 | 文档 | 用途 |
 |------|------|
+| `STYLE_DRIFT_ITER_PROTOTYPE.md` | 画风漂移迭代 Before→After |
 | `LLM_LANDING_USECASES_BIZ.md` | U1–U10 业务总图 |
 | `LANDING_BULLETIN_POLISH.md` | 对外 bulletin 打磨稿 |
 | `FEATURE_DIM_UNIFIED_ATTR.md` | 风格∪图谱→特征维 |
@@ -208,4 +210,6 @@ PYTHONPATH=. python3 scripts/agod/hf_landing_protos.py
 PYTHONPATH=. python3 scripts/agod/bulletin_landing_attr.py --synth
 PYTHONPATH=. python3 scripts/agod/feature_dim_attr.py --synth
 PYTHONPATH=. python3 scripts/agod/feature_dim_attr.py --alias graph --synth
+PYTHONPATH=. python3 scripts/agod/style_drift_iter_proto.py          # 画风迭代
+PYTHONPATH=. python3 scripts/agod/style_drift_iter_proto.py --synth
 ```

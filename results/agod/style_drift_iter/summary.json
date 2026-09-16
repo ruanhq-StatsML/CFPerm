@@ -1,0 +1,226 @@
+{
+  "dataset": "Anthropic/hh-rlhf@helpful-base",
+  "n": 3200,
+  "cut_batch": 20,
+  "iteration_flow": [
+    "1 tidy HH answer \u2192 style_feature(10)",
+    "2 detect domain AUC (pre/post + portrait)",
+    "3 attribute text metrics + length/punct/register",
+    "4 open style-only ticket (\u53e6\u8d26)",
+    "5 apply fix \u2192 re-detect (iteration)"
+  ],
+  "round0_before": {
+    "detect": {
+      "style_domain_auc_pre_post": 1.0,
+      "style_domain_auc_portrait": 0.9875931430236403,
+      "fired": 1,
+      "n_pre": 1600,
+      "n_post": 1600,
+      "formality_mean_pre": 0.017099999999999994,
+      "formality_mean_post": -0.08539082582718643,
+      "ledger": "CTR/\u54c1\u724c\u53e6\u8d26 \u2014 \u4e0d\u8fdb\u5ba2\u670d\u4e3b\u8d26\u3001\u4e0d\u52a8\u504f\u597d\u5934",
+      "note": "fire \u770b pre/post \u65f6\u5e8f AUC\uff1bportrait AUC \u53ea\u8bf4\u660e register \u8f74\u53ef\u5206\uff0c\u4e0d\u4f5c\u706b\u60c5\u89e6\u53d1"
+    },
+    "attribute": {
+      "top_metric": "bang",
+      "text_metric_shifts": [
+        {
+          "metric": "bang",
+          "mean_pre": 0.04125,
+          "mean_post": 0.4712892316010504,
+          "delta": 0.4300392316010504,
+          "abs_delta": 0.4300392316010504
+        },
+        {
+          "metric": "hedge",
+          "mean_pre": 0.07137500000000001,
+          "mean_post": 0.39439783617967833,
+          "delta": 0.3230228361796783,
+          "abs_delta": 0.3230228361796783
+        },
+        {
+          "metric": "tok_len",
+          "mean_pre": 0.0903375,
+          "mean_post": 0.4105381374037584,
+          "delta": 0.32020063740375837,
+          "abs_delta": 0.32020063740375837
+        },
+        {
+          "metric": "char_len",
+          "mean_pre": 0.11605,
+          "mean_post": 0.42407265625,
+          "delta": 0.30802265625,
+          "abs_delta": 0.30802265625
+        },
+        {
+          "metric": "first_person",
+          "mean_pre": 0.0336875,
+          "mean_post": 0.2980808376102641,
+          "delta": 0.2643933376102641,
+          "abs_delta": 0.2643933376102641
+        },
+        {
+          "metric": "newlines",
+          "mean_pre": 0.005,
+          "mean_post": 0.0914375,
+          "delta": 0.0864375,
+          "abs_delta": 0.0864375
+        }
+      ],
+      "top_family": "length",
+      "logo_share": {
+        "length": 0.9999663434331051,
+        "punct": 0.0,
+        "register": 0.0
+      },
+      "rf_mass": {
+        "length": 0.13619255614965722,
+        "punct": 0.37881539575755035,
+        "register": 0.4849920480917924
+      },
+      "logo": {
+        "length": {
+          "delta": 2.9710883660735035e-08,
+          "R_minus": 1.2671629895494498e-08
+        },
+        "punct": {
+          "delta": -0.0017312293426632766,
+          "R_minus": 0.0017312717251768328
+        },
+        "register": {
+          "delta": -0.000148975439627831,
+          "R_minus": 0.00014901782214138724
+        }
+      },
+      "feature_dim": "style metrics folded into length/punct/register dimensions"
+    },
+    "action": {
+      "ticket": "style_only_creative_decoding",
+      "primary_family": "length",
+      "primary_metric": "bang",
+      "do": [
+        "\u63a7\u957f\u5ea6\uff1amax_tokens / \u6a21\u677f\u77ed\u7b54 / \u53bb\u5570\u55e6\u53e5",
+        "\u76ef Top \u6307\u6807 `bang` \u56de\u843d",
+        "\u6539 decoding / \u6a21\u677f / \u521b\u610f\u914d\u6bd4\u540e\u91cd\u8dd1 detect"
+      ],
+      "dont": [
+        "\u4e0d\u8981\u628a style_auc \u5f53\u6210\u5bf9\u9f50\u5931\u8d25\u53bb\u52a8\u504f\u597d\u5934",
+        "\u4e0d\u8981\u5e76\u8fdb\u5ba2\u670d\u5de5\u5355/\u9000\u6b3e\u8d26",
+        "\u4e0d\u8981\u7528 PSI(\u957f\u5ea6) \u89e3\u91ca\u504f\u597d\u6389\u70b9"
+      ],
+      "ledger": "CTR/\u54c1\u724c\u53e6\u8d26 \u2014 \u4e0d\u8fdb\u5ba2\u670d\u4e3b\u8d26\u3001\u4e0d\u52a8\u504f\u597d\u5934"
+    }
+  },
+  "round1_after_fix": {
+    "detect": {
+      "style_domain_auc_pre_post": 0.5350220139247126,
+      "style_domain_auc_portrait": 0.9967044378443526,
+      "fired": 0,
+      "n_pre": 1600,
+      "n_post": 1600,
+      "formality_mean_pre": 0.028548445866773048,
+      "formality_mean_post": 0.02411090114868001,
+      "ledger": "CTR/\u54c1\u724c\u53e6\u8d26 \u2014 \u4e0d\u8fdb\u5ba2\u670d\u4e3b\u8d26\u3001\u4e0d\u52a8\u504f\u597d\u5934",
+      "note": "fire \u770b pre/post \u65f6\u5e8f AUC\uff1bportrait AUC \u53ea\u8bf4\u660e register \u8f74\u53ef\u5206\uff0c\u4e0d\u4f5c\u706b\u60c5\u89e6\u53d1"
+    },
+    "attribute": {
+      "top_metric": "bang",
+      "text_metric_shifts": [
+        {
+          "metric": "bang",
+          "mean_pre": 0.05213442103550872,
+          "mean_post": 0.05831338414298891,
+          "delta": 0.006178963107480187,
+          "abs_delta": 0.006178963107480187
+        },
+        {
+          "metric": "qmark",
+          "mean_pre": 0.10150444978808906,
+          "mean_post": 0.09642085991430172,
+          "delta": -0.0050835898737873475,
+          "abs_delta": 0.0050835898737873475
+        },
+        {
+          "metric": "upper_ratio",
+          "mean_pre": 0.04417763227032451,
+          "mean_post": 0.04738901939793756,
+          "delta": 0.003211387127613055,
+          "abs_delta": 0.003211387127613055
+        },
+        {
+          "metric": "hedge",
+          "mean_pre": 0.07727549281673865,
+          "mean_post": 0.07966895335470062,
+          "delta": 0.0023934605379619667,
+          "abs_delta": 0.0023934605379619667
+        },
+        {
+          "metric": "char_len",
+          "mean_pre": 0.11885232836804568,
+          "mean_post": 0.11661396110859068,
+          "delta": -0.002238367259455004,
+          "abs_delta": 0.002238367259455004
+        },
+        {
+          "metric": "first_person",
+          "mean_pre": 0.04467802535769511,
+          "mean_post": 0.04264922626111553,
+          "delta": -0.0020287990965795824,
+          "abs_delta": 0.0020287990965795824
+        }
+      ],
+      "top_family": "register",
+      "logo_share": {
+        "length": 0.0,
+        "punct": 0.0,
+        "register": 0.0
+      },
+      "rf_mass": {
+        "length": 0.35710643347848564,
+        "punct": 0.2511882100999322,
+        "register": 0.391705356420582
+      },
+      "logo": {
+        "length": {
+          "delta": -0.000951770459969338,
+          "R_minus": 0.05494380870895789
+        },
+        "punct": {
+          "delta": -0.0013053658320573425,
+          "R_minus": 0.055297404081045894
+        },
+        "register": {
+          "delta": -0.0020007321899207717,
+          "R_minus": 0.05599277043890932
+        }
+      },
+      "feature_dim": "style metrics folded into length/punct/register dimensions"
+    },
+    "action": {
+      "ticket": "none",
+      "reason": "style not fired \u2014 keep creative mix",
+      "do": [],
+      "dont": [
+        "\u4e0d\u8981\u52a8\u504f\u597d\u5934",
+        "\u4e0d\u8981\u5f00\u5ba2\u670d\u56de\u6eda"
+      ]
+    }
+  },
+  "before_after": {
+    "auc_pre_post_before": 1.0,
+    "auc_pre_post_after": 0.5350220139247126,
+    "auc_portrait_before": 0.9875931430236403,
+    "auc_portrait_after": 0.9967044378443526,
+    "fired_before": 1,
+    "fired_after": 0,
+    "top_family_before": "length",
+    "top_metric_before": "bang",
+    "improved": 1
+  },
+  "external_one_liner_cn": "\u753b\u98ce\u6f02\u79fb\uff1aBefore AUC(pre/post)=1.000\uff08fired=True\uff0c\u4e3b\u56e0 length/bang\uff09\u2192 \u4fee\u6a21\u677f/decoding \u540e After=0.535\uff08fired=False\uff09\uff1b\u8fed\u4ee3\u6709\u6548\uff1b\u53e6\u8d26\uff0c\u4e0d\u52a8\u504f\u597d\u5934/\u5ba2\u670d\u8d26\u3002",
+  "stance": {
+    "is": "P(X) register portrait monitor + metric/family attribution + style ticket",
+    "is_not": "preference judge; CS ticket driver; unique causal root cause"
+  },
+  "source": "/workspace/data/hf_cache/hh_rlhf_helpful_base_2500.jsonl"
+}
