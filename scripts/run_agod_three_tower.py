@@ -221,8 +221,9 @@ def write_latex(payload: dict, path: Path):
     lines = []
     for name in ("random_global", "seen_excluded", "same_cat_hard"):
         r = pool[name]
+        label = name.replace("_", r"\_")
         lines.append(
-            f"{name.replace('_', '\\_')} & {r['gap']:.3f} & {r['contam']:.2f} & "
+            f"{label} & {r['gap']:.3f} & {r['contam']:.2f} & "
             f"{r['cat_match_neg']:.2f} \\\\"
         )
     tex = (

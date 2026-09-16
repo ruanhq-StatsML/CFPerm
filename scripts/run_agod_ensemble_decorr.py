@@ -315,8 +315,9 @@ def write_latex(sweep, asym, path: Path):
         )
     asym_lines = []
     for c in asym:
+        case = c["case"].replace("_", r"\_")
         asym_lines.append(
-            f"{c['case'].replace('_', '\\_')} & {c['mean_redundancy']:.2f} & "
+            f"{case} & {c['mean_redundancy']:.2f} & "
             f"{c['effective_rank']:.2f} & {c['leader']} & "
             f"{c['roles']['video'][0]}/{c['roles']['text'][0]}/{c['roles']['audio'][0]} \\\\"
         )

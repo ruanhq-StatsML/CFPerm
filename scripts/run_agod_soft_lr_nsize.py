@@ -590,8 +590,9 @@ def plot_board(cells, nstars, path: Path):
 def write_latex(cells, nstars, path: Path):
     lines = []
     for c in sorted(cells, key=lambda r: (r["dataset"], r["policy"], r["n_cur"])):
+        pol = c["policy"].replace("_", r"\_")
         lines.append(
-            f"{c['dataset']} & {c['policy'].replace('_', '\\_')} & {c['n_cur']} & "
+            f"{c['dataset']} & {pol} & {c['n_cur']} & "
             f"{c['n_adapt_mean']:.0f} & {c['mean_acc_lift']:+.3f} & "
             f"{c['mean_flops_rel']:.3f} & {c['mean_lr_ratio']:.2f} & "
             f"{c['mean_alpha_entropy']:.3f} \\\\"
@@ -600,8 +601,9 @@ def write_latex(cells, nstars, path: Path):
     for k, st in sorted(nstars.items()):
         ds, pol = k.split(":", 1)
         ns = "---" if st.get("n_star") is None else f"{st['n_star']:.0f}"
+        pol_tex = pol.replace("_", r"\_")
         nstar_lines.append(
-            f"{ds} & {pol.replace('_', '\\_')} & {ns} & "
+            f"{ds} & {pol_tex} & {ns} & "
             f"{st.get('max_lift', float('nan')):+.3f} & "
             f"{st.get('best_n') if st.get('best_n') is not None else '---'} \\\\"
         )

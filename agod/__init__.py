@@ -138,6 +138,13 @@ from .three_tower import (
     score_triplet,
     user_tower,
 )
+from .tower_stack import (
+    stack_votes,
+    tower_stack_step,
+    run_tower_stack,
+    switch_events,
+    switch_report,
+)
 from .recsys_features import (
     TRAIN_END,
     VALID_END,
@@ -274,6 +281,11 @@ __all__ = [
     "agod_from_triplet",
     "tower_vote_vectors",
     "honest_three_tower_step",
+    "stack_votes",
+    "tower_stack_step",
+    "run_tower_stack",
+    "switch_events",
+    "switch_report",
     "CATS",
     "TOWERS",
 ]

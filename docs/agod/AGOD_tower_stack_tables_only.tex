@@ -1,0 +1,14 @@
+% Three-tower online stack vs snapshot GLS
+\begin{table}[t]\centering
+\caption{Category switch: Hedge $\pi(t)$ moves mass to the price item vote; per-step GLS snapshot almost does not. Leaky stacker prequential loss is optimistic.}
+\label{tab:agod-tower-stack-switch}
+\begin{tabular}{lcccc}\toprule
+method & $\pi_{\mathrm{item}}$ pre & post & path TV & mean preq \\
+\midrule
+Hedge honest & 0.18 & 0.25 & 2.26 & 0.086 \\
+OSL discrete & 0.35 & 0.00 & 4.67 & 0.102 \\
+GLS snapshot TV & --- & --- & 0.149 & --- \\
+leaky stacker & --- & --- & 2.17 & 0.066 \\
+\bottomrule
+\end{tabular}
+\end{table}

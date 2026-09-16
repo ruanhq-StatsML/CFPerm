@@ -557,8 +557,9 @@ def write_latex(sweep, mse_rows, replay, path: Path):
         )
     replay_lines = []
     for k, s in sorted(replay.items()):
+        label = k.replace("_", r"\_")
         replay_lines.append(
-            f"{k.replace('_', '\\_')} & {s['mean_rho']:+.3f} & {s['mean_n_eff']:.2f} & "
+            f"{label} & {s['mean_rho']:+.3f} & {s['mean_n_eff']:.2f} & "
             f"{s['mean_eta_global']:.2f} & {s['mean_ambiguity']:.2f} \\\\"
         )
     tex = (

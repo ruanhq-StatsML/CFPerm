@@ -638,13 +638,15 @@ PYTHONPATH=. python3 scripts/run_agod_gradcos_lr.py
 
 
 def write_latex(cells, path: Path):
-    lines = [
-        f"{c['dataset']} & {c['scheduler'].replace('_', '\\\\_')} & "
-        f"{c['mean_acc_lift']:+.3f} & {c['mean_pair_cos']:+.3f} & "
-        f"{c['mean_frac_conflict']:.2f} & {c['mean_temporal_cos']:+.3f} & "
-        f"{c['mean_lr_ratio']:.2f} \\\\"
-        for c in sorted(cells, key=lambda r: (r["dataset"], r["scheduler"]))
-    ]
+    lines = []
+    for c in sorted(cells, key=lambda r: (r["dataset"], r["scheduler"])):
+        sched = c["scheduler"].replace("_", r"\_")
+        lines.append(
+            f"{c['dataset']} & {sched} & "
+            f"{c['mean_acc_lift']:+.3f} & {c['mean_pair_cos']:+.3f} & "
+            f"{c['mean_frac_conflict']:.2f} & {c['mean_temporal_cos']:+.3f} & "
+            f"{c['mean_lr_ratio']:.2f} \\\\"
+        )
     tex = (
         "% Gradient-cosine × modality LR\n"
         "\\begin{table}[t]\\centering\n"
