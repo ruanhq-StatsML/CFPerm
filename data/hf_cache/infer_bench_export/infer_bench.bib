@@ -13,6 +13,7 @@
 %   SQuAD 2.0    rajpurkar-etal-2018-know          (only if using v2)
 %   HotpotQA     yang-etal-2018-hotpotqa
 %   TruthfulQA   lin-etal-2022-truthfulqa
+%   HH-RLHF      bai2022hh-rlhf                    (alignment counterpart; not a 300-export)
 %
 % Per-dataset files in this folder also keep arXiv, GitHub, and Hub entries.
 % This combined file is self-contained: primary venue papers + closely related
@@ -155,7 +156,7 @@
   dblp          = {https://dblp.org/rec/conf/acl/RajpurkarJL18},
   keywords      = {question answering, unanswerable questions, SQuAD 2.0, reading comprehension},
   abstract      = {Extractive reading comprehension systems can often locate the correct answer to a question in a context document, but they also tend to make unreliable guesses on questions for which the correct answer is not stated in the context. Existing datasets either focus exclusively on answerable questions, or use automatically generated unanswerable questions that are easy to identify. To address these weaknesses, we present SQuAD 2.0, the latest version of the Stanford Question Answering Dataset (SQuAD). SQuAD 2.0 combines existing SQuAD data with over 50,000 unanswerable questions written adversarially by crowdworkers to look similar to answerable ones. To do well on SQuAD 2.0, systems must not only answer questions when possible, but also determine when no answer is supported by the paragraph and abstain from answering. SQuAD 2.0 is a challenging natural language understanding task for existing models: a strong neural system that gets 86\% F1 on SQuAD 1.1 achieves only 66\% F1 on SQuAD 2.0.},
-  note          = {SQuAD 2.0. Hugging Face: https://huggingface.co/datasets/rajpurkar/squad_v2. License: CC BY-SA 4.0. arXiv:1806.03822.}
+  note          = {SQuAD 2.0. Hugging Face dataset \texttt{rajpurkar/squad\_v2}. License: CC BY-SA 4.0. arXiv:1806.03822.}
 }
 
 @misc{squad-explorer,
@@ -199,7 +200,7 @@
   dblp          = {https://dblp.org/rec/conf/emnlp/YangQZBCSM18},
   keywords      = {multi-hop question answering, explainable QA, Wikipedia, supporting facts, HotpotQA},
   abstract      = {Existing question answering (QA) datasets fail to train QA systems to perform complex reasoning and provide explanations for answers. We introduce HotpotQA, a new dataset with 113k Wikipedia-based question-answer pairs with four key features: (1) the questions require finding and reasoning over multiple supporting documents to answer; (2) the questions are diverse and not constrained to any pre-existing knowledge bases or knowledge schemas; (3) we provide sentence-level supporting facts required for reasoning, allowing QA systems to reason with strong supervision and explain the predictions; (4) we offer a new type of factoid comparison questions to test QA systems' ability to extract relevant facts and perform necessary comparison. We show that HotpotQA is challenging for the latest QA systems, and the supporting facts enable models to improve performance and make explainable predictions.},
-  note          = {Homepage: https://hotpotqa.github.io/. Code: https://github.com/hotpotqa/hotpot. Hugging Face: https://huggingface.co/datasets/hotpotqa/hotpot_qa. License: CC BY-SA 4.0. arXiv:1809.09600.}
+  note          = {Homepage: https://hotpotqa.github.io/. Code: https://github.com/hotpotqa/hotpot. Hugging Face dataset \texttt{hotpotqa/hotpot\_qa}. License: CC BY-SA 4.0. arXiv:1809.09600.}
 }
 
 @inproceedings{yang2018hotpotqa,
@@ -265,7 +266,7 @@
   dblp          = {https://dblp.org/rec/conf/acl/LinHE22},
   keywords      = {truthfulness, large language models, misconceptions, evaluation, TruthfulQA},
   abstract      = {We propose a benchmark to measure whether a language model is truthful in generating answers to questions. The benchmark comprises 817 questions that span 38 categories, including health, law, finance and politics. We crafted questions that some humans would answer falsely due to a false belief or misconception. To perform well, models must avoid generating false answers learned from imitating human texts. We tested GPT-3, GPT-Neo/J, GPT-2 and a T5-based model. The best model was truthful on 58\% of questions, while human performance was 94\%. Models generated many false answers that mimic popular misconceptions and have the potential to deceive humans. The largest models were generally the least truthful. This contrasts with other NLP tasks, where performance improves with model size. However, this result is expected if false answers are learned from the training distribution. We suggest that scaling up models alone is less promising for improving truthfulness than fine-tuning using training objectives other than imitation of text from the web.},
-  note          = {Code: https://github.com/sylinrl/TruthfulQA. Hugging Face: https://huggingface.co/datasets/truthfulqa/truthful_qa. License: Apache-2.0. arXiv:2109.07958.}
+  note          = {Code: https://github.com/sylinrl/TruthfulQA. Hugging Face dataset \texttt{truthfulqa/truthful\_qa}. License: Apache-2.0. arXiv:2109.07958.}
 }
 
 @misc{lin2021truthfulqa,
@@ -296,4 +297,20 @@
   howpublished = {https://huggingface.co/datasets/truthfulqa/truthful_qa},
   url          = {https://huggingface.co/datasets/truthfulqa/truthful_qa},
   note         = {Configs: generation and multiple_choice, 817 validation questions. License: Apache-2.0.}
+}
+
+% ---------------------------------------------------------------------------
+% Related (not one of the four 300-exports): HH-RLHF
+% ---------------------------------------------------------------------------
+@misc{bai2022hh-rlhf,
+  title         = {Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback},
+  author        = {Yuntao Bai and Andy Jones and Kamal Ndousse and Amanda Askell and Anna Chen and Nova DasSarma and Dawn Drain and Stanislav Fort and Deep Ganguli and Tom Henighan and Nicholas Joseph and Saurav Kadavath and Jackson Kernion and Tom Conerly and Sheer El-Showk and Nelson Elhage and Zac Hatfield-Dodds and Danny Hernandez and Tristan Hume and Scott Johnston and Shauna Kravec and Liane Lovitt and Neel Nanda and Catherine Olsson and Dario Amodei and Tom Brown and Jack Clark and Sam McCandlish and Chris Olah and Ben Mann and Jared Kaplan},
+  year          = {2022},
+  eprint        = {2204.05862},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2204.05862},
+  doi           = {10.48550/arXiv.2204.05862},
+  keywords      = {RLHF, preference modeling, helpful and harmless, alignment},
+  note          = {Alignment counterpart already run in the HF landing prototype. Dataset: Anthropic/hh-rlhf.}
 }

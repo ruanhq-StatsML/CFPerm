@@ -1,12 +1,10 @@
-# Infer-bench dataset citations
+# Infer-bench citations
 
-See `data/hf_cache/infer_bench_export/` for the BibTeX sources.
+Canonical BibTeX: `data/hf_cache/infer_bench_export/`.
 
-Copy of the combined file: this directory's `infer_bench.bib` is a pointer-friendly location for papers.
+This folder keeps a copy of the combined file for paper writing:
 
-Recommended keys:
+- `infer_bench.bib`
 
-- HaluEval: `li-etal-2023-halueval`
-- SQuAD: `rajpurkar-etal-2016-squad`
-- HotpotQA: `yang-etal-2018-hotpotqa`
-- TruthfulQA: `lin-etal-2022-truthfulqa`
+Recommended keys: `li-etal-2023-halueval`, `rajpurkar-etal-2016-squad`, `yang-etal-2018-hotpotqa`, `lin-etal-2022-truthfulqa`.
+Related alignment stream: `bai2022hh-rlhf`.
