@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
-"""Recsys prototype: graph localization by entity, then a two-step drill.
+"""Graph-localization package: data-manipulation + inference, then per-entity moved/quiet.
 
-Entities (enough — no extra grains):
+FSDS cannot multi-step-localize — this script is the loc package, not an FSDS story.
 
-  user / item / merchant
-  video_tower / audio_tower   (attach on merchant → pool to user)
+  1) Data-manipulation: left-window graphs, entity portraits, merchant→user pool.
+  2) Inference slot: fake 64-d DGP now; an LLM/encoder pipeline is enough to replace it.
+  3) Detector: each entity P(W|X_entity), no Y. Quiet entities stop.
 
-FSDS cannot multi-step-localize; online+LOGO needs these entity names.
-Use:
-  1) LOCALIZE (no Y): each entity vs clock W. Moved = RF-domain AUC ≥ 0.55.
-  2) Two-step FSDS drill (with Y), only on the few moved entities:
-       step 1  LOGO among those entities
-       step 2  LOCO columns inside them (top-k if a 64-d tower)
-
-Not causal. Not GNN. Fake towers are DGP, not production embeddings.
-φ=(Y−μ)(W−e) is early/late distance on post-click Y, not a treatment effect.
+Entities: user / item / merchant / video_tower / audio_tower.
 
   PYTHONPATH=. python3 scripts/tencent_gr/graph_loc_fsds_drill.py
 """
