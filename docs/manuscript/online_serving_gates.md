@@ -23,5 +23,7 @@ Chinese writeup and slides: `online_serving_gates_zh.md`, `online_serving_gates_
 Graph-RAG is the only facet that needs an extra sentence: **one serving batch is the aggregate of subgraph features** (nodes, edges, mean degree, CCs, query seeds, seed fraction, LCC). \(Y=\) supporting nodes in the served pack. A community refresh rewires edges and serves the largest CC, then aggregates again.
 
 ```bash
-PYTHONPATH=. python3 scripts/prototype_graph_pack_batch_agg.py
+PYTHONPATH=. python3 scripts/run_serving_gates.py
 ```
+
+Live tables already on disk: auditor, Graph-RAG pack, hybrid fusion. Same two gates. Rebuild the Graph-RAG windows with `scripts/prototype_graph_pack_batch_agg.py` if those csvs are missing.

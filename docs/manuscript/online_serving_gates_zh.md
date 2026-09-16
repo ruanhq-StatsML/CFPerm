@@ -81,28 +81,29 @@ Fire 是 \(P(Y\mid X)\) 的 hop，不是质量分。旁路指标可以挂在仪�
 盘上 Hotpot distractor 是题库快照，没有到达顺序。`batch` 在 snapshot 表里是题号；
 下面 prototype 用文件顺序只演示 **表形**，不声称墙上时间。连续时间 serving 仍要带时间戳的请求日志。
 
-## Prototype
+## 现在就能跑
+
+盘上已经有三面的 `(X,Y,batch)` 表。同一条命令、同一套闸：
+
+```bash
+PYTHONPATH=. python3 scripts/run_serving_gates.py
+```
+
+| 面 | quiet 表 | hop 表 |
+|---|---|---|
+| 审核 / judge | `llm_audit/xy_hh_helpful_consistent.csv` | `xy_hh_helpful_hop.csv` |
+| Graph-RAG 子图 | `graph_rag_batches/xy_graph_query.csv` | `xy_graph_query_hop.csv` |
+| 混合检索 | `hybrid_retrieval/xy_hotpot_hybrid.csv` | `xy_hotpot_hybrid_hop.csv` |
+
+读数写在 `results/manuscript/serving_gates/`。Graph-RAG 的闸打在一问一行的 0/1 表上（按窗分组）；一窗一行的聚合表是 serving 表形，不是探针样本。
+
+图包窗若要重做：
 
 ```bash
 PYTHONPATH=. python3 scripts/prototype_graph_pack_batch_agg.py
 ```
 
-写出 `results/manuscript/graph_rag_batches/`：
+Hop：切点后 rewire 边，改用最大连通片当 community 图包。演示稿：`docs/manuscript/online_serving_gates_zh.html`。
 
-- `xy_graph_query.csv` / `xy_graph_query_hop.csv`：一问一行，图特征 + 图包是否可用
-- `xy_graph_batch.csv` / `xy_graph_batch_hop.csv`：**一窗一行**，图特征聚合 + 可用率
-- `REPORT.md`、读数图
+还没有 csv 的面（smoothness / agent / 合成金标 / serving 刷新 / CUPED）同一套闸，换表即可。
 
-Hop 表在 `CUT_BATCH` 之后 rewire 边，并改用最大连通片作为 community 图包（相对 native 的 seed ∪ 一跳）。冻参考窗看 \(\Delta_t\)，last-two 看切点是否火。
-
-演示稿：`docs/manuscript/online_serving_gates_zh.html`。
-
-## 已经在盘上的其他面
-
-| 面 | 表 | 说明 |
-|---|---|---|
-| 审核 / judge | `results/manuscript/llm_audit/xy_*.csv` | \(Y=\) 过/不过；HH chosen 不是 \(Y\) |
-| Graph-RAG 快照 | `results/manuscript/hybrid_retrieval/xy_hotpot_pairs.csv` | 一问 × 10 标题；`batch` 是题号 |
-| 混合检索（同一快照的融合 readout） | `xy_hotpot_hybrid.csv` | \(Y=\) 融合 top-\(k\) 盖住支撑标题 |
-
-审核闸的两个读数见 `scripts/llm_audit_online_bootstrap_prototype.py`。
