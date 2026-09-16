@@ -162,6 +162,7 @@ else:                 audit_topk only
 | 序 | 切片 | 为何先做 | 依赖 |
 |----|------|----------|------|
 | **R0** | 生产 log → form adapter + Y 源字典 | 没有这一步后面全是 demo | 日志只读权限 |
+| **R0b** | **真推理流 use-case**（transformers / vLLM） | ✅ `online_rfperm_live_infer.py`：HaluEval 真生成 → fire → 路由 | 本地小模或 OpenAI-compat |
 | **R1** | Phase 1 路由表 + rag_hit 同窗 | 直接省误回滚，业务体感最强 | R0 |
 | **R2** | quiet 误火率 / gate 标定 | 值班敢接；否则会关系统 | R0 |
 | **R3** | Phase 2 po_risk0 Top-k 接审计队列 | 人力稀缺时立刻值钱 | R1 |
@@ -204,6 +205,8 @@ else:                 audit_topk only
 | 文档 / 脚本 | 用途 |
 |-------------|------|
 | `agod/online_rfperm.py` | 方法包 |
+| `scripts/agod/online_rfperm_live_infer.py` | **真推理流 use-case**（transformers / vLLM） |
+| `ONLINERFPERM_LIVE_INFER.md` | 真生成 → fire → 路由结果 |
 | `scripts/agod/llm_stream_changepoint.py` | 推理流 delay |
 | `scripts/agod/llm_infer_align_prototype.py` | 最小 call 包 |
 | `scripts/agod/hf_landing_protos.py` | 幻觉 + rag 路由 |
@@ -212,6 +215,8 @@ else:                 audit_topk only
 | `LLM_LANDING_PROTOTYPE_METHOD_LIST.md` | S1–S10 场景表 |
 
 ```bash
+PYTHONPATH=. python3 scripts/agod/online_rfperm_live_infer.py
+PYTHONPATH=. python3 scripts/agod/online_rfperm_live_infer.py --backend mock   # CI
 PYTHONPATH=. python3 scripts/agod/llm_stream_changepoint.py
 PYTHONPATH=. python3 scripts/agod/llm_infer_align_prototype.py
 PYTHONPATH=. python3 scripts/agod/hf_landing_protos.py
