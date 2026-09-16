@@ -23,6 +23,11 @@ A hop is a graph-pack, community recompute, or prompt-pack swap---not ``this nod
 Refresh order: prompt, then retrieval routing, then re-extract/re-summarize the graph; generator last.
 Promote a shadow pack only if the next-window error recovers and last-two is quiet.
 
+Hotpot prototype tables: \texttt{results/manuscript/hybrid\_retrieval/}
+(\texttt{xy\_hotpot\_hybrid.csv}, \texttt{xy\_hotpot\_graph.csv}, \texttt{xy\_hotpot\_two\_stream.csv}).
+\(Y\) is fused gold-title coverage; \(X\) is channel agreement plus title-graph geometry.
+Questions and gold-hit flags are not stored. Rebuild with \texttt{python3 scripts/build\_hybrid\_retrieval\_xy.py}.
+
 \paragraph{Hybrid retrieval.}
 One request rewrites, retrieves sparse and dense in parallel, fuses (e.g.\ RRF), reranks, and generates.
 \(Y\) is validity of the answer given the \emph{fused} context, not BM25-only or dense-only recall.

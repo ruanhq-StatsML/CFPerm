@@ -41,6 +41,8 @@ A hop of \(P(Y\mid X)\) is a graph pack / community recompute / prompt-pack swap
 
 **Prototype sketch.** Quiet corpus + fixed graph: expect no fire. Injected fracture (stale entities, swapped community summaries, prompt-pack cut): fire at the cut. After a real refresh: new \(D_{\mathrm{ref}}\), subsequent windows quiet.
 
+**Hotpot formulation (on disk).** Titles in the distractor pool are nodes. An edge exists when two titles share a token. Seeds are titles that overlap the query. Same fused \(Y\) as hybrid — the subgraph pack is usable iff supporting titles made the fused top-\(k\). Extra \(X\): `x_n_nodes`, `x_n_edges`, `x_mean_deg`, `x_n_cc`, `x_n_q_seeds`, `x_seed_frac`, `x_lcc_frac`. File: `results/manuscript/hybrid_retrieval/xy_hotpot_graph.csv`.
+
 ---
 
 ## 5b. Hybrid retrieval (vector + sparse + rerank)
@@ -73,6 +75,10 @@ A hop of \(P(Y\mid X)\) is a graph pack / community recompute / prompt-pack swap
 - Then full state reset. If only Recall@\(k\) moved and \(P(Y\mid X)\) did not recover, do not promote.
 
 Cheapest refresh first: fusion weights / \(k\) → reranker → re-embed corpus → generator.
+
+**Hotpot formulation (prototype, learn this table).** Candidate pool = the example’s ~10 paras. Sparse = BM25. Dense = char-ngram hashing cosine (second channel, not a GPU embedder). Fuse = RRF, \(k=5\). \(Y=1\) iff every gold supporting title is in the fused top-5. \(X\) is query geometry + channel agreement (`x_js_overlap`, `x_rank_corr`, margins, RRF mass). Gold hit flags are **not** \(X\); the question text is not stored.
+
+Rebuild: `python3 scripts/build_hybrid_retrieval_xy.py`. Files under `results/manuscript/hybrid_retrieval/`. Hop overlay flips dense scores after `batch>=4` (embedding-pack swap). Two-stream CFPerm: `T=0` sparse-only usable, `T=1` dense-only usable, same \(X\).
 
 ---
 
