@@ -1,0 +1,117 @@
+{
+  "hops": [
+    {
+      "batch": 0,
+      "fired": false,
+      "ratio": null,
+      "e_now": null,
+      "e_prev": null,
+      "mean_y_bad": 0.6666666666666666,
+      "mean_rag_hit": 0.1459824118308947,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "quiet"
+    },
+    {
+      "batch": 1,
+      "fired": false,
+      "ratio": 3.0,
+      "e_now": 0.25,
+      "e_prev": 0.0,
+      "mean_y_bad": 0.6666666666666666,
+      "mean_rag_hit": 0.1507208954376558,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "quiet"
+    },
+    {
+      "batch": 2,
+      "fired": false,
+      "ratio": 0.0,
+      "e_now": 0.0,
+      "e_prev": 0.25,
+      "mean_y_bad": 0.9166666666666666,
+      "mean_rag_hit": 0.10221638719234806,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "quiet"
+    },
+    {
+      "batch": 3,
+      "fired": false,
+      "ratio": 0.0,
+      "e_now": 0.0,
+      "e_prev": 0.0,
+      "mean_y_bad": 1.0,
+      "mean_rag_hit": 0.044146076099522806,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "hop"
+    },
+    {
+      "batch": 4,
+      "fired": false,
+      "ratio": 1.0000000000000004,
+      "e_now": 0.08333333333333337,
+      "e_prev": 0.0,
+      "mean_y_bad": 0.9166666666666666,
+      "mean_rag_hit": 0.07543622059504168,
+      "action": "quiet_pass",
+      "audit_t": [],
+      "regime": "hop"
+    },
+    {
+      "batch": 5,
+      "fired": true,
+      "ratio": 1.9999999999999987,
+      "e_now": 0.16666666666666663,
+      "e_prev": 0.08333333333333337,
+      "mean_y_bad": 0.8333333333333334,
+      "mean_rag_hit": 0.10446573840806238,
+      "action": "model_rollback_or_audit_topk",
+      "audit_t": [
+        65,
+        67,
+        71,
+        68,
+        61
+      ],
+      "regime": "hop"
+    }
+  ],
+  "cut_batch": 3,
+  "first_fire_batch": 5,
+  "detection_delay_batch": 2,
+  "X_dim": 73,
+  "n": 72,
+  "n_per": 12,
+  "n_batches": 6,
+  "gate": 1.25,
+  "audit_k": 5,
+  "mean_y_bad_quiet": 0.75,
+  "mean_y_bad_hop": 0.9166666666666666,
+  "mean_rag_quiet": 0.1329732314869662,
+  "mean_rag_hop": 0.07468267836754229,
+  "dataset": "squad",
+  "gen_seconds": 32.05889821052551,
+  "backend": "transformers",
+  "first_action": "model_rollback_or_audit_topk",
+  "samples": [
+    {
+      "batch": 0,
+      "regime": "quiet",
+      "question": "Which NFL team represented the AFC at Super Bowl 50?",
+      "answer": "The NFL team that represented the AFC at Super Bowl 50 was the Broncos.",
+      "y_bad": 1.0,
+      "rag_hit": 0.11764705882352941
+    },
+    {
+      "batch": 3,
+      "regime": "hop",
+      "question": "Who lost to the Broncos in the AFC Championship?",
+      "answer": "Answer: John Terry.",
+      "y_bad": 1.0,
+      "rag_hit": 0.0
+    }
+  ]
+}
