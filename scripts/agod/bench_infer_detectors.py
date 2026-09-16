@@ -41,7 +41,7 @@ from sklearn.ensemble import RandomForestClassifier
 
 sys.path = [p for p in sys.path if "/workspace/datasets" not in p]
 ROOT = Path(__file__).resolve().parents[2]
-STREAM_ROOT = ROOT / "results" / "agod" / "online_rfperm_two_datasets"
+STREAM_ROOT = ROOT / "results" / "agod" / "online_rfperm_multi_datasets"
 OUT = ROOT / "results" / "agod" / "bench_infer_detectors"
 DOCS = ROOT / "docs" / "biz"
 DATA_EXPORT = ROOT / "data" / "hf_cache" / "infer_bench_export"
@@ -292,121 +292,86 @@ def _fmt(v) -> str:
 
 
 def write_latex(results: dict, out: Path) -> str:
-    """Manuscript-style Table 1 (k=1) + Table 2 (k=2/3), trail *batch* index."""
+    """One table: all methods × all datasets, first1/first2/first3."""
     ds_names = list(results.keys())
-    # map method -> {ds: row}
     methods_order = [m["method"] for m in results[ds_names[0]]["batch"]]
 
-    def cell(ds, method, key, grid="batch"):
-        row = next(r for r in results[ds][grid] if r["method"] == method)
+    def cell(ds, method, key):
+        row = next(r for r in results[ds]["batch"] if r["method"] == method)
         return _fmt(row[key])
+
+    # header: Method | ds1_1 ds1_2 ds1_3 | ds2_1 ...
+    col_spec = "l" + "rrr" * len(ds_names)
+    header1 = "Method"
+    header2 = ""
+    for d in ds_names:
+        header1 += rf" & \multicolumn{{3}}{{c}}{{{latex_escape(d)}}}"
+        header2 += r" & $k{=}1$ & $k{=}2$ & $k{=}3$"
+    header1 += r" \\"
+    header2 += r" \\"
+    cmid = ""
+    c = 2
+    for _ in ds_names:
+        cmid += rf"\cmidrule(lr){{{c}-{c+2}}} "
+        c += 3
 
     lines = [
         r"\documentclass[11pt]{article}",
-        r"\usepackage[margin=1in]{geometry}",
+        r"\usepackage[margin=0.8in]{geometry}",
         r"\usepackage{booktabs,amsmath}",
-        r"\title{OnlineRFPerm vs OOB baselines on LLM infer streams\\"
-        r"(manuscript first$_k$ on trail batches)}",
-        r"\author{CFPerm benchmark}",
+        r"\title{All-method first$_k$ on four LLM infer streams}",
+        r"\author{CFPerm}",
         r"\date{\today}",
         r"\begin{document}",
         r"\maketitle",
         "",
-        r"\paragraph{Protocol.}",
         (
-            r"Quiet reference freezes the probe; trail $=$ batches after cut. "
-            r"\texttt{first}$_k$ $=$ first \emph{trail batch index} at which "
-            r"$k$ consecutive fires begin (0 $=$ first batch after cut). "
-            r"Same counting rule as PointCloud Table~1/2 "
-            r"(\texttt{first\_k\_consecutive}). "
-            f"HaluEval/SQuAD: $n_{{\\mathrm{{per}}}}={results[ds_names[0]]['n_per']}$, "
-            f"cut batch$={results[ds_names[0]]['cut_batch']}$ "
-            f"(cut $t={results[ds_names[0]]['cut_t']}$)."
+            rf"Trail-batch \texttt{{first}}$_k$ after cut "
+            rf"($n_{{\mathrm{{per}}}}={results[ds_names[0]]['n_per']}$, "
+            rf"cut$={results[ds_names[0]]['cut_batch']}$, "
+            rf"$n_{{\mathrm{{ref}}}}={results[ds_names[0]]['cut_t']}$). "
+            r"Index 0 $=$ first batch after cut; --- $=$ never."
         ),
         "",
         r"\begin{table}[h]",
         r"\centering",
-        r"\caption{Table 1 --- First rejection ($k=1$) on the trail (batch index).}",
-        r"\begin{tabular}{l" + "r" * len(ds_names) + "}",
-        r"\toprule Method & " + " & ".join(latex_escape(d) for d in ds_names) + r" \\",
-        r"\midrule",
-    ]
-    for method in methods_order:
-        vals = " & ".join(cell(d, method, "first1") for d in ds_names)
-        lines.append(f"{latex_escape(method)} & {vals} \\\\")
-    lines += [
-        r"\bottomrule",
-        r"\end{tabular}",
-        r"\end{table}",
-        "",
-        r"\begin{table}[h]",
-        r"\centering",
-        r"\caption{Table 2 --- Sustained onsets: $k=2$ / $k=3$ consecutive trail batches.}",
-        r"\begin{tabular}{l" + "rr" * len(ds_names) + "}",
+        r"\small",
+        r"\caption{All methods: first$_k$ consecutive fires on trail batches.}",
+        rf"\begin{{tabular}}{{{col_spec}}}",
         r"\toprule",
-        "Method & "
-        + " & ".join(rf"{latex_escape(d)} $k=2$ & {latex_escape(d)} $k=3$" for d in ds_names)
-        + r" \\",
+        header1,
+        cmid.strip(),
+        header2,
         r"\midrule",
     ]
     for method in methods_order:
-        parts = []
+        parts = [latex_escape(method)]
         for d in ds_names:
+            parts.append(cell(d, method, "first1"))
             parts.append(cell(d, method, "first2"))
             parts.append(cell(d, method, "first3"))
-        lines.append(f"{latex_escape(method)} & " + " & ".join(parts) + r" \\")
+        lines.append(" & ".join(parts) + r" \\")
     lines += [
         r"\bottomrule",
         r"\end{tabular}",
         r"\end{table}",
-        "",
-        r"\paragraph{Python logic.}",
-        r"\begin{verbatim}",
-        "def first_k_consecutive(det, k):",
-        "    # det: bool array on the TRAIL only (after cut)",
-        "    # return first i where det[i:i+k] are all True",
-        "    det = np.asarray(det, dtype=bool)",
-        "    for i in range(len(det) - k + 1):",
-        "        if det[i:i+k].all():",
-        "            return i   # trail batch index",
-        "    return None",
-        "",
-        "first1 = first_k_consecutive(trail_fires, 1)",
-        "first2 = first_k_consecutive(trail_fires, 2)  # 头一回连续两个 fire",
-        "first3 = first_k_consecutive(trail_fires, 3)",
-        r"\end{verbatim}",
-        "",
-        r"\paragraph{Takeaway.}",
-        (
-            r"Index 0 is the first hop batch. "
-            r"``---'' $=$ never $k$ consecutive fires on the trail. "
-            r"Baselines follow \texttt{onlinePermOOB\_algo.py} on the frozen-probe error stream."
-        ),
         "",
         r"\end{document}",
         "",
     ]
     tex = "\n".join(lines)
     (out / "bench_detectors.tex").write_text(tex)
+    (out / "all_methods_one_table.tex").write_text(tex)
     (DOCS / "BENCH_INFER_DETECTORS.tex").write_text(tex)
+    (DOCS / "ALL_METHODS_ONE_TABLE.tex").write_text(tex)
 
-    # also dump the logic snippet alone
     logic = (
-        "# manuscript first_k on trail batches\n"
-        "import numpy as np\n\n"
         "def first_k_consecutive(det, k):\n"
-        "    \"\"\"First trail index i where det[i:i+k] are all True.\n"
-        "    det is bool over trail batches only (after cut).\n"
-        "    first2 = 头一回连续两个 batch fire 从第几个 trail batch 开始.\n"
-        "    \"\"\"\n"
-        "    det = np.asarray(det, dtype=bool).ravel()\n"
+        "    det = np.asarray(det, dtype=bool)\n"
         "    for i in range(len(det) - k + 1):\n"
         "        if det[i:i+k].all():\n"
         "            return int(i)\n"
-        "    return None\n\n"
-        "# example\n"
-        "# trail_fires = [False, True, True, False]  # batches after cut\n"
-        "# first1 -> 1; first2 -> 1; first3 -> None\n"
+        "    return None\n"
     )
     (out / "first_k_logic.py").write_text(logic)
     (DOCS / "FIRST_K_LOGIC.py").write_text(logic)
@@ -479,6 +444,8 @@ def main(argv=None) -> int:
     specs = {
         "halueval": STREAM_ROOT / "halueval" / "stream.jsonl",
         "squad": STREAM_ROOT / "squad" / "stream.jsonl",
+        "hotpotqa": STREAM_ROOT / "hotpotqa" / "stream.jsonl",
+        "truthfulqa": STREAM_ROOT / "truthfulqa" / "stream.jsonl",
     }
     results = {}
     for name, path in specs.items():

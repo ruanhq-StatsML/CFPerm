@@ -5,15 +5,15 @@
   "results": {
     "halueval": {
       "dataset": "halueval",
-      "n": 72,
-      "n_per": 12,
-      "n_batches": 6,
-      "cut_batch": 3,
-      "cut_t": 36,
-      "n_trail_batches": 3,
-      "n_trail_obs": 36,
+      "n": 200,
+      "n_per": 20,
+      "n_batches": 10,
+      "cut_batch": 5,
+      "cut_t": 100,
+      "n_trail_batches": 5,
+      "n_trail_obs": 100,
       "mse_mean_quiet": 0.0,
-      "mse_mean_hop": 0.3055555555555556,
+      "mse_mean_hop": 1.0,
       "batch": [
         {
           "method": "OnlineRFPerm",
@@ -21,7 +21,7 @@
           "first2": null,
           "first3": null,
           "SUM": 1,
-          "n_trail": 3
+          "n_trail": 5
         },
         {
           "method": "BOCPD",
@@ -29,55 +29,55 @@
           "first2": null,
           "first3": null,
           "SUM": 2,
-          "n_trail": 3
+          "n_trail": 5
         },
         {
           "method": "PageHinkley",
           "first1": 0,
-          "first2": 0,
+          "first2": null,
           "first3": null,
-          "SUM": 2,
-          "n_trail": 3
+          "SUM": 1,
+          "n_trail": 5
         },
         {
           "method": "ADWIN",
-          "first1": null,
+          "first1": 0,
           "first2": null,
           "first3": null,
-          "SUM": 0,
-          "n_trail": 3
+          "SUM": 1,
+          "n_trail": 5
         },
         {
           "method": "DDM",
           "first1": 0,
           "first2": 0,
           "first3": 0,
-          "SUM": 3,
-          "n_trail": 3
+          "SUM": 5,
+          "n_trail": 5
         },
         {
           "method": "STEPD",
-          "first1": 2,
-          "first2": null,
-          "first3": null,
-          "SUM": 1,
-          "n_trail": 3
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
         },
         {
           "method": "HDDMA",
-          "first1": null,
+          "first1": 0,
           "first2": null,
           "first3": null,
-          "SUM": 0,
-          "n_trail": 3
+          "SUM": 1,
+          "n_trail": 5
         },
         {
           "method": "ECDDWT",
           "first1": 0,
           "first2": 0,
-          "first3": null,
-          "SUM": 2,
-          "n_trail": 3
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
         }
       ],
       "obs_B1": [
@@ -86,173 +86,260 @@
           "first1": 0,
           "first2": 0,
           "first3": 0,
-          "SUM": 12,
-          "n_trail": 36
+          "SUM": 20,
+          "n_trail": 100
         },
         {
           "method": "BOCPD",
-          "first1": 5,
-          "first2": 5,
-          "first3": null,
-          "SUM": 4,
-          "n_trail": 36
-        },
-        {
-          "method": "PageHinkley",
-          "first1": 6,
+          "first1": 0,
           "first2": null,
           "first3": null,
           "SUM": 2,
-          "n_trail": 36
+          "n_trail": 100
+        },
+        {
+          "method": "PageHinkley",
+          "first1": 0,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 100
         },
         {
           "method": "ADWIN",
-          "first1": null,
+          "first1": 11,
           "first2": null,
           "first3": null,
-          "SUM": 0,
-          "n_trail": 36
+          "SUM": 1,
+          "n_trail": 100
         },
         {
           "method": "DDM",
-          "first1": 6,
-          "first2": 6,
-          "first3": 6,
-          "SUM": 30,
-          "n_trail": 36
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 100,
+          "n_trail": 100
         },
         {
           "method": "STEPD",
-          "first1": 25,
-          "first2": 25,
-          "first3": 25,
-          "SUM": 11,
-          "n_trail": 36
+          "first1": 4,
+          "first2": 4,
+          "first3": 4,
+          "SUM": 96,
+          "n_trail": 100
         },
         {
           "method": "HDDMA",
-          "first1": null,
+          "first1": 3,
           "first2": null,
           "first3": null,
-          "SUM": 0,
-          "n_trail": 36
+          "SUM": 1,
+          "n_trail": 100
         },
         {
           "method": "ECDDWT",
-          "first1": 9,
-          "first2": 9,
-          "first3": 9,
-          "SUM": 7,
-          "n_trail": 36
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 98,
+          "n_trail": 100
         }
       ],
       "orf_trail_fires": [
         true,
+        false,
+        false,
         false,
         false
       ]
     },
     "squad": {
       "dataset": "squad",
-      "n": 72,
-      "n_per": 12,
-      "n_batches": 6,
-      "cut_batch": 3,
-      "cut_t": 36,
-      "n_trail_batches": 3,
-      "n_trail_obs": 36,
+      "n": 200,
+      "n_per": 20,
+      "n_batches": 10,
+      "cut_batch": 5,
+      "cut_t": 100,
+      "n_trail_batches": 5,
+      "n_trail_obs": 100,
       "mse_mean_quiet": 0.0,
-      "mse_mean_hop": 0.08333333333333333,
+      "mse_mean_hop": 1.0,
       "batch": [
         {
           "method": "OnlineRFPerm",
-          "first1": 2,
+          "first1": 0,
           "first2": null,
           "first3": null,
           "SUM": 1,
-          "n_trail": 3
+          "n_trail": 5
         },
         {
           "method": "BOCPD",
-          "first1": 1,
-          "first2": 1,
+          "first1": 0,
+          "first2": null,
           "first3": null,
           "SUM": 2,
-          "n_trail": 3
+          "n_trail": 5
         },
         {
           "method": "PageHinkley",
-          "first1": 1,
-          "first2": 1,
+          "first1": 0,
+          "first2": null,
           "first3": null,
-          "SUM": 2,
-          "n_trail": 3
+          "SUM": 1,
+          "n_trail": 5
         },
         {
           "method": "ADWIN",
-          "first1": null,
+          "first1": 0,
           "first2": null,
           "first3": null,
-          "SUM": 0,
-          "n_trail": 3
+          "SUM": 1,
+          "n_trail": 5
         },
         {
           "method": "DDM",
-          "first1": 1,
-          "first2": 1,
-          "first3": null,
-          "SUM": 2,
-          "n_trail": 3
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
         },
         {
           "method": "STEPD",
-          "first1": null,
-          "first2": null,
-          "first3": null,
-          "SUM": 0,
-          "n_trail": 3
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
         },
         {
           "method": "HDDMA",
-          "first1": null,
+          "first1": 0,
           "first2": null,
           "first3": null,
-          "SUM": 0,
-          "n_trail": 3
+          "SUM": 1,
+          "n_trail": 5
         },
         {
           "method": "ECDDWT",
-          "first1": 1,
-          "first2": 1,
-          "first3": null,
-          "SUM": 2,
-          "n_trail": 3
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
         }
       ],
       "obs_B1": [
         {
           "method": "OnlineRFPerm",
-          "first1": 24,
-          "first2": 24,
-          "first3": 24,
-          "SUM": 12,
-          "n_trail": 36
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 20,
+          "n_trail": 100
         },
         {
           "method": "BOCPD",
-          "first1": 19,
-          "first2": 19,
-          "first3": null,
-          "SUM": 5,
-          "n_trail": 36
-        },
-        {
-          "method": "PageHinkley",
-          "first1": 20,
+          "first1": 0,
           "first2": null,
           "first3": null,
           "SUM": 2,
-          "n_trail": 36
+          "n_trail": 100
+        },
+        {
+          "method": "PageHinkley",
+          "first1": 0,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 100
+        },
+        {
+          "method": "ADWIN",
+          "first1": 11,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 100
+        },
+        {
+          "method": "DDM",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 100,
+          "n_trail": 100
+        },
+        {
+          "method": "STEPD",
+          "first1": 4,
+          "first2": 4,
+          "first3": 4,
+          "SUM": 96,
+          "n_trail": 100
+        },
+        {
+          "method": "HDDMA",
+          "first1": 3,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 100
+        },
+        {
+          "method": "ECDDWT",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 98,
+          "n_trail": 100
+        }
+      ],
+      "orf_trail_fires": [
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    "hotpotqa": {
+      "dataset": "hotpotqa",
+      "n": 200,
+      "n_per": 20,
+      "n_batches": 10,
+      "cut_batch": 5,
+      "cut_t": 100,
+      "n_trail_batches": 5,
+      "n_trail_obs": 100,
+      "mse_mean_quiet": 0.0,
+      "mse_mean_hop": 0.0,
+      "batch": [
+        {
+          "method": "OnlineRFPerm",
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "SUM": 0,
+          "n_trail": 5
+        },
+        {
+          "method": "BOCPD",
+          "first1": 4,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 5
+        },
+        {
+          "method": "PageHinkley",
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "SUM": 0,
+          "n_trail": 5
         },
         {
           "method": "ADWIN",
@@ -260,23 +347,23 @@
           "first2": null,
           "first3": null,
           "SUM": 0,
-          "n_trail": 36
+          "n_trail": 5
         },
         {
           "method": "DDM",
-          "first1": 20,
-          "first2": 20,
-          "first3": 20,
-          "SUM": 16,
-          "n_trail": 36
-        },
-        {
-          "method": "STEPD",
           "first1": null,
           "first2": null,
           "first3": null,
           "SUM": 0,
-          "n_trail": 36
+          "n_trail": 5
+        },
+        {
+          "method": "STEPD",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
         },
         {
           "method": "HDDMA",
@@ -284,21 +371,240 @@
           "first2": null,
           "first3": null,
           "SUM": 0,
-          "n_trail": 36
+          "n_trail": 5
         },
         {
           "method": "ECDDWT",
-          "first1": 20,
+          "first1": null,
           "first2": null,
           "first3": null,
-          "SUM": 2,
-          "n_trail": 36
+          "SUM": 0,
+          "n_trail": 5
+        }
+      ],
+      "obs_B1": [
+        {
+          "method": "OnlineRFPerm",
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "SUM": 0,
+          "n_trail": 100
+        },
+        {
+          "method": "BOCPD",
+          "first1": 98,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 100
+        },
+        {
+          "method": "PageHinkley",
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "SUM": 0,
+          "n_trail": 100
+        },
+        {
+          "method": "ADWIN",
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "SUM": 0,
+          "n_trail": 100
+        },
+        {
+          "method": "DDM",
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "SUM": 0,
+          "n_trail": 100
+        },
+        {
+          "method": "STEPD",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 100,
+          "n_trail": 100
+        },
+        {
+          "method": "HDDMA",
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "SUM": 0,
+          "n_trail": 100
+        },
+        {
+          "method": "ECDDWT",
+          "first1": null,
+          "first2": null,
+          "first3": null,
+          "SUM": 0,
+          "n_trail": 100
         }
       ],
       "orf_trail_fires": [
         false,
         false,
-        true
+        false,
+        false,
+        false
+      ]
+    },
+    "truthfulqa": {
+      "dataset": "truthfulqa",
+      "n": 200,
+      "n_per": 20,
+      "n_batches": 10,
+      "cut_batch": 5,
+      "cut_t": 100,
+      "n_trail_batches": 5,
+      "n_trail_obs": 100,
+      "mse_mean_quiet": 0.0,
+      "mse_mean_hop": 0.98,
+      "batch": [
+        {
+          "method": "OnlineRFPerm",
+          "first1": 0,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 5
+        },
+        {
+          "method": "BOCPD",
+          "first1": 0,
+          "first2": null,
+          "first3": null,
+          "SUM": 2,
+          "n_trail": 5
+        },
+        {
+          "method": "PageHinkley",
+          "first1": 0,
+          "first2": 0,
+          "first3": null,
+          "SUM": 2,
+          "n_trail": 5
+        },
+        {
+          "method": "ADWIN",
+          "first1": 0,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 5
+        },
+        {
+          "method": "DDM",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
+        },
+        {
+          "method": "STEPD",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
+        },
+        {
+          "method": "HDDMA",
+          "first1": 0,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 5
+        },
+        {
+          "method": "ECDDWT",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 5,
+          "n_trail": 5
+        }
+      ],
+      "obs_B1": [
+        {
+          "method": "OnlineRFPerm",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 20,
+          "n_trail": 100
+        },
+        {
+          "method": "BOCPD",
+          "first1": 0,
+          "first2": null,
+          "first3": null,
+          "SUM": 2,
+          "n_trail": 100
+        },
+        {
+          "method": "PageHinkley",
+          "first1": 0,
+          "first2": null,
+          "first3": null,
+          "SUM": 3,
+          "n_trail": 100
+        },
+        {
+          "method": "ADWIN",
+          "first1": 11,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 100
+        },
+        {
+          "method": "DDM",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 100,
+          "n_trail": 100
+        },
+        {
+          "method": "STEPD",
+          "first1": 4,
+          "first2": 4,
+          "first3": 4,
+          "SUM": 96,
+          "n_trail": 100
+        },
+        {
+          "method": "HDDMA",
+          "first1": 3,
+          "first2": null,
+          "first3": null,
+          "SUM": 1,
+          "n_trail": 100
+        },
+        {
+          "method": "ECDDWT",
+          "first1": 0,
+          "first2": 0,
+          "first3": 0,
+          "SUM": 100,
+          "n_trail": 100
+        }
+      ],
+      "orf_trail_fires": [
+        true,
+        false,
+        false,
+        false,
+        false
       ]
     }
   }

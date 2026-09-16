@@ -1,69 +1,34 @@
 \documentclass[11pt]{article}
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=0.8in]{geometry}
 \usepackage{booktabs,amsmath}
-\title{OnlineRFPerm vs OOB baselines on LLM infer streams\\(manuscript first$_k$ on trail batches)}
-\author{CFPerm benchmark}
+\title{All-method first$_k$ on four LLM infer streams}
+\author{CFPerm}
 \date{\today}
 \begin{document}
 \maketitle
 
-\paragraph{Protocol.}
-Quiet reference freezes the probe; trail $=$ batches after cut. \texttt{first}$_k$ $=$ first \emph{trail batch index} at which $k$ consecutive fires begin (0 $=$ first batch after cut). Same counting rule as PointCloud Table~1/2 (\texttt{first\_k\_consecutive}). HaluEval/SQuAD: $n_{\mathrm{per}}=12$, cut batch$=3$ (cut $t=36$).
+Trail-batch \texttt{first}$_k$ after cut ($n_{\mathrm{per}}=20$, cut$=5$, $n_{\mathrm{ref}}=100$). Index 0 $=$ first batch after cut; --- $=$ never.
 
 \begin{table}[h]
 \centering
-\caption{Table 1 --- First rejection ($k=1$) on the trail (batch index).}
-\begin{tabular}{lrr}
-\toprule Method & halueval & squad \\
-\midrule
-OnlineRFPerm & 0 & 2 \\
-BOCPD & 0 & 1 \\
-PageHinkley & 0 & 1 \\
-ADWIN & --- & --- \\
-DDM & 0 & 1 \\
-STEPD & 2 & --- \\
-HDDMA & --- & --- \\
-ECDDWT & 0 & 1 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[h]
-\centering
-\caption{Table 2 --- Sustained onsets: $k=2$ / $k=3$ consecutive trail batches.}
-\begin{tabular}{lrrrr}
+\small
+\caption{All methods: first$_k$ consecutive fires on trail batches.}
+\begin{tabular}{lrrrrrrrrrrrr}
 \toprule
-Method & halueval $k=2$ & halueval $k=3$ & squad $k=2$ & squad $k=3$ \\
+Method & \multicolumn{3}{c}{halueval} & \multicolumn{3}{c}{squad} & \multicolumn{3}{c}{hotpotqa} & \multicolumn{3}{c}{truthfulqa} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(lr){11-13}
+ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ & $k{=}1$ & $k{=}2$ & $k{=}3$ \\
 \midrule
-OnlineRFPerm & --- & --- & --- & --- \\
-BOCPD & --- & --- & 1 & --- \\
-PageHinkley & 0 & --- & 1 & --- \\
-ADWIN & --- & --- & --- & --- \\
-DDM & 0 & 0 & 1 & --- \\
-STEPD & --- & --- & --- & --- \\
-HDDMA & --- & --- & --- & --- \\
-ECDDWT & 0 & --- & 1 & --- \\
+OnlineRFPerm & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
+BOCPD & 0 & --- & --- & 0 & --- & --- & 4 & --- & --- & 0 & --- & --- \\
+PageHinkley & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & 0 & --- \\
+ADWIN & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
+DDM & 0 & 0 & 0 & 0 & 0 & 0 & --- & --- & --- & 0 & 0 & 0 \\
+STEPD & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+HDDMA & 0 & --- & --- & 0 & --- & --- & --- & --- & --- & 0 & --- & --- \\
+ECDDWT & 0 & 0 & 0 & 0 & 0 & 0 & --- & --- & --- & 0 & 0 & 0 \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\paragraph{Python logic.}
-\begin{verbatim}
-def first_k_consecutive(det, k):
-    # det: bool array on the TRAIL only (after cut)
-    # return first i where det[i:i+k] are all True
-    det = np.asarray(det, dtype=bool)
-    for i in range(len(det) - k + 1):
-        if det[i:i+k].all():
-            return i   # trail batch index
-    return None
-
-first1 = first_k_consecutive(trail_fires, 1)
-first2 = first_k_consecutive(trail_fires, 2)  # 头一回连续两个 fire
-first3 = first_k_consecutive(trail_fires, 3)
-\end{verbatim}
-
-\paragraph{Takeaway.}
-Index 0 is the first hop batch. ``---'' $=$ never $k$ consecutive fires on the trail. Baselines follow \texttt{onlinePermOOB\_algo.py} on the frozen-probe error stream.
 
 \end{document}
