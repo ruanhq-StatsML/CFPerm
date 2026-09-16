@@ -70,7 +70,42 @@ class HybridRetrievalXyTests(unittest.TestCase):
         self.assertEqual({int(r["T"]) for r in rows}, {0, 1})
         self.assertEqual({r["stream"] for r in rows}, {"sparse", "dense"})
 
-    def test_hop_changes_y_after_cut(self):
+    def test_pair_shape_is_query_by_ten_paras(self):
+        rows = self._rows("xy_hotpot_pairs.csv")
+        self.assertEqual(len(rows), 12000)
+        batches = [int(r["batch"]) for r in rows]
+        self.assertEqual(min(batches), 0)
+        self.assertEqual(max(batches), 1199)
+        n_per = sum(1 for b in batches if b == 0)
+        self.assertEqual(n_per, 10)
+        for c in (
+            "x_bm25",
+            "x_dense",
+            "x_rrf",
+            "x_rank_sp",
+            "x_rank_de",
+            "x_q_overlap",
+            "x_title_seed",
+            "x_title_deg",
+            "x_slot",
+        ):
+            self.assertIn(c, rows[0])
+        ys = [int(r["y"]) for r in rows[:10]]
+        self.assertEqual(sum(ys), 2)
+        low = {k.lower() for k in rows[0]}
+        for bad in LEAK:
+            self.assertNotIn(bad, low)
+
+    def test_pair_hop_keeps_y_changes_dense(self):
+        nat = self._rows("xy_hotpot_pairs.csv")
+        hop = self._rows("xy_hotpot_pairs_hop.csv")
+        self.assertEqual([r["y"] for r in nat], [r["y"] for r in hop])
+        later = [
+            (a["x_dense"], b["x_dense"])
+            for a, b in zip(nat, hop)
+            if int(a["batch"]) >= 320
+        ]
+        self.assertTrue(any(x != y for x, y in later))
         nat = self._rows("xy_hotpot_hybrid.csv")
         hop = self._rows("xy_hotpot_hybrid_hop.csv")
         pre_n = [int(a["y"]) for a, b in zip(nat, hop) if int(a["batch"]) < 4]

@@ -33,6 +33,19 @@
     "seed_frac",
     "lcc_frac"
   ],
+  "n_cand": 10,
+  "pair_x": [
+    "bm25",
+    "dense",
+    "rrf",
+    "rank_sp",
+    "rank_de",
+    "q_overlap",
+    "title_seed",
+    "title_deg",
+    "slot"
+  ],
+  "y_pair": "1 iff this of the 10 wiki titles is a supporting fact",
   "files": {
     "xy_hotpot_hybrid.csv": {
       "name": "fused hybrid native",
@@ -51,6 +64,18 @@
       "n": 1200,
       "y_pass_rate": 0.5558333333333333,
       "n_batches": 15
+    },
+    "xy_hotpot_pairs.csv": {
+      "name": "query\u00d710 para pairs",
+      "n": 12000,
+      "y_pass_rate": 0.2,
+      "n_batches": 1200
+    },
+    "xy_hotpot_pairs_hop.csv": {
+      "name": "pairs, dense flipped after cut queries",
+      "n": 12000,
+      "y_pass_rate": 0.2,
+      "n_batches": 1200
     },
     "xy_hotpot_two_stream.csv": {
       "n": 2400,

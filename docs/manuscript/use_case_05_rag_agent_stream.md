@@ -76,9 +76,7 @@ A hop of \(P(Y\mid X)\) is a graph pack / community recompute / prompt-pack swap
 
 Cheapest refresh first: fusion weights / \(k\) → reranker → re-embed corpus → generator.
 
-**Hotpot formulation (prototype, learn this table).** Candidate pool = the example’s ~10 paras. Sparse = BM25. Dense = char-ngram hashing cosine (second channel, not a GPU embedder). Fuse = RRF, \(k=5\). \(Y=1\) iff every gold supporting title is in the fused top-5. \(X\) is query geometry + channel agreement (`x_js_overlap`, `x_rank_corr`, margins, RRF mass). Gold hit flags are **not** \(X\); the question text is not stored.
-
-Rebuild: `python3 scripts/build_hybrid_retrieval_xy.py`. Files under `results/manuscript/hybrid_retrieval/`. Hop overlay flips dense scores after `batch>=4` (embedding-pack swap). Two-stream CFPerm: `T=0` sparse-only usable, `T=1` dense-only usable, same \(X\).
+**Hotpot formulation (prototype, this is the 10-para shape).** Each distractor example is already `(1 query × 10 wiki paras)`. Scores are length-10 vectors (BM25, char-ngram cosine, RRF). Pair table: 10 rows, \(Y_j=1\) iff title \(j\) is supporting; `batch` = query id. Flattened file `xy_hotpot_pairs.csv` (\(1200\times 10\)). Collapsed one-row-per-query fused \(Y\) is optional. Rebuild: `PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py` then `python3 scripts/build_hybrid_retrieval_xy.py`.
 
 ---
 

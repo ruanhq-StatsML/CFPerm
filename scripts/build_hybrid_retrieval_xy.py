@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """Formulate hybrid-retrieval and Graph-RAG prediction tables from HotpotQA.
 
-One query → one row. No question text in the CSV.
+Native shape is one query × 10 wiki paras (Hotpot distractor pool), not one
+row per question. Pair table: Y_j = 1 iff title j is a supporting fact.
+Collapsed fused Y is an optional readout of that ranking.
+
+Questions and paragraph text are not stored.
+
+Usage::
+
+    PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py
+    python3 scripts/build_hybrid_retrieval_xy.py
+"""
 
 Hybrid serving (what production logs):
   sparse = BM25 on the distractor candidate pool
@@ -53,7 +63,20 @@ K_FUSE = 5
 RRF_K = 60
 N_ROWS = 1200
 N_PER = 80
+N_CAND = 10  # Hotpot distractor pool: one query × 10 wiki paras
 CUT_BATCH = 4
+PAIR_DIMS = [
+    "bm25",
+    "dense",
+    "rrf",
+    "rank_sp",
+    "rank_de",
+    "q_overlap",
+    "title_seed",
+    "title_deg",
+    "slot",
+]
+PAIR_COLS = [f"x_{d}" for d in PAIR_DIMS]
 
 HYBRID_DIMS = [
     "q_toks",
@@ -208,7 +231,99 @@ def title_graph(titles: list[str]):
         "mean_deg": float(deg.mean()) if n else 0.0,
         "n_cc": float(n_cc),
         "lcc_frac": float(lcc / n) if n else 0.0,
+        "deg": deg,
     }
+
+
+def pad_pool(titles, docs, n: int = N_CAND):
+    """Rectangular pool: (n_cand,) titles/docs. Truncate or pad empties."""
+    titles = [str(t) for t in list(titles)[:n]]
+    docs = [str(d) for d in list(docs)[:n]]
+    while len(titles) < n:
+        titles.append("")
+        docs.append("")
+    return titles, docs
+
+
+def zscore(x: np.ndarray) -> np.ndarray:
+    x = np.asarray(x, dtype=float)
+    s = float(x.std())
+    if s < 1e-12:
+        return np.zeros_like(x)
+    return (x - float(x.mean())) / s
+
+
+def inv_rank(scores: np.ndarray) -> np.ndarray:
+    order = np.argsort(-scores, kind="mergesort")
+    ranks = np.empty(len(scores), dtype=float)
+    ranks[order] = np.arange(1, len(scores) + 1)
+    return 1.0 / ranks
+
+
+def query_pool_tensors(question, context, supporting, *, fracture_dense: bool = False):
+    """The actual serving tensor: one query × 10 wiki paras.
+
+    Returns arrays all length ``N_CAND``::
+
+        titles (10,)   docs (10,)
+        sparse (10,)   dense (10,)   rrf (10,)
+        y_pair (10,)   1 iff this title is a supporting fact
+    """
+    titles, docs = pad_pool(
+        context["title"],
+        [" ".join(s) for s in context["sentences"]],
+        N_CAND,
+    )
+    gold = set(supporting["title"])
+    sp = bm25_scores(question, docs)
+    de = dense_scores(question, docs)
+    if fracture_dense:
+        de = -de
+    rrf = rrf_from_scores(sp) + rrf_from_scores(de)
+    y = np.asarray([1 if t in gold and t else 0 for t in titles], dtype=int)
+    return {
+        "titles": titles,
+        "docs": docs,
+        "sparse": sp,
+        "dense": de,
+        "rrf": rrf,
+        "y_pair": y,
+        "n_cand": N_CAND,
+        "n_gold": int(y.sum()),
+    }
+
+
+def pair_rows_for_query(question, context, supporting, *, batch: int, fracture_dense: bool = False):
+    """10 rows: slot j is wiki para j. Y = supporting title, not fused Recall."""
+    ten = query_pool_tensors(question, context, supporting, fracture_dense=fracture_dense)
+    titles = ten["titles"]
+    docs = ten["docs"]
+    sp, de, rrf = ten["sparse"], ten["dense"], ten["rrf"]
+    seeds = query_seeds(question, titles)
+    deg = title_graph(titles)["deg"]
+    qset = set(tokenize(question))
+    bm25_z, dense_z, rrf_z = zscore(sp), zscore(de), zscore(rrf)
+    rsp, rde = inv_rank(sp), inv_rank(de)
+    rows = []
+    for j in range(N_CAND):
+        dt = set(tokenize(docs[j]))
+        ov = len(qset & dt) / max(len(qset | dt), 1) if docs[j] else 0.0
+        rows.append(
+            {
+                "y": int(ten["y_pair"][j]),
+                "batch": int(batch),
+                "x_bm25": float(bm25_z[j]),
+                "x_dense": float(dense_z[j]),
+                "x_rrf": float(rrf_z[j]),
+                "x_rank_sp": float(rsp[j]),
+                "x_rank_de": float(rde[j]),
+                "x_q_overlap": float(ov),
+                "x_title_seed": float(seeds[j]),
+                "x_title_deg": float(deg[j]) / 6.0,
+                "x_slot": (j + 1) / N_CAND,
+            }
+        )
+    return rows, ten
 
 
 def query_seeds(query: str, titles: list[str]) -> np.ndarray:
@@ -392,10 +507,20 @@ def main() -> None:
     q, sf, ctx = load_hotpot(N_ROWS)
     native = build_regime(q, sf, ctx, hop=False)
     hop = build_regime(q, sf, ctx, hop=True)
+    pairs, pairs_hop = [], []
+    for i, (qi, sfi, ctxi) in enumerate(zip(q, sf, ctx)):
+        pr, _ = pair_rows_for_query(qi, ctxi, sfi, batch=i, fracture_dense=False)
+        ph, _ = pair_rows_for_query(
+            qi, ctxi, sfi, batch=i, fracture_dense=bool(i // N_PER >= CUT_BATCH)
+        )
+        pairs.extend(pr)
+        pairs_hop.extend(ph)
 
     write_xy(OUT / "xy_hotpot_hybrid.csv", native["fused"], HYBRID_COLS)
     write_xy(OUT / "xy_hotpot_hybrid_hop.csv", hop["fused"], HYBRID_COLS)
     write_xy(OUT / "xy_hotpot_graph.csv", native["graph"], HYBRID_COLS + GRAPH_COLS)
+    write_xy(OUT / "xy_hotpot_pairs.csv", pairs, PAIR_COLS)
+    write_xy(OUT / "xy_hotpot_pairs_hop.csv", pairs_hop, PAIR_COLS)
     write_two_stream(
         OUT / "xy_hotpot_two_stream.csv",
         native["sparse"],
@@ -419,10 +544,15 @@ def main() -> None:
         "hop": f"dense scores flipped after batch>={CUT_BATCH} (embedding-pack swap)",
         "hybrid_x": HYBRID_DIMS,
         "graph_x": GRAPH_DIMS,
+        "n_cand": N_CAND,
+        "pair_x": PAIR_DIMS,
+        "y_pair": "1 iff this of the 10 wiki titles is a supporting fact",
         "files": {
             "xy_hotpot_hybrid.csv": summarize("fused hybrid native", native["fused"]),
             "xy_hotpot_hybrid_hop.csv": summarize("fused hybrid dense-fracture", hop["fused"]),
             "xy_hotpot_graph.csv": summarize("fused Y + title-graph X", native["graph"]),
+            "xy_hotpot_pairs.csv": summarize("query×10 para pairs", pairs),
+            "xy_hotpot_pairs_hop.csv": summarize("pairs, dense flipped after cut queries", pairs_hop),
             "xy_hotpot_two_stream.csv": {
                 "n": len(native["sparse"]) + len(native["dense"]),
                 "T": "0=sparse-only usable, 1=dense-only usable",

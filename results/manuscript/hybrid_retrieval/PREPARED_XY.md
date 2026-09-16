@@ -1,36 +1,54 @@
 # Prediction table — hybrid retrieval / Graph-RAG
 
-HotpotQA distractor validation. **Questions are not stored.** One row per query.
+HotpotQA distractor validation. **Questions and wiki text are not stored.**
 
-## How the row is made
+## Native shape: one query × 10 wiki paras
 
-Candidate pool is the example’s ~10 Wikipedia paras (already in Hotpot, no separate index).
+Almost every distractor example is already a rectangular pool of 10 titles/paragraphs
+and exactly 2 supporting titles. That tensor is the serving object::
 
-1. **Sparse channel:** BM25(query, para text).
-2. **Dense channel:** char-ngram hashing cosine (a second view, not a GPU embedder).
-3. **Fuse:** RRF, \(k_s=k_d=k_{\mathrm{fuse}}=5\).
-4. **\(Y_{\mathrm{fused}}=1\)** iff every gold supporting **title** is in the fused top-5. Not BM25 Recall, not EM.
-5. **\(X\):** query geometry + how much the two channels agree. **Gold hit flags are not \(X\).**
+    titles, docs          (10,)
+    sparse BM25           (10,)
+    dense char-ngram cos  (10,)
+    RRF                   (10,)
+    y_pair                (10,)   1 iff this title is supporting
+    X_pair                (10, 9) channel scores, not gold flags
+    batch                 query id, repeated 10 times
 
-Graph-RAG extra \(X\) on the same \(Y\): titles = nodes, shared-token edges, query-overlapping titles = seeds.
+`xy_hotpot_pairs.csv` is this tensor flattened: **1200 queries × 10 rows**.
+Print three examples (no paragraph text):
 
-Hop overlay (`xy_hotpot_hybrid_hop.csv`): after `batch>=4`, flip the dense scores (embedding-pack swap). Pre-cut rows match native.
+```bash
+PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py
+```
+
+## Collapsed query-level table (optional readout)
+
+Same pool, one row per query: \(Y=1\) iff **all** gold titles landed in fused top-5.
+That is a collapse of the (10,) ranking, not the native shape.
+
+Graph-RAG extra \(X\) on the collapsed \(Y\): titles = nodes, shared-token edges, query-overlapping titles = seeds.
+
+Hop: after query `i // 80 >= 4`, flip dense scores (embedding-pack swap). Pair \(Y\) stays the gold mask; pair \(X\) moves. Collapsed fused \(Y\) can change.
 
 ## Files
 
-| File | n | Y | X |
+| File | n | shape | Y |
 |---|---:|---|---|
-| `xy_hotpot_hybrid.csv` | 1200 | fused gold-title coverage | hybrid geometry |
-| `xy_hotpot_hybrid_hop.csv` | 1200 | same, dense flipped after cut | recomputed after the flip |
-| `xy_hotpot_graph.csv` | 1200 | same fused Y | hybrid + title-graph geometry |
-| `xy_hotpot_two_stream.csv` | 2400 | `T=0` sparse-only usable, `T=1` dense-only usable | same hybrid X |
+| `xy_hotpot_pairs.csv` | 12000 | query × 10 paras | this para is supporting |
+| `xy_hotpot_pairs_hop.csv` | 12000 | same, dense flipped after cut | same gold mask |
+| `xy_hotpot_hybrid.csv` | 1200 | 1 row / query | all gold titles in fused top-5 |
+| `xy_hotpot_hybrid_hop.csv` | 1200 | collapsed + dense fracture | fused coverage |
+| `xy_hotpot_graph.csv` | 1200 | collapsed + title-graph X | fused coverage |
+| `xy_hotpot_two_stream.csv` | 2400 | `T=0` sparse-only, `T=1` dense-only | channel usable |
 
-Schema of `xy_hotpot_hybrid.csv`:
+Pair schema:
 
-`y,batch,x_q_toks,x_q_chars,x_qmark,x_q_ents,x_n_cand,x_js_overlap,x_rank_corr,x_sparse_margin,x_dense_margin,x_rrf_top1_mass,x_fuse_uniq,x_mean_q_overlap,x_ks,x_kd`
+`y,batch,x_bm25,x_dense,x_rrf,x_rank_sp,x_rank_de,x_q_overlap,x_title_seed,x_title_deg,x_slot`
 
-Rebuild (parquet under `data/hf_cache/retrieval/`, not committed):
+Rebuild:
 
 ```bash
+PYTHONPATH=. python3 scripts/prototype_hotpot_10para_shape.py
 python3 scripts/build_hybrid_retrieval_xy.py
 ```
