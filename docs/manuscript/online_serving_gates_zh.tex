@@ -8,13 +8,17 @@
 幻觉率、拒绝率、单路 Recall、任务最终成功都不是 \(Y\)。
 
 \paragraph{LLM 推理逻辑。}
-产品上就是连续到达的一跳：
-观察当前包 \(\to\) 模型走下一步（写回复 / 选工具 / 从子图引用）\(\to\) 写下这一跳的 \(Y\)。
-\(X\) 是这一跳的 serving 几何，不是原文。
-\(Y\) 是这一跳合不合法（审核：过/不过；推理：路径/工具/不 loop；图包：引用落在边上）。
-冻住的 \(f_{\mathrm{ref}}\) 只预测 \(P(Y\mid X)\)。
-误差相对参考窗已经极端就 fire：当前推理包不当金标，换最便宜的包，整池 reset。
-没有别的对象。
+四个产品 use-case 共用同一条连续到达的 hop，没有别的对象。
+\begin{enumerate}\itemsep=2pt
+\item 观察当前 serving 包
+      （审核：政策/judge；agent：工具 schema；Graph-RAG：图包；混合检索：融合索引）。
+\item 模型走下一步：写回复 / 选工具 / 从子图引用 / 融合两路给答案。
+\item 写下这一跳的 \(Y\)（见下表）。\(X\) 是这一跳的 serving 几何，不是原文。
+\item 冻住的 \(f_{\mathrm{ref}}\) 只预测 \(P(Y\mid X)\)。
+\item \(T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}\)，秩 \(p\)，在线 FDR。
+\end{enumerate}
+Quiet：这条轨迹当金标。
+Fire：当前推理包不当金标；换最便宜的包；整池 reset。
 
 \begin{table}[t]
 \centering

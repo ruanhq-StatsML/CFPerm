@@ -3,7 +3,19 @@
 The object is whether a frozen serving map \(P(Y\mid X)\) is still the same object.
 What we actually run in continuous time is **moderation** and **agent reasoning**.
 Graph-RAG and hybrid retrieval are ordinary serving maps under the same gates.
-These are product use-cases. The LLM loop is one hop: observe the pack → take the next step → write \(Y\) → frozen \(f_{\mathrm{ref}}\) scores \(P(Y\mid X)\). Fire if that map has already moved. Nothing else.
+These are product use-cases. One hop:
+
+```
+1. observe the current serving pack
+2. model takes the next step (reply / tool / cite subgraph / fuse channels)
+3. write Y for that hop   (X is serving geometry, not raw text)
+4. frozen f_ref predicts P(Y | X)
+5. T = MSE - E_ref → rank p → online FDR
+   quiet: this trajectory is gold
+   fire:  current pack is not gold → cheapest swap → reset
+```
+
+Nothing else.
 
 Drop-in LaTeX: `docs/manuscript/online_serving_gates.tex`.
 Chinese: `online_serving_gates_zh.md`, `online_serving_gates_zh.html`.

@@ -27,6 +27,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
 h1 { font-size: 42px; line-height: 1.2; margin: 0 0 16px; color: var(--accent); }
 h2 { font-size: 32px; line-height: 1.25; margin: 0 0 20px; color: var(--accent); }
 p, li { font-size: 22px; line-height: 1.45; color: var(--ink); }
+ol { margin: 4px 0 0; padding-left: 1.35em; }
+.box li { margin: 8px 0; }
 .lead { font-size: 26px; max-width: 42em; }
 .muted { color: var(--muted); }
 .kicker { letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
@@ -63,13 +65,22 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
 
 <section class="slide" data-title="推理逻辑">
   <div class="kicker">产品 use-case</div>
-  <h2>LLM 就是连续到达的一跳</h2>
+  <h2>LLM 推理逻辑：连续到达的一跳</h2>
   <div class="box">
-    <p>观察当前包 → 走下一步（写回复 / 选工具 / 从子图引用）→ 写下这一跳的 Y。</p>
-    <p>冻住的 f<sub>ref</sub> 只预测 P(Y | X)。误差已经极端就 fire：当前推理包不当金标，换包，reset。</p>
-    <p class="small">没有别的对象。X 是 serving 几何，不是原文。</p>
+    <ol>
+      <li>观察当前 serving 包（政策 / 工具 schema / 图包 / 融合索引）。</li>
+      <li>模型走下一步：写回复 / 选工具 / 从子图引用 / 融合两路给答案。</li>
+      <li>写下这一跳的 Y。X 是 serving 几何，不是原文。</li>
+      <li>冻住的 f<sub>ref</sub> 只预测 P(Y | X)。</li>
+      <li>T = MSE − E<sub>ref</sub> → 秩 p → 在线 FDR。<br>
+        <b style="color:var(--quiet)">quiet</b> 当金标；
+        <b style="color:var(--fire)">fire</b> 当前包不当金标，换最便宜的包，reset。</li>
+    </ol>
+    <p class="small">四个产品共用这一条 hop。没有别的对象。</p>
   </div>
 </section>
+
+<section class="slide" data-title="对象">
   <div class="kicker">对象</div>
   <h2>冻住的地图还在不在</h2>
   <p class="lead">不是归因，不是生成模型，也不是把旁路指标写成 Y。</p>
