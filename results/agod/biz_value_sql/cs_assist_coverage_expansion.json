@@ -1,0 +1,32 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "scenario":"cover_50_current",
+    "target_coverage_pct":50.0,
+    "coverage_now_pct":50.0,
+    "projected_gross_yen":16656.0,
+    "projected_net_yen":16590.0,
+    "incremental_gross_vs_now":0.0,
+    "full_coverage_gross_yen":33312.0
+  },
+  {
+    "surface_id":"shop_assistant",
+    "scenario":"cover_75",
+    "target_coverage_pct":75.0,
+    "coverage_now_pct":50.0,
+    "projected_gross_yen":24984.0,
+    "projected_net_yen":24885.0,
+    "incremental_gross_vs_now":8328.0,
+    "full_coverage_gross_yen":33312.0
+  },
+  {
+    "surface_id":"shop_assistant",
+    "scenario":"cover_100_full",
+    "target_coverage_pct":100.0,
+    "coverage_now_pct":50.0,
+    "projected_gross_yen":33312.0,
+    "projected_net_yen":33180.0,
+    "incremental_gross_vs_now":16656.0,
+    "full_coverage_gross_yen":33312.0
+  }
+]

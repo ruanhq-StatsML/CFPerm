@@ -1,0 +1,347 @@
+{
+  "stance": "style + graph first unify into feature dimensions, then L1\u2192L2",
+  "source": "synth",
+  "seed": 0,
+  "catalog": {
+    "graph_dims": [
+      "merchant",
+      "author",
+      "product",
+      "order"
+    ],
+    "llm_alias": {
+      "merchant": "rag_retrieval",
+      "author": "style_register",
+      "product": "text_payload",
+      "order": "agent_path"
+    },
+    "style_subfamilies": {
+      "length": [
+        "tok_len",
+        "char_len",
+        "avg_word"
+      ],
+      "punct": [
+        "qmark",
+        "bang",
+        "newlines"
+      ],
+      "register": [
+        "hedge",
+        "formal",
+        "first_person",
+        "upper_ratio"
+      ]
+    }
+  },
+  "style_dims": {
+    "rf_domain_auc": 1.0,
+    "rf_mass": {
+      "length": 0.3749999999996251,
+      "punct": 0.074999999999925,
+      "register": 0.54999999999945
+    },
+    "logo_share": {
+      "length": 0.0,
+      "punct": 0.0,
+      "register": 0.0
+    },
+    "logo": {
+      "length": {
+        "delta": 0.0,
+        "R_minus": 0.0
+      },
+      "punct": {
+        "delta": 0.0,
+        "R_minus": 0.0
+      },
+      "register": {
+        "delta": 0.0,
+        "R_minus": 0.0
+      }
+    },
+    "po_risk": 0.0,
+    "top_dims": [
+      "register",
+      "length"
+    ],
+    "within_dim": {
+      "register": [
+        {
+          "rank": 1,
+          "name": "formal",
+          "vimp": 0.25
+        },
+        {
+          "rank": 2,
+          "name": "first_person",
+          "vimp": 0.15
+        },
+        {
+          "rank": 3,
+          "name": "hedge",
+          "vimp": 0.075
+        },
+        {
+          "rank": 4,
+          "name": "upper_ratio",
+          "vimp": 0.075
+        }
+      ],
+      "length": [
+        {
+          "rank": 1,
+          "name": "avg_word",
+          "vimp": 0.15
+        },
+        {
+          "rank": 2,
+          "name": "char_len",
+          "vimp": 0.125
+        },
+        {
+          "rank": 3,
+          "name": "tok_len",
+          "vimp": 0.1
+        }
+      ]
+    },
+    "actions": [
+      "\u53ea\u5237\u65b0\u7ef4\u5ea6 register",
+      "\u53ea\u5237\u65b0\u7ef4\u5ea6 length"
+    ],
+    "meta": {
+      "board": "style_as_feature_dims",
+      "ledger": "CTR/\u54c1\u724c\u53e6\u8d26"
+    },
+    "text_metric_shifts": [
+      {
+        "metric": "bang",
+        "mean_pre": 0.6,
+        "mean_post": 0.0,
+        "delta": -0.6,
+        "abs_delta": 0.6
+      },
+      {
+        "metric": "formal",
+        "mean_pre": 0.0,
+        "mean_post": 0.4,
+        "delta": 0.4,
+        "abs_delta": 0.4
+      },
+      {
+        "metric": "hedge",
+        "mean_pre": 0.39999999999999997,
+        "mean_post": 0.0,
+        "delta": -0.39999999999999997,
+        "abs_delta": 0.39999999999999997
+      },
+      {
+        "metric": "avg_word",
+        "mean_pre": 0.35999999999999993,
+        "mean_post": 0.5777777777777776,
+        "delta": 0.21777777777777768,
+        "abs_delta": 0.21777777777777768
+      },
+      {
+        "metric": "first_person",
+        "mean_pre": 0.0,
+        "mean_post": 0.1,
+        "delta": 0.1,
+        "abs_delta": 0.1
+      },
+      {
+        "metric": "char_len",
+        "mean_pre": 0.035791666666666666,
+        "mean_post": 0.08125000000000002,
+        "delta": 0.04545833333333335,
+        "abs_delta": 0.04545833333333335
+      }
+    ]
+  },
+  "graph_dims": {
+    "rf_domain_auc": 1.0,
+    "rf_mass": {
+      "rag_retrieval": 0.10732726148939956,
+      "style_register": 0.20514532624367643,
+      "text_payload": 0.04977904629528641,
+      "agent_path": 0.6377483659706374
+    },
+    "logo_share": {
+      "rag_retrieval": 0.36388518340124837,
+      "style_register": 0.3650886991605228,
+      "text_payload": 0.271025666857788,
+      "agent_path": 0.0
+    },
+    "logo": {
+      "rag_retrieval": {
+        "delta": 8.075920532206326e-07,
+        "R_minus": 3.64665991621972e-06
+      },
+      "style_register": {
+        "delta": 8.10263087402434e-07,
+        "R_minus": 3.6439888820379186e-06
+      },
+      "text_payload": {
+        "delta": 6.015033993066431e-07,
+        "R_minus": 3.8527485701337094e-06
+      },
+      "agent_path": {
+        "delta": -0.0011755362751147158,
+        "R_minus": 0.0011799905270841562
+      }
+    },
+    "po_risk": 4.4542519694403525e-06,
+    "top_dims": [
+      "style_register",
+      "rag_retrieval"
+    ],
+    "within_dim": {
+      "style_register": [
+        {
+          "rank": 1,
+          "name": "char_len",
+          "vimp": 0.10338999617543976
+        },
+        {
+          "rank": 2,
+          "name": "tok_len",
+          "vimp": 0.10175533006844184
+        },
+        {
+          "rank": 3,
+          "name": "avg_word",
+          "vimp": 0.0
+        },
+        {
+          "rank": 4,
+          "name": "qmark",
+          "vimp": 0.0
+        },
+        {
+          "rank": 5,
+          "name": "bang",
+          "vimp": 0.0
+        }
+      ],
+      "rag_retrieval": [
+        {
+          "rank": 1,
+          "name": "rag_hit",
+          "vimp": 0.10732726148950689
+        }
+      ]
+    },
+    "actions": [
+      "\u6539\u6a21\u677f\u00b7decoding\uff08\u53e6\u8d26\uff0c\u4e0d\u8fdb\u5ba2\u670d\u4e3b\u8d26\uff09",
+      "\u5237\u68c0\u7d22 / \u6362\u7d22\u5f15\uff08\u522b\u5148\u56de\u6eda\u6574\u6a21\uff09"
+    ],
+    "meta": {
+      "board": "graph_as_feature_dims",
+      "alias": "llm",
+      "graph_dims": [
+        "merchant",
+        "author",
+        "product",
+        "order"
+      ],
+      "llm_alias": {
+        "merchant": "rag_retrieval",
+        "author": "style_register",
+        "product": "text_payload",
+        "order": "agent_path"
+      },
+      "note": "style folded into author/style_register dimension \u2014 not a parallel product"
+    }
+  },
+  "audit_dims": {
+    "rf_domain_auc": 0.5107692307692306,
+    "rf_mass": {
+      "preference_text": 0.9780452274813715,
+      "style_register": 0.021954772517628538
+    },
+    "logo_share": {
+      "preference_text": 0.0,
+      "style_register": 0.9999999928714723
+    },
+    "logo": {
+      "preference_text": {
+        "delta": -0.012279776357201184,
+        "R_minus": 0.05123952822937041
+      },
+      "style_register": {
+        "delta": 0.0001402814202330141,
+        "R_minus": 0.03881947045193621
+      }
+    },
+    "po_risk": 0.038959751872169227,
+    "top_dims": [
+      "style_register",
+      "preference_text"
+    ],
+    "within_dim": {
+      "style_register": [
+        {
+          "rank": 1,
+          "name": "char_len",
+          "vimp": 0.008845787282329638
+        },
+        {
+          "rank": 2,
+          "name": "upper_ratio",
+          "vimp": 0.0073683019253496665
+        },
+        {
+          "rank": 3,
+          "name": "formal",
+          "vimp": 0.004051016864665848
+        },
+        {
+          "rank": 4,
+          "name": "hedge",
+          "vimp": 0.001124415534598169
+        },
+        {
+          "rank": 5,
+          "name": "bang",
+          "vimp": 0.00048078556118573326
+        }
+      ],
+      "preference_text": [
+        {
+          "rank": 1,
+          "name": "hash_30",
+          "vimp": 0.08013648246841835
+        },
+        {
+          "rank": 2,
+          "name": "hash_10",
+          "vimp": 0.05598927590698087
+        },
+        {
+          "rank": 3,
+          "name": "hash_6",
+          "vimp": 0.03991247875874974
+        },
+        {
+          "rank": 4,
+          "name": "hash_63",
+          "vimp": 0.03708470453786756
+        },
+        {
+          "rank": 5,
+          "name": "hash_1",
+          "vimp": 0.03357476527162535
+        }
+      ]
+    },
+    "actions": [
+      "\u6539\u6a21\u677f\u00b7decoding\uff08\u53e6\u8d26\uff0c\u4e0d\u8fdb\u5ba2\u670d\u4e3b\u8d26\uff09",
+      "\u53ea\u5237\u65b0\u7ef4\u5ea6 preference_text"
+    ],
+    "meta": {
+      "board": "audit_feature_dims",
+      "split": "\u504f\u597d\u7ef4 vs \u6587\u98ce\u7ef4 \u2014 \u540c\u4e00\u7279\u5f81\u7ef4\u5ea6\u5c42\uff0c\u4e24\u672c\u8d26"
+    }
+  }
+}

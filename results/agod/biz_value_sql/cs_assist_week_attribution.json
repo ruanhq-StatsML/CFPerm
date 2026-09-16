@@ -1,0 +1,24 @@
+[
+  {
+    "week_start":"2026-09-14T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "days_acted":3,
+    "sessions_acted":600.0,
+    "tickets_avoided":86.1,
+    "refunds_avoided":57.0,
+    "extra_contained":135.7,
+    "gross_yen":7189.0,
+    "pct_of_total_gross":43.2
+  },
+  {
+    "week_start":"2026-09-21T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "days_acted":4,
+    "sessions_acted":800.0,
+    "tickets_avoided":119.9,
+    "refunds_avoided":73.0,
+    "extra_contained":180.3,
+    "gross_yen":9467.0,
+    "pct_of_total_gross":56.8
+  }
+]

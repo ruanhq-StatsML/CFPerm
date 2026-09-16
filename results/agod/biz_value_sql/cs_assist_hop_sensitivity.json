@@ -1,0 +1,231 @@
+[
+  {
+    "scenario": "weak_hop",
+    "hop_ratio": 4.100000000000003,
+    "fire_halluc": 0.2255,
+    "quiet_halluc": 0.07,
+    "rag_low": 0.3,
+    "rag_ok": 0.75,
+    "rag_threshold": 0.35,
+    "tickets_avoided": 125.0,
+    "refunds_avoided": 68.0,
+    "extra_sessions_contained": 186.0,
+    "gross_yen": 9216.0,
+    "net_yen": 9156.0,
+    "fully_loaded_net_yen": 8796.0,
+    "audit_cost_yen": 60.0,
+    "action_day_cost_yen": 360.0,
+    "ticket_rate_ignored_pct": 9.428571428571429,
+    "ticket_rate_acted_pct": 0.5,
+    "contain_lift_pp": 13.28571428571429,
+    "top_action": "retrieval_refresh",
+    "retrieval_day_share": 0.286,
+    "action_mix": {
+      "audit_topk": {
+        "n_days": 2,
+        "sessions": 400,
+        "gross_yen": 2526.0,
+        "avg_rag_hit": 0.7546358522995895,
+        "day_share": 0.286
+      },
+      "model_rollback": {
+        "n_days": 3,
+        "sessions": 600,
+        "gross_yen": 3997.0,
+        "avg_rag_hit": 0.747331509029153,
+        "day_share": 0.429
+      },
+      "retrieval_refresh": {
+        "n_days": 2,
+        "sessions": 400,
+        "gross_yen": 2693.0,
+        "avg_rag_hit": 0.3030719184102504,
+        "day_share": 0.286
+      }
+    },
+    "prod_mid_monthly_net_yen": 1962000.0,
+    "delta_gross_vs_base": -7440.0,
+    "delta_net_vs_base": -7434.0,
+    "delta_fully_loaded_vs_base": -7434.0,
+    "delta_retrieval_share_vs_base": 0.0
+  },
+  {
+    "scenario": "base_hop",
+    "hop_ratio": 11.714285714285724,
+    "fire_halluc": 0.41,
+    "quiet_halluc": 0.07,
+    "rag_low": 0.3,
+    "rag_ok": 0.75,
+    "rag_threshold": 0.35,
+    "tickets_avoided": 206.0,
+    "refunds_avoided": 130.0,
+    "extra_sessions_contained": 316.0,
+    "gross_yen": 16656.0,
+    "net_yen": 16590.0,
+    "fully_loaded_net_yen": 16230.0,
+    "audit_cost_yen": 66.0,
+    "action_day_cost_yen": 360.0,
+    "ticket_rate_ignored_pct": 15.857142857142856,
+    "ticket_rate_acted_pct": 1.1428571428571428,
+    "contain_lift_pp": 22.571428571428577,
+    "top_action": "model_rollback",
+    "retrieval_day_share": 0.286,
+    "action_mix": {
+      "audit_topk": {
+        "n_days": 2,
+        "sessions": 400,
+        "gross_yen": 4651.0,
+        "avg_rag_hit": 0.7534301215369912,
+        "day_share": 0.286
+      },
+      "model_rollback": {
+        "n_days": 3,
+        "sessions": 600,
+        "gross_yen": 7294.0,
+        "avg_rag_hit": 0.7503626088587123,
+        "day_share": 0.429
+      },
+      "retrieval_refresh": {
+        "n_days": 2,
+        "sessions": 400,
+        "gross_yen": 4711.0,
+        "avg_rag_hit": 0.30439421935111566,
+        "day_share": 0.286
+      }
+    },
+    "prod_mid_monthly_net_yen": 3555000.0,
+    "delta_gross_vs_base": 0.0,
+    "delta_net_vs_base": 0.0,
+    "delta_fully_loaded_vs_base": 0.0,
+    "delta_retrieval_share_vs_base": 0.0
+  },
+  {
+    "scenario": "strong_hop",
+    "hop_ratio": 15.81428571428573,
+    "fire_halluc": 0.5125,
+    "quiet_halluc": 0.07,
+    "rag_low": 0.3,
+    "rag_ok": 0.75,
+    "rag_threshold": 0.35,
+    "tickets_avoided": 223.0,
+    "refunds_avoided": 141.0,
+    "extra_sessions_contained": 338.0,
+    "gross_yen": 18038.0,
+    "net_yen": 17990.0,
+    "fully_loaded_net_yen": 17630.0,
+    "audit_cost_yen": 48.0,
+    "action_day_cost_yen": 360.0,
+    "ticket_rate_ignored_pct": 16.92857142857143,
+    "ticket_rate_acted_pct": 1.0,
+    "contain_lift_pp": 24.142857142857142,
+    "top_action": "model_rollback",
+    "retrieval_day_share": 0.286,
+    "action_mix": {
+      "audit_topk": {
+        "n_days": 2,
+        "sessions": 400,
+        "gross_yen": 5053.0,
+        "avg_rag_hit": 0.7534301215369912,
+        "day_share": 0.286
+      },
+      "model_rollback": {
+        "n_days": 3,
+        "sessions": 600,
+        "gross_yen": 7844.0,
+        "avg_rag_hit": 0.7512998383523758,
+        "day_share": 0.429
+      },
+      "retrieval_refresh": {
+        "n_days": 2,
+        "sessions": 400,
+        "gross_yen": 5141.0,
+        "avg_rag_hit": 0.30249516433224455,
+        "day_share": 0.286
+      }
+    },
+    "prod_mid_monthly_net_yen": 3855000.0,
+    "delta_gross_vs_base": 1382.0,
+    "delta_net_vs_base": 1400.0,
+    "delta_fully_loaded_vs_base": 1400.0,
+    "delta_retrieval_share_vs_base": 0.0
+  },
+  {
+    "scenario": "rag_worse",
+    "hop_ratio": 11.714285714285724,
+    "fire_halluc": 0.41,
+    "quiet_halluc": 0.07,
+    "rag_low": 0.12,
+    "rag_ok": 0.3,
+    "rag_threshold": 0.55,
+    "tickets_avoided": 212.0,
+    "refunds_avoided": 135.0,
+    "extra_sessions_contained": 327.0,
+    "gross_yen": 17245.0,
+    "net_yen": 17197.0,
+    "fully_loaded_net_yen": 16917.0,
+    "audit_cost_yen": 48.0,
+    "action_day_cost_yen": 280.0,
+    "ticket_rate_ignored_pct": 15.928571428571429,
+    "ticket_rate_acted_pct": 0.7857142857142858,
+    "contain_lift_pp": 23.357142857142854,
+    "top_action": "retrieval_refresh",
+    "retrieval_day_share": 1.0,
+    "action_mix": {
+      "retrieval_refresh": {
+        "n_days": 7,
+        "sessions": 1400,
+        "gross_yen": 17245.0,
+        "avg_rag_hit": 0.24990352032169946,
+        "day_share": 1.0
+      }
+    },
+    "prod_mid_monthly_net_yen": 3685071.0,
+    "delta_gross_vs_base": 589.0,
+    "delta_net_vs_base": 607.0,
+    "delta_fully_loaded_vs_base": 687.0,
+    "delta_retrieval_share_vs_base": 0.714
+  },
+  {
+    "scenario": "rag_better",
+    "hop_ratio": 11.714285714285724,
+    "fire_halluc": 0.41,
+    "quiet_halluc": 0.07,
+    "rag_low": 0.55,
+    "rag_ok": 0.9,
+    "rag_threshold": 0.24999999999999997,
+    "tickets_avoided": 204.0,
+    "refunds_avoided": 128.0,
+    "extra_sessions_contained": 312.0,
+    "gross_yen": 16432.0,
+    "net_yen": 16366.0,
+    "fully_loaded_net_yen": 15986.0,
+    "audit_cost_yen": 66.0,
+    "action_day_cost_yen": 380.0,
+    "ticket_rate_ignored_pct": 15.857142857142856,
+    "ticket_rate_acted_pct": 1.2857142857142856,
+    "contain_lift_pp": 22.285714285714285,
+    "top_action": "model_rollback",
+    "retrieval_day_share": 0.0,
+    "action_mix": {
+      "audit_topk": {
+        "n_days": 3,
+        "sessions": 600,
+        "gross_yen": 6738.0,
+        "avg_rag_hit": 0.7877318968668501,
+        "day_share": 0.429
+      },
+      "model_rollback": {
+        "n_days": 4,
+        "sessions": 800,
+        "gross_yen": 9694.0,
+        "avg_rag_hit": 0.8126231828509016,
+        "day_share": 0.571
+      }
+    },
+    "prod_mid_monthly_net_yen": 3507000.0,
+    "delta_gross_vs_base": -224.0,
+    "delta_net_vs_base": -224.0,
+    "delta_fully_loaded_vs_base": -244.0,
+    "delta_retrieval_share_vs_base": -0.286
+  }
+]

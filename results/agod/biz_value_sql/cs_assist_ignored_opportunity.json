@@ -1,0 +1,20 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "days_acted":7,
+    "days_ignored":7,
+    "sessions_acted":1400.0,
+    "sessions_ignored":1400.0,
+    "fire_day_coverage_pct":50.0,
+    "tickets_realized":206.0,
+    "tickets_left_on_table":206.0,
+    "refunds_realized":130.0,
+    "refunds_left_on_table":130.0,
+    "contain_realized":316.0,
+    "contain_left_on_table":316.0,
+    "realized_gross_yen":16656.0,
+    "opportunity_gross_yen":16656.0,
+    "potential_full_coverage_gross_yen":33312.0,
+    "yen_capture_pct":50.0
+  }
+]

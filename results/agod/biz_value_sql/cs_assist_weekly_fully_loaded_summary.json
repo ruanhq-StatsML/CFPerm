@@ -1,0 +1,17 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "latest_week_start":"2026-09-21T00:00:00.000",
+    "latest_days_acted":4,
+    "latest_gross_yen":9467.0,
+    "latest_audit_yen":30.0,
+    "latest_action_yen":206.0,
+    "latest_fully_loaded_net_yen":9231.0,
+    "prev_fully_loaded_net_yen":6999.0,
+    "delta_fully_loaded_net_yen":2232.0,
+    "week_fully_loaded_sum":16230.0,
+    "total_fully_loaded":16230.0,
+    "fully_loaded_gap_yen":0.0,
+    "external_one_liner_cn":"最近一周（2026-09-21）全成本净¥9231（毛¥9467−审计¥30−动作¥206）；较上周 +¥2232；周合计 vs 总账缺口¥0。"
+  }
+]

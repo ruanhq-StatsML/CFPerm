@@ -1,0 +1,88 @@
+{
+  "paths": {
+    "parquet": "results/agod/hh_online_stream/stream_table.parquet",
+    "feature_npy": "results/agod/hh_online_stream/feature_matrix.npy"
+  },
+  "shape": [
+    2000,
+    138
+  ],
+  "style_dims": [
+    {
+      "name": "n_tok",
+      "meaning": "词数/200"
+    },
+    {
+      "name": "n_char",
+      "meaning": "字符数/800"
+    },
+    {
+      "name": "avg_word",
+      "meaning": "平均词长/10"
+    },
+    {
+      "name": "qmark",
+      "meaning": "? 密度"
+    },
+    {
+      "name": "bang",
+      "meaning": "! 密度"
+    },
+    {
+      "name": "hedge",
+      "meaning": "maybe/perhaps/... 犹豫词"
+    },
+    {
+      "name": "formal",
+      "meaning": "therefore/however/... 正式词 ← 画风主轴之一"
+    },
+    {
+      "name": "i_count",
+      "meaning": "第一人称 i"
+    },
+    {
+      "name": "newlines",
+      "meaning": "换行密度"
+    },
+    {
+      "name": "upper_ratio",
+      "meaning": "大写比例"
+    }
+  ],
+  "examples": [
+    {
+      "t_idx": 0,
+      "batch": 0,
+      "y": 1,
+      "y_raw_pref": 1,
+      "flipped": 0,
+      "question": "How can you learn to be polite",
+      "answer": "I have an idea about a system I’d like to try.  I’d first model politeness, then teach you to copy it, and then reward you for good behavior.",
+      "featurizer": "style10+hash128",
+      "feature_dim": 138,
+      "style10": {
+        "n_tok": 0.15,
+        "n_char": 0.17625,
+        "avg_word": 0.3566666666666667,
+        "qmark": 0.0,
+        "bang": 0.0,
+        "hedge": 0.0,
+        "formal": 0.0,
+        "i_count": 0.0,
+        "newlines": 0.0,
+        "upper_ratio": 0.02127659574468085
+      },
+      "hash128_l2": 1.0,
+      "hash128_head8": [
+        0.09759000729485333,
+        0.09759000729485333,
+        0.09759000729485333,
+        0.09759000729485333,
+        0.0,
+        0.0,
+        0.0,
+        0.09759000729485333
+      ]
+    }
+  ]
+}

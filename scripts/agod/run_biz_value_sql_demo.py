@@ -1,0 +1,1369 @@
+#!/usr/bin/env python3
+"""Seed + run business-value SQL (hallucination + style drift).
+
+Requires: pip install duckdb
+
+Writes results/agod/biz_value_sql/{roi_*.json,dashboard.json,REPORT.md}
+"""
+from __future__ import annotations
+
+import json
+from datetime import date, datetime, timedelta
+from pathlib import Path
+
+import numpy as np
+
+ROOT = Path(__file__).resolve().parents[2]
+SQL_DIR = ROOT / "sql" / "biz_value"
+OUT = ROOT / "results" / "agod" / "biz_value_sql"
+HF_HOP_PATH = ROOT / "results" / "agod" / "hf_landing" / "halu_regime_rag.json"
+
+
+def _require_duckdb():
+    try:
+        import duckdb  # noqa: F401
+    except ImportError as e:
+        raise SystemExit(
+            "duckdb is required: pip install duckdb\n" + str(e)
+        ) from e
+    import duckdb
+
+    return duckdb
+
+
+def load_hf_hop(path: Path = HF_HOP_PATH) -> dict:
+    """Map HaluEval hop JSON → seed fire/rag intensity knobs."""
+    defaults = {
+        "source": "defaults",
+        "quiet_halluc": 0.07,
+        "fire_halluc": 0.41,
+        "acted_halluc_scale": 0.40,
+        "hop_ratio": 3.0,
+        "rag_low": 0.22,
+        "rag_ok": 0.60,
+        "rag_threshold": 0.35,
+        "precision_at_10": 0.7,
+        "fired_at_cut": 0,
+    }
+    if not path.exists():
+        return defaults
+    raw = json.loads(path.read_text())
+    hop = raw.get("hop_at_cut") or raw.get("hop_at_cut") or {}
+    quiet = raw.get("hop_quiet") or raw.get("hop_quiet") or {}
+    hop_rank = hop.get("ranking") or {}
+    quiet_rank = quiet.get("ranking") or {}
+    quiet_h = float(quiet_rank.get("halluc_rate", defaults["quiet_halluc"]))
+    fire_h = float(hop_rank.get("halluc_rate", 0.82))
+    # Business surface is milder than raw label hop; keep proportional.
+    fire_h_biz = float(np.clip(fire_h * 0.5, quiet_h + 0.05, 0.55))
+    ratio = float(
+        hop.get("ratio")
+        or (raw.get("rate_after", 3.0) / max(raw.get("rate_before", 0.08), 1e-6))
+    )
+    rag_top = float(
+        hop_rank.get("mean_rag_hit_top10")
+        or hop_rank.get("mean_rag_hit_top10")
+        or 1.0
+    )
+    # High HF top-10 rag ⇒ generation hop dominates; still keep a low-rag
+    # retrieval-refresh arm on every 3rd fire day for action split.
+    rag_ok = float(np.clip(0.35 + 0.4 * rag_top, 0.45, 0.75))
+    rag_low = float(np.clip(rag_ok - 0.40, 0.12, 0.30))
+    return {
+        "source": str(path.relative_to(ROOT)),
+        "quiet_halluc": quiet_h,
+        "fire_halluc": fire_h_biz,
+        "acted_halluc_scale": float(np.clip(1.0 / max(ratio, 1.0), 0.25, 0.55)),
+        "hop_ratio": ratio,
+        "rag_low": rag_low,
+        "rag_ok": rag_ok,
+        "rag_threshold": 0.35,
+        "precision_at_10": float(hop_rank.get("precision_at_10", 0.7)),
+        "fired_at_cut": int(hop.get("fired", 0)),
+        "raw_fire_halluc": fire_h,
+        "dataset": raw.get("dataset") or raw.get("scenario"),
+        "rate_before": float(raw.get("rate_before", quiet_h)),
+        "rate_after": float(raw.get("rate_after", fire_h)),
+    }
+
+
+def seed(con, hop: dict | None = None) -> None:
+    rng = np.random.default_rng(7)
+    start = date(2026, 9, 1)
+    days = 28
+    hop = hop or load_hf_hop()
+
+    con.execute(
+        """
+        INSERT INTO dim_surface VALUES
+          ('shop_assistant','llm_assist','llm-quality'),
+          ('feed_caption','content','content-growth'),
+          ('ad_creative','ads','ads-creative')
+        """
+    )
+    con.execute(
+        """
+        INSERT INTO dim_value_assumption VALUES
+          (?, 'shop_assistant', 'cs_ticket_cost', 25.0, 'CNY', 'ops FP 2026Q3'),
+          (?, 'shop_assistant', 'refund_unit_cost', 80.0, 'CNY', 'finance 2026Q3'),
+          (?, 'shop_assistant', 'contained_session_value', 3.5, 'CNY', 'ops: avoided human handle'),
+          (?, 'shop_assistant', 'audit_unit_cost', 6.0, 'CNY', 'ops: human audit per sample'),
+          (?, 'shop_assistant', 'action_cost_retrieval_refresh_day', 40.0, 'CNY', 'ops: index/RAG refresh day'),
+          (?, 'shop_assistant', 'action_cost_model_rollback_day', 80.0, 'CNY', 'ops: rollback+canary day'),
+          (?, 'shop_assistant', 'action_cost_audit_topk_day', 20.0, 'CNY', 'ops: queue setup (excl per-sample)'),
+          (?, 'feed_caption', 'value_per_ctr_point', 1200.0, 'CNY', 'growth proxy'),
+          (?, 'feed_caption', 'brand_incident_cost', 50.0, 'CNY', 'brand ops'),
+          (?, 'ad_creative', 'value_per_ctr_point', 2500.0, 'CNY', 'ads proxy'),
+          (?, 'ad_creative', 'brand_incident_cost', 120.0, 'CNY', 'brand ops')
+        """,
+        [start] * 11,
+    )
+
+    # creatives / style clusters
+    for i, cluster in enumerate(["clean_min", "loud_promo", "lifestyle", "ugc_raw"]):
+        con.execute(
+            "INSERT INTO dim_creative VALUES (?, ?, ?, ?, ?)",
+            [f"c{i}", f"camp{i%2}", cluster, cluster, start],
+        )
+
+    serve_rows = []
+    signal_rows = []
+    audit_rows = []
+
+    q_h = float(hop["quiet_halluc"])
+    f_h = float(hop["fire_halluc"])
+    acted_scale = float(hop["acted_halluc_scale"])
+    rag_low = float(hop["rag_low"])
+    rag_ok = float(hop["rag_ok"])
+    rag_thr = float(hop["rag_threshold"])
+    # Stronger hop ⇒ larger ticket/refund blow-up when ignored.
+    ignore_ticket_bump = float(np.clip(0.03 + 0.01 * hop["hop_ratio"], 0.04, 0.12))
+    ignore_refund_bump = float(np.clip(0.02 + 0.005 * hop["hop_ratio"], 0.025, 0.08))
+
+    con.execute("DELETE FROM dim_hf_hop_knobs WHERE surface_id = 'shop_assistant'")
+    con.execute(
+        """
+        INSERT INTO dim_hf_hop_knobs VALUES (
+          'shop_assistant', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )
+        """,
+        [
+            str(hop.get("source") or ""),
+            str(hop.get("dataset") or ""),
+            q_h,
+            f_h,
+            float(hop.get("raw_fire_halluc") or f_h),
+            acted_scale,
+            float(hop["hop_ratio"]),
+            rag_low,
+            rag_ok,
+            rag_thr,
+            float(hop.get("precision_at_10") or 0),
+            int(hop.get("fired_at_cut") or 0),
+            ignore_ticket_bump,
+            ignore_refund_bump,
+        ],
+    )
+
+    for d in range(days):
+        dt = start + timedelta(days=d)
+        # Hallucination surface: concept hop after day 14 (HF cut analogue)
+        fired = 1 if d >= 14 else 0
+        acted = 1 if (fired and d % 2 == 0) else 0
+        # Route action by retrieval health (HF hop RAG split)
+        rag = (q_h + 0.48) if d < 14 else (rag_low if d % 3 == 0 else rag_ok)
+        if not fired:
+            notes = None
+            action = None
+            act_ticket_cut = 0.0
+            act_refund_cut = 0.0
+            act_halluc = q_h
+        elif not acted:
+            notes = "ignored"
+            action = None
+            act_ticket_cut = 0.0
+            act_refund_cut = 0.0
+            act_halluc = f_h
+        elif rag < rag_thr:
+            notes = "acted:retrieval_refresh"
+            action = "retrieval_refresh"
+            act_ticket_cut = 0.028
+            act_refund_cut = 0.014
+            act_halluc = f_h * acted_scale * 0.85
+        elif d % 4 == 0:
+            notes = "acted:audit_topk"
+            action = "audit_topk"
+            act_ticket_cut = 0.018
+            act_refund_cut = 0.009
+            act_halluc = f_h * acted_scale * 1.15
+        else:
+            notes = "acted:model_rollback"
+            action = "model_rollback"
+            act_ticket_cut = 0.022
+            act_refund_cut = 0.011
+            act_halluc = f_h * acted_scale
+        n = 200
+        for i in range(n):
+            # HF-driven rates: quiet / fire_ignored / fire_acted
+            halluc = int(rng.random() < (q_h * 0.6 if d < 14 else act_halluc))
+            ticket = int(
+                rng.random()
+                < (
+                    0.012
+                    + 0.10 * halluc
+                    + (ignore_ticket_bump if (fired and not acted) else 0.0)
+                    - act_ticket_cut
+                )
+            )
+            refund = int(
+                rng.random()
+                < (
+                    0.004
+                    + 0.07 * halluc
+                    + (ignore_refund_bump if (fired and not acted) else 0.0)
+                    - act_refund_cut
+                )
+            )
+            serve_rows.append(
+                (
+                    f"h-{d}-{i}",
+                    dt,
+                    datetime.combine(dt, datetime.min.time()),
+                    "shop_assistant",
+                    f"s-{d}-{i%40}",
+                    f"u-{i%80}",
+                    "m_v2" if d >= 14 else "m_v1",
+                    None,
+                    "text",
+                    "qa",
+                    halluc,
+                    None,
+                    float(rng.normal(80, 20)),
+                    float(rng.uniform(0.2, 0.8)),
+                    float(rng.uniform(0, 0.2)),
+                    "zh",
+                    float(np.clip(rag + rng.normal(0, 0.05), 0, 1)),
+                    int(rng.random() < 0.1),
+                    int(rng.random() < 0.03),
+                    float(rng.uniform(0, 30)),
+                    refund,
+                    ticket,
+                    0,
+                )
+            )
+            if halluc and fired and i < 15:
+                audit_rows.append(
+                    (
+                        f"a-{d}-{i}",
+                        dt,
+                        "shop_assistant",
+                        f"h-{d}-{i}",
+                        f"b-{d}",
+                        float(0.5 + rng.random()),
+                        i + 1,
+                        "confirmed_bad" if i < 10 else "false_alarm",
+                        "auditor",
+                        datetime.combine(dt, datetime.min.time()),
+                    )
+                )
+        signal_rows.append(
+            (
+                f"sig-h-fire-{d}",
+                dt,
+                datetime.combine(dt, datetime.min.time()),
+                "shop_assistant",
+                f"b-{d}",
+                "rfperm_fire",
+                "concept",
+                fired,
+                float(1.1 + 0.4 * fired),
+                n,
+                "m_v2" if d >= 14 else "m_v1",
+                notes,
+            )
+        )
+        signal_rows.append(
+            (
+                f"sig-h-po-{d}",
+                dt,
+                datetime.combine(dt, datetime.min.time()),
+                "shop_assistant",
+                f"b-{d}",
+                "po_risk0",
+                "concept",
+                0,
+                float(0.2 + 0.5 * fired),
+                n,
+                "m_v2" if d >= 14 else "m_v1",
+                None,
+            )
+        )
+
+        # Style surface: portrait shift after day 10, usually WITHOUT concept fire
+        style_auc = 0.52 if d < 10 else 0.82
+        covar_fired = 1 if d >= 10 else 0
+        concept_fired_style = 1 if d >= 22 else 0  # late joint days
+        for i in range(150):
+            cluster_idx = (i + (3 if d >= 10 else 0)) % 4
+            creative_id = f"c{cluster_idx}"
+            formal = 0.3 if d < 10 else 0.75
+            brand = int(rng.random() < (0.005 + 0.02 * (d >= 10)))
+            ctr_p = 0.08 if d < 10 else (0.055 if cluster_idx >= 2 else 0.07)
+            serve_rows.append(
+                (
+                    f"s-{d}-{i}",
+                    dt,
+                    datetime.combine(dt, datetime.min.time()),
+                    "feed_caption",
+                    f"fs-{d}-{i%30}",
+                    f"fu-{i%60}",
+                    "cap_v1",
+                    creative_id,
+                    "text",
+                    "caption",
+                    None,
+                    None,
+                    float(rng.normal(40, 10)),
+                    float(np.clip(formal + rng.normal(0, 0.05), 0, 1)),
+                    float(rng.uniform(0, 0.3)),
+                    "zh",
+                    None,
+                    int(rng.random() < ctr_p),
+                    int(rng.random() < 0.01),
+                    float(rng.uniform(0, 5)),
+                    0,
+                    0,
+                    brand,
+                )
+            )
+        signal_rows.append(
+            (
+                f"sig-st-auc-{d}",
+                dt,
+                datetime.combine(dt, datetime.min.time()),
+                "feed_caption",
+                f"sb-{d}",
+                "style_domain_auc",
+                "covariate",
+                0,
+                float(style_auc),
+                150,
+                "cap_v1",
+                "acted" if covar_fired and d % 2 == 0 else None,
+            )
+        )
+        signal_rows.append(
+            (
+                f"sig-st-cov-{d}",
+                dt,
+                datetime.combine(dt, datetime.min.time()),
+                "feed_caption",
+                f"sb-{d}",
+                "rfperm_fire",
+                "covariate",
+                covar_fired,
+                float(1.0 + 0.3 * covar_fired),
+                150,
+                "cap_v1",
+                None,
+            )
+        )
+        signal_rows.append(
+            (
+                f"sig-st-con-{d}",
+                dt,
+                datetime.combine(dt, datetime.min.time()),
+                "feed_caption",
+                f"sb-{d}",
+                "rfperm_fire",
+                "concept",
+                concept_fired_style,
+                float(1.0 + 0.5 * concept_fired_style),
+                150,
+                "cap_v1",
+                None,
+            )
+        )
+        if concept_fired_style:
+            signal_rows.append(
+                (
+                    f"sig-st-judge-{d}",
+                    dt,
+                    datetime.combine(dt, datetime.min.time()),
+                    "feed_caption",
+                    f"sb-{d}",
+                    "judge_err_ratio",
+                    "concept",
+                    0,
+                    1.7,
+                    150,
+                    "cap_v1",
+                    None,
+                )
+            )
+
+    con.executemany(
+        """
+        INSERT INTO fct_serve_event VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        serve_rows,
+    )
+    con.executemany(
+        """
+        INSERT INTO fct_shift_signal VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        signal_rows,
+    )
+    if audit_rows:
+        con.executemany(
+            """
+            INSERT INTO fct_audit_queue VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            audit_rows,
+        )
+
+
+def main() -> int:
+    duckdb = _require_duckdb()
+    OUT.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(str(OUT / "biz_value.duckdb"))
+
+    for name in [
+        "00_schema.sql",
+        "01_hallucination_value.sql",
+        "02_style_drift_value.sql",
+        "03_value_dashboard.sql",
+        "04_cs_assistant_contribution.sql",
+        "05_cs_net_and_weekly.sql",
+        "06_cs_exec_dashboard.sql",
+        "07_cs_week_attribution_payback.sql",
+        "08_cs_unit_econ_cumulative.sql",
+        "09_cs_opportunity_breakeven.sql",
+        "10_cs_action_contain_split.sql",
+        "11_cs_week_split_coverage.sql",
+        "12_cs_payback_contain.sql",
+        "13_cs_hf_knob_bridge.sql",
+        "14_cs_marginal_day.sql",
+        "15_cs_payback_contain_price_stress.sql",
+        "16_cs_detection_delay_profit.sql",
+        "17_cs_fully_loaded_capture.sql",
+        "18_cs_ops_onepager.sql",
+        "19_cs_weekly_fully_loaded.sql",
+        "20_cs_hf_hop_yen_band.sql",
+    ]:
+        sql = (SQL_DIR / name).read_text()
+        con.execute(sql)
+
+    # reset seed tables
+    for t in [
+        "fct_audit_queue",
+        "fct_shift_signal",
+        "fct_serve_event",
+        "dim_value_assumption",
+        "dim_hf_hop_knobs",
+        "dim_creative",
+        "dim_surface",
+    ]:
+        try:
+            con.execute(f"DELETE FROM {t}")
+        except Exception:
+            pass
+
+    hop = load_hf_hop()
+    (OUT / "hf_hop_knobs.json").write_text(
+        json.dumps(hop, ensure_ascii=False, indent=2)
+    )
+    seed(con, hop=hop)
+
+    halluc = con.execute("SELECT * FROM vw_halluc_roi_rollup").fetchdf()
+    style = con.execute("SELECT * FROM vw_style_roi_rollup").fetchdf()
+    dash = con.execute("SELECT * FROM vw_biz_value_dashboard").fetchdf()
+    gate = con.execute(
+        "SELECT * FROM vw_alignment_merge_gate ORDER BY dt DESC LIMIT 10"
+    ).fetchdf()
+    oncall = con.execute(
+        "SELECT * FROM vw_oncall_queue ORDER BY severity_proxy DESC LIMIT 15"
+    ).fetchdf()
+
+    def dump(df, path: Path):
+        path.write_text(
+            df.to_json(orient="records", force_ascii=False, indent=2, date_format="iso")
+        )
+
+    cs = con.execute("SELECT * FROM vw_cs_assist_exec_summary").fetchdf()
+    cs_arms = con.execute(
+        "SELECT * FROM vw_cs_assist_arm_stats ORDER BY surface_id, arm"
+    ).fetchdf()
+    cs_rates = con.execute("SELECT * FROM vw_cs_assist_rate_compare").fetchdf()
+    cs_actions = con.execute(
+        "SELECT * FROM vw_cs_assist_action_increment ORDER BY incremental_yen DESC"
+    ).fetchdf()
+    cs_action_net = con.execute(
+        "SELECT * FROM vw_cs_assist_action_net ORDER BY net_yen_after_action_cost DESC"
+    ).fetchdf()
+    cs_traffic = con.execute(
+        "SELECT * FROM vw_cs_assist_traffic_scenarios ORDER BY daily_sessions"
+    ).fetchdf()
+    cs_net = con.execute("SELECT * FROM vw_cs_assist_net_increment").fetchdf()
+    cs_week = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly ORDER BY week_start"
+    ).fetchdf()
+    cs_wow = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly_wow ORDER BY week_start"
+    ).fetchdf()
+    cs_ledger = con.execute(
+        """
+        SELECT arm,
+               COUNT(*) AS days,
+               SUM(n_sessions) AS sessions,
+               SUM(n_tickets) AS tickets,
+               SUM(n_refunds) AS refunds,
+               SUM(n_contained) AS contained,
+               ROUND(AVG(ticket_rate), 4) AS avg_ticket_rate,
+               ROUND(AVG(refund_rate), 4) AS avg_refund_rate,
+               ROUND(AVG(containment_rate), 4) AS avg_containment_rate,
+               ROUND(SUM(quality_cost_yen), 0) AS quality_cost_yen,
+               ROUND(SUM(net_ops_value_yen), 0) AS net_ops_value_yen
+        FROM vw_cs_assist_daily_ledger
+        GROUP BY arm
+        ORDER BY arm
+        """
+    ).fetchdf()
+
+    dump(halluc, OUT / "roi_halluc.json")
+    dump(style, OUT / "roi_style.json")
+    dump(dash, OUT / "dashboard.json")
+    dump(gate, OUT / "merge_gate_sample.json")
+    dump(oncall, OUT / "oncall_sample.json")
+    dump(cs, OUT / "cs_assist_increment.json")
+    dump(cs_arms, OUT / "cs_assist_arms.json")
+    dump(cs_rates, OUT / "cs_assist_rates.json")
+    dump(cs_actions, OUT / "cs_assist_actions.json")
+    dump(cs_action_net, OUT / "cs_assist_action_net.json")
+    dump(cs_traffic, OUT / "cs_assist_traffic.json")
+    dump(cs_net, OUT / "cs_assist_net.json")
+    dump(cs_week, OUT / "cs_assist_weekly.json")
+    dump(cs_wow, OUT / "cs_assist_weekly_wow.json")
+    cs_exec = con.execute("SELECT * FROM vw_cs_assist_exec_dashboard").fetchdf()
+    cs_rec = con.execute("SELECT * FROM vw_cs_assist_action_recommend ORDER BY recommend_rank").fetchdf()
+    dump(cs_exec, OUT / "cs_assist_exec_dashboard.json")
+    dump(cs_rec, OUT / "cs_assist_action_recommend.json")
+    cs_week_attr = con.execute(
+        "SELECT * FROM vw_cs_assist_week_attribution ORDER BY week_start"
+    ).fetchdf()
+    cs_payback = con.execute(
+        "SELECT * FROM vw_cs_assist_action_payback ORDER BY payback_days"
+    ).fetchdf()
+    cs_attr_check = con.execute(
+        "SELECT * FROM vw_cs_assist_attribution_check"
+    ).fetchdf()
+    dump(cs_week_attr, OUT / "cs_assist_week_attribution.json")
+    dump(cs_payback, OUT / "cs_assist_action_payback.json")
+    dump(cs_attr_check, OUT / "cs_assist_attribution_check.json")
+    cs_curve = con.execute(
+        "SELECT * FROM vw_cs_assist_cumulative_curve ORDER BY dt"
+    ).fetchdf()
+    cs_unit = con.execute(
+        "SELECT * FROM vw_cs_assist_unit_econ_sensitivity ORDER BY scenario"
+    ).fetchdf()
+    cs_band = con.execute("SELECT * FROM vw_cs_assist_unit_econ_band").fetchdf()
+    dump(cs_curve, OUT / "cs_assist_cumulative_curve.json")
+    dump(cs_unit, OUT / "cs_assist_unit_econ_sensitivity.json")
+    dump(cs_band, OUT / "cs_assist_unit_econ_band.json")
+    cs_opp = con.execute("SELECT * FROM vw_cs_assist_ignored_opportunity").fetchdf()
+    cs_be = con.execute("SELECT * FROM vw_cs_assist_cost_breakeven").fetchdf()
+    cs_oneliner = con.execute("SELECT * FROM vw_cs_assist_business_oneliner").fetchdf()
+    dump(cs_opp, OUT / "cs_assist_ignored_opportunity.json")
+    dump(cs_be, OUT / "cs_assist_cost_breakeven.json")
+    dump(cs_oneliner, OUT / "cs_assist_business_oneliner.json")
+    cs_contain_split = con.execute(
+        "SELECT * FROM vw_cs_assist_action_value_split ORDER BY yen_from_containment DESC"
+    ).fetchdf()
+    cs_contain_check = con.execute(
+        "SELECT * FROM vw_cs_assist_contain_attribution_check"
+    ).fetchdf()
+    dump(cs_contain_split, OUT / "cs_assist_action_contain_split.json")
+    dump(cs_contain_check, OUT / "cs_assist_contain_attribution_check.json")
+    cs_week_split = con.execute(
+        "SELECT * FROM vw_cs_assist_week_value_split ORDER BY week_start"
+    ).fetchdf()
+    cs_week_split_chk = con.execute(
+        "SELECT * FROM vw_cs_assist_week_split_check"
+    ).fetchdf()
+    cs_cover = con.execute(
+        "SELECT * FROM vw_cs_assist_coverage_expansion ORDER BY target_coverage_pct"
+    ).fetchdf()
+    cs_cover_dec = con.execute(
+        "SELECT * FROM vw_cs_assist_coverage_decision"
+    ).fetchdf()
+    dump(cs_week_split, OUT / "cs_assist_week_value_split.json")
+    dump(cs_week_split_chk, OUT / "cs_assist_week_split_check.json")
+    dump(cs_cover, OUT / "cs_assist_coverage_expansion.json")
+    dump(cs_cover_dec, OUT / "cs_assist_coverage_decision.json")
+    cs_pay_contain = con.execute(
+        "SELECT * FROM vw_cs_assist_action_payback_contain ORDER BY payback_days"
+    ).fetchdf()
+    dump(cs_pay_contain, OUT / "cs_assist_action_payback_contain.json")
+    cs_hf_bridge = con.execute("SELECT * FROM vw_cs_assist_hf_knob_bridge").fetchdf()
+    dump(cs_hf_bridge, OUT / "cs_assist_hf_knob_bridge.json")
+    cs_marginal = con.execute("SELECT * FROM vw_cs_assist_marginal_day").fetchdf()
+    dump(cs_marginal, OUT / "cs_assist_marginal_day.json")
+    cs_contain_stress = con.execute(
+        """
+        SELECT * FROM vw_cs_assist_payback_contain_price_stress
+        ORDER BY action_type, contain_unit_price
+        """
+    ).fetchdf()
+    cs_contain_stress_sum = con.execute(
+        "SELECT * FROM vw_cs_assist_payback_contain_stress_summary"
+    ).fetchdf()
+    dump(cs_contain_stress, OUT / "cs_assist_payback_contain_price_stress.json")
+    dump(cs_contain_stress_sum, OUT / "cs_assist_payback_contain_stress_summary.json")
+    cs_delay = con.execute(
+        "SELECT * FROM vw_cs_assist_detection_delay_profit ORDER BY delay_days"
+    ).fetchdf()
+    cs_delay_sum = con.execute(
+        "SELECT * FROM vw_cs_assist_detection_delay_summary"
+    ).fetchdf()
+    dump(cs_delay, OUT / "cs_assist_detection_delay_profit.json")
+    dump(cs_delay_sum, OUT / "cs_assist_detection_delay_summary.json")
+    cs_full = con.execute(
+        "SELECT * FROM vw_cs_assist_fully_loaded_capture"
+    ).fetchdf()
+    cs_week_act_net = con.execute(
+        """
+        SELECT * FROM vw_cs_assist_weekly_action_cost_net
+        ORDER BY week_start
+        """
+    ).fetchdf()
+    dump(cs_full, OUT / "cs_assist_fully_loaded_capture.json")
+    dump(cs_week_act_net, OUT / "cs_assist_weekly_action_cost_net.json")
+    cs_onepager = con.execute(
+        "SELECT * FROM vw_cs_assist_ops_onepager"
+    ).fetchdf()
+    dump(cs_onepager, OUT / "cs_assist_ops_onepager.json")
+    cs_week_full = con.execute(
+        """
+        SELECT * FROM vw_cs_assist_weekly_fully_loaded_wow
+        ORDER BY week_start
+        """
+    ).fetchdf()
+    cs_week_full_chk = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly_fully_loaded_check"
+    ).fetchdf()
+    cs_week_full_sum = con.execute(
+        "SELECT * FROM vw_cs_assist_weekly_fully_loaded_summary"
+    ).fetchdf()
+    dump(cs_week_full, OUT / "cs_assist_weekly_fully_loaded.json")
+    dump(cs_week_full_chk, OUT / "cs_assist_weekly_fully_loaded_check.json")
+    dump(cs_week_full_sum, OUT / "cs_assist_weekly_fully_loaded_summary.json")
+
+    # HF hop / rag re-seed band → insert into this DB for SQL views
+    hop_band = {"rows": [], "summary": {}}
+    try:
+        import importlib.util as _ilu
+
+        _hs = ROOT / "scripts" / "agod" / "cs_assist_hop_sensitivity.py"
+        _spec = _ilu.spec_from_file_location("cs_hop_sens", _hs)
+        _mod = _ilu.module_from_spec(_spec)
+        assert _spec.loader is not None
+        _spec.loader.exec_module(_mod)
+        hop_band = _mod.run_band()
+        con.execute("DELETE FROM fct_hop_scenario_yen")
+        for r in hop_band["rows"]:
+            con.execute(
+                """
+                INSERT INTO fct_hop_scenario_yen VALUES (
+                  'shop_assistant', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )
+                """,
+                [
+                    r["scenario"],
+                    r["hop_ratio"],
+                    r["fire_halluc"],
+                    r["rag_low"],
+                    r["rag_ok"],
+                    r["rag_threshold"],
+                    r["tickets_avoided"],
+                    r["refunds_avoided"],
+                    r["extra_sessions_contained"],
+                    r["gross_yen"],
+                    r["net_yen"],
+                    r["fully_loaded_net_yen"],
+                    r["retrieval_day_share"],
+                    r["top_action"],
+                    r["delta_gross_vs_base"],
+                    r["delta_net_vs_base"],
+                    r["delta_fully_loaded_vs_base"],
+                    r["delta_retrieval_share_vs_base"],
+                ],
+            )
+        (OUT / "cs_assist_hop_sensitivity.json").write_text(
+            json.dumps(hop_band["rows"], ensure_ascii=False, indent=2, default=str)
+        )
+        (OUT / "cs_assist_hop_yen_band_summary.json").write_text(
+            json.dumps(hop_band["summary"], ensure_ascii=False, indent=2, default=str)
+        )
+        exec_md = _mod.render_exec_dashboard(hop_band)
+        (OUT / "CS_ASSISTANT_EXEC_DASHBOARD.md").write_text(exec_md)
+        (ROOT / "docs" / "biz" / "CS_ASSISTANT_EXEC_DASHBOARD.md").write_text(exec_md)
+    except Exception as e:  # noqa: BLE001
+        print(f"hop yen band skipped: {e}")
+
+    cs_hop_band = con.execute(
+        "SELECT * FROM vw_cs_assist_hop_yen_band"
+    ).fetchdf()
+    cs_hop_band_sum = con.execute(
+        "SELECT * FROM vw_cs_assist_hop_yen_band_summary"
+    ).fetchdf()
+    dump(cs_hop_band, OUT / "cs_assist_hop_yen_band.json")
+    dump(cs_hop_band_sum, OUT / "cs_assist_hop_yen_band_sql_summary.json")
+    # Finance CSV: day-level contribution for ledger import
+    cs_curve.to_csv(OUT / "cs_assist_finance_daily.csv", index=False)
+    dump(cs_ledger, OUT / "cs_assist_ledger.json")
+
+    h = halluc.iloc[0].to_dict() if len(halluc) else {}
+    s = style.iloc[0].to_dict() if len(style) else {}
+    c = cs.iloc[0].to_dict() if len(cs) else {}
+    r = cs_rates.iloc[0].to_dict() if len(cs_rates) else {}
+    n = cs_net.iloc[0].to_dict() if len(cs_net) else {}
+
+    def pct(x):
+        try:
+            return f"{100.0 * float(x):.2f}%"
+        except (TypeError, ValueError):
+            return str(x)
+
+    action_rows = []
+    for _, row in cs_actions.iterrows():
+        action_rows.append(
+            f"| {row['action_type']} | {int(row.get('n_days', row.get('days', 0)))} | {int(row['sessions'])} | "
+            f"{row['tickets_avoided']} | {row['refunds_avoided']} | "
+            f"{row['extra_contained']} | **¥{int(row['incremental_yen'])}** | "
+            f"{row['avg_rag_hit']:.2f} |"
+        )
+    action_table = "\n".join(action_rows) if action_rows else "| (none) ||||||"
+
+    action_net_rows = []
+    for _, row in cs_action_net.iterrows():
+        action_net_rows.append(
+            f"| {row['action_type']} | {int(row['n_days'])} | "
+            f"¥{int(row['gross_yen'])} | ¥{int(row['action_day_cost_yen'])} | "
+            f"**¥{int(row['net_yen_after_action_cost'])}** |"
+        )
+    action_net_table = "\n".join(action_net_rows) if action_net_rows else "| (none) ||||"
+
+    week_attr_rows = []
+    for _, row in cs_week_attr.iterrows():
+        week_attr_rows.append(
+            f"| {str(row['week_start'])[:10]} | {int(row['days_acted'])} | "
+            f"{int(row['sessions_acted'])} | {row['tickets_avoided']} | "
+            f"{row['refunds_avoided']} | {row['extra_contained']} | "
+            f"**¥{int(row['gross_yen'])}** | {row['pct_of_total_gross']}% |"
+        )
+    week_attr_table = "\n".join(week_attr_rows) if week_attr_rows else "| (none) |||||||"
+
+    payback_rows = []
+    for _, row in cs_payback.iterrows():
+        payback_rows.append(
+            f"| {row['action_type']} | {int(row['n_days'])} | "
+            f"¥{int(row['gross_yen_per_day'])} | ¥{int(row['cost_yen_per_day'])} | "
+            f"**{row['payback_days']} 天** | {row['payback_bucket']} | "
+            f"{row['net_roi_multiple']}x |"
+        )
+    payback_table = "\n".join(payback_rows) if payback_rows else "| (none) ||||||"
+
+    attr_gap = float(cs_attr_check.iloc[0]["attribution_gap_yen"]) if len(cs_attr_check) else 0
+    attr_gap_pct = float(cs_attr_check.iloc[0]["attribution_gap_pct"]) if len(cs_attr_check) else 0
+
+    unit_rows = []
+    for _, row in cs_unit.iterrows():
+        unit_rows.append(
+            f"| {row['scenario']} | ¥{row['ticket_cost']} | ¥{row['refund_cost']} | "
+            f"¥{row['contain_value']} | **¥{int(row['gross_yen'])}** | "
+            f"**¥{int(row['net_yen'])}** |"
+        )
+    unit_table = "\n".join(unit_rows) if unit_rows else "| (none) |||||"
+    band = cs_band.iloc[0].to_dict() if len(cs_band) else {}
+    opp = cs_opp.iloc[0].to_dict() if len(cs_opp) else {}
+    be = cs_be.iloc[0].to_dict() if len(cs_be) else {}
+    one = cs_oneliner.iloc[0].to_dict() if len(cs_oneliner) else {}
+    contain_chk = (
+        cs_contain_check.iloc[0].to_dict() if len(cs_contain_check) else {}
+    )
+    cover_dec = cs_cover_dec.iloc[0].to_dict() if len(cs_cover_dec) else {}
+    week_split_chk = (
+        cs_week_split_chk.iloc[0].to_dict() if len(cs_week_split_chk) else {}
+    )
+
+    contain_split_rows = []
+    for _, row in cs_contain_split.iterrows():
+        contain_split_rows.append(
+            f"| {row['action_type']} | {int(row['n_days'])} | "
+            f"{row['extra_contained']} | **¥{int(row['yen_from_containment'])}** | "
+            f"{row['contain_share_pct_of_action_gross']}% | "
+            f"{row['pct_of_total_extra_contained']}% | "
+            f"{row['pct_of_total_contain_yen']}% | "
+            f"¥{int(row['contain_yen_per_day'])}/日 |"
+        )
+    contain_split_table = (
+        "\n".join(contain_split_rows) if contain_split_rows else "| (none) |||||||"
+    )
+
+    week_split_rows = []
+    for _, row in cs_week_split.iterrows():
+        week_split_rows.append(
+            f"| {str(row['week_start'])[:10]} | {int(row['days_acted'])} | "
+            f"¥{int(row['yen_from_tickets'])} | ¥{int(row['yen_from_refunds'])} | "
+            f"**¥{int(row['yen_from_containment'])}** | **¥{int(row['gross_yen'])}** | "
+            f"{row['contain_share_pct']}% | {row['pct_of_total_gross']}% |"
+        )
+    week_split_table = (
+        "\n".join(week_split_rows) if week_split_rows else "| (none) |||||||"
+    )
+
+    cover_rows = []
+    for _, row in cs_cover.iterrows():
+        cover_rows.append(
+            f"| {row['scenario']} | {row['target_coverage_pct']}% | "
+            f"**¥{int(row['projected_gross_yen']):,}** | "
+            f"**¥{int(row['projected_net_yen']):,}** | "
+            f"¥{int(row['incremental_gross_vs_now']):,} |"
+        )
+    cover_table = "\n".join(cover_rows) if cover_rows else "| (none) ||||"
+
+    pay_contain_rows = []
+    for _, row in cs_pay_contain.iterrows():
+        pay_contain_rows.append(
+            f"| {row['action_type']} | {row['payback_days']} 天 | "
+            f"¥{int(row['yen_from_tickets'])}/¥{int(row['yen_from_refunds'])}/"
+            f"**¥{int(row['yen_from_containment'])}** | "
+            f"{row['contain_share_pct_of_gross']}% | "
+            f"**{row['payback_days_contain_only']} 天** | "
+            f"{row['contain_payback_bucket']} | "
+            f"{row['contain_roi_vs_action_cost']}x |"
+        )
+    pay_contain_table = (
+        "\n".join(pay_contain_rows) if pay_contain_rows else "| (none) ||||||"
+    )
+    hf_bridge = cs_hf_bridge.iloc[0].to_dict() if len(cs_hf_bridge) else {}
+    marginal = cs_marginal.iloc[0].to_dict() if len(cs_marginal) else {}
+    contain_stress_sum = (
+        cs_contain_stress_sum.iloc[0].to_dict() if len(cs_contain_stress_sum) else {}
+    )
+    delay_sum = cs_delay_sum.iloc[0].to_dict() if len(cs_delay_sum) else {}
+    full_cap = cs_full.iloc[0].to_dict() if len(cs_full) else {}
+    onepager = cs_onepager.iloc[0].to_dict() if len(cs_onepager) else {}
+    week_full_sum = (
+        cs_week_full_sum.iloc[0].to_dict() if len(cs_week_full_sum) else {}
+    )
+    week_full_chk = (
+        cs_week_full_chk.iloc[0].to_dict() if len(cs_week_full_chk) else {}
+    )
+    hop_band_sql = (
+        cs_hop_band_sum.iloc[0].to_dict() if len(cs_hop_band_sum) else {}
+    )
+
+    stress_rows = []
+    # 只展示 -50% 承压行（业务问题主句）+ base 对照
+    stress_view = cs_contain_stress[
+        cs_contain_stress["scenario"].isin(
+            ["contain_price_base", "contain_price_minus50"]
+        )
+    ] if len(cs_contain_stress) else cs_contain_stress
+    for _, row in stress_view.iterrows():
+        stress_rows.append(
+            f"| {row['action_type']} | {row['scenario']} | ¥{row['contain_unit_price']} | "
+            f"¥{int(row['contain_yen_per_day'])} | ¥{int(row['cost_yen_per_day'])} | "
+            f"**{row['payback_days_contain_only']} 天** | {row['contain_payback_bucket']} | "
+            f"{row['contain_roi_vs_action_cost']}x |"
+        )
+    stress_table = "\n".join(stress_rows) if stress_rows else "| (none) |||||||"
+
+    delay_rows = []
+    for _, row in cs_delay.iterrows():
+        delay_rows.append(
+            f"| {int(row['delay_days'])} | ¥{int(row['gross_yen_per_acted_day'])} | "
+            f"**¥{int(row['lost_gross_yen'])}** | **¥{int(row['lost_net_yen'])}** | "
+            f"{row['delay_bucket']} |"
+        )
+    delay_table = "\n".join(delay_rows) if delay_rows else "| (none) ||||"
+
+    week_act_rows = []
+    for _, row in cs_week_act_net.iterrows():
+        week_act_rows.append(
+            f"| {str(row['week_start'])[:10]} | {int(row['days_acted'])} | "
+            f"¥{int(row['gross_yen'])} | ¥{int(row['action_day_cost_yen_alloc'])} | "
+            f"**¥{int(row['net_yen_after_action_cost_alloc'])}** |"
+        )
+    week_act_table = (
+        "\n".join(week_act_rows) if week_act_rows else "| (none) ||||"
+    )
+
+    week_full_rows = []
+    for _, row in cs_week_full.iterrows():
+        delta = row.get("delta_fully_loaded_net_yen")
+        delta_s = "—" if delta is None or (isinstance(delta, float) and delta != delta) else f"¥{int(delta):+d}"
+        week_full_rows.append(
+            f"| {str(row['week_start'])[:10]} | {int(row['days_acted'])} | "
+            f"¥{int(row['gross_yen'])} | ¥{int(row['audit_cost_yen_alloc'])} | "
+            f"¥{int(row['action_day_cost_yen_alloc'])} | "
+            f"**¥{int(row['fully_loaded_net_yen'])}** | {delta_s} |"
+        )
+    week_full_table = (
+        "\n".join(week_full_rows) if week_full_rows else "| (none) ||||||"
+    )
+
+    hop_band_section = ""
+    if hop_band.get("rows"):
+        try:
+            import importlib.util as _ilu2
+
+            _hs2 = ROOT / "scripts" / "agod" / "cs_assist_hop_sensitivity.py"
+            _sp2 = _ilu2.spec_from_file_location("cs_hop_sens2", _hs2)
+            _m2 = _ilu2.module_from_spec(_sp2)
+            assert _sp2.loader is not None
+            _sp2.loader.exec_module(_m2)
+            hop_band_section = _m2.contribution_section(hop_band)
+        except Exception:
+            hop_band_section = (
+                hop_band_sql.get("external_one_liner_cn")
+                and f"## HF hop / rag 驱动 seed → 贡献带（可对账）\n\n"
+                f"对外一句：{hop_band_sql.get('external_one_liner_cn')}\n"
+            ) or ""
+    elif hop_band_sql.get("external_one_liner_cn"):
+        hop_band_section = (
+            f"## HF hop / rag 驱动 seed → 贡献带（可对账）\n\n"
+            f"对外一句：{hop_band_sql.get('external_one_liner_cn')}\n"
+        )
+
+    curve_tail = cs_curve.tail(3) if len(cs_curve) else cs_curve
+    curve_rows = []
+    for _, row in curve_tail.iterrows():
+        curve_rows.append(
+            f"| {str(row['dt'])[:10]} | ¥{int(row['gross_yen_day'])} | "
+            f"**¥{int(row['cumulative_gross_yen'])}** | {row['cumulative_pct_of_total']}% |"
+        )
+    curve_table = "\n".join(curve_rows) if curve_rows else "| (none) |||"
+
+    traffic_rows = []
+    for _, row in cs_traffic.iterrows():
+        traffic_rows.append(
+            f"| {row['scenario']} | {int(row['daily_sessions']):,} | "
+            f"**¥{int(row['monthly_yen']):,}** | {row['monthly_tickets']} | "
+            f"{row['monthly_refunds']} | {row['monthly_extra_contained']} |"
+        )
+    traffic_table = "\n".join(traffic_rows)
+
+    week_rows = []
+    for _, row in cs_week.iterrows():
+        week_rows.append(
+            f"| {row['week_start']} | {int(row['sessions'])} | {int(row['tickets'])} | "
+            f"{int(row['refunds'])} | {pct(row['ticket_rate'])} | "
+            f"{pct(row['containment_rate'])} | ¥{int(row['net_contrib_yen'])} | "
+            f"{int(row['days_acted'])}/{int(row['days_ignored'])} |"
+        )
+    week_table = "\n".join(week_rows)
+
+    # Pull HF hop evidence if present (justify which action bucket)
+    hf_note = ""
+    hf_path = ROOT / "results" / "agod" / "hf_landing" / "halu_regime_rag.json"
+    if hf_path.exists():
+        hf = json.loads(hf_path.read_text())
+        hop_cut = hf.get("hop_at_cut") or hf.get("hop_at_cut") or {}
+        ranking = hop_cut.get("ranking") or {}
+        hf_note = f"""
+## 与 HF 幻觉子集的衔接（证据链）
+
+HaluEval 子集原型（`results/agod/hf_landing/halu_regime_rag.json`）：
+
+- cut 处 `fired={hop_cut.get('fired')}`，ratio≈`{hop_cut.get('ratio')}`
+- 跳变后幻觉率 ≈ `{ranking.get('halluc_rate')}`；`po_risk0` P@10=`{ranking.get('precision_at_10')}`
+- Top-10 平均 `rag_hit`=`{ranking.get('mean_rag_hit_top10')}` → 路由：检索缺口 vs 生成制度
+
+本账动作拆分与之对齐：`avg_rag_hit` 低 → `retrieval_refresh`；否则 → `model_rollback` / `audit_topk`。
+"""
+
+    hop_source = hop.get("source")
+    hop_quiet = hop.get("quiet_halluc")
+    hop_fire = hop.get("fire_halluc")
+    hop_ratio = hop.get("hop_ratio")
+    hop_acted_scale = hop.get("acted_halluc_scale")
+    hop_rag_low = hop.get("rag_low")
+    hop_rag_ok = hop.get("rag_ok")
+    hop_rag_thr = hop.get("rag_threshold")
+    cs_report = f"""# 客服助手增量贡献账（可复现）
+
+产品面：`shop_assistant`（客服助手）。  
+对照：同一幻觉制度跳变期内，**动作落地** vs **同条件不动作**。  
+单位经济：工单 ¥25 / 退款 ¥80 / 机器人成功承接会话 ¥3.5 / 审计件 ¥6。
+
+## 落地产出（业务 KPI）
+
+| 指标 | 数值 |
+|------|------|
+| 少产生工单 | **{c.get('tickets_avoided')}** 单 |
+| 少产生退款 | **{c.get('refunds_avoided')}** 单 |
+| 多机器人承接会话 | **{c.get('extra_sessions_contained')}** 次 |
+| 区间增量贡献（毛） | **¥{c.get('incremental_yen')}** |
+| 其中：少工单 | ¥{c.get('yen_from_tickets')} |
+| 其中：少退款 | ¥{c.get('yen_from_refunds')} |
+| 其中：多承接 | ¥{c.get('yen_from_containment')} |
+| **扣审计后净增量** | **¥{n.get('net_incremental_yen')}** |
+| 审计件数 / 成本（acted） | {n.get('audits_acted')} / ¥{n.get('audit_cost_acted')} |
+| 审计 precision 代理 | {n.get('avg_audit_precision')} |
+| 每千会话毛增量 | **¥{c.get('incremental_yen_per_1k_sessions')}** |
+| 每千会话净增量 | **¥{n.get('net_yen_per_1k_sessions')}** |
+| 30 天跑率（毛，acted 日均外推） | **¥{c.get('monthly_runrate_yen')}** / 月 |
+| 承接率提升 | {c.get('containment_rate_lift_pp')} pp |
+| 对照天数 acted / ignored | {c.get('days_acted')} / {c.get('days_ignored')} |
+| acted 会话量 | {c.get('sessions_acted')} |
+
+## Before → After 费率（三臂）
+
+| 费率 | quiet（平稳） | fire+不动作 | fire+动作落地 |
+|------|---------------|-------------|---------------|
+| 工单率 | {pct(r.get('ticket_rate_quiet'))} | {pct(r.get('ticket_rate_ignored'))} | {pct(r.get('ticket_rate_acted'))} |
+| 退款率 | {pct(r.get('refund_rate_quiet'))} | {pct(r.get('refund_rate_ignored'))} | {pct(r.get('refund_rate_acted'))} |
+| 机器人承接率 | {pct(r.get('contain_rate_quiet'))} | {pct(r.get('contain_rate_ignored'))} | {pct(r.get('contain_rate_acted'))} |
+
+读法：制度跳变后若不动作，工单/退款率显著恶化；动作落地后费率回到接近平稳期，这就是增量贡献的来源。
+
+## 按动作类型拆贡献（增量来源）
+
+| 动作 | 天数 | 会话 | 少工单 | 少退款 | 多承接 | 增量¥ | avg_rag_hit |
+|------|------|------|--------|--------|--------|-------|-------------|
+{action_table}
+
+## 扣动作成本后净贡献
+
+| 动作 | 天数 | 毛增量¥ | 动作日成本¥ | 净贡献¥ |
+|------|------|---------|-------------|---------|
+{action_net_table}
+
+## 流量情景（月贡献外推 · 毛）
+
+| 情景 | 日会话 | 月增量¥ | 月少工单 | 月少退款 | 月多承接 |
+|------|--------|---------|----------|----------|----------|
+{traffic_table}
+
+## 周经营看板
+
+| 周起始 | 会话 | 工单 | 退款 | 工单率 | 承接率 | 净贡献¥ | acted/ignored 天 |
+|--------|------|------|------|--------|--------|---------|------------------|
+{week_table}
+{hf_note}
+## 口径
+
+```
+毛增量¥ =
+  (ignored工单率 - acted工单率) × acted会话数 × 工单单价
++ (ignored退款率 - acted退款率) × acted会话数 × 退款单价
++ (acted承接率 - ignored承接率) × acted会话数 × 承接会话价值
+
+净增量¥ = 毛增量¥ − acted 侧审计人力成本
+         （审计单价 × acted 日审计件数；不把 ignored 多烧的审计算进贡献）
+```
+
+## HF hop 驱动参数
+
+- source: `{hop_source}`
+- quiet_halluc / fire_halluc(biz): `{hop_quiet}` / `{hop_fire}`
+- hop_ratio: `{hop_ratio}`；acted_halluc_scale: `{hop_acted_scale}`
+- rag_low / rag_ok / thr: `{hop_rag_low}` / `{hop_rag_ok}` / `{hop_rag_thr}`
+
+## HF knobs → 费率桥接（可对账）
+
+| 项 | 值 |
+|----|-----|
+| HF source | `{hf_bridge.get('hf_source')}` |
+| hop_ratio / fired | `{hf_bridge.get('hop_ratio')}` / `{hf_bridge.get('fired_at_cut')}` |
+| fire_halluc biz / raw | `{hf_bridge.get('fire_halluc_biz')}` / `{hf_bridge.get('raw_fire_halluc')}` |
+| ignore ticket/refund bump | `{hf_bridge.get('ignore_ticket_bump')}` / `{hf_bridge.get('ignore_refund_bump')}` |
+| rag_low / ok / thr | `{hf_bridge.get('rag_low')}` / `{hf_bridge.get('rag_ok')}` / `{hf_bridge.get('rag_threshold')}` |
+| 工单 quiet→ignored→acted | {hf_bridge.get('ticket_rate_quiet_pct')}% → {hf_bridge.get('ticket_rate_ignored_pct')}% → {hf_bridge.get('ticket_rate_acted_pct')}% |
+| 承接 quiet→ignored→acted | {hf_bridge.get('contain_rate_quiet_pct')}% → {hf_bridge.get('contain_rate_ignored_pct')}% → {hf_bridge.get('contain_rate_acted_pct')}% |
+| bridge_status | **{hf_bridge.get('bridge_status')}** |
+
+桥接一句：{hf_bridge.get('external_one_liner_cn') or '（重跑 demo）'}
+
+## 边际动作日贡献（多动作一天值多少）
+
+| 项 | 值 |
+|----|-----|
+| 已动作 / 未动作天 | {marginal.get('days_acted')} / {marginal.get('days_ignored')} |
+| 日均会话（acted） | {marginal.get('sessions_per_acted_day')} |
+| 每动作日 毛/净/承接¥ | **¥{int(marginal.get('gross_yen_per_acted_day') or 0)}** / **¥{int(marginal.get('net_yen_per_acted_day') or 0)}** / ¥{int(marginal.get('contain_yen_per_acted_day') or 0)} |
+| 每动作日 少工单/退款/承接 | {marginal.get('tickets_per_acted_day')} / {marginal.get('refunds_per_acted_day')} / {marginal.get('contain_per_acted_day')} |
+| 再动作 1 天期望毛/净 | **¥{int(marginal.get('expected_gross_if_one_more_acted_day') or 0)}** / **¥{int(marginal.get('expected_net_if_one_more_acted_day') or 0)}** |
+| 仍余 ignored 日 / 留白毛 | {marginal.get('remaining_ignored_days')} / ¥{int(marginal.get('remaining_opportunity_gross_yen') or 0):,} |
+
+边际一句：{marginal.get('external_one_liner_cn') or '（重跑 demo）'}
+
+## 周归因贡献（财务对账）
+
+| 周起始 | acted天 | 会话 | 少工单 | 少退款 | 多承接 | 毛¥ | 占总毛% |
+|--------|---------|------|--------|--------|--------|-----|---------|
+{week_attr_table}
+
+周归因合计 vs 总账缺口：¥{attr_gap}（{attr_gap_pct}%）——应为 ~0。
+
+## 动作回本天数
+
+| 动作 | 天数 | 日均毛¥ | 日均成本¥ | 回本 | 分档 | 净ROI |
+|------|------|---------|-----------|------|------|-------|
+{payback_table}
+
+读法：回本天数 < 1 = 当天回本；净ROI = 动作净贡献 / 动作日成本合计。
+
+## 单位经济敏感度（量固定，扫单价）
+
+| 情景 | 工单单价 | 退款单价 | 承接单价 | 毛¥ | 净¥ |
+|------|----------|----------|----------|-----|-----|
+{unit_table}
+
+单价全 ±20% 净贡献带：**¥{int(band.get('net_yen_low') or 0):,} → ¥{int(band.get('net_yen_base') or 0):,} → ¥{int(band.get('net_yen_high') or 0):,}**（带宽相对 base ≈ {band.get('net_band_width_vs_base')}）。
+
+## 累计贡献曲线（末三日）
+
+| 日期 | 当日毛¥ | 累计毛¥ | 累计占比 |
+|------|---------|---------|----------|
+{curve_table}
+
+财务日账 CSV：`results/agod/biz_value_sql/cs_assist_finance_daily.csv`
+
+## 不动作留白（机会成本）
+
+火情日覆盖 **{opp.get('fire_day_coverage_pct')}%**（acted {opp.get('days_acted')} / ignored {opp.get('days_ignored')}）。  
+若 ignored 日按 acted 费率，桌上还留：
+
+| 项 | 已实现 | 留白（若当时动作） |
+|----|--------|-------------------|
+| 少工单 | {opp.get('tickets_realized')} | **{opp.get('tickets_left_on_table')}** |
+| 少退款 | {opp.get('refunds_realized')} | **{opp.get('refunds_left_on_table')}** |
+| 多承接 | {opp.get('contain_realized')} | **{opp.get('contain_left_on_table')}** |
+| 毛¥ | ¥{int(opp.get('realized_gross_yen') or 0)} | **¥{int(opp.get('opportunity_gross_yen') or 0)}** |
+
+全覆盖潜在毛¥ **¥{int(opp.get('potential_full_coverage_gross_yen') or 0):,}**；已捕获 **{opp.get('yen_capture_pct')}%**。
+
+## 按动作拆多承接（自助率贡献）
+
+| 动作 | 天数 | 多承接 | 承接¥ | 占该动作毛% | 占总承接次% | 占总承接¥% | 日均承接¥ |
+|------|------|--------|-------|-------------|-------------|------------|-----------|
+{contain_split_table}
+
+承接对账缺口：次数 {contain_chk.get('contain_count_gap')} / ¥{contain_chk.get('contain_yen_gap')}（应为 ~0）。
+
+## 周贡献三项拆分（工单 / 退款 / 承接）
+
+| 周 | acted天 | 工单¥ | 退款¥ | 承接¥ | 毛¥ | 承接占毛% | 占总毛% |
+|----|---------|-------|-------|-------|-----|-----------|---------|
+{week_split_table}
+
+周拆分对账缺口：毛¥ {week_split_chk.get('gross_gap')} / 承接¥ {week_split_chk.get('contain_yen_gap')}（应为 ~0）。
+
+## 火情覆盖率外推（50% → 75% → 100%）
+
+| 情景 | 目标覆盖 | 投影毛¥ | 投影净¥ | 相对当前毛增量 |
+|------|----------|---------|---------|----------------|
+{cover_table}
+
+读法：现覆盖 {cover_dec.get('fire_day_coverage_pct')}%；拉满可多拿毛约 ¥{int(cover_dec.get('gross_uplift_if_full_coverage') or 0):,}。
+
+## 回本分子拆分（承接进回本）
+
+| 动作 | 全口径回本 | 毛拆分 工单/退款/承接¥ | 承接占毛% | 仅承接回本 | 承接回本分档 | 承接ROI |
+|------|------------|------------------------|-----------|------------|--------------|---------|
+{pay_contain_table}
+
+读法：全口径回本用全部毛¥；「仅承接回本」= 动作日成本 / 日均承接¥——回答「自助率这一项能不能单独把动作成本赚回来」。
+
+## 承接单价承压（仅靠多承接还能回本吗）
+
+业务问题：自助会话价值从 ¥3.5 砍到 ¥1.75（-50%）时，各动作是否仍能 **只靠多承接** 当天回本。
+
+| 动作 | 情景 | 承接单价 | 日均承接¥ | 日成本¥ | 仅承接回本 | 分档 | 承接ROI |
+|------|------|----------|-----------|---------|------------|------|---------|
+{stress_table}
+
+摘要：{contain_stress_sum.get('external_one_liner_cn') or '（重跑 demo）'}  
+状态：`{contain_stress_sum.get('stress_status')}`（-50% 下 {contain_stress_sum.get('n_same_day_at_minus50')}/{contain_stress_sum.get('n_actions')} 臂当天回本）。
+
+## Early detection：delay → 利润差
+
+口径：`lost_¥(delay) = delay × 每动作日贡献`。零延迟吃满对照窗增量；晚发现一天 ≈ 少拿一个动作日。
+
+| Before → After（火情窗） | 不动作 | 动作落地 |
+|--------------------------|--------|----------|
+| 工单率 | {delay_sum.get('ticket_rate_ignored_pct')}% | {delay_sum.get('ticket_rate_acted_pct')}% |
+| 承接率 | {delay_sum.get('contain_rate_ignored_pct')}% | {delay_sum.get('contain_rate_acted_pct')}% |
+
+| delay（天） | 每动作日毛¥ | 少拿毛¥ | 少拿净¥ | 分档 |
+|------------:|------------:|--------:|--------:|------|
+{delay_table}
+
+对外一句：{delay_sum.get('external_one_liner_cn') or '（重跑 demo）'}
+
+## 全成本净贡献 + 总捕获
+
+口径：`全成本净 = 毛 − 审计件 − 动作日成本`；留白 = 火情 ignored 日未拿的毛。
+
+| 项 | 值 |
+|----|-----|
+| 毛增量 | **¥{int(full_cap.get('realized_gross_yen') or 0)}** |
+| 审计件成本 | ¥{int(full_cap.get('audit_cost_yen') or 0)} |
+| 动作日成本合计 | ¥{int(full_cap.get('action_day_cost_yen') or 0)} |
+| 扣审计净 | ¥{int(full_cap.get('net_after_audit_yen') or 0)} |
+| **全成本净** | **¥{int(full_cap.get('fully_loaded_net_yen') or 0)}** |
+| ignored 留白毛 | ¥{int(full_cap.get('uncaptured_ignored_gross_yen') or 0)} |
+| 总可寻址毛 | ¥{int(full_cap.get('total_addressable_gross_yen') or 0)} |
+| 毛捕获率 | **{full_cap.get('gross_capture_pct')}%** |
+| delay+1 天少拿毛 | ¥{int(full_cap.get('delay1_lost_gross_yen') or 0)} |
+
+对外一句：{full_cap.get('external_one_liner_cn') or '（重跑 demo）'}
+
+### 周毛 − 动作日成本分摊
+
+| 周 | acted天 | 毛¥ | 动作成本分摊¥ | 扣动作净¥ |
+|----|--------:|----:|---------------:|----------:|
+{week_act_table}
+
+## 值班一页纸（可对账）
+
+| 项 | 值 |
+|----|-----|
+| 工单 Before→After | {onepager.get('ticket_rate_ignored_pct')}% → **{onepager.get('ticket_rate_acted_pct')}%** |
+| 退款 Before→After | {onepager.get('refund_rate_ignored_pct')}% → **{onepager.get('refund_rate_acted_pct')}%** |
+| 承接 Before→After | {onepager.get('contain_rate_ignored_pct')}% → **{onepager.get('contain_rate_acted_pct')}%**（+{onepager.get('contain_lift_pp')}pp） |
+| 毛 / 扣审计净 / **全成本净** | ¥{int(onepager.get('realized_gross_yen') or 0)} / ¥{int(onepager.get('net_after_audit_yen') or 0)} / **¥{int(onepager.get('fully_loaded_net_yen') or 0)}** |
+| 捕获率 / ignored 留白毛 | {onepager.get('gross_capture_pct')}% / ¥{int(onepager.get('uncaptured_ignored_gross_yen') or 0)} |
+| delay 0/1/3 少拿毛 | ¥{int(onepager.get('delay0_lost_gross') or 0)} / **¥{int(onepager.get('delay1_lost_gross') or 0)}** / ¥{int(onepager.get('delay3_lost_gross') or 0)} |
+| 优先动作 | **{onepager.get('top_action')}**（日净≈¥{int(onepager.get('top_action_net_yen_per_day') or 0)}） |
+
+对外一句：{onepager.get('external_one_liner_cn') or '（重跑 demo）'}
+
+## 周全成本净周报（扣审计 + 动作日）
+
+口径：`周全成本净 = 周毛 − 当周 acted 审计件 − 动作日成本按天分摊`；环比看净贡献周变化。
+
+| 周 | acted天 | 毛¥ | 审计分摊¥ | 动作成本分摊¥ | 全成本净¥ | WoW Δ净 |
+|----|--------:|----:|----------:|---------------:|----------:|--------:|
+{week_full_table}
+
+| 对账 | 值 |
+|------|-----|
+| 周全成本净合计 | **¥{int(week_full_chk.get('week_fully_loaded_sum') or 0)}** |
+| 总账全成本净 | ¥{int(week_full_chk.get('total_fully_loaded') or 0)} |
+| 缺口 | ¥{int(week_full_chk.get('fully_loaded_gap_yen') or 0)} |
+
+对外一句：{week_full_sum.get('external_one_liner_cn') or '（重跑 demo）'}
+
+{hop_band_section}
+## 成本 / 单价盈亏平衡
+
+| 项 | 值 |
+|----|-----|
+| 现审计单价 | ¥{be.get('audit_unit_cost_now')} |
+| 净=0 时审计单价上限 | **¥{be.get('max_audit_unit_cost_at_net0')}**（余量 ×{be.get('audit_unit_headroom_multiple')}） |
+| 单价整体还可下砍 | **{be.get('price_cut_headroom_pct')}%** 仍净>0 |
+
+## 一句对外
+
+{cover_dec.get('external_one_liner_cn') or one.get('external_one_liner_cn') or '（重跑 demo 生成）'}
+"""
+    (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(cs_report)
+    docs_biz = ROOT / "docs" / "biz" / "CS_ASSISTANT_CONTRIBUTION.md"
+    docs_biz.write_text(cs_report)
+
+    # Weekly ops brief (paste-ready for biz review)
+    try:
+        import importlib.util
+
+        brief_path = ROOT / "scripts" / "agod" / "cs_assist_weekly_ops_brief.py"
+        spec = importlib.util.spec_from_file_location("cs_ops_brief", brief_path)
+        brief_mod = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(brief_mod)
+        brief = brief_mod.build_brief()
+        (OUT / "CS_ASSISTANT_WEEKLY_OPS_BRIEF.md").write_text(brief)
+        (ROOT / "docs" / "biz" / "CS_ASSISTANT_WEEKLY_OPS_BRIEF.md").write_text(brief)
+        # Append pointer into contribution doc
+        pointer = (
+            "\n\n---\n\n周经营简报（WoW / 动作净贡献）："
+            "`docs/biz/CS_ASSISTANT_WEEKLY_OPS_BRIEF.md`\n"
+            "经营总看板 / hop 情景：`docs/biz/CS_ASSISTANT_EXEC_DASHBOARD.md`\n"
+            "周归因 / 回本：见贡献账内「周归因贡献」「动作回本天数」\n"
+            "单位经济带 / 累计曲线 / 财务CSV：见贡献账对应章节\n"
+            "方法论 × 业务情景 × 单位经济对照原型："
+            "`docs/biz/METHOD_BIZ_SCENARIO_PROTOTYPE.md`\n"
+            "方法论落地 Roadmap（推理/对齐 + 回本/周归因详解）："
+            "`docs/biz/METHOD_LANDING_ROADMAP.md`\n"
+            "落地场景 · 多承接 · 方法异同 · 迭代更新："
+            "`docs/biz/LANDING_CONTAIN_METHOD_ITER.md`\n"
+            "不动作留白 / 盈亏平衡：见贡献账对应章节\n"
+            "承接单价承压（仅承接回本 ±50%）：见贡献账「承接单价承压」；"
+            "`results/agod/biz_value_sql/cs_assist_payback_contain_price_stress.json`\n"
+            "Early detection delay→利润差：见贡献账「Early detection」；"
+            "`results/agod/biz_value_sql/cs_assist_detection_delay_profit.json`\n"
+            "全成本净 + 总捕获：见贡献账「全成本净贡献」；"
+            "`results/agod/biz_value_sql/cs_assist_fully_loaded_capture.json`\n"
+            "值班一页纸：见贡献账「值班一页纸」；"
+            "`results/agod/biz_value_sql/cs_assist_ops_onepager.json`\n"
+            "周全成本净周报（扣审计+动作日+WoW）：见贡献账「周全成本净周报」；"
+            "`results/agod/biz_value_sql/cs_assist_weekly_fully_loaded.json`\n"
+            "HF hop/rag 重 seed 贡献带：见贡献账「HF hop / rag 驱动 seed」；"
+            "`results/agod/biz_value_sql/cs_assist_hop_yen_band_summary.json`\n"
+            "HH tidy流 + OnlineRFPerm 连续检测："
+            "`docs/biz/HH_ONLINE_RFPERM_STREAM.md`\n"
+            "大模型落地 use-case（业务逻辑）："
+            "`docs/biz/LLM_LANDING_USECASES_BIZ.md`\n"
+        )
+        docs_biz.write_text(docs_biz.read_text() + pointer)
+        (OUT / "CS_ASSISTANT_CONTRIBUTION.md").write_text(
+            (OUT / "CS_ASSISTANT_CONTRIBUTION.md").read_text() + pointer
+        )
+    except Exception as e:  # noqa: BLE001 — brief is additive; don't fail demo
+        print(f"weekly ops brief skipped: {e}")
+
+    report = f"""# Business-value SQL demo report
+
+## 客服助手增量贡献（主结果）
+
+- tickets avoided: `{c.get('tickets_avoided')}`
+- refunds avoided: `{c.get('refunds_avoided')}`
+- extra sessions contained: `{c.get('extra_sessions_contained')}`
+- **gross incremental ¥: `{c.get('incremental_yen')}`**
+- **net incremental ¥ (after audit): `{n.get('net_incremental_yen')}`**
+- ¥ breakdown tickets/refunds/contain: `{c.get('yen_from_tickets')}` / `{c.get('yen_from_refunds')}` / `{c.get('yen_from_containment')}`
+- monthly run-rate ¥ (gross): `{c.get('monthly_runrate_yen')}`
+- action split: `cs_assist_actions.json`
+- traffic / weekly / net: `cs_assist_traffic.json` / `cs_assist_weekly.json` / `cs_assist_net.json`
+- detail: `CS_ASSISTANT_CONTRIBUTION.md` / `docs/biz/CS_ASSISTANT_CONTRIBUTION.md`
+
+## Hallucination cost rollup (`shop_assistant`)
+
+- est daily save act vs ignore: `{h.get('est_daily_save_act_vs_ignore')}` CNY
+
+## Style / creative (`feed_caption`)
+
+- style-only days: `{s.get('n_style_only_days')}`
+- avg CTR style-only / quiet: `{s.get('avg_ctr_style_only')}` / `{s.get('avg_ctr_quiet')}`
+
+## Artifacts
+
+- `sql/biz_value/04_cs_assistant_contribution.sql`
+- `sql/biz_value/05_cs_net_and_weekly.sql`
+- `results/agod/biz_value_sql/CS_ASSISTANT_CONTRIBUTION.md`
+"""
+    (OUT / "REPORT.md").write_text(report)
+    print(cs_report)
+    print(report)
+    print(f"wrote {OUT}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

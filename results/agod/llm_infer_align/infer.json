@@ -1,0 +1,44 @@
+{
+  "surface": "inference_hallucination",
+  "package": "agod.online_rfperm / agod.po_iptw",
+  "data": "data/hf_cache/halueval_qa_3000.jsonl",
+  "n": 1200,
+  "gate": 1.25,
+  "stream_fires": 2,
+  "hop_at_cut": {
+    "t": 4,
+    "fired": true,
+    "ratio": 7.80240229115313,
+    "ranking": {
+      "n_t1": 100,
+      "halluc_rate": 0.92,
+      "auroc_po_risk0": 1.0,
+      "precision_at_10": 1.0,
+      "mean_rag_hit_top10": 0.3744196466792182
+    }
+  },
+  "po_gate_step": {
+    "fired": true,
+    "ratio": 18.399999999999984,
+    "mean_po": 0.8747717948717948,
+    "mean_w": 0.9999989075843194,
+    "precision_at_k": 1.0,
+    "audit_topk_local": [
+      6,
+      13,
+      31,
+      22,
+      48,
+      50,
+      40,
+      39,
+      58,
+      79
+    ]
+  },
+  "recommended_action": "model_rollback_or_audit_topk",
+  "how_to_use_in_serving": {
+    "on_fire": "升配检索 / 人工审计 Top-k(po_risk0) / 可选 √PO 重加权下一跳训练",
+    "on_quiet": "标准路径，w=1"
+  }
+}

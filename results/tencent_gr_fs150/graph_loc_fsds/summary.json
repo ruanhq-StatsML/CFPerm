@@ -1,0 +1,938 @@
+{
+  "stance": "graph localization \u2192 FSDS on TencentGR 150; inject Hit@K for precise dim attribution",
+  "dims": [
+    "user",
+    "merchant",
+    "product",
+    "order"
+  ],
+  "meta": {
+    "n": 6000,
+    "p_graph": 91,
+    "p_all_selected": 150,
+    "dim_sizes": {
+      "user": 64,
+      "merchant": 11,
+      "product": 4,
+      "order": 12
+    },
+    "pos_rate": 0.15683333333333332,
+    "w1_rate": 0.5
+  },
+  "natural_l1": {
+    "rf_domain_auc": 0.7430983285917496,
+    "rf_mass": {
+      "user": 0.659274369636488,
+      "merchant": 0.053094148641395576,
+      "product": 0.027818987314969026,
+      "order": 0.25981249440614734
+    },
+    "logo_share": {
+      "user": 0.0,
+      "merchant": 0.0,
+      "product": 0.9999999369907879,
+      "order": 0.0
+    },
+    "logo": {
+      "user": {
+        "delta": -0.00019112160693507017,
+        "R_minus": 0.0020814846052402197
+      },
+      "merchant": {
+        "delta": -7.725462181682125e-06,
+        "R_minus": 0.0018980884604868316
+      },
+      "product": {
+        "delta": 1.5870694184949618e-05,
+        "R_minus": 0.0018744923041202
+      },
+      "order": {
+        "delta": -7.425762593728236e-05,
+        "R_minus": 0.001964620624242432
+      }
+    },
+    "lodo_share": {
+      "user": 0.3489577667737506,
+      "merchant": 0.37503536261469805,
+      "product": 0.27600687059567475,
+      "order": 0.0
+    },
+    "blended": {
+      "user": 0.3360773858636245,
+      "merchant": 0.1427098400833695,
+      "product": 0.4346086074306028,
+      "order": 0.08660416662140315
+    },
+    "S_star": [
+      "product",
+      "user"
+    ],
+    "po_risk": 0.0018903629983051495
+  },
+  "natural_l2": {
+    "rf_domain_auc": 0.7459450568990044,
+    "rf_mass": {
+      "product": 0.054388929183929825,
+      "user": 0.94561107081507
+    },
+    "logo_share": {
+      "product": 0.0,
+      "user": 0.0
+    },
+    "within_dim": {
+      "product": [
+        {
+          "rank": 1,
+          "name": "n_uniq_cnv_item",
+          "vimp": 0.02471087032172256
+        },
+        {
+          "rank": 2,
+          "name": "item_entropy_cnv",
+          "vimp": 0.02094722673855575
+        },
+        {
+          "rank": 3,
+          "name": "item_entropy_clk",
+          "vimp": 0.007742555345861008
+        },
+        {
+          "rank": 4,
+          "name": "n_uniq_clk_item",
+          "vimp": 0.0009882767778449126
+        }
+      ],
+      "user": [
+        {
+          "rank": 1,
+          "name": "ui_only_exp_share",
+          "vimp": 0.13742539196945838
+        },
+        {
+          "rank": 2,
+          "name": "30d_ctcvr",
+          "vimp": 0.07819365646008977
+        },
+        {
+          "rank": 3,
+          "name": "sess_cnv_sess_rate",
+          "vimp": 0.07816530049207909
+        },
+        {
+          "rank": 4,
+          "name": "life_cnv_share",
+          "vimp": 0.07778387445280018
+        },
+        {
+          "rank": 5,
+          "name": "ui_exp_per_item_mean",
+          "vimp": 0.06606551194738747
+        },
+        {
+          "rank": 6,
+          "name": "life_ctcvr",
+          "vimp": 0.04948615845511178
+        },
+        {
+          "rank": 7,
+          "name": "sess_depth_cnv_mean",
+          "vimp": 0.04266619051634107
+        },
+        {
+          "rank": 8,
+          "name": "ctvr_pay_per_expose",
+          "vimp": 0.04237287416531035
+        }
+      ]
+    },
+    "po_risk": 0.0018774117282300976
+  },
+  "inject": {
+    "trials": [
+      {
+        "injected_dim": "user",
+        "strength": 0.8,
+        "confound": 0.0,
+        "S_star": [
+          "user",
+          "merchant"
+        ],
+        "flat_top": [
+          "user",
+          "merchant"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.9954978085079875,
+          "merchant": 0.003371143670754922,
+          "product": 0.0003962469170979374,
+          "order": 0.0007348009031596285
+        },
+        "flat_blended": {
+          "user": 0.9932467127624875,
+          "merchant": 0.005056715506127617,
+          "product": 0.0005943703756463458,
+          "order": 0.001102201354738404
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "user",
+        "strength": 0.8,
+        "confound": 0.35,
+        "S_star": [
+          "user",
+          "merchant"
+        ],
+        "flat_top": [
+          "user",
+          "merchant"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.9788214720317348,
+          "merchant": 0.018056470048872696,
+          "product": 0.00030014440164438314,
+          "order": 0.002821913516248219
+        },
+        "flat_blended": {
+          "user": 0.978821472032224,
+          "merchant": 0.018056470048881723,
+          "product": 0.00030014440164453313,
+          "order": 0.00282191351624963
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "user",
+        "strength": 1.5,
+        "confound": 0.0,
+        "S_star": [
+          "user",
+          "order"
+        ],
+        "flat_top": [
+          "user",
+          "order"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.9945248063941815,
+          "merchant": 0.0009018201653413885,
+          "product": 2.175419425527309e-05,
+          "order": 0.004551619245221963
+        },
+        "flat_blended": {
+          "user": 0.9917872095917799,
+          "merchant": 0.001352730248010595,
+          "product": 3.263129138287887e-05,
+          "order": 0.0068274288678265085
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "user",
+        "strength": 1.5,
+        "confound": 0.35,
+        "S_star": [
+          "user",
+          "merchant"
+        ],
+        "flat_top": [
+          "user",
+          "merchant"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.9973937813970954,
+          "merchant": 0.002250101601529043,
+          "product": 2.3642239904836094e-05,
+          "order": 0.00033247476047070364
+        },
+        "flat_blended": {
+          "user": 0.9960906721135941,
+          "merchant": 0.003375152387227045,
+          "product": 3.5463359698947395e-05,
+          "order": 0.0004987121384798283
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "user",
+        "strength": 2.5,
+        "confound": 0.0,
+        "S_star": [
+          "user",
+          "merchant"
+        ],
+        "flat_top": [
+          "user",
+          "merchant"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.9996912289276627,
+          "merchant": 0.0003049992597821598,
+          "product": 0.0,
+          "order": 3.7718115550762344e-06
+        },
+        "flat_blended": {
+          "user": 0.9995368433919948,
+          "merchant": 0.0004574988896728085,
+          "product": 0.0,
+          "order": 5.657717332396528e-06
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "user",
+        "strength": 2.5,
+        "confound": 0.35,
+        "S_star": [
+          "user",
+          "merchant"
+        ],
+        "flat_top": [
+          "user",
+          "merchant"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.9994476578683508,
+          "merchant": 0.00039002032543952666,
+          "product": 0.00015846724579544544,
+          "order": 3.854559414341526e-06
+        },
+        "flat_blended": {
+          "user": 0.9991714868170379,
+          "merchant": 0.0005850304795523221,
+          "product": 0.00023770086646480177,
+          "order": 5.781835944807307e-06
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "merchant",
+        "strength": 0.8,
+        "confound": 0.0,
+        "S_star": [
+          "merchant",
+          "user"
+        ],
+        "flat_top": [
+          "merchant",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.055965690847134895,
+          "merchant": 0.9064404121328309,
+          "product": 0.006946815486077943,
+          "order": 0.030647081532956297
+        },
+        "flat_blended": {
+          "user": 0.08394853627062387,
+          "merchant": 0.8596809250245795,
+          "product": 0.01041684104571769,
+          "order": 0.045953697658078864
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "merchant",
+        "strength": 0.8,
+        "confound": 0.35,
+        "S_star": [
+          "merchant",
+          "user"
+        ],
+        "flat_top": [
+          "merchant",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.23264099812944333,
+          "merchant": 0.6242936514097156,
+          "product": 0.02130763454163289,
+          "order": 0.12175771591770816
+        },
+        "flat_blended": {
+          "user": 0.23264099812955963,
+          "merchant": 0.6242936514100277,
+          "product": 0.02130763454164354,
+          "order": 0.12175771591776902
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "merchant",
+        "strength": 1.5,
+        "confound": 0.0,
+        "S_star": [
+          "merchant",
+          "user"
+        ],
+        "flat_top": [
+          "merchant",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.05636704465518177,
+          "merchant": 0.907986912801179,
+          "product": 0.007357097182824319,
+          "order": 0.0282889453598149
+        },
+        "flat_blended": {
+          "user": 0.08455056698269361,
+          "merchant": 0.8619803692023974,
+          "product": 0.011035645774226163,
+          "order": 0.04243341803968268
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "merchant",
+        "strength": 1.5,
+        "confound": 0.35,
+        "S_star": [
+          "merchant",
+          "user"
+        ],
+        "flat_top": [
+          "merchant",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.21795715480049555,
+          "merchant": 0.6489725972287996,
+          "product": 0.02535594097763161,
+          "order": 0.10771430699157332
+        },
+        "flat_blended": {
+          "user": 0.2179571548006045,
+          "merchant": 0.648972597229124,
+          "product": 0.02535594097764429,
+          "order": 0.10771430699162717
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "merchant",
+        "strength": 2.5,
+        "confound": 0.0,
+        "S_star": [
+          "merchant",
+          "user"
+        ],
+        "flat_top": [
+          "merchant",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.03807811728192519,
+          "merchant": 0.9396035340274279,
+          "product": 0.004695829648666381,
+          "order": 0.017622519040980555
+        },
+        "flat_blended": {
+          "user": 0.057117175922834405,
+          "merchant": 0.9094053010417263,
+          "product": 0.007043744472992989,
+          "order": 0.026433778561446124
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "merchant",
+        "strength": 2.5,
+        "confound": 0.35,
+        "S_star": [
+          "merchant",
+          "user"
+        ],
+        "flat_top": [
+          "merchant",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.10921359335237445,
+          "merchant": 0.8588325271661708,
+          "product": 0.004546641526606682,
+          "order": 0.027407237953848165
+        },
+        "flat_blended": {
+          "user": 0.1638203859373006,
+          "merchant": 0.7882487960380443,
+          "product": 0.006819962119587842,
+          "order": 0.04111085590406704
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "product",
+        "strength": 0.8,
+        "confound": 0.0,
+        "S_star": [
+          "product",
+          "user"
+        ],
+        "flat_top": [
+          "product",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.16931369596203827,
+          "merchant": 0.008764315999357206,
+          "product": 0.7376181355928352,
+          "order": 0.0843038524447693
+        },
+        "flat_blended": {
+          "user": 0.2539705439428137,
+          "merchant": 0.01069232839634625,
+          "product": 0.6094238844426123,
+          "order": 0.12591324321722763
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "product",
+        "strength": 0.8,
+        "confound": 0.35,
+        "S_star": [
+          "user",
+          "product"
+        ],
+        "flat_top": [
+          "user",
+          "product"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 0,
+        "hit_flat@1": 0,
+        "rank_graph": 2,
+        "rank_flat": 2,
+        "l1_blended": {
+          "user": 0.7390672817555782,
+          "merchant": 0.04734970733403486,
+          "product": 0.1352107885341299,
+          "order": 0.07837222237525708
+        },
+        "flat_blended": {
+          "user": 0.6086009331176397,
+          "merchant": 0.07102455909863252,
+          "product": 0.20281617736868657,
+          "order": 0.11755833041404112
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "product",
+        "strength": 1.5,
+        "confound": 0.0,
+        "S_star": [
+          "product",
+          "user"
+        ],
+        "flat_top": [
+          "product",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.11519283600369352,
+          "merchant": 0.01847403277152249,
+          "product": 0.8094885828791694,
+          "order": 0.05684454834461469
+        },
+        "flat_blended": {
+          "user": 0.17278925400537348,
+          "merchant": 0.027693715316322805,
+          "product": 0.7142710105835649,
+          "order": 0.08524602009373877
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "product",
+        "strength": 1.5,
+        "confound": 0.35,
+        "S_star": [
+          "product",
+          "user"
+        ],
+        "flat_top": [
+          "user",
+          "product"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 0,
+        "rank_graph": 1,
+        "rank_flat": 2,
+        "l1_blended": {
+          "user": 0.307820686149389,
+          "merchant": 0.01381706521348146,
+          "product": 0.5990510895466868,
+          "order": 0.07931115908944268
+        },
+        "flat_blended": {
+          "user": 0.46173100037472375,
+          "merchant": 0.020725596525268657,
+          "product": 0.3985766718979896,
+          "order": 0.11896673120101782
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "product",
+        "strength": 2.5,
+        "confound": 0.0,
+        "S_star": [
+          "product",
+          "user"
+        ],
+        "flat_top": [
+          "product",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.08769712835883503,
+          "merchant": 0.006247555347196168,
+          "product": 0.8623281467296853,
+          "order": 0.04372716956328352
+        },
+        "flat_blended": {
+          "user": 0.13154569253812554,
+          "merchant": 0.009371333020785204,
+          "product": 0.7934922200952271,
+          "order": 0.06559075434486196
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "product",
+        "strength": 2.5,
+        "confound": 0.35,
+        "S_star": [
+          "product",
+          "user"
+        ],
+        "flat_top": [
+          "product",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.2593028763609631,
+          "merchant": 0.041846593856588676,
+          "product": 0.6760206116499914,
+          "order": 0.022829918131456836
+        },
+        "flat_blended": {
+          "user": 0.3889543072508724,
+          "merchant": 0.06276988960832214,
+          "product": 0.5140309265845072,
+          "order": 0.03424487655529816
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "order",
+        "strength": 0.8,
+        "confound": 0.0,
+        "S_star": [
+          "order",
+          "user"
+        ],
+        "flat_top": [
+          "order",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.07093326410282932,
+          "merchant": 0.004943538584619656,
+          "product": 0.012738018869102103,
+          "order": 0.9113851784424489
+        },
+        "flat_blended": {
+          "user": 0.106399896154131,
+          "merchant": 0.007415307876921627,
+          "product": 0.019107028303632905,
+          "order": 0.8670777676643144
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "order",
+        "strength": 0.8,
+        "confound": 0.35,
+        "S_star": [
+          "order",
+          "user"
+        ],
+        "flat_top": [
+          "order",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.14131634944637164,
+          "merchant": 0.033050288107111934,
+          "product": 0.016214294161487973,
+          "order": 0.8094190682840284
+        },
+        "flat_blended": {
+          "user": 0.21197450828920694,
+          "merchant": 0.04957542844665914,
+          "product": 0.024321439420159168,
+          "order": 0.7141286238429748
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "order",
+        "strength": 1.5,
+        "confound": 0.0,
+        "S_star": [
+          "order",
+          "user"
+        ],
+        "flat_top": [
+          "order",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.045870721446833206,
+          "merchant": 0.003287627616695779,
+          "product": 0.007653644555552175,
+          "order": 0.943188006379919
+        },
+        "flat_blended": {
+          "user": 0.06880608217017688,
+          "merchant": 0.004931441425038442,
+          "product": 0.01148046683331586,
+          "order": 0.9147820095704688
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "order",
+        "strength": 1.5,
+        "confound": 0.35,
+        "S_star": [
+          "order",
+          "user"
+        ],
+        "flat_top": [
+          "order",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.0921038654348435,
+          "merchant": 0.023971897086986323,
+          "product": 0.010370240650434782,
+          "order": 0.8735539968267355
+        },
+        "flat_blended": {
+          "user": 0.13815577227689613,
+          "merchant": 0.03595783889589041,
+          "product": 0.01555535806226951,
+          "order": 0.810331030763944
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "order",
+        "strength": 2.5,
+        "confound": 0.0,
+        "S_star": [
+          "order",
+          "user"
+        ],
+        "flat_top": [
+          "order",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.029270835463886914,
+          "merchant": 0.0022890838686893712,
+          "product": 0.0013564408925426613,
+          "order": 0.9670836397738811
+        },
+        "flat_blended": {
+          "user": 0.04390625319578383,
+          "merchant": 0.003433625803030417,
+          "product": 0.0020346613388118355,
+          "order": 0.9506254596613739
+        },
+        "l2_within_top": {}
+      },
+      {
+        "injected_dim": "order",
+        "strength": 2.5,
+        "confound": 0.35,
+        "S_star": [
+          "order",
+          "user"
+        ],
+        "flat_top": [
+          "order",
+          "user"
+        ],
+        "hit_graph@2": 1,
+        "hit_flat@2": 1,
+        "hit_graph@1": 1,
+        "hit_flat@1": 1,
+        "rank_graph": 1,
+        "rank_flat": 1,
+        "l1_blended": {
+          "user": 0.08573374912770444,
+          "merchant": 0.026551805853668214,
+          "product": 0.0005428213993814013,
+          "order": 0.8871716236177459
+        },
+        "flat_blended": {
+          "user": 0.0857337491277473,
+          "merchant": 0.026551805853681488,
+          "product": 0.0005428213993816727,
+          "order": 0.8871716236181895
+        },
+        "l2_within_top": {}
+      }
+    ],
+    "summary": {
+      "n_trials": 24,
+      "hit_at_2_graph": 1.0,
+      "hit_at_2_flat": 1.0,
+      "hit_at_1_graph": 0.9583333333333334,
+      "hit_at_1_flat": 0.9166666666666666,
+      "mean_rank_graph": 1.0416666666666667,
+      "mean_rank_flat": 1.0833333333333333,
+      "graph_beats_or_ties_flat": 1.0,
+      "hard_n": 4,
+      "hard_hit_at_2_graph": 1.0,
+      "hard_hit_at_2_flat": 1.0,
+      "hard_hit_at_1_graph": 0.75,
+      "hard_hit_at_1_flat": 0.75
+    }
+  },
+  "external_one_liner_cn": "\u817e\u8bafGR\u56fe\u5b9a\u4f4d\u2192FSDS\uff1a\u6ce8\u5165\u7ef4 Hit@2=100%/Hit@1=96%\uff08flat @2/@1=100%/92%\uff09\uff1bhard\u5f31+\u6270 Hit@2=1.0\uff1b\u81ea\u7136\u7a97 S*=['product', 'user']\u3002"
+}

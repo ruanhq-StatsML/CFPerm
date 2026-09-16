@@ -1,0 +1,379 @@
+% !TEX program = xelatex
+% 中文报告：RFPerm / OnlineRFPerm / PO-learner / FSDS / 多层图算法
+% 在大模型推理、预测、对齐与数据质量一致性中的可落地场景盘点
+\documentclass[11pt,a4paper,UTF8,fontset=none]{ctexart}
+\setCJKmainfont{WenQuanYi Micro Hei}[AutoFakeBold=true,AutoFakeSlant=true]
+\setCJKsansfont{WenQuanYi Micro Hei}[AutoFakeBold=true]
+\setCJKmonofont{WenQuanYi Micro Hei Mono}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,longtable,tabularx,enumitem,hyperref,xcolor,graphicx}
+\usepackage{titlesec}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black,citecolor=blue!50!black}
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.25em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=0.25em,topsep=0.3em}
+\newcommand{\repo}[1]{\texttt{#1}}
+\newcommand{\meth}[1]{\textbf{#1}}
+
+\title{\textbf{工具包落地盘点报告}\\[0.35em]
+\large RFPerm\,/\,OnlineRFPerm\,/\,PO-learner\,/\,FSDS\,/\,多层特征图算法\\
+在大模型推理预测、对齐与数据质量一致性中的可直接落地场景}
+\author{内部方法盘点（基于开源 PDF、仓库实现与本地已就绪数据）\\
+日期：2026-09-15}
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+本报告对一组\textbf{已开源、已实现、数据已就绪}的分布漂移诊断与适应工具做总体盘点，并回答一个产品问题：在大模型（LLM）\textbf{推理/预测、对齐、幻觉监控、合成数据质量与表征一致性}场景里，哪些可以直接落地、怎么落地、不要过宣称什么。
+
+工具包覆盖五层能力：（i）\meth{RFPerm}——模型无关的预测退化置换检验；（ii）\meth{OnlineRFPerm}——流式监测 + Online FDR；（iii）\meth{PO-learner / CFPerm / DRPerm / RRPerm}——把新旧批次当作 \(T\in\{0,1\}\)，用因果目标函数做分布距离与 OOD 变量重要性；（iv）\meth{FSDS}——协变量漂移 \(P(X)\) 与概念漂移 \(P(Y\mid X)\) 的特征选择基准与生产诊断；（v）\meth{多层 / 多场景 / 特征库图算法}——对 user--item--session、模态塔、特征家族做 ASSOC/HSIC 链路与分层子集定位。
+
+\textbf{核心立场（不打折）：}这些方法回答的是\textbf{检测、定位、重加权/门控、调度算力}；它们\textbf{不是}事实核查器，也\textbf{不}在无额外结构时唯一分解「协变量 vs 概念」到单特征因果。KL 可加分解不自动迁移到任意距离；全空间唯一归因是不可能的，\textbf{子集定位}才是生产正确动作。
+
+\textbf{直接可落地的优先场景（数据已就绪）}：
+\begin{enumerate}
+  \item 流式幻觉/错误率\textbf{制度跳变}监测（OnlineRFPerm + \(\texttt{po\_risk0}\) 排序）；
+  \item 合成数据 / 蒸馏数据 vs 真人偏好的\textbf{质量一致性}门禁（RFPerm-as-Judge）；
+  \item 表征批次几何对齐（embedding PCA/PC1--PC3）后再做预测漂移检验；
+  \item 多模态塔（视频/音频/文本）\textbf{哪一层在漂} → 决定 KV 刷新 / LoRA 更新预算；
+  \item 推荐/转化特征库（TencentGR 等）上 FSDS：RF-domain 看 \(P(X)\)，PO-risk 看 \(Y\) 差；
+  \item 门控 \(\sqrt{\mathrm{PO}}\) 重加权：安静时均匀，概念跳变时加热再退火。
+\end{enumerate}
+\end{abstract}
+
+\tableofcontents
+\vspace{0.6em}
+\noindent\rule{\textwidth}{0.4pt}
+
+%==============================================================================
+\section{问题与边界}
+\label{sec:boundary}
+
+\subsection{要解决的四类产品问题}
+\begin{enumerate}
+  \item \textbf{推理/预测是否在漂？} 部署模型 \(\hat f\) 在连续到来的 \((X_t,Y_t)\) 上，何时需要刷新？
+  \item \textbf{对齐与偏好是否一致？} 人工偏好、合成偏好、裁判模型、线上反馈是否同分布？
+  \item \textbf{幻觉与错误是否进入新制度？} 不是单条「对/错」，而是 \(P(Y\mid X)\) 是否跳变。
+  \item \textbf{数据质量是否一致？} 特征库、embedding 批次、多模态塔、合成语料是否与参考批次对齐。
+\end{enumerate}
+
+\subsection{刻意不做的宣称}
+\begin{itemize}
+  \item 不做「特征 \(j\) 导致幻觉」的因果叙事。
+  \item 不做无结构假设下 \(P(X)\) 与 \(P(Y\mid X)\) 的唯一全空间分解。
+  \item 不把 DRE / PSI / KL 当成概念漂移的充分统计量。
+  \item 不把 \(\texttt{po\_risk0}\) 当成事实核查分数；它是相对上一探针的\textbf{残差强度}。
+\end{itemize}
+
+\subsection{开源与本地锚点}
+\begin{center}
+\begin{tabular}{@{}llp{7.2cm}@{}}
+\toprule
+组件 & 仓库 / 文档 & 角色 \\
+\midrule
+RFPerm & \url{https://github.com/ruanhq-StatsML/RFPerm} & OOB vs 预测误差置换检验 \\
+OnlineRFPerm & \url{https://github.com/ruanhq-StatsML/OnlineRFPerm} & 流式 + Online FDR \\
+PO-learner & \url{https://github.com/ruanhq-StatsML/Causal_Objective_Permutation_Test} & DR/R 目标置换检验 \\
+FSDS & \url{https://github.com/ruanhq-StatsML/FSDS-FeatureSelection_for_DistributionShift} & 特征级漂移选择基准 \\
+多层指标 PDF & 同仓 \texttt{FSDS\_Sep14\_MultiLayerFeatureSelection\_Metrics.pdf} & 多场景/特征库/ASSOC \\
+本地门控 PO & \texttt{docs/po\_risk/PO\_risk\_reweight\_method.tex} & \(\sqrt{\mathrm{PO}}\) 退火重加权 \\
+幻觉原型 & \texttt{scripts/agod/rfperm\_hallucination\_proto.py}（相关分支） & 制度火 + \(\texttt{po\_risk0}\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%==============================================================================
+\section{工具包总览：五层能力如何咬合}
+\label{sec:toolkit}
+
+\begin{center}
+\begin{tabular}{@{}p{2.4cm}p{4.2cm}p{5.6cm}@{}}
+\toprule
+层 & 输入 / 输出 & LLM 侧一句话 \\
+\midrule
+\textbf{1. RFPerm} &
+\((X,Y)\) 参考 vs 新批；拒绝/接受预测退化 &
+「这批回答/标签相对参考是否显著变差？」 \\
+\textbf{2. OnlineRFPerm} &
+流式误差 \(p\)-值 + SAFFRON/ADDIS &
+「连续线上何时该刷模型/裁判？」 \\
+\textbf{3. PO / R / CF} &
+\(T=0/1\)，PO-risk / R-risk，VIMP &
+「差在条件映射还是边缘画像？哪几维扛差？」 \\
+\textbf{4. FSDS} &
+协变量：RF-domain / MMD-LOCO；概念：PermuCATE / DRPerm &
+「特征库里哪一族在漂，该修特征还是重训头？」 \\
+\textbf{5. 多层图} &
+特征家族、模态塔、user--item 层级；HSIC/ASSOC 链 &
+「跨场景/跨库联动漂，钻到子集再行动。」 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{推荐默认流水线（生产）。}
+\begin{enumerate}
+  \item \textbf{几何预检}：embedding / 表征做批次 PCA（PC1--PC3）与简单域分类 AUC——对齐可视化，不是最终决策。
+  \item \textbf{制度检验}：OnlineRFPerm（或门控 OOS 比）决定是否 fire。
+  \item \textbf{轴诊断}：安静则停；fire 后并行 RF-domain（\(P(X)\)）与 PO/R（\(P(Y\mid X)\) 代理）。
+  \item \textbf{特征/层定位}：FSDS top-\(k\) + 家族质量；多层则 leave-one-group-out。
+  \item \textbf{行动}：quiet \(\to\) 均匀；概念异质 \(\to\) \(\sqrt{\mathrm{PO}}\) 重加权；全局映射翻 \(\to\) drop-old；模态漂 \(\to\) 刷新该塔 KV/更新预算。
+  \item \textbf{退火}：下一跳 \(e_{\mathrm{prev}}\) 变大，比率自然回落，回到均匀。
+\end{enumerate}
+
+%==============================================================================
+\section{方法卡片（可贴进设计文档）}
+\label{sec:cards}
+
+\subsection{RFPerm}
+\textbf{做什么。} 用随机森林（或任意有验证误差的模型）比较参考上的验证/OOB 误差与新批上的预测误差；置换生成零分布，给出是否「预测性退化」的检验。密度感知，对协变量与概念都敏感，但\textbf{不}单独指认轴。
+
+\textbf{LLM 用法。} 把 prompt/表征当 \(X\)，正确性/偏好/幻觉标签当 \(Y\)。小样本（约 30--40）即可有功率；适合每条合成样本「再测一次」的轻量门禁（RFPerm-as-Judge）。
+
+\subsection{OnlineRFPerm}
+\textbf{做什么。} 流式比较当前预测误差相对部署模型的极端性；Online FDR（SAFFRON/ADDIS，含异步）控假警。模态无关：表格、图像、文本、视频、音频、轨迹均可，前提是有合法预测模型。
+
+\textbf{LLM 用法。} 线上裁判分数、工具调用成功率、拒答率、幻觉率的\textbf{制度监测}；可选把检测分数当 clever covariate 注入下一阶段轻量适应。
+
+\subsection{PO-learner（DRPerm / RRPerm / CFPerm）}
+\textbf{做什么。} 旧批 \(T=0\)，新批 \(T=1\)。双稳健伪结果 / R-learner 目标经 permute-then-refit；VIMP 解释为\textbf{OOD 变量重要性}——元学习器是距离估计器，不是因果效应估计器。R-risk 在投影理论下对 \(P(X)\) 更不敏感，用作概念轴代理；仍非唯一分解证明。
+
+\textbf{LLM 用法。} 对齐偏移（同一 prompt 分布，偏好/正确性映射变了）vs 流量画像变了（用户/任务 mix）。实例 \(\texttt{po\_risk0}_i=|Y_i-\mu_0(X_i)|\)（分类用 \(1-p\)）驱动排序与门控权重。
+
+\subsection{门控 \(\sqrt{\mathrm{PO}}\) 重加权（本地已落地）}
+连续 OOS：\(e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma\)（默认 \(1.5\)）才 fire；fire 时 \(T=1\) 取 \(w=\sqrt{\texttt{po\_risk0}}\)（均值 1），安静时 \(w=1\)。平方损失下超额风险 \(\Delta_t^2=\mathbb{E}_t[(\mu_t^\star-\mu_0)^2]\)，故门只在概念 OOD 相对噪声大时打开。DRE 只看 \(p(x)\)，概念上贴近均匀、协变量上可能伤预测——与 synth/实盘一致。
+
+两杠杆：\textbf{reweight}（软）与 \textbf{drop-old}（硬，一次性全局映射翻）。不要 always-on IPTW；不要 PO-tail 过稀子集。
+
+\subsection{FSDS}
+\textbf{协变量轴。} RF-domain OOB-VIMP、MMD/HSIC-LOCO、Boruta/ShadowVIMP——对 \(P(X)\) 竞争强且常比 FSL-Net/DataFix 更省算力。
+
+\textbf{概念轴。} PermuCATE、DRPerm-LOCO、GRF VIMP、R-risk LOCO、Delta-Shapley、Knockoff/L1——元学习器在非线性概念上表现突出。
+
+\textbf{读法纪律。} 先看 VIMP，再看 \(\mathbb{E}[X\mid Q_1]\) vs \(\mathbb{E}[X\mid Q_4]\) 等 post-hoc；质量（mass）+ 方向均值讲「后来的人长什么样」，不讲因果故事。TencentGR 时钟上已验证：cross/衰减/场内成交扛差，last-touch 归因家族不是漂移源。
+
+\subsection{多层 / 多场景 / 特征库图算法}
+\textbf{动机。} 电商与多模态系统特征天然分层（user / item / session / merchant；或 audio / image / text）。全空间单特征唯一归因不可能；\textbf{分层子集定位}是正确动作。
+
+\textbf{ASSOC / HSIC 链。} 对跨层指标算成对 HSIC，超阈为边，连通分量即指标链（如 delivery--rating--orders--GMV）。只声明关联，不声明方向方向。
+
+\textbf{leave-one-group-out。} 估计特征块/模态对漂移的贡献；再条件钻取（先 region 再 category），避免在全人口上混淆层级。
+
+\textbf{连续多模态推理调度。} FSDS 份额 \(\pi_m\) 指导：哪塔每窗重编码、哪路 KV 失效、哪塔拿 test-time 更新预算；静止 caption 编码一次复用。Attribution-Guided Online Distillation（AGOD）把模态 gap 当 clever covariate 路由学生损失。
+
+%==============================================================================
+\section{可直接落地场景矩阵（LLM 重心）}
+\label{sec:scenarios}
+
+下列场景均满足：方法已有实现、输入可从现有管线抽出、输出可接告警/门禁/重加权/调度。标记 \(\star\) = 本仓库数据或原型已就绪。
+
+\subsection{A. 推理与预测监控}
+\begin{longtable}{@{}p{3.2cm}p{3.4cm}p{5.6cm}@{}}
+\toprule
+场景 & 首选方法 & 落地动作 \\
+\midrule
+\endhead
+A1 线上任务准确率/工具成功率制度跳变 \(\star\) &
+OnlineRFPerm + 门控 OOS &
+fire \(\to\) 告警；连续 FDR；可选 drop-old 裁判头 \\
+A2 延迟反馈（点赞/客诉）概念跳变 &
+PO-risk 流 + RRPerm &
+映射变了再刷偏好头；画像变了只调采样 \\
+A3 多任务 router 是否跟错专家 &
+FSDS on 任务 one-hot + 表征 &
+哪任务块 VIMP 高 \(\to\) 只重训该专家 \\
+A4 RAG 检索命中 vs 生成正确性 &
+双轴：RF-domain(检索特征) + PO(正确性) &
+检索漂 \(\neq\) 生成漂；分别修索引/生成 \\
+\bottomrule
+\end{longtable}
+
+\subsection{B. 幻觉与「看起来像回答」}
+\begin{itemize}
+  \item \textbf{B1 制度级幻觉率监测 \(\star\)。} 合成概念切割：前静后噪。OnlineRFPerm/门控在切割跳 fire；实例 \(\texttt{po\_risk0}\) 作候选排序（原型 AUROC \(\sim 0.63\)--\(0.64\)）。\textbf{不是}事实核查。
+  \item \textbf{B2 幻觉标签器漂移。} 同一生成分布，人标/自动标 \(Y\) 变了 \(\to\) PO/R；生成 mix 变了 \(\to\) RF-domain。
+  \item \textbf{B3 拒答/安全策略 hop。} 把安全动作当 \(Y\)；监测策略头是否进入新工作点，避免把流量画像当「模型变坏」。
+\end{itemize}
+
+\subsection{C. 对齐与偏好一致性}
+\begin{itemize}
+  \item \textbf{C1 人工偏好 vs 合成偏好。} RFPerm-as-Judge：小样本检验合成偏好是否预测性偏离真人批次。
+  \item \textbf{C2 SFT/RLHF/DPO 数据版本门禁。} 新旧偏好数据：FSDS 排出「哪类 prompt 特征」在扛差；门禁失败则拒合并。
+  \item \textbf{C3 裁判模型校准。} 裁判分数作 \(Y\)；OnlineRFPerm 监视裁判相对黄金集是否漂；PO 高则抽检而非全量重标。
+  \item \textbf{C4 指令跟随 vs 文风协变量。} 文风/长度/语言 mix \(\to\) RF-domain；正确性映射 \(\to\) PO。避免用 PSI(长度) 解释正确率跌。
+\end{itemize}
+
+\subsection{D. 数据质量与表征对齐}
+\begin{itemize}
+  \item \textbf{D1 Embedding 批次几何 \(\star\)。} 点云/文本/多模态 embedding：PC1--PC3 可视化 + 域分类 AUC；通过后再跑 RFPerm/FSDS。几何不对齐时先修管道。
+  \item \textbf{D2 特征库健康（TencentGR 类）\(\star\)。} 千维组合特征 \(\to\) FSDS：RF 看队列画像，PO 看转化差；家族 mass 驱动修特征而非空谈「CTR 掉了」。
+  \item \textbf{D3 合成语料多样性 vs 有害模式。} RFPerm 对质量标签；FSDS 定位有害模式特征（长度、模板 n-gram、嵌入簇）。
+  \item \textbf{D4 训练--服务特征一致性。} 同一特征名离线/在线两批当 \(T=0/1\)；RF-domain 高 VIMP = 管道 bug 嫌疑清单。
+\end{itemize}
+
+\subsection{E. 多模态与连续推理调度}
+\begin{itemize}
+  \item \textbf{E1 塔级归因（MSR-VTT / ChronoBerg 类）\(\star\)。} 模态块 FSDS + PO；份额 \(\pi_v,\pi_a,\pi_t\) 决定重编码与更新掩码。
+  \item \textbf{E2 连续 VLM 推理。} 静止文本 encode-once；视觉/音频每窗刷新；KV 失效阈值用会话级监测，避免全局池化符号抵消。
+  \item \textbf{E3 AGOD 蒸馏路由。} \(\alpha_m=\mathrm{softmax}(g_m/\tau)\)，\(g_m\) 含域 AUC\(\cdot\)VIMP + \(\gamma\cdot\)PO-risk；重叠差时回退 RF-domain。
+\end{itemize}
+
+\subsection{F. 多层业务图（推荐 / 风控 / 交易）}
+\begin{itemize}
+  \item \textbf{F1 分层子集定位。} 周批显著 \(\to\) 先 user-region，再 category；输出 \{\texttt{subset}, \texttt{split rule}, \texttt{stability}\} 给业务 owner。
+  \item \textbf{F2 ASSOC 指标链。} HSIC 边发现跨层联动（履约--评分--订单--GMV）；告警「链」而非单点 KPI。
+  \item \textbf{F3 反欺诈 mix vs 手法。} 用例与开源 PDF 一致：欺诈者 mix = 协变量；手法 = 概念；两轴分开工单。
+\end{itemize}
+
+%==============================================================================
+\section{已就绪数据与最小可行实验}
+\label{sec:data}
+
+\begin{center}
+\begin{tabular}{@{}p{3.4cm}p{3.8cm}p{5.0cm}@{}}
+\toprule
+数据 & 形态 & 建议实验 \\
+\midrule
+\texttt{data/public/*.npz} & 时间序列公开集 & 门控 \(\sqrt{\mathrm{PO}}\) vs DRE vs uniform（已有板） \\
+\texttt{data/tencent\_subset/} & 推荐序列 + 特征库 & FSDS 时间/业务时钟；家族 mass \\
+ChronoBerg / FMoW / WhyShift & 开源 FSDS 基准 & 概念/协变量特征选择复现 \\
+MSR-VTT 打包表征 & 视频/音频/文本 & 模态归因 + AGOD 路由 \\
+幻觉合成流 & 原型脚本 & fire@cut + \(\texttt{po\_risk0}\) 排序 \\
+OpenML 表格（FSDS） & 8 表 tabular & RF-domain vs FSL-Net 算力对比 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{最小命令（本地）。}
+\begin{verbatim}
+# 幻觉制度原型（分支 cursor/rfperm-hallucination-92f8）
+python3 scripts/agod/rfperm_hallucination_proto.py
+
+# 门控 PO 方法说明：
+#   docs/agod/AGOD_online_rfperm.md
+#   docs/po_risk/PO_risk_reweight_method.tex
+
+# Tencent 特征选择（时间时钟）
+python3 scripts/tencent_gr/run_fsds_time.py
+\end{verbatim}
+
+%==============================================================================
+\section{场景 \(\times\) 方法推荐表}
+\label{sec:matrix}
+
+\begin{center}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+场景簇 & RFPerm & Online & PO/R & FSDS/图 \\
+\midrule
+推理制度监测 & \(\bullet\) & \(\bullet\!\!\bullet\) & \(\bullet\) & \\
+幻觉候选排序 & & \(\bullet\) & \(\bullet\!\!\bullet\) & \\
+对齐/偏好门禁 & \(\bullet\!\!\bullet\) & \(\bullet\) & \(\bullet\) & \(\bullet\) \\
+表征几何对齐 & \(\bullet\) & & & \(\bullet\) \\
+特征库质量 & & & \(\bullet\!\!\bullet\) & \(\bullet\!\!\bullet\) \\
+多模态调度 & & \(\bullet\) & \(\bullet\) & \(\bullet\!\!\bullet\) \\
+多层业务钻取 & & & \(\bullet\) & \(\bullet\!\!\bullet\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+{\small \(\bullet\!\!\bullet\)=首选；\(\bullet\)=辅助。}
+
+%==============================================================================
+\section{落地 Playbook（可执行）}
+\label{sec:playbook}
+
+\subsection{Playbook 1：LLM 输出质量流}
+\begin{enumerate}
+  \item 定义 \(Y\in\{0,1\}\)：正确 / 非幻觉 / 偏好胜出（需标签或弱监督）。
+  \item \(X=\) 提示表征（句向量）+ 简单元特征（长度、工具次数）。
+  \item 参考窗 \(B_{\mathrm{ref}}\) 拟合浅 RF 探针 \(\mu_0\)；流式算 \(e_{\mathrm{now}}/e_{\mathrm{prev}}\)。
+  \item fire \(\Rightarrow\) 告警 + 按 \(\texttt{po\_risk0}\) 抽检 Top-\(k\)；可选 \(\sqrt{\mathrm{PO}}\) 重拟合轻量头。
+  \item 同步 Online FDR，防止夜间流量抖动刷屏。
+\end{enumerate}
+
+\subsection{Playbook 2：对齐数据版本门禁}
+\begin{enumerate}
+  \item 旧偏好集 \(T=0\)，候选合并集 \(T=1\)。
+  \item RF-domain：若 AUC 很高且 top 特征是「来源=合成」\(\to\) 画像污染。
+  \item DRPerm/PermuCATE：若概念轴显著 \(\to\) 偏好映射已变，需人工评审而非静默合并。
+  \item 门禁策略：仅当两轴皆静（或仅可解释协变量且业务签字）才合并。
+\end{enumerate}
+
+\subsection{Playbook 3：多模态连续推理}
+\begin{enumerate}
+  \item 每窗提 \(X_v,X_a,X_t\)；对参考窗跑块级 RF-domain + PO。
+  \item 得 \(\pi_m\)；\(\pi_t\approx 0\) 则 caption encode-once。
+  \item \(\pi_v\) 高则刷新视觉 KV / 提高视觉更新步数。
+  \item 文本 VIMP 异常升高当作\textbf{泄漏诊断}，不作为加大语言塔预算的理由。
+\end{enumerate}
+
+\subsection{Playbook 4：特征库漂移工单}
+\begin{enumerate}
+  \item 固定业务时钟（时间分位 / 实验桶）。
+  \item 出 RF-mass 与 PO-mass 按家族；附 Q1\(\to\)Q4 均值。
+  \item LOGO \(\Delta\) 为负的家族不做「根因」故事。
+  \item 工单只修高 mass 且方向可解释的家族（例如衰减点击、场内成交、cross）。
+\end{enumerate}
+
+%==============================================================================
+\section{与「不可能三角」对齐的工程结论}
+\label{sec:impossibility}
+
+\begin{enumerate}
+  \item \textbf{误差唯一分解不可能}：模型变差 vs 数据变差，无结构假设不可分。
+  \item \textbf{轴唯一分解不可能}：除 KL 等特殊散度外，不能从观测误差唯一拆 \(P(X)\) vs \(P(Y\mid X)\)。
+  \item \textbf{单特征唯一分解不可能}：故用 VIMP + 子集定位，不用「\(x_j\) 贡献 23\% 漂移」作 KPI。
+  \item \textbf{可做的}：联合敏感检验（RFPerm）；轴代理（R/PO vs domain）；子集/层定位；门控适应。
+\end{enumerate}
+
+%==============================================================================
+\section{风险、回退与 MLOps 嵌入}
+\label{sec:mlops}
+
+\begin{itemize}
+  \item \textbf{重叠差}：倾向分极端时 meta-learner 不稳——回退 RF-domain / 拒火 / 扩参考窗。
+  \item \textbf{空室分母}：分类 \(e_{\mathrm{prev}}\approx 0\) 会制造假火——设 \(e_{\mathrm{floor}}\)。
+  \item \textbf{Always-on IPTW}：安静钟上输给均匀——默认均匀，门控加热。
+  \item \textbf{并行}：置换检验可并行，文献称可降 60\%--70\% 墙钟。
+  \item \textbf{嵌入点}：特征质量看板、合并门禁、在线告警、多模态调度器、合成数据验收。
+\end{itemize}
+
+%==============================================================================
+\section{优先级路线图（按「现在就能跑」）}
+\label{sec:roadmap}
+
+\begin{enumerate}
+  \item \textbf{P0（本周）}：公开时钟门控 PO 板保持；幻觉原型接入真实裁判标签；TencentGR FSDS 工单模板固化。
+  \item \textbf{P1}：对齐数据版本门禁（人工 vs 合成偏好）接 CI。
+  \item \textbf{P1}：MSR-VTT/多模态 \(\pi_m\) \(\to\) 推理调度配置。
+  \item \textbf{P2}：ASSOC 指标链接到业务 KPI 图谱。
+  \item \textbf{P2}：Online FDR 接到生产告警总线。
+\end{enumerate}
+
+%==============================================================================
+\section{结论}
+\label{sec:conclusion}
+
+RFPerm / OnlineRFPerm / PO-learner / FSDS / 多层图算法已经构成一条从\textbf{检验 \(\to\) 定位 \(\to\) 门控适应 \(\to\) 调度}的闭环。放在大模型场景里，最值钱的不是又一个「幻觉分数」，而是：
+
+\begin{quote}
+在数据与标签已就绪的前提下，用有统计门控的制度检测，配上可解释的特征/模态定位，再把算力与重加权只花在真正 fire 的跳变上，并在下一跳退火回去。
+\end{quote}
+
+FSDS 尤其适合作为\textbf{特征库与多塔一致性}的默认诊断层；PO-learner 适合\textbf{对齐映射}与\textbf{概念跳变}；OnlineRFPerm 适合\textbf{线上制度}；多层 ASSOC 适合\textbf{跨场景钻取}。严格遵守「检测 \(\neq\) 因果、定位 \(\neq\) 唯一分解」，这套工具就可以直接进生产，而不是停在论文图。
+
+\vspace{1em}
+\noindent\textit{英文版见同目录} \texttt{LLM\_FSDS\_Landing\_Report\_EN.tex}。
+
+\section*{编译}
+\begin{verbatim}
+cd docs/reports
+xelatex LLM_FSDS_Landing_Report_CN.tex
+pdflatex LLM_FSDS_Landing_Report_EN.tex
+\end{verbatim}
+
+\end{document}

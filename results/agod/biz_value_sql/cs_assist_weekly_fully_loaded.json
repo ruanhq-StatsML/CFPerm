@@ -1,0 +1,28 @@
+[
+  {
+    "week_start":"2026-09-14T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "days_acted":3,
+    "gross_yen":7189.0,
+    "audit_cost_yen_alloc":36.0,
+    "action_day_cost_yen_alloc":154.0,
+    "fully_loaded_net_yen":6999.0,
+    "fully_loaded_pct_of_gross":97.4,
+    "prev_fully_loaded_net_yen":null,
+    "delta_fully_loaded_net_yen":null,
+    "delta_fully_loaded_pct":null
+  },
+  {
+    "week_start":"2026-09-21T00:00:00.000",
+    "surface_id":"shop_assistant",
+    "days_acted":4,
+    "gross_yen":9467.0,
+    "audit_cost_yen_alloc":30.0,
+    "action_day_cost_yen_alloc":206.0,
+    "fully_loaded_net_yen":9231.0,
+    "fully_loaded_pct_of_gross":97.5,
+    "prev_fully_loaded_net_yen":6999.0,
+    "delta_fully_loaded_net_yen":2232.0,
+    "delta_fully_loaded_pct":31.9
+  }
+]

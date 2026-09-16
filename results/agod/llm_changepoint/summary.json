@@ -1,0 +1,36 @@
+{
+  "form": [
+    "t",
+    "question",
+    "answer",
+    "embedding(p,1)",
+    "score"
+  ],
+  "positioning": "online-detection use-case on LLM inference/alignment streams; not LLM methodological innovation",
+  "method_changepoint": "OnlineRFPerm",
+  "method_po_risk_recommended": "BOCPD (per prior experiments; not OnlineRFPerm)",
+  "note": "stationary-DGP robustness already established; this run reports detection delay only",
+  "gate": 1.2,
+  "halu": {
+    "cut_batch": 4,
+    "first_fire_batch": 4,
+    "delay_batch": 0,
+    "delay_t": 0,
+    "ratio_at_first_fire": 30.66666666666664,
+    "n_fires": 1
+  },
+  "hh": {
+    "cut_batch": 4,
+    "first_fire_batch": 4,
+    "delay_batch": 0,
+    "delay_t": 0,
+    "ratio_at_first_fire": 31.999999999999975,
+    "n_fires": 8
+  },
+  "halu_fires": 1,
+  "hh_fires": 8,
+  "halu_first_fire": 4,
+  "hh_first_fire": 4,
+  "halu_delay_batch": 0,
+  "hh_delay_batch": 0
+}

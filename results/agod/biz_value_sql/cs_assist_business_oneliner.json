@@ -1,0 +1,25 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "ticket_rate_quiet_pct":1.5,
+    "ticket_rate_ignored_pct":15.86,
+    "ticket_rate_acted_pct":1.14,
+    "contain_rate_quiet_pct":97.89,
+    "contain_rate_ignored_pct":75.21,
+    "contain_rate_acted_pct":97.79,
+    "contain_rate_lift_pp":22.57,
+    "tickets_avoided":206.0,
+    "refunds_avoided":130.0,
+    "extra_sessions_contained":316.0,
+    "gross_yen":16656.0,
+    "net_yen":16590.0,
+    "opportunity_gross_yen":16656.0,
+    "yen_capture_pct":50.0,
+    "fire_day_coverage_pct":50.0,
+    "potential_full_coverage_gross_yen":33312.0,
+    "max_audit_unit_cost_at_net0":1514.2,
+    "price_cut_headroom_pct":99.6,
+    "top_action":"model_rollback",
+    "external_one_liner_cn":"Before→After：工单率 15.86%→1.14%，承接率 75.21%→97.79%（+22.57pp）；少工单 206.0 \/ 少退款 130.0 \/ 多承接 316.0；净¥16590；不动作留白毛¥16656（火情日覆盖 50.0%）；优先 model_rollback。"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "cut_batch": 4,
+  "n_per": 80,
+  "featurizer": "style10+hash128",
+  "feature_dim": 138
+}

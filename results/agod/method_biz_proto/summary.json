@@ -1,0 +1,317 @@
+{
+  "method": {
+    "halu": {
+      "dataset": "pminervini/HaluEval@qa_samples",
+      "fired": 1,
+      "ratio": 11.714285714285724,
+      "halluc_quiet": 0.07,
+      "halluc_fire": 0.82,
+      "po_p10": 1.0,
+      "po_auroc": 1.0,
+      "rag_top10": 1.0,
+      "reading": {
+        "regime": "OnlineRFPerm fire at cut => hallucination label law hopped",
+        "ranking": "po_risk0 sorts audit candidates under shift (not a fact checker)",
+        "rag": "low rag_hit among Top-k => retrieval-support gap, separate from generation hop",
+        "router": "task_shift guides which expert/route to refresh next"
+      }
+    },
+    "hh_style": {
+      "dataset": "Anthropic/hh-rlhf@helpful-base",
+      "style_domain_auc": 0.9988925576901218,
+      "judge_err_ratio": 3.670675300647549,
+      "fired": 1,
+      "reading": {
+        "style_axis": "style_domain_auc high => register/文风 portrait moved (P(X))",
+        "preference_axis": "judge_err_ratio / OnlineRFPerm fire => preference map P(Y|X) moved",
+        "action": "quiet->uniform; fire->audit Top-k by po_risk0; optional sqrt(PO) on T=1",
+        "not_a_claim": "not a moral judge; not causal feature attribution"
+      }
+    },
+    "knobs_into_seed": {
+      "source": "results/agod/hf_landing/halu_regime_rag.json",
+      "quiet_halluc": 0.07,
+      "fire_halluc": 0.41,
+      "acted_halluc_scale": 0.25,
+      "hop_ratio": 11.714285714285724,
+      "rag_low": 0.3,
+      "rag_ok": 0.75,
+      "rag_threshold": 0.35,
+      "precision_at_10": 1.0,
+      "fired_at_cut": 1,
+      "raw_fire_halluc": 0.82,
+      "dataset": "pminervini/HaluEval@qa_samples",
+      "rate_before": 0.08,
+      "rate_after": 0.942
+    }
+  },
+  "biz_scenarios": {
+    "hop_band": {
+      "weak_net": 9156.0,
+      "base_net": 16590.0,
+      "strong_net": 17990.0,
+      "base_tickets": 206.0,
+      "base_refunds": 130.0,
+      "base_contained": 316.0,
+      "base_gross": 16656.0,
+      "top_action": "model_rollback"
+    },
+    "before_after": {
+      "ticket_quiet": 1.5,
+      "ticket_ignored": 15.86,
+      "ticket_acted": 1.14,
+      "contain_lift_pp": 22.57
+    },
+    "traffic_prod_mid_monthly_yen": 3569143.0,
+    "week_attribution": [
+      {
+        "week_start": "2026-09-14T00:00:00.000",
+        "surface_id": "shop_assistant",
+        "days_acted": 3,
+        "sessions_acted": 600.0,
+        "tickets_avoided": 86.1,
+        "refunds_avoided": 57.0,
+        "extra_contained": 135.7,
+        "gross_yen": 7189.0,
+        "pct_of_total_gross": 43.2
+      },
+      {
+        "week_start": "2026-09-21T00:00:00.000",
+        "surface_id": "shop_assistant",
+        "days_acted": 4,
+        "sessions_acted": 800.0,
+        "tickets_avoided": 119.9,
+        "refunds_avoided": 73.0,
+        "extra_contained": 180.3,
+        "gross_yen": 9467.0,
+        "pct_of_total_gross": 56.8
+      }
+    ],
+    "action_payback": [
+      {
+        "surface_id": "shop_assistant",
+        "action_type": "audit_topk",
+        "n_days": 2,
+        "gross_yen": 4651.0,
+        "action_day_cost_yen": 40.0,
+        "net_yen": 4510.0,
+        "gross_yen_per_day": 2326.0,
+        "cost_yen_per_day": 20.0,
+        "payback_days": 0.009,
+        "payback_bucket": "same_day_payback",
+        "net_roi_multiple": 112.8
+      },
+      {
+        "surface_id": "shop_assistant",
+        "action_type": "retrieval_refresh",
+        "n_days": 2,
+        "gross_yen": 4711.0,
+        "action_day_cost_yen": 80.0,
+        "net_yen": 4631.0,
+        "gross_yen_per_day": 2356.0,
+        "cost_yen_per_day": 40.0,
+        "payback_days": 0.017,
+        "payback_bucket": "same_day_payback",
+        "net_roi_multiple": 57.9
+      },
+      {
+        "surface_id": "shop_assistant",
+        "action_type": "model_rollback",
+        "n_days": 3,
+        "gross_yen": 7294.0,
+        "action_day_cost_yen": 240.0,
+        "net_yen": 7054.0,
+        "gross_yen_per_day": 2431.0,
+        "cost_yen_per_day": 80.0,
+        "payback_days": 0.033,
+        "payback_bucket": "same_day_payback",
+        "net_roi_multiple": 29.4
+      }
+    ]
+  },
+  "unit_econ": {
+    "band": {
+      "surface_id": "shop_assistant",
+      "net_yen_base": 16590.0,
+      "net_yen_low": 13259.0,
+      "net_yen_high": 19921.0,
+      "gross_yen_base": 16656.0,
+      "gross_yen_low": 13325.0,
+      "gross_yen_high": 19987.0,
+      "net_band_width_vs_base": 0.4
+    },
+    "scenarios": [
+      {
+        "surface_id": "shop_assistant",
+        "scenario": "all_minus20",
+        "ticket_cost": 20.0,
+        "refund_cost": 64.0,
+        "contain_value": 2.8,
+        "tickets_avoided": 206.0,
+        "refunds_avoided": 130.0,
+        "extra_contained": 316.0,
+        "gross_yen": 13325.0,
+        "net_yen": 13259.0,
+        "base_gross_yen": 16656.0,
+        "base_net_yen": 16590.0
+      },
+      {
+        "surface_id": "shop_assistant",
+        "scenario": "all_plus20",
+        "ticket_cost": 30.0,
+        "refund_cost": 96.0,
+        "contain_value": 4.2,
+        "tickets_avoided": 206.0,
+        "refunds_avoided": 130.0,
+        "extra_contained": 316.0,
+        "gross_yen": 19987.0,
+        "net_yen": 19921.0,
+        "base_gross_yen": 16656.0,
+        "base_net_yen": 16590.0
+      },
+      {
+        "surface_id": "shop_assistant",
+        "scenario": "base",
+        "ticket_cost": 25.0,
+        "refund_cost": 80.0,
+        "contain_value": 3.5,
+        "tickets_avoided": 206.0,
+        "refunds_avoided": 130.0,
+        "extra_contained": 316.0,
+        "gross_yen": 16656.0,
+        "net_yen": 16590.0,
+        "base_gross_yen": 16656.0,
+        "base_net_yen": 16590.0
+      },
+      {
+        "surface_id": "shop_assistant",
+        "scenario": "refund_minus20",
+        "ticket_cost": 25.0,
+        "refund_cost": 64.0,
+        "contain_value": 3.5,
+        "tickets_avoided": 206.0,
+        "refunds_avoided": 130.0,
+        "extra_contained": 316.0,
+        "gross_yen": 14576.0,
+        "net_yen": 14510.0,
+        "base_gross_yen": 16656.0,
+        "base_net_yen": 16590.0
+      },
+      {
+        "surface_id": "shop_assistant",
+        "scenario": "refund_plus20",
+        "ticket_cost": 25.0,
+        "refund_cost": 96.0,
+        "contain_value": 3.5,
+        "tickets_avoided": 206.0,
+        "refunds_avoided": 130.0,
+        "extra_contained": 316.0,
+        "gross_yen": 18736.0,
+        "net_yen": 18670.0,
+        "base_gross_yen": 16656.0,
+        "base_net_yen": 16590.0
+      },
+      {
+        "surface_id": "shop_assistant",
+        "scenario": "ticket_minus20",
+        "ticket_cost": 20.0,
+        "refund_cost": 80.0,
+        "contain_value": 3.5,
+        "tickets_avoided": 206.0,
+        "refunds_avoided": 130.0,
+        "extra_contained": 316.0,
+        "gross_yen": 15626.0,
+        "net_yen": 15560.0,
+        "base_gross_yen": 16656.0,
+        "base_net_yen": 16590.0
+      },
+      {
+        "surface_id": "shop_assistant",
+        "scenario": "ticket_plus20",
+        "ticket_cost": 30.0,
+        "refund_cost": 80.0,
+        "contain_value": 3.5,
+        "tickets_avoided": 206.0,
+        "refunds_avoided": 130.0,
+        "extra_contained": 316.0,
+        "gross_yen": 17686.0,
+        "net_yen": 17620.0,
+        "base_gross_yen": 16656.0,
+        "base_net_yen": 16590.0
+      }
+    ]
+  },
+  "chain": [
+    {
+      "layer": "方法论 · OnlineRFPerm",
+      "object": "P(Y|X) / P(X) 是否进入新制度",
+      "signal": "fired=1, ratio≈11.71",
+      "same_as_biz": "给「要不要动作」打时间戳；不直接给钱",
+      "diff_from_biz": "不产出工单/退款/¥；AUROC≠贡献",
+      "relevance": "fire → 打开 act-vs-ignore 对照窗（制度跳变期）"
+    },
+    {
+      "layer": "方法论 · po_risk0",
+      "object": "跳变下谁该进审计队列",
+      "signal": "P@10=1.0, auroc=1.0",
+      "same_as_biz": "决定审计人力花在哪",
+      "diff_from_biz": "排序器不是事实核查器；P@10≠少退款数",
+      "relevance": "驱动 audit_topk 动作臂 + 审计件成本（净贡献扣减）"
+    },
+    {
+      "layer": "方法论 · RAG / router",
+      "object": "检索缺口 vs 生成制度 vs 路由漂移",
+      "signal": "rag_top10=1.0, domain_auc≈0.81",
+      "same_as_biz": "决定「刷检索」还是「回滚模型」",
+      "diff_from_biz": "不解释 GMV 因果",
+      "relevance": "路由到 retrieval_refresh / model_rollback 动作拆分"
+    },
+    {
+      "layer": "方法论 · style_domain_auc（对照面）",
+      "object": "P(X) 文风/画风画像",
+      "signal": "style_auc≈0.999, judge_err_ratio≈3.67",
+      "same_as_biz": "也是制度/画像监控",
+      "diff_from_biz": "客服助手主账不走 CTR/品牌路径；勿与幻觉 hop 混账",
+      "relevance": "证明要拆轴：风格工单 ≠ 客服工单；防误伤偏好头"
+    },
+    {
+      "layer": "业务情景 · hop 强度",
+      "object": "同一 fire 下跳变强弱 → 量差",
+      "signal": "weak/base/strong net = ¥9,156 / ¥16,590 / ¥17,990",
+      "same_as_biz": "仍用 act-vs-ignore 对照",
+      "diff_from_method": "把 ratio/幻觉率翻译成工单·退款·承接量",
+      "relevance": "方法论 hop 强度的业务可感知带（量）"
+    },
+    {
+      "layer": "业务情景 · 流量缩放",
+      "object": "每千会话单价 × 日会话",
+      "signal": "prod_mid 日10,000 → 月毛 ¥3,569,143",
+      "same_as_biz": "线性外推，不改费率",
+      "diff_from_method": "方法层没有「会话量」概念",
+      "relevance": "把子集原型外推到生产量级"
+    },
+    {
+      "layer": "单位经济 · 单价敏感度",
+      "object": "量固定，扫工单/退款/承接单价",
+      "signal": "净带 ¥13,259 → ¥16,590 → ¥19,921",
+      "same_as_biz": "仍基于同一套少工单/退款/承接量",
+      "diff_from_method": "与 fire/AUROC 无关；财务假设层",
+      "relevance": "回答「单价变了贡献还站不站得住」——方法层答不了"
+    }
+  ],
+  "same_diff": {
+    "same": [
+      "都对「制度/画像是否变了」敏感",
+      "都需要对照臂（quiet / fire_ignored / fire_acted），不能只看绝对值",
+      "动作路由都依赖轴拆分（concept vs covariate / RAG vs generation）"
+    ],
+    "different": [
+      "方法论输出：fired / ratio / AUROC / P@10 / style_auc（诊断）",
+      "业务情景输出：少工单 / 少退款 / 多承接 / 动作净¥（运营）",
+      "单位经济输出：同一量下的 ¥ 带（财务假设）",
+      "方法论不保证因果归因；业务账是对照代理，不是 RCT"
+    ],
+    "relevance_one_liner": "OnlineRFPerm 决定「哪段日子算跳变对照窗」；hop 情景把跳变强度变成量；单位经济把量变成可对账的 ¥ 带——三层叠乘，缺一不可。"
+  },
+  "external_one_liner_cn": "方法论确认幻觉制度跳变（ratio≈11.7）后，客服助手相对不动作少 206.0 工单 / 130.0 退款 / 多承接 316.0；净贡献 ¥16,590，单价±20% 净带 ¥13,259–¥19,921；优先动作 model_rollback。"
+}

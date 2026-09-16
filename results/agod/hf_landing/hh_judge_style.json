@@ -1,0 +1,82 @@
+{
+  "scenario": "hh_rlhf_rfperm_as_judge_style",
+  "dataset": "Anthropic/hh-rlhf@helpful-base",
+  "n": 4000,
+  "n_batches": 50,
+  "n_per": 80,
+  "cut_batch": 4,
+  "gate": 1.25,
+  "flip_rate_after": 0.85125,
+  "formality_early": 0.0025,
+  "formality_late": 0.0033152173913043475,
+  "style_domain_auc": 0.9988925576901218,
+  "text_domain_auc": 0.49423823668296024,
+  "judge_err_pre": 0.14687499999999998,
+  "judge_err_post": 0.5391304347826087,
+  "judge_err_ratio": 3.670675300647549,
+  "judge_post_po_auroc": 0.5605913279773157,
+  "fire_rate": 0.10416666666666667,
+  "first_fire_t": 4,
+  "fires": [
+    {
+      "t": 4,
+      "ratio": 1.342857142857143,
+      "mean_r0": 0.4375,
+      "mean_r1": 0.5875
+    },
+    {
+      "t": 7,
+      "ratio": 1.342857142857143,
+      "mean_r0": 0.4375,
+      "mean_r1": 0.5875
+    },
+    {
+      "t": 20,
+      "ratio": 1.4999999999999998,
+      "mean_r0": 0.4,
+      "mean_r1": 0.6
+    },
+    {
+      "t": 33,
+      "ratio": 1.2903225806451615,
+      "mean_r0": 0.38749999999999996,
+      "mean_r1": 0.5
+    },
+    {
+      "t": 47,
+      "ratio": 1.3125,
+      "mean_r0": 0.4,
+      "mean_r1": 0.525
+    }
+  ],
+  "hop_at_cut": {
+    "t": 4,
+    "fired": 1,
+    "ratio": 1.342857142857143,
+    "ranking": {
+      "n_t1": 80,
+      "pos_rate": 0.5875,
+      "auroc_po_risk0": 0.5409413281753708,
+      "precision_at_10": 0.5,
+      "mean_po_t1": 0.5458825483558659
+    }
+  },
+  "hop_quiet": {
+    "t": 2,
+    "fired": 0,
+    "ratio": 1.0263157894736843,
+    "ranking": {
+      "n_t1": 80,
+      "pos_rate": 0.475,
+      "auroc_po_risk0": 0.5081453634085213,
+      "precision_at_10": 0.8,
+      "mean_po_t1": 0.5024964816276234
+    }
+  },
+  "reading": {
+    "style_axis": "style_domain_auc high => register/\u6587\u98ce portrait moved (P(X))",
+    "preference_axis": "judge_err_ratio / OnlineRFPerm fire => preference map P(Y|X) moved",
+    "action": "quiet->uniform; fire->audit Top-k by po_risk0; optional sqrt(PO) on T=1",
+    "not_a_claim": "not a moral judge; not causal feature attribution"
+  }
+}

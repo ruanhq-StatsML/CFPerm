@@ -1,0 +1,12 @@
+[
+  {
+    "surface_id":"shop_assistant",
+    "net_yen_base":16590.0,
+    "net_yen_low":13259.0,
+    "net_yen_high":19921.0,
+    "gross_yen_base":16656.0,
+    "gross_yen_low":13325.0,
+    "gross_yen_high":19987.0,
+    "net_band_width_vs_base":0.4
+  }
+]
