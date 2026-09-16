@@ -40,6 +40,28 @@
 
 ---
 
+## 可跑落地（本仓库已接线）
+
+```bash
+PYTHONPATH=. python3 scripts/agod/bulletin_landing_attr.py          # HF cache
+PYTHONPATH=. python3 scripts/agod/bulletin_landing_attr.py --synth  # 离线合成
+PYTHONPATH=. python3 scripts/agod/feature_dim_attr.py --synth       # 风格+图谱并成特征维度
+```
+
+产物：
+- `results/agod/bulletin_landing/{summary.json,REPORT.md}`
+- `results/agod/feature_dim_attr/{summary.json,REPORT.md}`（并维层）
+
+| 场景 | 检测 | 归因（文本指标 + 特征族） | 直接动作 |
+|------|------|---------------------------|----------|
+| 智能体连续推理 | OnlineRFPerm 火情 | LOGO/RF-mass：`text_hash` / `rag` / `style` / `path`；路径指标 step_depth·tool_call·retry | 刷检索 / 审工具链 / Top-k / 回滚生成侧 |
+| 数据质检审核 | RFPerm-as-Judge + err ratio | 偏好轴 vs 文风轴拆开；PO Top-k | 拒合并 / 限量 / 人工复核 |
+| 画风漂移 | style domain AUC | formal / hedge / length 等指标 LOGO | 改模板·decoding（**另账**） |
+
+**并维纪律**：风格归因与图谱归因 **先收成特征维度**（`FEATURE_DIM_UNIFIED_ATTR.md`），再 L1→L2；文风 = Author/style_register 维，不是旁路产品。
+
+---
+
 ## 可接的下一句（可选，bulletin 第二点）
 
 > 进一步，在商户·作者·商品·订单等多维业务图上，先做图级 localization 标出问题维度，再在维度内做 FSDS 特征归因，形成可近实时的两级定位闭环。
@@ -48,6 +70,8 @@
 
 ## 索引
 
+- 可跑脚本：`scripts/agod/bulletin_landing_attr.py`
+- 特征维度并维：`FEATURE_DIM_UNIFIED_ATTR.md` / `scripts/agod/feature_dim_attr.py`
 - 总图：`LLM_LANDING_USECASES_BIZ.md`
 - 审核 / 多塔：`SUBSET_LOCALIZATION_AUDIT_TOWERS.md`
 - 周更·安全·图谱→FSDS：`WEEKLY_AUDIT_SAFETY_GRAPH_FSDS.md`

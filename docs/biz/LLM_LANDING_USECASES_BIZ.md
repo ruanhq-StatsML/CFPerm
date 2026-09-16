@@ -8,7 +8,7 @@
 
 > 将分布漂移检测与子集定位应用于 **AI 智能体连续推理路径**、**人工/合成数据质量检测与审核**，以及 **画风/文风漂移监测**；在推理质量衰减时，能把问题归因到 **文本指标与特征层面**，并直接接到刷新、审核与经营动作，具备可落地的生产价值。
 
-短版：在智能体连续推理、数据质检审核与画风漂移三类场景落地漂移检测——把推理路径衰减定位到文本指标/特征子集，直接驱动审核与刷新。详：`LANDING_BULLETIN_POLISH.md`。
+短版：在智能体连续推理、数据质检审核与画风漂移三类场景落地漂移检测——把推理路径衰减定位到文本指标/特征子集，直接驱动审核与刷新。详：`LANDING_BULLETIN_POLISH.md`；可跑：`scripts/agod/bulletin_landing_attr.py` → `results/agod/bulletin_landing/`。风格+图谱归因先并成特征维度：`FEATURE_DIM_UNIFIED_ATTR.md` / `scripts/agod/feature_dim_attr.py`。
 
 ---
 
