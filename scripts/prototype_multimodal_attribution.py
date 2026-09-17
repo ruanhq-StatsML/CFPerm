@@ -50,7 +50,7 @@ from scripts.prototype_group_attribution import (  # noqa: E402
     interaction_vimp,
     zscore,
 )
-from scripts.posthoc_localization import localize  # noqa: E402
+from scripts.posthoc_localization import localize, markdown_conditional_means  # noqa: E402
 
 HYBRID = ROOT / "results" / "manuscript" / "hybrid_retrieval"
 GRAPH = ROOT / "results" / "manuscript" / "graph_rag_batches"
@@ -285,6 +285,8 @@ def compact(rec: dict, spec: dict) -> dict:
         "y_meaning": spec["y_meaning"],
         "n": rec["n"],
         "n_groups": rec["n_groups"],
+        "group_counts": rec.get("group_counts"),
+        "y_by_group": rec.get("y_by_group"),
         "rejected": blk["rejected"],
         "n_hits": blk["n_hits"],
         "hits": blk["hit_names"],
@@ -293,6 +295,8 @@ def compact(rec: dict, spec: dict) -> dict:
         "blocks": rec["blocks"],
         "loc_sig_pairs": groups.get("n_sig_pairs"),
         "loc_pairwise": groups.get("pairwise"),
+        "loc_means": groups.get("conditional_mean"),
+        "loc_bin_means": (loc.get("bins") or {}).get("conditional_mean"),
     }
 
 
@@ -343,9 +347,11 @@ def render_report(rows: list[dict], extras: list[dict]) -> str:
         )
     lines += [
         "",
-        "Post-hoc: subset indices from T (and quartiles of the top coordinate), then pairwise **MMD** and **PO-risk**.",
-        "Conditional means stay in the JSON; they are not the localization test.",
+        "Post-hoc: subset indices, look at the **mean** (already computed), then pairwise **MMD** and **PO-risk**.",
         "",
+    ]
+    lines += markdown_conditional_means(rows)
+    lines += [
         "## Pairwise subset MMD / PO-risk",
         "",
         "| Stream | pair | n | MMD | MMD p | PO-risk | PO p | mean Y |",

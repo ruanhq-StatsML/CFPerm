@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.posthoc_localization import localize  # noqa: E402
+from scripts.posthoc_localization import localize, markdown_conditional_means  # noqa: E402
 
 AUDIT = ROOT / "results" / "manuscript" / "llm_audit"
 HYBRID = ROOT / "results" / "manuscript" / "hybrid_retrieval"
@@ -243,6 +243,8 @@ def compact(rec: dict, spec: dict) -> dict:
         "path": str(spec["path"].relative_to(ROOT)) if spec.get("path") else None,
         "loc_sig_pairs": groups.get("n_sig_pairs"),
         "loc_pairwise": groups.get("pairwise"),
+        "loc_means": groups.get("conditional_mean"),
+        "loc_bin_means": (loc.get("bins") or {}).get("conditional_mean"),
     }
 
 
@@ -296,9 +298,12 @@ def render_report(rows: list[dict], extras: list[dict]) -> str:
         )
     lines += [
         "",
-        "Post-hoc localization: pull subset indices (T groups, quartiles of the top X_j),",
-        "then pairwise **MMD** and **PO-risk**. Conditional means stay in the JSON; they are not the test.",
+        "Post-hoc localization: pull subset indices, look at the **mean** (already computed),",
+        "then pairwise **MMD** and **PO-risk**. All three are already in the code.",
         "",
+    ]
+    lines += markdown_conditional_means(rows)
+    lines += [
         "## Pairwise subset MMD / PO-risk",
         "",
         "| Stream | pair | n | MMD | MMD p | PO-risk | PO p | mean Y |",

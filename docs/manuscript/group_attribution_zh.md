@@ -36,7 +36,7 @@ T \in \{0,1,\ldots,K-1\}
 PYTHONPATH=. python3 scripts/prototype_group_attribution.py
 ```
 
-Post-hoc 子群定位：把 subset indices 拽出来，pairwise 打 **MMD** 和 **PO-risk**（不只是条件均值）。见 `scripts/posthoc_localization.py`。
+Post-hoc 子群定位：subset indices 拽出来。**先看已经算好的均值**，再 pairwise call `MMD()` 和 `po_risk()`。见 `scripts/posthoc_localization.py`。
 
 Planted：三组里只有组 2 依赖 `x1`，应 reject 且 top 是 `x1`。Null：\(Y\) 只靠 \(X\)、不靠 \(T\)，应 quiet。
 

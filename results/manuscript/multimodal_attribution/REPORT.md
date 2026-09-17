@@ -13,8 +13,26 @@ PYTHONPATH=. python3 scripts/prototype_multimodal_attribution.py
 | hybrid: dense pack hop | T=0 before dense cut, T=1 after | no | — | fusion, query, sparse | 1 |
 | Graph-RAG: local vs community | T=0 local pack, T=1 community pack | yes | graph | graph, query | 1 |
 
-Post-hoc: subset indices from T (and quartiles of the top coordinate), then pairwise **MMD** and **PO-risk**.
-Conditional means stay in the JSON; they are not the localization test.
+Post-hoc: subset indices, look at the **mean** (already computed), then pairwise **MMD** and **PO-risk**.
+
+## Conditional mean (already computed — look at this)
+
+| Stream | subset | n | mean Y | mean top x |
+|---|---|---:|---:|---:|
+| hybrid: dense pack hop | T0 | 320 | 0.572 | 0.11 |
+| hybrid: dense pack hop | T1 | 880 | 0.450 | 0.107 |
+| hybrid: dense pack hop | Q0 | 370 | 0.405 | 0.103 |
+| hybrid: dense pack hop | Q1 | 277 | 0.401 | 0.104 |
+| hybrid: dense pack hop | Q2 | 350 | 0.554 | 0.106 |
+| hybrid: dense pack hop | Q3 | 203 | 0.611 | 0.125 |
+| Graph-RAG: local vs community | T0 | 1200 | 0.534 | 0.43 |
+| Graph-RAG: local vs community | T1 | 1200 | 0.425 | 0.43 |
+| Graph-RAG: local vs community | Q0 | 716 | 0.235 | 0.0464 |
+| Graph-RAG: local vs community | Q1 | 520 | 0.352 | 0.191 |
+| Graph-RAG: local vs community | Q2 | 602 | 0.588 | 0.433 |
+| Graph-RAG: local vs community | Q3 | 562 | 0.794 | 1.14 |
+
+Read the mean first. Pairwise MMD and PO-risk are the significance next to it.
 
 ## Pairwise subset MMD / PO-risk
 

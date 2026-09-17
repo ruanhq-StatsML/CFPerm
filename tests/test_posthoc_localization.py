@@ -65,9 +65,27 @@ class PosthocLocalizationTests(unittest.TestCase):
         self.assertIn("groups", rec)
         self.assertIn("bins", rec)
         self.assertIn("conditional_mean", rec["groups"])
+        self.assertIsNotNone(rec["bins"]["conditional_mean"][next(iter(rec["bins"]["conditional_mean"]))]["mean_X"])
         self.assertTrue(rec["groups"]["pairwise"])
         self.assertIn("mmd", rec["groups"]["pairwise"][0])
         self.assertIn("po_risk", rec["groups"]["pairwise"][0])
+
+    def test_mean_table_is_emitted_from_already_computed_values(self):
+        from scripts.posthoc_localization import markdown_conditional_means
+
+        md = "\n".join(
+            markdown_conditional_means(
+                [
+                    {
+                        "title": "toy",
+                        "loc_means": {"T0": {"n": 10, "mean_Y": 0.2}, "T1": {"n": 10, "mean_Y": 0.8}},
+                    }
+                ]
+            )
+        )
+        self.assertIn("Conditional mean", md)
+        self.assertIn("0.200", md)
+        self.assertIn("0.800", md)
 
     def test_mmd_pair_is_the_vendor_call(self):
         rng = np.random.default_rng(4)

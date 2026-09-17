@@ -195,14 +195,20 @@ def localize(
         blocks["bins"] = subset_indices_from_feature(feature, n_bins=n_bins, prefix="Q")
     out = {}
     for name, subsets in blocks.items():
-        means = {
-            k: {
+        means = {}
+        feat = None if feature is None else np.asarray(feature, dtype=float).ravel()
+        for k, idx in subsets.items():
+            rec = {
                 "n": int(len(idx)),
                 "mean_Y": float(np.mean(Y[idx])) if len(idx) else None,
-                "mean_X": float(np.mean(X[idx])) if len(idx) and X.ndim == 1 else None,
             }
-            for k, idx in subsets.items()
-        }
+            if feat is not None and len(idx):
+                rec["mean_X"] = float(np.mean(feat[idx]))
+            elif np.asarray(X).ndim == 1 and len(idx):
+                rec["mean_X"] = float(np.mean(X[idx]))
+            else:
+                rec["mean_X"] = None
+            means[k] = rec
         mmd_rows = pairwise_subset_mmd(X if X.ndim == 2 else X.reshape(-1, 1), subsets, n_perm=n_perm, seed=seed)
         po_rows = pairwise_subset_po_risk(X if X.ndim == 2 else X.reshape(-1, 1), Y, subsets, n_perm=n_perm, seed=seed + 7)
         pairs = merge_pairwise(mmd_rows, po_rows)
@@ -215,3 +221,43 @@ def localize(
             "n_sig_pairs": int(n_sig),
         }
     return out
+
+
+def markdown_conditional_means(rows: list[dict]) -> list[str]:
+    """The mean is already computed. Put it on the page so we actually look at it."""
+    lines = [
+        "## Conditional mean (already computed — look at this)",
+        "",
+        "| Stream | subset | n | mean Y | mean top x |",
+        "|---|---|---:|---:|---:|",
+    ]
+    n_lines = 0
+    for r in rows:
+        title = r.get("title") or r.get("name") or ""
+        means = r.get("loc_means") or {}
+        bins = r.get("loc_bin_means") or {}
+        blocks = [("T", means)]
+        if bins:
+            blocks.append(("Q", bins))
+        if not means and r.get("y_by_group"):
+            yb = r["y_by_group"]
+            counts = r.get("group_counts") or {}
+            for g in sorted(yb, key=lambda z: int(z) if str(z).lstrip("-").isdigit() else str(z)):
+                lines.append(
+                    f"| {title} | T{g} | {counts.get(g, counts.get(str(g), ''))} | {float(yb[g]):.3f} | — |"
+                )
+                n_lines += 1
+            continue
+        for _kind, block in blocks:
+            for k in sorted(block, key=lambda z: z):
+                rec = block[k]
+                mx = rec.get("mean_X")
+                mx_s = f"{mx:.3g}" if mx is not None else "—"
+                my = rec.get("mean_Y")
+                my_s = f"{float(my):.3f}" if my is not None else "—"
+                lines.append(f"| {title} | {k} | {rec.get('n', '')} | {my_s} | {mx_s} |")
+                n_lines += 1
+    if n_lines == 0:
+        return []
+    lines += ["", "Read the mean first. Pairwise MMD and PO-risk are the significance next to it.", ""]
+    return lines

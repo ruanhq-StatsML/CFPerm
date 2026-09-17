@@ -19,8 +19,38 @@ feature p-value = fraction of nulls ≥ observed, across-feature threshold from 
 | sparse vs dense usable | T=0 sparse-only usable, T=1 dense-only usable | 2 | no | — | x_rrf_top1_mass, x_rank_corr, x_fuse_uniq |
 | multi-step hop 0 / 1 / 2+ | T=0 first hop, T=1 second, T=2 later | 3 | yes | x_n_toks, x_n_chars | x_n_chars, x_n_toks, x_bang |
 
-Post-hoc localization: pull subset indices (T groups, quartiles of the top X_j),
-then pairwise **MMD** and **PO-risk**. Conditional means stay in the JSON; they are not the test.
+Post-hoc localization: pull subset indices, look at the **mean** (already computed),
+then pairwise **MMD** and **PO-risk**. All three are already in the code.
+
+## Conditional mean (already computed — look at this)
+
+| Stream | subset | n | mean Y | mean top x |
+|---|---|---:|---:|---:|
+| HH helpful vs harmless | T0 | 1200 | 0.491 | 1.67 |
+| HH helpful vs harmless | T1 | 1200 | 0.491 | 1.42 |
+| HH helpful vs harmless | Q0 | 623 | 0.520 | 0.339 |
+| HH helpful vs harmless | Q1 | 577 | 0.390 | 0.816 |
+| HH helpful vs harmless | Q2 | 600 | 0.498 | 1.49 |
+| HH helpful vs harmless | Q3 | 600 | 0.550 | 3.54 |
+| BeaverTails vs ToxicChat | T0 | 1200 | 0.427 | 0.015 |
+| BeaverTails vs ToxicChat | T1 | 1200 | 0.780 | 0.11 |
+| BeaverTails vs ToxicChat | Q0 | 1853 | 0.584 | 0 |
+| BeaverTails vs ToxicChat | Q1 | 547 | 0.667 | 0.273 |
+| sparse vs dense usable | T0 | 1200 | 0.671 | 0.109 |
+| sparse vs dense usable | T1 | 1200 | 0.358 | 0.109 |
+| sparse vs dense usable | Q0 | 826 | 0.391 | 0.105 |
+| sparse vs dense usable | Q1 | 564 | 0.566 | 0.106 |
+| sparse vs dense usable | Q2 | 980 | 0.578 | 0.107 |
+| sparse vs dense usable | Q3 | 30 | 0.900 | 0.347 |
+| multi-step hop 0 / 1 / 2+ | T0 | 380 | 0.395 | 0.21 |
+| multi-step hop 0 / 1 / 2+ | T1 | 379 | 0.417 | 0.232 |
+| multi-step hop 0 / 1 / 2+ | T2 | 441 | 0.370 | 0.196 |
+| multi-step hop 0 / 1 / 2+ | Q0 | 301 | 0.000 | 0.0418 |
+| multi-step hop 0 / 1 / 2+ | Q1 | 303 | 0.000 | 0.105 |
+| multi-step hop 0 / 1 / 2+ | Q2 | 297 | 0.582 | 0.204 |
+| multi-step hop 0 / 1 / 2+ | Q3 | 299 | 0.997 | 0.5 |
+
+Read the mean first. Pairwise MMD and PO-risk are the significance next to it.
 
 ## Pairwise subset MMD / PO-risk
 
