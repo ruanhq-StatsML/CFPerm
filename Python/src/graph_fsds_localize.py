@@ -5,11 +5,11 @@ and not CATE. T is the batch label. Y is the outcome, never a feature,
 never the subset key.
 
 Pipeline (leakage-safe):
-  1. Score every native grain (order / merchant-node / user-node) with
+  1. Score every native grain (order / merchant / user) with
      MMD² vs D_ref, PO-risk, and Conditional Mean — before any join.
-  2. Changing subset on each layer: Fast Subset Scan of own-ref φ
-     (level set / coverage prefix). Graph is incidence only — lift, not cut.
-     Louvain is an optional contrast, not the localization.
+  2. Changing subset on each entity grain: Fast Subset Scan of own-ref φ
+     (level set / coverage prefix). Lift with merchant_id / user_id
+     (a foreign key, not a graph algorithm). No networkx on the default path.
   3. FSDS: rank features inside each grain; select the loud ones.
   4. Unify selected features onto one grain (order, or merchant).
   5. Two-layer on that grain: loud vs other, then LOGO on feature blocks.
@@ -420,17 +420,19 @@ def node_bundle_scores(node_rows: Sequence[Mapping], *, prefer: str = "vs_own_re
     return out
 
 
-def graph_shift_cuts(
+def entity_scan_cuts(
     ref: Mapping,
     new: Mapping,
     stats: Mapping,
     *,
     seed: int = 2026,
-    k_nn: int = 4,
     min_n: int = NODE_MIN_N,
 ) -> dict:
-    """Own-ref subset scan (primary) plus structural / bundled Louvain (contrast)."""
-    structural = graph_localize(new, k_nn=k_nn, seed=seed)
+    """Own-ref subset scan on merchant / user grains. No graph.
+
+    Each entity is a bag of orders. Rank by φ, take a prefix, lift with
+    merchant_id / user_id. That lift is a foreign-key map, not networkx.
+    """
     nodes = node_localization(
         ref["X_order"],
         ref["Y"],
@@ -444,38 +446,66 @@ def graph_shift_cuts(
         with_po=False,
     )
     scores = node_bundle_scores(nodes)
-    G_b = bundled_shift_graph(scores)
-    bundled_cut = louvain_int_cut(G_b, seed=seed)
     region_by_m = {}
     for m, r in zip(np.asarray(new["merchant_id"]).astype(int), np.asarray(new["region"])):
         region_by_m.setdefault(int(m), str(r))
-    hot = loud_community(bundled_cut, scores)
     return {
-        "package": GRAPH_PACKAGE,
-        "package_version": GRAPH_PACKAGE_VERSION,
-        "structural": structural,
-        "bundled": {
-            "cut_name": CUT_BUNDLED,
-            "merchant_cut": bundled_cut,
-            "n_communities": int(len(set(bundled_cut.values()))) if bundled_cut else 0,
-            "n_nodes": int(G_b.number_of_nodes()),
-            "n_edges": int(G_b.number_of_edges()),
-            "south_frac": community_south_frac(bundled_cut, region_by_m),
-            "loud_community": hot,
-            "loud_south_frac": float(community_south_frac(bundled_cut, region_by_m).get(hot, 0.0))
-            if hot
-            else 0.0,
-            "y_in_graph": y_in_graph_attrs(G_b),
-        },
-        "scores": {str(k): v for k, v in scores.items()},
+        "with_graph_contrast": False,
+        "scores": scores,
         "region_by_merchant": {str(k): v for k, v in region_by_m.items()},
-        "y_in_structural": y_in_graph_attrs(structural["graph"]),
         "own_vs_full": own_vs_full_summary(nodes, region_by_m),
-        "layers": layer_eval_on_orders(ref, new, stats, merchant_nodes=nodes, seed=seed, min_n=min_n),
         "level_set": multilayer_level_set(
             ref, new, stats, merchant_nodes=nodes, seed=seed, min_n=min_n
         ),
+        "structural": None,
+        "bundled": None,
+        "layers": None,
+        "y_in_structural": False,
+        "_merchant_nodes": nodes,
     }
+
+
+def graph_shift_cuts(
+    ref: Mapping,
+    new: Mapping,
+    stats: Mapping,
+    *,
+    seed: int = 2026,
+    k_nn: int = 4,
+    min_n: int = NODE_MIN_N,
+    with_graph_contrast: bool = False,
+) -> dict:
+    """Entity scan, optionally plus structural / bundled Louvain (contrast only)."""
+    pack = entity_scan_cuts(ref, new, stats, seed=seed, min_n=min_n)
+    nodes = pack.pop("_merchant_nodes", None)
+    if not with_graph_contrast:
+        return pack
+    scores = pack["scores"]
+    structural = graph_localize(new, k_nn=k_nn, seed=seed)
+    G_b = bundled_shift_graph(scores)
+    bundled_cut = louvain_int_cut(G_b, seed=seed)
+    region_by_m = {int(k): v for k, v in pack["region_by_merchant"].items()}
+    hot = loud_community(bundled_cut, scores)
+    pack["with_graph_contrast"] = True
+    pack["structural"] = structural
+    pack["bundled"] = {
+        "cut_name": CUT_BUNDLED,
+        "merchant_cut": bundled_cut,
+        "n_communities": int(len(set(bundled_cut.values()))) if bundled_cut else 0,
+        "n_nodes": int(G_b.number_of_nodes()),
+        "n_edges": int(G_b.number_of_edges()),
+        "south_frac": community_south_frac(bundled_cut, region_by_m),
+        "loud_community": hot,
+        "loud_south_frac": float(community_south_frac(bundled_cut, region_by_m).get(hot, 0.0))
+        if hot
+        else 0.0,
+        "y_in_graph": y_in_graph_attrs(G_b),
+    }
+    pack["y_in_structural"] = y_in_graph_attrs(structural["graph"])
+    pack["layers"] = layer_eval_on_orders(
+        ref, new, stats, merchant_nodes=nodes, seed=seed, min_n=min_n
+    )
+    return pack
 
 
 def jaccard_masks(a, b) -> float:
@@ -793,11 +823,88 @@ def multilayer_level_set(
         "jaccard_mass_merchant_vs_south": float(mer["mass_coverage"]["jaccard_vs_planted_south"]),
         "read": (
             "changing subset = Fast Subset Scan of own-ref φ (level set / "
-            "coverage prefix), not Louvain; evaluate layers only after "
-            "lift-to-order; merchant layer should recover planted south when "
-            "the DGP is merchant-local; user layer need not (users are mixed "
-            "across merchants)"
+            "coverage prefix); lift with merchant_id / user_id, not a graph "
+            "cut; merchant grain should recover planted south when the DGP is "
+            "merchant-local; user grain need not (users are mixed across merchants)"
         ),
+    }
+
+
+def assemble_feature_library(fsds: Mapping, meta: Mapping) -> dict:
+    """Join the DGP catalog with this-window FSDS ranks. Y never enters.
+
+    This is the localization surface: which native-grain columns are loud,
+    which were planted, which FSDS kept. No graph.
+    """
+    from stream_dgps import FEATURE_LIBRARY, planted_how_for_kind
+
+    kind = str(meta.get("kind") or "")
+    planted = dict(meta.get("planted_how") or planted_how_for_kind(kind))
+    selected = {str(n) for n in (fsds.get("selected_names") or [])}
+    by: dict[tuple[str, str], Mapping] = {}
+    for grain, rows in (fsds.get("rank") or {}).items():
+        for r in rows:
+            by[(str(grain), str(r["feature"]))] = r
+    catalog = []
+    for item in FEATURE_LIBRARY:
+        feat = str(item["feature"])
+        grain = str(item["grain"])
+        r = by.get((grain, feat), {})
+        how = planted.get(feat)
+        catalog.append(
+            {
+                "feature": feat,
+                "grain": grain,
+                "role": item["role"],
+                "planted": how is not None,
+                "planted_how": how,
+                "mmd": r.get("mmd"),
+                "cmean_x": r.get("cmean_x"),
+                "cmean_y": r.get("cmean_y"),
+                "score": r.get("score"),
+                "loud": bool(r.get("loud")),
+                "selected": feat in selected,
+            }
+        )
+    assert_not_outcome([c["feature"] for c in catalog])
+    return {
+        "kind": kind,
+        "n": int(len(catalog)),
+        "rows": catalog,
+        "selected": [c["feature"] for c in catalog if c["selected"]],
+        "read": "native-grain feature catalog scored by FSDS; Y is not a column",
+    }
+
+
+def merchant_scan_rank(merchant_layer: Mapping, region_by: Mapping) -> dict:
+    """Rank merchants by own-ref φ. Prefix scan, not a network drawing."""
+    phis = {int(k): float(v) for k, v in (merchant_layer.get("phis") or {}).items()}
+    loud = {int(i) for i in merchant_layer.get("loud_ids") or []}
+    tau = float(merchant_layer.get("tau") or 0.0)
+
+    def _region(i: int) -> str:
+        if i in region_by:
+            return str(region_by[i])
+        if str(i) in region_by:
+            return str(region_by[str(i)])
+        return ""
+
+    rows = [
+        {
+            "merchant_id": i,
+            "phi": phis[i],
+            "loud": i in loud,
+            "region": _region(i),
+        }
+        for i in phis
+    ]
+    rows.sort(key=lambda r: (-r["phi"], r["merchant_id"]))
+    return {
+        "tau": tau,
+        "n_loud": int(len(loud)),
+        "n": int(len(rows)),
+        "rows": rows,
+        "read": "subset scan = sort φ and take a prefix; N = n_merchants",
     }
 
 
@@ -1276,16 +1383,21 @@ def run_pipeline(
     with_logo: bool = True,
     with_po: bool = True,
     k_nn: int = 4,
+    with_graph_contrast: bool = False,
 ) -> dict:
-    """Subset-scan localization first (changing subset = prefix of own-ref φ), then FSDS, then two-layer.
+    """Subset-scan localization first (prefix of own-ref φ), then FSDS, then two-layer.
 
-    subset_by='level_set' labels orders loud vs other from the merchant-layer
-    own-ref scan. community / structural Louvain and region are contrasts.
+    Default path does not build a graph. subset_by='level_set' labels orders
+    loud vs other from the merchant-grain scan. community / structural Louvain
+    are opt-in contrasts (with_graph_contrast or subset_by in those names).
     """
     cut = slice_stream(tables, t)
     ref, new, meta = cut["ref"], cut["new"], cut["meta"]
     stats = freeze_ref_stats(ref, seed=seed)
-    graph_pack = graph_shift_cuts(ref, new, stats, seed=seed, k_nn=k_nn)
+    need_graph = bool(with_graph_contrast) or subset_by in ("community", "structural")
+    graph_pack = graph_shift_cuts(
+        ref, new, stats, seed=seed, k_nn=k_nn, with_graph_contrast=need_graph
+    )
     grains = grain_localization(ref, new, stats, seed=seed, with_po=with_po)
     fsds = fsds_select(ref, new, stats, top_k=top_k, seed=seed)
     uni_ref = unify_to_order(ref, fsds["selected"], stats, mode=mode)
@@ -1374,73 +1486,83 @@ def run_pipeline(
         "sigma_from_ref": True,
         "bins_from_ref": True,
         "serve_profiles_from_ref": mode == "serve",
-        "graph_package": GRAPH_PACKAGE,
-        "graph_package_version": GRAPH_PACKAGE_VERSION,
         "graph_cut": cut_name,
-        "y_in_bundled_graph": graph_pack["bundled"]["y_in_graph"],
-        "y_in_structural_graph": graph_pack["y_in_structural"],
+        "used_networkx": bool(need_graph),
+        "y_in_bundled_graph": bool(
+            need_graph and (graph_pack.get("bundled") or {}).get("y_in_graph")
+        ),
+        "y_in_structural_graph": bool(need_graph and graph_pack.get("y_in_structural")),
     }
+    bundled = graph_pack.get("bundled") or {}
+    structural = graph_pack.get("structural") or {}
+    layers = graph_pack.get("layers")
+    graph_out = {
+        "cut": cut_name,
+        "with_graph_contrast": bool(need_graph),
+        "own_vs_full": graph_pack["own_vs_full"],
+        "level_set": {
+            "cut": graph_pack["level_set"]["cut_name"],
+            "merchant": {
+                k: v
+                for k, v in graph_pack["level_set"]["merchant"].items()
+                if k not in ("phis",)
+            },
+            "user": {
+                k: v
+                for k, v in graph_pack["level_set"]["user"].items()
+                if k not in ("phis",)
+            },
+            "jaccard_merchant_vs_user": graph_pack["level_set"]["jaccard_merchant_vs_user"],
+            "jaccard_merchant_vs_south": graph_pack["level_set"]["jaccard_merchant_vs_south"],
+            "jaccard_user_vs_south": graph_pack["level_set"]["jaccard_user_vs_south"],
+            "jaccard_coverage_merchant_vs_south": graph_pack["level_set"].get(
+                "jaccard_coverage_merchant_vs_south"
+            ),
+            "jaccard_mass_merchant_vs_south": graph_pack["level_set"].get(
+                "jaccard_mass_merchant_vs_south"
+            ),
+            "order_oracle_south_n": graph_pack["level_set"]["order_oracle_south_n"],
+            "read": graph_pack["level_set"]["read"],
+        },
+        "bundled": None,
+        "structural": None,
+        "layers": None,
+        "package": GRAPH_PACKAGE if need_graph else None,
+        "package_version": GRAPH_PACKAGE_VERSION if need_graph else None,
+        "encoder": structural.get("encoder") if need_graph else None,
+    }
+    if need_graph and bundled:
+        graph_out["bundled"] = {
+            "n_communities": bundled["n_communities"],
+            "n_nodes": bundled["n_nodes"],
+            "n_edges": bundled["n_edges"],
+            "south_frac": bundled["south_frac"],
+            "loud_community": bundled["loud_community"],
+            "loud_south_frac": bundled["loud_south_frac"],
+            "merchant_cut": {str(k): v for k, v in bundled["merchant_cut"].items()},
+        }
+        graph_out["structural"] = {
+            "n_communities": structural["n_communities"],
+            "n_nodes": structural["n_nodes"],
+            "n_edges": structural["n_edges"],
+            "south_frac": structural["south_frac"],
+            "merchant_cut": {str(k): v for k, v in structural["merchant_cut"].items()},
+        }
+        graph_out["layers"] = {
+            "merchant": {k: v for k, v in layers["merchant"].items() if k != "cut"},
+            "user": {k: v for k, v in layers["user"].items() if k != "cut"},
+            "jaccard_merchant_vs_user": layers["jaccard_merchant_vs_user"],
+            "jaccard_merchant_vs_south": layers["jaccard_merchant_vs_south"],
+            "jaccard_user_vs_south": layers["jaccard_user_vs_south"],
+            "order_oracle_south_n": layers["order_oracle_south_n"],
+            "read": layers["read"],
+        }
     return {
         "t": int(t),
         "grain": grain,
         "subset_by": subset_by,
         "meta": meta,
-        "graph": {
-            "package": GRAPH_PACKAGE,
-            "package_version": GRAPH_PACKAGE_VERSION,
-            "encoder": graph_pack["structural"]["encoder"],
-            "cut": cut_name,
-            "bundled": {
-                "n_communities": graph_pack["bundled"]["n_communities"],
-                "n_nodes": graph_pack["bundled"]["n_nodes"],
-                "n_edges": graph_pack["bundled"]["n_edges"],
-                "south_frac": graph_pack["bundled"]["south_frac"],
-                "loud_community": graph_pack["bundled"]["loud_community"],
-                "loud_south_frac": graph_pack["bundled"]["loud_south_frac"],
-                "merchant_cut": {str(k): v for k, v in graph_pack["bundled"]["merchant_cut"].items()},
-            },
-            "structural": {
-                "n_communities": graph_pack["structural"]["n_communities"],
-                "n_nodes": graph_pack["structural"]["n_nodes"],
-                "n_edges": graph_pack["structural"]["n_edges"],
-                "south_frac": graph_pack["structural"]["south_frac"],
-                "merchant_cut": {str(k): v for k, v in graph_pack["structural"]["merchant_cut"].items()},
-            },
-            "own_vs_full": graph_pack["own_vs_full"],
-            "level_set": {
-                "cut": graph_pack["level_set"]["cut_name"],
-                "merchant": {
-                    k: v
-                    for k, v in graph_pack["level_set"]["merchant"].items()
-                    if k not in ("phis",)
-                },
-                "user": {
-                    k: v
-                    for k, v in graph_pack["level_set"]["user"].items()
-                    if k not in ("phis",)
-                },
-                "jaccard_merchant_vs_user": graph_pack["level_set"]["jaccard_merchant_vs_user"],
-                "jaccard_merchant_vs_south": graph_pack["level_set"]["jaccard_merchant_vs_south"],
-                "jaccard_user_vs_south": graph_pack["level_set"]["jaccard_user_vs_south"],
-                "jaccard_coverage_merchant_vs_south": graph_pack["level_set"].get(
-                    "jaccard_coverage_merchant_vs_south"
-                ),
-                "jaccard_mass_merchant_vs_south": graph_pack["level_set"].get(
-                    "jaccard_mass_merchant_vs_south"
-                ),
-                "order_oracle_south_n": graph_pack["level_set"]["order_oracle_south_n"],
-                "read": graph_pack["level_set"]["read"],
-            },
-            "layers": {
-                "merchant": {k: v for k, v in graph_pack["layers"]["merchant"].items() if k != "cut"},
-                "user": {k: v for k, v in graph_pack["layers"]["user"].items() if k != "cut"},
-                "jaccard_merchant_vs_user": graph_pack["layers"]["jaccard_merchant_vs_user"],
-                "jaccard_merchant_vs_south": graph_pack["layers"]["jaccard_merchant_vs_south"],
-                "jaccard_user_vs_south": graph_pack["layers"]["jaccard_user_vs_south"],
-                "order_oracle_south_n": graph_pack["layers"]["order_oracle_south_n"],
-                "read": graph_pack["layers"]["read"],
-            },
-        },
+        "graph": graph_out,
         "grains": grains,
         "fsds": {
             "rank": fsds["rank"],
@@ -1471,13 +1593,19 @@ def run_pipeline(
             "ratios": logo_sub["ratios"],
         },
         "leakage": leakage,
+        "library": assemble_feature_library(fsds, meta),
+        "scan_rank": merchant_scan_rank(
+            graph_pack["level_set"]["merchant"],
+            graph_pack.get("region_by_merchant") or {},
+        ),
         "n_selected": len(uni_new["names"]),
     }
 
 
 # re-export for tests that want the LOGO mix helper
 __all__ = [
-    "assert_not_outcome",
+    "assemble_feature_library",
+    "merchant_scan_rank",
     "characterize_subset",
     "cmean_x",
     "cmean_y",
@@ -1492,6 +1620,7 @@ __all__ = [
     "CUT_BUNDLED",
     "CUT_STRUCTURAL",
     "GRAPH_PACKAGE",
+    "entity_scan_cuts",
     "graph_shift_cuts",
     "jaccard_masks",
     "layer_eval_on_orders",

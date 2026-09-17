@@ -13,6 +13,7 @@ SRC = ROOT / "Python" / "src"
 sys.path.insert(0, str(SRC))
 
 from graph_fsds_localize import (  # noqa: E402
+    assemble_feature_library,
     assert_not_outcome,
     freeze_ref_stats,
     fsds_select,
@@ -23,7 +24,7 @@ from graph_fsds_localize import (  # noqa: E402
     unify_to_order,
 )
 from order_graph_nx import subset_scan  # noqa: E402
-from stream_dgps import make_order_graph_stream  # noqa: E402
+from stream_dgps import FEATURE_LIBRARY, make_order_graph_stream  # noqa: E402
 
 
 def _stream(kind, seed=0):
@@ -166,7 +167,9 @@ class BundledGraphTests(unittest.TestCase):
         stats = freeze_ref_stats(cut["ref"], seed=seed)
         from graph_fsds_localize import graph_shift_cuts
 
-        return graph_shift_cuts(cut["ref"], cut["new"], stats, seed=seed, min_n=6)
+        return graph_shift_cuts(
+            cut["ref"], cut["new"], stats, seed=seed, min_n=6, with_graph_contrast=True
+        )
 
     def test_package_is_networkx_not_pyg(self):
         from order_graph_nx import GRAPH_PACKAGE, CUT_BUNDLED
@@ -222,7 +225,9 @@ class LevelSetTests(unittest.TestCase):
         stats = freeze_ref_stats(cut["ref"], seed=seed)
         from graph_fsds_localize import graph_shift_cuts
 
-        return graph_shift_cuts(cut["ref"], cut["new"], stats, seed=seed, min_n=6)
+        return graph_shift_cuts(
+            cut["ref"], cut["new"], stats, seed=seed, min_n=6, with_graph_contrast=False
+        )
 
     def test_cut_name_is_level_set_not_louvain(self):
         from order_graph_nx import CUT_LEVEL_SET
@@ -231,6 +236,9 @@ class LevelSetTests(unittest.TestCase):
         self.assertNotIn("louvain", CUT_LEVEL_SET)
         pack = self._pack("covariate_south", seed=9)
         self.assertEqual(pack["level_set"]["cut_name"], CUT_LEVEL_SET)
+        self.assertFalse(pack["with_graph_contrast"])
+        self.assertIsNone(pack["bundled"])
+        self.assertIsNone(pack["structural"])
 
     def test_covariate_merchant_level_set_recovers_south(self):
         pack = self._pack("covariate_south", seed=9)
@@ -282,6 +290,9 @@ class LevelSetTests(unittest.TestCase):
             with_po=False,
         )
         self.assertEqual(out["leakage"]["graph_cut"], "level_set/{phi>=tau}")
+        self.assertFalse(out["leakage"]["used_networkx"])
+        self.assertFalse(out["graph"]["with_graph_contrast"])
+        self.assertIsNone(out["graph"]["bundled"])
         self.assertIn(out["loud_subset"], ("loud", "other"))
         loud = next(p for p in out["portraits"] if p["subset"] == "loud")
         self.assertGreaterEqual(loud["south_frac"], 0.6)
@@ -316,6 +327,59 @@ class SubsetScanTests(unittest.TestCase):
         # Tiny bag 2 can rank high on intensity; mass should put 0 or 1 first.
         self.assertIn(mass["loud_ids"][0], (0, 1))
         self.assertTrue(set(phi["loud_ids"]).issubset(set(phi["ranked"])))
+
+
+class FeatureLibraryTests(unittest.TestCase):
+    def test_catalog_has_no_y_and_covers_three_grains(self):
+        names = [r["feature"] for r in FEATURE_LIBRARY]
+        grains = {r["grain"] for r in FEATURE_LIBRARY}
+        self.assertNotIn("Y", names)
+        self.assertNotIn("y", names)
+        self.assertEqual(grains, {"order", "merchant", "user"})
+        self.assertIn("amount", names)
+        self.assertIn("merchant_gmv", names)
+
+    def test_pipeline_library_marks_planted_and_selects_amount(self):
+        tables = _stream("covariate_south", seed=12)
+        self.assertIn("feature_library", tables["meta"])
+        out = run_pipeline(
+            tables,
+            t=2,
+            grain="order",
+            mode="localize",
+            subset_by="level_set",
+            seed=12,
+            min_n=15,
+            with_logo=False,
+            with_po=False,
+            with_graph_contrast=False,
+        )
+        lib = out["library"]
+        feats = [r["feature"] for r in lib["rows"]]
+        self.assertNotIn("Y", feats)
+        amount = next(r for r in lib["rows"] if r["feature"] == "amount")
+        hour = next(r for r in lib["rows"] if r["feature"] == "hour")
+        self.assertTrue(amount["planted"])
+        self.assertEqual(amount["planted_how"], "x")
+        self.assertFalse(hour["planted"])
+        self.assertIn("amount", lib["selected"])
+        self.assertGreater(amount["score"], hour["score"])
+        self.assertFalse(out["leakage"].get("used_networkx"))
+        rank = out["scan_rank"]
+        self.assertGreater(rank["n"], 0)
+        self.assertEqual(rank["rows"], sorted(rank["rows"], key=lambda r: (-r["phi"], r["merchant_id"])))
+
+    def test_assemble_rejects_outcome_column(self):
+        from stream_dgps import FEATURE_LIBRARY as CATALOG
+
+        fake = {
+            "rank": {"order": [{"feature": "Y", "score": 1, "mmd": 0, "cmean_x": 0, "cmean_y": 0, "loud": True}]},
+            "selected_names": ["Y"],
+        }
+        # Catalog does not include Y, so assemble stays clean even if FSDS leaked.
+        lib = assemble_feature_library(fake, {"kind": "covariate_south"})
+        self.assertEqual([r["feature"] for r in lib["rows"]], [c["feature"] for c in CATALOG])
+        self.assertNotIn("Y", lib["selected"])
 
 
 if __name__ == "__main__":

@@ -199,6 +199,31 @@ MERCHANT_FEATS = ("merchant_cat", "merchant_gmv", "n_skus")
 USER_FEATS = ("user_tenure", "user_hist_freq")
 SOUTH_MERCHANTS = (4, 5, 6, 7)
 
+# Native-grain catalog. Y is not a feature. planted_how is filled per kind in meta.
+FEATURE_LIBRARY = (
+    {"feature": "amount", "grain": "order", "role": "订单金额（进 logit）"},
+    {"feature": "hour", "grain": "order", "role": "下单时刻（噪声列）"},
+    {"feature": "n_items", "grain": "order", "role": "件数（噪声列）"},
+    {"feature": "channel", "grain": "order", "role": "渠道"},
+    {"feature": "merchant_cat", "grain": "merchant", "role": "商户类目（进 logit，不种 shift）"},
+    {"feature": "merchant_gmv", "grain": "merchant", "role": "商户 GMV"},
+    {"feature": "n_skus", "grain": "merchant", "role": "SKU 数（噪声列）"},
+    {"feature": "user_tenure", "grain": "user", "role": "用户 tenure（进 logit，不种 shift）"},
+    {"feature": "user_hist_freq", "grain": "user", "role": "历史频次（噪声列）"},
+)
+
+
+def planted_how_for_kind(kind: str) -> dict[str, str]:
+    """How a catalog column is planted. Empty → not planted. Never includes Y."""
+    kind = str(kind)
+    if kind == "covariate_south":
+        return {"amount": "x", "channel": "x", "merchant_gmv": "x"}
+    if kind == "concept_south":
+        return {"amount": "y|x"}
+    if kind == "both":
+        return {"amount": "both", "channel": "x", "merchant_gmv": "x"}
+    return {}
+
 
 def south_merchant_ids(n_merchants: int) -> np.ndarray:
     """Second half of merchant ids. n=8 → {4,5,6,7}, same as SOUTH_MERCHANTS."""
@@ -312,8 +337,10 @@ def make_order_graph_stream(
         "n_batches": n_batches,
         "n_merchants": n_merchants,
         "n_users": n_users,
-        "title": f"order-graph {kind} (south after batch {onset_batch})",
+        "title": f"order stream {kind} (south after batch {onset_batch})",
         "leakage": "Y is outcome only; subset key is region, not Y",
+        "feature_library": list(FEATURE_LIBRARY),
+        "planted_how": planted_how_for_kind(kind),
     }
     tables = {
         "order_id": np.arange(n, dtype=int),

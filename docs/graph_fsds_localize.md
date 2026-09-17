@@ -14,7 +14,7 @@
         localize = 当前窗的 X；serve = 订单 X 用当前、实体列用 D_ref 画像
   → 4. 两层
         层 1  subset vs other：默认 **own-ref subset scan**（水平集 `{φ≥τ}` 或覆盖前缀）；
-              图只做 incidence lift。Louvain 社区 / region / structural 只做对照
+              lift 用 `merchant_id` / `user_id`（外键）。默认**不建图**。
         层 2  选中块的 LOGO（order / merchant / user）
   → 5. 对 loud subset 出三支肖像 + fingerprint
 ```
@@ -30,15 +30,27 @@
 | 收成一粒 | 评估单位钉死（一张订单，或一个商户） | 订单指标和商户指标不能比份额；「谁贡献大」没有同一个分母 |
 | 两层 | 哪一个 **subset**；这个 subset 里是哪一块 **feature block** | 只报全局 MMD 会漏掉「只有南区商户在走」 |
 
-图在这里就是实体图：`order → merchant`、`order → user`。包是 **networkx**（不是 GraphRAG / PyG / DGL）。**图只回答 incidence（谁挂在谁下面），不回答谁在变。** 变动 subset 是 Fast Subset Scan 的前缀（水平集 / 覆盖），不是社区发现。
+`merchant_id` / `user_id` 是外键，不是一张要跑社区发现的网络。变动 subset 是 Fast Subset Scan 的前缀（水平集 / 覆盖）。默认路径**不调用 networkx**。Louvain / kNN / SAGE 只在显式对照时才建。
 
 ---
 
-## 表 0 · 多层图上怎么做 subset localization（不走 community detection）
+## 表 0 · 多实体粒上的 subset scan（正经方法，不是图方法）
 
-Community detection 问「谁和谁连得密」。多层图 localization 问的是另一件事：**哪一层上的哪一组实体，自己的 \(P(X)\) / \(P(Y\mid X)\) 在走。** 这两个目标没有同一套最优解。共单边的模块度切的是谁共享用户；南区商户的用户是跨商户随机挂的，所以 Louvain 跟种下的变动子集可以对齐也可以对不齐——对不齐不是调 resolution 能修的。
+这是流行病学 / 异常定位里的 **spatial scan / Fast Subset Scan**（Kulldorff；Neill LTSS）：在一组实体上找最响的子集。势能可加时，最优解是按 \(\psi\) 排序的前缀，复杂度是一次排序，不是 \(2^N\)，也不是一张图的划分。
 
-正确的对象是 **subset scan**（Neill LTSS）：节点势能可加时，最响的子集一定是按 \(\psi\) 排序的**前缀**，不是一张图的一个划分。
+### 计算量
+
+| 步 | 复杂度 | 贵不贵 |
+|---|---|---|
+| 每个实体打钟（MMD / \(\Delta\mu\) / 可选 PO） | \(O(N_{\mathrm{ent}}\cdot n_{\mathrm{bag}}^2)\) 量级（RBF-MMD 对袋） | **这是账单。** 16 个商户、每袋十几单可以忽略；上万商户、每袋上百单才需要抽袋 / 线性 MMD |
+| 扫描本身（排序 + 取前缀） | \(O(N_{\mathrm{ent}}\log N_{\mathrm{ent}})\) | 可以忽略。\(N\) 是商户数或用户数，不是边数 |
+| lift 到订单 | \(O(n_{\mathrm{order}})\) | `merchant_id ∈ loud_ids`，一次布尔 mask |
+| 朴素穷举所有子集再对并袋打 MMD | \(2^{N}\) 次 MMD | **不做。** LTSS 用可加的 \(\sum\phi_i\)，所以前缀就是最优 |
+| 图约束扫描（连通子图） / Louvain | 指数或迭代模块度 | **不做默认。** 那才是网络数据；这里外键不是边 |
+
+所以 subset scan **作为切法几乎不花钱**。不要把它和「在图上搜连通异常块」混为一谈——后者才超纲、才贵。
+
+Community detection 问「谁和谁连得密」。这里问的是：**哪一个实体粒上的哪一组 id，自己的 \(P(X)\) / \(P(Y\mid X)\) 在走。** 共单边的模块度切的是谁共享用户；南区用户跨商户随机挂，Louvain 跟种下的子集可以对齐也可以对不齐——对不齐不是调 resolution 能修的。图 / 网络数据不是这套 localization 的输入。
 
 \[
 \psi_i=\phi_i\quad\text{或}\quad\psi_i=\phi_i\cdot n_i,\qquad
@@ -46,7 +58,7 @@ Community detection 问「谁和谁连得密」。多层图 localization 问的�
 v_i=(\mathrm{MMD}_i,\ \lVert\Delta\mu_X\rVert_i,\ \Delta\mu_Y_i,\ \mathrm{PO}_i)\ \text{vs own-ref}.
 \]
 
-两条前缀规则（同一条排序，不是两套图）：
+两条前缀规则（同一条排序）：
 
 \[
 \begin{aligned}
@@ -58,34 +70,34 @@ v_i=(\mathrm{MMD}_i,\ \lVert\Delta\mu_X\rVert_i,\ \Delta\mu_Y_i,\ \mathrm{PO}_i)
 \end{aligned}
 \]
 
-\(\tau\) 自适应：安静窗 \(\max\psi\) 小，floor 把噪声挡掉；onset 后 \(\max\psi\) 抬起来，前缀跟着走。覆盖前缀回答「偏移质量的 80% 落在哪些点」，水平集回答「谁过了响度门槛」。默认 subset 键用水平集；覆盖 / 质量加权（\(\phi\cdot n\)）写在同一层上对照。
+\(\tau\) 自适应：安静窗 \(\max\psi\) 小，floor 把噪声挡掉；onset 后 \(\max\psi\) 抬起来，前缀跟着走。覆盖前缀回答「偏移质量的 80% 落在哪些点」，水平集回答「谁过了响度门槛」。默认 subset 键用水平集；覆盖 / 质量加权（\(\phi\cdot n\)）写在同一粒上对照。
 
-### 具体弄法（按层扫，再 lift，再在订单粒上评）
+### 具体弄法（按实体粒扫，再 lift，再在订单粒上评）
 
-层 = 一种实体粒。这里两层：商户、用户。边 = 订单挂在哪个商户 / 哪个用户。**不要合成一张超图，也不要把两层的 \(v_i\) 加进同一个 simplex。** 图的唯一法定用途是第 3 步的 incidence lift。
+粒 = 一种实体。这里两粒：商户、用户。`merchant_id` / `user_id` 只是订单挂在哪个实体上。**不要建成网络，也不要把两粒的 \(v_i\) 加进同一个 simplex。**
 
 ```
 冻结 D_ref（σ、分位数、每个实体自己的 ref 袋）。新商户没有 own-ref → 跳过，不进扫描。
 
-对每一层 L ∈ {merchant, user} 独立：
-  1. 每个节点 i 用自己的 D_ref 袋打捆
+对每一粒 L ∈ {merchant, user} 独立：
+  1. 每个实体 i 用自己的 D_ref 袋打捆
        v_i = (MMD_i, ‖Δμ_X‖_i, Δμ_Y_i, PO_i)     # own-ref
        φ_i = ‖ṽ_i‖_1
        ψ_i = φ_i            # 强度；要质量时改成 φ_i · n_i
-  2. 排序 + 取前缀（Fast Subset Scan，不是 Louvain）
+  2. 排序 + 取前缀（Fast Subset Scan）
        水平集  Ŝ_L = { i : ψ_i ≥ τ }
        覆盖    Ŝ_L^cov = 累计 ψ 到 80% 的最短前缀
-  3. lift 到订单（incidence，唯一用到图的地方）
-       订单 o ∈ Ŝ̂_L  ⇔  o 挂到的该层实体 ∈ Ŝ_L
+  3. lift 到订单（外键，不是图算法）
+       订单 o ∈ Ŝ̂_L  ⇔  o 的该粒 id ∈ Ŝ_L
 
 评估（唯一可加的单位 = 订单）：
        J(Ŝ̂_m, S*), J(Ŝ̂_u, S*), J(Ŝ̂_m, Ŝ̂_u)
-       层对了才回收：这个 DGP 变动在商户，用户层 Jaccard 应接近 0
+       粒对了才回收：这个 DGP 变动在商户，用户粒 Jaccard 应接近 0
 
-两层归因（默认用商户层水平集 lift 出的标签）：
+两层归因（默认用商户粒水平集 lift 出的标签）：
        订单标签 = loud / other（不是 C0/C1/C2）
        再打 π_MMD / π_PO / π_CMean 和 fingerprint
-方向（捆 φ 混了就读切片，仍是扫描，不是第二套社区）：
+方向（捆 φ 混了就读切片，仍是扫描）：
        {i : MMD_i ≥ τ_MMD}、{i : |Δμ_Y|_i ≥ τ_Y}、…
 ```
 
@@ -299,7 +311,26 @@ HH（划分）选的是图上的 merchant 扫描 / region，**不是 Y**。FSDS 
 | `concept_south` | 南区 amount 系数翻号并下移截距；\(P(X)\) 固定 | FSDS 含 amount（靠 CMean 关联差，不是靠 MMD）；loud=south；π_PO 和 \(|\Delta\mu_Y|\) 南>北；MMD 份额被门控掉；fingerprint `concept` |
 | `both` | 两件同时 | 后期 MMD 往往盖过 PO（X 走得更响）；肖像里仍要读 PO 和 \(\Delta\mu_Y\)，不要只看 mix |
 
-实测表：`results/graph_fsds_localize/TABLES.md`。图：`subset_shares.png`。
+实测表：`results/graph_fsds_localize/TABLES.md`。特征库看板：`results/graph_fsds_localize/library.html`（`library_heatmap.png` / `library_time.png` / `merchant_scan.png`）。
+
+---
+
+## 表 8 · 特征库（这个 dataset 上的可视化）
+
+九列、三粒、不含 Y。看板把 FSDS 分数贴回目录，而不是画一张网络。
+
+| grain | 列 | 角色 | covariate 种下 | concept 种下 |
+|---|---|---|---|---|
+| order | amount | 进 logit | \(P(X)\) | \(P(Y\mid X)\) |
+| order | channel | 渠道 | \(P(X)\) | — |
+| order | hour, n_items | 噪声 | — | — |
+| merchant | merchant_gmv | GMV | \(P(X)\) | — |
+| merchant | merchant_cat | 进 logit，不种 shift | — | — |
+| merchant | n_skus | 噪声 | — | — |
+| user | user_tenure | 进 logit，不种 shift | — | — |
+| user | user_hist_freq | 噪声 | — | — |
+
+读法：种下的列应变红、进 FSDS；噪声列保持淡。商户扫描条形图红 = 南区，● = 进 \(\{φ\geτ\}\)。**没有边、没有社区。**
 
 ---
 
@@ -314,10 +345,10 @@ HH（划分）选的是图上的 merchant 扫描 / region，**不是 Y**。FSDS 
 
 代码：
 
-- `Python/src/order_graph_nx.py` — incidence 图、own-ref subset scan（水平集 / 覆盖 / \(\phi\cdot n\)）、metric slice；结构 / bundled Louvain 只做对照；冻住 SAGE-mean
-- `Python/src/graph_fsds_localize.py` — 维度定位、FSDS、unify、subset vs other、肖像
-- `Python/src/stream_dgps.py` — `make_order_graph_stream`（接着用这批合成订单）
-- `scripts/run_graph_fsds_localize.py`
+- `Python/src/stream_dgps.py` — `make_order_graph_stream` + `FEATURE_LIBRARY`
+- `Python/src/graph_fsds_localize.py` — 特征库、FSDS、unify、subset vs other、肖像
+- `Python/src/order_graph_nx.py` — subset scan（水平集 / 覆盖 / \(\phi\cdot n\)）；Louvain 只做对照
+- `scripts/run_graph_fsds_localize.py` — `library.html` 看板
 - `tests/test_graph_fsds_localize.py`
 
 ```bash
