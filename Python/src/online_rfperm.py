@@ -16,6 +16,7 @@ from sklearn.ensemble import RandomForestRegressor
 
 GATE = 1.5
 P_ALPHA = 0.05
+NULL_B = 200
 
 
 def fit_frozen_rf(X, y, *, seed: int = 0) -> RandomForestRegressor:
@@ -56,22 +57,44 @@ def hop_fires(e_now, e_prev, gate: float = GATE, e_floor: float = 0.0) -> bool:
 
 
 class FrozenRFPerm:
-    """Fit RandomForestRegressor once on D_ref. Each batch is one T_t / p_t / hop."""
+    """Fit RandomForestRegressor once on D_ref. Each batch is one T_t / p_t / hop.
 
-    def __init__(self, X_ref, Y_ref, *, seed: int = 2026, gate: float = GATE):
+    Rank-p for FDR is against a fixed ref-null pool (subsets of D_ref), not the
+    short stream of previous T's — those ranks are too coarse for ADDIS/SAFFRON.
+    """
+
+    def __init__(self, X_ref, Y_ref, *, seed: int = 2026, gate: float = GATE, null_b: int = NULL_B):
         X_ref = np.asarray(X_ref, dtype=float)
         Y_ref = np.asarray(Y_ref, dtype=float).ravel()
         self.gate = float(gate)
         self.probe = fit_frozen_rf(X_ref, Y_ref, seed=seed)
         self.e_ref = probe_mse(self.probe, X_ref, Y_ref)
+        self.null_pool = self._ref_null_pool(X_ref, Y_ref, seed=seed, b=int(null_b))
         self.pool: list[float] = []
         self.e_prev = None
+
+    def _ref_null_pool(self, X_ref, Y_ref, *, seed: int, b: int) -> np.ndarray:
+        rng = np.random.default_rng(int(seed) + 17)
+        n = len(Y_ref)
+        m = min(n, max(64, n // 5))
+        out = np.empty(max(int(b), 1), dtype=float)
+        for i in range(len(out)):
+            sl = rng.choice(n, size=m, replace=False)
+            out[i] = probe_mse(self.probe, X_ref[sl], Y_ref[sl]) - self.e_ref
+        return out
+
+    def _pval(self, T: float) -> float:
+        pool = np.asarray(self.null_pool, dtype=float)
+        if pool.size == 0:
+            return 1.0
+        return float(np.sum(float(T) <= pool) + 1.0) / float(pool.size + 1.0)
 
     def step(self, X_new, Y_new) -> dict:
         mse = probe_mse(self.probe, X_new, Y_new)
         T = float(mse - self.e_ref)
+        p = self._pval(T)
         pool_arr = np.asarray(self.pool, dtype=float)
-        p = 1.0 if pool_arr.size == 0 else float(np.sum(T <= pool_arr) + 1) / float(len(self.pool) + 1)
+        p_seq = 1.0 if pool_arr.size == 0 else float(np.sum(T <= pool_arr) + 1) / float(len(self.pool) + 1)
         self.pool.append(T)
         n = len(np.asarray(Y_new).ravel())
         e_fl = error_floor(n)
@@ -81,6 +104,7 @@ class FrozenRFPerm:
             "rfperm_mse": float(mse),
             "rfperm_T": float(T),
             "rfperm_p": float(p),
+            "rfperm_p_seq": float(p_seq),
             "rfperm_hop": bool(hop),
             "rfperm_ratio": float(ratio),
             "rfperm_e_ref": float(self.e_ref),

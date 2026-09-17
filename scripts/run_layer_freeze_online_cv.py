@@ -798,15 +798,14 @@ def write_index(out: Path) -> None:
     bits = [
         "# PO-risk board",
         "",
+        "[flow.html](flow.html) — PO / MMD / MSE flow, OnlineRFPerm p, ADDIS/SAFFRON.",
         "OnlineRFPerm (frozen RF.predict(X_new), T=MSE−E_ref) marks shift-onset.",
+        "MSE collapse gates the rank-p into ADDIS (primary) / SAFFRON (contrast).",
         "PO × MSE × MMD²(X_new, X_ref) says what kind of shift it was.",
-        "PO+MSE both break → freeze that layer's training.",
-        "RF PO-risk should not collapse first; serving MSE is likelier to break.",
-        "MSE broken, PO quiet → not concept drift; read MMD vs the reference batch.",
         "No online-bootstrap.",
         "",
     ]
-    html_items = []
+    html_items = ['<li><a href="flow.html"><b>流程 + 全部看板 + ADDIS/SAFFRON</b></a></li>']
     for name in INDEX_NAMES:
         sub = out / name
         if (sub / "board.html").exists():
@@ -828,12 +827,25 @@ def write_index(out: Path) -> None:
     if (out / "JUSTIFY.md").exists():
         bits.append("- [justify table](JUSTIFY.md)")
         html_items.append('<li><a href="JUSTIFY.md">justify</a></li>')
+    bits.insert(2, "- [flow.html](flow.html)")
     (out / "REPORT.md").write_text("\n".join(bits) + "\n", encoding="utf-8")
     html = """<!DOCTYPE html><meta charset="utf-8"><title>PO × MSE board</title>
 <h1>PO × MSE 对照</h1>
-<p>闭环：OnlineRFPerm 标 onset（冻住的 RandomForestRegressor.predict(X_new)）。MMD 口径是 MMD²(X_new, X_ref)。RF PO-risk 不该先崩；MSE 先崩再看 MMD。PO 崩模型没崩 → 再观察。</p>
+<p>主页是 <a href="flow.html">flow.html</a>：PO-risk / MMD / MSE 流程，MSE 崩了才把 OnlineRFPerm 的 p 送进 ADDIS（主）和 SAFFRON（对照）。</p>
 <ul>""" + "".join(html_items) + "</ul>"
     (out / "index.html").write_text(html, encoding="utf-8")
+    try:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "render_flow_html", ROOT / "scripts" / "render_flow_html.py"
+        )
+        if spec and spec.loader:
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            mod.render(out)
+    except Exception as exc:
+        print("skip flow.html:", exc, flush=True)
 
 
 def run_size_compare(name: str, n_ref: int, sizes: list[int], stream_cap: int) -> dict:
@@ -952,16 +964,21 @@ def write_justify_md(results: list[dict], out_path: Path) -> str:
         "Concept DGP: P(X) fixed, β rotates after labeled onset → MMD quiet, PO/MSE move (watch).",
         "Covariate DGP: same f, μ(X) walks → MMD vs ref fires, PO stays quiet.",
         "Last-two hop is a jump detector; a slow walk shows up as T / MMD trends, not a 1.5× hop.",
+        "MSE collapse gates OnlineRFPerm rank-p into ADDIS (primary) / SAFFRON (contrast).",
         "Real streams (bank-marketing, EEG) are the MSE-first + MMD cell (x_shift).",
         "",
-        "| dataset | n_new | onset_true | onset_hat | onset_rank | board | n_watch | n_x_shift | n_tricky | n_freeze | n_hop |",
-        "|---|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|",
+        "| dataset | n_new | onset_true | onset_hat | onset_fdr | MSE-tested | ADDIS rej | SAFFRON rej | board | n_watch | n_x_shift | n_tricky | n_freeze | n_hop |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|",
     ]
     for r in results:
+        add = r.get("fdr_addis") or {}
+        saff = r.get("fdr_saffron") or {}
         lines.append(
             f"| {r.get('dataset')} | {r.get('n_new')} | {r.get('onset_true')} | {r.get('onset_hat')} | "
-            f"{r.get('onset_rank')} | {r.get('board_action')} | {r.get('n_watch', 0)} | "
-            f"{r.get('n_x_shift', 0)} | {r.get('n_tricky', 0)} | {r.get('n_freeze', 0)} | {r.get('n_rfperm_hop', 0)} |"
+            f"{add.get('onset_fdr', r.get('onset_fdr'))} | {add.get('n_fdr_tested', 0)} | "
+            f"{add.get('n_fdr_reject', 0)} | {saff.get('n_fdr_reject', 0)} | {r.get('board_action')} | "
+            f"{r.get('n_watch', 0)} | {r.get('n_x_shift', 0)} | {r.get('n_tricky', 0)} | "
+            f"{r.get('n_freeze', 0)} | {r.get('n_rfperm_hop', 0)} |"
         )
     lines += ["", "Freeze only when PO and MSE both break. No online-bootstrap.", ""]
     text = "\n".join(lines)

@@ -48,7 +48,21 @@ T = mean((Y_new - pred) ** 2) - E_ref
 
 last-two hop 是相邻窗的 MSE 比。第一个 hop 就是 **shift-onset**。MMD 同样只对 `X_new` vs `X_ref`。
 
+**MSE 崩了才把 OnlineRFPerm 的 rank-p 送进 online FDR。** 安静 batch 的 p 记成 1。主方法是 **ADDIS**（p > τ=0.5 discard，适合大量 conservative null）；**SAFFRON** 做对照。α=0.05，infinite-horizon γ_t = 1/(t(t+1))。
+
 看板读 WHAT：
+
+| DGP | P(X) | P(Y\|X) | OnlineRFPerm | MMD²(X_new, X_ref) | 看板该看到 |
+|---|---|---|---|---|---|
+| gradual concept | 固定 | β 慢慢翻 | T 从 labeled onset 往后抬；慢漂不一定 1.5× hop | 安静 | MSE/PO 动 → watch |
+| gradual covariate | μ 慢慢走 | 同一 f | T 不一定 hop | 过线 | PO 安静；MSE 崩才标 X shift |
+
+```bash
+PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --justify
+PYTHONPATH=Python/src:. python3 scripts/render_flow_html.py
+```
+
+总页是 `results/layer_freeze_online_cv/flow.html`。
 
 | DGP | P(X) | P(Y\|X) | OnlineRFPerm | MMD²(X_new, X_ref) | 看板该看到 |
 |---|---|---|---|---|---|

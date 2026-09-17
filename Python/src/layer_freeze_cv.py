@@ -14,8 +14,9 @@ MMD口径 is vs the same T=0 reference batch as PO-risk — not mean
 pairwise MMD against previous batches, not last-batch layer reps.
 
 Closed loop: OnlineRFPerm (frozen RandomForestRegressor.predict(X_new),
-T=MSE−E_ref, last-two hop) marks the shift-onset point. The board says
-what kind of shift it was.
+T=MSE−E_ref) marks WHEN. Serving MSE collapse is the gate: only then
+does the rank-p enter ADDIS (primary) / SAFFRON (contrast) online FDR.
+The board (PO × MSE × MMD²(X_new, X_ref)) says WHAT.
 
 No online-bootstrap. Causal MA is the stability readout.
 
@@ -37,6 +38,7 @@ from dl_model_registry import (
     construct_dataloader,
     spawn_layer_models,
 )
+from online_fdr import both_fdr
 from online_rfperm import FrozenRFPerm, onset_from_rows
 from streaming_po_risk import (
     ACTION_FREEZE,
@@ -131,6 +133,11 @@ def attach_layer_dicts(result: dict) -> dict:
         )
     if rows and any(r.get("rfperm_T") is not None for r in rows):
         result.update(onset_from_rows(rows))
+        fdr = both_fdr(rows)
+        result["fdr_addis"] = fdr["addis"]
+        result["fdr_saffron"] = fdr["saffron"]
+        result["onset_fdr"] = fdr["addis"].get("onset_fdr")
+        result["n_fdr_reject"] = fdr["addis"].get("n_fdr_reject")
     for rec in rows:
         i = rec.get("i_star", k)
         rec.update(freeze_training_of(i, k))
@@ -404,5 +411,10 @@ def run_layer_freeze_cv(
     out.update(annotate_po_mse_contrast(rows, po_base, mse_base=mse_base, mmd_base=mmd_base, n_new=batch_size_stream))
     out.update(stack_layer_metric_dicts(rows, k))
     out.update(onset_from_rows(rows))
+    fdr = both_fdr(rows)
+    out["fdr_addis"] = fdr["addis"]
+    out["fdr_saffron"] = fdr["saffron"]
+    out["onset_fdr"] = fdr["addis"].get("onset_fdr")
+    out["n_fdr_reject"] = fdr["addis"].get("n_fdr_reject")
     out["rfperm_e_ref"] = float(rfperm.e_ref)
     return out

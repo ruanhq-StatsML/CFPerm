@@ -470,6 +470,68 @@ class OnlineRFPermTests(unittest.TestCase):
         self.assertIsNotNone(mark)
         self.assertGreaterEqual(int(mark), onset)
         self.assertLessEqual(int(mark), onset + 1)
+        self.assertLess(float(rows[onset]["rfperm_p"]), 0.05)
+
+
+class OnlineFdrTests(unittest.TestCase):
+    def test_tiny_p_is_rejected_saffron_and_addis(self):
+        from online_fdr import addis, saffron
+
+        p = [1e-9, 0.9, 0.8, 0.7]
+        s = saffron(p)
+        a = addis(p)
+        self.assertTrue(s["reject"][0])
+        self.assertTrue(a["reject"][0])
+        self.assertFalse(s["reject"][1])
+        self.assertTrue(bool(a["discarded"][1]))
+
+    def test_p_one_never_rejects(self):
+        from online_fdr import addis, saffron
+
+        p = [1.0] * 12
+        s = saffron(p)
+        a = addis(p)
+        self.assertFalse(bool(s["reject"].any()))
+        self.assertFalse(bool(a["reject"].any()))
+        self.assertTrue(bool(a["discarded"].all()))
+
+    def test_mse_gate_uses_rfperm_p_else_discards(self):
+        from online_fdr import annotate_mse_rfperm_fdr, pvals_mse_gated
+
+        rows = [
+            {"t": 0, "mse_broken": False, "rfperm_p": 1e-9},
+            {"t": 1, "mse_broken": True, "rfperm_p": 1e-9},
+            {"t": 2, "mse_broken": True, "rfperm_p": 0.9},
+        ]
+        p = pvals_mse_gated(rows)
+        np.testing.assert_allclose(p, [1.0, 1e-9, 0.9])
+        info = annotate_mse_rfperm_fdr(rows, method="addis")
+        self.assertEqual(info["n_fdr_tested"], 2)
+        self.assertTrue(rows[1]["fdr_reject"])
+        self.assertFalse(rows[0]["fdr_tested"])
+        self.assertEqual(info["onset_fdr"], 1)
+
+    def test_addis_discards_then_still_rejects_tiny_p(self):
+        from online_fdr import addis
+
+        a = addis([0.9, 0.8, 1e-9, 0.7])
+        self.assertTrue(bool(a["discarded"][0]) and bool(a["discarded"][1]))
+        self.assertTrue(bool(a["reject"][2]))
+        self.assertFalse(bool(a["reject"][3]))
+
+    def test_both_fdr_marks_addis_and_saffron(self):
+        from online_fdr import both_fdr
+
+        rows = [
+            {"t": 0, "mse_broken": False, "rfperm_p": 0.01},
+            {"t": 1, "mse_broken": True, "rfperm_p": 1e-9},
+        ]
+        info = both_fdr(rows)
+        self.assertEqual(info["addis"]["n_fdr_tested"], 1)
+        self.assertTrue(rows[1]["fdr_reject_addis"])
+        self.assertTrue(rows[1]["fdr_reject_saffron"])
+        self.assertFalse(rows[0]["fdr_tested"])
+        self.assertEqual(rows[0]["fdr_p"], 1.0)
 
 
 if __name__ == "__main__":
