@@ -503,7 +503,7 @@ covariate / both 种 amount ≻ merchant_gmv ≻ channel；concept 只种 amount
 </tbody>
 </table>
 
-<p class="foot">细表 <a href="TABLES.md">TABLES.md</a> · 口径 <a href="REPORT.md">REPORT.md</a> · 一页 <a href="JUSTIFY.md">JUSTIFY.md</a></p>
+<p class="foot">LaTeX <a href="../../docs/recsys_grain_monitor.tex">docs/recsys_grain_monitor.tex</a> · PDF <a href="recsys_grain_monitor.pdf">recsys_grain_monitor.pdf</a> · 细表 <a href="TABLES.md">TABLES.md</a> · 口径 <a href="REPORT.md">REPORT.md</a></p>
 </body>
 </html>
 """

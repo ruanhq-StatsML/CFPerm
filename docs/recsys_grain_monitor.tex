@@ -1,0 +1,138 @@
+% Recsys grain monitor. Compile: pdflatex docs/recsys_grain_monitor.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,graphicx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\title{Recommendation stream by grain:\\
+OnlineRFPerm, RFPerm/CFPerm, and FSDS}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\paragraph{$Y$ (outcome).}
+One row is one order.
+$Y\in\{0,1\}$ is \textbf{conversion} on that order (purchase / not).
+$Y$ is the response only.
+It is never a column of $X$, never a ranking key, never a subset key.
+
+\paragraph{$X$ (covariates).}
+$X$ is the serving table of that order, sliced the way the log is written.
+$Y$ is not in any slice.
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+grain & $X$ columns & what the row is \\
+\midrule
+order & amount, hour, n\_items, channel & this order \\
+merchant & merchant\_cat, merchant\_gmv, n\_skus & the merchant on this order \\
+user & user\_tenure, user\_hist\_freq & the user on this order \\
+all & the nine columns concatenated & anti-pattern; shown as a check \\
+\bottomrule
+\end{tabular}
+\end{center}
+Region (south / north) is a merchant attribute, not a feature and not $Y$.
+The batch index $T$ is a time label ($D_{\mathrm{ref}}$ vs the new batch), not a treatment.
+
+\paragraph{Setup.}
+$n_{\mathrm{ref}}{=}400$, $n_{\mathrm{new}}{=}120$, six batches, labeled onset $t{=}2$.
+After onset, only \textbf{south} merchants are shifted.
+Covariate / both plant $\mathrm{amount}\succ\mathrm{merchant\_gmv}\succ\mathrm{channel}$ in $P(X)$.
+Concept plants amount in $P(Y\mid X)$ only.
+User columns never walk.
+
+\vspace{0.6em}
+\noindent
+Table~\ref{tab:when}: OnlineRFPerm (Algorithm~1) --- first rejection, delay, FAR.\\
+Table~\ref{tab:which}: FSDS / RFPerm $\Delta$MSE / CFPerm $\varphi$-VIMP --- Kendall-$\tau$ vs planted.\\
+Table~\ref{tab:where}: south vs north, own-ref, last batch.
+
+\begin{table}[h]
+\centering
+\caption{WHEN. Frozen RF on $D_{\mathrm{ref}}$. $T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}$.
+Delay $=$ first rejection $-$ onset. FAR $=$ mark before onset. Hop is a $1.5\times$ jump detector.}
+\label{tab:when}
+\scriptsize
+\begin{tabular}{llcccccc}
+\toprule
+kind & grain & ADDIS & rank-$p$ & SAFFRON & hop & last $T$ & last MMD \\
+\midrule
+covariate & order & $2$ ($d{=}0$) & $2$ ($d{=}0$) & $2$ ($d{=}0$) & miss & $0.067$ & $0.095$ \\
+covariate & merchant & $5$ ($d{=}3$) & $2$ ($d{=}0$) & $5$ ($d{=}3$) & miss & $0.066$ & $0.065$ \\
+covariate & user & $2$ ($d{=}0$) & FAR@$0$ & $2$ ($d{=}0$) & miss & $0.057$ & $0.0006$ \\
+covariate & all & FAR@$0$ & FAR@$0$ & FAR@$0$ & miss & $0.053$ & $0.077$ \\
+concept & order & $2$ ($d{=}0$) & $2$ ($d{=}0$) & $2$ ($d{=}0$) & miss & $0.113$ & $-0.0005$ \\
+concept & merchant & miss & $2$ ($d{=}0$) & miss & miss & $0.019$ & $-0.005$ \\
+concept & user & $2$ ($d{=}0$) & FAR@$0$ & $2$ ($d{=}0$) & miss & $0.009$ & $0.0006$ \\
+concept & all & FAR@$0$ & FAR@$0$ & FAR@$0$ & miss & $0.110$ & $-0.001$ \\
+both & order & $2$ ($d{=}0$) & $2$ ($d{=}0$) & $2$ ($d{=}0$) & miss & $0.157$ & $0.095$ \\
+both & merchant & miss & $2$ ($d{=}0$) & miss & miss & $-0.019$ & $0.065$ \\
+both & user & $2$ ($d{=}0$) & FAR@$0$ & $2$ ($d{=}0$) & miss & $-0.0005$ & $0.0006$ \\
+both & all & FAR@$0$ & FAR@$0$ & FAR@$0$ & miss & $0.170$ & $0.077$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{WHICH columns. Ranking recovery vs planted magnitude.
+User grain has no planted $X$ columns --- the correct negative control.}
+\label{tab:which}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{llllccc}
+\toprule
+kind & grain & planted in $X$ & FSDS recovered & $\tau_{\mathrm{FSDS}}$ & $\tau_{\mathrm{RFPerm}}$ & $\tau_{\mathrm{CFPerm}}$ \\
+\midrule
+covariate & order & amount, channel & amount, channel & $0.91$ & $0.55$ & $-0.18$ \\
+covariate & merchant & merchant\_gmv & merchant\_gmv & $0.82$ & $-0.82$ & $-0.82$ \\
+covariate & user & --- & --- & --- & --- & --- \\
+covariate & all & amount, channel, gmv & amount, channel, gmv & $0.69$ & $0.18$ & $-0.18$ \\
+concept & order & amount & amount & $0.24$ & $0.24$ & $0.71$ \\
+concept & merchant & --- & --- & --- & --- & --- \\
+concept & user & --- & --- & --- & --- & --- \\
+concept & all & amount & amount & $0.35$ & $0.35$ & $0.47$ \\
+both & order & amount, channel & amount, channel & $0.91$ & $-0.18$ & $0.91$ \\
+both & merchant & merchant\_gmv & merchant\_gmv & $0.82$ & $0$ & $-0.82$ \\
+both & user & --- & --- & --- & --- & --- \\
+both & all & amount, channel, gmv & amount, channel, gmv & $0.69$ & $0.04$ & $0.26$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{WHICH accounts. Own-ref MMD: this region's new bag vs this region's $D_{\mathrm{ref}}$.
+Subset key is region, not $Y$.}
+\label{tab:where}
+\scriptsize
+\begin{tabular}{llccccc}
+\toprule
+kind & grain & $n_{\mathrm{south}}$ & south MMD & north MMD & pair MMD & south $\Delta\mathbb{E}[Y]$ \\
+\midrule
+covariate & order & $59$ & $0.35$ & $0.001$ & $0.32$ & $0.35$ \\
+covariate & merchant & $59$ & $0.29$ & $-0.005$ & $0.29$ & $0.35$ \\
+covariate & user & $59$ & $-0.001$ & $-0.001$ & $-0.003$ & $0.35$ \\
+covariate & all & $59$ & $0.30$ & $0.001$ & $0.26$ & $0.35$ \\
+concept & order & $59$ & $-0.001$ & $0.001$ & $0.002$ & $-0.041$ \\
+concept & merchant & $59$ & $-0.010$ & $-0.005$ & $0.18$ & $-0.041$ \\
+concept & user & $59$ & $-0.001$ & $-0.001$ & $-0.003$ & $-0.041$ \\
+concept & all & $59$ & $-0.004$ & $0.001$ & $0.033$ & $-0.041$ \\
+both & order & $59$ & $0.35$ & $0.001$ & $0.32$ & $-0.26$ \\
+both & merchant & $59$ & $0.29$ & $-0.005$ & $0.29$ & $-0.26$ \\
+both & user & $59$ & $-0.001$ & $-0.001$ & $-0.003$ & $-0.26$ \\
+both & all & $59$ & $0.30$ & $0.001$ & $0.26$ & $-0.26$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Read-off.}
+Order grain $+$ ADDIS hits at the labeled onset ($d{=}0$).
+The concatenated \texttt{all} grain is FAR at $t{=}0$.
+User $X$ does not move (MMD $\approx 0$); a $T$ mark there is $Y$ walking through another grain.
+FSDS recovers the planted columns on the grain that actually contains them.
+South own-ref MMD is loud on covariate order ($0.35$ vs north $0.001$); concept is quiet in $X$ and shows up in $\Delta\mathbb{E}[Y]$.
+
+\end{document}
