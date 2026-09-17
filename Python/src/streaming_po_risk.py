@@ -19,6 +19,9 @@ REF_N = 10_000
 MIN_STREAM_N = 5_000
 # Stream vs ref-split baseline. Below this, all layers stay trainable.
 DEVIATION_RATIO = 2.0
+ACTION_KEEP = "keep_training"
+ACTION_WATCH = "watch"
+ACTION_FREEZE = "freeze"
 
 
 def zscore(X: np.ndarray) -> np.ndarray:
@@ -209,3 +212,63 @@ def large_deviation(stream_po: float, baseline_po: float, ratio: float = DEVIATI
     """Read the two numbers. Large iff stream is clearly above the ref-split baseline."""
     denom = max(float(baseline_po), 1e-12)
     return float(stream_po) >= float(ratio) * denom
+
+
+def po_mse_action(po_broken: bool, mse_broken: bool) -> str:
+    """PO × MSE contrast on the board. Nothing statistical beyond the two flags.
+
+    both broken → freeze (this update strategy is not working)
+    PO broken, MSE holds → watch
+    both quiet → keep training
+    """
+    if po_broken and mse_broken:
+        return ACTION_FREEZE
+    if po_broken:
+        return ACTION_WATCH
+    return ACTION_KEEP
+
+
+def annotate_po_mse_contrast(rows, po_base, mse_base=None, n_new=None, ratio: float = DEVIATION_RATIO) -> dict:
+    """Causal MA of PO-risk and of serving MSE, then the three-way action."""
+    po_info = annotate_moving_average(rows, po_base, n_new=n_new, ratio=ratio)
+    w = int(po_info["ma_window"])
+    has_mse = bool(rows) and all(r.get("mse_stream") is not None for r in rows)
+    if has_mse and mse_base is not None:
+        ys = np.asarray([float(r["mse_stream"]) for r in rows], dtype=float)
+        ma = moving_average(ys, w) if ys.size else np.array([])
+        for r, m in zip(rows, ma):
+            r["mse_ma"] = float(m)
+            r["mse_large"] = bool(large_deviation(float(m), mse_base, ratio=ratio))
+            r["po_broken"] = bool(r.get("ma_large"))
+            r["mse_broken"] = bool(r["mse_large"])
+            r["action"] = po_mse_action(r["po_broken"], r["mse_broken"])
+        mse_max = float(np.nanmax(ma)) if ma.size else 0.0
+        mse_thresh = float(ratio) * max(float(mse_base), 1e-12)
+        mse_stable = bool(ma.size == 0 or mse_max < mse_thresh)
+    else:
+        for r in rows:
+            r["po_broken"] = bool(r.get("ma_large", r.get("large_deviation")))
+            r["mse_broken"] = False
+            r["action"] = po_mse_action(bool(r["po_broken"]), False)
+        mse_max, mse_stable = 0.0, True
+    counts = {
+        ACTION_KEEP: sum(1 for r in rows if r.get("action") == ACTION_KEEP),
+        ACTION_WATCH: sum(1 for r in rows if r.get("action") == ACTION_WATCH),
+        ACTION_FREEZE: sum(1 for r in rows if r.get("action") == ACTION_FREEZE),
+    }
+    if counts[ACTION_FREEZE]:
+        board_action = ACTION_FREEZE
+    elif counts[ACTION_WATCH]:
+        board_action = ACTION_WATCH
+    else:
+        board_action = ACTION_KEEP
+    return {
+        **po_info,
+        "mse_ma_max": mse_max,
+        "mse_stable": mse_stable,
+        "n_keep_training": int(counts[ACTION_KEEP]),
+        "n_watch": int(counts[ACTION_WATCH]),
+        "n_freeze": int(counts[ACTION_FREEZE]),
+        "board_action": board_action,
+        "all_layer_backprop": bool(board_action == ACTION_KEEP),
+    }

@@ -28,15 +28,20 @@ from layer_freeze_cv import (  # noqa: E402
     stack_layer_metric_dicts,
 )
 from streaming_po_risk import (  # noqa: E402
+    ACTION_FREEZE,
+    ACTION_KEEP,
+    ACTION_WATCH,
     MIN_STREAM_N,
     REF_N,
     TabularPORisk,
     annotate_moving_average,
+    annotate_po_mse_contrast,
     batch_mse,
     large_deviation,
     ma_window,
     moving_average,
     pack_ref_new,
+    po_mse_action,
     po_risk,
     ref_split_baseline,
     streaming_po_and_mse,
@@ -204,7 +209,9 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertIn("large_deviation", out["rows"][0])
         self.assertIn("po_base", out["rows"][0])
         for r in out["rows"]:
-            if r["large_deviation"]:
+            self.assertIn(r["action"], {ACTION_KEEP, ACTION_WATCH, ACTION_FREEZE})
+            self.assertIn("mse_stream", r)
+            if r["action"] == ACTION_FREEZE:
                 self.assertEqual(len(r["layers"]), 4)
                 self.assertIn(r["i_star"], {0, 1, 2, 3})
             else:
@@ -297,13 +304,35 @@ class FreezeCvSmokeTests(unittest.TestCase):
         )
         self.assertEqual(set(out["MSE_Dict"]), {"layer0", "layer1", "layer2", "layer3"})
         self.assertEqual(len(out["PO_Dict"]["layer1"]), out["n_batches"])
-        self.assertIn("all_layer_backprop", out)
+        self.assertIn("board_action", out)
+        self.assertTrue(all("mse_stream" in r and "action" in r for r in out["rows"]))
         for r in out["rows"]:
-            if r["large_deviation"]:
+            if r["action"] == ACTION_FREEZE:
                 self.assertEqual(len(r["layers"]), 4)
                 self.assertTrue(all("mse" in x for x in r["layers"]))
                 self.assertIn("i_star_mse", r)
                 self.assertTrue(np.isfinite(out["MSE_Dict"][f"layer{r['i_star']}"][r["t"]]))
+            else:
+                self.assertTrue(r["all_trainable"])
+
+
+    def test_po_mse_contrast_is_the_board_readout(self):
+        self.assertEqual(po_mse_action(False, False), ACTION_KEEP)
+        self.assertEqual(po_mse_action(True, False), ACTION_WATCH)
+        self.assertEqual(po_mse_action(True, True), ACTION_FREEZE)
+        self.assertEqual(po_mse_action(False, True), ACTION_KEEP)
+        rows = [
+            {"t": 0, "n_new": 20, "po_stream": 1e-6, "mse_stream": 0.10},
+            {"t": 1, "n_new": 20, "po_stream": 3e-6, "mse_stream": 0.11},
+            {"t": 2, "n_new": 20, "po_stream": 4e-6, "mse_stream": 0.50},
+        ]
+        info = annotate_po_mse_contrast(rows, po_base=1e-6, mse_base=0.10, n_new=20)
+        self.assertEqual(rows[0]["action"], ACTION_KEEP)
+        self.assertEqual(rows[1]["action"], ACTION_WATCH)
+        self.assertEqual(rows[2]["action"], ACTION_FREEZE)
+        self.assertEqual(info["board_action"], ACTION_FREEZE)
+        self.assertEqual(info["n_watch"], 1)
+        self.assertEqual(info["n_freeze"], 1)
 
 
 if __name__ == "__main__":

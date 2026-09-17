@@ -1,14 +1,14 @@
-"""Layer freeze is only for a large PO-risk deviation.
+"""Layer freeze is only for a large PO-risk deviation that MSE also confirms.
 
-No large deviation → all layers stay trainable.
-Large deviation → prototype: from which layer to start freezing.
+PO × MSE contrast on the board:
+  both quiet → keep training every layer
+  PO broken, MSE holds → watch (do not freeze yet)
+  both broken → freeze (this update strategy is not working)
 
 Tabular PO-risk keeps its own outcome model μ(Y|X) and propensity e(T|X).
-Conditional on a freeze-depth MLP, the outcome model also sees that model's
-prediction. No online-bootstrap. A causal moving average of PO-risk is the
-stability readout: MA below 2× baseline → all-layer backprop.
+No online-bootstrap. Causal MA of both series is the stability readout.
 
-When a freeze-depth starts to move, keep PO-risk and MSE together:
+When we do freeze, keep PO-risk and MSE together per freeze-depth:
 
     PO_Dict  = {layer0: array, layer1: array, …, layer_k: array}
     MSE_Dict = {layer0: array, layer1: array, …, layer_k: array}
@@ -27,9 +27,15 @@ from dl_model_registry import (
     spawn_layer_models,
 )
 from streaming_po_risk import (
+    ACTION_FREEZE,
     REF_N,
     annotate_moving_average,
+    annotate_po_mse_contrast,
+    batch_mse,
     large_deviation,
+    ma_window,
+    moving_average,
+    po_mse_action,
     ref_split_baseline,
     streaming_po_and_mse,
     streaming_po_risk,
@@ -63,7 +69,7 @@ def stack_layer_metric_dicts(rows, k: int) -> dict:
 
 
 def attach_layer_dicts(result: dict) -> dict:
-    """Replay-safe: rebuild PO_Dict / MSE_Dict and the MA readout."""
+    """Replay-safe: rebuild PO_Dict / MSE_Dict and the PO×MSE contrast."""
     k = int(result["k"])
     result.update(stack_layer_metric_dicts(result.get("rows") or [], k))
     n_new = result.get("n_new")
@@ -71,7 +77,11 @@ def attach_layer_dicts(result: dict) -> dict:
     if n_new is None and rows:
         n_new = rows[0].get("n_new")
     if rows and "po_base" in result:
-        result.update(annotate_moving_average(rows, result["po_base"], n_new=n_new))
+        result.update(
+            annotate_po_mse_contrast(
+                rows, result["po_base"], mse_base=result.get("mse_base"), n_new=n_new
+            )
+        )
     return result
 
 
@@ -185,7 +195,7 @@ def run_layer_freeze_cv(
     registry: DLModelRegistry | None = None,
     n_ref_eval: int | None = None,
 ):
-    """Stream T=1 batches. Freeze search only when PO-risk deviation is large."""
+    """Stream T=1 batches. Freeze only when PO-risk and MSE both break."""
     X = np.asarray(X, dtype=float)
     Y = np.asarray(Y, dtype=float).ravel()
     if len(Y) < n_ref + 50:
@@ -201,8 +211,12 @@ def run_layer_freeze_cv(
     rng = np.random.default_rng(seed + 7)
     ref_eval = np.arange(n_ref) if take == n_ref else rng.choice(n_ref, size=take, replace=False)
     po_base = ref_split_baseline(X_ref[ref_eval], Y_ref[ref_eval], seed=seed)
+    serve = _mu_fn(registry, full)
+    mse_base = batch_mse(Y_ref[ref_eval], serve(X_ref[ref_eval]))
+    w = ma_window(batch_size_stream)
 
     rows = []
+    po_hist, mse_hist = [], []
     n_stream = len(Y_stream)
     n_batches = n_stream // batch_size_stream
     if max_batches is not None:
@@ -213,20 +227,34 @@ def run_layer_freeze_cv(
         cursor += batch_size_stream
         Xb, Yb = X_stream[sl], Y_stream[sl]
         po_stream = streaming_po_risk(X_ref[ref_eval], Y_ref[ref_eval], Xb, Yb, mu_fn=None, seed=seed + t)
-        large = large_deviation(po_stream, po_base)
+        mse_stream = batch_mse(Yb, serve(Xb))
+        po_hist.append(float(po_stream))
+        mse_hist.append(float(mse_stream))
+        po_ma = float(moving_average(po_hist, w)[-1])
+        mse_ma = float(moving_average(mse_hist, w)[-1])
+        po_broken = large_deviation(po_ma, po_base)
+        mse_broken = large_deviation(mse_ma, mse_base)
+        action = po_mse_action(po_broken, mse_broken)
         rec = {
             "t": t,
             "n_new": int(len(Yb)),
             "n_ref": int(take),
             "po_stream": float(po_stream),
             "po_base": float(po_base),
-            "large_deviation": bool(large),
-            "all_trainable": (not large),
+            "po_ma": float(po_ma),
+            "mse_stream": float(mse_stream),
+            "mse_base": float(mse_base),
+            "mse_ma": float(mse_ma),
+            "large_deviation": bool(large_deviation(po_stream, po_base)),
+            "po_broken": bool(po_broken),
+            "mse_broken": bool(mse_broken),
+            "action": action,
+            "all_trainable": action != ACTION_FREEZE,
             "freeze_from": None,
-            "i_star": int(k) if not large else None,
+            "i_star": int(k) if action != ACTION_FREEZE else None,
             "layers": [],
         }
-        if not large:
+        if action != ACTION_FREEZE:
             loader = construct_dataloader(Xb, Yb, batch_size=loader_batch, shuffle=True)
             apply_train_top_i(full, k)
             registry._train_loop(
@@ -279,7 +307,9 @@ def run_layer_freeze_cv(
             winner = next(m for m in clones if int(m._freeze_i) == star_i)
             full.load_state_dict(winner.state_dict())
         rows.append(rec)
+        serve = _mu_fn(registry, full)
     n_large = sum(1 for r in rows if r["large_deviation"])
+    freeze_rows = [r for r in rows if r["action"] == ACTION_FREEZE]
     out = {
         "k": int(k),
         "n_ref": int(n_ref),
@@ -287,14 +317,15 @@ def run_layer_freeze_cv(
         "n_batches": int(n_batches),
         "hidden_dims": list(hidden_dims),
         "po_base": float(po_base),
+        "mse_base": float(mse_base),
         "n_large": int(n_large),
         "rows": rows,
         "layer_names": [f"model_{i}" for i in range(k + 1)],
         "layer_keys": [layer_key(i) for i in range(k + 1)],
-        "recommend_i": int(k) if n_large == 0 else int(
-            np.round(np.median([r["i_star"] for r in rows if r["large_deviation"]]))
+        "recommend_i": int(k) if not freeze_rows else int(
+            np.round(np.median([r["i_star"] for r in freeze_rows]))
         ),
     }
-    out.update(annotate_moving_average(rows, po_base, n_new=batch_size_stream))
+    out.update(annotate_po_mse_contrast(rows, po_base, mse_base=mse_base, n_new=batch_size_stream))
     out.update(stack_layer_metric_dicts(rows, k))
     return out
