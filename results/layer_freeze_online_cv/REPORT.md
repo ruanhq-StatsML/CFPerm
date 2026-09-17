@@ -1,7 +1,9 @@
 # PO-risk board
 
-No large deviation → all trainable. Large deviation → from which layer to freeze.
-Tabular PO-risk: separate outcome model + propensity.
+When to **update** is business logic. PO-risk does not justify that.
+No large deviation → all trainable. Large deviation (and the business already wants a hop) → from which layer to freeze.
 
-- [electricity (NSW, ordered in time)](electricity/board.html) — large batches: 2; recommend **model_0**
-- [covertype (geographic order, class 2 vs rest)](covertype/board.html) — large batches: 1; recommend **model_3**
+- [electricity freeze board](electricity/board.html)
+- [covertype freeze board](covertype/board.html)
+- [electricity small vs large n_new](electricity/batch_size_gate.png)
+- [covertype small vs large n_new](covertype/batch_size_gate.png)

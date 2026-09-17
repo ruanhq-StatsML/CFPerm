@@ -1,4 +1,4 @@
 <!DOCTYPE html><meta charset="utf-8"><title>PO-risk board</title>
-<h1>除非有大 deviation，否则一直 trainable</h1>
-<p>直接读 PO-risk。表格：单独的 outcome + propensity。</p>
-<ul><li><a href="electricity/board.html">electricity</a></li><li><a href="covertype/board.html">covertype</a></li></ul>
+<h1>何时 update 是业务逻辑</h1>
+<p>PO-risk 不能 justify 什么时候该 update。没有大 deviation 就一直 trainable；业务已经要 hop 且 PO-risk 大，才看从哪层冻。缩小 batch 只会让统计旗标抖。</p>
+<ul><li><a href="electricity/board.html">electricity</a> · <a href="electricity/batch_size_gate.png">n_new</a></li><li><a href="covertype/board.html">covertype</a> · <a href="covertype/batch_size_gate.png">n_new</a></li></ul>

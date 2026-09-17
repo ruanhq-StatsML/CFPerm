@@ -398,7 +398,7 @@ def main() -> int:
         lines = [
             f"# Batch size is not when to update — {cmp_['title']}",
             "",
-            "When to update is business logic. Shrinking n_new only makes the PO-risk flag flicker.",
+            "When to update is business logic. Small n_new has no power or a noisy flag — not an update clock.",
             "",
             "| n_new | batches | frac large |",
             "|---:|---:|---:|",
