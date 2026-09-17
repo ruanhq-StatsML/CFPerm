@@ -148,7 +148,7 @@ Hub：`friedrichor/MSR-VTT`（train_7k / train_9k / test_1k），字段 `video_i
 | 4 | MSR-VTT embedding 缓存 + category 流 | 表 7 |
 | 5 | regret 的 oracle 按 DGP/业务写死：concept→更新，X-shift→stem 或冻住 | `cumulative_regret` |
 | 6 | 把 LOGO 表接到老板 HTML 作为冻层看板的下一页 | `render_flow_html.py` 还没接 |
-| — | 服务误差 vs 份额误差：两口钟 + latency 面积 | `docs/serving_vs_share.md` |
+| — | 滑动窗候选特征库：online PCA 等廉价统计 vs \(D_{\mathrm{ref}}\) | `docs/sliding_window_bank.md` |
 
 代码：
 
