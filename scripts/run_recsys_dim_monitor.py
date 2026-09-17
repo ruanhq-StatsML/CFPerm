@@ -387,8 +387,136 @@ def plot_fsds(results: dict, dest: Path) -> None:
     plt.close(fig)
 
 
+def _status_class(status) -> str:
+    if status == "FAR":
+        return "far"
+    if status == "hit":
+        return "hit"
+    return "miss"
+
+
+def write_tables_html(slim: dict, dest: Path) -> None:
+    """Three paper-style tables. No extra story."""
+
+    def td(text, cls=""):
+        c = f' class="{cls}"' if cls else ""
+        return f"<td{c}>{text}</td>"
+
+    def status_td(t_hat, delay, status):
+        return td(_status_cell(t_hat, delay, status), _status_class(status))
+
+    rows1 = []
+    rows2 = []
+    rows3 = []
+    for kind in KINDS:
+        for dim in DIMS:
+            d = slim[kind]["dims"][dim]
+            planted = ",".join(d.get("planted") or []) or "—"
+            recov = ",".join(d.get("fsds_recovered") or []) or "—"
+            mse_top = ",".join(d.get("mse_vimp_top") or []) or "—"
+            cf_top = ",".join(d.get("vimp_top") or []) or "—"
+            rows1.append(
+                "<tr>"
+                + td(kind)
+                + td(dim)
+                + status_td(d["addis_t"], d.get("addis_delay"), d.get("addis_status"))
+                + status_td(d["onset_rank"], d.get("rank_delay"), d.get("rank_status"))
+                + status_td(d.get("saffron_t"), d.get("saffron_delay"), d.get("saffron_status"))
+                + status_td(d["onset_hat"], d.get("hop_delay"), d.get("hop_status"))
+                + td(_fmt(d["last_T"]))
+                + td(_fmt(d["last_mmd"]))
+                + "</tr>"
+            )
+            rows2.append(
+                "<tr>"
+                + td(kind)
+                + td(dim)
+                + td(planted)
+                + td(recov)
+                + td(_fmt(d.get("tau_fsds")))
+                + td(mse_top)
+                + td(_fmt(d.get("tau_rfperm")))
+                + td(cf_top)
+                + td(_fmt(d.get("tau_cfperm")))
+                + "</tr>"
+            )
+            rows3.append(
+                "<tr>"
+                + td(kind)
+                + td(dim)
+                + td(d.get("loc_n_south"))
+                + td(_fmt(d.get("loc_south_mmd")))
+                + td(_fmt(d.get("loc_north_mmd")))
+                + td(_fmt(d.get("loc_pair_mmd")))
+                + td(_fmt(d.get("loc_south_cmean_y")))
+                + td(_fmt(d.get("loc_north_cmean_y")))
+                + "</tr>"
+            )
+    html = f"""<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"/>
+<title>Recsys grain · OnlineRFPerm / CFPerm / FSDS</title>
+<style>
+body {{ font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif; margin: 24px auto; max-width: 1080px; color: #122; background: #f7f5f0; line-height: 1.45; }}
+h1 {{ font-size: 1.28rem; margin-bottom: 0.25rem; }}
+h2 {{ font-size: 1.05rem; margin: 1.4rem 0 0.35rem; }}
+.lead {{ background: #1f4e79; color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 0.92rem; }}
+.note {{ color: #445; font-size: 0.88rem; }}
+table {{ border-collapse: collapse; background: #fff; font-size: 0.82rem; width: 100%; margin: 0.4rem 0 0.8rem; }}
+td, th {{ border: 1px solid #ccc; padding: 5px 7px; font-variant-numeric: tabular-nums; text-align: left; }}
+th {{ background: #ece7dc; }}
+.hit {{ background: #e5f4e3; }}
+.far {{ background: #f8e0dc; }}
+.miss {{ color: #889; }}
+.foot {{ color: #667; font-size: 0.82rem; margin-top: 1.4rem; }}
+code {{ background: #eee; padding: 1px 4px; }}
+</style>
+</head>
+<body>
+<h1>推荐流按 grain 切开：OnlineRFPerm / RFPerm·CFPerm / FSDS</h1>
+<p class="lead">三张表。Table 1 = WHEN（Algorithm 1 first rejection / delay / FAR）。Table 2 = WHICH columns（Kendall-τ vs planted）。Table 3 = WHICH accounts（south vs north own-ref）。Y 不当特征。T = batch。定位，不是唯一分解。</p>
+<p class="note">n_ref={N_REF} · n_new={N_NEW} · batches={N_BATCHES} · onset_true={ONSET} · merchants={N_MERCHANTS} · planted subset = south。<br/>
+covariate / both 种 amount ≻ merchant_gmv ≻ channel；concept 只种 amount 在 Y|X。Delay = first rejection − onset。绿 = hit，红 = FAR，灰 = miss。Hop 是 1.5× jump detector，这批是慢走。</p>
+
+<h2>Table 1 · OnlineRFPerm（WHEN）</h2>
+<table>
+<thead><tr><th>kind</th><th>dim</th><th>ADDIS</th><th>rank-p</th><th>SAFFRON</th><th>hop</th><th>last T</th><th>last MMD</th></tr></thead>
+<tbody>
+{''.join(rows1)}
+</tbody>
+</table>
+
+<h2>Table 2 · FSDS / RFPerm ΔMSE / CFPerm φ-VIMP（WHICH columns · Kendall-τ）</h2>
+<table>
+<thead><tr><th>kind</th><th>dim</th><th>planted</th><th>FSDS recovered</th><th>τ_FSDS</th><th>RFPerm ΔMSE top-3</th><th>τ_RFPerm</th><th>CFPerm φ top-3</th><th>τ_CFPerm</th></tr></thead>
+<tbody>
+{''.join(rows2)}
+</tbody>
+</table>
+
+<h2>Table 3 · Post-hoc localization（south vs north, last batch）</h2>
+<table>
+<thead><tr><th>kind</th><th>dim</th><th>n_south</th><th>south MMD</th><th>north MMD</th><th>pair MMD</th><th>south ΔE[Y]</th><th>north ΔE[Y]</th></tr></thead>
+<tbody>
+{''.join(rows3)}
+</tbody>
+</table>
+
+<p class="foot">细表 <a href="TABLES.md">TABLES.md</a> · 口径 <a href="REPORT.md">REPORT.md</a> · 一页 <a href="JUSTIFY.md">JUSTIFY.md</a></p>
+</body>
+</html>
+"""
+    dest.write_text(html, encoding="utf-8")
+
+
 def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
+    if "--from-summary" in sys.argv:
+        slim = json.loads((OUT / "summary.json").read_text(encoding="utf-8"))
+        write_tables_html(slim, OUT / "tables.html")
+        print("wrote", OUT / "tables.html")
+        return 0
     results = {kind: run_kind(kind) for kind in KINDS}
     write_markdown(results, OUT / "TABLES.md")
     plot_T(results, OUT / "online_rfperm_T.png")
@@ -403,6 +531,7 @@ def main() -> int:
     (OUT / "summary.json").write_text(json.dumps(jsonable(slim), indent=2), encoding="utf-8")
     write_justify(slim)
     write_report(slim)
+    write_tables_html(slim, OUT / "tables.html")
     print("wrote", OUT)
     return 0
 
