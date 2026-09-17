@@ -437,12 +437,20 @@ def main() -> int:
             "",
             "When to update is business logic. Small n_new has no power or a noisy flag — not an update clock.",
             "",
-            "| n_new | batches | frac large |",
-            "|---:|---:|---:|",
+            "| n_new | batches | frac large | mean PO-risk | std |",
+            "|---:|---:|---:|---:|---:|",
         ]
         for n_new in sorted(cmp_["by_size"]):
             rec = cmp_["by_size"][n_new]
-            lines.append(f"| {n_new} | {rec['n_batches']} | {rec['frac_large']:.2f} |")
+            ys_mean = rec.get("po_mean")
+            ys_std = rec.get("po_std")
+            if ys_mean is None:
+                import numpy as np
+                ys = np.array([r["po_stream"] for r in rec["rows"]])
+                ys_mean, ys_std = float(ys.mean()), float(ys.std())
+            lines.append(
+                f"| {n_new} | {rec['n_batches']} | {rec['frac_large']:.2f} | {ys_mean:.3g} | {ys_std:.3g} |"
+            )
         (sub / "BATCH_SIZE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
         print("\n".join(lines), flush=True)
         index_bits.append(f"- [{name} small vs large n_new]({name}/{img})")

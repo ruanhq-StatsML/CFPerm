@@ -116,6 +116,8 @@ def run_deviation_gate(
         "n_batches": int(n_batches),
         "po_base": float(po_base),
         "frac_large": float(np.mean([r["large_deviation"] for r in rows])) if rows else 0.0,
+        "po_mean": float(np.mean([r["po_stream"] for r in rows])) if rows else 0.0,
+        "po_std": float(np.std([r["po_stream"] for r in rows])) if rows else 0.0,
         "rows": rows,
     }
 
