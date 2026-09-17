@@ -215,11 +215,12 @@ def large_deviation(stream_po: float, baseline_po: float, ratio: float = DEVIATI
 
 
 def po_mse_action(po_broken: bool, mse_broken: bool) -> str:
-    """PO × MSE contrast on the board. Nothing statistical beyond the two flags.
+    """PO × MSE contrast on the board.
 
-    both broken → freeze (this update strategy is not working)
-    PO broken, MSE holds → watch
-    both quiet → keep training
+    PO-risk: did P(Y|X) hop (T=1 new vs T=0 ref)?
+    Serving MSE: is the current MLP still within its D_ref error?
+    Freeze only if both flags fire — a hop with a quiet MSE is not a
+    failed all-layer update. MSE-only bumps stay keep-training.
     """
     if po_broken and mse_broken:
         return ACTION_FREEZE

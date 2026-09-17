@@ -429,7 +429,9 @@ code {{ background: #eee; padding: 1px 4px; }}
 <p class="note">
 {spec["title"]}. n_ref={result["n_ref"]}, n_new={n_new}, hidden={result["hidden_dims"]}.
 <b>PO 崩 + MSE 崩 → 冻住</b>；<b>只崩 PO → 再观察</b>；<b>两个都正常 → 接着 train</b>。
-表格 PO-risk 单独维护 outcome / propensity。serving MSE 是当前 MLP 在新 batch 上的误差。
+PO-risk 量的是新 batch（T=1）相对 D_ref（T=0）的 P(Y|X) hop，不是现模型好不好用；
+serving MSE 量的是当前 MLP 在新 batch 上还付不付得起房租。两条分开走才对照。
+冻要两个都崩：只崩 PO 说明机制可能动了但误差还在线内，冻会把还在工作的更新掐掉。
 不做 online-bootstrap。何时 update 仍是业务逻辑。
 </p>
 <p class="rec">{rec}</p>
@@ -467,6 +469,8 @@ def render_report(spec: dict, result: dict) -> str:
         f"# PO × MSE board — {spec['title']}",
         "",
         "PO broken and MSE broken → freeze. PO broken, MSE holds → watch. Both quiet → keep training.",
+        "PO-risk is the P(Y|X) hop vs D_ref (T=1 vs T=0). Serving MSE is whether the current MLP still fits.",
+        "Freeze only when both break: a PO hop with a quiet MSE is not a failed update strategy.",
         "No online-bootstrap. Freeze-depth PO_Dict / MSE_Dict only on freeze hops.",
         f"T=1 on the incoming batch. n_ref={result['n_ref']}, n_new={n_new}.",
         f"po_base={result['po_base']:.4g}. mse_base={mse_base_s}.",

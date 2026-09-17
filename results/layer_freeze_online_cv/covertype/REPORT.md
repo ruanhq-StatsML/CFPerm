@@ -1,6 +1,8 @@
 # PO × MSE board — covertype (geographic order, class 2 vs rest)
 
 PO broken and MSE broken → freeze. PO broken, MSE holds → watch. Both quiet → keep training.
+PO-risk is the P(Y|X) hop vs D_ref (T=1 vs T=0). Serving MSE is whether the current MLP still fits.
+Freeze only when both break: a PO hop with a quiet MSE is not a failed update strategy.
 No online-bootstrap. Freeze-depth PO_Dict / MSE_Dict only on freeze hops.
 T=1 on the incoming batch. n_ref=10000, n_new=10000.
 po_base=0.0003472. mse_base=0.0819.
