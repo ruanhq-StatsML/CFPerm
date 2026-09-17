@@ -113,7 +113,7 @@ def write_markdown(results: dict, dest: Path) -> None:
         "",
         "Default cut = **own-ref subset scan** (level set `{φ≥τ}` / coverage prefix). "
         "`merchant_id` / `user_id` lift Ŝ onto orders. No graph is built. "
-        "Scan cost is a sort, \(O(N\\log N)\), N = n_merchants. "
+        "Scan cost is a sort, O(N log N), N = n_merchants. "
         "Shares are localization proxies, not a unique decomposition. Y is never a feature. "
         "Board: `library.html`.",
         "",
@@ -398,19 +398,17 @@ def plot_library_heatmap(results: dict, dest: Path) -> None:
             planted.append(bool(r.get("planted")))
             selected.append(bool(r.get("selected")))
         M = np.asarray(raw, dtype=float)
+        floors = np.array([0.02, 0.15, 0.05, 0.8], dtype=float)
         N = M.copy()
         for j in range(N.shape[1]):
             mx = float(N[:, j].max()) if N.size else 0.0
-            if mx > 0:
-                N[:, j] = N[:, j] / mx
+            N[:, j] = N[:, j] / max(mx, float(floors[j]))
         im = ax.imshow(N, aspect="auto", cmap="YlOrRd", vmin=0, vmax=1)
         ax.set_xticks(range(len(cols)))
         ax.set_xticklabels([t for _, t in cols], fontsize=8)
         ax.set_yticks(range(len(labels)))
         ax.set_yticklabels(labels, fontsize=8, fontfamily="monospace")
-        for i, rlab in enumerate(labels):
-            if planted[i]:
-                ax.get_yticklabels()[i].set_fontweight("bold")
+        for i in range(len(labels)):
             for j in range(len(cols)):
                 val = raw[i][j]
                 ax.text(
@@ -434,7 +432,7 @@ def plot_library_heatmap(results: dict, dest: Path) -> None:
                     )
                 )
         ax.set_title(kind, fontsize=10)
-        ax.set_xlabel("column-wise max-norm")
+        ax.set_xlabel("relative to max(column, floor)")
     fig.colorbar(im, ax=axes, fraction=0.02, pad=0.02, label="relative")
     fig.suptitle("Feature library · last batch · * planted · box = FSDS selected · Y not in catalog")
     fig.savefig(dest, dpi=140, bbox_inches="tight")

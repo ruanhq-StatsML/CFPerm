@@ -1,23 +1,54 @@
-# Graph localization → FSDS unify → two-layer subset (order grain)
+# Feature library → FSDS unify → subset scan (order grain)
 
-Package: **networkx** for the incidence graph. Default cut = **own-ref subset scan** (level set `{φ≥τ}` / coverage prefix). The graph lifts a layer's Ŝ onto orders; it does not run community detection. Bundled / structural Louvain are contrast only.
-Shares are localization proxies, not a unique decomposition. Y is never a feature.
+Default cut = **own-ref subset scan** (level set `{φ≥τ}` / coverage prefix). `merchant_id` / `user_id` lift Ŝ onto orders. No graph is built. Scan cost is a sort, O(N log N), N = n_merchants. Shares are localization proxies, not a unique decomposition. Y is never a feature. Board: `library.html`.
 
 n_ref=480, n_new=160, merchants=16, batches=3, onset=1. Planted region is **south** (second half of merchant ids).
 
-## Subset scan by layer (lift to orders; Louvain is contrast only)
+## Subset scan by grain (lift to orders)
 
-| kind | t | onset | cut | loud south_frac | J(scan mer,south) | J(coverage mer,south) | J(mass mer,south) | J(user scan,south) | J(Louvain mer,south) | n_loud mer | FSDS selected | fingerprint |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| covariate_south | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 0.422 | 13 | amount,channel |  |
-| covariate_south | 1 | yes | level_set/{phi>=tau} | 0.565 | 0.473 | 0.473 | 0.488 | 0 | 0.473 | 10 | channel,amount | x_shift |
-| covariate_south | 2 | yes | level_set/{phi>=tau} | 0.852 | 0.767 | 0.885 | 0.885 | 0 | 0.767 | 7 | amount,channel,merchant_gmv | x_shift |
-| concept_south | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 0.422 | 13 | amount,channel |  |
-| concept_south | 1 | yes | level_set/{phi>=tau} |  | 0.31 | 0.38 | 0.348 | 0 | 0.31 | 8 | amount,n_items |  |
-| concept_south | 2 | yes | level_set/{phi>=tau} | 0.521 | 0.455 | 0.41 | 0.54 | 0 | 0.0885 | 10 | amount,channel | x_shift |
-| both | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 0.422 | 13 | amount,channel |  |
-| both | 1 | yes | level_set/{phi>=tau} | 0.605 | 0.558 | 0.488 | 0.488 | 0 | 0.558 | 11 | channel,amount | x_shift |
-| both | 2 | yes | level_set/{phi>=tau} | 0.852 | 0.767 | 0.885 | 0.885 | 0 | 0.767 | 7 | amount,channel,merchant_gmv | x_shift |
+| kind | t | onset | cut | loud south_frac | J(scan mer,south) | J(coverage mer,south) | J(mass mer,south) | J(user scan,south) | n_loud mer | FSDS selected | fingerprint |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| covariate_south | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 13 | amount,channel |  |
+| covariate_south | 1 | yes | level_set/{phi>=tau} | 0.565 | 0.473 | 0.473 | 0.488 | 0 | 10 | channel,amount | x_shift |
+| covariate_south | 2 | yes | level_set/{phi>=tau} | 0.852 | 0.767 | 0.885 | 0.885 | 0 | 7 | amount,channel,merchant_gmv | x_shift |
+| concept_south | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 13 | amount,channel |  |
+| concept_south | 1 | yes | level_set/{phi>=tau} |  | 0.31 | 0.38 | 0.348 | 0 | 8 | amount,n_items |  |
+| concept_south | 2 | yes | level_set/{phi>=tau} | 0.521 | 0.455 | 0.41 | 0.54 | 0 | 10 | amount,channel | x_shift |
+| both | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 13 | amount,channel |  |
+| both | 1 | yes | level_set/{phi>=tau} | 0.605 | 0.558 | 0.488 | 0.488 | 0 | 11 | channel,amount | x_shift |
+| both | 2 | yes | level_set/{phi>=tau} | 0.852 | 0.767 | 0.885 | 0.885 | 0 | 7 | amount,channel,merchant_gmv | x_shift |
+
+## Feature library (native-grain catalog · last batch)
+
+| kind | grain | feature | role | planted | selected | loud | score | mmd | cmean_x | cmean_y |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| covariate_south | order | amount | 订单金额（进 logit） | x | yes | yes | 6.74 | 0.101 | 0.935 | 0.167 |
+| covariate_south | order | hour | 下单时刻（噪声列） |  |  |  | 0.709 | 0.00979 | 0.0908 | 0.0844 |
+| covariate_south | order | n_items | 件数（噪声列） |  |  |  | 0.247 | -0.003 | 0.0617 | 0.00157 |
+| covariate_south | order | channel | 渠道 | x | yes | yes | 2.34 | 0.035 | 0.555 | 0.169 |
+| covariate_south | merchant | merchant_cat | 商户类目（进 logit，不种 shift） |  |  |  | 4.44e-16 | -0.0736 | 1.11e-16 | 0 |
+| covariate_south | merchant | merchant_gmv | 商户 GMV | x | yes | yes | 3.77 | 0.0566 | 0.725 | 0 |
+| covariate_south | merchant | n_skus | SKU 数（噪声列） |  |  |  | 4.44e-16 | -0.0719 | 1.11e-16 | 0 |
+| covariate_south | user | user_tenure | 用户 tenure（进 logit，不种 shift） |  |  |  | 0.584 | -0.00146 | 0.0788 | 0.0584 |
+| covariate_south | user | user_hist_freq | 历史频次（噪声列） |  |  |  | 0.124 | -0.00378 | 0.00194 | 0.0124 |
+| concept_south | order | amount | 订单金额（进 logit） | y|x | yes |  | 1.7 | -0.00388 | 0.0556 | 0.17 |
+| concept_south | order | hour | 下单时刻（噪声列） |  |  |  | 0.653 | 0.00979 | 0.0908 | 0.0271 |
+| concept_south | order | n_items | 件数（噪声列） |  |  |  | 0.288 | -0.003 | 0.0617 | 0.0288 |
+| concept_south | order | channel | 渠道 |  | yes |  | 0.97 | 0.00255 | 0.064 | 0.097 |
+| concept_south | merchant | merchant_cat | 商户类目（进 logit，不种 shift） |  |  |  | 4.44e-16 | -0.0736 | 1.11e-16 | 0 |
+| concept_south | merchant | merchant_gmv | 商户 GMV |  |  |  | 6.18e-17 | -0.0715 | 5.55e-17 | 0 |
+| concept_south | merchant | n_skus | SKU 数（噪声列） |  |  |  | 4.44e-16 | -0.0719 | 1.11e-16 | 0 |
+| concept_south | user | user_tenure | 用户 tenure（进 logit，不种 shift） |  |  |  | 1 | -0.00146 | 0.0788 | 0.1 |
+| concept_south | user | user_hist_freq | 历史频次（噪声列） |  |  |  | 0.354 | -0.00378 | 0.00194 | 0.0354 |
+| both | order | amount | 订单金额（进 logit） | both | yes | yes | 6.74 | 0.101 | 0.935 | 0.232 |
+| both | order | hour | 下单时刻（噪声列） |  |  |  | 0.653 | 0.00979 | 0.0908 | 0.0323 |
+| both | order | n_items | 件数（噪声列） |  |  |  | 0.5 | -0.003 | 0.0617 | 0.05 |
+| both | order | channel | 渠道 | x | yes | yes | 2.34 | 0.035 | 0.555 | 0.119 |
+| both | merchant | merchant_cat | 商户类目（进 logit，不种 shift） |  |  |  | 4.44e-16 | -0.0736 | 1.11e-16 | 0 |
+| both | merchant | merchant_gmv | 商户 GMV | x | yes | yes | 3.77 | 0.0566 | 0.725 | 0 |
+| both | merchant | n_skus | SKU 数（噪声列） |  |  |  | 4.44e-16 | -0.0719 | 1.11e-16 | 0 |
+| both | user | user_tenure | 用户 tenure（进 logit，不种 shift） |  |  |  | 1.3 | -0.00146 | 0.0788 | 0.13 |
+| both | user | user_hist_freq | 历史频次（噪声列） |  |  |  | 0.892 | -0.00378 | 0.00194 | 0.0892 |
 
 ## Own-ref vs full-ref (node clock) and multi-layer lift-to-order
 
