@@ -13,7 +13,10 @@ suddenly; serving MSE of the MLP is likelier to break first.
 MMD口径 is MMD²(X_new, X_ref) vs the T=0 reference batch — not
 pairwise vs history, not last-batch layer representations.
 
-    PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py
+Closed loop: OnlineRFPerm (frozen RandomForestRegressor, predict(X_new),
+T=MSE−E_ref, last-two hop) marks WHEN. PO × MSE × MMD says WHAT.
+
+    PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --justify
 """
 from __future__ import annotations
 
@@ -55,11 +58,37 @@ from streaming_po_risk import (  # noqa: E402
     moving_average,
 )
 
+from stream_dgps import ONSET_BATCH, make_gradual_concept, make_gradual_covariate  # noqa: E402
+
 OUT = ROOT / "results" / "layer_freeze_online_cv"
 DEFAULT_STREAM = {
     "electricity": MIN_STREAM_N,
     "covertype": REF_N,
     "airlines": MIN_STREAM_N,
+    "bankmarketing": MIN_STREAM_N,
+    "eeg": 1500,
+    "dgp_concept": 2000,
+    "dgp_covariate": 2000,
+}
+ONSET_TRUE = {
+    "dgp_concept": ONSET_BATCH,
+    "dgp_covariate": ONSET_BATCH,
+}
+INDEX_NAMES = (
+    "electricity",
+    "covertype",
+    "airlines",
+    "dgp_concept",
+    "dgp_covariate",
+    "bankmarketing",
+    "eeg",
+)
+JUSTIFY = ("dgp_concept", "dgp_covariate", "bankmarketing", "eeg")
+JUSTIFY_SPECS = {
+    "dgp_concept": {"n_ref": REF_N, "batch": 2000, "max_batches": 10},
+    "dgp_covariate": {"n_ref": REF_N, "batch": 2000, "max_batches": 10},
+    "bankmarketing": {"n_ref": REF_N, "batch": MIN_STREAM_N, "max_batches": 6},
+    "eeg": {"n_ref": 6000, "batch": 1500, "max_batches": 5},
 }
 
 
@@ -125,10 +154,38 @@ def load_airlines():
     return _frame_to_xy(bunch.data.copy(), bunch.target, "airlines (flight delay, time-ordered)")
 
 
+def load_bankmarketing():
+    from sklearn.datasets import fetch_openml
+
+    bunch = fetch_openml("bank-marketing", version=1, as_frame=True, parser="auto")
+    return _frame_to_xy(bunch.data.copy(), bunch.target, "bank-marketing (campaign order)")
+
+
+def load_eeg():
+    from sklearn.datasets import fetch_openml
+
+    bunch = fetch_openml("eeg-eye-state", version=1, as_frame=True, parser="auto")
+    return _frame_to_xy(bunch.data.copy(), bunch.target, "eeg-eye-state (time-ordered EEG)")
+
+
+def load_dgp_concept():
+    X, Y, meta = make_gradual_concept()
+    return X, Y, meta["title"], [f"x{j}" for j in range(X.shape[1])]
+
+
+def load_dgp_covariate():
+    X, Y, meta = make_gradual_covariate()
+    return X, Y, meta["title"], [f"x{j}" for j in range(X.shape[1])]
+
+
 LOADERS = {
     "electricity": load_electricity,
     "covertype": load_covertype,
     "airlines": load_airlines,
+    "bankmarketing": load_bankmarketing,
+    "eeg": load_eeg,
+    "dgp_concept": load_dgp_concept,
+    "dgp_covariate": load_dgp_covariate,
 }
 
 
@@ -269,8 +326,18 @@ def _action_of(row: dict) -> str:
     return str(row.get("action") or (ACTION_FREEZE if not row.get("all_trainable", True) else ACTION_KEEP))
 
 
+def _mark_onset(ax, result: dict) -> None:
+    """Labeled onset (gray dash) and OnlineRFPerm hop onset (orange)."""
+    true = result.get("onset_true")
+    hat = result.get("onset_hat")
+    if true is not None:
+        ax.axvline(float(true), color="#888", ls="--", lw=1.3, zorder=2)
+    if hat is not None:
+        ax.axvline(float(hat), color="#c45c26", ls="-", lw=1.5, zorder=3)
+
+
 def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
-    """PO, MSE, MMD of X. Freeze-from-layer only when PO and MSE both break."""
+    """PO, MSE, MMD vs ref, OnlineRFPerm onset. Freeze only when PO and MSE both break."""
     rows = result["rows"]
     if not rows or any(r.get("mse_stream") is None for r in rows):
         return None
@@ -278,6 +345,7 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
     po = np.asarray([r["po_stream"] for r in rows], dtype=float)
     mse = np.asarray([r["mse_stream"] for r in rows], dtype=float)
     has_mmd = all(_mmd_val(r) is not None for r in rows)
+    has_rf = all(r.get("rfperm_T") is not None for r in rows)
     n_new = int(rows[0]["n_new"])
     w = int(result.get("ma_window") or ma_window(n_new))
     po_ma = np.asarray([r.get("po_ma", np.nan) for r in rows], dtype=float)
@@ -288,12 +356,20 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
         mse_ma = moving_average(mse, w)
     po_base = float(result["po_base"])
     mse_base = float(result.get("mse_base") or np.nanmean(mse[: max(1, len(mse) // 4)]))
-    n_ax = 4 if has_mmd else 3
-    heights = [2.0, 2.0, 2.0, 0.8] if has_mmd else [2.2, 2.2, 0.7]
-    fig, axes = plt.subplots(n_ax, 1, figsize=(8.8, 2.6 * n_ax + 0.6), sharex=True, gridspec_kw={"height_ratios": heights})
+    n_ax = 3 + int(has_mmd) + int(has_rf)
+    heights = [2.0] * (n_ax - 1) + [0.8]
+    fig, axes = plt.subplots(n_ax, 1, figsize=(8.8, 2.4 * n_ax + 0.6), sharex=True, gridspec_kw={"height_ratios": heights})
     ax_po = axes[0]
     ax_mse = axes[1]
-    ax_mmd = axes[2] if has_mmd else None
+    i_ax = 2
+    ax_mmd = None
+    ax_rf = None
+    if has_mmd:
+        ax_mmd = axes[i_ax]
+        i_ax += 1
+    if has_rf:
+        ax_rf = axes[i_ax]
+        i_ax += 1
     ax_act = axes[-1]
     ax_po.plot(ts, po, color="#9bb4cc", lw=1.0, marker="o", ms=3.5, label="raw")
     ax_po.plot(ts, po_ma, color="#1f4e79", lw=2.2, label=f"MA({w})")
@@ -315,6 +391,15 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
         ax_mmd.axhline(2.0 * max(mmd_base, 1e-12), color="#b33", ls=":", lw=1.0, label="2×")
         ax_mmd.set_ylabel("MMD²(X_new, X_ref)")
         ax_mmd.legend(fontsize=8, ncol=3)
+    if ax_rf is not None:
+        T = np.asarray([r["rfperm_T"] for r in rows], dtype=float)
+        ax_rf.plot(ts, T, color="#c45c26", lw=2.0, marker="o", ms=3.5, label="T = MSE − E_ref")
+        ax_rf.axhline(0.0, color="#888", ls="--", lw=1.0)
+        hops = [r for r in rows if r.get("rfperm_hop")]
+        if hops:
+            ax_rf.scatter([r["t"] for r in hops], [r["rfperm_T"] for r in hops], s=70, color="#c45c26", zorder=4, label="hop")
+        ax_rf.set_ylabel("OnlineRFPerm T")
+        ax_rf.legend(fontsize=8, ncol=2)
     y_map = {ACTION_KEEP: 0, ACTION_WATCH: 1, ACTION_XSHIFT: 2, ACTION_TRICKY: 3, ACTION_FREEZE: 4}
     act_y = [y_map.get(_action_of(r), 0) for r in rows]
     ax_act.step(ts, act_y, where="mid", color="#333", lw=2.0)
@@ -328,15 +413,22 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
             ax_mmd.scatter([x], [_mmd_val(r)], s=55, color=color, zorder=4)
         ax_act.scatter([x], [y], s=55, color=color, zorder=4)
         seen.add(act)
+    for ax in (ax_po, ax_mse, ax_mmd, ax_rf, ax_act):
+        if ax is not None:
+            _mark_onset(ax, result)
     ax_po.set_ylabel("PO-risk")
-    ax_po.set_title(title + " — PO vs MSE vs MMD²(X_new, X_ref)")
+    ax_po.set_title(title + " — PO vs MSE vs MMD²(X_new, X_ref); OnlineRFPerm onset")
     ax_po.legend(fontsize=8, ncol=3)
     ax_mse.set_ylabel("serving MSE")
     ax_mse.legend(fontsize=8, ncol=3)
     ax_act.set_yticks([0, 1, 2, 3, 4], labels=["keep", "watch", "X shift", "tricky", "freeze"])
     ax_act.set_ylim(-0.4, 4.4)
     ax_act.set_xlabel("incoming batch (T=1)")
-    ax_act.set_title("MMD is vs the reference batch. MSE is likelier to break first than RF PO-risk.")
+    hat = result.get("onset_hat")
+    true = result.get("onset_true")
+    ax_act.set_title(
+        f"onset_hat={hat} (OnlineRFPerm hop); labeled={true}. MSE likelier to break first than RF PO-risk."
+    )
     fig.tight_layout()
     p = out_dir / "po_mse_trend.png"
     fig.savefig(p, dpi=140)
@@ -420,7 +512,7 @@ def render_html(spec: dict, result: dict, images: list[str], out_path: Path) -> 
     for img in images:
         cards.append(f'<figure><img src="{img}" alt="{img}"><figcaption>{img}</figcaption></figure>')
     table = [
-        "<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>MMD vs ref</th><th>MMD MA</th><th>action</th><th>冻结哪一层的 training</th></tr></thead><tbody>"
+        "<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>MMD vs ref</th><th>MMD MA</th><th>RFPerm T</th><th>hop</th><th>action</th><th>冻结哪一层的 training</th></tr></thead><tbody>"
     ]
     for r in result["rows"]:
         act = _action_of(r)
@@ -434,11 +526,14 @@ def render_html(spec: dict, result: dict, images: list[str], out_path: Path) -> 
         mse_ma_s = "" if mse_ma is None else f"{float(mse_ma):.4g}"
         mmd_s = "" if mmd is None else f"{float(mmd):.4g}"
         mmd_ma_s = "" if mmd_ma is None else f"{float(mmd_ma):.4g}"
+        T = r.get("rfperm_T")
+        T_s = "" if T is None else f"{float(T):.4g}"
+        hop_s = "●" if r.get("rfperm_hop") else ""
         freeze_s = r.get("freeze_training_zh") or ACTION_LABEL.get(act, act)
         table.append(
             f"<tr><td>{r['t']}</td><td>{r['po_stream']:.4g}</td>"
             f"<td>{po_ma_s}</td><td>{mse_s}</td><td>{mse_ma_s}</td>"
-            f"<td>{mmd_s}</td><td>{mmd_ma_s}</td>"
+            f"<td>{mmd_s}</td><td>{mmd_ma_s}</td><td>{T_s}</td><td>{hop_s}</td>"
             f"<td>{ACTION_LABEL.get(act, act)}</td><td>{freeze_s}</td></tr>"
         )
     table.append("</tbody></table>")
@@ -482,7 +577,8 @@ code {{ background: #eee; padding: 1px 4px; }}
 PO-risk 用 RF，不该突然崩；<b>更可能先崩的是 serving MSE</b>。
 MSE 崩了但 PO 正常 → 不是 concept drift。MMD 口径是 <b>MMD²(X_new, X_ref)</b>，
 跟 reference batch 比，不是跟历史所有 batch 的 pairwise 均值，也不是上个 batch 的层 representation。
-PO 崩了模型没崩 → 再观察，先不冻。
+闭环：<b>OnlineRFPerm</b> 冻参考窗 RF，T=MSE−E_ref，last-two hop 标 <b>shift-onset</b>（onset_hat={result.get("onset_hat")}，labeled={result.get("onset_true")}）。
+看板说这是哪种 shift。PO 崩了模型没崩 → 再观察，先不冻。
 两都崩 → 开 freeze-depth，<code>model_i</code> 只训 top i。
 不做 online-bootstrap。
 </p>
@@ -523,15 +619,17 @@ def render_report(spec: dict, result: dict) -> str:
         "RF PO-risk should not collapse first; serving MSE is the series that breaks.",
         "MMD口径 is MMD²(X_new, X_ref) — vs the reference batch, not history, not layer reps.",
         "PO broken, MSE holds → watch. MSE broken, PO quiet → read MMD vs ref.",
+        "OnlineRFPerm marks the shift-onset (frozen RF, T=MSE−E_ref, last-two hop).",
         f"T=1 on the incoming batch. n_ref={result['n_ref']}, n_new={n_new}.",
         f"po_base={result['po_base']:.4g}. mse_base={mse_base_s}. mmd_base={result.get('mmd_base')}.",
+        f"onset_hat={result.get('onset_hat')}, onset_rank={result.get('onset_rank')}, labeled onset={result.get('onset_true')}.",
         "",
         f"- hidden_dims = `{result['hidden_dims']}`, k = {k}",
-        f"- n_batches = {result['n_batches']}, n_watch = {result.get('n_watch', 0)}, n_x_shift = {result.get('n_x_shift', 0)}, n_tricky = {result.get('n_tricky', 0)}, n_freeze = {result.get('n_freeze', 0)}",
+        f"- n_batches = {result['n_batches']}, n_watch = {result.get('n_watch', 0)}, n_x_shift = {result.get('n_x_shift', 0)}, n_tricky = {result.get('n_tricky', 0)}, n_freeze = {result.get('n_freeze', 0)}, n_rfperm_hop = {result.get('n_rfperm_hop', 0)}",
         f"- **{rec}**",
         "",
-        "| t | PO-risk | PO MA | MSE | MSE MA | MMD | MMD MA | action | freeze training |",
-        "|---:|---:|---:|---:|---:|---:|---:|---|---|",
+        "| t | PO-risk | PO MA | MSE | MSE MA | MMD | MMD MA | RFPerm T | hop | action | freeze training |",
+        "|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
     for r in result["rows"]:
         act = _action_of(r)
@@ -546,8 +644,11 @@ def render_report(spec: dict, result: dict) -> str:
         mmd_s = "" if mmd is None else f"{float(mmd):.3g}"
         mmd_ma_s = "" if mmd_ma is None else f"{float(mmd_ma):.3g}"
         freeze_s = r.get("freeze_training") or ""
+        T = r.get("rfperm_T")
+        T_s = "" if T is None else f"{float(T):.3g}"
+        hop_s = "yes" if r.get("rfperm_hop") else ""
         lines.append(
-            f"| {r['t']} | {r['po_stream']:.3g} | {po_ma_s} | {mse_s} | {mse_ma_s} | {mmd_s} | {mmd_ma_s} | {ACTION_LABEL.get(act, act)} | {freeze_s} |"
+            f"| {r['t']} | {r['po_stream']:.3g} | {po_ma_s} | {mse_s} | {mse_ma_s} | {mmd_s} | {mmd_ma_s} | {T_s} | {hop_s} | {ACTION_LABEL.get(act, act)} | {freeze_s} |"
         )
     freeze_rows = [r for r in result["rows"] if r.get("action") == ACTION_FREEZE and r.get("layers")]
     keys = result.get("layer_keys") or [layer_key(i) for i in range(k + 1)]
@@ -607,6 +708,9 @@ def run_one(name: str, n_ref: int, batch: int, max_batches: int, hidden, online_
     result["n_total"] = int(len(Y))
     result["feature_names"] = list(map(str, cols))
     result["n_new"] = int(batch)
+    if name in ONSET_TRUE:
+        result["onset_true"] = int(ONSET_TRUE[name])
+        result["dgp_kind"] = "concept" if name == "dgp_concept" else "covariate"
     return result
 
 
@@ -694,19 +798,20 @@ def write_index(out: Path) -> None:
     bits = [
         "# PO-risk board",
         "",
+        "OnlineRFPerm (frozen RF.predict(X_new), T=MSE−E_ref) marks shift-onset.",
+        "PO × MSE × MMD²(X_new, X_ref) says what kind of shift it was.",
         "PO+MSE both break → freeze that layer's training.",
         "RF PO-risk should not collapse first; serving MSE is likelier to break.",
-        "MSE broken, PO quiet → not concept drift; read MMD²(X_new, X_ref).",
-        "MMD is vs the reference batch, not pairwise history, not layer reps.",
-        "PO broken, MSE holds → watch. No online-bootstrap.",
+        "MSE broken, PO quiet → not concept drift; read MMD vs the reference batch.",
+        "No online-bootstrap.",
         "",
     ]
     html_items = []
-    for name in ("electricity", "covertype", "airlines"):
+    for name in INDEX_NAMES:
         sub = out / name
         if (sub / "board.html").exists():
             bits.append(f"- [{name} freeze board]({name}/board.html)")
-            html_items.append(f'<li><a href="{name}/board.html">{name} freeze</a>')
+            html_items.append(f'<li><a href="{name}/board.html">{name}</a>')
         else:
             html_items.append(f"<li>{name}")
         if (sub / "po_mse_trend.png").exists():
@@ -717,10 +822,16 @@ def write_index(out: Path) -> None:
             html_items.append(f' · <a href="{name}/batch_size_gate.png">MA</a></li>')
         else:
             html_items.append("</li>")
+    if (out / "dgp_contrast.png").exists():
+        bits.append("- [DGP concept vs covariate](dgp_contrast.png)")
+        html_items.append('<li><a href="dgp_contrast.png">DGP contrast</a></li>')
+    if (out / "JUSTIFY.md").exists():
+        bits.append("- [justify table](JUSTIFY.md)")
+        html_items.append('<li><a href="JUSTIFY.md">justify</a></li>')
     (out / "REPORT.md").write_text("\n".join(bits) + "\n", encoding="utf-8")
     html = """<!DOCTYPE html><meta charset="utf-8"><title>PO × MSE board</title>
 <h1>PO × MSE 对照</h1>
-<p>MMD 口径是 MMD²(X_new, X_ref)。RF PO-risk 不该先崩；MSE 先崩再看 MMD。PO 崩模型没崩 → 再观察。</p>
+<p>闭环：OnlineRFPerm 标 onset（冻住的 RandomForestRegressor.predict(X_new)）。MMD 口径是 MMD²(X_new, X_ref)。RF PO-risk 不该先崩；MSE 先崩再看 MMD。PO 崩模型没崩 → 再观察。</p>
 <ul>""" + "".join(html_items) + "</ul>"
     (out / "index.html").write_text(html, encoding="utf-8")
 
@@ -779,11 +890,111 @@ def replay_saved_gates(names: list[str]) -> None:
             board.write_text(json.dumps(jsonable(result), indent=2) + "\n", encoding="utf-8")
 
 
+def write_freeze_board(name: str, result: dict) -> None:
+    spec = {"name": name, "title": result.get("title", name)}
+    sub = OUT / name
+    sub.mkdir(parents=True, exist_ok=True)
+    (sub / "summary.json").write_text(json.dumps(jsonable(result), indent=2) + "\n", encoding="utf-8")
+    images = plot_boards(result, result["title"], sub)
+    render_html(spec, result, images, sub / "board.html")
+    report = render_report(spec, result)
+    (sub / "REPORT.md").write_text(report + "\n", encoding="utf-8")
+    print(report, flush=True)
+
+
+def plot_dgp_contrast(out: Path) -> str | None:
+    """Side-by-side concept vs covariate: WHEN (OnlineRFPerm) vs WHAT (PO/MSE/MMD)."""
+    paths = [out / "dgp_concept" / "summary.json", out / "dgp_covariate" / "summary.json"]
+    if not all(p.exists() for p in paths):
+        return None
+    fig, axes = plt.subplots(4, 2, figsize=(11.2, 9.2), sharex=True)
+    titles = []
+    for col, path in enumerate(paths):
+        result = json.loads(path.read_text(encoding="utf-8"))
+        rows = result["rows"]
+        ts = [r["t"] for r in rows]
+        titles.append(result.get("title", path.parent.name))
+        series = [
+            (np.asarray([r["po_stream"] for r in rows], dtype=float), "PO-risk", result.get("po_base")),
+            (np.asarray([r["mse_stream"] for r in rows], dtype=float), "serving MSE", result.get("mse_base")),
+            (np.asarray([_mmd_val(r) for r in rows], dtype=float), "MMD²(X_new, X_ref)", result.get("mmd_base")),
+            (np.asarray([0.0 if r.get("rfperm_T") is None else float(r["rfperm_T"]) for r in rows], dtype=float), "OnlineRFPerm T", 0.0),
+        ]
+        for row, (ys, ylab, base) in enumerate(series):
+            ax = axes[row, col]
+            ax.plot(ts, ys, color="#1f4e79", lw=2.0, marker="o", ms=3.5)
+            if base is not None:
+                ax.axhline(float(base), color="#888", ls="--", lw=1.0)
+                if row < 3:
+                    ax.axhline(2.0 * max(float(base), 1e-12), color="#b33", ls=":", lw=1.0)
+            _mark_onset(ax, result)
+            if col == 0:
+                ax.set_ylabel(ylab)
+            hops = [r["t"] for r in rows if r.get("rfperm_hop")]
+            if hops and row == 3:
+                ax.scatter(hops, [ys[t] for t in hops], s=70, color="#c45c26", zorder=4)
+        axes[0, col].set_title(titles[col], fontsize=10)
+        axes[-1, col].set_xlabel("incoming batch (T=1)")
+    fig.suptitle("labeled onset = gray dash; OnlineRFPerm hop = orange. Concept: MMD quiet. Covariate: MMD fires.", y=1.01)
+    fig.tight_layout()
+    dest = out / "dgp_contrast.png"
+    fig.savefig(dest, dpi=140, bbox_inches="tight")
+    plt.close(fig)
+    return dest.name
+
+
+def write_justify_md(results: list[dict], out_path: Path) -> str:
+    lines = [
+        "# Justify: OnlineRFPerm onset × PO / MSE / MMD vs ref",
+        "",
+        "WHEN = frozen `RandomForestRegressor().predict(X_new)`, T = MSE − E_ref, last-two hop.",
+        "WHAT = PO-risk (RF nuisances) × serving MSE × MMD²(X_new, X_ref).",
+        "Concept DGP: P(X) fixed, β rotates after labeled onset → MMD stays quiet, MSE/PO move.",
+        "Covariate DGP: P(Y|X) fixed, μ(X) walks → MMD fires, PO stays quieter; MSE-only is X shift.",
+        "",
+        "| dataset | n_new | onset_true | onset_hat | onset_rank | board | n_watch | n_x_shift | n_tricky | n_freeze | n_hop |",
+        "|---|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|",
+    ]
+    for r in results:
+        lines.append(
+            f"| {r.get('dataset')} | {r.get('n_new')} | {r.get('onset_true')} | {r.get('onset_hat')} | "
+            f"{r.get('onset_rank')} | {r.get('board_action')} | {r.get('n_watch', 0)} | "
+            f"{r.get('n_x_shift', 0)} | {r.get('n_tricky', 0)} | {r.get('n_freeze', 0)} | {r.get('n_rfperm_hop', 0)} |"
+        )
+    lines += ["", "Freeze only when PO and MSE both break. No online-bootstrap.", ""]
+    text = "\n".join(lines)
+    out_path.write_text(text + "\n", encoding="utf-8")
+    return text
+
+
+def run_justify(hidden, online_epochs: int) -> list[dict]:
+    """DGP contrast + extra datasets. Does not touch the size-grid boards."""
+    results = []
+    for name in JUSTIFY:
+        spec = JUSTIFY_SPECS[name]
+        print(
+            f"=== justify {name} n_ref={spec['n_ref']} n_new={spec['batch']} max_batches={spec['max_batches']} ===",
+            flush=True,
+        )
+        result = run_one(name, spec["n_ref"], spec["batch"], spec["max_batches"], hidden, online_epochs)
+        write_freeze_board(name, result)
+        results.append(result)
+        print(
+            f"done {name}: board={result.get('board_action')} onset_hat={result.get('onset_hat')} "
+            f"labeled={result.get('onset_true')} n_x_shift={result.get('n_x_shift')} n_watch={result.get('n_watch')}",
+            flush=True,
+        )
+    plot_dgp_contrast(OUT)
+    print(write_justify_md(results, OUT / "JUSTIFY.md"), flush=True)
+    write_index(OUT)
+    return results
+
+
 def main() -> int:
     import argparse
 
     p = argparse.ArgumentParser()
-    p.add_argument("--dataset", default="electricity", choices=sorted(LOADERS) + ["both", "all"])
+    p.add_argument("--dataset", default="electricity", choices=sorted(LOADERS) + ["both", "all", "justify"])
     p.add_argument("--n-ref", type=int, default=REF_N)
     p.add_argument("--batch", type=int, default=0, help="incoming T=1 size; 0 = per-dataset default (≥5000)")
     p.add_argument("--max-batches", type=int, default=8)
@@ -797,8 +1008,18 @@ def main() -> int:
         action="store_true",
         help="redraw MA boards from saved batch_size.json; no extra inference",
     )
+    p.add_argument(
+        "--justify",
+        action="store_true",
+        help="gradual concept vs covariate DGPs + extra datasets; OnlineRFPerm onset. No size grid.",
+    )
     args = p.parse_args()
     hidden = tuple(int(x) for x in args.hidden.split(",") if x.strip())
+    if args.justify or args.dataset == "justify":
+        OUT.mkdir(parents=True, exist_ok=True)
+        run_justify(hidden, args.online_epochs)
+        print("wrote", OUT)
+        return 0
     if args.dataset == "both":
         names = ["electricity", "covertype"]
     elif args.dataset == "all":
@@ -814,25 +1035,24 @@ def main() -> int:
         return 0
     for name in names:
         if not args.skip_freeze:
-            batch = args.batch if args.batch > 0 else DEFAULT_STREAM[name]
+            if name in JUSTIFY_SPECS:
+                js = JUSTIFY_SPECS[name]
+                n_ref, batch, max_batches = js["n_ref"], js["batch"], js["max_batches"]
+            else:
+                n_ref = args.n_ref
+                batch = args.batch if args.batch > 0 else DEFAULT_STREAM[name]
+                max_batches = args.max_batches
             if batch < MIN_STREAM_N:
                 print(
                     f"note: n_new={batch} < {MIN_STREAM_N}; "
                     "raw PO-risk jitters — read the moving average, do not bootstrap",
                     flush=True,
                 )
-            spec = {"name": name, "title": name}
-            print(f"=== {name} n_ref={args.n_ref} n_new={batch} ===", flush=True)
-            result = run_one(name, args.n_ref, batch, args.max_batches, hidden, args.online_epochs)
-            spec["title"] = result["title"]
-            sub = OUT / name
-            sub.mkdir(parents=True, exist_ok=True)
-            (sub / "summary.json").write_text(json.dumps(jsonable(result), indent=2) + "\n", encoding="utf-8")
-            images = plot_boards(result, result["title"], sub)
-            render_html(spec, result, images, sub / "board.html")
-            report = render_report(spec, result)
-            (sub / "REPORT.md").write_text(report + "\n", encoding="utf-8")
-            print(report, flush=True)
+            print(f"=== {name} n_ref={n_ref} n_new={batch} ===", flush=True)
+            result = run_one(name, n_ref, batch, max_batches, hidden, args.online_epochs)
+            write_freeze_board(name, result)
+        if name in JUSTIFY:
+            continue
         print(f"=== {name} batch-size gate (MA → all-layer backprop) ===", flush=True)
         cmp_ = attach_ma(run_size_compare(name, args.n_ref, sizes, args.stream_cap))
         sub = OUT / name

@@ -391,5 +391,86 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertAlmostEqual(vs_ref, rbf_mmd2(X_new, X_ref, sigma=sigma, seed=14), places=12)
 
 
+class OnlineRFPermTests(unittest.TestCase):
+    def test_probe_is_random_forest_regressor_predict(self):
+        from online_rfperm import FrozenRFPerm
+
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(120, 3))
+        Y = (X[:, 0] > 0).astype(float)
+        probe = FrozenRFPerm(X, Y, seed=0)
+        self.assertIsInstance(probe.probe, RandomForestRegressor)
+        pred = probe.probe.predict(np.asarray(X))
+        self.assertEqual(len(pred), len(Y))
+
+    def test_onset_is_first_last_two_hop(self):
+        from online_rfperm import hop_fires, onset_from_rows
+
+        self.assertFalse(hop_fires(1.0, None))
+        self.assertFalse(hop_fires(1.0, 1.0))
+        self.assertTrue(hop_fires(2.0, 1.0, gate=1.5))
+        rows = [
+            {"t": 0, "rfperm_hop": False, "rfperm_p": 1.0, "rfperm_T": 0.0},
+            {"t": 1, "rfperm_hop": False, "rfperm_p": 0.5, "rfperm_T": 0.01},
+            {"t": 2, "rfperm_hop": True, "rfperm_p": 0.02, "rfperm_T": 0.20},
+            {"t": 3, "rfperm_hop": False, "rfperm_p": 0.01, "rfperm_T": 0.22},
+        ]
+        info = onset_from_rows(rows)
+        self.assertEqual(info["onset_hat"], 2)
+        self.assertEqual(info["onset_rank"], 2)
+        self.assertEqual(info["n_rfperm_hop"], 1)
+
+    def test_gradual_concept_mmd_quiet_covariate_mmd_fires(self):
+        from online_rfperm import FrozenRFPerm
+        from stream_dgps import ONSET_BATCH, make_gradual_concept, make_gradual_covariate
+
+        n_ref, n_new, n_batches = 400, 120, 6
+        Xc, Yc, mc = make_gradual_concept(n_ref=n_ref, n_new=n_new, n_batches=n_batches, seed=1)
+        Xx, Yx, mx = make_gradual_covariate(n_ref=n_ref, n_new=n_new, n_batches=n_batches, seed=1)
+        self.assertEqual(mc["onset_batch"], ONSET_BATCH)
+        self.assertEqual(mx["onset_batch"], ONSET_BATCH)
+        sigma_c = rbf_bandwidth(Xc[:n_ref], seed=1)
+        sigma_x = rbf_bandwidth(Xx[:n_ref], seed=1)
+        quiet_c = rbf_mmd2(Xc[: n_ref // 2], Xc[n_ref // 2 : n_ref], sigma=sigma_c, seed=1)
+        last_c = rbf_mmd2(Xc[-n_new:], Xc[:n_ref], sigma=sigma_c, seed=2)
+        last_x = rbf_mmd2(Xx[-n_new:], Xx[:n_ref], sigma=sigma_x, seed=2)
+        self.assertLess(last_c, 2.0 * max(quiet_c, 1e-6) + 0.05)
+        self.assertGreater(last_x, last_c)
+        self.assertGreater(last_x, 2.0 * max(quiet_c, 1e-12))
+
+        probe = FrozenRFPerm(Xc[:n_ref], Yc[:n_ref], seed=3)
+        Ts = []
+        cur = n_ref
+        for _ in range(n_batches):
+            rec = probe.step(Xc[cur : cur + n_new], Yc[cur : cur + n_new])
+            Ts.append(rec["rfperm_T"])
+            cur += n_new
+        self.assertGreater(float(np.mean(Ts[ONSET_BATCH + 1 :])), float(np.mean(Ts[:ONSET_BATCH])))
+
+    def test_abrupt_y_flip_marks_onset_with_frozen_rf(self):
+        from online_rfperm import FrozenRFPerm, onset_from_rows
+
+        rng = np.random.default_rng(7)
+        n_ref, n_new, n_batches = 300, 80, 5
+        X = rng.normal(size=(n_ref + n_new * n_batches, 4))
+        Y = (X[:, 0] > 0).astype(float)
+        onset = 2
+        start = n_ref + onset * n_new
+        Y[start:] = 1.0 - Y[start:]
+        probe = FrozenRFPerm(X[:n_ref], Y[:n_ref], seed=7)
+        rows = []
+        cur = n_ref
+        for t in range(n_batches):
+            rec = probe.step(X[cur : cur + n_new], Y[cur : cur + n_new])
+            rec["t"] = t
+            rows.append(rec)
+            cur += n_new
+        info = onset_from_rows(rows)
+        mark = info["onset_hat"] if info["onset_hat"] is not None else info["onset_rank"]
+        self.assertIsNotNone(mark)
+        self.assertGreaterEqual(int(mark), onset)
+        self.assertLessEqual(int(mark), onset + 1)
+
+
 if __name__ == "__main__":
     unittest.main()

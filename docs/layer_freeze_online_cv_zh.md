@@ -36,6 +36,25 @@
 
 何时 **update** 仍是业务逻辑。
 
+## 闭环：OnlineRFPerm 标 WHEN
+
+onset 探针就是冻住参考窗的 RF：
+
+```python
+rf = RandomForestRegressor().fit(X_ref, Y_ref)
+pred = rf.predict(np.asarray(X_new))
+T = mean((Y_new - pred) ** 2) - E_ref
+```
+
+last-two hop 是相邻窗的 MSE 比。第一个 hop 就是 **shift-onset**。MMD 同样只对 `X_new` vs `X_ref`。
+
+看板读 WHAT：
+
+| DGP | P(X) | P(Y\|X) | OnlineRFPerm | MMD²(X_new, X_ref) | 看板该看到 |
+|---|---|---|---|---|---|
+| gradual concept | 固定 | β 慢慢翻 | onset 在 labeled 附近 | 安静 | MSE/PO 动，不是 X shift |
+| gradual covariate | μ 慢慢走 | 固定 | onset 在 labeled 附近 | 过线 | MSE 崩、PO 安静 → X shift |
+
 ```bash
-PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --dataset all --replay-json
+PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --justify
 ```

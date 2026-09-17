@@ -13,6 +13,10 @@ series more likely to break.
 MMD口径 is vs the same T=0 reference batch as PO-risk — not mean
 pairwise MMD against previous batches, not last-batch layer reps.
 
+Closed loop: OnlineRFPerm (frozen RandomForestRegressor.predict(X_new),
+T=MSE−E_ref, last-two hop) marks the shift-onset point. The board says
+what kind of shift it was.
+
 No online-bootstrap. Causal MA is the stability readout.
 
 When we do freeze, that output is which layers stop training:
@@ -33,6 +37,7 @@ from dl_model_registry import (
     construct_dataloader,
     spawn_layer_models,
 )
+from online_rfperm import FrozenRFPerm, onset_from_rows
 from streaming_po_risk import (
     ACTION_FREEZE,
     REF_N,
@@ -124,6 +129,8 @@ def attach_layer_dicts(result: dict) -> dict:
                 n_new=n_new,
             )
         )
+    if rows and any(r.get("rfperm_T") is not None for r in rows):
+        result.update(onset_from_rows(rows))
     for rec in rows:
         i = rec.get("i_star", k)
         rec.update(freeze_training_of(i, k))
@@ -263,6 +270,7 @@ def run_layer_freeze_cv(
     mmd_sigma = rbf_bandwidth(X_ref[ref_eval], seed=seed)
     mmd_base = ref_split_mmd(X_ref[ref_eval], sigma=mmd_sigma, seed=seed)
     w = ma_window(batch_size_stream)
+    rfperm = FrozenRFPerm(X_ref[ref_eval], Y_ref[ref_eval], seed=seed)
 
     rows = []
     po_hist, mse_hist, mmd_hist = [], [], []
@@ -289,6 +297,7 @@ def run_layer_freeze_cv(
         mse_broken = large_deviation(mse_ma, mse_base)
         mmd_broken = large_deviation(mmd_ma, mmd_base)
         action = po_mse_action(po_broken, mse_broken, mmd_broken)
+        rf = rfperm.step(Xb, Yb)
         rec = {
             "t": t,
             "n_new": int(len(Yb)),
@@ -312,6 +321,7 @@ def run_layer_freeze_cv(
             "freeze_from": None,
             "i_star": int(k) if action != ACTION_FREEZE else None,
             "layers": [],
+            **rf,
         }
         if action != ACTION_FREEZE:
             loader = construct_dataloader(Xb, Yb, batch_size=loader_batch, shuffle=True)
@@ -393,4 +403,6 @@ def run_layer_freeze_cv(
     out.update(freeze_training_of(rec_i, k))
     out.update(annotate_po_mse_contrast(rows, po_base, mse_base=mse_base, mmd_base=mmd_base, n_new=batch_size_stream))
     out.update(stack_layer_metric_dicts(rows, k))
+    out.update(onset_from_rows(rows))
+    out["rfperm_e_ref"] = float(rfperm.e_ref)
     return out
