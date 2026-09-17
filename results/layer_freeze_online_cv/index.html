@@ -1,4 +1,4 @@
 <!DOCTYPE html><meta charset="utf-8"><title>PO × MSE board</title>
 <h1>PO × MSE 对照</h1>
-<p>PO 和 MSE 都崩 → 冻结那一层的 training。只崩 PO → 观察。MSE 崩但 PO 正常 → 看 MMD(X)，不是 concept drift。</p>
+<p>MMD 口径是 MMD²(X_new, X_ref)。RF PO-risk 不该先崩；MSE 先崩再看 MMD。PO 崩模型没崩 → 再观察。</p>
 <ul><li><a href="electricity/board.html">electricity freeze</a> · <a href="electricity/po_mse_trend.png">trend</a> · <a href="electricity/batch_size_gate.png">MA</a></li><li><a href="covertype/board.html">covertype freeze</a> · <a href="covertype/po_mse_trend.png">trend</a> · <a href="covertype/batch_size_gate.png">MA</a></li><li>airlines · <a href="airlines/batch_size_gate.png">MA</a></li></ul>

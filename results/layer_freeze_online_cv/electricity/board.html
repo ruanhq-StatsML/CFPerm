@@ -20,15 +20,17 @@ code { background: #eee; padding: 1px 4px; }
 <p class="note">
 electricity (NSW, ordered in time). n_ref=10000, n_new=5000, hidden=[64, 32].
 看板的输出就是：<b>该冻结哪一层的 training</b>（仅当 PO 和 MSE 都崩）。
-MSE 崩了但 PO 正常 → 不是 concept drift，看 MMD(X)：MMD 过线是 X 在动。
-PO 和 MSE 都正常，或只崩 PO → 一层都不冻。
-两都崩 → 开 freeze-depth，<code>model_i</code> 只训 top i，其余层停训。
+PO-risk 用 RF，不该突然崩；<b>更可能先崩的是 serving MSE</b>。
+MSE 崩了但 PO 正常 → 不是 concept drift。MMD 口径是 <b>MMD²(X_new, X_ref)</b>，
+跟 reference batch 比，不是跟历史所有 batch 的 pairwise 均值，也不是上个 batch 的层 representation。
+PO 崩了模型没崩 → 再观察，先不冻。
+两都崩 → 开 freeze-depth，<code>model_i</code> 只训 top i。
 不做 online-bootstrap。
 </p>
-<p class="rec">再观察 — 先不冻任何一层的 training</p>
+<p class="rec">不冻任何一层的 training — 接着 train</p>
 <figure><img src="po_mse_trend.png" alt="po_mse_trend.png"><figcaption>po_mse_trend.png</figcaption></figure><figure><img src="po_risk_gate.png" alt="po_risk_gate.png"><figcaption>po_risk_gate.png</figcaption></figure><figure><img src="freeze_from.png" alt="freeze_from.png"><figcaption>freeze_from.png</figcaption></figure>
 <h2>每一段 — PO × MSE</h2>
-<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>MMD(X)</th><th>MMD MA</th><th>action</th><th>冻结哪一层的 training</th></tr></thead><tbody><tr><td>0</td><td>9.59e-05</td><td>9.59e-05</td><td>0.1188</td><td>0.1188</td><td>0.01913</td><td>0.01913</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>1</td><td>0.0009639</td><td>0.0005299</td><td>0.1929</td><td>0.1559</td><td>0.02747</td><td>0.0233</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>2</td><td>0.001658</td><td>0.0009058</td><td>0.2197</td><td>0.1772</td><td>0.121</td><td>0.05585</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>3</td><td>0.005966</td><td>0.002171</td><td>0.1595</td><td>0.1728</td><td>0.1282</td><td>0.07393</td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr><tr><td>4</td><td>0.0009047</td><td>0.001918</td><td>0.1935</td><td>0.1769</td><td>0.1574</td><td>0.09063</td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr><tr><td>5</td><td>9.407e-06</td><td>0.0019</td><td>0.2678</td><td>0.2067</td><td>0.05751</td><td>0.09831</td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr><tr><td>6</td><td>6.078e-05</td><td>0.00172</td><td>0.123</td><td>0.1927</td><td>0.005695</td><td>0.09396</td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr></tbody></table>
+<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>MMD vs ref</th><th>MMD MA</th><th>action</th><th>冻结哪一层的 training</th></tr></thead><tbody><tr><td>0</td><td>3.065e-05</td><td>3.065e-05</td><td>0.119</td><td>0.119</td><td>0.0166</td><td>0.0166</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>1</td><td>0.0002054</td><td>0.000118</td><td>0.2045</td><td>0.1618</td><td>0.02258</td><td>0.01959</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>2</td><td>5.482e-09</td><td>7.868e-05</td><td>0.2325</td><td>0.1853</td><td>0.1208</td><td>0.05334</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>3</td><td>3.536e-09</td><td>5.901e-05</td><td>0.159</td><td>0.1788</td><td>0.1242</td><td>0.07106</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>4</td><td>1.858e-08</td><td>4.722e-05</td><td>0.1882</td><td>0.1807</td><td>0.1546</td><td>0.08777</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>5</td><td>1.98e-08</td><td>4.109e-05</td><td>0.2702</td><td>0.2109</td><td>0.04761</td><td>0.09397</td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>6</td><td>3.333e-09</td><td>1.015e-08</td><td>0.1223</td><td>0.1945</td><td>0.009964</td><td>0.09145</td><td>keep training</td><td>不冻任何一层的 training</td></tr></tbody></table>
 
 </body>
 </html>

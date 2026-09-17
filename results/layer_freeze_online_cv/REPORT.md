@@ -1,8 +1,10 @@
 # PO-risk board
 
 PO+MSE both break → freeze that layer's training.
-MSE broken, PO quiet → not concept drift; read MMD of X.
-No online-bootstrap.
+RF PO-risk should not collapse first; serving MSE is likelier to break.
+MSE broken, PO quiet → not concept drift; read MMD²(X_new, X_ref).
+MMD is vs the reference batch, not pairwise history, not layer reps.
+PO broken, MSE holds → watch. No online-bootstrap.
 
 - [electricity freeze board](electricity/board.html)
 - [electricity PO×MSE trend](electricity/po_mse_trend.png)
