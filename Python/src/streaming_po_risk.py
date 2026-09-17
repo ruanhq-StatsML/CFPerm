@@ -4,7 +4,9 @@ New batch is T=1, reference is T=0. Outcome model μ(Y|X) and
 propensity e(T|X) are maintained separately — not the serving MLP,
 not a single lstsq. φ = (Y − μ)(T − e), τ̂(X) ≈ φ, risk = mean(τ̂²).
 
-Read the number. n_new stays large so we do not online-bootstrap.
+Read the number. Raw PO-risk on a small n_new jitters; a causal
+moving average is the stability readout. No online-bootstrap —
+repeated MLP inference cannot be afforded.
 """
 from __future__ import annotations
 
@@ -130,6 +132,50 @@ def ref_split_baseline(X_ref, Y_ref, *, seed: int = 2026, clip: float = CLIP) ->
     n = len(Y_ref)
     half = n // 2
     return streaming_po_risk(X_ref[:half], Y_ref[:half], X_ref[half:], Y_ref[half:], clip=clip, seed=seed)
+
+
+def moving_average(y, window: int) -> np.ndarray:
+    """Causal moving average. No bootstrap, no extra inference."""
+    y = np.asarray(y, dtype=float).ravel()
+    if y.size == 0:
+        return y
+    w = max(1, int(window))
+    out = np.empty(len(y), dtype=float)
+    c = np.cumsum(y)
+    for i in range(len(y)):
+        lo = i - w + 1
+        if lo <= 0:
+            out[i] = c[i] / (i + 1)
+        else:
+            out[i] = (c[i] - c[lo - 1]) / w
+    return out
+
+
+def ma_window(n_new: int) -> int:
+    """Cover ~1000 stream rows. n_new=20 → window 50. No extra inference."""
+    return max(5, int(round(1000 / max(int(n_new), 1))))
+
+
+def annotate_moving_average(rows, baseline, n_new=None, ratio: float = DEVIATION_RATIO) -> dict:
+    """Attach causal MA to each row. MA below 2× baseline → all-layer backprop."""
+    rows = list(rows)
+    if n_new is None:
+        n_new = int(rows[0]["n_new"]) if rows else 1
+    w = ma_window(n_new)
+    ys = np.asarray([float(r["po_stream"]) for r in rows], dtype=float) if rows else np.array([])
+    ma = moving_average(ys, w) if ys.size else np.array([])
+    for r, m in zip(rows, ma):
+        r["po_ma"] = float(m)
+        r["ma_large"] = bool(large_deviation(float(m), baseline, ratio=ratio))
+    thresh = float(ratio) * max(float(baseline), 1e-12)
+    stable = bool(ma.size == 0 or float(np.nanmax(ma)) < thresh)
+    return {
+        "ma_window": int(w),
+        "ma_max": float(np.nanmax(ma)) if ma.size else 0.0,
+        "ma_stable": stable,
+        "all_layer_backprop": stable,
+        "frac_ma_large": float(np.mean([r["ma_large"] for r in rows])) if rows else 0.0,
+    }
 
 
 def large_deviation(stream_po: float, baseline_po: float, ratio: float = DEVIATION_RATIO) -> bool:

@@ -2,8 +2,10 @@
 """Layer-freeze board: read PO-risk to see where to start updating.
 
 k+1 models; model_i starts updating from the top i layers.
-Incoming batch is T=1, n_ref=10000. Keep n_new large so the board
-can read PO-risk directly — a small batch would need online-bootstrap.
+Incoming batch is T=1, n_ref=10000. Raw PO-risk jitters on a small
+n_new; a causal moving average is the stability readout. No
+online-bootstrap — repeated MLP inference cannot be afforded.
+MA below 2× baseline → all-layer backprop.
 
     PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py
 """
@@ -28,7 +30,13 @@ if str(ROOT) not in sys.path:
 
 from dl_model_registry import DLModelRegistry  # noqa: E402
 from layer_freeze_cv import run_deviation_gate, run_layer_freeze_cv  # noqa: E402
-from streaming_po_risk import MIN_STREAM_N, REF_N  # noqa: E402
+from streaming_po_risk import (  # noqa: E402
+    MIN_STREAM_N,
+    REF_N,
+    annotate_moving_average,
+    ma_window,
+    moving_average,
+)
 
 OUT = ROOT / "results" / "layer_freeze_online_cv"
 DEFAULT_STREAM = {
@@ -116,14 +124,20 @@ def plot_boards(result: dict, title: str, out_dir: Path) -> list[str]:
     written = []
 
     fig, ax = plt.subplots(figsize=(8.6, 4.0))
-    ax.plot(ts, [r["po_stream"] for r in rows], color="#1f4e79", lw=2.2, marker="o", label="stream PO-risk")
+    raw = np.asarray([r["po_stream"] for r in rows], dtype=float)
+    n_new = int(rows[0]["n_new"]) if rows else 1
+    w = ma_window(n_new)
+    ma = moving_average(raw, w) if raw.size else raw
+    ax.plot(ts, raw, color="#9bb4cc", lw=1.0, marker="o", ms=3.5, label="raw")
+    ax.plot(ts, ma, color="#1f4e79", lw=2.2, label=f"MA({w})")
     ax.axhline(result["po_base"], color="#888", ls="--", lw=1.6, label="ref-split baseline")
+    ax.axhline(2.0 * result["po_base"], color="#b33", ls=":", lw=1.0, label="2× baseline")
     for r in rows:
         if r["large_deviation"]:
             ax.scatter([r["t"]], [r["po_stream"]], s=80, color="#b33", zorder=4)
     ax.set_xlabel("incoming batch (T=1)")
     ax.set_ylabel("PO-risk")
-    ax.set_title(title + " — deviation gate")
+    ax.set_title(title + " — MA of PO-risk (no bootstrap)")
     ax.legend(fontsize=8)
     fig.tight_layout()
     p = out_dir / "po_risk_gate.png"
@@ -228,8 +242,9 @@ code {{ background: #eee; padding: 1px 4px; }}
 <p class="note">
 {spec["title"]}. n_ref={result["n_ref"]}, n_new={n_new}, hidden={result["hidden_dims"]}.
 表格 PO-risk 单独维护 <b>outcome model</b> μ(Y|X) 和 <b>propensity</b> e(T|X)。
-新 batch 是 <b>T=1</b>。直接读 PO-risk。没有大偏差就全开；有大偏差才看从第几层开始冻。
-何时 update 是业务逻辑，不是这个数。n_new 太小旗标会抖，更不能当 update 开关。
+新 batch 是 <b>T=1</b>。raw PO-risk 会抖就做 causal moving average；
+<b>MA 稳（不过 2× baseline）→ 全量每一层 back-propagate</b>。
+不做 online-bootstrap。何时 update 是业务逻辑，不是这个数。
 </p>
 <p class="rec">{rec}</p>
 {"".join(cards)}
@@ -255,7 +270,8 @@ def render_report(spec: dict, result: dict) -> str:
     lines = [
         f"# PO-risk board — {spec['title']}",
         "",
-        "No large deviation → all trainable. Large deviation → from which layer to freeze.",
+        "No large deviation → all-layer backprop. Large deviation → from which layer to freeze.",
+        "Raw PO-risk jitters; a causal moving average is the stability readout. No online-bootstrap.",
         "Tabular PO-risk keeps a separate outcome model and a separate propensity model.",
         f"T=1 on the incoming batch. n_ref={result['n_ref']}, n_new={n_new}. baseline={result['po_base']:.4g}.",
         "",
@@ -319,31 +335,115 @@ def run_one(name: str, n_ref: int, batch: int, max_batches: int, hidden, online_
     return result
 
 
+def _get_size(by_size: dict, n_new: int) -> dict:
+    if n_new in by_size:
+        return by_size[n_new]
+    return by_size[str(n_new)]
+
+
+def attach_ma(cmp_: dict) -> dict:
+    """Replay-safe: annotate MA on saved gate rows. No extra inference."""
+    by_size = {int(k): v for k, v in cmp_["by_size"].items()}
+    for n_new, rec in by_size.items():
+        info = annotate_moving_average(rec["rows"], rec["po_base"], n_new=n_new)
+        rec.update(info)
+    cmp_["by_size"] = by_size
+    return cmp_
+
+
 def plot_size_compare(by_size: dict, title: str, out_dir: Path) -> str:
-    """Small n_new makes the statistical 'large' flag flicker — not a when-to-update rule."""
-    sizes = sorted(by_size)
+    """Raw PO-risk jitters; the moving average says whether all layers can backprop."""
+    sizes = sorted(int(s) for s in by_size)
     fig, axes = plt.subplots(len(sizes), 1, figsize=(8.8, 2.2 * len(sizes)), sharex=False)
     if len(sizes) == 1:
         axes = [axes]
     for ax, n_new in zip(axes, sizes):
-        rec = by_size[n_new]
+        rec = _get_size(by_size, n_new)
         rows = rec["rows"]
         ts = [r["t"] for r in rows]
-        ax.plot(ts, [r["po_stream"] for r in rows], color="#1f4e79", lw=0.9 if len(ts) > 80 else 1.5)
-        ax.axhline(rec["po_base"], color="#888", ls="--", lw=1.2)
-        large_t = [r["t"] for r in rows if r["large_deviation"]]
-        large_y = [r["po_stream"] for r in rows if r["large_deviation"]]
-        if large_t:
-            ax.scatter(large_t, large_y, s=12 if len(ts) > 80 else 28, color="#b33", zorder=4)
+        raw = np.asarray([r["po_stream"] for r in rows], dtype=float)
+        w = int(rec.get("ma_window") or ma_window(n_new))
+        ma = moving_average(raw, w)
+        ax.plot(ts, raw, color="#9bb4cc", lw=0.7 if len(ts) > 80 else 1.0, label="raw")
+        ax.plot(ts, ma, color="#1f4e79", lw=2.0, label=f"MA({w})")
+        ax.axhline(rec["po_base"], color="#888", ls="--", lw=1.2, label="baseline")
+        ax.axhline(2.0 * rec["po_base"], color="#b33", ls=":", lw=1.0, label="2× baseline")
         ax.set_ylabel("PO-risk")
-        ax.set_title(f"n_new={n_new}  frac large={rec['frac_large']:.2f}", fontsize=10)
+        stable = rec.get("all_layer_backprop")
+        if stable is None:
+            stable = bool(np.nanmax(ma) < 2.0 * max(rec["po_base"], 1e-12))
+        tag = "MA stable → all-layer backprop" if stable else "MA hop"
+        ax.set_title(f"n_new={n_new}  {tag}", fontsize=10)
+        if n_new == sizes[0]:
+            ax.legend(fontsize=7, ncol=4)
     axes[-1].set_xlabel("incoming batch index (T=1)")
-    fig.suptitle(title + " — small batch ≠ when to update", y=1.01)
+    fig.suptitle(title + " — moving average, no bootstrap", y=1.01)
     fig.tight_layout()
     path = out_dir / "batch_size_gate.png"
     fig.savefig(path, dpi=140, bbox_inches="tight")
     plt.close(fig)
     return path.name
+
+
+def write_batch_size_md(cmp_: dict, out_path: Path) -> str:
+    lines = [
+        f"# MA of PO-risk — {cmp_['title']}",
+        "",
+        "Raw PO-risk jitters. Causal moving average is the stability readout.",
+        "No online-bootstrap (repeated MLP inference cannot be afforded).",
+        "MA below 2× ref-split baseline → all-layer backprop.",
+        f"n_ref={cmp_.get('n_ref', REF_N)}.",
+        "",
+        "| n_new | batches | MA window | raw frac large | MA frac large | MA max / baseline | all-layer backprop |",
+        "|---:|---:|---:|---:|---:|---:|---|",
+    ]
+    for n_new in sorted(int(s) for s in cmp_["by_size"]):
+        rec = _get_size(cmp_["by_size"], n_new)
+        base = max(float(rec["po_base"]), 1e-12)
+        ma_max = rec.get("ma_max")
+        if ma_max is None:
+            raw = np.asarray([r["po_stream"] for r in rec["rows"]], dtype=float)
+            ma_max = float(np.nanmax(moving_average(raw, ma_window(n_new))))
+        ratio = float(ma_max) / base
+        backprop = "yes" if rec.get("all_layer_backprop", ratio < 2.0) else "no"
+        lines.append(
+            f"| {n_new} | {rec['n_batches']} | {rec.get('ma_window', ma_window(n_new))} | "
+            f"{rec['frac_large']:.2f} | {rec.get('frac_ma_large', 0.0):.2f} | {ratio:.2f} | {backprop} |"
+        )
+    text = "\n".join(lines) + "\n"
+    out_path.write_text(text, encoding="utf-8")
+    return text
+
+
+def write_index(out: Path) -> None:
+    bits = [
+        "# PO-risk board",
+        "",
+        "When to **update** is business logic. PO-risk does not justify that.",
+        "Raw PO-risk jitters; a causal moving average is the stability readout.",
+        "**MA stable (below 2× baseline) → all-layer backprop.** No online-bootstrap.",
+        "Large MA hop (and the business already wants a hop) → from which layer to freeze.",
+        "",
+    ]
+    html_items = []
+    for name in ("electricity", "covertype", "airlines"):
+        sub = out / name
+        if (sub / "board.html").exists():
+            bits.append(f"- [{name} freeze board]({name}/board.html)")
+        if (sub / "batch_size_gate.png").exists():
+            bits.append(f"- [{name} MA gate]({name}/batch_size_gate.png)")
+        if (sub / "board.html").exists() or (sub / "batch_size_gate.png").exists():
+            html_items.append(
+                f'<li><a href="{name}/board.html">{name}</a> · '
+                f'<a href="{name}/batch_size_gate.png">MA</a></li>'
+            )
+    (out / "REPORT.md").write_text("\n".join(bits) + "\n", encoding="utf-8")
+    html = """<!DOCTYPE html><meta charset="utf-8"><title>PO-risk board</title>
+<h1>MA 稳定 → 全层 backprop</h1>
+<p>raw PO-risk 会抖。causal moving average 不过 2× baseline，就全量每一层 back-propagate。
+不做 online-bootstrap。何时 update 是业务逻辑。</p>
+<ul>""" + "".join(html_items) + "</ul>"
+    (out / "index.html").write_text(html, encoding="utf-8")
 
 
 def run_size_compare(name: str, n_ref: int, sizes: list[int], stream_cap: int) -> dict:
@@ -377,11 +477,32 @@ def jsonable(obj):
     return obj
 
 
+def replay_saved_gates(names: list[str]) -> None:
+    """Redraw MA boards from on-disk JSON. No MLP, no extra inference."""
+    for name in names:
+        path = OUT / name / "batch_size.json"
+        if not path.exists():
+            print(f"skip {name}: no {path}", flush=True)
+            continue
+        cmp_ = attach_ma(json.loads(path.read_text(encoding="utf-8")))
+        sub = OUT / name
+        plot_size_compare(cmp_["by_size"], cmp_["title"], sub)
+        path.write_text(json.dumps(jsonable(cmp_), indent=2) + "\n", encoding="utf-8")
+        text = write_batch_size_md(cmp_, sub / "BATCH_SIZE.md")
+        print(text, flush=True)
+        board = sub / "summary.json"
+        if board.exists():
+            result = json.loads(board.read_text(encoding="utf-8"))
+            spec = {"name": name, "title": result.get("title", name)}
+            images = plot_boards(result, spec["title"], sub)
+            render_html(spec, result, images, sub / "board.html")
+
+
 def main() -> int:
     import argparse
 
     p = argparse.ArgumentParser()
-    p.add_argument("--dataset", default="electricity", choices=sorted(LOADERS) + ["both"])
+    p.add_argument("--dataset", default="electricity", choices=sorted(LOADERS) + ["both", "all"])
     p.add_argument("--n-ref", type=int, default=REF_N)
     p.add_argument("--batch", type=int, default=0, help="incoming T=1 size; 0 = per-dataset default (≥5000)")
     p.add_argument("--max-batches", type=int, default=8)
@@ -390,25 +511,33 @@ def main() -> int:
     p.add_argument("--skip-freeze", action="store_true", help="only the batch-size gate, no freeze prototype")
     p.add_argument("--sizes", default="500,1000,2000,5000")
     p.add_argument("--stream-cap", type=int, default=30000)
+    p.add_argument(
+        "--replay-json",
+        action="store_true",
+        help="redraw MA boards from saved batch_size.json; no extra inference",
+    )
     args = p.parse_args()
     hidden = tuple(int(x) for x in args.hidden.split(",") if x.strip())
-    names = ["electricity", "covertype"] if args.dataset == "both" else [args.dataset]
+    if args.dataset == "both":
+        names = ["electricity", "covertype"]
+    elif args.dataset == "all":
+        names = ["electricity", "covertype", "airlines"]
+    else:
+        names = [args.dataset]
     sizes = [int(x) for x in args.sizes.split(",") if x.strip()]
     OUT.mkdir(parents=True, exist_ok=True)
-    index_bits = [
-        "# PO-risk board",
-        "",
-        "When to **update** is business logic. PO-risk does not justify that.",
-        "No large deviation → all trainable. Large deviation (and the business already wants a hop) → from which layer to freeze.",
-        "",
-    ]
+    if args.replay_json:
+        replay_saved_gates(names)
+        write_index(OUT)
+        print("wrote", OUT)
+        return 0
     for name in names:
         if not args.skip_freeze:
             batch = args.batch if args.batch > 0 else DEFAULT_STREAM[name]
             if batch < MIN_STREAM_N:
                 print(
-                    f"warning: n_new={batch} < {MIN_STREAM_N}; "
-                    "PO-risk will jitter and you would need online-bootstrap",
+                    f"note: n_new={batch} < {MIN_STREAM_N}; "
+                    "raw PO-risk jitters — read the moving average, do not bootstrap",
                     flush=True,
                 )
             spec = {"name": name, "title": name}
@@ -423,45 +552,14 @@ def main() -> int:
             report = render_report(spec, result)
             (sub / "REPORT.md").write_text(report + "\n", encoding="utf-8")
             print(report, flush=True)
-            index_bits.append(
-                f"- [{result['title']}]({name}/board.html) — large batches: {result.get('n_large', 0)}"
-            )
-        print(f"=== {name} batch-size gate (when-to-update is NOT this) ===", flush=True)
-        cmp_ = run_size_compare(name, args.n_ref, sizes, args.stream_cap)
+        print(f"=== {name} batch-size gate (MA → all-layer backprop) ===", flush=True)
+        cmp_ = attach_ma(run_size_compare(name, args.n_ref, sizes, args.stream_cap))
         sub = OUT / name
         sub.mkdir(parents=True, exist_ok=True)
-        img = plot_size_compare(cmp_["by_size"], cmp_["title"], sub)
+        plot_size_compare(cmp_["by_size"], cmp_["title"], sub)
         (sub / "batch_size.json").write_text(json.dumps(jsonable(cmp_), indent=2) + "\n", encoding="utf-8")
-        lines = [
-            f"# Batch size is not when to update — {cmp_['title']}",
-            "",
-            "When to update is business logic. Small n_new has no power or a noisy flag — not an update clock.",
-            "",
-            "| n_new | batches | frac large | mean PO-risk | std |",
-            "|---:|---:|---:|---:|---:|",
-        ]
-        for n_new in sorted(cmp_["by_size"]):
-            rec = cmp_["by_size"][n_new]
-            ys_mean = rec.get("po_mean")
-            ys_std = rec.get("po_std")
-            if ys_mean is None:
-                import numpy as np
-                ys = np.array([r["po_stream"] for r in rec["rows"]])
-                ys_mean, ys_std = float(ys.mean()), float(ys.std())
-            lines.append(
-                f"| {n_new} | {rec['n_batches']} | {rec['frac_large']:.2f} | {ys_mean:.3g} | {ys_std:.3g} |"
-            )
-        (sub / "BATCH_SIZE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-        print("\n".join(lines), flush=True)
-        index_bits.append(f"- [{name} small vs large n_new]({name}/{img})")
-    (OUT / "REPORT.md").write_text("\n".join(index_bits) + "\n", encoding="utf-8")
-    html_index = """<!DOCTYPE html><meta charset="utf-8"><title>PO-risk board</title>
-<h1>何时 update 是业务逻辑</h1>
-<p>PO-risk 不能 justify 什么时候该 update。没有大 deviation 就一直 trainable；业务已经要 hop 且 PO-risk 大，才看从哪层冻。缩小 batch 只会让统计旗标抖。</p>
-<ul>""" + "".join(
-        f'<li><a href="{n}/board.html">{n}</a> · <a href="{n}/batch_size_gate.png">n_new</a></li>' for n in names
-    ) + "</ul>"
-    (OUT / "index.html").write_text(html_index, encoding="utf-8")
+        print(write_batch_size_md(cmp_, sub / "BATCH_SIZE.md"), flush=True)
+    write_index(OUT)
     print("wrote", OUT)
     return 0
 

@@ -5,7 +5,8 @@ Large deviation → prototype: from which layer to start freezing.
 
 Tabular PO-risk keeps its own outcome model μ(Y|X) and propensity e(T|X).
 Conditional on a freeze-depth MLP, the outcome model also sees that model's
-prediction. Incoming n_new stays large; no online-bootstrap.
+prediction. No online-bootstrap. A causal moving average of PO-risk is the
+stability readout: MA below 2× baseline → all-layer backprop.
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ from dl_model_registry import (
 )
 from streaming_po_risk import (
     REF_N,
+    annotate_moving_average,
     large_deviation,
     ref_split_baseline,
     streaming_po_risk,
@@ -110,6 +112,7 @@ def run_deviation_gate(
                 "large_deviation": bool(large),
             }
         )
+    ma_info = annotate_moving_average(rows, po_base, n_new=batch_size_stream)
     return {
         "n_ref": int(n_ref),
         "n_new": int(batch_size_stream),
@@ -119,6 +122,7 @@ def run_deviation_gate(
         "po_mean": float(np.mean([r["po_stream"] for r in rows])) if rows else 0.0,
         "po_std": float(np.std([r["po_stream"] for r in rows])) if rows else 0.0,
         "rows": rows,
+        **ma_info,
     }
 
 

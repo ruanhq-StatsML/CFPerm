@@ -1,10 +1,10 @@
 # 除非有大 deviation，否则一直 trainable
 
-看板直接读 PO-risk。没有大偏差，AnyMLP 各层都 trainable。
+看板直接读 PO-risk。没有大偏差，AnyMLP 各层都 trainable，**全量每一层 back-propagate**。
 有大偏差，才做 freeze prototype：从第几层开始冻。
 这是 conditional on 当前模型的逻辑。
 
-**何时 update 是业务逻辑**，纯统计 justify 不了。缩小 batch 只会让 PO-risk 旗标抖，不是 update 开关。
+**何时 update 是业务逻辑**，纯统计 justify 不了。
 
 表格 PO-risk **单独**维护两套 nuisance，不是 serving MLP，也不是一个 lstsq：
 
@@ -18,13 +18,15 @@
 和 D_ref 对半切的 baseline 比，stream ≥ 2× baseline 算大 deviation。
 有大偏差时，outcome 再看上该 freeze-depth MLP 的预测（conditional on 模型），propensity 仍单独拟合。
 
-n_new 不宜过小：不是“小了才能看到何时 update”，而是点估计会抖，纯统计更不能当 update 开关。何时 update 是业务（政策切、队列换、域换）。PO-risk 只在业务已经要动的时候，读能不能全开、还是从哪层冻。
+raw 点估计在小 `n_new` 上会抖。**不做 online-bootstrap**：要对每个小 batch 重复推 MLP，顶不住。
+改做因果 moving average（窗口约覆盖 1000 条流，`n_new=20` → window 50）。
+
+**MA 稳定（不过 2× baseline）→ 可以放心全量每一层 back-propagate。** 这是预期读法。
 
 换表 airlines（航班延误，时间序）。n_ref 仍是 10000，n_new 收到 20。
-不做 online-bootstrap：要对每个 20 条的 batch 重复推 MLP，顶不住。只读 μ/e 的 PO-risk 点估计。
 
 ```bash
-PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --dataset airlines --skip-freeze --sizes 20,50,100,500 --stream-cap 4000
+PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --dataset all --replay-json
 ```
 
 看板：`results/layer_freeze_online_cv/index.html`。

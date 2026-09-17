@@ -26,7 +26,10 @@ from streaming_po_risk import (  # noqa: E402
     MIN_STREAM_N,
     REF_N,
     TabularPORisk,
+    annotate_moving_average,
     large_deviation,
+    ma_window,
+    moving_average,
     pack_ref_new,
     po_risk,
     ref_split_baseline,
@@ -123,6 +126,30 @@ class StreamingPOTests(unittest.TestCase):
         self.assertTrue(large_deviation(2.1 * (base + 1e-12), base + 1e-12))
         self.assertGreaterEqual(hopped, quiet)
 
+    def test_moving_average_is_smoother_and_preserves_level(self):
+        rng = np.random.default_rng(0)
+        y = 0.01 + 0.2 * rng.normal(size=80)
+        ma = moving_average(y, 10)
+        self.assertEqual(len(ma), len(y))
+        self.assertLess(float(ma.std()), float(y.std()))
+        self.assertAlmostEqual(ma[0], y[0])
+        self.assertAlmostEqual(ma[9], float(y[:10].mean()))
+        self.assertAlmostEqual(ma[10], float(y[1:11].mean()))
+        self.assertEqual(len(moving_average([], 5)), 0)
+
+    def test_ma_stable_means_all_layer_backprop(self):
+        self.assertEqual(ma_window(20), 50)
+        baseline = 1e-6
+        quiet = [{"t": t, "n_new": 20, "po_stream": baseline * 0.4} for t in range(40)]
+        info = annotate_moving_average(quiet, baseline, n_new=20)
+        self.assertTrue(info["ma_stable"])
+        self.assertTrue(info["all_layer_backprop"])
+        self.assertLess(info["ma_max"], 2.0 * baseline)
+        hopped = [{"t": t, "n_new": 20, "po_stream": baseline * 3.0} for t in range(40)]
+        info2 = annotate_moving_average(hopped, baseline, n_new=20)
+        self.assertFalse(info2["ma_stable"])
+        self.assertFalse(info2["all_layer_backprop"])
+
 
 class FreezeCvSmokeTests(unittest.TestCase):
     def test_model_0_weights_do_not_move(self):
@@ -183,6 +210,10 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertEqual(out["n_batches"], 4)
         self.assertEqual(out["n_new"], 50)
         self.assertIn("frac_large", out)
+        self.assertIn("all_layer_backprop", out)
+        self.assertIn("ma_window", out)
+        self.assertIn("po_ma", out["rows"][0])
+
     def test_n_new_20_keeps_n_ref_and_skips_bootstrap(self):
         rng = np.random.default_rng(8)
         X = rng.normal(size=(260, 4))
@@ -192,6 +223,8 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertEqual(out["n_new"], 20)
         self.assertEqual(out["n_batches"], 3)
         self.assertTrue(all(r["n_new"] == 20 for r in out["rows"]))
+        self.assertNotIn("bootstrap", out)
+        self.assertTrue(all("po_ma" in r for r in out["rows"]))
 
 
 if __name__ == "__main__":
