@@ -2,11 +2,11 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8"/>
-<title>从哪一层开始 update</title>
+<title>PO-risk 看板</title>
 <style>
 body { font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif; margin: 24px; color: #122; background: #f7f5f0; }
 h1 { font-size: 1.5rem; }
-.note { max-width: 820px; line-height: 1.5; }
+.note { max-width: 860px; line-height: 1.5; }
 .rec { background: #1f4e79; color: #fff; padding: 12px 16px; border-radius: 8px; display: inline-block; }
 figure { margin: 18px 0; }
 img { max-width: 100%; background: #fff; border: 1px solid #ddd; }
@@ -16,16 +16,17 @@ code { background: #eee; padding: 1px 4px; }
 </style>
 </head>
 <body>
-<h1>从哪一层开始 update</h1>
+<h1>除非有大 deviation，否则一直 trainable</h1>
 <p class="note">
-covertype (geographic order, class 2 vs rest). n_ref=10000, n_new=10000, hidden=[64, 32],
-<code>model_0</code>…<code>model_3</code>. 新 batch 是 <b>T=1</b>。
-看板直接读 PO-risk。i* = argmin<sub>i</sub> PO-risk：从这一层开始 update。
-n_new 不宜过小，否则要做 online-bootstrap，计算量太大。
+covertype (geographic order, class 2 vs rest). n_ref=10000, n_new=10000, hidden=[64, 32].
+表格 PO-risk 单独维护 <b>outcome model</b> μ(Y|X) 和 <b>propensity</b> e(T|X)。
+新 batch 是 <b>T=1</b>。直接读 PO-risk。没有大偏差就全开；有大偏差才看从第几层开始冻。
+n_new 不宜过小，否则要 online-bootstrap。
 </p>
-<p class="rec">从 model_3 开始 update（median i* = 3）</p>
-<figure><img src="po_risk_by_layer.png" alt="po_risk_by_layer.png"><figcaption>po_risk_by_layer.png</figcaption></figure><figure><img src="po_risk_heatmap.png" alt="po_risk_heatmap.png"><figcaption>po_risk_heatmap.png</figcaption></figure><figure><img src="i_star.png" alt="i_star.png"><figcaption>i_star.png</figcaption></figure>
-<h2>Last batch — 直接读 PO-risk</h2>
-<table><thead><tr><th>model</th><th>PO-risk</th></tr></thead><tbody><tr><td>model_0</td><td>0.001056</td></tr><tr><td>model_1</td><td>0.002589</td></tr><tr><td>model_2</td><td>0.002584</td></tr><tr><td>model_3 ★</td><td>0.001623</td></tr></tbody></table>
+<p class="rec">没有大 deviation，或大偏差段仍全开 → 一直 trainable</p>
+<figure><img src="po_risk_gate.png" alt="po_risk_gate.png"><figcaption>po_risk_gate.png</figcaption></figure><figure><img src="freeze_from.png" alt="freeze_from.png"><figcaption>freeze_from.png</figcaption></figure><figure><img src="po_risk_by_layer.png" alt="po_risk_by_layer.png"><figcaption>po_risk_by_layer.png</figcaption></figure>
+<h2>每一段 — 直接读 PO-risk</h2>
+<table><thead><tr><th>t</th><th>PO-risk</th><th>baseline</th><th>large?</th><th>action</th></tr></thead><tbody><tr><td>0</td><td>0.0002547</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>1</td><td>0.0001885</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>2</td><td>0.0005227</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>3</td><td>0.001023</td><td>0.0003472</td><td>yes</td><td>all trainable</td></tr><tr><td>4</td><td>0.0002675</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>5</td><td>0.0002218</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>6</td><td>0.0003444</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>7</td><td>0.0001586</td><td>0.0003472</td><td></td><td>all trainable</td></tr></tbody></table>
+<h2>Last large-deviation batch — 从哪一层冻</h2><table><thead><tr><th>model</th><th>PO-risk</th></tr></thead><tbody><tr><td>model_0</td><td>0.0009169</td></tr><tr><td>model_1</td><td>0.0009105</td></tr><tr><td>model_2</td><td>0.0007236</td></tr><tr><td>model_3 ★</td><td>0.0006523</td></tr></tbody></table>
 </body>
 </html>

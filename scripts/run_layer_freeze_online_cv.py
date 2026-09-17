@@ -143,8 +143,8 @@ def render_html(spec: dict, result: dict, images: list[str], out_path: Path) -> 
     rec_i = result["recommend_i"]
     k = result["k"]
     n_large = result.get("n_large", 0)
-    if n_large == 0:
-        rec = "没有大 deviation → 一直 trainable"
+    if n_large == 0 or rec_i == k:
+        rec = "没有大 deviation，或大偏差段仍全开 → 一直 trainable"
     else:
         rec = f"有大 deviation 的段：从 model_{rec_i} 开始冻（median）"
     n_new = result["rows"][0]["n_new"] if result["rows"] else ""
@@ -211,7 +211,11 @@ def render_report(spec: dict, result: dict) -> str:
     n_new = result["rows"][0]["n_new"] if result["rows"] else ""
     n_large = result.get("n_large", 0)
     k = result["k"]
-    rec = "all trainable" if n_large == 0 else f"on large-deviation batches, freeze from model_{rec_i}"
+    rec = "all trainable"
+    if n_large and rec_i < k:
+        rec = f"on large-deviation batches, freeze from model_{rec_i}"
+    elif n_large:
+        rec = "large deviation present, freeze prototype still says all trainable"
     lines = [
         f"# PO-risk board — {spec['title']}",
         "",
@@ -242,7 +246,8 @@ def render_report(spec: dict, result: dict) -> str:
         for r in large_rows:
             by = {x["i"]: x["po_fit"] for x in r["layers"]}
             cells = " | ".join(f"{by[i]:.3g}" for i in range(k + 1))
-            lines.append(f"| {r['t']} | {cells} | {r['freeze_from']} |")
+            action = "all trainable" if r["all_trainable"] else f"freeze from {r['freeze_from']}"
+            lines.append(f"| {r['t']} | {cells} | {action} |")
     lines += ["", "Read the PO-risk. Nothing else.", ""]
     return "\n".join(lines)
 

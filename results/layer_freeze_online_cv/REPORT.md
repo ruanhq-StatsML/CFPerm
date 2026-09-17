@@ -1,6 +1,7 @@
-# 从哪一层开始 update
+# PO-risk board
 
-看板直接读 PO-risk。Incoming batch is **T=1**, n_ref=10000, n_new ≥ 5000（不做 online-bootstrap）。
+No large deviation → all trainable. Large deviation → from which layer to freeze.
+Tabular PO-risk: separate outcome model + propensity.
 
-- [electricity (NSW, ordered in time)](electricity/board.html) — start updating from **model_1**
-- [covertype (geographic order, class 2 vs rest)](covertype/board.html) — start updating from **model_3**
+- [electricity (NSW, ordered in time)](electricity/board.html) — large batches: 2; recommend **model_0**
+- [covertype (geographic order, class 2 vs rest)](covertype/board.html) — large batches: 1; recommend **model_3**

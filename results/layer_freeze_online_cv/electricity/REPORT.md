@@ -1,23 +1,29 @@
-# 从哪一层开始 update — electricity (NSW, ordered in time)
+# PO-risk board — electricity (NSW, ordered in time)
 
-看板直接读 PO-risk。i* = argmin_i PO-risk：从这一层开始 update。
-T=1 on the incoming batch. n_ref=10000, n_new=5000.
-n_new is large so we do not online-bootstrap.
+No large deviation → all trainable. Large deviation → from which layer to freeze.
+Tabular PO-risk keeps a separate outcome model and a separate propensity model.
+T=1 on the incoming batch. n_ref=10000, n_new=5000. baseline=0.0005076.
 
-- hidden_dims = `[64, 32]`
-- k = 3 → models 0…3
-- n_batches = 7
-- **start updating from model_1** (median i*)
+- hidden_dims = `[64, 32]`, k = 3
+- n_batches = 7, n_large = 2
+- **on large-deviation batches, freeze from model_0**
 
-| t | model_0 | model_1 | model_2 | model_3 | start from |
+| t | PO-risk | baseline | large | action |
+|---:|---:|---:|---|---|
+| 0 | 0.000116 | 0.000508 |  | all trainable |
+| 1 | 0.000936 | 0.000508 |  | all trainable |
+| 2 | 0.00183 | 0.000508 | yes | freeze from model_0 |
+| 3 | 0.00598 | 0.000508 | yes | freeze from model_0 |
+| 4 | 0.000905 | 0.000508 |  | all trainable |
+| 5 | 1.07e-05 | 0.000508 |  | all trainable |
+| 6 | 9.31e-05 | 0.000508 |  | all trainable |
+
+Large-deviation batches, PO-risk conditional on freeze-depth:
+
+| t | model_0 | model_1 | model_2 | model_3 | freeze from |
 |---:|---:|---:|---:|---:|---|
-| 0 | 0.000118 | 0.000112 | 9.15e-05 | 8.83e-05 | model_3 |
-| 1 | 0.00107 | 0.00102 | 0.000763 | 0.000753 | model_3 |
-| 2 | 0.00203 | 0.00225 | 0.00374 | 0.00364 | model_0 |
-| 3 | 0.00598 | 0.00484 | 0.00503 | 0.0052 | model_1 |
-| 4 | 0.00185 | 0.00126 | 0.00213 | 0.00234 | model_1 |
-| 5 | 0.000132 | 0.000101 | 0.000202 | 0.000174 | model_1 |
-| 6 | 0.000144 | 0.000195 | 0.000289 | 0.000243 | model_0 |
+| 2 | 0.00184 | 0.00192 | 0.00201 | 0.00204 | freeze from model_0 |
+| 3 | 0.0057 | 0.00588 | 0.00632 | 0.00645 | freeze from model_0 |
 
 Read the PO-risk. Nothing else.
 
