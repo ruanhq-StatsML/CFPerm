@@ -22,6 +22,7 @@ from graph_fsds_localize import (  # noqa: E402
     slice_stream,
     unify_to_order,
 )
+from order_graph_nx import subset_scan  # noqa: E402
 from stream_dgps import make_order_graph_stream  # noqa: E402
 
 
@@ -246,6 +247,18 @@ class LevelSetTests(unittest.TestCase):
         self.assertGreaterEqual(mer["slices"]["cmean_y"]["south_frac"], 0.5)
         self.assertGreaterEqual(pack["level_set"]["jaccard_merchant_vs_south"], 0.25)
 
+    def test_coverage_scan_recovers_south_without_louvain(self):
+        pack = self._pack("covariate_south", seed=9)
+        ls = pack["level_set"]
+        mer = ls["merchant"]
+        self.assertEqual(mer["coverage"]["cut_name"], "subset_scan/{coverage}")
+        self.assertNotIn("louvain", mer["coverage"]["cut_name"])
+        self.assertGreaterEqual(ls["jaccard_coverage_merchant_vs_south"], 0.4)
+        self.assertGreaterEqual(ls["jaccard_mass_merchant_vs_south"], 0.4)
+        self.assertGreater(
+            ls["jaccard_coverage_merchant_vs_south"], ls["jaccard_user_vs_south"]
+        )
+
     def test_pipeline_level_set_loud_vs_other(self):
         tables = make_order_graph_stream(
             n_ref=300,
@@ -274,6 +287,35 @@ class LevelSetTests(unittest.TestCase):
         self.assertGreaterEqual(loud["south_frac"], 0.6)
         self.assertGreater(loud["pi_mmd"], 0.5)
         self.assertFalse(out["leakage"]["y_in_Z"])
+
+
+class SubsetScanTests(unittest.TestCase):
+    def _scores(self):
+        # Two loud, one tiny-loud, two quiet. Scale is estimated from the stack.
+        return {
+            0: {"mmd": 0.40, "cmean_x": 1.20, "cmean_y": 0.0, "po": 0.0, "n": 40},
+            1: {"mmd": 0.35, "cmean_x": 1.00, "cmean_y": 0.0, "po": 0.0, "n": 40},
+            2: {"mmd": 0.30, "cmean_x": 0.90, "cmean_y": 0.0, "po": 0.0, "n": 4},
+            3: {"mmd": 0.00, "cmean_x": 0.00, "cmean_y": 0.0, "po": 0.0, "n": 40},
+            4: {"mmd": 0.00, "cmean_x": 0.00, "cmean_y": 0.0, "po": 0.0, "n": 40},
+        }
+
+    def test_loud_ids_are_a_prefix_not_a_partition(self):
+        scores = self._scores()
+        out = subset_scan(scores, rule="coverage", floor=0.0, coverage=0.80, weight="phi")
+        self.assertNotIn("louvain", out["cut_name"])
+        ranked = out["ranked"]
+        loud = out["loud_ids"]
+        self.assertEqual(loud, ranked[: len(loud)])
+        self.assertLess(len(loud), len(ranked))
+
+    def test_mass_weight_prefers_large_bags(self):
+        scores = self._scores()
+        phi = subset_scan(scores, rule="coverage", floor=0.0, coverage=0.50, weight="phi")
+        mass = subset_scan(scores, rule="coverage", floor=0.0, coverage=0.50, weight="mass")
+        # Tiny bag 2 can rank high on intensity; mass should put 0 or 1 first.
+        self.assertIn(mass["loud_ids"][0], (0, 1))
+        self.assertTrue(set(phi["loud_ids"]).issubset(set(phi["ranked"])))
 
 
 if __name__ == "__main__":

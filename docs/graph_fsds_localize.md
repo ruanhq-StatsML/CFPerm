@@ -13,8 +13,8 @@
   → 3. 收到同一粒：订单（或商户）
         localize = 当前窗的 X；serve = 订单 X 用当前、实体列用 D_ref 画像
   → 4. 两层
-        层 1  subset vs other：默认 **own-ref 水平集** `{φ≥τ}`（变动子集）；
-              Louvain 社区 / region / structural 只做对照
+        层 1  subset vs other：默认 **own-ref subset scan**（水平集 `{φ≥τ}` 或覆盖前缀）；
+              图只做 incidence lift。Louvain 社区 / region / structural 只做对照
         层 2  选中块的 LOGO（order / merchant / user）
   → 5. 对 loud subset 出三支肖像 + fingerprint
 ```
@@ -30,79 +30,102 @@
 | 收成一粒 | 评估单位钉死（一张订单，或一个商户） | 订单指标和商户指标不能比份额；「谁贡献大」没有同一个分母 |
 | 两层 | 哪一个 **subset**；这个 subset 里是哪一块 **feature block** | 只报全局 MMD 会漏掉「只有南区商户在走」 |
 
-图在这里就是实体图：`order → merchant`、`order → user`。包是 **networkx**（不是 GraphRAG / PyG / DGL）。**图只回答 incidence（谁挂在谁下面），不回答谁在变。** 变动 subset 是节点势能的水平集，不是社区发现。
+图在这里就是实体图：`order → merchant`、`order → user`。包是 **networkx**（不是 GraphRAG / PyG / DGL）。**图只回答 incidence（谁挂在谁下面），不回答谁在变。** 变动 subset 是 Fast Subset Scan 的前缀（水平集 / 覆盖），不是社区发现。
 
 ---
 
-## 表 0 · 怎么定位变动 subset（不走 community detection）
+## 表 0 · 多层图上怎么做 subset localization（不走 community detection）
 
-Community detection 把「谁和谁连得密」当成「谁在变」。共单图的模块度是谁共享用户；bundled 图上的 Louvain 也还是在切图。变动子集的定义更直接：
+Community detection 问「谁和谁连得密」。多层图 localization 问的是另一件事：**哪一层上的哪一组实体，自己的 \(P(X)\) / \(P(Y\mid X)\) 在走。** 这两个目标没有同一套最优解。共单边的模块度切的是谁共享用户；南区商户的用户是跨商户随机挂的，所以 Louvain 跟种下的变动子集可以对齐也可以对不齐——对不齐不是调 resolution 能修的。
+
+正确的对象是 **subset scan**（Neill LTSS）：节点势能可加时，最响的子集一定是按 \(\psi\) 排序的**前缀**，不是一张图的一个划分。
 
 \[
-\hat S_{\mathrm{layer}}=\bigl\{i:\ \phi_i\ge\tau\bigr\},\qquad
-\tau=\max\bigl(\mathrm{floor},\ \alpha\cdot\max_i\phi_i\bigr),\quad\alpha=0.3.
+\psi_i=\phi_i\quad\text{或}\quad\psi_i=\phi_i\cdot n_i,\qquad
+\phi_i=\lVert\tilde v_i\rVert_1,\quad
+v_i=(\mathrm{MMD}_i,\ \lVert\Delta\mu_X\rVert_i,\ \Delta\mu_Y_i,\ \mathrm{PO}_i)\ \text{vs own-ref}.
 \]
 
-\(\phi_i\) 是该层节点 \(i\) **对自己 \(D_{\mathrm{ref}}\) 袋** 的捆分数（MMD、\(\|\Delta\mu_X\|\)、\(\Delta\mu_Y\)、PO）。图不进这个切。\(\tau\) 自适应：安静窗 \(\max\phi\) 小，floor 把噪声挡掉；onset 后 \(\max\phi\) 抬起来，水平集跟着走。
+两条前缀规则（同一条排序，不是两套图）：
 
-### 多层图 localization 的具体弄法
+\[
+\begin{aligned}
+\text{水平集}\quad
+\hat S&=\{i:\psi_i\ge\tau\},\quad
+\tau=\max(\mathrm{floor},\ \alpha\cdot\max_i\psi_i),\ \alpha=0.3;\\
+\text{覆盖}\quad
+\hat S&=\text{最短前缀，使 }\sum_{i\in\hat S}\psi_i\ge\beta\sum_i\psi_i,\ \beta=0.8.
+\end{aligned}
+\]
 
-层 = 一种实体粒。这里两层：商户、用户。边 = 订单挂在哪个商户 / 哪个用户。不要合成一张超图，也不要把两层的 \(v_i\) 加进同一个 simplex。
+\(\tau\) 自适应：安静窗 \(\max\psi\) 小，floor 把噪声挡掉；onset 后 \(\max\psi\) 抬起来，前缀跟着走。覆盖前缀回答「偏移质量的 80% 落在哪些点」，水平集回答「谁过了响度门槛」。默认 subset 键用水平集；覆盖 / 质量加权（\(\phi\cdot n\)）写在同一层上对照。
+
+### 具体弄法（按层扫，再 lift，再在订单粒上评）
+
+层 = 一种实体粒。这里两层：商户、用户。边 = 订单挂在哪个商户 / 哪个用户。**不要合成一张超图，也不要把两层的 \(v_i\) 加进同一个 simplex。** 图的唯一法定用途是第 3 步的 incidence lift。
 
 ```
-对每一层独立：
+冻结 D_ref（σ、分位数、每个实体自己的 ref 袋）。新商户没有 own-ref → 跳过，不进扫描。
+
+对每一层 L ∈ {merchant, user} 独立：
   1. 每个节点 i 用自己的 D_ref 袋打捆
-       v_i = (MMD_i, ‖Δμ_X‖_i, Δμ_Y_i, PO_i)     # own-ref；没有 own-ref 的新节点跳过
+       v_i = (MMD_i, ‖Δμ_X‖_i, Δμ_Y_i, PO_i)     # own-ref
        φ_i = ‖ṽ_i‖_1
-  2. 水平集  Ŝ_layer = { i : φ_i ≥ τ }
-  3. lift 到订单
-       订单 o ∈ Ŝ̂_layer  ⇔  o 挂到的该层实体 ∈ Ŝ_layer
+       ψ_i = φ_i            # 强度；要质量时改成 φ_i · n_i
+  2. 排序 + 取前缀（Fast Subset Scan，不是 Louvain）
+       水平集  Ŝ_L = { i : ψ_i ≥ τ }
+       覆盖    Ŝ_L^cov = 累计 ψ 到 80% 的最短前缀
+  3. lift 到订单（incidence，唯一用到图的地方）
+       订单 o ∈ Ŝ̂_L  ⇔  o 挂到的该层实体 ∈ Ŝ_L
+
 评估（唯一可加的单位 = 订单）：
        J(Ŝ̂_m, S*), J(Ŝ̂_u, S*), J(Ŝ̂_m, Ŝ̂_u)
-两层归因：
+       层对了才回收：这个 DGP 变动在商户，用户层 Jaccard 应接近 0
+
+两层归因（默认用商户层水平集 lift 出的标签）：
        订单标签 = loud / other（不是 C0/C1/C2）
        再打 π_MMD / π_PO / π_CMean 和 fingerprint
+方向（捆 φ 混了就读切片，仍是扫描，不是第二套社区）：
+       {i : MMD_i ≥ τ_MMD}、{i : |Δμ_Y|_i ≥ τ_Y}、…
 ```
 
 | 步 | 做什么 | 不要做成 |
 |---|---|---|
 | 节点钟 | own-ref：这个商户/用户自己变了没有 | 用 full-ref 切（那是异质性） |
-| 切 | \(\{i:\phi_i\ge\tau\}\) | Louvain / 模块度 / GraphRAG 社区 |
-| 多层 | 每层自己切，再 lift 到订单比 Jaccard | 把商户 MMD 和用户 MMD 丢进同一个份额 |
-| 归因 | loud vs other，三支 + vs other gap | 把水平集再切成一堆社区当 subset 键 |
-| 方向 | 需要时看 **metric slice** \(\{i:\mathrm{MMD}_i\ge\tau_{\mathrm{MMD}}\}\) 等 | 用社区标签代替「谁在变」 |
+| 切 | 按 \(\psi\) 排序取前缀（水平集 / 覆盖 / \(\phi\cdot n\)） | Louvain / 模块度 / GraphRAG 社区 / 把一层切成 C0–C3 |
+| 多层 | 每层自己扫，再 lift 到订单比 Jaccard | 把商户 MMD 和用户 MMD 丢进同一个份额；合成一张超图再切 |
+| 图 | incidence：\(o\mapsto m(o),\ o\mapsto u(o)\) | 用共单连通当约束（用户跨南北随机挂，连通会把南北糊在一起） |
+| 归因 | loud vs other，三支 + vs other gap | 把扫描结果再送进 Louvain 当 subset 键 |
+| 方向 | metric slice：covariate 点亮 MMD / CMean_X；concept 点亮 CMean_Y / PO | 用社区标签代替「谁在变」 |
 
-### 为什么不默认社区发现
+### 为什么这叫 localization，不叫 community detection
 
-| | 水平集（默认） | Bundled Louvain（对照） | 结构 Louvain（对照） |
-|---|---|---|---|
-| 问什么 | 哪些节点自己的钟响了 | 响的节点里谁和谁同方向、连成一块 | 谁共享用户 / kNN(X) 稠密 |
-| 目标 | 阈值 | 模块度（边已经换成同方向亲和） | 模块度（共单） |
-| 种下 south、X 走 | 南区商户 \(\phi\) 高 → 进 \(\hat S\) | 多数时候能把南区收成一块，但 resolution 会碎 | kNN 可能碰巧聚南区 |
-| 种下 south、X 不动（concept） | \(\Delta\mu_Y\) 把南区 \(\phi\) 抬起来 | 钟对不齐时 loud 社区 south_frac 会掉到噪声（超纲：模块度不是这个目标） | 结构几乎不变，切不出 |
-| 多层 | 每层一个水平集 | 每层一张 bundled 图再 Louvain | 共单图本来就是跨层的，更不能当切 |
+| | Subset scan（默认） | 共单 / bundled Louvain（对照，不是方法） |
+|---|---|---|
+| 问什么 | 哪些节点自己的钟响了，响的质量在哪一段前缀 | 谁和谁连成一块（模块度） |
+| 可行集 | 排序的 \(N\) 个前缀（LTSS） | 节点的一个划分 \(c:V\to\{C_0,C_1,\ldots\}\) |
+| 目标 | \(\sum_{i\in S}\psi_i\)（可加） | \(Q=\frac{1}{2m}\sum_{ij}(A_{ij}-k_i k_j/2m)\delta(c_i,c_j)\) |
+| 种下 south、X 走 | 南区 \(\phi\) 高 → 进前缀 | 碰巧能收成一块，resolution 会碎 |
+| 种下 south、X 不动（concept） | \(\Delta\mu_Y\) 把南区 \(\phi\) 抬起来 | 钟对不齐时 loud 社区 south_frac 掉到噪声 |
+| 多层 | 每层一个扫描 | 共单图本来就是跨层的，更不能当切 |
 
-Vanilla Louvain 最大化
+求解器用 networkx 只是因为 incidence 图现成、无 torch。**默认切不用 `louvain_communities`。** 不要用 GraphRAG 合成图来代替这个目标。
 
-\[
-Q=\frac{1}{2m}\sum_{ij}\Big(A_{ij}-\frac{k_i k_j}{2m}\Big)\delta(c_i,c_j).
-\]
-
-这回答「稠密子图」。共单图的稠密块 = 谁共享用户，**不是**谁的 \(P(X)\) / \(P(Y\mid X)\) 在走。Bundled 图只是把边换成「一样在变」，求解器还是 Louvain——分辨率、碎社区、把噪声节点并进来，都还在。水平集把「谁在变」从切图里拿出来，图只负责 lift。
-
-求解器用 networkx 只是因为 incidence 图和对照 Louvain 现成、无 torch。**默认切不用它。** 不要用 GraphRAG 合成图来代替这个目标。
-
-### 还有什么（仍不是社区发现）
+### 同一套扫描上还能怎么取前缀（仍不是社区发现）
 
 | 件 | 什么时候用 | 不是什么 |
 |---|---|---|
-| **metric slice** | covariate 应点亮 MMD / CMean_X；concept 应点亮 CMean_Y / PO。捆 \(\phi\) 混了就读切片 | 第二套 subset 键 |
-| 覆盖前缀 | 按 \(\phi\) 排序，累计到总 \(\phi\) 的 \(\alpha\)（比如 80%） | 固定 top-k |
-| 同方向连通分量 | 只有 \(\cos(\tilde v_i,\tilde v_j)<0\) 的两拨 loud 节点（X 走 vs \(Y\mid X\) hop）才拆 | 默认仍是一块 loud vs other |
-| 结构 Louvain | 对照：模块度切不出 concept | 当变动 subset |
-| 冻住 SAGE-mean | 结构读出 | 当切 |
+| **水平集** `{φ≥τ}` | 默认 subset 键。门槛自适应 | 社区标签 |
+| **覆盖前缀** 80% | 要看「偏移质量落在哪」；水平集太宽或太窄时对照 | 固定 top-k |
+| **质量加权** \(\phi\cdot n\) | 小袋 \(\phi\) 虚高、大袋才是构成 | 只按 \(\phi\) 排序当贡献 |
+| **metric slice** | 捆 \(\phi\) 把 MMD 和 \(\Delta\mu_Y\) 混在一起时，分开扫 | 第二套 subset 键；covariate 应点亮 MMD / CMean_X，concept 应点亮 CMean_Y / PO |
+| 同方向拆开 | 只有 \(\cos(\tilde v_i,\tilde v_j)<0\) 的两拨 loud（X 走 vs \(Y\mid X\) hop）才拆 | 默认仍是一块 loud vs other |
+| 同层邻接约束 | **仅当**你事先相信变动在该层的 geo / 类目图上连通。从 \(\arg\max\psi\) 往外长，目标仍是 \(\sum\psi\)，不是 \(Q\) | 共单图上做连通约束（会混层） |
+| 结构 Louvain / SAGE-mean | 对照：模块度切不出 concept；SAGE 是读出 | 当变动 subset |
 
 Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \(Z\)。
+
+冷启动（新商户没有 own-ref）：不把 full-ref 塞进扫描，否则又变成异质性。订单仍可挂 `other`。
 
 ---
 
@@ -129,11 +152,11 @@ Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \
 
 ### 多个维度 / 多层图怎么评估
 
-图是分层的：商户层、用户层、（可选）订单 kNN 层。**每一层自己取水平集**，切完 **全部 lift 到订单粒** 再比。这是唯一可加的评估单位。
+图是分层的：商户层、用户层、（可选）订单 kNN 层。**每一层自己做 subset scan**，扫完 **全部 lift 到订单粒** 再比。这是唯一可加的评估单位。
 
 ```
-商户层 {φ≥τ}  →  订单集合 Ŝ_m
-用户层 {φ≥τ}  →  订单集合 Ŝ_u
+商户层 scan {φ≥τ} / 覆盖前缀  →  订单集合 Ŝ_m
+用户层 scan {φ≥τ} / 覆盖前缀  →  订单集合 Ŝ_u
 订单粒 oracle（region）→  订单集合 S*
 评估：J(Ŝ_m, S*)、J(Ŝ_u, S*)、J(Ŝ_m, Ŝ_u)
 三支肖像只在 Ŝ_m / Ŝ_u 上打（已经是同一粒；标签是 loud / other）
@@ -147,15 +170,15 @@ Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \
 | 把两层的 \(v_i\) 直接加起来再取阈值 | **不要**。量纲和 n 都不同 |
 | 把两层并成一张超图再 Louvain | **不要**。那又回到社区发现 |
 
-多层不是 GraphRAG 合成一张超图。就是：每层一个水平集、lift 到订单、Jaccard。用户层在这个 DGP 里**不该**回收南区——用户是跨商户随机挂的。这正是评估：层对了才回收。
+多层不是 GraphRAG 合成一张超图。就是：每层一次 subset scan、lift 到订单、Jaccard。用户层在这个 DGP 里**不该**回收南区——用户是跨商户随机挂的。这正是评估：层对了才回收。
 
-Louvain 对照仍按层切、再 lift，用来说明「切错目标会切碎」。不要把社区标签当默认 subset 键。
+Louvain 对照仍按层切、再 lift，用来说明「切错目标会切碎」。不要把社区标签当默认 subset 键。不要在共单图上做连通约束——那会把南北用户糊在一起。
 
 ### 还有什么（同一套钟上的附件，不是新的面）
 
 | 件 | 做什么 | 不要做成 |
 |---|---|---|
-| min_n | own-ref / 社区 PO 的地板 | 小袋上打 RF PO |
+| min_n | own-ref / 扫描 PO 的地板 | 小袋上打 RF PO |
 | 强度 vs 质量 | \(\phi_i\) 高但 \(n_i\) 小 → 报 n 和 share | 只按 \(\phi\) 排序当贡献 |
 | vs other | loud − other，两头对同一口 ref | 当成 Shapley |
 | 结构 Louvain | 对照：模块度切不出 concept | 当变动 subset |
@@ -199,7 +222,7 @@ Z = \big[\;X^{\mathrm{order}}_{\mathrm{sel}}\;\big|\;X^{\mathrm{merchant}}_{\mat
 | `localize` | **当前窗** X | **当前窗** 实体 X（不含 Y） | 定位「现在谁在走」 |
 | `serve` | 当前窗 X | **冻结的 \(D_{\mathrm{ref}}\) 画像** | 可进服务 / clever covariate；新商户用 ref 全局均值 |
 
-评估只在 **同一个 \(Z\)** 上比。默认子集键是 **merchant-layer 水平集** lift 成的 `loud` / `other`。`region` 是种下的对照，不是切。`community` / `structural` 是 Louvain 对照，用来说明「切错目标会切不出 / 切碎 concept」。
+评估只在 **同一个 \(Z\)** 上比。默认子集键是 **merchant-layer subset scan** lift 成的 `loud` / `other`。`region` 是种下的对照，不是切。`community` / `structural` 是 Louvain 对照，用来说明「切错目标会切不出 / 切碎 concept」。
 
 两个对照，回答两个不同的问题：
 
@@ -248,8 +271,8 @@ CMean 份额用 \(\tfrac12|\Delta\mu_Y|+\tfrac12\|\Delta\mu_X\|\)（先各自非
 评估（玩具里可回收）按 **订单粒** 写死：
 
 1. **特征回收**：FSDS 集合含种下的列，且 **不含 Y**。
-2. **水平集回收**：merchant-layer `{φ≥τ}` lift 后 `south_frac` 高（covariate 应接近 1）。结构 / bundled Louvain **不要求**回收。
-3. **构成 vs 强度**：水平集可以不含全部南区商户（冷启动、n 不够）；看 loud 的 \(\pi\) 和 gap vs other。
+2. **扫描回收**：merchant-layer `{φ≥τ}`（以及覆盖前缀）lift 后 `south_frac` 高（covariate 应接近 1）。结构 / bundled Louvain **不要求**回收。
+3. **构成 vs 强度**：扫描可以不含全部南区商户（冷启动、n 不够）；看 loud 的 \(\pi\) 和 gap vs other。覆盖前缀看质量落在哪；质量加权 \(\phi\cdot n\) 压小袋。
 4. **指纹**：loud 上的 mix 偏 MMD / PO / CMean；切片对不上时先读 metric slice，不要换回 Louvain。
 
 ---
@@ -262,7 +285,7 @@ CMean 份额用 \(\tfrac12|\Delta\mu_Y|+\tfrac12\|\Delta\mu_X\|\)（先各自非
 | 实体画像（serve 模式） | PO / CMean_Y 的 **outcome** | 用新窗 Y 重切的 HH / 小时桶去当 subset |
 | 子集词表（south/north 来自商户） | 服务误差（冻住的 \(\mu_{\mathrm{ref}}\)） | 把 PO 的 \(\mu\) 当下一轮特征再选一遍 |
 
-HH（划分）选的是图上的 merchant 水平集 / region，**不是 Y**。FSDS 的 CMean_Y 用 Y 当左边的均值，列仍是 X。
+HH（划分）选的是图上的 merchant 扫描 / region，**不是 Y**。FSDS 的 CMean_Y 用 Y 当左边的均值，列仍是 X。
 
 ---
 
@@ -291,7 +314,7 @@ HH（划分）选的是图上的 merchant 水平集 / region，**不是 Y**。FS
 
 代码：
 
-- `Python/src/order_graph_nx.py` — incidence 图、own-ref 水平集 `{φ≥τ}`、metric slice；结构 / bundled Louvain 只做对照；冻住 SAGE-mean
+- `Python/src/order_graph_nx.py` — incidence 图、own-ref subset scan（水平集 / 覆盖 / \(\phi\cdot n\)）、metric slice；结构 / bundled Louvain 只做对照；冻住 SAGE-mean
 - `Python/src/graph_fsds_localize.py` — 维度定位、FSDS、unify、subset vs other、肖像
 - `Python/src/stream_dgps.py` — `make_order_graph_stream`（接着用这批合成订单）
 - `scripts/run_graph_fsds_localize.py`

@@ -2,14 +2,17 @@
 
 Package: networkx (3.6.x in this env).
 
-The changing subset is a **level set of a node potential**, not a community:
+The changing subset is a **Fast Subset Scan** of a node potential, not a
+community. Rank entities by own-ref φ (or mass-weighted φ·n) and take a
+prefix:
 
-    Ŝ = { i : φ_i ≥ τ },  τ = max(floor, α · max φ)
+    level set   Ŝ = { i : ψ_i ≥ τ },  τ = max(floor, α · max ψ)
+    coverage    smallest prefix of the ranking with Σψ ≥ β · Σψ
 
 φ_i is the bundled own-ref score (MMD, CMean_X, CMean_Y, PO). The multi-layer
-graph is incidence only: which orders hang on which merchant / user. Lift Ŝ
-on each layer to the order grain, then Jaccard. Do not mix merchant-MMD and
-user-MMD in one simplex.
+graph is incidence only: which orders hang on which merchant / user. Scan
+each layer independently, lift Ŝ to the order grain, then Jaccard. Do not
+mix merchant-MMD and user-MMD in one simplex. Do not run Louvain.
 
 Louvain is an optional contrast, not the cut:
 
@@ -35,6 +38,9 @@ ENCODER = "graphsage-mean-frozen"
 CUT_STRUCTURAL = "networkx.community.louvain_communities/structural"
 CUT_BUNDLED = "networkx.community.louvain_communities/bundled-shift"
 CUT_LEVEL_SET = "level_set/{phi>=tau}"
+CUT_SCAN_COVERAGE = "subset_scan/{coverage}"
+CUT_SCAN_MASS = "subset_scan/{mass_coverage}"
+SCAN_COVERAGE = 0.80
 SAGE_LAYERS = 2
 BUNDLE_KEYS = ("mmd", "cmean_x", "cmean_y", "po")
 METRIC_FLOORS = {"mmd": 0.02, "cmean_x": 0.15, "cmean_y": 0.05, "po": 1e-3}
@@ -341,24 +347,103 @@ def phi_tau(phis: Mapping[int, float], floor: float = 1.0, frac: float = 0.30) -
     return max(float(floor), float(frac) * max(phis.values()))
 
 
+def node_mass(scores: Mapping[int, Mapping]) -> dict[int, float]:
+    """Bag size per node. Missing n → 1 so mass weight does not drop the node."""
+    out = {}
+    for i, row in scores.items():
+        n = (row or {}).get("n")
+        out[int(i)] = float(n) if n is not None and float(n) > 0 else 1.0
+    return out
+
+
+def _scan_priority(
+    scores: Mapping[int, Mapping],
+    *,
+    weight: str = "phi",
+) -> tuple[dict[int, float], dict[int, float]]:
+    """ψ used to rank nodes. weight='phi' is intensity; 'mass' is φ·n."""
+    phis = node_phis(scores)
+    if weight == "phi":
+        return phis, dict(phis)
+    if weight != "mass":
+        raise ValueError(f"weight must be phi or mass, got {weight!r}")
+    ns = node_mass(scores)
+    psi = {int(i): float(phis[i]) * float(ns.get(i, 1.0)) for i in phis}
+    return phis, psi
+
+
+def subset_scan(
+    scores: Mapping[int, Mapping],
+    *,
+    rule: str = "level_set",
+    floor: float = 1.0,
+    frac: float = 0.30,
+    coverage: float = SCAN_COVERAGE,
+    weight: str = "phi",
+) -> dict:
+    """Fast subset scan: rank nodes by ψ, take a prefix. Not a partition.
+
+    rule='level_set'  → {i : ψ_i ≥ max(floor, frac · max ψ)}
+    rule='coverage'   → shortest prefix of the ranking with Σψ ≥ coverage · Σψ,
+                        after dropping nodes with φ < floor (quiet).
+
+    Graph is not used. Weight 'mass' scores φ·n so a tiny noisy bag cannot
+    outrank a large shifted bag. This is LTSS (Neill): an additive score's
+    maximizer is a prefix of the priority ranking — not modularity.
+    """
+    if rule not in ("level_set", "coverage"):
+        raise ValueError(f"rule must be level_set or coverage, got {rule!r}")
+    phis, psi = _scan_priority(scores, weight=weight)
+    ranked = sorted(psi, key=lambda i: (-float(psi[i]), int(i)))
+    if rule == "level_set":
+        tau = phi_tau(psi, floor=floor, frac=frac)
+        loud = [int(i) for i in ranked if float(psi[i]) >= tau]
+        cut_name = CUT_LEVEL_SET if weight == "phi" else CUT_SCAN_MASS
+    else:
+        # Quiet nodes (φ below floor) never enter the prefix.
+        live = [int(i) for i in ranked if float(phis[i]) >= float(floor)]
+        total = float(sum(psi[i] for i in live))
+        loud = []
+        acc = 0.0
+        target = float(coverage) * total
+        if total > 0.0:
+            for i in live:
+                loud.append(int(i))
+                acc += float(psi[i])
+                if acc >= target:
+                    break
+        tau = float(psi[loud[-1]]) if loud else float(floor)
+        cut_name = CUT_SCAN_MASS if weight == "mass" else CUT_SCAN_COVERAGE
+    return {
+        "loud_ids": loud,
+        "ranked": [int(i) for i in ranked],
+        "tau": float(tau),
+        "phis": {str(k): float(v) for k, v in phis.items()},
+        "psi": {str(k): float(v) for k, v in psi.items()},
+        "n_loud": int(len(loud)),
+        "rule": rule,
+        "weight": weight,
+        "coverage": float(coverage) if rule == "coverage" else None,
+        "cut_name": cut_name,
+    }
+
+
 def level_set_ids(
     scores: Mapping[int, Mapping],
     *,
     floor: float = 1.0,
     frac: float = 0.30,
 ) -> dict:
-    """Changing subset = {i : φ_i ≥ τ}. No community detection.
+    """Changing subset = {i : φ_i ≥ τ}. Prefix of a subset scan, not a community.
 
     Graph is not used. τ = max(floor, frac * max φ).
     """
-    phis = node_phis(scores)
-    tau = phi_tau(phis, floor=floor, frac=frac)
-    loud = sorted(int(i) for i, p in phis.items() if p >= tau)
+    out = subset_scan(scores, rule="level_set", floor=floor, frac=frac, weight="phi")
     return {
-        "loud_ids": loud,
-        "tau": float(tau),
-        "phis": {str(k): float(v) for k, v in phis.items()},
-        "n_loud": int(len(loud)),
+        "loud_ids": sorted(out["loud_ids"]),
+        "tau": out["tau"],
+        "phis": out["phis"],
+        "n_loud": out["n_loud"],
     }
 
 

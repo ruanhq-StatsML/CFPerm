@@ -110,15 +110,15 @@ def write_markdown(results: dict, dest: Path) -> None:
     lines = [
         "# Graph localization → FSDS unify → two-layer subset (order grain)",
         "",
-        "Package: **networkx** for the incidence graph. Default cut = **own-ref level set** "
-        "`{φ≥τ}` (changing subset). Bundled / structural Louvain are reported only as a contrast — "
-        "modularity is not the shift object.",
+        "Package: **networkx** for the incidence graph. Default cut = **own-ref subset scan** "
+        "(level set `{φ≥τ}` / coverage prefix). The graph lifts a layer's Ŝ onto orders; "
+        "it does not run community detection. Bundled / structural Louvain are contrast only.",
         "Shares are localization proxies, not a unique decomposition. Y is never a feature.",
         "",
         f"n_ref={N_REF}, n_new={N_NEW}, merchants={N_MERCHANTS}, batches={N_BATCHES}, onset={ONSET}. "
         "Planted region is **south** (second half of merchant ids).",
         "",
-        "## Graph cuts (level-set vs Louvain contrast)",
+        "## Subset scan by layer (lift to orders; Louvain is contrast only)",
         "",
     ]
     gheader = [
@@ -127,9 +127,11 @@ def write_markdown(results: dict, dest: Path) -> None:
         "onset",
         "cut",
         "loud south_frac",
-        "J(level-set,south)",
-        "J(Louvain,south)",
-        "J(user level-set,south)",
+        "J(scan mer,south)",
+        "J(coverage mer,south)",
+        "J(mass mer,south)",
+        "J(user scan,south)",
+        "J(Louvain mer,south)",
         "n_loud mer",
         "FSDS selected",
         "fingerprint",
@@ -159,8 +161,10 @@ def write_markdown(results: dict, dest: Path) -> None:
                         g.get("cut") or "",
                         _fmt(south_frac),
                         _fmt(ls.get("jaccard_merchant_vs_south")),
-                        _fmt(L.get("jaccard_merchant_vs_south")),
+                        _fmt(ls.get("jaccard_coverage_merchant_vs_south")),
+                        _fmt(ls.get("jaccard_mass_merchant_vs_south")),
                         _fmt(ls.get("jaccard_user_vs_south")),
+                        _fmt(L.get("jaccard_merchant_vs_south")),
                         mer.get("n_loud_nodes"),
                         ",".join(rec["fsds"]["selected_names"]),
                         fp,
@@ -179,9 +183,9 @@ def write_markdown(results: dict, dest: Path) -> None:
                 "north own MMD",
                 "south own ‖ΔX‖",
                 "north own ‖ΔX‖",
-                "J(level-set mer,south)",
-                "J(Louvain mer,south)",
-                "J(level-set user,south)",
+                "J(scan mer,south)",
+                "J(coverage mer,south)",
+                "J(user scan,south)",
                 "MMD-slice south_frac",
                 "ΔY-slice south_frac",
             ]
@@ -195,7 +199,6 @@ def write_markdown(results: dict, dest: Path) -> None:
             g = rec.get("graph") or {}
             o = g.get("own_vs_full") or {}
             ls = g.get("level_set") or {}
-            L = g.get("layers") or {}
             mer = ls.get("merchant") or {}
             slices = mer.get("slices") or {}
             lines.append(
@@ -208,7 +211,7 @@ def write_markdown(results: dict, dest: Path) -> None:
                         _fmt(o.get("south_own_cmean_x")),
                         _fmt(o.get("north_own_cmean_x")),
                         _fmt(ls.get("jaccard_merchant_vs_south")),
-                        _fmt(L.get("jaccard_merchant_vs_south")),
+                        _fmt(ls.get("jaccard_coverage_merchant_vs_south")),
                         _fmt(ls.get("jaccard_user_vs_south")),
                         _fmt((slices.get("mmd") or {}).get("south_frac")),
                         _fmt((slices.get("cmean_y") or {}).get("south_frac")),
@@ -217,7 +220,7 @@ def write_markdown(results: dict, dest: Path) -> None:
             )
     lines += [
         "",
-        "## Subset portraits (level-set loud vs other · MMD + PO + CMean)",
+        "## Subset portraits (scan loud vs other · MMD + PO + CMean)",
         "",
     ]
     header = [
@@ -323,7 +326,7 @@ def plot_portraits(results: dict, dest: Path) -> None:
         ax.grid(axis="y", alpha=0.3)
         ax.legend(frameon=False, fontsize=7)
     axes[0].set_ylabel("subset share")
-    fig.suptitle("Level-set loud vs other · last batch · redder = higher south fraction")
+    fig.suptitle("Subset-scan loud vs other · last batch · redder = higher south fraction")
     fig.tight_layout()
     fig.savefig(dest, dpi=140)
     plt.close(fig)

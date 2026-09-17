@@ -7,8 +7,9 @@ never the subset key.
 Pipeline (leakage-safe):
   1. Score every native grain (order / merchant-node / user-node) with
      MMD² vs D_ref, PO-risk, and Conditional Mean — before any join.
-  2. Changing subset on each layer: level set {i : φ_i ≥ τ} vs own-ref.
-     Graph is incidence only. Louvain is an optional contrast.
+  2. Changing subset on each layer: Fast Subset Scan of own-ref φ
+     (level set / coverage prefix). Graph is incidence only — lift, not cut.
+     Louvain is an optional contrast, not the localization.
   3. FSDS: rank features inside each grain; select the loud ones.
   4. Unify selected features onto one grain (order, or merchant).
   5. Two-layer on that grain: loud vs other, then LOGO on feature blocks.
@@ -30,6 +31,8 @@ from order_graph_nx import (
     BUNDLE_KEYS,
     CUT_BUNDLED,
     CUT_LEVEL_SET,
+    CUT_SCAN_COVERAGE,
+    CUT_SCAN_MASS,
     CUT_STRUCTURAL,
     bundled_shift_graph,
     community_south_frac,
@@ -40,6 +43,7 @@ from order_graph_nx import (
     metric_level_set_ids,
     order_community_labels,
     order_level_set_labels,
+    subset_scan,
     y_in_graph_attrs,
 )
 from streaming_po_risk import (
@@ -425,7 +429,7 @@ def graph_shift_cuts(
     k_nn: int = 4,
     min_n: int = NODE_MIN_N,
 ) -> dict:
-    """Structural / bundled Louvain (contrast) plus the level-set cut (primary)."""
+    """Own-ref subset scan (primary) plus structural / bundled Louvain (contrast)."""
     structural = graph_localize(new, k_nn=k_nn, seed=seed)
     nodes = node_localization(
         ref["X_order"],
@@ -631,6 +635,30 @@ def _south_frac_ids(ids: Sequence[int], region_by_id: Mapping[int, str]) -> floa
     return float(np.mean([str(region_by_id.get(int(i), "")) == "south" for i in ids]))
 
 
+def _lifted_scan_stats(
+    entity_ids,
+    loud_ids: Sequence[int],
+    planted,
+    region_by: Mapping[int, str],
+    *,
+    cut_name: str,
+    n_loud_nodes: int,
+    tau: float,
+) -> dict:
+    mask = lift_level_set_to_orders(entity_ids, loud_ids)
+    return {
+        "cut_name": cut_name,
+        "loud_ids": [int(i) for i in loud_ids],
+        "n_loud_nodes": int(n_loud_nodes),
+        "tau": float(tau),
+        "n_loud_orders": int(mask.sum()),
+        "jaccard_vs_planted_south": jaccard_masks(mask, planted),
+        "south_frac_loud_nodes": _south_frac_ids(loud_ids, region_by),
+        "south_frac_loud_orders": float(planted[mask].mean()) if int(mask.sum()) else 0.0,
+        "_mask": mask,
+    }
+
+
 def _level_set_layer(
     ref,
     new,
@@ -643,7 +671,11 @@ def _level_set_layer(
     floor: float = 1.0,
     frac: float = 0.30,
 ) -> dict:
-    """Score this layer vs own-ref, take {φ ≥ τ}, lift to orders. No Louvain."""
+    """Score this layer vs own-ref, scan a prefix, lift to orders. No Louvain.
+
+    Default cut is the level set {φ ≥ τ}. Coverage and mass-weighted coverage
+    are the same scan on the same ranking — other prefixes, not other graphs.
+    """
     if scores is None:
         nodes = node_localization(
             ref["X_order"],
@@ -659,11 +691,41 @@ def _level_set_layer(
         )
         scores = node_bundle_scores(nodes, prefer="vs_own_ref")
     ls = level_set_ids(scores, floor=floor, frac=frac)
-    mask = lift_level_set_to_orders(new[id_key], ls["loud_ids"])
     planted = np.asarray(new["region"]) == "south"
     region_by: dict[int, str] = {}
     for e, r in zip(np.asarray(new[id_key]).astype(int), np.asarray(new["region"])):
         region_by.setdefault(int(e), str(r))
+    primary = _lifted_scan_stats(
+        new[id_key],
+        ls["loud_ids"],
+        planted,
+        region_by,
+        cut_name=CUT_LEVEL_SET,
+        n_loud_nodes=ls["n_loud"],
+        tau=ls["tau"],
+    )
+    cov = subset_scan(scores, rule="coverage", floor=floor, weight="phi")
+    mass = subset_scan(scores, rule="coverage", floor=floor, weight="mass")
+    coverage = _lifted_scan_stats(
+        new[id_key],
+        cov["loud_ids"],
+        planted,
+        region_by,
+        cut_name=CUT_SCAN_COVERAGE,
+        n_loud_nodes=cov["n_loud"],
+        tau=cov["tau"],
+    )
+    mass_cov = _lifted_scan_stats(
+        new[id_key],
+        mass["loud_ids"],
+        planted,
+        region_by,
+        cut_name=CUT_SCAN_MASS,
+        n_loud_nodes=mass["n_loud"],
+        tau=mass["tau"],
+    )
+    coverage.pop("_mask")
+    mass_cov.pop("_mask")
     slices = {}
     for metric in BUNDLE_KEYS:
         sl = metric_level_set_ids(scores, metric, frac=frac)
@@ -678,17 +740,19 @@ def _level_set_layer(
     return {
         "layer": id_key.replace("_id", ""),
         "cut_name": CUT_LEVEL_SET,
-        "loud_ids": [int(i) for i in ls["loud_ids"]],
-        "n_loud_nodes": int(ls["n_loud"]),
+        "loud_ids": primary["loud_ids"],
+        "n_loud_nodes": primary["n_loud_nodes"],
         "n_scored": int(len(scores)),
-        "tau": float(ls["tau"]),
-        "n_loud_orders": int(mask.sum()),
-        "jaccard_vs_planted_south": jaccard_masks(mask, planted),
-        "south_frac_loud_nodes": _south_frac_ids(ls["loud_ids"], region_by),
-        "south_frac_loud_orders": float(planted[mask].mean()) if int(mask.sum()) else 0.0,
+        "tau": primary["tau"],
+        "n_loud_orders": primary["n_loud_orders"],
+        "jaccard_vs_planted_south": primary["jaccard_vs_planted_south"],
+        "south_frac_loud_nodes": primary["south_frac_loud_nodes"],
+        "south_frac_loud_orders": primary["south_frac_loud_orders"],
         "slices": slices,
         "phis": ls["phis"],
-        "_mask": mask,
+        "coverage": coverage,
+        "mass_coverage": mass_cov,
+        "_mask": primary["_mask"],
     }
 
 
@@ -701,10 +765,10 @@ def multilayer_level_set(
     seed: int = 2026,
     min_n: int = NODE_MIN_N,
 ) -> dict:
-    """Per-layer level sets, evaluated only after lifting to orders.
+    """Per-layer subset scans, evaluated only after lifting to orders.
 
-    Graph = incidence (order→merchant, order→user). The cut on each layer is
-    Ŝ = {i : φ_i ≥ τ} against that node's own D_ref. No community detection.
+    Graph = incidence (order→merchant, order→user). Each layer is scanned
+    independently against that node's own D_ref. No community detection.
     """
     mer_scores = None
     if merchant_nodes is not None:
@@ -725,11 +789,14 @@ def multilayer_level_set(
         "jaccard_merchant_vs_user": jaccard_masks(mer_mask, usr_mask),
         "jaccard_merchant_vs_south": float(mer["jaccard_vs_planted_south"]),
         "jaccard_user_vs_south": float(usr["jaccard_vs_planted_south"]),
+        "jaccard_coverage_merchant_vs_south": float(mer["coverage"]["jaccard_vs_planted_south"]),
+        "jaccard_mass_merchant_vs_south": float(mer["mass_coverage"]["jaccard_vs_planted_south"]),
         "read": (
-            "changing subset = level set of own-ref φ, not Louvain; "
-            "evaluate layers only after lift-to-order; merchant layer should "
-            "recover planted south when the DGP is merchant-local; user layer "
-            "need not (users are mixed across merchants)"
+            "changing subset = Fast Subset Scan of own-ref φ (level set / "
+            "coverage prefix), not Louvain; evaluate layers only after "
+            "lift-to-order; merchant layer should recover planted south when "
+            "the DGP is merchant-local; user layer need not (users are mixed "
+            "across merchants)"
         ),
     }
 
@@ -1210,10 +1277,10 @@ def run_pipeline(
     with_po: bool = True,
     k_nn: int = 4,
 ) -> dict:
-    """Level-set localization first (changing subset = {φ ≥ τ}), then FSDS, then two-layer.
+    """Subset-scan localization first (changing subset = prefix of own-ref φ), then FSDS, then two-layer.
 
     subset_by='level_set' labels orders loud vs other from the merchant-layer
-    own-ref level set. community / structural Louvain and region are contrasts.
+    own-ref scan. community / structural Louvain and region are contrasts.
     """
     cut = slice_stream(tables, t)
     ref, new, meta = cut["ref"], cut["new"], cut["meta"]
@@ -1355,6 +1422,12 @@ def run_pipeline(
                 "jaccard_merchant_vs_user": graph_pack["level_set"]["jaccard_merchant_vs_user"],
                 "jaccard_merchant_vs_south": graph_pack["level_set"]["jaccard_merchant_vs_south"],
                 "jaccard_user_vs_south": graph_pack["level_set"]["jaccard_user_vs_south"],
+                "jaccard_coverage_merchant_vs_south": graph_pack["level_set"].get(
+                    "jaccard_coverage_merchant_vs_south"
+                ),
+                "jaccard_mass_merchant_vs_south": graph_pack["level_set"].get(
+                    "jaccard_mass_merchant_vs_south"
+                ),
                 "order_oracle_south_n": graph_pack["level_set"]["order_oracle_south_n"],
                 "read": graph_pack["level_set"]["read"],
             },
