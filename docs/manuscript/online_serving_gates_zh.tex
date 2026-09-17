@@ -1,0 +1,83 @@
+% 中文架构表。需要 \usepackage{booktabs,array}，中文稿件再加 ctex 或 xeCJK。
+\subsection{一张地图，两件连续时间的事}
+\label{sec:online-serving-gates-zh}
+对象只有一个：冻住的 serving 地图 \(P(Y\mid X)\) 在到达窗 \(\mathrm{batch}\) 上还是不是同一个东西。
+两闸不可互换：冻参考窗（相对 \(D_{\mathrm{ref}}\) 的 MSE，在线 FDR）与相邻窗 \texttt{hop\_fires}。
+我们真正按连续时间做的是两件：\textbf{审核}与\textbf{agent 推理}。
+其余（Graph-RAG 图包、混合检索）是同一套闸下的普通 serving，只换 \(Y\)，不必再往虚处写。
+幻觉率、拒绝率、单路 Recall、任务最终成功都不是 \(Y\)。
+
+\paragraph{LLM 推理逻辑。}
+四个产品 use-case 共用同一条连续到达的 hop，没有别的对象。
+\begin{enumerate}\itemsep=2pt
+\item 观察当前 serving 包
+      （审核：政策/judge；agent：工具 schema；Graph-RAG：图包；混合检索：融合索引）。
+\item 模型走下一步：写回复 / 选工具 / 从子图引用 / 融合两路给答案。
+\item 写下这一跳的 \(Y\)（见下表）。\(X\) 是这一跳的 serving 几何，不是原文。
+\item 冻住的 \(f_{\mathrm{ref}}\) 只预测 \(P(Y\mid X)\)。
+\item \(T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}\)，秩 \(p\)，在线 FDR。
+\end{enumerate}
+Quiet：这条轨迹当金标。
+Fire：当前推理包不当金标；换最便宜的包；整池 reset。
+审核可以是多步：对话里每一跳一行，\(Y\) 仍是这一跳过/不过，整段成功不是 \(Y\)。
+
+\begin{table}[t]
+\centering
+\caption{同一套闸。上两行是连续时间的主任务；下两行是普通 serving。
+Fire 是 \(P(Y\mid X)\) 的 hop，不是质量分。}
+\label{tab:serving-facets-zh}
+\setlength{\tabcolsep}{3.5pt}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.16\linewidth}
+                >{\raggedright\arraybackslash}p{0.28\linewidth}
+                >{\raggedright\arraybackslash}p{0.26\linewidth}
+                >{\raggedright\arraybackslash}p{0.22\linewidth}@{}}
+\toprule
+面 & \(Y\) & Fire 表示什么 & 不表示什么 \\
+\midrule
+连续时间审核
+  & 过 / 不过
+  & 政策包或 judge 换代
+  & 拒绝率；HH chosen \\
+Agent 推理
+  & 这一跳 / 路径是否合法
+    （schema、工具、不 loop）
+  & 推理断了，或开始空转
+  & 幻觉率；任务最终成功 \\
+\midrule
+Graph-RAG 子图
+  & 引用落在边上；
+    支撑节点在图包里
+  & 图包或 community 换代
+  & 单点相关性 \\
+混合检索
+  & 融合后的答案成不成立
+  & 某一路索引或融合坏了
+  & 单路 Recall \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{共用循环。}
+\(D_{\mathrm{ref}}\) 上 burn-in。
+每窗：\(T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}\)，秩 \(p\) 值，在线 FDR
+（窗重叠则异步 ADDIS/SAFFRON）。
+Quiet：金标保留，误差入池。
+Fire：当前包不当金标；从最便宜的刷新做起；误差池、burn-in、FDR wealth 整池 reset。
+影子包晋升当且仅当下一窗误差回到 \(E_{\mathrm{ref}}\) 附近 \emph{且} last-two quiet。
+
+\paragraph{普通 serving 的 \(X\)。}
+审核用回复特征；agent 用观察 / 工具 schema。
+Graph-RAG 不需要奇怪坐标：一个 batch 把窗内子图特征聚合起来
+（节点、边、度、连通片、query seed、最大片；日志若是 user-id \(\to\) 图 list，先聚合 list，可选再拼冻结 GraphSAGE-mean）。
+\(Y=\) 支撑节点在 served pack 里。
+盘上 Hotpot 是题库快照，\texttt{batch} 是题号，不是墙上时间。
+
+\paragraph{现成的表。}
+连续时间审核已在盘上。
+\texttt{python3 scripts/run\_serving\_gates.py}。
+另两件是 CFPerm，不是时间闸：多组别归因 permute \(T\) 报 \(X_j\)；
+多模态归因同一套循环，报模态块。
+
+\paragraph{读数。}
+光滑不火；已知切点在 onset 附近火；真刷新之后 reset 再 quiet。

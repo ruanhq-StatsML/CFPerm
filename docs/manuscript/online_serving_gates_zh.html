@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>在线 serving 闸：连续时间审核，和 agent 推理</title>
+<style>
+:root {
+  --ink: #1b1f24;
+  --muted: #5c6570;
+  --line: #d8dee6;
+  --accent: #1f4e79;
+  --fire: #9b2c2c;
+  --quiet: #276749;
+  --bg: #f4f1ea;
+  --card: #fffdf8;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+  font-family: "Source Han Sans SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; }
+.deck { height: 100%; display: flex; flex-direction: column; }
+.slide {
+  display: none; flex: 1; padding: 48px 64px 72px;
+  max-width: 1180px; margin: 0 auto; width: 100%;
+}
+.slide.on { display: flex; flex-direction: column; justify-content: center; }
+h1 { font-size: 42px; line-height: 1.2; margin: 0 0 16px; color: var(--accent); }
+h2 { font-size: 32px; line-height: 1.25; margin: 0 0 20px; color: var(--accent); }
+p, li { font-size: 22px; line-height: 1.45; color: var(--ink); }
+ol { margin: 4px 0 0; padding-left: 1.35em; }
+.box li { margin: 8px 0; }
+.lead { font-size: 26px; max-width: 42em; }
+.muted { color: var(--muted); }
+.kicker { letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  font-size: 13px; margin-bottom: 10px; font-weight: 700; }
+.bar { display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 24px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+.arch { display: grid; gap: 12px; }
+.box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+.facets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.facets .box { font-size: 16px; }
+.facets b { display: block; color: var(--accent); margin-bottom: 6px; }
+table { border-collapse: collapse; width: 100%; background: var(--card); font-size: 16px; }
+th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { color: var(--accent); font-weight: 700; }
+td.fire { color: var(--fire); }
+td.not { color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .92em; background: #eee8dc; padding: 1px 6px; border-radius: 4px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.eq { font-size: 24px; background: var(--card); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--line); }
+.small { font-size: 16px; color: var(--muted); }
+kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; border-radius: 4px; background: #fff; }
+</style>
+</head>
+<body>
+<div class="deck">
+
+<section class="slide on" data-title="封面">
+  <div class="kicker">OnlineRFPerm / frozen probe</div>
+  <h1>两件连续时间的事</h1>
+  <p class="lead">检测的是 P(Y | X) 还是不是同一张 serving 地图。<br>
+  我们做的是<strong>连续时间审核</strong>，和 <strong>agent 推理</strong>。其余按普通 serving，同一套闸。</p>
+</section>
+
+<section class="slide" data-title="推理逻辑">
+  <div class="kicker">产品 use-case</div>
+  <h2>LLM 推理逻辑：连续到达的一跳</h2>
+  <div class="box">
+    <ol>
+      <li>观察当前 serving 包（政策 / 工具 schema / 图包 / 融合索引）。</li>
+      <li>模型走下一步：写回复 / 选工具 / 从子图引用 / 融合两路给答案。</li>
+      <li>写下这一跳的 Y。X 是 serving 几何，不是原文。</li>
+      <li>冻住的 f<sub>ref</sub> 只预测 P(Y | X)。</li>
+      <li>T = MSE − E<sub>ref</sub> → 秩 p → 在线 FDR。<br>
+        <b style="color:var(--quiet)">quiet</b> 当金标；
+        <b style="color:var(--fire)">fire</b> 当前包不当金标，换最便宜的包，reset。</li>
+    </ol>
+    <p class="small">四个产品共用这一条 hop。审核可以是多步：每一跳一行，Y 仍是过/不过。没有别的对象。</p>
+  </div>
+</section>
+
+<section class="slide" data-title="对象">
+  <div class="kicker">对象</div>
+  <h2>冻住的地图还在不在</h2>
+  <p class="lead">不是归因，不是生成模型，也不是把旁路指标写成 Y。</p>
+  <div class="eq">表：(X, Y, batch)，可选队列 T ∈ {0,1}</div>
+  <p class="small" style="margin-top:18px">凡是连续时间在变、能写成这张表的流，都可以走这一套。</p>
+</section>
+
+<section class="slide" data-title="两个闸">
+  <div class="kicker">两个闸，不可互换</div>
+  <h2>冻参考窗，和相邻 hop</h2>
+  <div class="row">
+    <div class="box">
+      <b>冻参考窗</b>
+      <p>D<sub>ref</sub> 上 fit 一次。<br>
+      Δ<sub>t</sub> = MSE<sub>t</sub> − μ<sub>ref</sub><br>
+      Fire = 相对参考窗已经显著变差。</p>
+    </div>
+    <div class="box">
+      <b>Last-two <code>hop_fires</code></b>
+      <p>在 B<sub>t−1</sub> 上重 fit，打 B<sub>t</sub>。<br>
+      Fire = 相邻两窗的地图 hop 了。<br>
+      第一跳永远 quiet。</p>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="两件事">
+  <div class="kicker">主任务</div>
+  <h2>连续时间审核，和 agent 推理</h2>
+  <div class="row">
+    <div class="box">
+      <b>连续时间审核</b>
+      <p>Y = 过 / 不过。<br>
+      Fire = 政策包或 judge 换代。<br>
+      不是拒绝率，不是 HH chosen。</p>
+    </div>
+    <div class="box">
+      <b>Agent 推理</b>
+      <p>Y = 这一跳 / 路径是否合法。<br>
+      Fire = 推理断了，或开始空转。<br>
+      不是幻觉率，不是任务最终成功。</p>
+    </div>
+  </div>
+  <p class="small" style="margin-top:16px">Graph-RAG、混合检索：同一套闸，只换 Y，按普通 serving 写。</p>
+</section>
+
+<section class="slide" data-title="对照表">
+  <div class="kicker">Table</div>
+  <h2>Fire 是 hop，不是质量分</h2>
+  <table>
+    <thead>
+      <tr><th>面</th><th>Y</th><th>Fire 表示什么</th><th>不表示什么</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>连续时间审核</td><td>过 / 不过</td><td class="fire">政策包或 judge 换代</td><td class="not">拒绝率；HH chosen</td></tr>
+      <tr><td>Agent 推理</td><td>这一跳 / 路径是否合法</td><td class="fire">推理断了，或开始空转</td><td class="not">幻觉率；任务最终成功</td></tr>
+      <tr><td>Graph-RAG 子图</td><td>引用落在边上；支撑节点在图包里</td><td class="fire">图包或 community 换代</td><td class="not">单点相关性</td></tr>
+      <tr><td>混合检索</td><td>融合后的答案成不成立</td><td class="fire">某一路索引或融合坏了</td><td class="not">单路 Recall</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="slide" data-title="特征">
+  <div class="kicker">盘上的 X，直接 prototype</div>
+  <h2>闸只读 x_*，没有奇怪的东西</h2>
+  <table>
+    <thead><tr><th>面</th><th>X</th><th>列数</th></tr></thead>
+    <tbody>
+      <tr><td>审核 / judge</td><td>长度、标点、hedge/formal、I、换行、大写、refuse/please/thank</td><td>13</td></tr>
+      <tr><td>Graph-RAG 子图</td><td>节点、边、度、连通片、query seed、seed 比例、最大片（窗上再 mean/std）</td><td>7 → 14</td></tr>
+      <tr><td>混合检索</td><td>问句大小、两路 overlap/相关/margin、RRF mass、k<sub>s</sub> k<sub>d</sub></td><td>14</td></tr>
+      <tr><td>一问 × 10 标题</td><td>BM25 / dense / RRF、逆秩、overlap、seed、度、槽位</td><td>9</td></tr>
+    </tbody>
+  </table>
+  <p class="small">不是特征：原文、gold 标记、HH chosen、单路 Recall、幻觉率。</p>
+</section>
+
+<section class="slide" data-title="Graph-RAG">
+  <div class="kicker">普通 serving</div>
+  <h2>图包：batch = 图特征聚合</h2>
+  <p>每条请求一张子图：节点、边、平均度、连通片、query seed、seed 比例、最大片。</p>
+  <p>一个到达窗把这些特征 <b>aggregate</b> 起来，就是这一窗的 X。<br>
+  Y = 支撑节点落在 seed ∪ 一跳邻居。</p>
+  <p>Community 换代：切点后 drop / rewire 边，再做同样的聚合。不要另造奇怪的 X。</p>
+  <p class="small">Hotpot 盘上是题库快照，没有墙上时间。Prototype 用文件顺序只演示表形。</p>
+</section>
+
+<section class="slide" data-title="组别归因">
+  <div class="kicker">CFPerm · 不是时间闸</div>
+  <h2>多组别归因：permute T</h2>
+  <div class="box">
+    <p>T = 队列 / 检索路 / 第几跳。打乱 T，不打乱 X。</p>
+    <p>问哪些 x<sub>j</sub> 带着组间 P(Y | X) 差。不是哪一维造成了时间 hop。</p>
+    <p>定位：subset indices → pairwise MMD + PO-risk。</p>
+    <p class="small"><code>PYTHONPATH=. python3 scripts/prototype_group_attribution.py</code></p>
+  </div>
+</section>
+
+<section class="slide" data-title="多模态归因">
+  <div class="kicker">CFPerm · 单位是块</div>
+  <h2>多模态归因：同一套循环，报告模态</h2>
+  <div class="box">
+    <p>X = [text | vision/dense | graph | fusion]。T 仍是包版本 / 组别。</p>
+    <p>块内把 importance 加起来。命中的是模态，不是像素，不是单列 x_*。</p>
+    <p>Post-hoc：拽 subset indices，pairwise 打 MMD 和 PO-risk，不只是条件均值。</p>
+    <p class="small"><code>PYTHONPATH=. python3 scripts/prototype_multimodal_attribution.py</code></p>
+  </div>
+</section>
+
+<section class="slide" data-title="循环">
+  <div class="kicker">Serving 循环</div>
+  <h2>Quiet 留金标，Fire 换包</h2>
+  <div class="box">
+    <p>burn-in → 每窗打 Δ<sub>t</sub> → 在线 FDR</p>
+    <p><b style="color:var(--quiet)">Quiet</b>：金标保留，误差入池。</p>
+    <p><b style="color:var(--fire)">Fire</b>：当前包不当金标；从最便宜的刷新做起；整池 reset。</p>
+    <p>晋升：影子窗误差回来 <b>且</b> last-two quiet。</p>
+  </div>
+</section>
+
+<section class="slide" data-title="现在就跑">
+  <div class="kicker">现在就能做</div>
+  <h2>一条命令，三张已有的表</h2>
+  <div class="box">
+    <p><code>PYTHONPATH=. python3 scripts/run_serving_gates.py</code></p>
+    <p>连续时间审核已在盘上。同一套闸也可以打 Graph-RAG / 混合检索。</p>
+    <p class="small">Hotpot 仍是题库快照，不是墙上时间。</p>
+  </div>
+</section>
+
+<section class="slide" data-title="读数">
+  <div class="kicker">读数</div>
+  <h2>三句话</h2>
+  <p class="lead">光滑不火。<br>断裂在 onset 火。<br>Refresh 之后 reset，再 quiet。</p>
+</section>
+
+</div>
+<div class="bar">
+  <span>在线 serving 闸</span>
+  <span><kbd>←</kbd> <kbd>→</kbd>　<span id="pos"></span></span>
+</div>
+<script>
+const slides = [...document.querySelectorAll(".slide")];
+let i = 0;
+function show(k) {
+  i = (k + slides.length) % slides.length;
+  slides.forEach((s, j) => s.classList.toggle("on", j === i));
+  document.getElementById("pos").textContent = (i + 1) + " / " + slides.length;
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); show(i + 1); }
+  if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); show(i - 1); }
+  if (e.key === "Home") show(0);
+  if (e.key === "End") show(slides.length - 1);
+});
+show(0);
+</script>
+</body>
+</html>

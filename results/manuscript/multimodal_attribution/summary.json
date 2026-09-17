@@ -1,0 +1,197 @@
+[
+  {
+    "name": "hybrid_dense_hop",
+    "title": "hybrid: dense pack hop",
+    "t_meaning": "T=0 before dense cut, T=1 after",
+    "y_meaning": "fused answer valid",
+    "n": 1200,
+    "n_groups": 2,
+    "group_counts": {
+      "0": 320,
+      "1": 880
+    },
+    "y_by_group": {
+      "0": 0.571875,
+      "1": 0.45
+    },
+    "rejected": 0,
+    "n_hits": 0,
+    "hits": [],
+    "top": [
+      "fusion",
+      "query",
+      "sparse",
+      "dense"
+    ],
+    "feature_top": [
+      "x_rrf_top1_mass",
+      "x_fuse_uniq",
+      "x_n_cand"
+    ],
+    "blocks": {
+      "query": [
+        "x_q_toks",
+        "x_q_chars",
+        "x_qmark",
+        "x_q_ents"
+      ],
+      "sparse": [
+        "x_sparse_margin",
+        "x_ks"
+      ],
+      "dense": [
+        "x_dense_margin",
+        "x_kd"
+      ],
+      "fusion": [
+        "x_n_cand",
+        "x_js_overlap",
+        "x_rank_corr",
+        "x_rrf_top1_mass",
+        "x_fuse_uniq",
+        "x_mean_q_overlap"
+      ]
+    },
+    "loc_sig_pairs": 1,
+    "loc_pairwise": [
+      {
+        "a": "T0",
+        "b": "T1",
+        "n_a": 320,
+        "n_b": 880,
+        "mmd": 0.050486224871727936,
+        "mmd_p": 0.038461538461538464,
+        "po_risk": 0.0002056597780301227,
+        "po_p": 0.9615384615384616,
+        "mean_Y_a": 0.571875,
+        "mean_Y_b": 0.45
+      }
+    ],
+    "loc_means": {
+      "T0": {
+        "n": 320,
+        "mean_Y": 0.571875,
+        "mean_X": 0.11014544062499998
+      },
+      "T1": {
+        "n": 880,
+        "mean_Y": 0.45,
+        "mean_X": 0.10695409545454546
+      }
+    },
+    "loc_bin_means": {
+      "Q0": {
+        "n": 370,
+        "mean_Y": 0.40540540540540543,
+        "mean_X": 0.10282554864864865
+      },
+      "Q1": {
+        "n": 277,
+        "mean_Y": 0.4007220216606498,
+        "mean_X": 0.10442938267148016
+      },
+      "Q2": {
+        "n": 350,
+        "mean_Y": 0.5542857142857143,
+        "mean_X": 0.1058767
+      },
+      "Q3": {
+        "n": 203,
+        "mean_Y": 0.6108374384236454,
+        "mean_X": 0.12481235467980296
+      }
+    }
+  },
+  {
+    "name": "graph_community",
+    "title": "Graph-RAG: local vs community",
+    "t_meaning": "T=0 local pack, T=1 community pack",
+    "y_meaning": "supporting nodes in the pack",
+    "n": 2400,
+    "n_groups": 2,
+    "group_counts": {
+      "0": 1200,
+      "1": 1200
+    },
+    "y_by_group": {
+      "0": 0.5341666666666667,
+      "1": 0.425
+    },
+    "rejected": 1,
+    "n_hits": 1,
+    "hits": [
+      "graph"
+    ],
+    "top": [
+      "graph",
+      "query"
+    ],
+    "feature_top": [
+      "x_n_edges",
+      "x_mean_deg",
+      "x_n_q_seeds"
+    ],
+    "blocks": {
+      "query": [
+        "x_n_q_seeds",
+        "x_seed_frac"
+      ],
+      "graph": [
+        "x_n_nodes",
+        "x_n_edges",
+        "x_mean_deg",
+        "x_n_cc",
+        "x_lcc_frac"
+      ]
+    },
+    "loc_sig_pairs": 1,
+    "loc_pairwise": [
+      {
+        "a": "T0",
+        "b": "T1",
+        "n_a": 1200,
+        "n_b": 1200,
+        "mmd": 0.011691395402517957,
+        "mmd_p": 0.038461538461538464,
+        "po_risk": 0.0028146329884901383,
+        "po_p": 0.038461538461538464,
+        "mean_Y_a": 0.5341666666666667,
+        "mean_Y_b": 0.425
+      }
+    ],
+    "loc_means": {
+      "T0": {
+        "n": 1200,
+        "mean_Y": 0.5341666666666667,
+        "mean_X": 0.43020833333333336
+      },
+      "T1": {
+        "n": 1200,
+        "mean_Y": 0.425,
+        "mean_X": 0.43020833333333336
+      }
+    },
+    "loc_bin_means": {
+      "Q0": {
+        "n": 716,
+        "mean_Y": 0.2346368715083799,
+        "mean_X": 0.04636871508379889
+      },
+      "Q1": {
+        "n": 520,
+        "mean_Y": 0.35192307692307695,
+        "mean_X": 0.19076923076923077
+      },
+      "Q2": {
+        "n": 602,
+        "mean_Y": 0.5880398671096345,
+        "mean_X": 0.4330564784053157
+      },
+      "Q3": {
+        "n": 562,
+        "mean_Y": 0.7935943060498221,
+        "mean_X": 1.1377224199288258
+      }
+    }
+  }
+]

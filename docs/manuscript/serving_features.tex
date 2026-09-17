@@ -1,0 +1,52 @@
+% Feature catalog. Needs \usepackage{booktabs,array,longtable} (or split the tables).
+\subsection{Prototype coordinates}
+\label{sec:serving-features}
+Every live table is \((X,Y,\mathrm{batch})\) with \(X\) stored as \texttt{x\_*} columns.
+Raw prompts, wiki text, gold indicators, and HH \texttt{chosen}/\texttt{rejected} are not features.
+Run the gates with \texttt{python3 scripts/run\_serving\_gates.py}.
+
+\paragraph{Auditor / judge (13, or 14 on multi-step).}
+\texttt{xy\_hh\_*.csv}, BeaverTails, WildGuard, ToxicChat.
+\(Y=\) pass/fail.
+\(X=\texttt{n\_toks},\texttt{n\_chars},\texttt{avg\_word},\texttt{qmark},\texttt{bang},\texttt{hedge},\texttt{formal},\texttt{i\_count},\texttt{newlines},\texttt{upper},\texttt{refuse},\texttt{please},\texttt{thank}\).
+Multi-step adds \texttt{x\_step} (hop index in the episode). One row per assistant turn.
+
+\paragraph{Graph-RAG pack (7, then window aggregate).}
+Query table: \texttt{n\_nodes},\texttt{n\_edges},\texttt{mean\_deg},\texttt{n\_cc},\texttt{n\_q\_seeds},\texttt{seed\_frac},\texttt{lcc\_frac}.
+One serving batch is the mean (and std) of those seven.
+\(Y=\) supporting titles sit in the served pack.
+
+\paragraph{Hybrid retrieval (14).}
+\texttt{q\_toks},\texttt{q\_chars},\texttt{qmark},\texttt{q\_ents},\texttt{n\_cand},\texttt{js\_overlap},\texttt{rank\_corr},\texttt{sparse\_margin},\texttt{dense\_margin},\texttt{rrf\_top1\_mass},\texttt{fuse\_uniq},\texttt{mean\_q\_overlap},\texttt{ks},\texttt{kd}.
+\(Y=\) fused top-\(k\) covers the gold titles.
+
+\paragraph{Hotpot pool snapshot (9).}
+One query \(\times\) 10 titles: \texttt{bm25},\texttt{dense},\texttt{rrf},\texttt{rank\_sp},\texttt{rank\_de},\texttt{q\_overlap},\texttt{title\_seed},\texttt{title\_deg},\texttt{slot}.
+\texttt{batch} is query index, not wall-clock time.
+
+\begin{table}[t]
+\centering
+\caption{Prototype \(X\) by facet. Nothing else.}
+\label{tab:serving-features}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}p{0.22\linewidth}p{0.28\linewidth}p{0.42\linewidth}@{}}
+\toprule
+Facet & \(Y\) & \(X\) \\
+\midrule
+Auditor / judge
+  & pass / fail
+  & length, punctuation, hedge/formal, I, newlines, uppercase, refuse/please/thank \\
+Graph-RAG pack
+  & supporting nodes in the pack
+  & nodes, edges, degree, CCs, query seeds, seed frac, LCC frac
+    (window = mean/std) \\
+Hybrid retrieval
+  & fused answer valid
+  & query size, channel overlap/correlation/margins, RRF mass, \(k_s,k_d\) \\
+Hotpot 10-title pool
+  & this title is supporting
+  & BM25, dense, RRF, ranks, query overlap, seed, degree, slot \\
+\bottomrule
+\end{tabular}
+\end{table}

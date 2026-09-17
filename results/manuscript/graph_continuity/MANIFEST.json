@@ -1,0 +1,43 @@
+{
+  "x": "concat(GraphSAGE-mean, hand graph features)",
+  "sage_dim": 16,
+  "hand_dim": 7,
+  "n_users": 20,
+  "y": "pack-usable rate on the user list",
+  "onlinerfperm": "frozen RF, T=MSE-E_ref, rank p; last-two hop_fires",
+  "note": "Hotpot has no real user_id; query index % N_USERS prototypes the log.",
+  "quiet": {
+    "name": "quiet",
+    "regime": "quiet",
+    "n": 300,
+    "n_users": 20,
+    "x_dim": 23,
+    "sage_dim": 16,
+    "hand_dim": 7,
+    "y_pre": 0.515625,
+    "y_post": 0.5409090909090909,
+    "e_ref": 0.027323437360559526,
+    "mean_T": 0.030024645182820654,
+    "n_rank_p_lt_alpha": 0,
+    "first_p_fire": null,
+    "hop_fire_at_cut": false,
+    "n_hop_fires": 0
+  },
+  "community_hop": {
+    "name": "community",
+    "regime": "hop",
+    "n": 300,
+    "n_users": 20,
+    "x_dim": 23,
+    "sage_dim": 16,
+    "hand_dim": 7,
+    "y_pre": 0.515625,
+    "y_post": 0.39204545454545453,
+    "e_ref": 0.027323437360559526,
+    "mean_T": 0.04946018785766087,
+    "n_rank_p_lt_alpha": 0,
+    "first_p_fire": null,
+    "hop_fire_at_cut": false,
+    "n_hop_fires": 2
+  }
+}
