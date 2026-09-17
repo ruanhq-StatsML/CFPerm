@@ -43,6 +43,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.posthoc_localization import localize  # noqa: E402
+
 AUDIT = ROOT / "results" / "manuscript" / "llm_audit"
 HYBRID = ROOT / "results" / "manuscript" / "hybrid_retrieval"
 OUT = ROOT / "results" / "manuscript" / "group_attribution"
@@ -222,6 +224,8 @@ STREAMS = [
 
 
 def compact(rec: dict, spec: dict) -> dict:
+    loc = rec.get("localization") or {}
+    groups = loc.get("groups") or {}
     return {
         "name": spec["name"],
         "title": spec["title"],
@@ -237,6 +241,8 @@ def compact(rec: dict, spec: dict) -> dict:
         "top": rec["top"],
         "hits": [n for n, h in zip(rec["names"], rec["hits"]) if h],
         "path": str(spec["path"].relative_to(ROOT)) if spec.get("path") else None,
+        "loc_sig_pairs": groups.get("n_sig_pairs"),
+        "loc_pairwise": groups.get("pairwise"),
     }
 
 
@@ -290,6 +296,33 @@ def render_report(rows: list[dict], extras: list[dict]) -> str:
         )
     lines += [
         "",
+        "Post-hoc localization: pull subset indices (T groups, quartiles of the top \(X_j\)),",
+        "then pairwise **MMD** and **PO-risk**. Conditional means stay in the JSON; they are not the test.",
+        "",
+        "## Pairwise subset MMD / PO-risk",
+        "",
+        "| Stream | pair | n | MMD | MMD p | PO-risk | PO p | mean Y |",
+        "|---|---|---|---:|---:|---:|---:|---|",
+    ]
+    for r in rows:
+        for p in r.get("loc_pairwise") or []:
+            lines.append(
+                "| {title} | {a} vs {b} | {na}/{nb} | {mmd:.3g} | {mp:.3g} | {po:.3g} | {pp:.3g} | {ya:.3f}/{yb:.3f} |".format(
+                    title=r["title"],
+                    a=p["a"],
+                    b=p["b"],
+                    na=p["n_a"],
+                    nb=p["n_b"],
+                    mmd=p["mmd"],
+                    mp=p["mmd_p"],
+                    po=p.get("po_risk", float("nan")),
+                    pp=p.get("po_p", float("nan")),
+                    ya=p.get("mean_Y_a", float("nan")),
+                    yb=p.get("mean_Y_b", float("nan")),
+                )
+            )
+    lines += [
+        "",
         "## Synthetic check",
         "",
         "| DGP | reject | top |",
@@ -319,6 +352,9 @@ def run_stream(spec: dict) -> dict:
     rec = cfperm_groups(X, Y, T, names=cols, seed=SEED)
     rec["name"] = spec["name"]
     rec["title"] = spec["title"]
+    top_name = rec["top"][0] if rec["top"] else None
+    feat = X[:, cols.index(top_name)] if top_name in cols else None
+    rec["localization"] = localize(X, Y, group_labels=T, feature=feat, n_perm=25, seed=SEED)
     return rec
 
 
@@ -359,6 +395,7 @@ def main() -> int:
     ):
         X, Y, T, names = fn(n=500, seed=seed)
         rec = cfperm_groups(X, Y, T, names=names, n_perm=25, seed=seed)
+        rec["localization"] = localize(X, Y, group_labels=T, n_perm=20, seed=seed)
         extras.append({"title": title, **compact(rec, {"name": title, "title": title, "t_meaning": "", "y_meaning": "", "path": None})})
         extras[-1]["top"] = rec["top"]
         extras[-1]["rejected"] = rec["rejected"]

@@ -38,6 +38,8 @@ PYTHONPATH=. python3 scripts/prototype_group_attribution.py
 
 Planted：三模态里只有 vision 与 \(T\) 交互，top 应是 `vision`。Null：\(Y\) 靠 text/graph、不靠 \(T\)，块应 quiet。
 
+Post-hoc：拽 subset indices（包版本 T，以及命中块上 top 坐标的分位），再 pairwise call `MMD()` 和 `po_risk()`。条件均值留着看，不是定位检验。
+
 ## 两件归因怎么分开
 
 | 对象 | 单位 | 动哪一列 |

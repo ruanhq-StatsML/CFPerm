@@ -174,6 +174,7 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
   <div class="box">
     <p>T = 队列 / 检索路 / 第几跳。打乱 T，不打乱 X。</p>
     <p>问哪些 x<sub>j</sub> 带着组间 P(Y | X) 差。不是哪一维造成了时间 hop。</p>
+    <p>定位：subset indices → pairwise MMD + PO-risk。</p>
     <p class="small"><code>PYTHONPATH=. python3 scripts/prototype_group_attribution.py</code></p>
   </div>
 </section>
@@ -184,6 +185,7 @@ kbd { border: 1px solid var(--line); border-bottom-width: 2px; padding: 0 6px; b
   <div class="box">
     <p>X = [text | vision/dense | graph | fusion]。T 仍是包版本 / 组别。</p>
     <p>块内把 importance 加起来。命中的是模态，不是像素，不是单列 x_*。</p>
+    <p>Post-hoc：拽 subset indices，pairwise 打 MMD 和 PO-risk，不只是条件均值。</p>
     <p class="small"><code>PYTHONPATH=. python3 scripts/prototype_multimodal_attribution.py</code></p>
   </div>
 </section>

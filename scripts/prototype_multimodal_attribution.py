@@ -50,6 +50,7 @@ from scripts.prototype_group_attribution import (  # noqa: E402
     interaction_vimp,
     zscore,
 )
+from scripts.posthoc_localization import localize  # noqa: E402
 
 HYBRID = ROOT / "results" / "manuscript" / "hybrid_retrieval"
 GRAPH = ROOT / "results" / "manuscript" / "graph_rag_batches"
@@ -275,6 +276,8 @@ def jsonable(obj):
 
 def compact(rec: dict, spec: dict) -> dict:
     blk = rec["block"]
+    loc = rec.get("localization") or {}
+    groups = loc.get("groups") or {}
     return {
         "name": spec["name"],
         "title": spec["title"],
@@ -288,6 +291,8 @@ def compact(rec: dict, spec: dict) -> dict:
         "top": blk["top"],
         "feature_top": rec["feature"]["top"][:3],
         "blocks": rec["blocks"],
+        "loc_sig_pairs": groups.get("n_sig_pairs"),
+        "loc_pairwise": groups.get("pairwise"),
     }
 
 
@@ -326,16 +331,43 @@ def render_report(rows: list[dict], extras: list[dict]) -> str:
         "PYTHONPATH=. python3 scripts/prototype_multimodal_attribution.py",
         "```",
         "",
-        "| Stream | T | reject | block hits | top blocks |",
-        "|---|---|---|---|---|",
+        "| Stream | T | reject | block hits | top blocks | loc sig pairs |",
+        "|---|---|---|---|---|---:|",
     ]
     for r in rows:
         hits = ", ".join(r["hits"]) if r["hits"] else "—"
         top = ", ".join(r["top"][:3])
         lines.append(
             f"| {r['title']} | {r['t_meaning']} | "
-            f"{'yes' if r['rejected'] else 'no'} | {hits} | {top} |"
+            f"{'yes' if r['rejected'] else 'no'} | {hits} | {top} | {r.get('loc_sig_pairs', '—')} |"
         )
+    lines += [
+        "",
+        "Post-hoc: subset indices from T (and quartiles of the top coordinate), then pairwise **MMD** and **PO-risk**.",
+        "Conditional means stay in the JSON; they are not the localization test.",
+        "",
+        "## Pairwise subset MMD / PO-risk",
+        "",
+        "| Stream | pair | n | MMD | MMD p | PO-risk | PO p | mean Y |",
+        "|---|---|---|---:|---:|---:|---:|---|",
+    ]
+    for r in rows:
+        for p in r.get("loc_pairwise") or []:
+            lines.append(
+                "| {title} | {a} vs {b} | {na}/{nb} | {mmd:.3g} | {mp:.3g} | {po:.3g} | {pp:.3g} | {ya:.3f}/{yb:.3f} |".format(
+                    title=r["title"],
+                    a=p["a"],
+                    b=p["b"],
+                    na=p["n_a"],
+                    nb=p["n_b"],
+                    mmd=p["mmd"],
+                    mp=p["mmd_p"],
+                    po=p.get("po_risk", float("nan")),
+                    pp=p.get("po_p", float("nan")),
+                    ya=p.get("mean_Y_a", float("nan")),
+                    yb=p.get("mean_Y_b", float("nan")),
+                )
+            )
     lines += [
         "",
         "## Synthetic check",
@@ -367,6 +399,9 @@ def run_stream(spec: dict) -> dict:
     rec = cfperm_blocks(X, Y, T, blocks, names=cols, seed=SEED)
     rec["name"] = spec["name"]
     rec["title"] = spec["title"]
+    top_name = rec["feature"]["top"][0] if rec["feature"]["top"] else None
+    feat = X[:, cols.index(top_name)] if top_name in cols else None
+    rec["localization"] = localize(X, Y, group_labels=T, feature=feat, n_perm=25, seed=SEED)
     return rec
 
 
@@ -396,6 +431,7 @@ def main() -> int:
     ):
         X, Y, T, names, blocks = fn(n=700, seed=seed)
         rec = cfperm_blocks(X, Y, T, blocks, names=names, n_perm=25, seed=seed)
+        rec["localization"] = localize(X, Y, group_labels=T, n_perm=20, seed=seed)
         extras.append(
             {
                 "title": title,
