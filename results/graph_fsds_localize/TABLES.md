@@ -1,6 +1,6 @@
 # Feature library → FSDS unify → subset scan (order grain)
 
-Default cut = **own-ref subset scan** (level set `{φ≥τ}` / coverage prefix). `merchant_id` / `user_id` lift Ŝ onto orders. No graph is built. Scan cost is a sort, O(N log N), N = n_merchants. Shares are localization proxies, not a unique decomposition. Y is never a feature. Board: `library.html`.
+Default cut = **own-ref subset scan** (level set `{φ≥τ}` / coverage prefix). `merchant_id` / `user_id` lift Ŝ onto orders. No graph is built. Y is never a feature. Board: `library.html`. Brief for stakeholders: `report.html` / `REPORT.md`.
 
 n_ref=480, n_new=160, merchants=16, batches=3, onset=1. Planted region is **south** (second half of merchant ids).
 

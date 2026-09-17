@@ -330,7 +330,9 @@ HH（划分）选的是图上的 merchant 扫描 / region，**不是 Y**。FSDS 
 | user | user_tenure | 进 logit，不种 shift | — | — |
 | user | user_hist_freq | 噪声 | — | — |
 
-读法：种下的列应变红、进 FSDS；噪声列保持淡。商户扫描条形图红 = 南区，● = 进 \(\{φ\geτ\}\)。**没有边、没有社区。**
+读法：种下的列应变红、进 FSDS；噪声列保持淡。商户扫描条形图红 = 南区，● = 进 \(\{φ\geτ\}\)。**没有边、没有社区。** 图 1/2 是各列 shift 程度；图 3 是哪些商户，不是 feature 程度。
+
+给老板的简报：`results/graph_fsds_localize/report.html`、`REPORT.md`、`JUSTIFY.md`。
 
 ---
 

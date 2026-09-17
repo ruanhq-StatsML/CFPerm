@@ -18,12 +18,10 @@ code { background: #eee; padding: 1px 4px; }
 </style></head><body>
 <h1>特征库 · 订单流 localization</h1>
 <p class="note">
-Subset scan 是正经的定位方法（Kulldorff / Neill LTSS）：每个实体打一口 own-ref 钟，
-<b>按 φ 排序取前缀</b>。扫描本身是一次排序，<code>O(N log N)</code>，
-N = 商户数（这里 16），不是边数，也不是 2<sup>N</sup>。
-贵的是打钟（每袋一次 MMD），那是任何 subset localization 都要付的。
-<b>这张看板是特征目录，不是网络图。</b> merchant_id / user_id 是外键，用来 lift，不建 graph。
-Y 不当特征。* / 橙色行 = 种下的列；蓝框 / 粗体 = FSDS 选中。
+给老板的简报：<a href="report.html">report.html</a> · <a href="REPORT.md">REPORT.md</a>。
+图 1/2 = 各列 shift 程度；图 3 = 哪些商户在走（<b>不是</b> feature 程度）。
+目录九列，Y 不当特征。<code>merchant_id</code> 是外键，不是图方法。
+橙色行 = 种下的列；粗体 = FSDS 选中。
 </p>
 <figure><img src="library_heatmap.png" alt="library heatmap"><figcaption>最后一批：目录列 × 三支读数（列内 max-norm）</figcaption></figure>
 <figure><img src="library_time.png" alt="library over time"><figcaption>FSDS score 随 batch；粗线 = 种下的列</figcaption></figure>
