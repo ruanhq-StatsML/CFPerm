@@ -20,8 +20,11 @@
 
 n_new 不宜过小：不是“小了才能看到何时 update”，而是点估计会抖，纯统计更不能当 update 开关。何时 update 是业务（政策切、队列换、域换）。PO-risk 只在业务已经要动的时候，读能不能全开、还是从哪层冻。
 
+换表 airlines（航班延误，时间序）。n_ref 仍是 10000，n_new 收到 20。
+不做 online-bootstrap：要对每个 20 条的 batch 重复推 MLP，顶不住。只读 μ/e 的 PO-risk 点估计。
+
 ```bash
-PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --dataset both --skip-freeze
+PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --dataset airlines --skip-freeze --sizes 20,50,100,500 --stream-cap 4000
 ```
 
 看板：`results/layer_freeze_online_cv/index.html`。

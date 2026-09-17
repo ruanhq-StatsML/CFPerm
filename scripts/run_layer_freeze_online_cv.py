@@ -34,6 +34,7 @@ OUT = ROOT / "results" / "layer_freeze_online_cv"
 DEFAULT_STREAM = {
     "electricity": MIN_STREAM_N,
     "covertype": REF_N,
+    "airlines": MIN_STREAM_N,
 }
 
 
@@ -44,16 +45,43 @@ def _standardize_from_ref(X, n_ref: int):
     return (X - mu) / sd
 
 
+def _frame_to_xy(df, y_raw, title):
+    import pandas as pd
+
+    Y = np.asarray(y_raw).ravel()
+    if Y.dtype == object or str(Y.dtype).startswith("str") or str(Y.dtype) == "category":
+        ys = pd.Series(Y.astype(str))
+        # delay / UP / 1 as the positive class when present
+        pos = {"1", "UP", "True", "true", "Y", "yes"}
+        if set(ys.unique()) <= {"0", "1"} or any(v in pos for v in ys.unique()):
+            Y = ys.isin(sorted(pos)).astype(int).to_numpy()
+        else:
+            top = ys.value_counts().index[0]
+            Y = (ys == top).astype(int).to_numpy()
+    else:
+        u = np.unique(Y)
+        Y = (Y == (2 if 2 in u else u[np.argmax([np.sum(Y == v) for v in u])])).astype(int)
+    cols = []
+    blocks = []
+    for c in df.columns:
+        s = df[c]
+        if str(s.dtype) in {"object", "category"} or s.dtype == object:
+            codes, _ = pd.factorize(s.astype(str), sort=False)
+            blocks.append(codes.astype(float))
+        else:
+            blocks.append(np.asarray(s, dtype=float))
+        cols.append(str(c))
+    X = np.column_stack(blocks)
+    return X, Y, title, cols
+
+
 def load_electricity():
     from sklearn.datasets import fetch_openml
 
     bunch = fetch_openml("electricity", version=1, as_frame=True, parser="auto")
     df = bunch.data.copy()
-    y_raw = bunch.target.astype(str).to_numpy()
-    Y = (y_raw == "UP").astype(int)
     drop = [c for c in df.columns if str(c).lower() == "date"]
-    X = df.drop(columns=drop).to_numpy(dtype=float)
-    return X, Y, "electricity (NSW, ordered in time)", list(df.drop(columns=drop).columns)
+    return _frame_to_xy(df.drop(columns=drop), bunch.target, "electricity (NSW, ordered in time)")
 
 
 def load_covertype():
@@ -65,9 +93,17 @@ def load_covertype():
     return X, Y, "covertype (geographic order, class 2 vs rest)", [f"x{j}" for j in range(X.shape[1])]
 
 
+def load_airlines():
+    from sklearn.datasets import fetch_openml
+
+    bunch = fetch_openml("airlines", version=1, as_frame=True, parser="auto")
+    return _frame_to_xy(bunch.data.copy(), bunch.target, "airlines (flight delay, time-ordered)")
+
+
 LOADERS = {
     "electricity": load_electricity,
     "covertype": load_covertype,
+    "airlines": load_airlines,
 }
 
 
@@ -293,11 +329,12 @@ def plot_size_compare(by_size: dict, title: str, out_dir: Path) -> str:
         rec = by_size[n_new]
         rows = rec["rows"]
         ts = [r["t"] for r in rows]
-        ax.plot(ts, [r["po_stream"] for r in rows], color="#1f4e79", lw=1.5)
+        ax.plot(ts, [r["po_stream"] for r in rows], color="#1f4e79", lw=0.9 if len(ts) > 80 else 1.5)
         ax.axhline(rec["po_base"], color="#888", ls="--", lw=1.2)
-        for r in rows:
-            if r["large_deviation"]:
-                ax.scatter([r["t"]], [r["po_stream"]], s=28, color="#b33", zorder=4)
+        large_t = [r["t"] for r in rows if r["large_deviation"]]
+        large_y = [r["po_stream"] for r in rows if r["large_deviation"]]
+        if large_t:
+            ax.scatter(large_t, large_y, s=12 if len(ts) > 80 else 28, color="#b33", zorder=4)
         ax.set_ylabel("PO-risk")
         ax.set_title(f"n_new={n_new}  frac large={rec['frac_large']:.2f}", fontsize=10)
     axes[-1].set_xlabel("incoming batch index (T=1)")

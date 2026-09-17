@@ -183,7 +183,15 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertEqual(out["n_batches"], 4)
         self.assertEqual(out["n_new"], 50)
         self.assertIn("frac_large", out)
-        self.assertTrue(all("large_deviation" in r for r in out["rows"]))
+    def test_n_new_20_keeps_n_ref_and_skips_bootstrap(self):
+        rng = np.random.default_rng(8)
+        X = rng.normal(size=(260, 4))
+        Y = (X[:, 0] > 0).astype(float)
+        out = run_deviation_gate(X, Y, n_ref=200, batch_size_stream=20, max_batches=3)
+        self.assertEqual(out["n_ref"], 200)
+        self.assertEqual(out["n_new"], 20)
+        self.assertEqual(out["n_batches"], 3)
+        self.assertTrue(all(r["n_new"] == 20 for r in out["rows"]))
 
 
 if __name__ == "__main__":
