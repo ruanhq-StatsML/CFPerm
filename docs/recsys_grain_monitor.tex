@@ -1,141 +1,115 @@
 % Recsys grain monitor. Compile: pdflatex docs/recsys_grain_monitor.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amssymb,booktabs}
+\usepackage{booktabs,float}
 \usepackage[hidelinks]{hyperref}
 \usepackage{microtype}
-\title{Recommendation stream by grain:\\
-OnlineRFPerm, RFPerm/CFPerm, and FSDS}
+\title{Recommendation stream by grain}
 \author{}
 \date{}
 \begin{document}
 \maketitle
 \thispagestyle{empty}
 
-\paragraph{$Y$ (outcome).}
-One row is one order.
-$Y\in\{0,1\}$ is \textbf{conversion} on that order (purchase / not).
-$Y$ is the response only.
-It is never a column of $X$, never a ranking key, never a subset key.
+\paragraph{$Y$ and $X$.}
+One row is one order. $Y$ is conversion on that order --- purchase or not.
+It is the outcome only: never a feature, never a ranking key, never a subset key.
+$X$ is the serving table, sliced the way the log is written.
 
-\paragraph{$X$ (covariates).}
-$X$ is the serving table of that order, sliced the way the log is written.
-$Y$ is not in any slice.
 \begin{center}
 \begin{tabular}{lll}
 \toprule
-grain & $X$ columns & what the row is \\
+table & what sits in $X$ & what the row is \\
 \midrule
-order & amount, hour, n\_items, channel & this order \\
-merchant & merchant\_cat, merchant\_gmv, n\_skus & the merchant on this order \\
-user & user\_tenure, user\_hist\_freq & the user on this order \\
-all & the nine columns concatenated & anti-pattern; shown as a check \\
+order & amount, hour, items, channel & this ticket \\
+merchant & category, GMV, SKU count & the store on this ticket \\
+user & tenure, past frequency & the buyer on this ticket \\
+dumped all & every column concatenated & do not put this in production \\
 \bottomrule
 \end{tabular}
 \end{center}
-Region (south / north) is a merchant attribute, not a feature and not $Y$.
-The batch index $T$ is a time label ($D_{\mathrm{ref}}$ vs the new batch), not a treatment.
 
-\paragraph{Setup.}
-$n_{\mathrm{ref}}{=}400$, $n_{\mathrm{new}}{=}120$, six batches, labeled onset $t{=}2$.
-After onset, only \textbf{south} merchants are shifted.
-Covariate / both plant $\mathrm{amount}\succ\mathrm{merchant\_gmv}\succ\mathrm{channel}$ in $P(X)$.
-Concept plants amount in $P(Y\mid X)$ only.
-User columns never walk.
+South / north is a merchant attribute, not $Y$.
+The batch index only marks a quiet reference window versus new traffic --- it is not a treatment.
 
-\vspace{0.6em}
-\noindent
-Table~\ref{tab:when}: OnlineRFPerm (Algorithm~1) --- first rejection, delay, FAR.\\
-Table~\ref{tab:which}: FSDS / RFPerm $\Delta$MSE / CFPerm $\varphi$-VIMP --- Kendall-$\tau$ vs planted.\\
-Table~\ref{tab:where}: south vs north own-ref. \textbf{MMD, CMean, and PO-risk together.}
+\paragraph{How the marketplace actually logs.}
+A recsys serving log is three tables that share a foreign key, not one embedding soup.
+The order table is this ticket: amount, hour, items, channel.
+The merchant table is the store on that ticket.
+The user table is the buyer.
+Those three clocks are not the same clock.
+Ticket size and channel mix move when south stores start selling a different basket.
+Merchant GMV moves when a cluster of stores walks.
+Tenure and past frequency move only if the buyer panel itself walks.
+Users shop across south and north, so a south-store mix shift does not show up as a user-feature incident.
+Dump every column into one table and a quiet user grain is drowned by a loud order grain: the frozen predictor looks broken before anything real has happened.
+The working rule is: watch each table on its own, then join back with merchant id or user id.
 
-\begin{table}[ht]
+\paragraph{Two incidents, three tables.}
+Fit a conversion predictor once on the quiet window.
+Each new batch is scored against that frozen error floor.
+A ring means this table is no longer paying rent the way it did on reference.
+
+We look at two business incidents on the same south accounts.
+The first is a \emph{customer-mix} walk: south ticket size and channel leave the reference panel, and conversion follows because the people in the basket changed --- an acquisition / category story.
+The second is a \emph{conversion} walk: south mix stays put, but purchase given the same basket moves --- ranking, creative, or the conversion surface, not growth.
+Table~\ref{tab:when} is the watch on each serving table, written as ops time.
+
+\begin{table}[H]
 \centering
-\caption{WHEN. Frozen RF on $D_{\mathrm{ref}}$. $T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}$.
-Delay $=$ first rejection $-$ onset. FAR $=$ mark before onset.}
+\caption{Frozen watch on each serving table. ``Too early'' is a false alarm. ``Leak'' means mix did not move --- conversion came in from the order table; do not page growth.}
 \label{tab:when}
-\scriptsize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{llcccccc}
+\begin{tabular}{lll}
 \toprule
-kind & grain & ADDIS & rank-$p$ & SAFFRON & hop & last $T$ & last MMD \\
+serving table & south customer mix & south conversion \\
 \midrule
-covariate & order & $2$ ($d{=}0$) & $2$ ($d{=}0$) & $2$ ($d{=}0$) & miss & $0.067$ & $0.0952$ \\
-covariate & merchant & $5$ ($d{=}3$) & $2$ ($d{=}0$) & $5$ ($d{=}3$) & miss & $0.066$ & $0.0645$ \\
-covariate & user & $2$ ($d{=}0$) & FAR@$0$ & $2$ ($d{=}0$) & miss & $0.0569$ & $0.000627$ \\
-covariate & all & FAR@$0$ & FAR@$0$ & FAR@$0$ & miss & $0.0531$ & $0.0773$ \\
-concept & order & $2$ ($d{=}0$) & $2$ ($d{=}0$) & $2$ ($d{=}0$) & miss & $0.113$ & $-0.000532$ \\
-concept & merchant & miss & $2$ ($d{=}0$) & miss & miss & $0.0188$ & $-0.00488$ \\
-concept & user & $2$ ($d{=}0$) & FAR@$0$ & $2$ ($d{=}0$) & miss & $0.00947$ & $0.000627$ \\
-concept & all & FAR@$0$ & FAR@$0$ & FAR@$0$ & miss & $0.11$ & $-0.00121$ \\
-both & order & $2$ ($d{=}0$) & $2$ ($d{=}0$) & $2$ ($d{=}0$) & miss & $0.157$ & $0.0952$ \\
-both & merchant & miss & $2$ ($d{=}0$) & miss & miss & $-0.0187$ & $0.0645$ \\
-both & user & $2$ ($d{=}0$) & FAR@$0$ & $2$ ($d{=}0$) & miss & $-0.000541$ & $0.000627$ \\
-both & all & FAR@$0$ & FAR@$0$ & FAR@$0$ & miss & $0.17$ & $0.0773$ \\
+order & rang with south & rang, mix still \\
+user & leak & leak \\
+dumped all & too early & too early \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{table}[ht]
-\centering
-\caption{WHICH columns. Ranking recovery vs planted magnitude.
-User grain has no planted $X$ columns --- the correct negative control.}
-\label{tab:which}
-\scriptsize
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{llllccc}
-\toprule
-kind & grain & planted in $X$ & FSDS recovered & $\tau_{\mathrm{FSDS}}$ & $\tau_{\mathrm{RFPerm}}$ & $\tau_{\mathrm{CFPerm}}$ \\
-\midrule
-covariate & order & amount, channel & amount, channel & $0.913$ & $0.548$ & $-0.183$ \\
-covariate & merchant & merchant\_gmv & merchant\_gmv & $0.816$ & $-0.816$ & $-0.816$ \\
-covariate & user & --- & --- & --- & --- & --- \\
-covariate & all & amount, channel, merchant\_gmv & amount, channel, merchant\_gmv & $0.691$ & $0.182$ & $-0.182$ \\
-concept & order & amount & amount & $0.236$ & $0.236$ & $0.707$ \\
-concept & merchant & --- & --- & --- & --- & --- \\
-concept & user & --- & --- & --- & --- & --- \\
-concept & all & amount & amount & $0.354$ & $0.354$ & $0.471$ \\
-both & order & amount, channel & amount, channel & $0.913$ & $-0.183$ & $0.913$ \\
-both & merchant & merchant\_gmv & merchant\_gmv & $0.816$ & $0$ & $-0.816$ \\
-both & user & --- & --- & --- & --- & --- \\
-both & all & amount, channel, merchant\_gmv & amount, channel, merchant\_gmv & $0.691$ & $0.0364$ & $0.255$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+The order table is the one that actually moved.
+It rings when south merchants start to walk.
+The user table never moved on mix --- tenure and frequency were never the walk --- but the watch can still ring because conversion leaked in from the order table.
+That ring is not a growth-team incident.
+The dumped table rings before the walk: too many columns were fit on the quiet window, so the frozen model looks better than it is, and a quiet table is mixed with a loud one.
+Leave it out of production.
 
-\begin{table}[ht]
+\paragraph{Where to look, who to page.}
+After a ring, do not retrain the whole stack.
+Name the fields on the table that moved, then name the accounts.
+On the mix walk the order table points at amount, channel; the merchant table points at GMV; the user table recovers nothing --- those fields do not live on that table.
+On the conversion walk the order table still names amount (it sits in the conversion surface) while the mix of $X$ itself has not walked.
+Table~\ref{tab:where} splits the same order table by south versus north.
+
+\begin{table}[H]
 \centering
-\caption{WHICH accounts. Own-ref clock. Three readouts on the same slice:
-MMD ($P(X)$), CMean ($\Vert\Delta\mathbb{E}[X]\Vert$ and $\Delta\mathbb{E}[Y]$), PO-risk ($P(Y\mid X)$).
-Subset key is region, not $Y$.}
+\caption{South versus north on the order table. Mix is the basket (ticket size, channel). Conversion is purchase on that ticket. North is the control.}
 \label{tab:where}
-\scriptsize
-\setlength{\tabcolsep}{2.8pt}
-\begin{tabular}{llcccc cccc}
+\begin{tabular}{lcccc}
 \toprule
-& & \multicolumn{4}{c}{south own-ref} & \multicolumn{4}{c}{north own-ref} \\
-\cmidrule(lr){3-6}\cmidrule(lr){7-10}
-kind & grain & MMD & $\Vert\Delta X\Vert$ & PO & $\Delta\mathbb{E}[Y]$ & MMD & $\Vert\Delta X\Vert$ & PO & $\Delta\mathbb{E}[Y]$ \\
+incident & south mix & south conversion & north mix & north conversion \\
 \midrule
-covariate & order & $0.35$ & $2.55$ & $7.59e-05$ & $0.349$ & $0.00109$ & $0.302$ & $0.000898$ & $-0.0489$ \\
-covariate & merchant & $0.291$ & $1.7$ & $0.000475$ & $0.349$ & $-0.00538$ & $0.196$ & $0.000359$ & $-0.0489$ \\
-covariate & user & $-0.00133$ & $0.0659$ & $0.00329$ & $0.349$ & $-0.000738$ & $0.189$ & $0.000486$ & $-0.0489$ \\
-covariate & all & $0.296$ & $3.07$ & $0.000224$ & $0.349$ & $0.000566$ & $0.407$ & $0.00116$ & $-0.0489$ \\
-concept & order & $-0.00137$ & $0.275$ & $0.00307$ & $-0.0412$ & $0.00109$ & $0.302$ & $0.000898$ & $-0.0489$ \\
-concept & merchant & $-0.00969$ & $0.059$ & $0.000936$ & $-0.0412$ & $-0.00538$ & $0.196$ & $0.000359$ & $-0.0489$ \\
-concept & user & $-0.00133$ & $0.0659$ & $0.000132$ & $-0.0412$ & $-0.000738$ & $0.189$ & $0.000486$ & $-0.0489$ \\
-concept & all & $-0.00413$ & $0.289$ & $0.00376$ & $-0.0412$ & $0.000566$ & $0.407$ & $0.00116$ & $-0.0489$ \\
-both & order & $0.35$ & $2.55$ & $0.0015$ & $-0.262$ & $0.00109$ & $0.302$ & $0.000898$ & $-0.0489$ \\
-both & merchant & $0.291$ & $1.7$ & $0.000157$ & $-0.262$ & $-0.00538$ & $0.196$ & $0.000359$ & $-0.0489$ \\
-both & user & $-0.00133$ & $0.0659$ & $0.00183$ & $-0.262$ & $-0.000738$ & $0.189$ & $0.000486$ & $-0.0489$ \\
-both & all & $0.296$ & $3.07$ & $0.000552$ & $-0.262$ & $0.000566$ & $0.407$ & $0.00116$ & $-0.0489$ \\
+customer mix & moved & moved & still & still \\
+conversion & still & moved & still & still \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{What this means on the serving log.}
-Read the log the way it is written. Conversion is the outcome; the serving table is sliced into order, merchant, and user --- do not dump every id embedding into one table. OnlineRFPerm on the order slice marks the batch where south merchants started to walk: predictive error left the reference pool on time. Concatenating every column false-alarms before anything happened. The user slice stays quiet because those columns never moved; a blip there is just conversion leaking through from another slice.
+South is where the walk lives; north stays near reference on both incidents.
+On a mix walk, south ticket size and channel move and conversion follows --- page category ops on those south stores, check the basket, do not open the conversion model first.
+On a conversion walk, south mix is still and conversion moves --- page ranking / conversion on south, do not tell category that ``the panel changed.''
+Users mix across merchants, so the user table cannot tell south from north.
+Do not page the growth team for a user-feature incident that is actually a south-store mix shift.
 
-After a mark, FSDS names the columns that actually sit in that slice (amount and channel on orders, GMV on merchants; none of those on users). South versus north then names the accounts. When the customer mix walks, south orders move in the covariates and the conversion rate follows; north stays near the reference. When only the conversion mechanism walks, south covariates stay put and PO-risk plus the conversion mean move instead. Refresh the model, then reset the error pool. This is localization, not a unique split of blame.
+\paragraph{What to do next.}
+Do not concatenate the serving log. Watch the order table.
+When it rings, split south versus north and read mix next to conversion on the same clock.
+If south ticket size and channel walked and conversion followed, category ops checks those stores first --- ranking does not open a model ticket yet.
+If the same south stores, same basket, conversion moved, ranking checks the south conversion surface --- growth is not paged, because the user table never moved.
+Refresh, then reset the error pool so Monday's walk is not Wednesday's alarm.
+Where to look first: not a unique split of blame across columns.
 
 \end{document}

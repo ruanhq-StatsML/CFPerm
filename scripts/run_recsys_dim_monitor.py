@@ -527,170 +527,237 @@ covariate / both 种 amount ≻ merchant_gmv ≻ channel；concept 只种 amount
     dest.write_text(html, encoding="utf-8")
 
 
-def _tex_status(t_hat, delay, status) -> str:
-    if status == "miss" or t_hat is None:
+def _biz_when(d: dict) -> str:
+    st = d.get("addis_status")
+    if st == "FAR":
+        return "false alarm"
+    if st == "miss":
         return "miss"
-    if status == "FAR":
-        return f"FAR@${int(t_hat)}$"
-    d = 0 if delay is None else int(delay)
-    return f"${int(t_hat)}$ ($d{{=}}{d}$)"
+    if st == "hit" and int(d.get("addis_delay") or 0) == 0:
+        return "on time"
+    if st == "hit":
+        return "late"
+    return "---"
 
 
-def _tex_num(x, n=3) -> str:
-    s = _fmt(x, n)
-    if s == "":
+def _biz_mix_mmd(val) -> str:
+    try:
+        v = abs(float(val))
+    except (TypeError, ValueError):
         return "---"
-    return f"${s}$"
+    return "moved" if v >= 0.02 else "still"
+
+
+def _biz_mix_loc(d: dict, side: str) -> str:
+    mmd = d.get(f"loc_{side}_mmd")
+    cx = d.get(f"loc_{side}_cmean_x")
+    try:
+        loud = abs(float(mmd or 0)) >= 0.05 or abs(float(cx or 0)) >= 1.0
+    except (TypeError, ValueError):
+        return "---"
+    return "moved" if loud else "still"
+
+
+def _biz_conv_loc(d: dict, side: str) -> str:
+    po = d.get(f"loc_{side}_po")
+    cy = d.get(f"loc_{side}_cmean_y")
+    try:
+        loud = abs(float(po or 0)) >= 0.001 or abs(float(cy or 0)) >= 0.12
+    except (TypeError, ValueError):
+        return "---"
+    return "moved" if loud else "still"
+
+
+_FIELD_PRETTY = {
+    "merchant_gmv": "GMV",
+    "amount": "amount",
+    "channel": "channel",
+}
+
+
+def _fields(d: dict) -> str:
+    names = []
+    for n in d.get("fsds_recovered") or []:
+        names.append(_FIELD_PRETTY.get(n, n.replace("_", r"\_")))
+    return ", ".join(names) or "nothing"
+
+
+def _watch_cell(d: dict, grain: str) -> str:
+    mark = _biz_when(d)
+    mixs = _biz_mix_mmd(d.get("last_mmd"))
+    if mark == "false alarm":
+        return "too early"
+    if mixs == "moved":
+        return "rang with south"
+    if grain == "user":
+        return "leak"
+    return "rang, mix still"
 
 
 def write_tex(slim: dict, dest: Path) -> None:
-    """Two-page note: Y, X, three tables. Localization prints MMD / CMean / PO together."""
+    """Ops note. Two small tables, no p-values. Fine numbers stay in TABLES.md."""
 
-    def when_row(kind, dim):
-        d = slim[kind]["dims"][dim]
-        return (
-            f"{kind.replace('_south', '')} & {dim} & "
-            + _tex_status(d["addis_t"], d.get("addis_delay"), d.get("addis_status"))
+    mix = slim["covariate_south"]["dims"]
+    conv = slim["concept_south"]["dims"]
+    order_mix = mix["order"]
+    order_conv = conv["order"]
+
+    when_rows = "\n".join(
+        [
+            r"order & "
+            + _watch_cell(mix["order"], "order")
             + " & "
-            + _tex_status(d["onset_rank"], d.get("rank_delay"), d.get("rank_status"))
+            + _watch_cell(conv["order"], "order")
+            + r" \\",
+            r"user & "
+            + _watch_cell(mix["user"], "user")
             + " & "
-            + _tex_status(d.get("saffron_t"), d.get("saffron_delay"), d.get("saffron_status"))
+            + _watch_cell(conv["user"], "user")
+            + r" \\",
+            r"dumped all & "
+            + _watch_cell(mix["all"], "all")
             + " & "
-            + _tex_status(d["onset_hat"], d.get("hop_delay"), d.get("hop_status"))
-            + f" & {_tex_num(d['last_T'])} & {_tex_num(d['last_mmd'])} \\\\"
-        )
+            + _watch_cell(conv["all"], "all")
+            + r" \\",
+        ]
+    )
+    loc_rows = "\n".join(
+        [
+            r"customer mix & "
+            + _biz_mix_loc(order_mix, "south")
+            + " & "
+            + _biz_conv_loc(order_mix, "south")
+            + " & "
+            + _biz_mix_loc(order_mix, "north")
+            + " & "
+            + _biz_conv_loc(order_mix, "north")
+            + r" \\",
+            r"conversion & "
+            + _biz_mix_loc(order_conv, "south")
+            + " & "
+            + _biz_conv_loc(order_conv, "south")
+            + " & "
+            + _biz_mix_loc(order_conv, "north")
+            + " & "
+            + _biz_conv_loc(order_conv, "north")
+            + r" \\",
+        ]
+    )
+    mix_fields = _fields(order_mix)
+    conv_fields = _fields(order_conv)
+    merch_fields = _fields(mix["merchant"])
+    user_fields = _fields(mix["user"])
 
-    def which_row(kind, dim):
-        d = slim[kind]["dims"][dim]
-        planted = ", ".join(d.get("planted") or []) or "---"
-        recov = ", ".join(d.get("fsds_recovered") or []) or "---"
-        planted = planted.replace("_", r"\_")
-        recov = recov.replace("_", r"\_")
-        return (
-            f"{kind.replace('_south', '')} & {dim} & {planted} & {recov} & "
-            f"{_tex_num(d.get('tau_fsds'))} & {_tex_num(d.get('tau_rfperm'))} & "
-            f"{_tex_num(d.get('tau_cfperm'))} \\\\"
-        )
-
-    def loc_row(kind, dim):
-        d = slim[kind]["dims"][dim]
-        return (
-            f"{kind.replace('_south', '')} & {dim} & "
-            f"{_tex_num(d.get('loc_south_mmd'))} & {_tex_num(d.get('loc_south_cmean_x'))} & "
-            f"{_tex_num(d.get('loc_south_po'))} & {_tex_num(d.get('loc_south_cmean_y'))} & "
-            f"{_tex_num(d.get('loc_north_mmd'))} & {_tex_num(d.get('loc_north_cmean_x'))} & "
-            f"{_tex_num(d.get('loc_north_po'))} & {_tex_num(d.get('loc_north_cmean_y'))} \\\\"
-        )
-
-    when_rows = "\n".join(when_row(k, dim) for k in KINDS for dim in DIMS)
-    which_rows = "\n".join(which_row(k, dim) for k in KINDS for dim in DIMS)
-    loc_rows = "\n".join(loc_row(k, dim) for k in KINDS for dim in DIMS)
     body = r"""% Recsys grain monitor. Compile: pdflatex docs/recsys_grain_monitor.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amssymb,booktabs}
+\usepackage{booktabs,float}
 \usepackage[hidelinks]{hyperref}
 \usepackage{microtype}
-\title{Recommendation stream by grain:\\
-OnlineRFPerm, RFPerm/CFPerm, and FSDS}
+\title{Recommendation stream by grain}
 \author{}
 \date{}
 \begin{document}
 \maketitle
 \thispagestyle{empty}
 
-\paragraph{$Y$ (outcome).}
-One row is one order.
-$Y\in\{0,1\}$ is \textbf{conversion} on that order (purchase / not).
-$Y$ is the response only.
-It is never a column of $X$, never a ranking key, never a subset key.
+\paragraph{$Y$ and $X$.}
+One row is one order. $Y$ is conversion on that order --- purchase or not.
+It is the outcome only: never a feature, never a ranking key, never a subset key.
+$X$ is the serving table, sliced the way the log is written.
 
-\paragraph{$X$ (covariates).}
-$X$ is the serving table of that order, sliced the way the log is written.
-$Y$ is not in any slice.
 \begin{center}
 \begin{tabular}{lll}
 \toprule
-grain & $X$ columns & what the row is \\
+table & what sits in $X$ & what the row is \\
 \midrule
-order & amount, hour, n\_items, channel & this order \\
-merchant & merchant\_cat, merchant\_gmv, n\_skus & the merchant on this order \\
-user & user\_tenure, user\_hist\_freq & the user on this order \\
-all & the nine columns concatenated & anti-pattern; shown as a check \\
+order & amount, hour, items, channel & this ticket \\
+merchant & category, GMV, SKU count & the store on this ticket \\
+user & tenure, past frequency & the buyer on this ticket \\
+dumped all & every column concatenated & do not put this in production \\
 \bottomrule
 \end{tabular}
 \end{center}
-Region (south / north) is a merchant attribute, not a feature and not $Y$.
-The batch index $T$ is a time label ($D_{\mathrm{ref}}$ vs the new batch), not a treatment.
 
-\paragraph{Setup.}
-$n_{\mathrm{ref}}{=}400$, $n_{\mathrm{new}}{=}120$, six batches, labeled onset $t{=}2$.
-After onset, only \textbf{south} merchants are shifted.
-Covariate / both plant $\mathrm{amount}\succ\mathrm{merchant\_gmv}\succ\mathrm{channel}$ in $P(X)$.
-Concept plants amount in $P(Y\mid X)$ only.
-User columns never walk.
+South / north is a merchant attribute, not $Y$.
+The batch index only marks a quiet reference window versus new traffic --- it is not a treatment.
 
-\vspace{0.6em}
-\noindent
-Table~\ref{tab:when}: OnlineRFPerm (Algorithm~1) --- first rejection, delay, FAR.\\
-Table~\ref{tab:which}: FSDS / RFPerm $\Delta$MSE / CFPerm $\varphi$-VIMP --- Kendall-$\tau$ vs planted.\\
-Table~\ref{tab:where}: south vs north own-ref. \textbf{MMD, CMean, and PO-risk together.}
+\paragraph{How the marketplace actually logs.}
+A recsys serving log is three tables that share a foreign key, not one embedding soup.
+The order table is this ticket: amount, hour, items, channel.
+The merchant table is the store on that ticket.
+The user table is the buyer.
+Those three clocks are not the same clock.
+Ticket size and channel mix move when south stores start selling a different basket.
+Merchant GMV moves when a cluster of stores walks.
+Tenure and past frequency move only if the buyer panel itself walks.
+Users shop across south and north, so a south-store mix shift does not show up as a user-feature incident.
+Dump every column into one table and a quiet user grain is drowned by a loud order grain: the frozen predictor looks broken before anything real has happened.
+The working rule is: watch each table on its own, then join back with merchant id or user id.
 
-\begin{table}[ht]
+\paragraph{Two incidents, three tables.}
+Fit a conversion predictor once on the quiet window.
+Each new batch is scored against that frozen error floor.
+A ring means this table is no longer paying rent the way it did on reference.
+
+We look at two business incidents on the same south accounts.
+The first is a \emph{customer-mix} walk: south ticket size and channel leave the reference panel, and conversion follows because the people in the basket changed --- an acquisition / category story.
+The second is a \emph{conversion} walk: south mix stays put, but purchase given the same basket moves --- ranking, creative, or the conversion surface, not growth.
+Table~\ref{tab:when} is the watch on each serving table, written as ops time.
+
+\begin{table}[H]
 \centering
-\caption{WHEN. Frozen RF on $D_{\mathrm{ref}}$. $T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}$.
-Delay $=$ first rejection $-$ onset. FAR $=$ mark before onset.}
+\caption{Frozen watch on each serving table. ``Too early'' is a false alarm. ``Leak'' means mix did not move --- conversion came in from the order table; do not page growth.}
 \label{tab:when}
-\scriptsize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{llcccccc}
+\begin{tabular}{lll}
 \toprule
-kind & grain & ADDIS & rank-$p$ & SAFFRON & hop & last $T$ & last MMD \\
+serving table & south customer mix & south conversion \\
 \midrule
 """ + when_rows + r"""
 \bottomrule
 \end{tabular}
 \end{table}
 
-\begin{table}[ht]
-\centering
-\caption{WHICH columns. Ranking recovery vs planted magnitude.
-User grain has no planted $X$ columns --- the correct negative control.}
-\label{tab:which}
-\scriptsize
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{llllccc}
-\toprule
-kind & grain & planted in $X$ & FSDS recovered & $\tau_{\mathrm{FSDS}}$ & $\tau_{\mathrm{RFPerm}}$ & $\tau_{\mathrm{CFPerm}}$ \\
-\midrule
-""" + which_rows + r"""
-\bottomrule
-\end{tabular}
-\end{table}
+The order table is the one that actually moved.
+It rings when south merchants start to walk.
+The user table never moved on mix --- tenure and frequency were never the walk --- but the watch can still ring because conversion leaked in from the order table.
+That ring is not a growth-team incident.
+The dumped table rings before the walk: too many columns were fit on the quiet window, so the frozen model looks better than it is, and a quiet table is mixed with a loud one.
+Leave it out of production.
 
-\begin{table}[ht]
+\paragraph{Where to look, who to page.}
+After a ring, do not retrain the whole stack.
+Name the fields on the table that moved, then name the accounts.
+On the mix walk the order table points at """ + mix_fields + r"""; the merchant table points at """ + merch_fields + r"""; the user table recovers """ + user_fields + r""" --- those fields do not live on that table.
+On the conversion walk the order table still names """ + conv_fields + r""" (it sits in the conversion surface) while the mix of $X$ itself has not walked.
+Table~\ref{tab:where} splits the same order table by south versus north.
+
+\begin{table}[H]
 \centering
-\caption{WHICH accounts. Own-ref clock. Three readouts on the same slice:
-MMD ($P(X)$), CMean ($\Vert\Delta\mathbb{E}[X]\Vert$ and $\Delta\mathbb{E}[Y]$), PO-risk ($P(Y\mid X)$).
-Subset key is region, not $Y$.}
+\caption{South versus north on the order table. Mix is the basket (ticket size, channel). Conversion is purchase on that ticket. North is the control.}
 \label{tab:where}
-\scriptsize
-\setlength{\tabcolsep}{2.8pt}
-\begin{tabular}{llcccc cccc}
+\begin{tabular}{lcccc}
 \toprule
-& & \multicolumn{4}{c}{south own-ref} & \multicolumn{4}{c}{north own-ref} \\
-\cmidrule(lr){3-6}\cmidrule(lr){7-10}
-kind & grain & MMD & $\Vert\Delta X\Vert$ & PO & $\Delta\mathbb{E}[Y]$ & MMD & $\Vert\Delta X\Vert$ & PO & $\Delta\mathbb{E}[Y]$ \\
+incident & south mix & south conversion & north mix & north conversion \\
 \midrule
 """ + loc_rows + r"""
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{What this means on the serving log.}
-Read the log the way it is written. Conversion is the outcome; the serving table is sliced into order, merchant, and user --- do not dump every id embedding into one table. OnlineRFPerm on the order slice marks the batch where south merchants started to walk: predictive error left the reference pool on time. Concatenating every column false-alarms before anything happened. The user slice stays quiet because those columns never moved; a blip there is just conversion leaking through from another slice.
+South is where the walk lives; north stays near reference on both incidents.
+On a mix walk, south ticket size and channel move and conversion follows --- page category ops on those south stores, check the basket, do not open the conversion model first.
+On a conversion walk, south mix is still and conversion moves --- page ranking / conversion on south, do not tell category that ``the panel changed.''
+Users mix across merchants, so the user table cannot tell south from north.
+Do not page the growth team for a user-feature incident that is actually a south-store mix shift.
 
-After a mark, FSDS names the columns that actually sit in that slice (amount and channel on orders, GMV on merchants; none of those on users). South versus north then names the accounts. When the customer mix walks, south orders move in the covariates and the conversion rate follows; north stays near the reference. When only the conversion mechanism walks, south covariates stay put and PO-risk plus the conversion mean move instead. Refresh the model, then reset the error pool. This is localization, not a unique split of blame.
+\paragraph{What to do next.}
+Do not concatenate the serving log. Watch the order table.
+When it rings, split south versus north and read mix next to conversion on the same clock.
+If south ticket size and channel walked and conversion followed, category ops checks those stores first --- ranking does not open a model ticket yet.
+If the same south stores, same basket, conversion moved, ranking checks the south conversion surface --- growth is not paged, because the user table never moved.
+Refresh, then reset the error pool so Monday's walk is not Wednesday's alarm.
+Where to look first: not a unique split of blame across columns.
 
 \end{document}
 """
@@ -703,7 +770,8 @@ def main() -> int:
     if "--from-summary" in sys.argv:
         slim = json.loads((OUT / "summary.json").read_text(encoding="utf-8"))
         write_tables_html(slim, OUT / "tables.html")
-        print("wrote", OUT / "tables.html")
+        write_tex(slim, ROOT / "docs" / "recsys_grain_monitor.tex")
+        print("wrote", OUT / "tables.html", "and tex")
         return 0
     results = {kind: run_kind(kind) for kind in KINDS}
     write_markdown(results, OUT / "TABLES.md")
