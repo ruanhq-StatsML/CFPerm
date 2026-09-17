@@ -8,6 +8,7 @@
     32
   ],
   "po_base": 0.0005145147596206146,
+  "mse_base": 0.12097810120043626,
   "n_large": 2,
   "rows": [
     {
@@ -16,13 +17,20 @@
       "n_ref": 10000,
       "po_stream": 9.589701058494567e-05,
       "po_base": 0.0005145147596206146,
+      "po_ma": 9.589701058494567e-05,
+      "mse_stream": 0.11833469514159288,
+      "mse_base": 0.12097810120043626,
+      "mse_ma": 0.11833469514159288,
       "large_deviation": 0,
+      "po_broken": 0,
+      "mse_broken": 0,
+      "action": "keep_training",
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
       "layers": [],
-      "po_ma": 9.589701058494567e-05,
-      "ma_large": 0
+      "ma_large": 0,
+      "mse_large": 0
     },
     {
       "t": 1,
@@ -30,13 +38,20 @@
       "n_ref": 10000,
       "po_stream": 0.0009638598077860458,
       "po_base": 0.0005145147596206146,
+      "po_ma": 0.0005298784091854957,
+      "mse_stream": 0.20380682345757123,
+      "mse_base": 0.12097810120043626,
+      "mse_ma": 0.16107075929958206,
       "large_deviation": 0,
+      "po_broken": 0,
+      "mse_broken": 0,
+      "action": "keep_training",
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
       "layers": [],
-      "po_ma": 0.0005298784091854957,
-      "ma_large": 0
+      "ma_large": 0,
+      "mse_large": 0
     },
     {
       "t": 2,
@@ -44,45 +59,20 @@
       "n_ref": 10000,
       "po_stream": 0.0016575460141207187,
       "po_base": 0.0005145147596206146,
-      "large_deviation": 1,
-      "all_trainable": 0,
-      "freeze_from": "model_0",
-      "i_star": 0,
-      "layers": [
-        {
-          "i": 0,
-          "name": "model_0",
-          "layer": "layer0",
-          "po_fit": 0.0017070912020710888,
-          "mse": 0.2276687650457341
-        },
-        {
-          "i": 1,
-          "name": "model_1",
-          "layer": "layer1",
-          "po_fit": 0.0017505891539766822,
-          "mse": 0.20172812425760026
-        },
-        {
-          "i": 2,
-          "name": "model_2",
-          "layer": "layer2",
-          "po_fit": 0.0017493608066144438,
-          "mse": 0.1765532030809159
-        },
-        {
-          "i": 3,
-          "name": "model_3",
-          "layer": "layer3",
-          "po_fit": 0.0018128796991629939,
-          "mse": 0.1718010945795992
-        }
-      ],
-      "po_star": 0.0017070912020710888,
-      "i_star_mse": 3,
-      "mse_star": 0.1718010945795992,
       "po_ma": 0.0009057676108305701,
-      "ma_large": 0
+      "mse_stream": 0.22876626289833765,
+      "mse_base": 0.12097810120043626,
+      "mse_ma": 0.1836359271658339,
+      "large_deviation": 1,
+      "po_broken": 0,
+      "mse_broken": 0,
+      "action": "keep_training",
+      "all_trainable": 1,
+      "freeze_from": null,
+      "i_star": 3,
+      "layers": [],
+      "ma_large": 0,
+      "mse_large": 0
     },
     {
       "t": 3,
@@ -90,45 +80,20 @@
       "n_ref": 10000,
       "po_stream": 0.0059663813661110275,
       "po_base": 0.0005145147596206146,
-      "large_deviation": 1,
-      "all_trainable": 0,
-      "freeze_from": "model_0",
-      "i_star": 0,
-      "layers": [
-        {
-          "i": 0,
-          "name": "model_0",
-          "layer": "layer0",
-          "po_fit": 0.00571562153520206,
-          "mse": 0.24705239156435246
-        },
-        {
-          "i": 1,
-          "name": "model_1",
-          "layer": "layer1",
-          "po_fit": 0.005893321227296326,
-          "mse": 0.2095037316280328
-        },
-        {
-          "i": 2,
-          "name": "model_2",
-          "layer": "layer2",
-          "po_fit": 0.0061949374459574335,
-          "mse": 0.14937639762661326
-        },
-        {
-          "i": 3,
-          "name": "model_3",
-          "layer": "layer3",
-          "po_fit": 0.006301757718270085,
-          "mse": 0.14501463049465474
-        }
-      ],
-      "po_star": 0.00571562153520206,
-      "i_star_mse": 3,
-      "mse_star": 0.14501463049465474,
       "po_ma": 0.0021709210496506843,
-      "ma_large": 1
+      "mse_stream": 0.15836098700256454,
+      "mse_base": 0.12097810120043626,
+      "mse_ma": 0.17731719212501657,
+      "large_deviation": 1,
+      "po_broken": 1,
+      "mse_broken": 0,
+      "action": "watch",
+      "all_trainable": 1,
+      "freeze_from": null,
+      "i_star": 3,
+      "layers": [],
+      "ma_large": 1,
+      "mse_large": 0
     },
     {
       "t": 4,
@@ -136,13 +101,20 @@
       "n_ref": 10000,
       "po_stream": 0.0009046717392936014,
       "po_base": 0.0005145147596206146,
+      "po_ma": 0.0019176711875792678,
+      "mse_stream": 0.1959232889513175,
+      "mse_base": 0.12097810120043626,
+      "mse_ma": 0.18103841149027675,
       "large_deviation": 0,
+      "po_broken": 1,
+      "mse_broken": 0,
+      "action": "watch",
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
       "layers": [],
-      "po_ma": 0.0019176711875792678,
-      "ma_large": 1
+      "ma_large": 1,
+      "mse_large": 0
     },
     {
       "t": 5,
@@ -150,13 +122,20 @@
       "n_ref": 10000,
       "po_stream": 9.407300195327887e-06,
       "po_base": 0.0005145147596206146,
+      "po_ma": 0.0019003732455013442,
+      "mse_stream": 0.2618998518603291,
+      "mse_base": 0.12097810120043626,
+      "mse_ma": 0.209751442834024,
       "large_deviation": 0,
+      "po_broken": 1,
+      "mse_broken": 0,
+      "action": "watch",
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
       "layers": [],
-      "po_ma": 0.0019003732455013442,
-      "ma_large": 1
+      "ma_large": 1,
+      "mse_large": 0
     },
     {
       "t": 6,
@@ -164,13 +143,20 @@
       "n_ref": 10000,
       "po_stream": 6.077536665209389e-05,
       "po_base": 0.0005145147596206146,
+      "po_ma": 0.0017197563572745537,
+      "mse_stream": 0.12420696279260371,
+      "mse_base": 0.12097810120043626,
+      "mse_ma": 0.19383147070103052,
       "large_deviation": 0,
+      "po_broken": 1,
+      "mse_broken": 0,
+      "action": "watch",
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
       "layers": [],
-      "po_ma": 0.0017197563572745537,
-      "ma_large": 1
+      "ma_large": 1,
+      "mse_large": 0
     }
   ],
   "layer_names": [
@@ -185,18 +171,24 @@
     "layer2",
     "layer3"
   ],
-  "recommend_i": 0,
+  "recommend_i": 3,
   "ma_window": 5,
   "ma_max": 0.0021709210496506843,
   "ma_stable": 0,
   "all_layer_backprop": 0,
   "frac_ma_large": 0.5714285714285714,
+  "mse_ma_max": 0.209751442834024,
+  "mse_stable": 1,
+  "n_keep_training": 3,
+  "n_watch": 4,
+  "n_freeze": 0,
+  "board_action": "watch",
   "PO_Dict": {
     "layer0": [
       null,
       null,
-      0.0017070912020710888,
-      0.00571562153520206,
+      null,
+      null,
       null,
       null,
       null
@@ -204,8 +196,8 @@
     "layer1": [
       null,
       null,
-      0.0017505891539766822,
-      0.005893321227296326,
+      null,
+      null,
       null,
       null,
       null
@@ -213,8 +205,8 @@
     "layer2": [
       null,
       null,
-      0.0017493608066144438,
-      0.0061949374459574335,
+      null,
+      null,
       null,
       null,
       null
@@ -222,8 +214,8 @@
     "layer3": [
       null,
       null,
-      0.0018128796991629939,
-      0.006301757718270085,
+      null,
+      null,
       null,
       null,
       null
@@ -233,8 +225,8 @@
     "layer0": [
       null,
       null,
-      0.2276687650457341,
-      0.24705239156435246,
+      null,
+      null,
       null,
       null,
       null
@@ -242,8 +234,8 @@
     "layer1": [
       null,
       null,
-      0.20172812425760026,
-      0.2095037316280328,
+      null,
+      null,
       null,
       null,
       null
@@ -251,8 +243,8 @@
     "layer2": [
       null,
       null,
-      0.1765532030809159,
-      0.14937639762661326,
+      null,
+      null,
       null,
       null,
       null
@@ -260,8 +252,8 @@
     "layer3": [
       null,
       null,
-      0.1718010945795992,
-      0.14501463049465474,
+      null,
+      null,
       null,
       null,
       null

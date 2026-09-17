@@ -1,5 +1,4 @@
-<!DOCTYPE html><meta charset="utf-8"><title>PO-risk board</title>
-<h1>MA 稳定 → 全层 backprop</h1>
-<p>raw PO-risk 会抖。causal moving average 不过 2× baseline，就全量每一层 back-propagate。
-大 hop 上同时看 PO_Dict 和 MSE_Dict。不做 online-bootstrap。何时 update 是业务逻辑。</p>
-<ul><li><a href="electricity/board.html">electricity freeze</a> · <a href="electricity/batch_size_gate.png">MA</a></li><li><a href="covertype/board.html">covertype freeze</a> · <a href="covertype/batch_size_gate.png">MA</a></li><li>airlines · <a href="airlines/batch_size_gate.png">MA</a></li></ul>
+<!DOCTYPE html><meta charset="utf-8"><title>PO × MSE board</title>
+<h1>PO × MSE 对照</h1>
+<p>PO 崩且 MSE 崩 → 冻住。只崩 PO → 再观察。两个都正常 → 接着 train。不做 online-bootstrap。</p>
+<ul><li><a href="electricity/board.html">electricity freeze</a> · <a href="electricity/po_mse_trend.png">trend</a> · <a href="electricity/batch_size_gate.png">MA</a></li><li><a href="covertype/board.html">covertype freeze</a> · <a href="covertype/po_mse_trend.png">trend</a> · <a href="covertype/batch_size_gate.png">MA</a></li><li>airlines · <a href="airlines/batch_size_gate.png">MA</a></li></ul>
