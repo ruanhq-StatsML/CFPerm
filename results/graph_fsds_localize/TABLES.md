@@ -1,50 +1,51 @@
 # Graph localization → FSDS unify → two-layer subset (order grain)
 
-Package: **networkx** `louvain_communities`. Not GraphRAG, not PyG.
-Default cut = **bundled-shift** Louvain (changing-subset objective). Structural Louvain is reported only as a contrast — modularity of co-order/kNN is not the shift object.
+Package: **networkx** for the incidence graph. Default cut = **own-ref subset scan** (level set `{φ≥τ}` / coverage prefix). The graph lifts a layer's Ŝ onto orders; it does not run community detection. Bundled / structural Louvain are contrast only.
 Shares are localization proxies, not a unique decomposition. Y is never a feature.
 
 n_ref=480, n_new=160, merchants=16, batches=3, onset=1. Planted region is **south** (second half of merchant ids).
 
-## Graph cuts (networkx Louvain, two objectives)
+## Subset scan by layer (lift to orders; Louvain is contrast only)
 
-| kind | t | onset | package | bundled loud | bundled south_frac | layer2 loud | bundled n_comm | bundled n_edges | struct n_comm | FSDS selected | fingerprint |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| covariate_south | 0 |  | networkx | C0 | 0.462 |  | 1 | 77 | 4 | amount,channel |  |
-| covariate_south | 1 | yes | networkx | C0 | 0.6 | C0 | 5 | 45 | 3 | channel,amount | x_shift |
-| covariate_south | 2 | yes | networkx | C0 | 0.857 | C0 | 6 | 21 | 3 | amount,channel,merchant_gmv | x_shift |
-| concept_south | 0 |  | networkx | C0 | 0.462 |  | 1 | 77 | 4 | amount,channel |  |
-| concept_south | 1 | yes | networkx | C0 | 0.5 |  | 7 | 28 | 4 | amount,n_items |  |
-| concept_south | 2 | yes | networkx | C1 | 0.25 | C0 | 4 | 45 | 4 | amount,channel | concept |
-| both | 0 |  | networkx | C0 | 0.462 |  | 1 | 77 | 4 | amount,channel |  |
-| both | 1 | yes | networkx | C0 | 0.636 | C0 | 4 | 55 | 3 | channel,amount | x_shift |
-| both | 2 | yes | networkx | C0 | 0.857 | C0 | 6 | 21 | 3 | amount,channel,merchant_gmv | x_shift |
+| kind | t | onset | cut | loud south_frac | J(scan mer,south) | J(coverage mer,south) | J(mass mer,south) | J(user scan,south) | J(Louvain mer,south) | n_loud mer | FSDS selected | fingerprint |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| covariate_south | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 0.422 | 13 | amount,channel |  |
+| covariate_south | 1 | yes | level_set/{phi>=tau} | 0.565 | 0.473 | 0.473 | 0.488 | 0 | 0.473 | 10 | channel,amount | x_shift |
+| covariate_south | 2 | yes | level_set/{phi>=tau} | 0.852 | 0.767 | 0.885 | 0.885 | 0 | 0.767 | 7 | amount,channel,merchant_gmv | x_shift |
+| concept_south | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 0.422 | 13 | amount,channel |  |
+| concept_south | 1 | yes | level_set/{phi>=tau} |  | 0.31 | 0.38 | 0.348 | 0 | 0.31 | 8 | amount,n_items |  |
+| concept_south | 2 | yes | level_set/{phi>=tau} | 0.521 | 0.455 | 0.41 | 0.54 | 0 | 0.0885 | 10 | amount,channel | x_shift |
+| both | 0 |  | level_set/{phi>=tau} |  | 0.422 | 0.57 | 0.442 | 0 | 0.422 | 13 | amount,channel |  |
+| both | 1 | yes | level_set/{phi>=tau} | 0.605 | 0.558 | 0.488 | 0.488 | 0 | 0.558 | 11 | channel,amount | x_shift |
+| both | 2 | yes | level_set/{phi>=tau} | 0.852 | 0.767 | 0.885 | 0.885 | 0 | 0.767 | 7 | amount,channel,merchant_gmv | x_shift |
 
 ## Own-ref vs full-ref (node clock) and multi-layer lift-to-order
 
-| kind | t | south own MMD | north own MMD | south own ‖ΔX‖ | north own ‖ΔX‖ | north full ‖ΔX‖ | J(merchant,south) | J(user,south) | J(merchant,user) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| covariate_south | 1 | 0.0291 | -0.0059 | 0.929 | 0.716 | 0.796 | 0.473 | 0 | 0 |
-| covariate_south | 2 | 0.257 | 0.016 | 2.28 | 0.676 | 0.67 | 0.767 | 0 | 0 |
-| concept_south | 1 | -0.00763 | -0.0059 | 0.644 | 0.716 | 0.796 | 0.31 | 0 | 0 |
-| concept_south | 2 | -0.0106 | 0.016 | 0.598 | 0.676 | 0.67 | 0.0885 | 0 | 0 |
-| both | 1 | 0.0291 | -0.0059 | 0.929 | 0.716 | 0.796 | 0.558 | 0 | 0 |
-| both | 2 | 0.257 | 0.016 | 2.28 | 0.676 | 0.67 | 0.767 | 0 | 0 |
+| kind | t | south own MMD | north own MMD | south own ‖ΔX‖ | north own ‖ΔX‖ | J(scan mer,south) | J(coverage mer,south) | J(user scan,south) | MMD-slice south_frac | ΔY-slice south_frac |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| covariate_south | 1 | 0.0291 | -0.0059 | 0.929 | 0.716 | 0.473 | 0.473 | 0 | 1 | 0.556 |
+| covariate_south | 2 | 0.257 | 0.016 | 2.28 | 0.676 | 0.767 | 0.885 | 0 | 1 | 0.75 |
+| concept_south | 1 | -0.00763 | -0.0059 | 0.644 | 0.716 | 0.31 | 0.38 | 0 | 1 | 0.571 |
+| concept_south | 2 | -0.0106 | 0.016 | 0.598 | 0.676 | 0.455 | 0.41 | 0 | 0.333 | 0.625 |
+| both | 1 | 0.0291 | -0.0059 | 0.929 | 0.716 | 0.558 | 0.488 | 0 | 1 | 0.571 |
+| both | 2 | 0.257 | 0.016 | 2.28 | 0.676 | 0.767 | 0.885 | 0 | 1 | 0.714 |
 
-## Community portraits (bundled cut · MMD + PO + CMean)
+## Subset portraits (scan loud vs other · MMD + PO + CMean)
 
-| kind | t | community | n | south_frac | π_MMD | π_PO | π_CMean | MMD | PO | ΔE[Y] | ‖ΔE[X]‖ | fingerprint |
+| kind | t | subset | n | south_frac | π_MMD | π_PO | π_CMean | MMD | PO | ΔE[Y] | ‖ΔE[X]‖ | fingerprint |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| covariate_south | 1 | C0 | 108 | 0.6 | 1 | 0 | 1 | 0.0295 | 6.17e-05 | 0.0188 | 0.538 | x_shift |
-| covariate_south | 2 | C0 | 81 | 0.857 | 0.797 | 0 | 0.667 | 0.375 | 6.47e-05 | 0.261 | 2.34 | x_shift |
-| covariate_south | 2 | C? | 22 | 0 | 0.203 | 0 | 0.333 | 0.0954 |  | 0.118 | 1.28 | x_shift |
-| concept_south | 1 | C0 | 87 | 0.5 | 0 | 0 | 0 | 0.00602 | 8.59e-05 | 0.00725 | 0.112 | x_shift |
-| concept_south | 2 | C0 | 72 | 0.667 | 0 | 0.951 | 0.344 | -0.00386 | 0.00168 | -0.159 | 0.149 | concept |
-| concept_south | 2 | C1 | 45 | 0.25 | 0.718 | 0.0489 | 0.406 | 0.0388 | 8.63e-05 | 0.0698 | 0.592 | x_shift |
-| concept_south | 2 | C? | 22 | 0 | 0.282 | 0 | 0.251 | 0.0153 |  | -0.0634 | 0.294 | x_shift |
-| both | 1 | C0 | 119 | 0.636 | 1 | 0 | 1 | 0.0294 | 0.000154 | 0.0423 | 0.552 | x_shift |
-| both | 2 | C0 | 81 | 0.857 | 0.797 | 0 | 0.663 | 0.375 | 0.000213 | -0.233 | 2.34 | x_shift |
-| both | 2 | C? | 22 | 0 | 0.203 | 0 | 0.337 | 0.0954 |  | -0.109 | 1.28 | x_shift |
+| covariate_south | 1 | loud | 108 | 0.565 | 1 | 0 | 0.969 | 0.0295 | 6.17e-05 | 0.0188 | 0.538 | x_shift |
+| covariate_south | 1 | other | 52 | 0.404 | 0 | 0 | 0.0307 | -0.00286 | 0.000141 | 0.0147 | 0.0171 | x_shift |
+| covariate_south | 2 | loud | 81 | 0.852 | 1 | 0 | 0.893 | 0.375 | 6.47e-05 | 0.261 | 2.34 | x_shift |
+| covariate_south | 2 | other | 79 | 0.114 | 0 | 0 | 0.107 | -0.0027 | 0.000215 | 0.0263 | 0.325 | x_shift |
+| concept_south | 1 | loud | 87 | 0.46 | 0 | 0 | 0 | 0.00602 | 8.59e-05 | 0.00725 | 0.112 | x_shift |
+| concept_south | 1 | other | 73 | 0.575 | 0 | 0 | 0 | -0.0072 | 6.26e-05 | 0.0456 | 0.13 | x_shift |
+| concept_south | 2 | loud | 117 | 0.521 | 0 | 0 | 0.712 | 0.00497 | 0.000704 | -0.069 | 0.154 | x_shift |
+| concept_south | 2 | other | 43 | 0.395 | 0 | 0 | 0.288 | -0.00832 | 0.000537 | -0.0279 | 0.141 | x_shift |
+| both | 1 | loud | 119 | 0.605 | 1 | 0 | 0.738 | 0.0294 | 0.000154 | 0.0423 | 0.552 | x_shift |
+| both | 1 | other | 41 | 0.244 | 0 | 0 | 0.262 | -0.000303 | 9.59e-05 | 0.0192 | 0.196 | x_shift |
+| both | 2 | loud | 81 | 0.852 | 1 | 0 | 0.87 | 0.375 | 0.000213 | -0.233 | 2.34 | x_shift |
+| both | 2 | other | 79 | 0.114 | 0 | 0 | 0.13 | -0.0027 | 0.000286 | -0.037 | 0.325 | x_shift |
 
 ## FSDS ranking (last batch, top of each grain)
 
