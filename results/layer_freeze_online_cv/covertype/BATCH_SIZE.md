@@ -1,10 +1,13 @@
-# Batch size is not when to update — covertype (geographic order, class 2 vs rest)
+# MA of PO-risk — covertype (geographic order, class 2 vs rest)
 
-When to update is business logic. n_new=500 chatters around the baseline and never flags; 1000–2000 scatter red dots; 5000 keeps one late hop. That is not when to update.
+Raw PO-risk jitters. Causal moving average is the stability readout.
+No online-bootstrap (repeated MLP inference cannot be afforded).
+MA below 2× ref-split baseline → all-layer backprop.
+n_ref=10000.
 
-| n_new | batches | frac large |
-|---:|---:|---:|
-| 500 | 60 | 0.00 |
-| 1000 | 30 | 0.20 |
-| 2000 | 15 | 0.27 |
-| 5000 | 6 | 0.17 |
+| n_new | batches | MA window | raw frac large | MA frac large | MA max / baseline | all-layer backprop |
+|---:|---:|---:|---:|---:|---:|---|
+| 500 | 60 | 5 | 0.00 | 0.00 | 1.53 | yes |
+| 1000 | 30 | 5 | 0.20 | 0.07 | 2.26 | no |
+| 2000 | 15 | 5 | 0.27 | 0.13 | 2.68 | no |
+| 5000 | 6 | 5 | 0.17 | 0.00 | 1.42 | yes |

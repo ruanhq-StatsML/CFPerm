@@ -20,13 +20,16 @@ code { background: #eee; padding: 1px 4px; }
 <p class="note">
 electricity (NSW, ordered in time). n_ref=10000, n_new=5000, hidden=[64, 32].
 表格 PO-risk 单独维护 <b>outcome model</b> μ(Y|X) 和 <b>propensity</b> e(T|X)。
-新 batch 是 <b>T=1</b>。直接读 PO-risk。没有大偏差就全开；有大偏差才看从第几层开始冻。
-n_new 不宜过小，否则要 online-bootstrap。
+新 batch 是 <b>T=1</b>。raw PO-risk 会抖就做 causal moving average；
+<b>MA 稳（不过 2× baseline）→ 全量每一层 back-propagate</b>。
+大 hop 上同时记 <code>PO_Dict</code> / <code>MSE_Dict</code>
+（layer0…layer_k），从哪一层开始明显变动就对着 MSE 读。
+不做 online-bootstrap。何时 update 是业务逻辑，不是这个数。
 </p>
 <p class="rec">有大 deviation 的段：从 model_0 开始冻（median）</p>
-<figure><img src="po_risk_gate.png" alt="po_risk_gate.png"><figcaption>po_risk_gate.png</figcaption></figure><figure><img src="freeze_from.png" alt="freeze_from.png"><figcaption>freeze_from.png</figcaption></figure><figure><img src="po_risk_by_layer.png" alt="po_risk_by_layer.png"><figcaption>po_risk_by_layer.png</figcaption></figure>
+<figure><img src="po_risk_gate.png" alt="po_risk_gate.png"><figcaption>po_risk_gate.png</figcaption></figure><figure><img src="freeze_from.png" alt="freeze_from.png"><figcaption>freeze_from.png</figcaption></figure><figure><img src="po_mse_by_layer.png" alt="po_mse_by_layer.png"><figcaption>po_mse_by_layer.png</figcaption></figure><figure><img src="po_risk_by_layer.png" alt="po_risk_by_layer.png"><figcaption>po_risk_by_layer.png</figcaption></figure><figure><img src="mse_by_layer.png" alt="mse_by_layer.png"><figcaption>mse_by_layer.png</figcaption></figure>
 <h2>每一段 — 直接读 PO-risk</h2>
-<table><thead><tr><th>t</th><th>PO-risk</th><th>baseline</th><th>large?</th><th>action</th></tr></thead><tbody><tr><td>0</td><td>0.0001158</td><td>0.0005076</td><td></td><td>all trainable</td></tr><tr><td>1</td><td>0.000936</td><td>0.0005076</td><td></td><td>all trainable</td></tr><tr><td>2</td><td>0.001832</td><td>0.0005076</td><td>yes</td><td>freeze from model_0</td></tr><tr><td>3</td><td>0.005983</td><td>0.0005076</td><td>yes</td><td>freeze from model_0</td></tr><tr><td>4</td><td>0.0009048</td><td>0.0005076</td><td></td><td>all trainable</td></tr><tr><td>5</td><td>1.072e-05</td><td>0.0005076</td><td></td><td>all trainable</td></tr><tr><td>6</td><td>9.313e-05</td><td>0.0005076</td><td></td><td>all trainable</td></tr></tbody></table>
-<h2>Last large-deviation batch — 从哪一层冻</h2><table><thead><tr><th>model</th><th>PO-risk</th></tr></thead><tbody><tr><td>model_0 ★</td><td>0.0057</td></tr><tr><td>model_1</td><td>0.005884</td></tr><tr><td>model_2</td><td>0.006315</td></tr><tr><td>model_3</td><td>0.006445</td></tr></tbody></table>
+<table><thead><tr><th>t</th><th>PO-risk</th><th>MA</th><th>baseline</th><th>large?</th><th>action</th></tr></thead><tbody><tr><td>0</td><td>9.59e-05</td><td>9.59e-05</td><td>0.0005145</td><td></td><td>all trainable</td></tr><tr><td>1</td><td>0.0009639</td><td>0.0005299</td><td>0.0005145</td><td></td><td>all trainable</td></tr><tr><td>2</td><td>0.001658</td><td>0.0009058</td><td>0.0005145</td><td>yes</td><td>freeze from model_0</td></tr><tr><td>3</td><td>0.005966</td><td>0.002171</td><td>0.0005145</td><td>yes</td><td>freeze from model_0</td></tr><tr><td>4</td><td>0.0009047</td><td>0.001918</td><td>0.0005145</td><td></td><td>all trainable</td></tr><tr><td>5</td><td>9.407e-06</td><td>0.0019</td><td>0.0005145</td><td></td><td>all trainable</td></tr><tr><td>6</td><td>6.078e-05</td><td>0.00172</td><td>0.0005145</td><td></td><td>all trainable</td></tr></tbody></table>
+<h2>Last large-deviation batch — PO-risk 和 MSE 同时读</h2><table><thead><tr><th>layer</th><th>model</th><th>PO-risk</th><th>MSE</th></tr></thead><tbody><tr><td>layer0</td><td>model_0 ★</td><td>0.005716</td><td>0.2471</td></tr><tr><td>layer1</td><td>model_1</td><td>0.005893</td><td>0.2095</td></tr><tr><td>layer2</td><td>model_2</td><td>0.006195</td><td>0.1494</td></tr><tr><td>layer3</td><td>model_3</td><td>0.006302</td><td>0.145</td></tr></tbody></table>
 </body>
 </html>

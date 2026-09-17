@@ -1,44 +1,49 @@
 {
   "k": 3,
   "n_ref": 10000,
+  "n_new": 5000,
   "n_batches": 7,
   "hidden_dims": [
     64,
     32
   ],
-  "po_base": 0.000507554511410979,
+  "po_base": 0.0005145147596206146,
   "n_large": 2,
   "rows": [
     {
       "t": 0,
       "n_new": 5000,
       "n_ref": 10000,
-      "po_stream": 0.00011576627395179546,
-      "po_base": 0.000507554511410979,
+      "po_stream": 9.589701058494567e-05,
+      "po_base": 0.0005145147596206146,
       "large_deviation": 0,
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 9.589701058494567e-05,
+      "ma_large": 0
     },
     {
       "t": 1,
       "n_new": 5000,
       "n_ref": 10000,
-      "po_stream": 0.0009359648978712852,
-      "po_base": 0.000507554511410979,
+      "po_stream": 0.0009638598077860458,
+      "po_base": 0.0005145147596206146,
       "large_deviation": 0,
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.0005298784091854957,
+      "ma_large": 0
     },
     {
       "t": 2,
       "n_new": 5000,
       "n_ref": 10000,
-      "po_stream": 0.0018320313065780464,
-      "po_base": 0.000507554511410979,
+      "po_stream": 0.0016575460141207187,
+      "po_base": 0.0005145147596206146,
       "large_deviation": 1,
       "all_trainable": 0,
       "freeze_from": "model_0",
@@ -47,32 +52,44 @@
         {
           "i": 0,
           "name": "model_0",
-          "po_fit": 0.0018350507592491219
+          "layer": "layer0",
+          "po_fit": 0.0017070912020710888,
+          "mse": 0.2276687650457341
         },
         {
           "i": 1,
           "name": "model_1",
-          "po_fit": 0.0019151398545727185
+          "layer": "layer1",
+          "po_fit": 0.0017505891539766822,
+          "mse": 0.20172812425760026
         },
         {
           "i": 2,
           "name": "model_2",
-          "po_fit": 0.0020083965161821053
+          "layer": "layer2",
+          "po_fit": 0.0017493608066144438,
+          "mse": 0.1765532030809159
         },
         {
           "i": 3,
           "name": "model_3",
-          "po_fit": 0.0020373924507666227
+          "layer": "layer3",
+          "po_fit": 0.0018128796991629939,
+          "mse": 0.1718010945795992
         }
       ],
-      "po_star": 0.0018350507592491219
+      "po_star": 0.0017070912020710888,
+      "i_star_mse": 3,
+      "mse_star": 0.1718010945795992,
+      "po_ma": 0.0009057676108305701,
+      "ma_large": 0
     },
     {
       "t": 3,
       "n_new": 5000,
       "n_ref": 10000,
-      "po_stream": 0.005983298584482906,
-      "po_base": 0.000507554511410979,
+      "po_stream": 0.0059663813661110275,
+      "po_base": 0.0005145147596206146,
       "large_deviation": 1,
       "all_trainable": 0,
       "freeze_from": "model_0",
@@ -81,61 +98,79 @@
         {
           "i": 0,
           "name": "model_0",
-          "po_fit": 0.005700105453260515
+          "layer": "layer0",
+          "po_fit": 0.00571562153520206,
+          "mse": 0.24705239156435246
         },
         {
           "i": 1,
           "name": "model_1",
-          "po_fit": 0.005884235912721099
+          "layer": "layer1",
+          "po_fit": 0.005893321227296326,
+          "mse": 0.2095037316280328
         },
         {
           "i": 2,
           "name": "model_2",
-          "po_fit": 0.006315024069856404
+          "layer": "layer2",
+          "po_fit": 0.0061949374459574335,
+          "mse": 0.14937639762661326
         },
         {
           "i": 3,
           "name": "model_3",
-          "po_fit": 0.0064454252036395925
+          "layer": "layer3",
+          "po_fit": 0.006301757718270085,
+          "mse": 0.14501463049465474
         }
       ],
-      "po_star": 0.005700105453260515
+      "po_star": 0.00571562153520206,
+      "i_star_mse": 3,
+      "mse_star": 0.14501463049465474,
+      "po_ma": 0.0021709210496506843,
+      "ma_large": 1
     },
     {
       "t": 4,
       "n_new": 5000,
       "n_ref": 10000,
-      "po_stream": 0.0009048471148132057,
-      "po_base": 0.000507554511410979,
+      "po_stream": 0.0009046717392936014,
+      "po_base": 0.0005145147596206146,
       "large_deviation": 0,
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.0019176711875792678,
+      "ma_large": 1
     },
     {
       "t": 5,
       "n_new": 5000,
       "n_ref": 10000,
-      "po_stream": 1.0717244734734347e-05,
-      "po_base": 0.000507554511410979,
+      "po_stream": 9.407300195327887e-06,
+      "po_base": 0.0005145147596206146,
       "large_deviation": 0,
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.0019003732455013442,
+      "ma_large": 1
     },
     {
       "t": 6,
       "n_new": 5000,
       "n_ref": 10000,
-      "po_stream": 9.312531431370358e-05,
-      "po_base": 0.000507554511410979,
+      "po_stream": 6.077536665209389e-05,
+      "po_base": 0.0005145147596206146,
       "large_deviation": 0,
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.0017197563572745537,
+      "ma_large": 1
     }
   ],
   "layer_names": [
@@ -144,7 +179,94 @@
     "model_2",
     "model_3"
   ],
+  "layer_keys": [
+    "layer0",
+    "layer1",
+    "layer2",
+    "layer3"
+  ],
   "recommend_i": 0,
+  "ma_window": 5,
+  "ma_max": 0.0021709210496506843,
+  "ma_stable": 0,
+  "all_layer_backprop": 0,
+  "frac_ma_large": 0.5714285714285714,
+  "PO_Dict": {
+    "layer0": [
+      null,
+      null,
+      0.0017070912020710888,
+      0.00571562153520206,
+      null,
+      null,
+      null
+    ],
+    "layer1": [
+      null,
+      null,
+      0.0017505891539766822,
+      0.005893321227296326,
+      null,
+      null,
+      null
+    ],
+    "layer2": [
+      null,
+      null,
+      0.0017493608066144438,
+      0.0061949374459574335,
+      null,
+      null,
+      null
+    ],
+    "layer3": [
+      null,
+      null,
+      0.0018128796991629939,
+      0.006301757718270085,
+      null,
+      null,
+      null
+    ]
+  },
+  "MSE_Dict": {
+    "layer0": [
+      null,
+      null,
+      0.2276687650457341,
+      0.24705239156435246,
+      null,
+      null,
+      null
+    ],
+    "layer1": [
+      null,
+      null,
+      0.20172812425760026,
+      0.2095037316280328,
+      null,
+      null,
+      null
+    ],
+    "layer2": [
+      null,
+      null,
+      0.1765532030809159,
+      0.14937639762661326,
+      null,
+      null,
+      null
+    ],
+    "layer3": [
+      null,
+      null,
+      0.1718010945795992,
+      0.14501463049465474,
+      null,
+      null,
+      null
+    ]
+  },
   "dataset": "electricity",
   "title": "electricity (NSW, ordered in time)",
   "n_features": 7,
@@ -157,6 +279,5 @@
     "vicprice",
     "vicdemand",
     "transfer"
-  ],
-  "n_new": 5000
+  ]
 }

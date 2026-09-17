@@ -1,6 +1,7 @@
 {
   "k": 3,
   "n_ref": 10000,
+  "n_new": 10000,
   "n_batches": 8,
   "hidden_dims": [
     64,
@@ -19,7 +20,9 @@
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.00025465617765679127,
+      "ma_large": 0
     },
     {
       "t": 1,
@@ -31,7 +34,9 @@
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.00022160070313228023,
+      "ma_large": 0
     },
     {
       "t": 2,
@@ -43,7 +48,9 @@
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.0003219754440688393,
+      "ma_large": 0
     },
     {
       "t": 3,
@@ -59,25 +66,37 @@
         {
           "i": 0,
           "name": "model_0",
-          "po_fit": 0.0009169286463967181
+          "layer": "layer0",
+          "po_fit": 0.0008518292209179759,
+          "mse": 0.07432830825596835
         },
         {
           "i": 1,
           "name": "model_1",
-          "po_fit": 0.0009105009959553058
+          "layer": "layer1",
+          "po_fit": 0.0008342329765274721,
+          "mse": 0.06711431424539202
         },
         {
           "i": 2,
           "name": "model_2",
-          "po_fit": 0.0007235856451757308
+          "layer": "layer2",
+          "po_fit": 0.000692986470138436,
+          "mse": 0.042903444324579036
         },
         {
           "i": 3,
           "name": "model_3",
-          "po_fit": 0.0006522809551914848
+          "layer": "layer3",
+          "po_fit": 0.0006530205259146412,
+          "mse": 0.027479253923763814
         }
       ],
-      "po_star": 0.0006522809551914848
+      "po_star": 0.0006530205259146412,
+      "i_star_mse": 3,
+      "mse_star": 0.027479253923763814,
+      "po_ma": 0.0004971749956026201,
+      "ma_large": 0
     },
     {
       "t": 4,
@@ -89,7 +108,9 @@
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.00045123245989119856,
+      "ma_large": 0
     },
     {
       "t": 5,
@@ -101,7 +122,9 @@
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.00044466824495271805,
+      "ma_large": 0
     },
     {
       "t": 6,
@@ -113,7 +136,9 @@
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.0004758374850661111,
+      "ma_large": 0
     },
     {
       "t": 7,
@@ -125,7 +150,9 @@
       "all_trainable": 1,
       "freeze_from": null,
       "i_star": 3,
-      "layers": []
+      "layers": [],
+      "po_ma": 0.0004030035697014149,
+      "ma_large": 0
     }
   ],
   "layer_names": [
@@ -134,7 +161,102 @@
     "model_2",
     "model_3"
   ],
+  "layer_keys": [
+    "layer0",
+    "layer1",
+    "layer2",
+    "layer3"
+  ],
   "recommend_i": 3,
+  "ma_window": 5,
+  "ma_max": 0.0004971749956026201,
+  "ma_stable": 1,
+  "all_layer_backprop": 1,
+  "frac_ma_large": 0.0,
+  "PO_Dict": {
+    "layer0": [
+      null,
+      null,
+      null,
+      0.0008518292209179759,
+      null,
+      null,
+      null,
+      null
+    ],
+    "layer1": [
+      null,
+      null,
+      null,
+      0.0008342329765274721,
+      null,
+      null,
+      null,
+      null
+    ],
+    "layer2": [
+      null,
+      null,
+      null,
+      0.000692986470138436,
+      null,
+      null,
+      null,
+      null
+    ],
+    "layer3": [
+      null,
+      null,
+      null,
+      0.0006530205259146412,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "MSE_Dict": {
+    "layer0": [
+      null,
+      null,
+      null,
+      0.07432830825596835,
+      null,
+      null,
+      null,
+      null
+    ],
+    "layer1": [
+      null,
+      null,
+      null,
+      0.06711431424539202,
+      null,
+      null,
+      null,
+      null
+    ],
+    "layer2": [
+      null,
+      null,
+      null,
+      0.042903444324579036,
+      null,
+      null,
+      null,
+      null
+    ],
+    "layer3": [
+      null,
+      null,
+      null,
+      0.027479253923763814,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
   "dataset": "covertype",
   "title": "covertype (geographic order, class 2 vs rest)",
   "n_features": 54,
@@ -194,6 +316,5 @@
     "x51",
     "x52",
     "x53"
-  ],
-  "n_new": 10000
+  ]
 }

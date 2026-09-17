@@ -20,13 +20,16 @@ code { background: #eee; padding: 1px 4px; }
 <p class="note">
 covertype (geographic order, class 2 vs rest). n_ref=10000, n_new=10000, hidden=[64, 32].
 表格 PO-risk 单独维护 <b>outcome model</b> μ(Y|X) 和 <b>propensity</b> e(T|X)。
-新 batch 是 <b>T=1</b>。直接读 PO-risk。没有大偏差就全开；有大偏差才看从第几层开始冻。
-n_new 不宜过小，否则要 online-bootstrap。
+新 batch 是 <b>T=1</b>。raw PO-risk 会抖就做 causal moving average；
+<b>MA 稳（不过 2× baseline）→ 全量每一层 back-propagate</b>。
+大 hop 上同时记 <code>PO_Dict</code> / <code>MSE_Dict</code>
+（layer0…layer_k），从哪一层开始明显变动就对着 MSE 读。
+不做 online-bootstrap。何时 update 是业务逻辑，不是这个数。
 </p>
-<p class="rec">没有大 deviation，或大偏差段仍全开 → 一直 trainable</p>
-<figure><img src="po_risk_gate.png" alt="po_risk_gate.png"><figcaption>po_risk_gate.png</figcaption></figure><figure><img src="freeze_from.png" alt="freeze_from.png"><figcaption>freeze_from.png</figcaption></figure><figure><img src="po_risk_by_layer.png" alt="po_risk_by_layer.png"><figcaption>po_risk_by_layer.png</figcaption></figure>
+<p class="rec">MA 稳定 → 全量每一层 back-propagate</p>
+<figure><img src="po_risk_gate.png" alt="po_risk_gate.png"><figcaption>po_risk_gate.png</figcaption></figure><figure><img src="freeze_from.png" alt="freeze_from.png"><figcaption>freeze_from.png</figcaption></figure><figure><img src="po_mse_by_layer.png" alt="po_mse_by_layer.png"><figcaption>po_mse_by_layer.png</figcaption></figure><figure><img src="po_risk_by_layer.png" alt="po_risk_by_layer.png"><figcaption>po_risk_by_layer.png</figcaption></figure><figure><img src="mse_by_layer.png" alt="mse_by_layer.png"><figcaption>mse_by_layer.png</figcaption></figure>
 <h2>每一段 — 直接读 PO-risk</h2>
-<table><thead><tr><th>t</th><th>PO-risk</th><th>baseline</th><th>large?</th><th>action</th></tr></thead><tbody><tr><td>0</td><td>0.0002547</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>1</td><td>0.0001885</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>2</td><td>0.0005227</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>3</td><td>0.001023</td><td>0.0003472</td><td>yes</td><td>all trainable</td></tr><tr><td>4</td><td>0.0002675</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>5</td><td>0.0002218</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>6</td><td>0.0003444</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>7</td><td>0.0001586</td><td>0.0003472</td><td></td><td>all trainable</td></tr></tbody></table>
-<h2>Last large-deviation batch — 从哪一层冻</h2><table><thead><tr><th>model</th><th>PO-risk</th></tr></thead><tbody><tr><td>model_0</td><td>0.0009169</td></tr><tr><td>model_1</td><td>0.0009105</td></tr><tr><td>model_2</td><td>0.0007236</td></tr><tr><td>model_3 ★</td><td>0.0006523</td></tr></tbody></table>
+<table><thead><tr><th>t</th><th>PO-risk</th><th>MA</th><th>baseline</th><th>large?</th><th>action</th></tr></thead><tbody><tr><td>0</td><td>0.0002547</td><td>0.0002547</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>1</td><td>0.0001885</td><td>0.0002216</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>2</td><td>0.0005227</td><td>0.000322</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>3</td><td>0.001023</td><td>0.0004972</td><td>0.0003472</td><td>yes</td><td>all trainable</td></tr><tr><td>4</td><td>0.0002675</td><td>0.0004512</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>5</td><td>0.0002218</td><td>0.0004447</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>6</td><td>0.0003444</td><td>0.0004758</td><td>0.0003472</td><td></td><td>all trainable</td></tr><tr><td>7</td><td>0.0001586</td><td>0.000403</td><td>0.0003472</td><td></td><td>all trainable</td></tr></tbody></table>
+<h2>Last large-deviation batch — PO-risk 和 MSE 同时读</h2><table><thead><tr><th>layer</th><th>model</th><th>PO-risk</th><th>MSE</th></tr></thead><tbody><tr><td>layer0</td><td>model_0</td><td>0.0008518</td><td>0.07433</td></tr><tr><td>layer1</td><td>model_1</td><td>0.0008342</td><td>0.06711</td></tr><tr><td>layer2</td><td>model_2</td><td>0.000693</td><td>0.0429</td></tr><tr><td>layer3</td><td>model_3 ★</td><td>0.000653</td><td>0.02748</td></tr></tbody></table>
 </body>
 </html>
