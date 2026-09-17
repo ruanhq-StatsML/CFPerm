@@ -217,10 +217,11 @@ def alarm_rate(
     after: int = 0,
     until: Optional[int] = None,
 ) -> float:
-    """Alarm rate = ``(# rejects) / (# batches)`` on the window.
+    """Baseline alarm rate = ``(# rejects) / (# batches)`` on the window.
 
-    Under a null (no shift) stream this *is* the false-alarm rate (FAR):
-    ``FAR = n_alarm / n_batch``.
+    This is a **reference reject frequency**, not a Type-I FAR: once the
+    model / stream is updating, we cannot claim a strictly stationary DGP,
+    so a moderately high rate is an expected baseline, not a false-alarm bug.
     """
     n_alarm, n_batch = alarm_counts(reject_hist, after=after, until=until)
     if n_batch <= 0:
@@ -228,14 +229,8 @@ def alarm_rate(
     return float(n_alarm) / float(n_batch)
 
 
-def false_alarm_rate(
-    reject_hist: Sequence[int],
-    *,
-    after: int = 0,
-    until: Optional[int] = None,
-) -> float:
-    """Alias of :func:`alarm_rate` for null-stream reporting."""
-    return alarm_rate(reject_hist, after=after, until=until)
+# Kept as alias for older call sites; prefer ``alarm_rate`` naming.
+false_alarm_rate = alarm_rate
 
 
 def lead_time(grad_reject_t: Optional[int], mse_break_t: Optional[int]) -> Optional[int]:

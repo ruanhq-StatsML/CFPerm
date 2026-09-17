@@ -6,7 +6,6 @@ import torch.nn as nn
 
 from agod.grad_rfperm import (
     alarm_rate,
-    false_alarm_rate,
     init_grad_rfperm,
     init_grad_rfperm_layers,
     layer_grad_norms,
@@ -65,10 +64,9 @@ def test_single_stream_update():
     assert abs(shares["fc2"] - 0.75) < 1e-9
 
 
-def test_far_is_alarms_over_batches():
+def test_alarm_rate_is_alarms_over_batches():
     hist = [0, 0, 1, 0, 1, 1, 0, 0]
     # after burn=2: alarms at t=2,4,5 → 3/6
     assert abs(alarm_rate(hist, after=2) - 3 / 6) < 1e-12
-    assert abs(false_alarm_rate(hist, after=2) - 3 / 6) < 1e-12
     assert alarm_rate([0, 0, 0], after=0) == 0.0
 
