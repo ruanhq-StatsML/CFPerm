@@ -62,13 +62,4 @@ PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --justify
 PYTHONPATH=Python/src:. python3 scripts/render_flow_html.py
 ```
 
-总页是 `results/layer_freeze_online_cv/flow.html`。
-
-| DGP | P(X) | P(Y\|X) | OnlineRFPerm | MMD²(X_new, X_ref) | 看板该看到 |
-|---|---|---|---|---|---|
-| gradual concept | 固定 | β 慢慢翻 | T 从 labeled onset 往后抬；慢漂不一定 1.5× hop | 安静 | MSE/PO 动 → watch |
-| gradual covariate | μ 慢慢走 | 同一 f | T 不一定 hop | 过线 | PO 安静；MSE 崩才标 X shift |
-
-```bash
-PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --justify
-```
+给老板看的总页：`results/layer_freeze_online_cv/mvp.html`。
