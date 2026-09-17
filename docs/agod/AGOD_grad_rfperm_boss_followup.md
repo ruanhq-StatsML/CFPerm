@@ -63,11 +63,22 @@ Artifacts：`results/agod_grad_rfperm/`（per-dataset plots + `lead_time_summary
 - 单流 `‖∇_U‖₂`，无跨参数 multiple testing。  
 - frozen `f_ref` 读 grad，避免 online 更新把 norm 训没。
 
-**建议下周细化**
-1. **Grace / 稳健性：** burn 后前几个 step 的假阳率扫描（部分 run 在 `t=n_burn` 立刻 reject）。  
-2. **接真实 freeze 闭环：** reject → 按 share 冻/解冻 → 报 next-batch MSE / FLOPs 节省（现在是 monitor-only）。  
-3. **接到现有 AGOD pack：** stocks / metro / beijing / Waymo proxy，与 RFPerm-gated √PO 同屏。  
-4. **大模型侧：** 同一口径挂在 adapter / LoRA 未冻结参数上（仍是一条 `‖∇_U‖₂`）。
+**建议下周细化（部分已做，见 §5b）**
+1. Grace / 稳健性假阳扫描  
+2. Freeze 闭环 MSE / FLOPs  
+3. 接到 stocks / metro / beijing / Waymo pack  
+4. 大模型 adapter / LoRA 未冻结参数同口径（仍待做）
+
+### 5b. Supplementary experiments（已跑）
+
+`docs/method/Grad_OnlineRFPerm_extras.md` · `results/grad_rfperm_extras/`
+
+| Extra | Headline |
+|---|---|
+| Null + grace | grace=4：first reject 8→15；early(≤5) FPR 100%→67% |
+| α sweep | synthetic/electricity 上 lead 在 α∈{0.01,0.05,0.10} 仍为负 |
+| Freeze loop | electricity：`freeze_early` ≈0.86× MSE @ 0.79× FLOPs vs always_adapt |
+| Extra packs | stocks_IWM lead −4.0（100% earlier）；metro +2；waymo ≈0 |
 
 ## 6. 代码入口
 

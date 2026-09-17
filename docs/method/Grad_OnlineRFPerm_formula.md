@@ -41,3 +41,12 @@ $$
 $$
 
 MVP (5×5): mean Lead $=-3.24$, $P(\mathrm{Lead}<0)=72\%$.
+
+## Supplementary experiments
+
+See [`Grad_OnlineRFPerm_extras.md`](Grad_OnlineRFPerm_extras.md):
+
+- Null / grace FPR
+- α sensitivity
+- Freeze closed-loop (MSE vs FLOPs)
+- Extra stream packs (metro / beijing / stocks / waymo)

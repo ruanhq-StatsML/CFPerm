@@ -1,0 +1,30 @@
+{
+  "null_grace": {
+    "by_grace": {
+      "0": {
+        "fpr_first": 1.0,
+        "fpr_early5": 1.0,
+        "mean_duty": 0.2333333333333333,
+        "mean_duty_mse": 0.225,
+        "mean_t_grad": 8.0,
+        "n": 3
+      },
+      "2": {
+        "fpr_first": 1.0,
+        "fpr_early5": 1.0,
+        "mean_duty": 0.21052631578947367,
+        "mean_duty_mse": 0.2280701754385965,
+        "mean_t_grad": 10.666666666666666,
+        "n": 3
+      },
+      "4": {
+        "fpr_first": 1.0,
+        "fpr_early5": 0.6666666666666666,
+        "mean_duty": 0.2037037037037037,
+        "mean_duty_mse": 0.2222222222222222,
+        "mean_t_grad": 15.333333333333334,
+        "n": 3
+      }
+    }
+  }
+}
