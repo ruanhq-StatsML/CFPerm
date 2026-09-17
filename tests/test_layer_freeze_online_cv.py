@@ -22,7 +22,7 @@ from dl_model_registry import (  # noqa: E402
     spawn_layer_models,
 )
 from layer_freeze_cv import run_layer_freeze_cv  # noqa: E402
-from streaming_po_risk import pack_ref_new, po_risk, streaming_po_risk  # noqa: E402
+from streaming_po_risk import MIN_STREAM_N, REF_N, pack_ref_new, po_risk, streaming_po_risk  # noqa: E402
 
 
 class RegistryTests(unittest.TestCase):
@@ -57,6 +57,10 @@ class RegistryTests(unittest.TestCase):
 
 
 class StreamingPOTests(unittest.TestCase):
+    def test_ref_and_stream_are_large_enough_to_read_po_risk(self):
+        self.assertEqual(REF_N, 10_000)
+        self.assertGreaterEqual(MIN_STREAM_N, 5_000)
+
     def test_new_batch_is_t1(self):
         X0 = np.zeros((10, 2))
         X1 = np.ones((6, 2))

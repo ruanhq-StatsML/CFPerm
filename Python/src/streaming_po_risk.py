@@ -2,8 +2,8 @@
 
 φ = (Y − μ)(T − e), τ̂(X) ≈ φ, risk = mean(τ̂²).
 
-μ is either a linear probe (the hop in the table) or a model
-prediction (the leftover hop after that freeze-depth).
+μ is a linear probe on the table, or the AnyMLP prediction
+for that freeze-depth. Read the number; do not bootstrap.
 """
 from __future__ import annotations
 
@@ -11,6 +11,9 @@ import numpy as np
 
 CLIP = 1e-3
 REF_N = 10_000
+# Incoming T=1 block. Smaller than this, PO-risk jitters and you would
+# need online-bootstrap on k+1 models — too expensive for the board.
+MIN_STREAM_N = 5_000
 
 
 def zscore(X: np.ndarray) -> np.ndarray:

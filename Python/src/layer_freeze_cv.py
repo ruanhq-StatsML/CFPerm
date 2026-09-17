@@ -1,9 +1,10 @@
-"""Online layer-freeze CV: watch streaming PO-risk while training top-i layers.
+"""Online layer-freeze CV: read PO-risk to see where to start updating.
 
 Pretrain AnyMLP on D_ref (T=0, n_ref=10000). Clone k+1 models.
-On each incoming batch (T=1): CosineAnnealingLR on the unfrozen top-i
-layers, then PO-risk on (ref ∪ new). i* = argmin_i PO-risk is how deep
-to unfreeze; freeze everything below that.
+On each incoming batch (T=1): CosineAnnealingLR from the top i layers,
+then read PO-risk on (ref ∪ new). i* = argmin_i PO-risk is the layer
+to start updating from. Incoming n_new must be large; a small batch
+would need online-bootstrap, which is too expensive for the board.
 """
 from __future__ import annotations
 
@@ -77,7 +78,7 @@ def run_layer_freeze_cv(
     seed: int = 2026,
     max_batches: int | None = 12,
     registry: DLModelRegistry | None = None,
-    n_ref_eval: int = 4000,
+    n_ref_eval: int | None = None,
 ):
     """Stream T=1 batches; return per-layer PO-risk rows plus i*(t)."""
     X = np.asarray(X, dtype=float)
@@ -91,9 +92,9 @@ def run_layer_freeze_cv(
     )
     models = spawn_layer_models(pretrained)
     k = pretrained.n_layer_groups
+    take = int(n_ref if n_ref_eval is None else min(n_ref_eval, n_ref))
     rng = np.random.default_rng(seed + 7)
-    take = min(n_ref_eval, n_ref)
-    ref_eval = rng.choice(n_ref, size=take, replace=False)
+    ref_eval = np.arange(n_ref) if take == n_ref else rng.choice(n_ref, size=take, replace=False)
 
     rows = []
     n_stream = len(Y_stream)
