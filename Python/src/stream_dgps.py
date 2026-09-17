@@ -65,7 +65,11 @@ def make_gradual_covariate(
     shift: float = 2.5,
     seed: int = 2026,
 ):
-    """P(Y|X) fixed. First 4 coordinates of X walk by `shift` after onset."""
+    """P(Y|X) is a radial bump on the first 4 coords. Mean of those coords walks.
+
+    Same f before and after. After onset the mass leaves the bump, so a model
+    fit on D_ref pays MSE while PO-risk (same f) stays quieter than concept.
+    """
     rng = np.random.default_rng(seed)
     n = int(n_ref) + int(n_new) * int(n_batches)
     X0 = rng.normal(size=(n, p))
@@ -73,13 +77,12 @@ def make_gradual_covariate(
     delta[:4] = float(shift)
     a = _alpha(n_ref, n_new, n_batches, onset_batch)
     X = X0 + a[:, None] * delta
-    beta = np.zeros(p)
-    beta[:4] = 1.2
-    Y = rng.binomial(1, _sigmoid(X @ beta)).astype(float)
+    r = np.sqrt(np.sum(X[:, :4] ** 2, axis=1))
+    Y = rng.binomial(1, _sigmoid(2.2 - 1.6 * r)).astype(float)
     meta = {
         "kind": "covariate",
         "onset_batch": int(onset_batch),
-        "title": f"DGP gradual covariate (μ walks after batch {onset_batch})",
+        "title": f"DGP gradual covariate (bump; μ walks after batch {onset_batch})",
         "n_ref": int(n_ref),
         "n_new": int(n_new),
     }

@@ -52,8 +52,8 @@ last-two hop 是相邻窗的 MSE 比。第一个 hop 就是 **shift-onset**。MM
 
 | DGP | P(X) | P(Y\|X) | OnlineRFPerm | MMD²(X_new, X_ref) | 看板该看到 |
 |---|---|---|---|---|---|
-| gradual concept | 固定 | β 慢慢翻 | onset 在 labeled 附近 | 安静 | MSE/PO 动，不是 X shift |
-| gradual covariate | μ 慢慢走 | 固定 | onset 在 labeled 附近 | 过线 | MSE 崩、PO 安静 → X shift |
+| gradual concept | 固定 | β 慢慢翻 | T 从 labeled onset 往后抬；慢漂不一定 1.5× hop | 安静 | MSE/PO 动 → watch |
+| gradual covariate | μ 慢慢走 | 同一 f | T 不一定 hop | 过线 | PO 安静；MSE 崩才标 X shift |
 
 ```bash
 PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py --justify
