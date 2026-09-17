@@ -20,6 +20,17 @@ n_ref=480, n_new=160, merchants=16, batches=3, onset=1. Planted region is **sout
 | both | 1 | yes | networkx | C0 | 0.636 | C0 | 4 | 55 | 3 | channel,amount | x_shift |
 | both | 2 | yes | networkx | C0 | 0.857 | C0 | 6 | 21 | 3 | amount,channel,merchant_gmv | x_shift |
 
+## Own-ref vs full-ref (node clock) and multi-layer lift-to-order
+
+| kind | t | south own MMD | north own MMD | south own ‖ΔX‖ | north own ‖ΔX‖ | north full ‖ΔX‖ | J(merchant,south) | J(user,south) | J(merchant,user) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| covariate_south | 1 | 0.0291 | -0.0059 | 0.929 | 0.716 | 0.796 | 0.473 | 0 | 0 |
+| covariate_south | 2 | 0.257 | 0.016 | 2.28 | 0.676 | 0.67 | 0.767 | 0 | 0 |
+| concept_south | 1 | -0.00763 | -0.0059 | 0.644 | 0.716 | 0.796 | 0.31 | 0 | 0 |
+| concept_south | 2 | -0.0106 | 0.016 | 0.598 | 0.676 | 0.67 | 0.0885 | 0 | 0 |
+| both | 1 | 0.0291 | -0.0059 | 0.929 | 0.716 | 0.796 | 0.558 | 0 | 0 |
+| both | 2 | 0.257 | 0.016 | 2.28 | 0.676 | 0.67 | 0.767 | 0 | 0 |
+
 ## Community portraits (bundled cut · MMD + PO + CMean)
 
 | kind | t | community | n | south_frac | π_MMD | π_PO | π_CMean | MMD | PO | ΔE[Y] | ‖ΔE[X]‖ | fingerprint |

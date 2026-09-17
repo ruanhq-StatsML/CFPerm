@@ -187,6 +187,23 @@ class BundledGraphTests(unittest.TestCase):
         pack = self._pack("concept_south", seed=10)
         self.assertGreaterEqual(pack["bundled"]["loud_south_frac"], 0.6)
 
+    def test_own_ref_flags_change_full_ref_flags_heterogeneity(self):
+        pack = self._pack("covariate_south", seed=9)
+        s = pack["own_vs_full"]
+        self.assertGreater(s["south_own_mmd"], s["north_own_mmd"])
+        self.assertGreater(s["south_own_cmean_x"], s["north_own_cmean_x"])
+        own_gap = s["south_own_mmd"] - s["north_own_mmd"]
+        full_gap = s["south_full_mmd"] - s["north_full_mmd"]
+        self.assertGreater(own_gap, full_gap)
+
+    def test_layers_evaluated_after_lift_to_orders(self):
+        pack = self._pack("covariate_south", seed=9)
+        layers = pack["layers"]
+        self.assertGreater(layers["jaccard_merchant_vs_south"], layers["jaccard_user_vs_south"])
+        self.assertGreaterEqual(layers["jaccard_merchant_vs_south"], 0.4)
+        self.assertFalse(layers["merchant"]["y_in_graph"])
+        self.assertFalse(layers["user"]["y_in_graph"])
+
 
 if __name__ == "__main__":
     unittest.main()

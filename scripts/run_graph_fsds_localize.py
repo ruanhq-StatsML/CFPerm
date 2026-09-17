@@ -168,6 +168,49 @@ def write_markdown(results: dict, dest: Path) -> None:
             )
     lines += [
         "",
+        "## Own-ref vs full-ref (node clock) and multi-layer lift-to-order",
+        "",
+        _md_row(
+            [
+                "kind",
+                "t",
+                "south own MMD",
+                "north own MMD",
+                "south own ‖ΔX‖",
+                "north own ‖ΔX‖",
+                "north full ‖ΔX‖",
+                "J(merchant,south)",
+                "J(user,south)",
+                "J(merchant,user)",
+            ]
+        ),
+        _md_row(["---"] * 10),
+    ]
+    for kind in KINDS:
+        for rec in results[kind]["rows"]:
+            if not rec.get("onset"):
+                continue
+            g = rec.get("graph") or {}
+            o = g.get("own_vs_full") or {}
+            L = g.get("layers") or {}
+            lines.append(
+                _md_row(
+                    [
+                        kind,
+                        rec["t"],
+                        _fmt(o.get("south_own_mmd")),
+                        _fmt(o.get("north_own_mmd")),
+                        _fmt(o.get("south_own_cmean_x")),
+                        _fmt(o.get("north_own_cmean_x")),
+                        _fmt(o.get("north_full_cmean_x")),
+                        _fmt(L.get("jaccard_merchant_vs_south")),
+                        _fmt(L.get("jaccard_user_vs_south")),
+                        _fmt(L.get("jaccard_merchant_vs_user")),
+                    ]
+                )
+            )
+    lines += [
+        "",
         "## Community portraits (bundled cut · MMD + PO + CMean)",
         "",
     ]

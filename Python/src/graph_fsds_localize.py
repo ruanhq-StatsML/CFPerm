@@ -392,6 +392,8 @@ def node_bundle_scores(node_rows: Sequence[Mapping], *, prefer: str = "vs_own_re
     """
     out = {}
     for r in node_rows:
+        if r.get(prefer) is None and prefer == "vs_own_ref":
+            continue
         src = dict(r.get(prefer) or r.get("vs_full_ref") or {})
         full = r.get("vs_full_ref") or {}
         if src.get("po") is None and full.get("po") is not None:
@@ -457,6 +459,152 @@ def graph_shift_cuts(
         "scores": {str(k): v for k, v in scores.items()},
         "region_by_merchant": {str(k): v for k, v in region_by_m.items()},
         "y_in_structural": y_in_graph_attrs(structural["graph"]),
+        "own_vs_full": own_vs_full_summary(nodes, region_by_m),
+        "layers": layer_eval_on_orders(ref, new, stats, merchant_nodes=nodes, seed=seed, min_n=min_n),
+    }
+
+
+def jaccard_masks(a, b) -> float:
+    a = np.asarray(a, dtype=bool).ravel()
+    b = np.asarray(b, dtype=bool).ravel()
+    if a.size != b.size:
+        raise ValueError("masks must align on the order grain")
+    inter = int(np.logical_and(a, b).sum())
+    union = int(np.logical_or(a, b).sum())
+    return float(inter / union) if union else 0.0
+
+
+def lift_cut_to_orders(entity_ids, cut: Mapping[int, str], default: str = "C_quiet") -> np.ndarray:
+    """Entity-layer labels → one label per order. Evaluation grain is always the order."""
+    entity_ids = np.asarray(entity_ids).astype(int)
+    return np.asarray([cut.get(int(e), default) for e in entity_ids], dtype=object)
+
+
+def loud_order_mask(entity_ids, cut: Mapping[int, str], scores: Mapping[int, Mapping]):
+    hot = loud_community(cut, scores)
+    labs = lift_cut_to_orders(entity_ids, cut)
+    if hot is None:
+        return np.zeros(len(labs), dtype=bool), None, labs
+    return labs == hot, hot, labs
+
+
+def own_vs_full_summary(node_rows: Sequence[Mapping], region_by_id: Mapping[int, str]) -> dict:
+    """Why own-ref is the changing-subset clock, and full-ref is heterogeneity.
+
+    own:  this node's new bag vs this node's D_ref bag
+    full: this node's new bag vs the global D_ref
+    A niche merchant who did not move is loud on full, quiet on own.
+    A planted shifter is loud on own.
+    """
+    south_own, north_own, south_full, north_full = [], [], [], []
+    n_own, n_skip = 0, 0
+    for r in node_rows:
+        own, full = r.get("vs_own_ref"), r.get("vs_full_ref") or {}
+        lab = str(region_by_id.get(int(r["node"]), ""))
+        if own is None:
+            n_skip += 1
+            continue
+        n_own += 1
+        om, fm = float(own.get("mmd") or 0.0), float(full.get("mmd") or 0.0)
+        oc, fc = float(own.get("cmean_x") or 0.0), float(full.get("cmean_x") or 0.0)
+        if lab == "south":
+            south_own.append((om, oc, abs(float(own.get("cmean_y") or 0.0))))
+            south_full.append((fm, fc))
+        else:
+            north_own.append((om, oc, abs(float(own.get("cmean_y") or 0.0))))
+            north_full.append((fm, fc))
+
+    def _mean(rows, j):
+        if not rows:
+            return None
+        return float(np.mean([r[j] for r in rows]))
+
+    return {
+        "n_with_own_ref": n_own,
+        "n_cold_start_skipped": n_skip,
+        "south_own_mmd": _mean(south_own, 0),
+        "north_own_mmd": _mean(north_own, 0),
+        "south_own_cmean_x": _mean(south_own, 1),
+        "north_own_cmean_x": _mean(north_own, 1),
+        "south_own_cmean_y": _mean(south_own, 2),
+        "north_own_cmean_y": _mean(north_own, 2),
+        "south_full_mmd": _mean(south_full, 0),
+        "north_full_mmd": _mean(north_full, 0),
+        "south_full_cmean_x": _mean(south_full, 1),
+        "north_full_cmean_x": _mean(north_full, 1),
+        "read": (
+            "own-ref = did this merchant move; full-ref = does this merchant "
+            "differ from the global mix (heterogeneity, not shift)"
+        ),
+    }
+
+
+def _layer_cut(ref, new, stats, id_key: str, min_n: int, seed: int) -> dict:
+    nodes = node_localization(
+        ref["X_order"],
+        ref["Y"],
+        new["X_order"],
+        new["Y"],
+        ref[id_key],
+        new[id_key],
+        sigma=stats["sigma_order"],
+        seed=seed,
+        min_n=min_n,
+        with_po=False,
+    )
+    scores = node_bundle_scores(nodes, prefer="vs_own_ref")
+    G = bundled_shift_graph(scores)
+    cut = louvain_int_cut(G, seed=seed)
+    mask, hot, labs = loud_order_mask(new[id_key], cut, scores)
+    planted = np.asarray(new["region"]) == "south"
+    return {
+        "layer": id_key.replace("_id", ""),
+        "n_nodes": int(G.number_of_nodes()),
+        "n_edges": int(G.number_of_edges()),
+        "n_communities": int(len(set(cut.values()))) if cut else 0,
+        "loud_community": hot,
+        "n_loud_orders": int(mask.sum()),
+        "jaccard_vs_planted_south": jaccard_masks(mask, planted),
+        "south_frac_loud_orders": float(planted[mask].mean()) if int(mask.sum()) else 0.0,
+        "cut": {str(k): v for k, v in cut.items()},
+        "y_in_graph": y_in_graph_attrs(G),
+        "_mask": mask,
+    }
+
+
+def layer_eval_on_orders(
+    ref: Mapping,
+    new: Mapping,
+    stats: Mapping,
+    *,
+    merchant_nodes=None,
+    seed: int = 2026,
+    min_n: int = NODE_MIN_N,
+) -> dict:
+    """Cut each layer on its own nodes, then evaluate only after lifting to orders.
+
+    Same-dimension localization stays on one grain. Multi-layer graphs are
+    compared by Jaccard of loud order-sets — never by mixing merchant-MMD
+    with user-MMD in one simplex.
+    """
+    mer = _layer_cut(ref, new, stats, "merchant_id", min_n=min_n, seed=seed)
+    user_min = max(int(min_n), 4)
+    usr = _layer_cut(ref, new, stats, "user_id", min_n=user_min, seed=seed)
+    planted = np.asarray(new["region"]) == "south"
+    mer_mask = mer.pop("_mask")
+    usr_mask = usr.pop("_mask")
+    return {
+        "merchant": mer,
+        "user": usr,
+        "order_oracle_south_n": int(planted.sum()),
+        "jaccard_merchant_vs_user": jaccard_masks(mer_mask, usr_mask),
+        "jaccard_merchant_vs_south": float(mer["jaccard_vs_planted_south"]),
+        "jaccard_user_vs_south": float(usr["jaccard_vs_planted_south"]),
+        "read": (
+            "evaluate layers only after lift-to-order; merchant layer should "
+            "recover planted south when the DGP is merchant-local; user layer "
+            "need not (users are mixed across merchants)"
+        ),
     }
 
 
@@ -1047,6 +1195,16 @@ def run_pipeline(
                 "south_frac": graph_pack["structural"]["south_frac"],
                 "merchant_cut": {str(k): v for k, v in graph_pack["structural"]["merchant_cut"].items()},
             },
+            "own_vs_full": graph_pack["own_vs_full"],
+            "layers": {
+                "merchant": {k: v for k, v in graph_pack["layers"]["merchant"].items() if k != "cut"},
+                "user": {k: v for k, v in graph_pack["layers"]["user"].items() if k != "cut"},
+                "jaccard_merchant_vs_user": graph_pack["layers"]["jaccard_merchant_vs_user"],
+                "jaccard_merchant_vs_south": graph_pack["layers"]["jaccard_merchant_vs_south"],
+                "jaccard_user_vs_south": graph_pack["layers"]["jaccard_user_vs_south"],
+                "order_oracle_south_n": graph_pack["layers"]["order_oracle_south_n"],
+                "read": graph_pack["layers"]["read"],
+            },
         },
         "grains": grains,
         "fsds": {
@@ -1099,6 +1257,9 @@ __all__ = [
     "CUT_STRUCTURAL",
     "GRAPH_PACKAGE",
     "graph_shift_cuts",
+    "jaccard_masks",
+    "layer_eval_on_orders",
+    "own_vs_full_summary",
     "node_bundle_scores",
     "grain_localization",
     "join_profile",

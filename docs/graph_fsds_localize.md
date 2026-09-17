@@ -82,6 +82,61 @@ Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \
 
 ---
 
+## 表 0b · 怎么定位变动 subset：own-ref、同一维度、多层图怎么评
+
+### 节点分数必须对「商户自己的 \(D_{\mathrm{ref}}\)」
+
+| 钟 | 公式（节点 \(i\) = 一个商户的订单袋） | 问什么 | 会误伤什么 |
+|---|---|---|---|
+| **own-ref** | \(\mathrm{MMD}(X_{\mathrm{new}}(i), X_{\mathrm{ref}}(i))\)，\(\Delta\mu\) 同样用 \(i\) 自己的 ref | **这个商户自己变了没有** | 需要 \(n_{\mathrm{ref}}(i)\ge\min n\)；新商户没有自己的钟 → **跳过**，不进 bundled 图 |
+| **full-ref** | \(\mathrm{MMD}(X_{\mathrm{new}}(i), X_{\mathrm{ref}})\) | 这个商户和**全局混合**不像 | 从来就小众的商户永远 loud（异质性，不是 drift） |
+
+变动 subset 的切图只用 own-ref。full-ref 留着报「对整窗的贡献」（构成变化：南区单变多）。两口钟不要合成一个分数再切。
+
+冷启动（新商户没有 own-ref）：不把 full-ref 塞进切图，否则又变成异质性。订单仍可挂 `C_quiet`，两层归因时单独看。
+
+σ 钉在**该节点自己的 ref 袋**上（own）或全局 \(D_{\mathrm{ref}}\)（full），都冻结，不在新窗重估。
+
+### 同一维度怎么 localize
+
+只在一个粒上切、只在这个粒上比份额：订单就订单，商户就商户。\(\pi_{\mathrm{MMD}}\) 的分母是这个粒上的社区。不要把商户节点 MMD 和订单行 MMD 丢进同一个 simplex。
+
+同一维度的评估：loud 社区 lift 成订单集合 \(\hat S\)，和种下的南区订单 \(S^\star\) 算 Jaccard；再在 \(\hat S\) 上打三支 + vs other。
+
+### 多个维度 / 多层图怎么评估
+
+图是分层的：商户层、用户层、（可选）订单 kNN 层。**每一层自己切**，切完 **全部 lift 到订单粒** 再比。这是唯一可加的评估单位。
+
+```
+商户层 bundled Louvain  →  订单集合 Ŝ_m
+用户层 bundled Louvain  →  订单集合 Ŝ_u
+订单粒 oracle（region）→  订单集合 S*
+评估：J(Ŝ_m, S*)、J(Ŝ_u, S*)、J(Ŝ_m, Ŝ_u)
+三支肖像只在 Ŝ_m / Ŝ_u 上打（已经是同一粒）
+```
+
+| 看到 | 读法 |
+|---|---|
+| \(J(\hat S_m,S^\star)\) 高、\(J(\hat S_u,S^\star)\) 低 | 变动落在商户层；用户只是被共单带着走 |
+| 两头 Jaccard 都高、层间 Jaccard 也高 | 两层指到同一批订单（仍不是唯一分解） |
+| 层间 Jaccard 低、两头对 \(S^\star\) 都不高 | 切错层或 own-ref 样本不够 |
+| 把两层的 \(v_i\) 直接加起来再 Louvain | **不要**。量纲和 n 都不同 |
+
+多层不是 GraphRAG 合成一张超图。就是：每层一个 bundled 图、一个 Louvain、lift 到订单、Jaccard。用户层在这个 DGP 里**不该**回收南区——用户是跨商户随机挂的。这正是评估：层对了才回收。
+
+### 还有什么（同一套钟上的附件，不是新的面）
+
+| 件 | 做什么 | 不要做成 |
+|---|---|---|
+| min_n | own-ref / 社区 PO 的地板 | 小袋上打 RF PO |
+| 强度 vs 质量 | \(\phi_i\) 高但 \(n_i\) 小 → 报 n 和 share | 只按 \(\phi\) 排序当贡献 |
+| vs other | 社区 − 补集，两头对同一口 ref | 当成 Shapley |
+| 结构 Louvain | 对照：模块度切不出 concept | 当变动 subset |
+| 冻住 SAGE-mean | 结构读出 | 当切 |
+| 新商户 | C_quiet | 用全局均值假造 own-ref 再切 |
+
+---
+
 ## 表 2 · 三支读数（同一口 \(D_{\mathrm{ref}}\) 钟）
 
 | 量 | 符号 | 问什么 | 口径 | 不是什么 |

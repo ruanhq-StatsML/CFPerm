@@ -92,29 +92,73 @@
             "n_nodes": 61,
             "n_edges": 189,
             "south_frac": {
-              "C0": 0.4,
+              "C0": 0.5,
               "C1": 0.4,
               "C2": 0.6666666666666666,
-              "C3": 0.6666666666666666
+              "C3": 0.5
             },
             "merchant_cut": {
+              "0": "C0",
+              "11": "C0",
               "4": "C0",
               "10": "C0",
-              "0": "C0",
+              "7": "C0",
               "13": "C0",
-              "3": "C0",
-              "2": "C1",
               "8": "C1",
-              "14": "C1",
               "6": "C1",
               "1": "C1",
+              "14": "C1",
+              "2": "C1",
               "15": "C2",
               "5": "C2",
               "12": "C2",
-              "7": "C3",
-              "9": "C3",
-              "11": "C3"
+              "3": "C3",
+              "9": "C3"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 13,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": 0.005730239177119123,
+            "north_own_mmd": -0.008651275003038259,
+            "south_own_cmean_x": 0.6721972352781395,
+            "north_own_cmean_x": 0.5718456769656681,
+            "south_own_cmean_y": 0.024711831378498042,
+            "north_own_cmean_y": 0.11821938780066861,
+            "south_full_mmd": 0.009146837187974507,
+            "north_full_mmd": 0.0049537211256122414,
+            "south_full_cmean_x": 0.6234845635284206,
+            "north_full_cmean_x": 0.623353013144689,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 13,
+              "n_edges": 77,
+              "n_communities": 1,
+              "loud_community": "C0",
+              "n_loud_orders": 145,
+              "jaccard_vs_planted_south": 0.42207792207792205,
+              "south_frac_loud_orders": 0.4482758620689655,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.42207792207792205,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 74,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
@@ -288,28 +332,72 @@
             "n_nodes": 64,
             "n_edges": 189,
             "south_frac": {
-              "C0": 0.16666666666666666,
-              "C1": 0.6666666666666666,
-              "C2": 0.75
+              "C0": 0.7142857142857143,
+              "C1": 0.2,
+              "C2": 0.5
             },
             "merchant_cut": {
-              "13": "C0",
-              "4": "C0",
-              "0": "C0",
-              "2": "C0",
-              "6": "C0",
-              "1": "C0",
-              "15": "C1",
-              "5": "C1",
-              "12": "C1",
-              "8": "C1",
-              "14": "C1",
-              "3": "C1",
-              "7": "C2",
+              "8": "C0",
+              "3": "C0",
+              "12": "C0",
+              "14": "C0",
+              "15": "C0",
+              "10": "C0",
+              "5": "C0",
+              "0": "C1",
+              "13": "C1",
+              "1": "C1",
+              "4": "C1",
+              "2": "C1",
               "9": "C2",
-              "10": "C2",
-              "11": "C2"
+              "11": "C2",
+              "6": "C2",
+              "7": "C2"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 14,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": 0.029102108629006238,
+            "north_own_mmd": -0.005899162027722837,
+            "south_own_cmean_x": 0.9294379663500052,
+            "north_own_cmean_x": 0.7157711882230168,
+            "south_own_cmean_y": 0.11090298012173014,
+            "north_own_cmean_y": 0.10083676965860873,
+            "south_full_mmd": 0.03528512678191048,
+            "north_full_mmd": 0.008391674639990502,
+            "south_full_cmean_x": 0.9008767737724074,
+            "north_full_cmean_x": 0.7960814124767576,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 14,
+              "n_edges": 45,
+              "n_communities": 5,
+              "loud_community": "C0",
+              "n_loud_orders": 108,
+              "jaccard_vs_planted_south": 0.4728682170542636,
+              "south_frac_loud_orders": 0.5648148148148148,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.4728682170542636,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 82,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
@@ -573,26 +661,70 @@
             "south_frac": {
               "C0": 0.0,
               "C1": 1.0,
-              "C2": 0.5
+              "C2": 0.75
             },
             "merchant_cut": {
-              "7": "C0",
-              "4": "C0",
-              "5": "C0",
-              "0": "C0",
               "3": "C0",
+              "0": "C0",
               "6": "C0",
               "1": "C0",
+              "4": "C0",
+              "5": "C0",
+              "7": "C0",
+              "8": "C1",
+              "12": "C1",
+              "14": "C1",
               "9": "C1",
               "15": "C1",
-              "10": "C1",
-              "13": "C1",
-              "14": "C1",
-              "11": "C1",
-              "12": "C1",
-              "2": "C2",
-              "8": "C2"
+              "10": "C2",
+              "11": "C2",
+              "13": "C2",
+              "2": "C2"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 12,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": 0.2573731085282729,
+            "north_own_mmd": 0.01603567640379792,
+            "south_own_cmean_x": 2.2779208626100296,
+            "north_own_cmean_x": 0.6761214455106742,
+            "south_own_cmean_y": 0.3373922240040661,
+            "north_own_cmean_y": 0.10101580518247183,
+            "south_full_mmd": 0.2867677215835445,
+            "north_full_mmd": 0.02360577083313851,
+            "south_full_cmean_x": 2.380122314479483,
+            "north_full_cmean_x": 0.6703634780940599,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 12,
+              "n_edges": 21,
+              "n_communities": 6,
+              "loud_community": "C0",
+              "n_loud_orders": 81,
+              "jaccard_vs_planted_south": 0.7666666666666667,
+              "south_frac_loud_orders": 0.8518518518518519,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.7666666666666667,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 78,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
@@ -781,29 +913,73 @@
             "n_nodes": 61,
             "n_edges": 189,
             "south_frac": {
-              "C0": 0.4,
+              "C0": 0.5,
               "C1": 0.4,
               "C2": 0.6666666666666666,
-              "C3": 0.6666666666666666
+              "C3": 0.5
             },
             "merchant_cut": {
+              "0": "C0",
+              "11": "C0",
               "4": "C0",
               "10": "C0",
-              "0": "C0",
+              "7": "C0",
               "13": "C0",
-              "3": "C0",
-              "2": "C1",
               "8": "C1",
-              "14": "C1",
               "6": "C1",
               "1": "C1",
+              "14": "C1",
+              "2": "C1",
               "15": "C2",
               "5": "C2",
               "12": "C2",
-              "7": "C3",
-              "9": "C3",
-              "11": "C3"
+              "3": "C3",
+              "9": "C3"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 13,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": 0.005730239177119123,
+            "north_own_mmd": -0.008651275003038259,
+            "south_own_cmean_x": 0.6721972352781395,
+            "north_own_cmean_x": 0.5718456769656681,
+            "south_own_cmean_y": 0.024711831378498042,
+            "north_own_cmean_y": 0.11821938780066861,
+            "south_full_mmd": 0.009146837187974507,
+            "north_full_mmd": 0.0049537211256122414,
+            "south_full_cmean_x": 0.6234845635284206,
+            "north_full_cmean_x": 0.623353013144689,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 13,
+              "n_edges": 77,
+              "n_communities": 1,
+              "loud_community": "C0",
+              "n_loud_orders": 145,
+              "jaccard_vs_planted_south": 0.42207792207792205,
+              "south_frac_loud_orders": 0.4482758620689655,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.42207792207792205,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 74,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
@@ -985,23 +1161,67 @@
               "C3": 0.5
             },
             "merchant_cut": {
-              "15": "C0",
-              "5": "C0",
               "8": "C0",
-              "14": "C0",
               "3": "C0",
               "12": "C0",
-              "13": "C1",
-              "4": "C1",
+              "14": "C0",
+              "15": "C0",
+              "5": "C0",
               "0": "C1",
-              "2": "C1",
+              "13": "C1",
               "1": "C1",
-              "7": "C2",
+              "4": "C1",
+              "2": "C1",
               "10": "C2",
               "11": "C2",
+              "7": "C2",
               "9": "C3",
               "6": "C3"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 14,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": -0.007630689651570349,
+            "north_own_mmd": -0.005899162027722837,
+            "south_own_cmean_x": 0.6438843282051612,
+            "north_own_cmean_x": 0.7157711882230168,
+            "south_own_cmean_y": 0.10146654849779849,
+            "north_own_cmean_y": 0.10083676965860873,
+            "south_full_mmd": 0.0025409006786768495,
+            "north_full_mmd": 0.008391674639990502,
+            "south_full_cmean_x": 0.6449288017469033,
+            "north_full_cmean_x": 0.7960814124767576,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 14,
+              "n_edges": 28,
+              "n_communities": 7,
+              "loud_community": "C0",
+              "n_loud_orders": 87,
+              "jaccard_vs_planted_south": 0.31007751937984496,
+              "south_frac_loud_orders": 0.45977011494252873,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.31007751937984496,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 82,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
@@ -1228,23 +1448,67 @@
               "C3": 0.75
             },
             "merchant_cut": {
-              "7": "C0",
               "9": "C0",
               "4": "C0",
               "0": "C0",
-              "2": "C1",
+              "7": "C0",
               "8": "C1",
               "5": "C1",
               "1": "C1",
-              "13": "C2",
+              "2": "C1",
               "3": "C2",
               "10": "C2",
               "11": "C2",
+              "13": "C2",
               "14": "C3",
               "15": "C3",
               "6": "C3",
               "12": "C3"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 12,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": -0.010592699269987849,
+            "north_own_mmd": 0.01603567640379792,
+            "south_own_cmean_x": 0.5979158434919738,
+            "north_own_cmean_x": 0.6761214455106742,
+            "south_own_cmean_y": 0.16679836610757662,
+            "north_own_cmean_y": 0.10101580518247183,
+            "south_full_mmd": -0.005264272275902186,
+            "north_full_mmd": 0.02360577083313851,
+            "south_full_cmean_x": 0.5609900441011634,
+            "north_full_cmean_x": 0.6703634780940599,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 12,
+              "n_edges": 45,
+              "n_communities": 4,
+              "loud_community": "C1",
+              "n_loud_orders": 45,
+              "jaccard_vs_planted_south": 0.08849557522123894,
+              "south_frac_loud_orders": 0.2222222222222222,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.08849557522123894,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 78,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
@@ -1436,29 +1700,73 @@
             "n_nodes": 61,
             "n_edges": 189,
             "south_frac": {
-              "C0": 0.4,
+              "C0": 0.5,
               "C1": 0.4,
               "C2": 0.6666666666666666,
-              "C3": 0.6666666666666666
+              "C3": 0.5
             },
             "merchant_cut": {
+              "0": "C0",
+              "11": "C0",
               "4": "C0",
               "10": "C0",
-              "0": "C0",
+              "7": "C0",
               "13": "C0",
-              "3": "C0",
-              "2": "C1",
               "8": "C1",
-              "14": "C1",
               "6": "C1",
               "1": "C1",
+              "14": "C1",
+              "2": "C1",
               "15": "C2",
               "5": "C2",
               "12": "C2",
-              "7": "C3",
-              "9": "C3",
-              "11": "C3"
+              "3": "C3",
+              "9": "C3"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 13,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": 0.005730239177119123,
+            "north_own_mmd": -0.008651275003038259,
+            "south_own_cmean_x": 0.6721972352781395,
+            "north_own_cmean_x": 0.5718456769656681,
+            "south_own_cmean_y": 0.024711831378498042,
+            "north_own_cmean_y": 0.11821938780066861,
+            "south_full_mmd": 0.009146837187974507,
+            "north_full_mmd": 0.0049537211256122414,
+            "south_full_cmean_x": 0.6234845635284206,
+            "north_full_cmean_x": 0.623353013144689,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 13,
+              "n_edges": 77,
+              "n_communities": 1,
+              "loud_community": "C0",
+              "n_loud_orders": 145,
+              "jaccard_vs_planted_south": 0.42207792207792205,
+              "south_frac_loud_orders": 0.4482758620689655,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.42207792207792205,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 74,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
@@ -1631,28 +1939,72 @@
             "n_nodes": 64,
             "n_edges": 189,
             "south_frac": {
-              "C0": 0.16666666666666666,
-              "C1": 0.6666666666666666,
-              "C2": 0.75
+              "C0": 0.7142857142857143,
+              "C1": 0.2,
+              "C2": 0.5
             },
             "merchant_cut": {
-              "13": "C0",
-              "4": "C0",
-              "0": "C0",
-              "2": "C0",
-              "6": "C0",
-              "1": "C0",
-              "15": "C1",
-              "5": "C1",
-              "12": "C1",
-              "8": "C1",
-              "14": "C1",
-              "3": "C1",
-              "7": "C2",
+              "8": "C0",
+              "3": "C0",
+              "12": "C0",
+              "14": "C0",
+              "15": "C0",
+              "10": "C0",
+              "5": "C0",
+              "0": "C1",
+              "13": "C1",
+              "1": "C1",
+              "4": "C1",
+              "2": "C1",
               "9": "C2",
-              "10": "C2",
-              "11": "C2"
+              "11": "C2",
+              "6": "C2",
+              "7": "C2"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 14,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": 0.029102108629006238,
+            "north_own_mmd": -0.005899162027722837,
+            "south_own_cmean_x": 0.9294379663500052,
+            "north_own_cmean_x": 0.7157711882230168,
+            "south_own_cmean_y": 0.10241351819476821,
+            "north_own_cmean_y": 0.10083676965860873,
+            "south_full_mmd": 0.03528512678191048,
+            "north_full_mmd": 0.008391674639990502,
+            "south_full_cmean_x": 0.9008767737724074,
+            "north_full_cmean_x": 0.7960814124767576,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 14,
+              "n_edges": 55,
+              "n_communities": 4,
+              "loud_community": "C0",
+              "n_loud_orders": 119,
+              "jaccard_vs_planted_south": 0.5581395348837209,
+              "south_frac_loud_orders": 0.6050420168067226,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.5581395348837209,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 82,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
@@ -1916,26 +2268,70 @@
             "south_frac": {
               "C0": 0.0,
               "C1": 1.0,
-              "C2": 0.5
+              "C2": 0.75
             },
             "merchant_cut": {
-              "7": "C0",
-              "4": "C0",
-              "5": "C0",
-              "0": "C0",
               "3": "C0",
+              "0": "C0",
               "6": "C0",
               "1": "C0",
+              "4": "C0",
+              "5": "C0",
+              "7": "C0",
+              "8": "C1",
+              "12": "C1",
+              "14": "C1",
               "9": "C1",
               "15": "C1",
-              "10": "C1",
-              "13": "C1",
-              "14": "C1",
-              "11": "C1",
-              "12": "C1",
-              "2": "C2",
-              "8": "C2"
+              "10": "C2",
+              "11": "C2",
+              "13": "C2",
+              "2": "C2"
             }
+          },
+          "own_vs_full": {
+            "n_with_own_ref": 12,
+            "n_cold_start_skipped": 0,
+            "south_own_mmd": 0.2573731085282729,
+            "north_own_mmd": 0.01603567640379792,
+            "south_own_cmean_x": 2.2779208626100296,
+            "north_own_cmean_x": 0.6761214455106742,
+            "south_own_cmean_y": 0.2692505192176245,
+            "north_own_cmean_y": 0.10101580518247183,
+            "south_full_mmd": 0.2867677215835445,
+            "north_full_mmd": 0.02360577083313851,
+            "south_full_cmean_x": 2.380122314479483,
+            "north_full_cmean_x": 0.6703634780940599,
+            "read": "own-ref = did this merchant move; full-ref = does this merchant differ from the global mix (heterogeneity, not shift)"
+          },
+          "layers": {
+            "merchant": {
+              "layer": "merchant",
+              "n_nodes": 12,
+              "n_edges": 21,
+              "n_communities": 6,
+              "loud_community": "C0",
+              "n_loud_orders": 81,
+              "jaccard_vs_planted_south": 0.7666666666666667,
+              "south_frac_loud_orders": 0.8518518518518519,
+              "y_in_graph": false
+            },
+            "user": {
+              "layer": "user",
+              "n_nodes": 0,
+              "n_edges": 0,
+              "n_communities": 0,
+              "loud_community": null,
+              "n_loud_orders": 0,
+              "jaccard_vs_planted_south": 0.0,
+              "south_frac_loud_orders": 0.0,
+              "y_in_graph": false
+            },
+            "jaccard_merchant_vs_user": 0.0,
+            "jaccard_merchant_vs_south": 0.7666666666666667,
+            "jaccard_user_vs_south": 0.0,
+            "order_oracle_south_n": 78,
+            "read": "evaluate layers only after lift-to-order; merchant layer should recover planted south when the DGP is merchant-local; user layer need not (users are mixed across merchants)"
           }
         },
         "leakage": {
