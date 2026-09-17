@@ -1,0 +1,73 @@
+% Brief decision note for the layer-freeze online CV heuristic board.
+% Compile with: pdflatex docs/layer_freeze_decisions.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\title{Layer-freeze board: decisions}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\paragraph{What we decide.}
+The board does not choose \emph{when} to update---that remains business logic.
+It answers a narrower question: \emph{from which layer to freeze training} on an incoming batch, and only as a heuristic readout.
+
+\paragraph{Three series, one reference window.}
+Let $D_{\mathrm{ref}}$ be a fixed $T{=}0$ window ($n_{\mathrm{ref}}{=}10^4$).
+Each new batch is $T{=}1$.
+We read three numbers against $D_{\mathrm{ref}}$, never against a rolling history:
+\begin{itemize}\setlength{\itemsep}{2pt}
+\item \textbf{PO-risk} (concept / $P(Y\mid X)$).
+Own RF nuisances $\mu(Y\mid X)$ and $e(T\mid X)$; $\varphi=(Y-\mu)(T-e)$; risk $=\mathbb{E}[\hat\tau(X)^2]$.
+Not the serving MLP, not $\ell_2$.
+RF PO-risk is not expected to collapse first.
+\item \textbf{Serving MSE} (does the current model still pay rent?).
+Evaluated \emph{before} the online step.
+This is the series more likely to break first.
+\item \textbf{MMD} (covariate / $P(X)$).
+Fixed口径: $\mathrm{MMD}^2(X_{\mathrm{new}},X_{\mathrm{ref}})$, RBF, median bandwidth pinned on $D_{\mathrm{ref}}$.
+\emph{Not} mean pairwise MMD vs all previous batches, and \emph{not} last-batch layer representations.
+\end{itemize}
+A series is ``broken'' if its causal moving average is $\ge 2\times$ its $D_{\mathrm{ref}}$-split baseline.
+No online-bootstrap.
+
+\paragraph{Heuristic action.}
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+PO-risk & MSE & MMD vs $D_{\mathrm{ref}}$ & action \\
+\midrule
+quiet & quiet & --- & keep training every layer \\
+broken & holds & --- & watch; do not freeze yet \\
+broken & broken & --- & freeze that layer's training \\
+holds & broken & broken & $X$-shift; not concept drift \\
+holds & broken & quiet & tricky; freeze nothing \\
+\bottomrule
+\end{tabular}
+\end{center}
+Freeze-depth clones ($k{+}1$ models, $\mathrm{model}_i$ trains only the top $i$ groups) run \emph{only} on the both-broken cell.
+PO-broken / MSE-holds is watch: RF PO-risk should not snap first; keep observing.
+MSE-broken / PO-holds is \emph{not} concept drift---read MMD vs $D_{\mathrm{ref}}$.
+
+\paragraph{When the stream moved.}
+A frozen $\mathtt{RandomForestRegressor}$ fit once on $D_{\mathrm{ref}}$:
+\[
+\hat y=\mathrm{rf.predict}(X_{\mathrm{new}}),\qquad
+T=\mathrm{MSE}(Y_{\mathrm{new}},\hat y)-E_{\mathrm{ref}}.
+\]
+The first last-two hop on $T$ is the jump onset.
+A slow walk may never fire the $1.5\times$ hop; then read the $T$ and MMD trends.
+Same one-liner as MMD: score the new batch against the frozen reference, nothing else.
+
+\paragraph{What we would actually do.}
+If both PO-risk and MSE are quiet: full backprop, no freeze.
+If only PO-risk moves: watch, do not freeze.
+If MSE moves and MMD vs $D_{\mathrm{ref}}$ is large: treat as $P(X)$ shift, do not freeze layers as if $P(Y\mid X)$ hopped.
+If both PO-risk and MSE break: freeze training of the bottom groups and keep only the top $i^\star$ trainable.
+Do not shrink the batch to invent an update clock; do not bootstrap the MLP.
+
+\end{document}
