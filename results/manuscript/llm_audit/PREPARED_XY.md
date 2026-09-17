@@ -39,6 +39,14 @@ PYTHONPATH=. python3 scripts/llm_audit_online_bootstrap_prototype.py
 
 Numbers: `results/manuscript/llm_audit_online_bootstrap/`. Frozen-ref lstsq \(\Delta_t=s_t-\mu_{\mathrm{ref}}\), fire on \(\mathrm{CI}_{\mathrm{lo}}>0\). Last-two `hop_fires` (RF) is the other gate.
 
+Post-hoc localization on the same csvs (pull T / step / batch indices, look at the mean, then `MMD()` + `po_risk()`):
+
+```bash
+PYTHONPATH=. python3 scripts/run_posthoc_on_dataset.py
+```
+
+Numbers: `results/manuscript/posthoc_dataset/`.
+
 Rebuild (parquet cache under `data/hf_cache/audit/`, not committed):
 
 ```bash

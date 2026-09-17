@@ -36,7 +36,13 @@ T \in \{0,1,\ldots,K-1\}
 PYTHONPATH=. python3 scripts/prototype_group_attribution.py
 ```
 
-Post-hoc 子群定位：subset indices 拽出来。**先看已经算好的均值**，再 pairwise call `MMD()` 和 `po_risk()`。见 `scripts/posthoc_localization.py`。
+Post-hoc 子群定位：subset indices 拽出来。**先看已经算好的均值**，再 pairwise call `MMD()` 和 `po_risk()`。见 `scripts/posthoc_localization.py`。直接在盘上的审核表上跑（HH 两路、多步 hop、helpful 政策切、BeaverTails/ToxicChat）：
+
+```bash
+PYTHONPATH=. python3 scripts/run_posthoc_on_dataset.py
+```
+
+数字：`results/manuscript/posthoc_dataset/`。
 
 Planted：三组里只有组 2 依赖 `x1`，应 reject 且 top 是 `x1`。Null：\(Y\) 只靠 \(X\)、不靠 \(T\)，应 quiet。
 
