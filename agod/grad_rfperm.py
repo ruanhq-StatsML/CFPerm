@@ -193,6 +193,51 @@ def first_reject_index(reject_hist: Sequence[int], *, after: int = 0) -> Optiona
     return None
 
 
+def alarm_counts(
+    reject_hist: Sequence[int],
+    *,
+    after: int = 0,
+    until: Optional[int] = None,
+) -> tuple:
+    """``(n_alarm, n_batch)`` on ``reject_hist[after:until]``."""
+    hist = list(reject_hist)
+    if until is None:
+        until = len(hist)
+    after = max(0, int(after))
+    until = min(len(hist), int(until))
+    if until <= after:
+        return 0, 0
+    window = [int(r) for r in hist[after:until]]
+    return int(sum(window)), int(len(window))
+
+
+def alarm_rate(
+    reject_hist: Sequence[int],
+    *,
+    after: int = 0,
+    until: Optional[int] = None,
+) -> float:
+    """Alarm rate = ``(# rejects) / (# batches)`` on the window.
+
+    Under a null (no shift) stream this *is* the false-alarm rate (FAR):
+    ``FAR = n_alarm / n_batch``.
+    """
+    n_alarm, n_batch = alarm_counts(reject_hist, after=after, until=until)
+    if n_batch <= 0:
+        return float("nan")
+    return float(n_alarm) / float(n_batch)
+
+
+def false_alarm_rate(
+    reject_hist: Sequence[int],
+    *,
+    after: int = 0,
+    until: Optional[int] = None,
+) -> float:
+    """Alias of :func:`alarm_rate` for null-stream reporting."""
+    return alarm_rate(reject_hist, after=after, until=until)
+
+
 def lead_time(grad_reject_t: Optional[int], mse_break_t: Optional[int]) -> Optional[int]:
     """``t_grad - t_mse``; negative ⇒ Grad earlier than MSE break."""
     if grad_reject_t is None or mse_break_t is None:

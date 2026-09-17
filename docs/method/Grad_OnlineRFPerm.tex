@@ -190,6 +190,20 @@ To damp burn-edge noise, ignore rejects on
 $t\in\{b,\ldots,b+g-1\}$ when reporting first-reject time
 (grace window $g$; does not change the underlying $p_t$).
 
+\begin{definition}[False-alarm / alarm rate]
+Over a window of batches $\mathcal{W}$ (default: post-burn, or post-burn+grace),
+\begin{equation}
+\label{eq:FAR}
+  \mathrm{FAR}
+  \;=\;
+  \frac{n_{\mathrm{alarm}}}{n_{\mathrm{batch}}}
+  \;=\;
+  \frac{\#\{ t\in\mathcal{W}: R_t=1 \}}{|\mathcal{W}|}.
+\end{equation}
+Under a null (no-shift) stream this is the false-alarm rate; on shifted
+streams the same ratio is the empirical alarm rate.
+\end{definition}
+
 %======================================================================
 \section{Layer shares (diagnostic only)}
 \label{sec:shares}

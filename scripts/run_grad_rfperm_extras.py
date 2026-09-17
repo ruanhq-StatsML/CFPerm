@@ -27,6 +27,9 @@ import torch.nn as nn
 from sklearn.preprocessing import StandardScaler
 
 from agod.grad_rfperm import (
+    alarm_counts,
+    alarm_rate,
+    false_alarm_rate,
     first_reject_index,
     init_grad_rfperm,
     layer_grad_norms,
@@ -77,7 +80,17 @@ def run_monitor_leads(
     lr: float = 1e-2,
     grace: int = 0,
 ) -> dict:
-    """Single-stream Grad vs MSE; optional grace ignores rejects in [burn, burn+grace)."""
+    """Single-stream Grad vs MSE.
+
+    FAR口径 (null stream):
+      FAR = n_alarm / n_batch
+      where n_alarm = #{t : R_t=1}, n_batch = #observations in the window.
+
+    Windows reported:
+      - all:           t = 0 .. T-1
+      - monitor:       t >= n_burn
+      - grace_monitor: t >= n_burn + grace  (rejects inside grace zeroed)
+    """
     torch.manual_seed(seed)
     d = stream[0][0].shape[1]
     f_ref = StreamMLP(d)
@@ -96,29 +109,62 @@ def run_monitor_leads(
         update_grad_rfperm(grad_state, float(snap["g"]), burn_in=burn, alpha=alpha)
         update_online_rfperm(mse_state, Xc, yc, burn_in=burn, alpha=alpha)
 
-    after = n_burn + max(int(grace), 0)
-    # zero-out reject flags inside grace window for first-reject / duty reporting
-    g_rej = list(grad_state.reject_hist)
-    m_rej = list(mse_state.reject_hist)
-    if grace > 0:
-        for t in range(n_burn, min(n_burn + grace, len(g_rej))):
-            g_rej[t] = 0
-            m_rej[t] = 0
-    t_grad = first_reject_index(g_rej, after=after)
-    t_mse = first_reject_index(m_rej, after=after)
-    duty_g = float(np.mean(g_rej[after:])) if after < len(g_rej) else 0.0
-    duty_m = float(np.mean(m_rej[after:])) if after < len(m_rej) else 0.0
+    T = len(stream)
+    g_raw = list(grad_state.reject_hist)
+    m_raw = list(mse_state.reject_hist)
+    # grace: treat [burn, burn+grace) as non-alarms for grace-window FAR
+    g_grace = list(g_raw)
+    m_grace = list(m_raw)
+    g0 = max(int(grace), 0)
+    if g0 > 0:
+        for t in range(n_burn, min(n_burn + g0, T)):
+            g_grace[t] = 0
+            m_grace[t] = 0
+
+    after_mon = n_burn
+    after_grace = n_burn + g0
+
+    def _far_block(hist, after: int) -> dict:
+        n_alarm, n_batch = alarm_counts(hist, after=after)
+        return {
+            "n_alarm": n_alarm,
+            "n_batch": n_batch,
+            "FAR": (float(n_alarm) / float(n_batch)) if n_batch else float("nan"),
+        }
+
+    far_grad_all = _far_block(g_raw, 0)
+    far_grad_mon = _far_block(g_raw, after_mon)
+    far_grad_grace = _far_block(g_grace, after_grace)
+    far_mse_mon = _far_block(m_raw, after_mon)
+    far_mse_grace = _far_block(m_grace, after_grace)
+
+    t_grad = first_reject_index(g_grace, after=after_grace)
+    t_mse = first_reject_index(m_grace, after=after_grace)
+
     return {
         "t_grad": t_grad,
         "t_mse": t_mse,
         "lead": lead_time(t_grad, t_mse),
-        "duty_grad": duty_g,
-        "duty_mse": duty_m,
+        # polished FAR = n_alarm / n_batch
+        "FAR_grad_all": far_grad_all["FAR"],
+        "FAR_grad_monitor": far_grad_mon["FAR"],
+        "FAR_grad_grace": far_grad_grace["FAR"],
+        "FAR_mse_monitor": far_mse_mon["FAR"],
+        "FAR_mse_grace": far_mse_grace["FAR"],
+        "n_alarm_grad_monitor": far_grad_mon["n_alarm"],
+        "n_batch_monitor": far_grad_mon["n_batch"],
+        "n_alarm_grad_grace": far_grad_grace["n_alarm"],
+        "n_batch_grace": far_grad_grace["n_batch"],
+        "n_alarm_mse_monitor": far_mse_mon["n_alarm"],
+        # backward-compat aliases
+        "duty_grad": far_grad_grace["FAR"],
+        "duty_mse": far_mse_grace["FAR"],
         "rejected_grad": t_grad is not None,
         "rejected_mse": t_mse is not None,
         "n_burn": n_burn,
         "grace": grace,
         "alpha": alpha,
+        "n_total": T,
     }
 
 
@@ -131,7 +177,7 @@ def exp_null_grace(
     max_n: int,
     out_dir: Path,
 ) -> dict:
-    print("=== A) Null / grace FPR ===", flush=True)
+    print("=== A) Null FAR = n_alarm / n_batch ===", flush=True)
     graces = [0, 2, 4]
     rows = []
     for grace in graces:
@@ -142,45 +188,52 @@ def exp_null_grace(
             r["seed"] = seed
             rows.append(r)
             print(
-                f"  grace={grace} seed={seed}: reject={r['rejected_grad']} "
-                f"t_grad={r['t_grad']} duty={r['duty_grad']:.3f}",
+                f"  grace={grace} seed={seed}: "
+                f"FAR_mon={r['FAR_grad_monitor']:.3f} "
+                f"({r['n_alarm_grad_monitor']}/{r['n_batch_monitor']}) "
+                f"FAR_grace={r['FAR_grad_grace']:.3f} "
+                f"({r['n_alarm_grad_grace']}/{r['n_batch_grace']}) "
+                f"MSE_FAR={r['FAR_mse_monitor']:.3f}",
                 flush=True,
             )
     by_grace = {}
     for grace in graces:
         sub = [r for r in rows if r["grace"] == grace]
-        # early FPR: first reject within 5 steps after (burn+grace)
-        early = []
-        for r in sub:
-            after = n_burn + grace
-            tg = r["t_grad"]
-            early.append(bool(tg is not None and tg < after + 5))
         by_grace[str(grace)] = {
+            "FAR_grad_monitor_mean": float(np.mean([r["FAR_grad_monitor"] for r in sub])),
+            "FAR_grad_grace_mean": float(np.mean([r["FAR_grad_grace"] for r in sub])),
+            "FAR_mse_monitor_mean": float(np.mean([r["FAR_mse_monitor"] for r in sub])),
+            "FAR_mse_grace_mean": float(np.mean([r["FAR_mse_grace"] for r in sub])),
+            "mean_n_alarm_grad": float(np.mean([r["n_alarm_grad_grace"] for r in sub])),
+            "mean_n_batch": float(np.mean([r["n_batch_grace"] for r in sub])),
+            "mean_t_grad": float(
+                np.mean([r["t_grad"] for r in sub if r["t_grad"] is not None])
+            ),
+            # legacy keys used by older report snippets
             "fpr_first": float(np.mean([r["rejected_grad"] for r in sub])),
-            "fpr_early5": float(np.mean(early)),
-            "mean_duty": float(np.mean([r["duty_grad"] for r in sub])),
-            "mean_duty_mse": float(np.mean([r["duty_mse"] for r in sub])),
-            "mean_t_grad": float(np.mean([r["t_grad"] for r in sub if r["t_grad"] is not None])),
+            "mean_duty": float(np.mean([r["FAR_grad_grace"] for r in sub])),
+            "mean_duty_mse": float(np.mean([r["FAR_mse_grace"] for r in sub])),
             "n": len(sub),
+            "definition": "FAR = n_alarm / n_batch",
         }
-    # plot
-    fig, ax = plt.subplots(figsize=(6.5, 3.8))
+    # plot polished FAR
+    fig, ax = plt.subplots(figsize=(7.2, 4.0))
     xs = np.arange(len(graces))
-    fprs = [by_grace[str(g)]["fpr_first"] for g in graces]
-    duties = [by_grace[str(g)]["mean_duty"] for g in graces]
-    ax.bar(xs - 0.15, fprs, 0.3, label="P(any reject)", color="#BF616A")
-    ax.bar(xs + 0.15, duties, 0.3, label="mean reject duty", color="#5E81AC")
+    far_g = [by_grace[str(g)]["FAR_grad_grace_mean"] for g in graces]
+    far_m = [by_grace[str(g)]["FAR_mse_grace_mean"] for g in graces]
+    ax.bar(xs - 0.15, far_g, 0.3, label="Grad FAR", color="#BF616A")
+    ax.bar(xs + 0.15, far_m, 0.3, label="MSE FAR", color="#5E81AC")
     ax.set_xticks(xs)
     ax.set_xticklabels([f"grace={g}" for g in graces])
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("rate")
-    ax.set_title("Null synthetic: Grad FPR vs grace window")
+    ax.set_ylabel(r"FAR $= n_{\mathrm{alarm}} / n_{\mathrm{batch}}$")
+    ax.set_ylim(0, max(0.35, 1.15 * max(far_g + far_m)))
+    ax.set_title("Null synthetic: FAR = (#alarms) / (#batches)")
     ax.legend(fontsize=8)
     ax.grid(True, axis="y", alpha=0.3)
     fig.tight_layout()
     fig.savefig(out_dir / "extra_null_grace_fpr.png", dpi=140)
     plt.close(fig)
-    return {"by_grace": by_grace, "rows": rows}
+    return {"by_grace": by_grace, "rows": rows, "FAR_def": "n_alarm / n_batch"}
 
 
 # ---------------------------------------------------------------------------
@@ -568,15 +621,21 @@ def write_report(bundle: dict, out_dir: Path) -> Path:
     ]
     if "null_grace" in bundle:
         lines += [
-            "## A) Null / grace FPR (stationary synthetic)",
+            "## A) Null FAR $= n_{\\mathrm{alarm}} / n_{\\mathrm{batch}}$",
             "",
-            "| grace | P(any reject) | P(early≤5) | mean t_grad | mean Grad duty | mean MSE duty |",
-            "|---:|---:|---:|---:|---:|---:|",
+            "Definition: **FAR = (# reject batches) / (# observation batches)** "
+            "on the post-burn (optionally post-grace) window.",
+            "",
+            "| grace | Grad FAR | MSE FAR | mean n_alarm/n_batch | mean t_grad |",
+            "|---:|---:|---:|---:|---:|",
         ]
         for g, v in bundle["null_grace"]["by_grace"].items():
             lines.append(
-                f"| {g} | {v['fpr_first']:.0%} | {v.get('fpr_early5', float('nan')):.0%} | "
-                f"{v.get('mean_t_grad', float('nan')):.1f} | {v['mean_duty']:.3f} | {v['mean_duty_mse']:.3f} |"
+                f"| {g} | {v.get('FAR_grad_grace_mean', v.get('mean_duty', float('nan'))):.3f} | "
+                f"{v.get('FAR_mse_grace_mean', v.get('mean_duty_mse', float('nan'))):.3f} | "
+                f"{v.get('mean_n_alarm_grad', float('nan')):.1f}/"
+                f"{v.get('mean_n_batch', float('nan')):.0f} | "
+                f"{v.get('mean_t_grad', float('nan')):.1f} |"
             )
         lines.append("")
     if "alpha" in bundle:
@@ -635,9 +694,9 @@ def write_report(bundle: dict, out_dir: Path) -> Path:
     lines += [
         "## Takeaways",
         "",
-        "- **Null:** over a long horizon alpha-investing still rejects eventually; "
-        "**grace** delays first reject (mean t: 8→15) and cuts early(≤5) FPR "
-        "(100%→67% at grace=4).",
+        "- **Null FAR:** $\\mathrm{FAR}=n_{\\mathrm{alarm}}/n_{\\mathrm{batch}}$ "
+        "(alarms over observation batches). Grad FAR ≈ MSE FAR (~0.20–0.23); "
+        "grace mainly delays first reject, mild FAR drop.",
         "- **Alpha:** lead(g−mse) stays negative for α∈{0.01,0.05,0.10} on "
         "synthetic / electricity (directionally stable).",
         "- **Freeze loop:** on electricity, `freeze_early` / `freeze_low_share` "

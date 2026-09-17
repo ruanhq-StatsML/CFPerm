@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 
 from agod.grad_rfperm import (
+    alarm_rate,
+    false_alarm_rate,
     init_grad_rfperm,
     init_grad_rfperm_layers,
     layer_grad_norms,
@@ -57,8 +59,16 @@ def test_single_stream_update():
     out = update_grad_rfperm(st, 5.0, burn_in=False, alpha=0.2, fdr="fixed")
     assert "p" in out and "reject" in out
     assert lead_time(3, 5) == -2
-    # multi-stream helper still exists but is ablation-only
     layers = init_grad_rfperm_layers(["fc1", "fc2"])
     assert set(layers) == {"fc1", "fc2"}
     shares = relative_grad_shares({"fc1": 1.0, "fc2": 3.0})
     assert abs(shares["fc2"] - 0.75) < 1e-9
+
+
+def test_far_is_alarms_over_batches():
+    hist = [0, 0, 1, 0, 1, 1, 0, 0]
+    # after burn=2: alarms at t=2,4,5 → 3/6
+    assert abs(alarm_rate(hist, after=2) - 3 / 6) < 1e-12
+    assert abs(false_alarm_rate(hist, after=2) - 3 / 6) < 1e-12
+    assert alarm_rate([0, 0, 0], after=0) == 0.0
+
