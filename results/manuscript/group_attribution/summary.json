@@ -28,7 +28,22 @@
       "x_n_toks",
       "x_n_chars"
     ],
-    "path": "results/manuscript/llm_audit/xy_hh_two_stream.csv"
+    "path": "results/manuscript/llm_audit/xy_hh_two_stream.csv",
+    "loc_sig_pairs": 1,
+    "loc_pairwise": [
+      {
+        "a": "T0",
+        "b": "T1",
+        "n_a": 1200,
+        "n_b": 1200,
+        "mmd": 0.004918016852440976,
+        "mmd_p": 0.038461538461538464,
+        "po_risk": 0.012960054624385566,
+        "po_p": 0.038461538461538464,
+        "mean_Y_a": 0.49083333333333334,
+        "mean_Y_b": 0.49083333333333334
+      }
+    ]
   },
   {
     "name": "real_judges",
@@ -56,7 +71,22 @@
       "x_bang"
     ],
     "hits": [],
-    "path": "results/manuscript/llm_audit/xy_real_two_stream.csv"
+    "path": "results/manuscript/llm_audit/xy_real_two_stream.csv",
+    "loc_sig_pairs": 1,
+    "loc_pairwise": [
+      {
+        "a": "T0",
+        "b": "T1",
+        "n_a": 1200,
+        "n_b": 1200,
+        "mmd": 0.27934042182969865,
+        "mmd_p": 0.038461538461538464,
+        "po_risk": 0.0054552348311936475,
+        "po_p": 0.038461538461538464,
+        "mean_Y_a": 0.4266666666666667,
+        "mean_Y_b": 0.78
+      }
+    ]
   },
   {
     "name": "hybrid_channels",
@@ -84,7 +114,22 @@
       "x_q_chars"
     ],
     "hits": [],
-    "path": "results/manuscript/hybrid_retrieval/xy_hotpot_two_stream.csv"
+    "path": "results/manuscript/hybrid_retrieval/xy_hotpot_two_stream.csv",
+    "loc_sig_pairs": 1,
+    "loc_pairwise": [
+      {
+        "a": "T0",
+        "b": "T1",
+        "n_a": 1200,
+        "n_b": 1200,
+        "mmd": 0.0,
+        "mmd_p": 1.0,
+        "po_risk": 0.008521760611615312,
+        "po_p": 0.038461538461538464,
+        "mean_Y_a": 0.6708333333333333,
+        "mean_Y_b": 0.35833333333333334
+      }
+    ]
   },
   {
     "name": "audit_hop_buckets",
@@ -117,6 +162,45 @@
       "x_n_toks",
       "x_n_chars"
     ],
-    "path": "results/manuscript/llm_audit/xy_hh_multistep_consistent.csv"
+    "path": "results/manuscript/llm_audit/xy_hh_multistep_consistent.csv",
+    "loc_sig_pairs": 3,
+    "loc_pairwise": [
+      {
+        "a": "T0",
+        "b": "T1",
+        "n_a": 380,
+        "n_b": 379,
+        "mmd": 0.056303617580279575,
+        "mmd_p": 0.038461538461538464,
+        "po_risk": 2.5687575181277067e-09,
+        "po_p": 1.0,
+        "mean_Y_a": 0.39473684210526316,
+        "mean_Y_b": 0.41688654353562005
+      },
+      {
+        "a": "T0",
+        "b": "T2",
+        "n_a": 380,
+        "n_b": 441,
+        "mmd": 0.2712905329952855,
+        "mmd_p": 0.038461538461538464,
+        "po_risk": 0.0001692453407468704,
+        "po_p": 1.0,
+        "mean_Y_a": 0.39473684210526316,
+        "mean_Y_b": 0.36961451247165533
+      },
+      {
+        "a": "T1",
+        "b": "T2",
+        "n_a": 379,
+        "n_b": 441,
+        "mmd": 0.12084248417620369,
+        "mmd_p": 0.038461538461538464,
+        "po_risk": 0.00016937976092884353,
+        "po_p": 1.0,
+        "mean_Y_a": 0.41688654353562005,
+        "mean_Y_b": 0.36961451247165533
+      }
+    ]
   }
 ]

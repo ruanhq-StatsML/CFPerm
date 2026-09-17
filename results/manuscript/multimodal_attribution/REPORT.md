@@ -8,10 +8,20 @@ No pixels, no raw prompts, no HH chosen.
 PYTHONPATH=. python3 scripts/prototype_multimodal_attribution.py
 ```
 
-| Stream | T | reject | block hits | top blocks |
-|---|---|---|---|---|
-| hybrid: dense pack hop | T=0 before dense cut, T=1 after | no | — | fusion, query, sparse |
-| Graph-RAG: local vs community | T=0 local pack, T=1 community pack | yes | graph | graph, query |
+| Stream | T | reject | block hits | top blocks | loc sig pairs |
+|---|---|---|---|---|---:|
+| hybrid: dense pack hop | T=0 before dense cut, T=1 after | no | — | fusion, query, sparse | 1 |
+| Graph-RAG: local vs community | T=0 local pack, T=1 community pack | yes | graph | graph, query | 1 |
+
+Post-hoc: subset indices from T (and quartiles of the top coordinate), then pairwise **MMD** and **PO-risk**.
+Conditional means stay in the JSON; they are not the localization test.
+
+## Pairwise subset MMD / PO-risk
+
+| Stream | pair | n | MMD | MMD p | PO-risk | PO p | mean Y |
+|---|---|---|---:|---:|---:|---:|---|
+| hybrid: dense pack hop | T0 vs T1 | 320/880 | 0.0505 | 0.0385 | 0.000206 | 0.962 | 0.572/0.450 |
+| Graph-RAG: local vs community | T0 vs T1 | 1200/1200 | 0.0117 | 0.0385 | 0.00281 | 0.0385 | 0.534/0.425 |
 
 ## Synthetic check
 

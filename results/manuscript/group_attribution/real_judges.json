@@ -99,5 +99,75 @@
   "level_across_feature": 0.05,
   "top_k": 1,
   "name": "real_judges",
-  "title": "BeaverTails vs ToxicChat"
+  "title": "BeaverTails vs ToxicChat",
+  "localization": {
+    "groups": {
+      "n_subsets": 2,
+      "subset_sizes": {
+        "T0": 1200,
+        "T1": 1200
+      },
+      "conditional_mean": {
+        "T0": {
+          "n": 1200,
+          "mean_Y": 0.4266666666666667,
+          "mean_X": null
+        },
+        "T1": {
+          "n": 1200,
+          "mean_Y": 0.78,
+          "mean_X": null
+        }
+      },
+      "pairwise": [
+        {
+          "a": "T0",
+          "b": "T1",
+          "n_a": 1200,
+          "n_b": 1200,
+          "mmd": 0.27934042182969865,
+          "mmd_p": 0.038461538461538464,
+          "po_risk": 0.0054552348311936475,
+          "po_p": 0.038461538461538464,
+          "mean_Y_a": 0.4266666666666667,
+          "mean_Y_b": 0.78
+        }
+      ],
+      "n_sig_pairs": 1
+    },
+    "bins": {
+      "n_subsets": 2,
+      "subset_sizes": {
+        "Q0": 1853,
+        "Q1": 547
+      },
+      "conditional_mean": {
+        "Q0": {
+          "n": 1853,
+          "mean_Y": 0.5844576362655154,
+          "mean_X": null
+        },
+        "Q1": {
+          "n": 547,
+          "mean_Y": 0.6672760511882998,
+          "mean_X": null
+        }
+      },
+      "pairwise": [
+        {
+          "a": "Q0",
+          "b": "Q1",
+          "n_a": 1853,
+          "n_b": 547,
+          "mmd": 0.061027767250952714,
+          "mmd_p": 0.038461538461538464,
+          "po_risk": 0.0005345075646827958,
+          "po_p": 0.038461538461538464,
+          "mean_Y_a": 0.5844576362655154,
+          "mean_Y_b": 0.6672760511882998
+        }
+      ],
+      "n_sig_pairs": 1
+    }
+  }
 }

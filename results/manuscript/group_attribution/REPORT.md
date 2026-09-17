@@ -19,6 +19,20 @@ feature p-value = fraction of nulls ≥ observed, across-feature threshold from 
 | sparse vs dense usable | T=0 sparse-only usable, T=1 dense-only usable | 2 | no | — | x_rrf_top1_mass, x_rank_corr, x_fuse_uniq |
 | multi-step hop 0 / 1 / 2+ | T=0 first hop, T=1 second, T=2 later | 3 | yes | x_n_toks, x_n_chars | x_n_chars, x_n_toks, x_bang |
 
+Post-hoc localization: pull subset indices (T groups, quartiles of the top X_j),
+then pairwise **MMD** and **PO-risk**. Conditional means stay in the JSON; they are not the test.
+
+## Pairwise subset MMD / PO-risk
+
+| Stream | pair | n | MMD | MMD p | PO-risk | PO p | mean Y |
+|---|---|---|---:|---:|---:|---:|---|
+| HH helpful vs harmless | T0 vs T1 | 1200/1200 | 0.00492 | 0.0385 | 0.013 | 0.0385 | 0.491/0.491 |
+| BeaverTails vs ToxicChat | T0 vs T1 | 1200/1200 | 0.279 | 0.0385 | 0.00546 | 0.0385 | 0.427/0.780 |
+| sparse vs dense usable | T0 vs T1 | 1200/1200 | 0 | 1 | 0.00852 | 0.0385 | 0.671/0.358 |
+| multi-step hop 0 / 1 / 2+ | T0 vs T1 | 380/379 | 0.0563 | 0.0385 | 2.57e-09 | 1 | 0.395/0.417 |
+| multi-step hop 0 / 1 / 2+ | T0 vs T2 | 380/441 | 0.271 | 0.0385 | 0.000169 | 1 | 0.395/0.370 |
+| multi-step hop 0 / 1 / 2+ | T1 vs T2 | 379/441 | 0.121 | 0.0385 | 0.000169 | 1 | 0.417/0.370 |
+
 ## Synthetic check
 
 | DGP | reject | top |
