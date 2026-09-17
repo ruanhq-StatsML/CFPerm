@@ -76,4 +76,10 @@ They are not a unique decomposition.
 A quiet full-batch cell can still have a hot subset; localize the slice first.
 \texttt{train\_top} on a PO-loud tower, \texttt{train\_stem} on an MMD-loud tower.
 
+\paragraph{Gradual / continuous time.}
+If \(\alpha(\tau)\) walks, last-two hop ratios go to 1 and the 2$\times$ PO gate may never leave keep.
+WHEN is the level of FrozenRF $T(\tau)$ (and serving Brier) against the reference, not $T(\tau)/T(\tau-W)$.
+Evaluable latency is excess serving loss while waiting, plus windowing delay and compute lag---not a single $\hat\tau-\tau_0$.
+Default action is watch; freeze-from-layer waits for serving error to walk, not for a hop.
+
 \end{document}

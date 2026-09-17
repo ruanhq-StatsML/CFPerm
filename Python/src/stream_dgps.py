@@ -150,3 +150,45 @@ def make_trimodal_stream(
         "n_new": int(n_new),
     }
     return X, Y, slice_id, meta
+
+
+def make_trimodal_gradual_concept(
+    n_ref: int = 800,
+    n_new: int = 40,
+    n_batches: int = 16,
+    onset_batch: int = 3,
+    seed: int = 2026,
+):
+    """Continuous-time gradual concept: P(X) fixed, video β rotates for every row.
+
+    Clock is the observation index τ. α(τ) walks 0→1 after labeled onset.
+    There is no jump. Last-two hops on a slow walk should stay quiet.
+    """
+    rng = np.random.default_rng(seed)
+    n_ref = int(n_ref)
+    n_new = int(n_new)
+    n_batches = int(n_batches)
+    n = n_ref + n_new * n_batches
+    X = rng.normal(size=(n, 12))
+    alpha = _alpha(n_ref, n_new, n_batches, onset_batch)
+    tau = np.arange(n, dtype=float)
+    beta_v = np.array([1.2, 0.4, 0.0, 0.0])
+    beta_a = np.array([0.45, 0.0, 0.0, 0.0])
+    beta_t = np.array([0.45, 0.0, 0.0, 0.0])
+    logit0 = X[:, 0:4] @ beta_v + X[:, 4:8] @ beta_a + X[:, 8:12] @ beta_t
+    logit1 = X[:, 0:4] @ (-beta_v) + X[:, 4:8] @ beta_a + X[:, 8:12] @ beta_t
+    logit = logit0 * (1.0 - alpha) + logit1 * alpha
+    Y = rng.binomial(1, _sigmoid(logit)).astype(float)
+    onset_tau = n_ref + int(onset_batch) * n_new
+    meta = {
+        "kind": "gradual_concept_video",
+        "onset_batch": int(onset_batch),
+        "onset_tau": int(onset_tau),
+        "clock": "observation_index",
+        "groups": {k: list(range(s.start, s.stop)) for k, s in TRIMODAL_GROUPS.items()},
+        "title": f"gradual concept on video (α walks after τ={onset_tau})",
+        "n_ref": n_ref,
+        "n_new": n_new,
+        "n_batches": n_batches,
+    }
+    return X, Y, alpha, tau, meta
