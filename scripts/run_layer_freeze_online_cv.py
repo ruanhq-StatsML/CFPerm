@@ -31,6 +31,7 @@ if str(ROOT) not in sys.path:
 from dl_model_registry import DLModelRegistry  # noqa: E402
 from layer_freeze_cv import (  # noqa: E402
     attach_layer_dicts,
+    freeze_training_of,
     layer_key,
     run_deviation_gate,
     run_layer_freeze_cv,
@@ -38,7 +39,9 @@ from layer_freeze_cv import (  # noqa: E402
 from streaming_po_risk import (  # noqa: E402
     ACTION_FREEZE,
     ACTION_KEEP,
+    ACTION_TRICKY,
     ACTION_WATCH,
+    ACTION_XSHIFT,
     MIN_STREAM_N,
     REF_N,
     annotate_moving_average,
@@ -235,12 +238,16 @@ def plot_layer_dicts(result: dict, title: str, out_dir: Path) -> list[str]:
 ACTION_COLOR = {
     ACTION_KEEP: "#2a7d4f",
     ACTION_WATCH: "#d48b16",
+    ACTION_XSHIFT: "#6b4ea0",
+    ACTION_TRICKY: "#666",
     ACTION_FREEZE: "#b33",
 }
 ACTION_LABEL = {
     ACTION_KEEP: "keep training",
-    ACTION_WATCH: "watch",
-    ACTION_FREEZE: "freeze",
+    ACTION_WATCH: "watch (concept?)",
+    ACTION_XSHIFT: "X shift (MMD)",
+    ACTION_TRICKY: "tricky",
+    ACTION_FREEZE: "freeze layers",
 }
 
 
@@ -249,13 +256,14 @@ def _action_of(row: dict) -> str:
 
 
 def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
-    """Two trends, one readout: freeze / watch / keep training."""
+    """PO, MSE, MMD of X. Freeze-from-layer only when PO and MSE both break."""
     rows = result["rows"]
     if not rows or any(r.get("mse_stream") is None for r in rows):
         return None
     ts = np.asarray([r["t"] for r in rows])
     po = np.asarray([r["po_stream"] for r in rows], dtype=float)
     mse = np.asarray([r["mse_stream"] for r in rows], dtype=float)
+    has_mmd = all(r.get("mmd_stream") is not None for r in rows)
     n_new = int(rows[0]["n_new"])
     w = int(result.get("ma_window") or ma_window(n_new))
     po_ma = np.asarray([r.get("po_ma", np.nan) for r in rows], dtype=float)
@@ -266,8 +274,13 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
         mse_ma = moving_average(mse, w)
     po_base = float(result["po_base"])
     mse_base = float(result.get("mse_base") or np.nanmean(mse[: max(1, len(mse) // 4)]))
-    fig, axes = plt.subplots(3, 1, figsize=(8.8, 8.4), sharex=True, gridspec_kw={"height_ratios": [2.2, 2.2, 0.7]})
-    ax_po, ax_mse, ax_act = axes
+    n_ax = 4 if has_mmd else 3
+    heights = [2.0, 2.0, 2.0, 0.8] if has_mmd else [2.2, 2.2, 0.7]
+    fig, axes = plt.subplots(n_ax, 1, figsize=(8.8, 2.6 * n_ax + 0.6), sharex=True, gridspec_kw={"height_ratios": heights})
+    ax_po = axes[0]
+    ax_mse = axes[1]
+    ax_mmd = axes[2] if has_mmd else None
+    ax_act = axes[-1]
     ax_po.plot(ts, po, color="#9bb4cc", lw=1.0, marker="o", ms=3.5, label="raw")
     ax_po.plot(ts, po_ma, color="#1f4e79", lw=2.2, label=f"MA({w})")
     ax_po.axhline(po_base, color="#888", ls="--", lw=1.4, label="baseline")
@@ -276,25 +289,40 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
     ax_mse.plot(ts, mse_ma, color="#7a4e1f", lw=2.2, label=f"MA({w})")
     ax_mse.axhline(mse_base, color="#888", ls="--", lw=1.4, label="baseline")
     ax_mse.axhline(2.0 * mse_base, color="#b33", ls=":", lw=1.0, label="2×")
-    y_map = {ACTION_KEEP: 0, ACTION_WATCH: 1, ACTION_FREEZE: 2}
-    act_y = [y_map[_action_of(r)] for r in rows]
+    if ax_mmd is not None:
+        mmd = np.asarray([r["mmd_stream"] for r in rows], dtype=float)
+        mmd_ma = np.asarray([r.get("mmd_ma", np.nan) for r in rows], dtype=float)
+        if not np.isfinite(mmd_ma).all():
+            mmd_ma = moving_average(mmd, w)
+        mmd_base = float(result.get("mmd_base") or 0.0)
+        ax_mmd.plot(ts, mmd, color="#c5b3d9", lw=1.0, marker="o", ms=3.5, label="raw")
+        ax_mmd.plot(ts, mmd_ma, color="#6b4ea0", lw=2.2, label=f"MA({w})")
+        ax_mmd.axhline(mmd_base, color="#888", ls="--", lw=1.4, label="baseline")
+        ax_mmd.axhline(2.0 * max(mmd_base, 1e-12), color="#b33", ls=":", lw=1.0, label="2×")
+        ax_mmd.set_ylabel("MMD² of X")
+        ax_mmd.legend(fontsize=8, ncol=3)
+    y_map = {ACTION_KEEP: 0, ACTION_WATCH: 1, ACTION_XSHIFT: 2, ACTION_TRICKY: 3, ACTION_FREEZE: 4}
+    act_y = [y_map.get(_action_of(r), 0) for r in rows]
     ax_act.step(ts, act_y, where="mid", color="#333", lw=2.0)
     seen = set()
     for r, x, y in zip(rows, ts, act_y):
         act = _action_of(r)
-        ax_po.scatter([x], [r["po_stream"]], s=55, color=ACTION_COLOR[act], zorder=4, label=ACTION_LABEL[act] if act not in seen else None)
-        ax_mse.scatter([x], [r["mse_stream"]], s=55, color=ACTION_COLOR[act], zorder=4)
-        ax_act.scatter([x], [y], s=55, color=ACTION_COLOR[act], zorder=4)
+        color = ACTION_COLOR.get(act, "#333")
+        ax_po.scatter([x], [r["po_stream"]], s=55, color=color, zorder=4, label=ACTION_LABEL.get(act, act) if act not in seen else None)
+        ax_mse.scatter([x], [r["mse_stream"]], s=55, color=color, zorder=4)
+        if ax_mmd is not None:
+            ax_mmd.scatter([x], [r["mmd_stream"]], s=55, color=color, zorder=4)
+        ax_act.scatter([x], [y], s=55, color=color, zorder=4)
         seen.add(act)
     ax_po.set_ylabel("PO-risk")
-    ax_po.set_title(title + " — PO vs MSE contrast")
-    ax_po.legend(fontsize=8, ncol=4)
+    ax_po.set_title(title + " — PO vs MSE vs MMD(X)")
+    ax_po.legend(fontsize=8, ncol=3)
     ax_mse.set_ylabel("serving MSE")
     ax_mse.legend(fontsize=8, ncol=3)
-    ax_act.set_yticks([0, 1, 2], labels=["keep training", "watch", "freeze"])
-    ax_act.set_ylim(-0.4, 2.4)
+    ax_act.set_yticks([0, 1, 2, 3, 4], labels=["keep", "watch", "X shift", "tricky", "freeze"])
+    ax_act.set_ylim(-0.4, 4.4)
     ax_act.set_xlabel("incoming batch (T=1)")
-    ax_act.set_title("both broken → freeze; PO only → watch; both quiet → keep training")
+    ax_act.set_title("PO+MSE break → freeze that layer's training; MSE-only → read MMD of X")
     fig.tight_layout()
     p = out_dir / "po_mse_trend.png"
     fig.savefig(p, dpi=140)
@@ -345,7 +373,7 @@ def plot_boards(result: dict, title: str, out_dir: Path) -> list[str]:
     ax.scatter(ts, freeze_y, color="#1f4e79", zorder=3)
     ax.set_yticks(range(k + 1), labels=names)
     ax.set_xlabel("incoming batch (T=1)")
-    ax.set_title("freeze from this layer only when PO and MSE both break")
+    ax.set_title("which layers stop training (only when PO and MSE both break)")
     ax.set_ylim(-0.4, k + 0.4)
     fig.tight_layout()
     p = out_dir / "freeze_from.png"
@@ -362,34 +390,42 @@ def render_html(spec: dict, result: dict, images: list[str], out_path: Path) -> 
     rec_i = result["recommend_i"]
     k = result["k"]
     board = result.get("board_action") or ACTION_KEEP
+    rec_zh = result.get("freeze_training_zh") or freeze_training_of(rec_i, k)["freeze_training_zh"]
     if board == ACTION_KEEP:
-        rec = "PO 和 MSE 都正常 → 接着 train"
+        rec = "不冻任何一层的 training — 接着 train"
     elif board == ACTION_WATCH:
-        rec = "PO 崩了、MSE 没崩 → 再观察，先不冻"
+        rec = "再观察 — 先不冻任何一层的 training"
+    elif board == ACTION_XSHIFT:
+        rec = "MSE 崩了但 PO 正常 — 不是 concept drift，看 MMD：X 在动"
+    elif board == ACTION_TRICKY:
+        rec = "MSE 崩了但 PO 和 MMD 都正常 — tricky，不是 P(Y|X) 也不是 X"
     else:
-        rec = (
-            f"PO 和 MSE 都崩了 → 冻住"
-            + ("" if rec_i == k else f"（从 model_{rec_i}）")
-        )
+        rec = f"冻住 — {rec_zh}"
     n_new = result["rows"][0]["n_new"] if result["rows"] else ""
     cards = []
     for img in images:
         cards.append(f'<figure><img src="{img}" alt="{img}"><figcaption>{img}</figcaption></figure>')
     table = [
-        "<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>action</th></tr></thead><tbody>"
+        "<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>MMD(X)</th><th>MMD MA</th><th>action</th><th>冻结哪一层的 training</th></tr></thead><tbody>"
     ]
     for r in result["rows"]:
         act = _action_of(r)
         po_ma = r.get("po_ma")
         mse = r.get("mse_stream")
         mse_ma = r.get("mse_ma")
+        mmd = r.get("mmd_stream")
+        mmd_ma = r.get("mmd_ma")
         po_ma_s = "" if po_ma is None else f"{float(po_ma):.4g}"
         mse_s = "" if mse is None else f"{float(mse):.4g}"
         mse_ma_s = "" if mse_ma is None else f"{float(mse_ma):.4g}"
+        mmd_s = "" if mmd is None else f"{float(mmd):.4g}"
+        mmd_ma_s = "" if mmd_ma is None else f"{float(mmd_ma):.4g}"
+        freeze_s = r.get("freeze_training_zh") or ACTION_LABEL.get(act, act)
         table.append(
             f"<tr><td>{r['t']}</td><td>{r['po_stream']:.4g}</td>"
             f"<td>{po_ma_s}</td><td>{mse_s}</td><td>{mse_ma_s}</td>"
-            f"<td>{ACTION_LABEL.get(act, act)}</td></tr>"
+            f"<td>{mmd_s}</td><td>{mmd_ma_s}</td>"
+            f"<td>{ACTION_LABEL.get(act, act)}</td><td>{freeze_s}</td></tr>"
         )
     table.append("</tbody></table>")
     layer_tab = ""
@@ -425,14 +461,14 @@ code {{ background: #eee; padding: 1px 4px; }}
 </style>
 </head>
 <body>
-<h1>PO × MSE 对照看板</h1>
+<h1>该冻结哪一层的 training</h1>
 <p class="note">
 {spec["title"]}. n_ref={result["n_ref"]}, n_new={n_new}, hidden={result["hidden_dims"]}.
-<b>PO 崩 + MSE 崩 → 冻住</b>；<b>只崩 PO → 再观察</b>；<b>两个都正常 → 接着 train</b>。
-PO-risk 量的是新 batch（T=1）相对 D_ref（T=0）的 P(Y|X) hop，不是现模型好不好用；
-serving MSE 量的是当前 MLP 在新 batch 上还付不付得起房租。两条分开走才对照。
-冻要两个都崩：只崩 PO 说明机制可能动了但误差还在线内，冻会把还在工作的更新掐掉。
-不做 online-bootstrap。何时 update 仍是业务逻辑。
+看板的输出就是：<b>该冻结哪一层的 training</b>（仅当 PO 和 MSE 都崩）。
+MSE 崩了但 PO 正常 → 不是 concept drift，看 MMD(X)：MMD 过线是 X 在动。
+PO 和 MSE 都正常，或只崩 PO → 一层都不冻。
+两都崩 → 开 freeze-depth，<code>model_i</code> 只训 top i，其余层停训。
+不做 online-bootstrap。
 </p>
 <p class="rec">{rec}</p>
 {"".join(cards)}
@@ -468,19 +504,18 @@ def render_report(spec: dict, result: dict) -> str:
     lines = [
         f"# PO × MSE board — {spec['title']}",
         "",
-        "PO broken and MSE broken → freeze. PO broken, MSE holds → watch. Both quiet → keep training.",
-        "PO-risk is the P(Y|X) hop vs D_ref (T=1 vs T=0). Serving MSE is whether the current MLP still fits.",
-        "Freeze only when both break: a PO hop with a quiet MSE is not a failed update strategy.",
-        "No online-bootstrap. Freeze-depth PO_Dict / MSE_Dict only on freeze hops.",
+        "PO+MSE both break → freeze that layer's training. PO only → watch.",
+        "MSE broken, PO quiet → not concept drift; read MMD of X (covariate shift).",
+        "Both quiet → keep training. No online-bootstrap.",
         f"T=1 on the incoming batch. n_ref={result['n_ref']}, n_new={n_new}.",
-        f"po_base={result['po_base']:.4g}. mse_base={mse_base_s}.",
+        f"po_base={result['po_base']:.4g}. mse_base={mse_base_s}. mmd_base={result.get('mmd_base')}.",
         "",
         f"- hidden_dims = `{result['hidden_dims']}`, k = {k}",
-        f"- n_batches = {result['n_batches']}, n_watch = {result.get('n_watch', 0)}, n_freeze = {result.get('n_freeze', 0)}",
+        f"- n_batches = {result['n_batches']}, n_watch = {result.get('n_watch', 0)}, n_x_shift = {result.get('n_x_shift', 0)}, n_tricky = {result.get('n_tricky', 0)}, n_freeze = {result.get('n_freeze', 0)}",
         f"- **{rec}**",
         "",
-        "| t | PO-risk | PO MA | MSE | MSE MA | action |",
-        "|---:|---:|---:|---:|---:|---|",
+        "| t | PO-risk | PO MA | MSE | MSE MA | MMD | MMD MA | action | freeze training |",
+        "|---:|---:|---:|---:|---:|---:|---:|---|---|",
     ]
     for r in result["rows"]:
         act = _action_of(r)
@@ -490,8 +525,13 @@ def render_report(spec: dict, result: dict) -> str:
         po_ma_s = "" if po_ma is None else f"{float(po_ma):.3g}"
         mse_s = "" if mse is None else f"{float(mse):.3g}"
         mse_ma_s = "" if mse_ma is None else f"{float(mse_ma):.3g}"
+        mmd = r.get("mmd_stream")
+        mmd_ma = r.get("mmd_ma")
+        mmd_s = "" if mmd is None else f"{float(mmd):.3g}"
+        mmd_ma_s = "" if mmd_ma is None else f"{float(mmd_ma):.3g}"
+        freeze_s = r.get("freeze_training") or ""
         lines.append(
-            f"| {r['t']} | {r['po_stream']:.3g} | {po_ma_s} | {mse_s} | {mse_ma_s} | {ACTION_LABEL.get(act, act)} |"
+            f"| {r['t']} | {r['po_stream']:.3g} | {po_ma_s} | {mse_s} | {mse_ma_s} | {mmd_s} | {mmd_ma_s} | {ACTION_LABEL.get(act, act)} | {freeze_s} |"
         )
     freeze_rows = [r for r in result["rows"] if r.get("action") == ACTION_FREEZE and r.get("layers")]
     keys = result.get("layer_keys") or [layer_key(i) for i in range(k + 1)]
@@ -638,8 +678,8 @@ def write_index(out: Path) -> None:
     bits = [
         "# PO-risk board",
         "",
-        "When to **update** is business logic. The board only contrasts PO-risk and MSE.",
-        "PO broken and MSE broken → freeze. PO broken, MSE holds → watch. Both quiet → keep training.",
+        "PO+MSE both break → freeze that layer's training.",
+        "MSE broken, PO quiet → not concept drift; read MMD of X.",
         "No online-bootstrap.",
         "",
     ]
@@ -662,7 +702,7 @@ def write_index(out: Path) -> None:
     (out / "REPORT.md").write_text("\n".join(bits) + "\n", encoding="utf-8")
     html = """<!DOCTYPE html><meta charset="utf-8"><title>PO × MSE board</title>
 <h1>PO × MSE 对照</h1>
-<p>PO 崩且 MSE 崩 → 冻住。只崩 PO → 再观察。两个都正常 → 接着 train。不做 online-bootstrap。</p>
+<p>PO 和 MSE 都崩 → 冻结那一层的 training。只崩 PO → 观察。MSE 崩但 PO 正常 → 看 MMD(X)，不是 concept drift。</p>
 <ul>""" + "".join(html_items) + "</ul>"
     (out / "index.html").write_text(html, encoding="utf-8")
 

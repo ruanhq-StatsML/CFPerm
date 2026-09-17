@@ -30,7 +30,9 @@ from layer_freeze_cv import (  # noqa: E402
 from streaming_po_risk import (  # noqa: E402
     ACTION_FREEZE,
     ACTION_KEEP,
+    ACTION_TRICKY,
     ACTION_WATCH,
+    ACTION_XSHIFT,
     MIN_STREAM_N,
     REF_N,
     TabularPORisk,
@@ -43,6 +45,8 @@ from streaming_po_risk import (  # noqa: E402
     pack_ref_new,
     po_mse_action,
     po_risk,
+    rbf_bandwidth,
+    rbf_mmd2,
     ref_split_baseline,
     streaming_po_and_mse,
     streaming_po_risk,
@@ -320,19 +324,36 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertEqual(po_mse_action(False, False), ACTION_KEEP)
         self.assertEqual(po_mse_action(True, False), ACTION_WATCH)
         self.assertEqual(po_mse_action(True, True), ACTION_FREEZE)
-        self.assertEqual(po_mse_action(False, True), ACTION_KEEP)
+        self.assertEqual(po_mse_action(False, True, True), ACTION_XSHIFT)
+        self.assertEqual(po_mse_action(False, True, False), ACTION_TRICKY)
         rows = [
-            {"t": 0, "n_new": 20, "po_stream": 1e-6, "mse_stream": 0.10},
-            {"t": 1, "n_new": 20, "po_stream": 3e-6, "mse_stream": 0.11},
-            {"t": 2, "n_new": 20, "po_stream": 4e-6, "mse_stream": 0.50},
+            {"t": 0, "n_new": 20, "po_stream": 1e-6, "mse_stream": 0.10, "mmd_stream": 0.01},
+            {"t": 1, "n_new": 20, "po_stream": 3e-6, "mse_stream": 0.11, "mmd_stream": 0.01},
+            {"t": 2, "n_new": 20, "po_stream": 4e-6, "mse_stream": 0.50, "mmd_stream": 0.01},
         ]
-        info = annotate_po_mse_contrast(rows, po_base=1e-6, mse_base=0.10, n_new=20)
+        info = annotate_po_mse_contrast(rows, po_base=1e-6, mse_base=0.10, mmd_base=0.01, n_new=20)
         self.assertEqual(rows[0]["action"], ACTION_KEEP)
         self.assertEqual(rows[1]["action"], ACTION_WATCH)
         self.assertEqual(rows[2]["action"], ACTION_FREEZE)
         self.assertEqual(info["board_action"], ACTION_FREEZE)
         self.assertEqual(info["n_watch"], 1)
         self.assertEqual(info["n_freeze"], 1)
+        x_only = [
+            {"t": 0, "n_new": 20, "po_stream": 1e-6, "mse_stream": 0.10, "mmd_stream": 0.01},
+            {"t": 1, "n_new": 20, "po_stream": 1.1e-6, "mse_stream": 0.30, "mmd_stream": 0.05},
+        ]
+        info2 = annotate_po_mse_contrast(x_only, po_base=1e-6, mse_base=0.10, mmd_base=0.01, n_new=20)
+        self.assertEqual(x_only[1]["action"], ACTION_XSHIFT)
+        self.assertEqual(info2["board_action"], ACTION_XSHIFT)
+
+    def test_rbf_mmd_fires_when_x_shifts(self):
+        rng = np.random.default_rng(12)
+        X0 = rng.normal(size=(200, 4))
+        sigma = rbf_bandwidth(X0, seed=12)
+        quiet = rbf_mmd2(X0[:100], X0[100:], sigma=sigma, seed=12)
+        hopped = rbf_mmd2(X0, X0 + 2.5, sigma=sigma, seed=13)
+        self.assertGreater(hopped, quiet)
+        self.assertGreater(hopped, 2.0 * max(quiet, 1e-12))
 
 
 if __name__ == "__main__":

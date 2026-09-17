@@ -22,6 +22,64 @@ DEVIATION_RATIO = 2.0
 ACTION_KEEP = "keep_training"
 ACTION_WATCH = "watch"
 ACTION_FREEZE = "freeze"
+ACTION_XSHIFT = "x_shift"
+ACTION_TRICKY = "tricky"
+MMD_MAX_N = 512
+
+
+def _sqdist(A, B):
+    aa = np.sum(np.asarray(A, dtype=float) ** 2, axis=1, keepdims=True)
+    bb = np.sum(np.asarray(B, dtype=float) ** 2, axis=1, keepdims=True).T
+    return np.maximum(aa + bb - 2.0 * (A @ B.T), 0.0)
+
+
+def _subsample_rows(X, n, rng):
+    X = np.asarray(X, dtype=float)
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    if len(X) <= n:
+        return X
+    return X[rng.choice(len(X), size=int(n), replace=False)]
+
+
+def rbf_bandwidth(X, max_n: int = MMD_MAX_N, seed: int = 2026) -> float:
+    """Median heuristic on a subsample of X. Fixed for the stream so MMD is comparable."""
+    rng = np.random.default_rng(seed)
+    Xs = _subsample_rows(X, max_n, rng)
+    D = _sqdist(Xs, Xs)
+    tri = D[np.triu_indices_from(D, k=1)]
+    med = float(np.median(tri)) if tri.size else 0.0
+    if med <= 0:
+        return 1.0
+    return float(np.sqrt(med / 2.0))
+
+
+def rbf_mmd2(X, Y, sigma: float, max_n: int = MMD_MAX_N, seed: int = 2026) -> float:
+    """Unbiased RBF MMD² between two X clouds. Subsample; no extra MLP inference."""
+    rng = np.random.default_rng(seed)
+    Xs = _subsample_rows(X, max_n, rng)
+    Ys = _subsample_rows(Y, max_n, rng)
+    sig = max(float(sigma), 1e-8)
+    gamma = 1.0 / (2.0 * sig * sig)
+    Kxx = np.exp(-gamma * _sqdist(Xs, Xs))
+    Kyy = np.exp(-gamma * _sqdist(Ys, Ys))
+    Kxy = np.exp(-gamma * _sqdist(Xs, Ys))
+    n, m = len(Xs), len(Ys)
+    xx = 0.0 if n < 2 else (Kxx.sum() - np.trace(Kxx)) / (n * (n - 1))
+    yy = 0.0 if m < 2 else (Kyy.sum() - np.trace(Kyy)) / (m * (m - 1))
+    return float(xx + yy - 2.0 * float(Kxy.mean()))
+
+
+def ref_split_mmd(X_ref, *, sigma: float, seed: int = 2026, max_n: int = MMD_MAX_N) -> float:
+    """MMD of a fake split of D_ref. Quiet level for P(X)."""
+    X_ref = np.asarray(X_ref, dtype=float)
+    n = len(X_ref)
+    half = n // 2
+    return rbf_mmd2(X_ref[:half], X_ref[half:], sigma=sigma, max_n=max_n, seed=seed)
+    X = np.asarray(X, dtype=float)
+    sd = X.std(axis=0)
+    sd = np.where(sd < 1e-8, 1.0, sd)
+    return (X - X.mean(axis=0)) / sd
 
 
 def zscore(X: np.ndarray) -> np.ndarray:
@@ -214,51 +272,63 @@ def large_deviation(stream_po: float, baseline_po: float, ratio: float = DEVIATI
     return float(stream_po) >= float(ratio) * denom
 
 
-def po_mse_action(po_broken: bool, mse_broken: bool) -> str:
-    """PO × MSE contrast on the board.
+def po_mse_action(po_broken: bool, mse_broken: bool, mmd_broken: bool | None = None) -> str:
+    """PO × MSE contrast. Freeze-from-layer only when both PO and MSE break.
 
-    PO-risk: did P(Y|X) hop (T=1 new vs T=0 ref)?
-    Serving MSE: is the current MLP still within its D_ref error?
-    Freeze only if both flags fire — a hop with a quiet MSE is not a
-    failed all-layer update. MSE-only bumps stay keep-training.
+    MSE broken while PO is quiet is not concept drift. Look at MMD of X:
+    MMD large → covariate shift (P(X)); MMD quiet → tricky, not X and not P(Y|X).
     """
     if po_broken and mse_broken:
         return ACTION_FREEZE
     if po_broken:
         return ACTION_WATCH
+    if mse_broken:
+        if mmd_broken:
+            return ACTION_XSHIFT
+        return ACTION_TRICKY
     return ACTION_KEEP
 
 
-def annotate_po_mse_contrast(rows, po_base, mse_base=None, n_new=None, ratio: float = DEVIATION_RATIO) -> dict:
-    """Causal MA of PO-risk and of serving MSE, then the three-way action."""
+def annotate_po_mse_contrast(rows, po_base, mse_base=None, mmd_base=None, n_new=None, ratio: float = DEVIATION_RATIO) -> dict:
+    """Causal MA of PO-risk, serving MSE, and MMD of X, then the action."""
     po_info = annotate_moving_average(rows, po_base, n_new=n_new, ratio=ratio)
     w = int(po_info["ma_window"])
-    has_mse = bool(rows) and all(r.get("mse_stream") is not None for r in rows)
-    if has_mse and mse_base is not None:
-        ys = np.asarray([float(r["mse_stream"]) for r in rows], dtype=float)
+
+    def _ma_flag(key, baseline):
+        has = bool(rows) and all(r.get(key) is not None for r in rows) and baseline is not None
+        if not has:
+            return 0.0, True, None
+        ys = np.asarray([float(r[key]) for r in rows], dtype=float)
         ma = moving_average(ys, w) if ys.size else np.array([])
+        ma_key = "mse_ma" if key == "mse_stream" else "mmd_ma"
+        large_key = "mse_large" if key == "mse_stream" else "mmd_large"
         for r, m in zip(rows, ma):
-            r["mse_ma"] = float(m)
-            r["mse_large"] = bool(large_deviation(float(m), mse_base, ratio=ratio))
-            r["po_broken"] = bool(r.get("ma_large"))
-            r["mse_broken"] = bool(r["mse_large"])
-            r["action"] = po_mse_action(r["po_broken"], r["mse_broken"])
-        mse_max = float(np.nanmax(ma)) if ma.size else 0.0
-        mse_thresh = float(ratio) * max(float(mse_base), 1e-12)
-        mse_stable = bool(ma.size == 0 or mse_max < mse_thresh)
-    else:
-        for r in rows:
-            r["po_broken"] = bool(r.get("ma_large", r.get("large_deviation")))
-            r["mse_broken"] = False
-            r["action"] = po_mse_action(bool(r["po_broken"]), False)
-        mse_max, mse_stable = 0.0, True
+            r[ma_key] = float(m)
+            r[large_key] = bool(large_deviation(float(m), baseline, ratio=ratio))
+        mx = float(np.nanmax(ma)) if ma.size else 0.0
+        thresh = float(ratio) * max(float(baseline), 1e-12)
+        return mx, bool(ma.size == 0 or mx < thresh), True
+
+    mse_max, mse_stable, has_mse = _ma_flag("mse_stream", mse_base)
+    mmd_max, mmd_stable, has_mmd = _ma_flag("mmd_stream", mmd_base)
+    for r in rows:
+        r["po_broken"] = bool(r.get("ma_large", r.get("large_deviation")))
+        r["mse_broken"] = bool(r.get("mse_large")) if has_mse else False
+        r["mmd_broken"] = bool(r.get("mmd_large")) if has_mmd else False
+        r["action"] = po_mse_action(r["po_broken"], r["mse_broken"], r["mmd_broken"])
     counts = {
         ACTION_KEEP: sum(1 for r in rows if r.get("action") == ACTION_KEEP),
         ACTION_WATCH: sum(1 for r in rows if r.get("action") == ACTION_WATCH),
+        ACTION_XSHIFT: sum(1 for r in rows if r.get("action") == ACTION_XSHIFT),
+        ACTION_TRICKY: sum(1 for r in rows if r.get("action") == ACTION_TRICKY),
         ACTION_FREEZE: sum(1 for r in rows if r.get("action") == ACTION_FREEZE),
     }
     if counts[ACTION_FREEZE]:
         board_action = ACTION_FREEZE
+    elif counts[ACTION_XSHIFT]:
+        board_action = ACTION_XSHIFT
+    elif counts[ACTION_TRICKY]:
+        board_action = ACTION_TRICKY
     elif counts[ACTION_WATCH]:
         board_action = ACTION_WATCH
     else:
@@ -267,8 +337,12 @@ def annotate_po_mse_contrast(rows, po_base, mse_base=None, n_new=None, ratio: fl
         **po_info,
         "mse_ma_max": mse_max,
         "mse_stable": mse_stable,
+        "mmd_ma_max": mmd_max,
+        "mmd_stable": mmd_stable,
         "n_keep_training": int(counts[ACTION_KEEP]),
         "n_watch": int(counts[ACTION_WATCH]),
+        "n_x_shift": int(counts[ACTION_XSHIFT]),
+        "n_tricky": int(counts[ACTION_TRICKY]),
         "n_freeze": int(counts[ACTION_FREEZE]),
         "board_action": board_action,
         "all_layer_backprop": bool(board_action == ACTION_KEEP),
