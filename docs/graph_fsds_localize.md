@@ -13,7 +13,8 @@
   → 3. 收到同一粒：订单（或商户）
         localize = 当前窗的 X；serve = 订单 X 用当前、实体列用 D_ref 画像
   → 4. 两层
-        层 1  subset vs other：默认 **bundled Louvain 社区**（变动子集）；region / structural 只做对照
+        层 1  subset vs other：默认 **own-ref 水平集** `{φ≥τ}`（变动子集）；
+              Louvain 社区 / region / structural 只做对照
         层 2  选中块的 LOGO（order / merchant / user）
   → 5. 对 loud subset 出三支肖像 + fingerprint
 ```
@@ -29,22 +30,57 @@
 | 收成一粒 | 评估单位钉死（一张订单，或一个商户） | 订单指标和商户指标不能比份额；「谁贡献大」没有同一个分母 |
 | 两层 | 哪一个 **subset**；这个 subset 里是哪一块 **feature block** | 只报全局 MMD 会漏掉「只有南区商户在走」 |
 
-图在这里就是实体图：`order → merchant`、`order → user`。包是 **networkx**（不是 GraphRAG / PyG / DGL）。社区发现有两套目标，不能混。
+图在这里就是实体图：`order → merchant`、`order → user`。包是 **networkx**（不是 GraphRAG / PyG / DGL）。**图只回答 incidence（谁挂在谁下面），不回答谁在变。** 变动 subset 是节点势能的水平集，不是社区发现。
 
 ---
 
-## 表 0 · 用哪个包、社区发现到底在优化什么
+## 表 0 · 怎么定位变动 subset（不走 community detection）
 
-| | 结构 Louvain | **Bundled-shift Louvain（默认）** |
+Community detection 把「谁和谁连得密」当成「谁在变」。共单图的模块度是谁共享用户；bundled 图上的 Louvain 也还是在切图。变动子集的定义更直接：
+
+\[
+\hat S_{\mathrm{layer}}=\bigl\{i:\ \phi_i\ge\tau\bigr\},\qquad
+\tau=\max\bigl(\mathrm{floor},\ \alpha\cdot\max_i\phi_i\bigr),\quad\alpha=0.3.
+\]
+
+\(\phi_i\) 是该层节点 \(i\) **对自己 \(D_{\mathrm{ref}}\) 袋** 的捆分数（MMD、\(\|\Delta\mu_X\|\)、\(\Delta\mu_Y\)、PO）。图不进这个切。\(\tau\) 自适应：安静窗 \(\max\phi\) 小，floor 把噪声挡掉；onset 后 \(\max\phi\) 抬起来，水平集跟着走。
+
+### 多层图 localization 的具体弄法
+
+层 = 一种实体粒。这里两层：商户、用户。边 = 订单挂在哪个商户 / 哪个用户。不要合成一张超图，也不要把两层的 \(v_i\) 加进同一个 simplex。
+
+```
+对每一层独立：
+  1. 每个节点 i 用自己的 D_ref 袋打捆
+       v_i = (MMD_i, ‖Δμ_X‖_i, Δμ_Y_i, PO_i)     # own-ref；没有 own-ref 的新节点跳过
+       φ_i = ‖ṽ_i‖_1
+  2. 水平集  Ŝ_layer = { i : φ_i ≥ τ }
+  3. lift 到订单
+       订单 o ∈ Ŝ̂_layer  ⇔  o 挂到的该层实体 ∈ Ŝ_layer
+评估（唯一可加的单位 = 订单）：
+       J(Ŝ̂_m, S*), J(Ŝ̂_u, S*), J(Ŝ̂_m, Ŝ̂_u)
+两层归因：
+       订单标签 = loud / other（不是 C0/C1/C2）
+       再打 π_MMD / π_PO / π_CMean 和 fingerprint
+```
+
+| 步 | 做什么 | 不要做成 |
 |---|---|---|
-| 包 | `networkx==3.6.x` | 同一个包 |
-| 求解器 | `nx.community.louvain_communities` | **同一个求解器** |
-| 图 | 共单（merchant–user）+ 当前窗 kNN(X) | 商户节点；边 = 三支捆的**同方向亲和** |
-| 目标 \(Q\) | 模块度：谁和谁连得密 | **不是**模块度语义。边是「一样在变」，切出来的社区是变动 subset 的代理 |
-| 种下 south、X 走（covariate） | kNN(X) 可能碰巧把南区聚在一起 | 应用目标：loud 社区的 south_frac 高 |
-| 种下 south、X 不动（concept） | 结构图几乎不变，**切不出变动子集** | 捆里的 \(\Delta\mu_Y\) / PO 把南区商户连在一起 |
-| GraphSAGE | 冻住的 mean-aggregator 读出，不是切 | 不用它来切 |
-| GraphRAG | 不用 | 不用 |
+| 节点钟 | own-ref：这个商户/用户自己变了没有 | 用 full-ref 切（那是异质性） |
+| 切 | \(\{i:\phi_i\ge\tau\}\) | Louvain / 模块度 / GraphRAG 社区 |
+| 多层 | 每层自己切，再 lift 到订单比 Jaccard | 把商户 MMD 和用户 MMD 丢进同一个份额 |
+| 归因 | loud vs other，三支 + vs other gap | 把水平集再切成一堆社区当 subset 键 |
+| 方向 | 需要时看 **metric slice** \(\{i:\mathrm{MMD}_i\ge\tau_{\mathrm{MMD}}\}\) 等 | 用社区标签代替「谁在变」 |
+
+### 为什么不默认社区发现
+
+| | 水平集（默认） | Bundled Louvain（对照） | 结构 Louvain（对照） |
+|---|---|---|---|
+| 问什么 | 哪些节点自己的钟响了 | 响的节点里谁和谁同方向、连成一块 | 谁共享用户 / kNN(X) 稠密 |
+| 目标 | 阈值 | 模块度（边已经换成同方向亲和） | 模块度（共单） |
+| 种下 south、X 走 | 南区商户 \(\phi\) 高 → 进 \(\hat S\) | 多数时候能把南区收成一块，但 resolution 会碎 | kNN 可能碰巧聚南区 |
+| 种下 south、X 不动（concept） | \(\Delta\mu_Y\) 把南区 \(\phi\) 抬起来 | 钟对不齐时 loud 社区 south_frac 会掉到噪声（超纲：模块度不是这个目标） | 结构几乎不变，切不出 |
+| 多层 | 每层一个水平集 | 每层一张 bundled 图再 Louvain | 共单图本来就是跨层的，更不能当切 |
 
 Vanilla Louvain 最大化
 
@@ -52,67 +88,55 @@ Vanilla Louvain 最大化
 Q=\frac{1}{2m}\sum_{ij}\Big(A_{ij}-\frac{k_i k_j}{2m}\Big)\delta(c_i,c_j).
 \]
 
-这回答「稠密子图」。共单图的稠密块 = 谁共享用户，**不是**谁的 \(P(X)\) / \(P(Y\mid X)\) 在走。
+这回答「稠密子图」。共单图的稠密块 = 谁共享用户，**不是**谁的 \(P(X)\) / \(P(Y\mid X)\) 在走。Bundled 图只是把边换成「一样在变」，求解器还是 Louvain——分辨率、碎社区、把噪声节点并进来，都还在。水平集把「谁在变」从切图里拿出来，图只负责 lift。
 
-Bundled 图把多指标捆进边：
+求解器用 networkx 只是因为 incidence 图和对照 Louvain 现成、无 torch。**默认切不用它。** 不要用 GraphRAG 合成图来代替这个目标。
 
-\[
-v_i=\big(\mathrm{MMD}_i,\;\|\Delta\mu_X\|_i,\;|\Delta\mu_Y|_i,\;\mathrm{PO}_i\big)
-\quad\text{（相对 }D_{\mathrm{ref}}\text{，节点 = 商户的订单袋）}
-\]
+### 还有什么（仍不是社区发现）
 
-\[
-w_{ij}=\mathrm{ReLU}\big(\cos(\tilde v_i,\tilde v_j)\big)\cdot\mathbf{1}[\phi_i\ge\tau\text{ 或 }\phi_j\ge\tau],
-\quad \phi_i=\mathbf{1}^\top \tilde v_i.
-\]
-
-安静的商户孤立。Louvain 在这张图上切 = 把**同方向 loud** 的点收成一块。然后两层归因仍在订单粒上对社区打三支。
-
-Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \(Z\)。这不是泄漏进服务模型；用 Y 去找「哪一块转化在 hop」就是 localization 本身。不要用 GraphRAG 合成图来代替这个目标。
-
-**Multi-bundled 三层：**
-
-| 层 | 对象 | 捆 |
+| 件 | 什么时候用 | 不是什么 |
 |---|---|---|
-| 节点 | 每个商户的订单袋 vs \(D_{\mathrm{ref}}\) | \(v_i\) |
-| 边 | 同方向亲和 \(w_{ij}\) | \(\cos(\tilde v_i,\tilde v_j)\) |
-| 社区 | 社区内订单并起来，再打三支 + \(\pi\) vs other | 层 1 归因 |
+| **metric slice** | covariate 应点亮 MMD / CMean_X；concept 应点亮 CMean_Y / PO。捆 \(\phi\) 混了就读切片 | 第二套 subset 键 |
+| 覆盖前缀 | 按 \(\phi\) 排序，累计到总 \(\phi\) 的 \(\alpha\)（比如 80%） | 固定 top-k |
+| 同方向连通分量 | 只有 \(\cos(\tilde v_i,\tilde v_j)<0\) 的两拨 loud 节点（X 走 vs \(Y\mid X\) hop）才拆 | 默认仍是一块 loud vs other |
+| 结构 Louvain | 对照：模块度切不出 concept | 当变动 subset |
+| 冻住 SAGE-mean | 结构读出 | 当切 |
 
-求解器用 networkx Louvain，是因为它现成、无 torch、和冻层看板一样不引入可训练 GNN（可训练 GNN 会把 encoder drift 和 graph drift 糊在一起）。目标换了，求解器没换。
+Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \(Z\)。
 
 ---
 
-## 表 0b · 怎么定位变动 subset：own-ref、同一维度、多层图怎么评
+## 表 0b · own-ref、同一维度、多层图怎么评
 
 ### 节点分数必须对「商户自己的 \(D_{\mathrm{ref}}\)」
 
 | 钟 | 公式（节点 \(i\) = 一个商户的订单袋） | 问什么 | 会误伤什么 |
 |---|---|---|---|
-| **own-ref** | \(\mathrm{MMD}(X_{\mathrm{new}}(i), X_{\mathrm{ref}}(i))\)，\(\Delta\mu\) 同样用 \(i\) 自己的 ref | **这个商户自己变了没有** | 需要 \(n_{\mathrm{ref}}(i)\ge\min n\)；新商户没有自己的钟 → **跳过**，不进 bundled 图 |
+| **own-ref** | \(\mathrm{MMD}(X_{\mathrm{new}}(i), X_{\mathrm{ref}}(i))\)，\(\Delta\mu\) 同样用 \(i\) 自己的 ref | **这个商户自己变了没有** | 需要 \(n_{\mathrm{ref}}(i)\ge\min n\)；新商户没有自己的钟 → **跳过**，不进水平集 |
 | **full-ref** | \(\mathrm{MMD}(X_{\mathrm{new}}(i), X_{\mathrm{ref}})\) | 这个商户和**全局混合**不像 | 从来就小众的商户永远 loud（异质性，不是 drift） |
 
-变动 subset 的切图只用 own-ref。full-ref 留着报「对整窗的贡献」（构成变化：南区单变多）。两口钟不要合成一个分数再切。
+变动 subset 的切只用 own-ref 水平集。full-ref 留着报「对整窗的贡献」（构成变化：南区单变多）。两口钟不要合成一个分数再切。
 
-冷启动（新商户没有 own-ref）：不把 full-ref 塞进切图，否则又变成异质性。订单仍可挂 `C_quiet`，两层归因时单独看。
+冷启动（新商户没有 own-ref）：不把 full-ref 塞进切，否则又变成异质性。订单仍可挂 `other`，两层归因时单独看。
 
 σ 钉在**该节点自己的 ref 袋**上（own）或全局 \(D_{\mathrm{ref}}\)（full），都冻结，不在新窗重估。
 
 ### 同一维度怎么 localize
 
-只在一个粒上切、只在这个粒上比份额：订单就订单，商户就商户。\(\pi_{\mathrm{MMD}}\) 的分母是这个粒上的社区。不要把商户节点 MMD 和订单行 MMD 丢进同一个 simplex。
+只在一个粒上切、只在这个粒上比份额：订单就订单，商户就商户。\(\pi_{\mathrm{MMD}}\) 的分母是这个粒上的 loud / other。不要把商户节点 MMD 和订单行 MMD 丢进同一个 simplex。
 
-同一维度的评估：loud 社区 lift 成订单集合 \(\hat S\)，和种下的南区订单 \(S^\star\) 算 Jaccard；再在 \(\hat S\) 上打三支 + vs other。
+同一维度的评估：水平集 lift 成订单集合 \(\hat S\)，和种下的南区订单 \(S^\star\) 算 Jaccard；再在 \(\hat S\) 上打三支 + vs other。
 
 ### 多个维度 / 多层图怎么评估
 
-图是分层的：商户层、用户层、（可选）订单 kNN 层。**每一层自己切**，切完 **全部 lift 到订单粒** 再比。这是唯一可加的评估单位。
+图是分层的：商户层、用户层、（可选）订单 kNN 层。**每一层自己取水平集**，切完 **全部 lift 到订单粒** 再比。这是唯一可加的评估单位。
 
 ```
-商户层 bundled Louvain  →  订单集合 Ŝ_m
-用户层 bundled Louvain  →  订单集合 Ŝ_u
+商户层 {φ≥τ}  →  订单集合 Ŝ_m
+用户层 {φ≥τ}  →  订单集合 Ŝ_u
 订单粒 oracle（region）→  订单集合 S*
 评估：J(Ŝ_m, S*)、J(Ŝ_u, S*)、J(Ŝ_m, Ŝ_u)
-三支肖像只在 Ŝ_m / Ŝ_u 上打（已经是同一粒）
+三支肖像只在 Ŝ_m / Ŝ_u 上打（已经是同一粒；标签是 loud / other）
 ```
 
 | 看到 | 读法 |
@@ -120,9 +144,12 @@ Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \
 | \(J(\hat S_m,S^\star)\) 高、\(J(\hat S_u,S^\star)\) 低 | 变动落在商户层；用户只是被共单带着走 |
 | 两头 Jaccard 都高、层间 Jaccard 也高 | 两层指到同一批订单（仍不是唯一分解） |
 | 层间 Jaccard 低、两头对 \(S^\star\) 都不高 | 切错层或 own-ref 样本不够 |
-| 把两层的 \(v_i\) 直接加起来再 Louvain | **不要**。量纲和 n 都不同 |
+| 把两层的 \(v_i\) 直接加起来再取阈值 | **不要**。量纲和 n 都不同 |
+| 把两层并成一张超图再 Louvain | **不要**。那又回到社区发现 |
 
-多层不是 GraphRAG 合成一张超图。就是：每层一个 bundled 图、一个 Louvain、lift 到订单、Jaccard。用户层在这个 DGP 里**不该**回收南区——用户是跨商户随机挂的。这正是评估：层对了才回收。
+多层不是 GraphRAG 合成一张超图。就是：每层一个水平集、lift 到订单、Jaccard。用户层在这个 DGP 里**不该**回收南区——用户是跨商户随机挂的。这正是评估：层对了才回收。
+
+Louvain 对照仍按层切、再 lift，用来说明「切错目标会切碎」。不要把社区标签当默认 subset 键。
 
 ### 还有什么（同一套钟上的附件，不是新的面）
 
@@ -130,10 +157,10 @@ Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \
 |---|---|---|
 | min_n | own-ref / 社区 PO 的地板 | 小袋上打 RF PO |
 | 强度 vs 质量 | \(\phi_i\) 高但 \(n_i\) 小 → 报 n 和 share | 只按 \(\phi\) 排序当贡献 |
-| vs other | 社区 − 补集，两头对同一口 ref | 当成 Shapley |
+| vs other | loud − other，两头对同一口 ref | 当成 Shapley |
 | 结构 Louvain | 对照：模块度切不出 concept | 当变动 subset |
 | 冻住 SAGE-mean | 结构读出 | 当切 |
-| 新商户 | C_quiet | 用全局均值假造 own-ref 再切 |
+| 新商户 | other | 用全局均值假造 own-ref 再切 |
 
 ---
 
@@ -172,7 +199,7 @@ Z = \big[\;X^{\mathrm{order}}_{\mathrm{sel}}\;\big|\;X^{\mathrm{merchant}}_{\mat
 | `localize` | **当前窗** X | **当前窗** 实体 X（不含 Y） | 定位「现在谁在走」 |
 | `serve` | 当前窗 X | **冻结的 \(D_{\mathrm{ref}}\) 画像** | 可进服务 / clever covariate；新商户用 ref 全局均值 |
 
-评估只在 **同一个 \(Z\)** 上比。默认子集键是 **bundled Louvain 社区**（变动 subset 的代理）。`region` 是种下的对照，不是切图目标。`structural` 是共单模块度，用来说明「切错目标会切不出 concept」。
+评估只在 **同一个 \(Z\)** 上比。默认子集键是 **merchant-layer 水平集** lift 成的 `loud` / `other`。`region` 是种下的对照，不是切。`community` / `structural` 是 Louvain 对照，用来说明「切错目标会切不出 / 切碎 concept」。
 
 两个对照，回答两个不同的问题：
 
@@ -221,9 +248,9 @@ CMean 份额用 \(\tfrac12|\Delta\mu_Y|+\tfrac12\|\Delta\mu_X\|\)（先各自非
 评估（玩具里可回收）按 **订单粒** 写死：
 
 1. **特征回收**：FSDS 集合含种下的列，且 **不含 Y**。
-2. **社区回收**：bundled Louvain 的 loud 社区 `south_frac` 高（covariate 应接近 1）。结构 Louvain 对 concept **不要求**回收。
-3. **构成 vs 强度**：社区可以碎成几块；看 loud 那一块的 \(\pi\) 和 gap vs other，不要求全部南区商户在同一社区。
-4. **指纹**：社区上的 mix 偏 MMD / PO / CMean。
+2. **水平集回收**：merchant-layer `{φ≥τ}` lift 后 `south_frac` 高（covariate 应接近 1）。结构 / bundled Louvain **不要求**回收。
+3. **构成 vs 强度**：水平集可以不含全部南区商户（冷启动、n 不够）；看 loud 的 \(\pi\) 和 gap vs other。
+4. **指纹**：loud 上的 mix 偏 MMD / PO / CMean；切片对不上时先读 metric slice，不要换回 Louvain。
 
 ---
 
@@ -235,7 +262,7 @@ CMean 份额用 \(\tfrac12|\Delta\mu_Y|+\tfrac12\|\Delta\mu_X\|\)（先各自非
 | 实体画像（serve 模式） | PO / CMean_Y 的 **outcome** | 用新窗 Y 重切的 HH / 小时桶去当 subset |
 | 子集词表（south/north 来自商户） | 服务误差（冻住的 \(\mu_{\mathrm{ref}}\)） | 把 PO 的 \(\mu\) 当下一轮特征再选一遍 |
 
-HH（划分）选的是图上的 merchant/region，**不是 Y**。FSDS 的 CMean_Y 用 Y 当左边的均值，列仍是 X。
+HH（划分）选的是图上的 merchant 水平集 / region，**不是 Y**。FSDS 的 CMean_Y 用 Y 当左边的均值，列仍是 X。
 
 ---
 
@@ -264,7 +291,7 @@ HH（划分）选的是图上的 merchant/region，**不是 Y**。FSDS 的 CMean
 
 代码：
 
-- `Python/src/order_graph_nx.py` — networkx 图、结构 Louvain、bundled-shift Louvain、冻住 SAGE-mean
+- `Python/src/order_graph_nx.py` — incidence 图、own-ref 水平集 `{φ≥τ}`、metric slice；结构 / bundled Louvain 只做对照；冻住 SAGE-mean
 - `Python/src/graph_fsds_localize.py` — 维度定位、FSDS、unify、subset vs other、肖像
 - `Python/src/stream_dgps.py` — `make_order_graph_stream`（接着用这批合成订单）
 - `scripts/run_graph_fsds_localize.py`

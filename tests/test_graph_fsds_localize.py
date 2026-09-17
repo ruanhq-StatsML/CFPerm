@@ -205,5 +205,76 @@ class BundledGraphTests(unittest.TestCase):
         self.assertFalse(layers["user"]["y_in_graph"])
 
 
+class LevelSetTests(unittest.TestCase):
+    def _pack(self, kind, seed, n_merchants=12):
+        tables = make_order_graph_stream(
+            n_ref=300,
+            n_new=120,
+            n_batches=3,
+            onset_batch=1,
+            n_merchants=n_merchants,
+            n_users=40,
+            kind=kind,
+            seed=seed,
+        )
+        cut = slice_stream(tables, t=2)
+        stats = freeze_ref_stats(cut["ref"], seed=seed)
+        from graph_fsds_localize import graph_shift_cuts
+
+        return graph_shift_cuts(cut["ref"], cut["new"], stats, seed=seed, min_n=6)
+
+    def test_cut_name_is_level_set_not_louvain(self):
+        from order_graph_nx import CUT_LEVEL_SET
+
+        self.assertIn("level_set", CUT_LEVEL_SET)
+        self.assertNotIn("louvain", CUT_LEVEL_SET)
+        pack = self._pack("covariate_south", seed=9)
+        self.assertEqual(pack["level_set"]["cut_name"], CUT_LEVEL_SET)
+
+    def test_covariate_merchant_level_set_recovers_south(self):
+        pack = self._pack("covariate_south", seed=9)
+        ls = pack["level_set"]
+        self.assertGreater(ls["jaccard_merchant_vs_south"], ls["jaccard_user_vs_south"])
+        self.assertGreaterEqual(ls["jaccard_merchant_vs_south"], 0.5)
+        self.assertGreaterEqual(ls["merchant"]["south_frac_loud_nodes"], 0.75)
+        self.assertGreaterEqual(ls["merchant"]["slices"]["mmd"]["south_frac"], 0.6)
+
+    def test_concept_level_set_uses_y_not_community(self):
+        pack = self._pack("concept_south", seed=10)
+        mer = pack["level_set"]["merchant"]
+        self.assertGreaterEqual(mer["south_frac_loud_nodes"], 0.5)
+        self.assertGreaterEqual(mer["slices"]["cmean_y"]["south_frac"], 0.5)
+        self.assertGreaterEqual(pack["level_set"]["jaccard_merchant_vs_south"], 0.25)
+
+    def test_pipeline_level_set_loud_vs_other(self):
+        tables = make_order_graph_stream(
+            n_ref=300,
+            n_new=120,
+            n_batches=3,
+            onset_batch=1,
+            n_merchants=12,
+            n_users=40,
+            kind="covariate_south",
+            seed=11,
+        )
+        out = run_pipeline(
+            tables,
+            t=2,
+            grain="order",
+            mode="localize",
+            subset_by="level_set",
+            seed=11,
+            min_n=15,
+            with_logo=False,
+            with_po=False,
+        )
+        self.assertEqual(out["leakage"]["graph_cut"], "level_set/{phi>=tau}")
+        self.assertIn(out["loud_subset"], ("loud", "other"))
+        loud = next(p for p in out["portraits"] if p["subset"] == "loud")
+        self.assertGreaterEqual(loud["south_frac"], 0.6)
+        self.assertGreater(loud["pi_mmd"], 0.5)
+        self.assertFalse(out["leakage"]["y_in_Z"])
+
+
 if __name__ == "__main__":
     unittest.main()

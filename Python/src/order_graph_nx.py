@@ -1,16 +1,22 @@
 """Order-graph localization on **networkx** (not PyG / DGL / GraphRAG / igraph).
 
 Package: networkx (3.6.x in this env).
-Solver:  nx.community.louvain_communities  — a *solver*, not the objective.
 
-Two graphs, two objectives:
+The changing subset is a **level set of a node potential**, not a community:
+
+    Ŝ = { i : φ_i ≥ τ },  τ = max(floor, α · max φ)
+
+φ_i is the bundled own-ref score (MMD, CMean_X, CMean_Y, PO). The multi-layer
+graph is incidence only: which orders hang on which merchant / user. Lift Ŝ
+on each layer to the order grain, then Jaccard. Do not mix merchant-MMD and
+user-MMD in one simplex.
+
+Louvain is an optional contrast, not the cut:
 
   structural  co-order + kNN(X). Modularity Q finds dense subgraphs
-              ("who shares users / who looks similar in X"). That is
-              **not** "who shifted".
-  bundled     merchants as nodes; edge weight = same-direction affinity
-              of the multi-metric bundle (MMD, CMean_X, CMean_Y, PO).
-              Louvain on this graph is a proxy for the changing subset.
+              ("who shares users"). That is **not** "who shifted".
+  bundled     same-direction affinity of the multi-metric bundle.
+              Louvain here groups loud nodes; still not required.
 
 Frozen GraphSAGE-mean is a readout of the structural graph, not the cut.
 Y never enters node features. Y may score the bundle (monitoring outcome).
@@ -28,8 +34,10 @@ GRAPH_PACKAGE_VERSION = nx.__version__
 ENCODER = "graphsage-mean-frozen"
 CUT_STRUCTURAL = "networkx.community.louvain_communities/structural"
 CUT_BUNDLED = "networkx.community.louvain_communities/bundled-shift"
+CUT_LEVEL_SET = "level_set/{phi>=tau}"
 SAGE_LAYERS = 2
 BUNDLE_KEYS = ("mmd", "cmean_x", "cmean_y", "po")
+METRIC_FLOORS = {"mmd": 0.02, "cmean_x": 0.15, "cmean_y": 0.05, "po": 1e-3}
 
 
 def _as_2d(X) -> np.ndarray:
@@ -154,6 +162,19 @@ def sage_merchant_matrix(G: nx.Graph) -> tuple[np.ndarray, np.ndarray]:
 def order_community_labels(merchant_id, cut: Mapping[int, str], default: str = "C?") -> np.ndarray:
     merchant_id = np.asarray(merchant_id).astype(int)
     return np.asarray([cut.get(int(m), default) for m in merchant_id], dtype=object)
+
+
+def order_level_set_labels(
+    entity_ids,
+    loud_ids: Sequence[int],
+    *,
+    loud_name: str = "loud",
+    other_name: str = "other",
+) -> np.ndarray:
+    """Binary order labels from a node level-set. Not a community partition."""
+    loud = {int(i) for i in loud_ids}
+    ids = np.asarray(entity_ids).astype(int)
+    return np.asarray([loud_name if int(e) in loud else other_name for e in ids], dtype=object)
 
 
 def community_south_frac(cut: Mapping[int, str], region_by_merchant: Mapping[int, str]) -> dict[str, float]:
@@ -306,6 +327,75 @@ def loud_community(cut: Mapping[int, str], scores: Mapping[int, Mapping]) -> str
     if max(phis.values()) <= 1e-12:
         return None
     return max(phis, key=phis.get)
+
+
+def node_phis(scores: Mapping[int, Mapping]) -> dict[int, float]:
+    vecs = [bundle_vec(scores[m]) for m in scores]
+    scale = _column_scale(vecs)
+    return {int(m): bundle_phi(scores[m], scale=scale) for m in scores}
+
+
+def phi_tau(phis: Mapping[int, float], floor: float = 1.0, frac: float = 0.30) -> float:
+    if not phis:
+        return float(floor)
+    return max(float(floor), float(frac) * max(phis.values()))
+
+
+def level_set_ids(
+    scores: Mapping[int, Mapping],
+    *,
+    floor: float = 1.0,
+    frac: float = 0.30,
+) -> dict:
+    """Changing subset = {i : φ_i ≥ τ}. No community detection.
+
+    Graph is not used. τ = max(floor, frac * max φ).
+    """
+    phis = node_phis(scores)
+    tau = phi_tau(phis, floor=floor, frac=frac)
+    loud = sorted(int(i) for i, p in phis.items() if p >= tau)
+    return {
+        "loud_ids": loud,
+        "tau": float(tau),
+        "phis": {str(k): float(v) for k, v in phis.items()},
+        "n_loud": int(len(loud)),
+    }
+
+
+def metric_level_set_ids(
+    scores: Mapping[int, Mapping],
+    metric: str,
+    *,
+    floor: float | None = None,
+    frac: float = 0.30,
+) -> dict:
+    """Per-metric level set {i : |metric_i| ≥ τ}. Diagnostic, not a second cut.
+
+    Covariate should light MMD / CMean_X; concept should light CMean_Y / PO.
+    Union of metric slices is allowed to be larger than the bundled Ŝ.
+    """
+    if metric not in BUNDLE_KEYS:
+        raise ValueError(f"metric must be one of {BUNDLE_KEYS}, got {metric!r}")
+    if floor is None:
+        floor = float(METRIC_FLOORS[metric])
+    vals: dict[int, float] = {}
+    for m, row in scores.items():
+        raw = row.get(metric)
+        if raw is None:
+            continue
+        v = abs(float(raw)) if metric == "cmean_y" else max(float(raw), 0.0)
+        vals[int(m)] = v
+    if not vals:
+        return {"metric": metric, "loud_ids": [], "tau": float(floor), "n_loud": 0}
+    tau = max(float(floor), float(frac) * max(vals.values()))
+    loud = sorted(int(i) for i, v in vals.items() if v >= tau)
+    return {
+        "metric": metric,
+        "loud_ids": loud,
+        "tau": float(tau),
+        "n_loud": int(len(loud)),
+        "vals": {str(k): float(v) for k, v in vals.items()},
+    }
 
 
 def y_in_graph_attrs(G: nx.Graph) -> bool:
