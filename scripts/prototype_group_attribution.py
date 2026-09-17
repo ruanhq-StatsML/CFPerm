@@ -296,7 +296,7 @@ def render_report(rows: list[dict], extras: list[dict]) -> str:
         )
     lines += [
         "",
-        "Post-hoc localization: pull subset indices (T groups, quartiles of the top \(X_j\)),",
+        "Post-hoc localization: pull subset indices (T groups, quartiles of the top X_j),",
         "then pairwise **MMD** and **PO-risk**. Conditional means stay in the JSON; they are not the test.",
         "",
         "## Pairwise subset MMD / PO-risk",
