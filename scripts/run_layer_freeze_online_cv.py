@@ -29,7 +29,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from dl_model_registry import DLModelRegistry  # noqa: E402
-from layer_freeze_cv import run_deviation_gate, run_layer_freeze_cv  # noqa: E402
+from layer_freeze_cv import (  # noqa: E402
+    attach_layer_dicts,
+    layer_key,
+    run_deviation_gate,
+    run_layer_freeze_cv,
+)
 from streaming_po_risk import (  # noqa: E402
     MIN_STREAM_N,
     REF_N,
@@ -115,7 +120,117 @@ LOADERS = {
 }
 
 
+def _float_arr(v) -> np.ndarray:
+    a = np.asarray(v, dtype=object).ravel()
+    out = np.empty(len(a), dtype=float)
+    for i, x in enumerate(a):
+        out[i] = np.nan if x is None else float(x)
+    return out
+
+
+def _layer_series(d: dict | None, k: int, n: int = 0) -> dict[str, np.ndarray]:
+    d = d or {}
+    out = {}
+    empty = np.full(n, np.nan)
+    for i in range(k + 1):
+        key = layer_key(i)
+        if key in d:
+            out[key] = _float_arr(d[key])
+        elif str(i) in d:
+            out[key] = _float_arr(d[str(i)])
+        else:
+            out[key] = empty.copy()
+    return out
+
+
+def _finite_xy(ts, ys):
+    ts = np.asarray(ts)
+    ys = np.asarray(ys, dtype=float)
+    m = np.isfinite(ys)
+    return ts[m], ys[m]
+
+
+def plot_layer_dicts(result: dict, title: str, out_dir: Path) -> list[str]:
+    """PO-risk and MSE per freeze-depth. NaN hops were not cloned (MA quiet)."""
+    k = int(result["k"])
+    names = result.get("layer_names") or [f"model_{i}" for i in range(k + 1)]
+    ts = [r["t"] for r in result["rows"]]
+    po = _layer_series(result.get("PO_Dict"), k, n=len(ts))
+    mse = _layer_series(result.get("MSE_Dict"), k, n=len(ts))
+    has_po = any(np.isfinite(v).any() for v in po.values())
+    has_mse = any(np.isfinite(v).any() for v in mse.values())
+    if not has_po and not has_mse:
+        return []
+    colors = plt.cm.tab10(np.linspace(0, 0.8, k + 1))
+    n_ax = int(has_po) + int(has_mse)
+    fig, axes = plt.subplots(n_ax, 1, figsize=(8.6, 3.6 * n_ax), sharex=True)
+    if n_ax == 1:
+        axes = [axes]
+    ax_i = 0
+    if has_po:
+        ax = axes[ax_i]
+        ax_i += 1
+        for i in range(k + 1):
+            key = layer_key(i)
+            x, y = _finite_xy(ts, po[key])
+            if len(y):
+                ax.plot(x, y, color=colors[i], lw=2.0, marker="o", ms=4, label=f"{key} / {names[i]}")
+        ax.set_ylabel("PO-risk")
+        ax.set_title(title + " — PO_Dict (from which layer the hop starts)")
+        ax.legend(fontsize=8, ncol=2)
+    if has_mse:
+        ax = axes[ax_i]
+        for i in range(k + 1):
+            key = layer_key(i)
+            x, y = _finite_xy(ts, mse[key])
+            if len(y):
+                ax.plot(x, y, color=colors[i], lw=2.0, marker="o", ms=4, label=f"{key} / {names[i]}")
+        ax.set_ylabel("MSE")
+        ax.set_title("MSE_Dict — same freeze-depths, prediction error on the new batch")
+        ax.legend(fontsize=8, ncol=2)
+    axes[-1].set_xlabel("incoming batch (T=1), large deviation only")
+    fig.tight_layout()
+    p = out_dir / "po_mse_by_layer.png"
+    fig.savefig(p, dpi=140)
+    plt.close(fig)
+    written = [p.name]
+    if has_po:
+        fig, ax = plt.subplots(figsize=(8.6, 4.2))
+        for i in range(k + 1):
+            key = layer_key(i)
+            x, y = _finite_xy(ts, po[key])
+            if len(y):
+                ax.plot(x, y, color=colors[i], lw=2.0, marker="o", ms=3.5, label=names[i])
+        ax.set_xlabel("incoming batch (T=1), large deviation only")
+        ax.set_ylabel("PO-risk (conditional on freeze-depth)")
+        ax.set_title("from which layer to freeze")
+        ax.legend(fontsize=8, ncol=2)
+        fig.tight_layout()
+        p = out_dir / "po_risk_by_layer.png"
+        fig.savefig(p, dpi=140)
+        plt.close(fig)
+        written.append(p.name)
+    if has_mse:
+        fig, ax = plt.subplots(figsize=(8.6, 4.2))
+        for i in range(k + 1):
+            key = layer_key(i)
+            x, y = _finite_xy(ts, mse[key])
+            if len(y):
+                ax.plot(x, y, color=colors[i], lw=2.0, marker="o", ms=3.5, label=names[i])
+        ax.set_xlabel("incoming batch (T=1), large deviation only")
+        ax.set_ylabel("MSE on the new batch")
+        ax.set_title("MSE by freeze-depth")
+        ax.legend(fontsize=8, ncol=2)
+        fig.tight_layout()
+        p = out_dir / "mse_by_layer.png"
+        fig.savefig(p, dpi=140)
+        plt.close(fig)
+        written.append(p.name)
+    return written
+
+
 def plot_boards(result: dict, title: str, out_dir: Path) -> list[str]:
+    result = attach_layer_dicts(result)
     rows = result["rows"]
     k = result["k"]
     names = result["layer_names"]
@@ -137,7 +252,8 @@ def plot_boards(result: dict, title: str, out_dir: Path) -> list[str]:
             ax.scatter([r["t"]], [r["po_stream"]], s=80, color="#b33", zorder=4)
     ax.set_xlabel("incoming batch (T=1)")
     ax.set_ylabel("PO-risk")
-    ax.set_title(title + " — MA of PO-risk (no bootstrap)")
+    tag = "MA stable → all-layer backprop" if result.get("all_layer_backprop") else "MA hop"
+    ax.set_title(title + f" — MA of PO-risk ({tag}; no bootstrap)")
     ax.legend(fontsize=8)
     fig.tight_layout()
     p = out_dir / "po_risk_gate.png"
@@ -161,39 +277,18 @@ def plot_boards(result: dict, title: str, out_dir: Path) -> list[str]:
     plt.close(fig)
     written.append(p.name)
 
-    large_rows = [r for r in rows if r["large_deviation"] and r["layers"]]
-    if large_rows:
-        colors = plt.cm.tab10(np.linspace(0, 0.8, k + 1))
-        fig, ax = plt.subplots(figsize=(8.6, 4.2))
-        ts_l = [r["t"] for r in large_rows]
-        for i in range(k + 1):
-            ys = []
-            ok = True
-            for r in large_rows:
-                hit = next((x for x in r["layers"] if x["i"] == i), None)
-                if hit is None:
-                    ok = False
-                    break
-                ys.append(hit["po_fit"])
-            if ok:
-                ax.plot(ts_l, ys, color=colors[i], lw=2.0, marker="o", ms=3.5, label=names[i])
-        ax.set_xlabel("incoming batch (T=1), large deviation only")
-        ax.set_ylabel("PO-risk (conditional on freeze-depth)")
-        ax.set_title("from which layer to freeze")
-        ax.legend(fontsize=8, ncol=2)
-        fig.tight_layout()
-        p = out_dir / "po_risk_by_layer.png"
-        fig.savefig(p, dpi=140)
-        plt.close(fig)
-        written.append(p.name)
+    written.extend(plot_layer_dicts(result, title, out_dir))
     return written
 
 
 def render_html(spec: dict, result: dict, images: list[str], out_path: Path) -> None:
+    result = attach_layer_dicts(result)
     rec_i = result["recommend_i"]
     k = result["k"]
     n_large = result.get("n_large", 0)
-    if n_large == 0 or rec_i == k:
+    if result.get("all_layer_backprop") and (n_large == 0 or rec_i == k):
+        rec = "MA 稳定 → 全量每一层 back-propagate"
+    elif n_large == 0 or rec_i == k:
         rec = "没有大 deviation，或大偏差段仍全开 → 一直 trainable"
     else:
         rec = f"有大 deviation 的段：从 model_{rec_i} 开始冻（median）"
@@ -202,23 +297,32 @@ def render_html(spec: dict, result: dict, images: list[str], out_path: Path) -> 
     for img in images:
         cards.append(f'<figure><img src="{img}" alt="{img}"><figcaption>{img}</figcaption></figure>')
     table = [
-        "<table><thead><tr><th>t</th><th>PO-risk</th><th>baseline</th><th>large?</th><th>action</th></tr></thead><tbody>"
+        "<table><thead><tr><th>t</th><th>PO-risk</th><th>MA</th><th>baseline</th><th>large?</th><th>action</th></tr></thead><tbody>"
     ]
     for r in result["rows"]:
         action = "all trainable" if r["all_trainable"] else f"freeze from {r['freeze_from']}"
         flag = "yes" if r["large_deviation"] else ""
+        ma = r.get("po_ma")
+        ma_s = f"{ma:.4g}" if ma is not None else ""
         table.append(
-            f"<tr><td>{r['t']}</td><td>{r['po_stream']:.4g}</td><td>{r['po_base']:.4g}</td>"
+            f"<tr><td>{r['t']}</td><td>{r['po_stream']:.4g}</td><td>{ma_s}</td><td>{r['po_base']:.4g}</td>"
             f"<td>{flag}</td><td>{action}</td></tr>"
         )
     table.append("</tbody></table>")
     layer_tab = ""
     last_large = next((r for r in reversed(result["rows"]) if r["large_deviation"] and r["layers"]), None)
     if last_large:
-        layer_tab = "<h2>Last large-deviation batch — 从哪一层冻</h2><table><thead><tr><th>model</th><th>PO-risk</th></tr></thead><tbody>"
+        layer_tab = (
+            "<h2>Last large-deviation batch — PO-risk 和 MSE 同时读</h2>"
+            "<table><thead><tr><th>layer</th><th>model</th><th>PO-risk</th><th>MSE</th></tr></thead><tbody>"
+        )
         for x in last_large["layers"]:
             mark = " ★" if x["i"] == last_large["i_star"] else ""
-            layer_tab += f"<tr><td>{x['name']}{mark}</td><td>{x['po_fit']:.4g}</td></tr>"
+            mse_s = f"{x['mse']:.4g}" if x.get("mse") is not None else ""
+            layer_tab += (
+                f"<tr><td>{x.get('layer', layer_key(x['i']))}</td>"
+                f"<td>{x['name']}{mark}</td><td>{x['po_fit']:.4g}</td><td>{mse_s}</td></tr>"
+            )
         layer_tab += "</tbody></table>"
     html = f"""<!DOCTYPE html>
 <html lang="zh">
@@ -244,6 +348,8 @@ code {{ background: #eee; padding: 1px 4px; }}
 表格 PO-risk 单独维护 <b>outcome model</b> μ(Y|X) 和 <b>propensity</b> e(T|X)。
 新 batch 是 <b>T=1</b>。raw PO-risk 会抖就做 causal moving average；
 <b>MA 稳（不过 2× baseline）→ 全量每一层 back-propagate</b>。
+大 hop 上同时记 <code>PO_Dict</code> / <code>MSE_Dict</code>
+（layer0…layer_k），从哪一层开始明显变动就对着 MSE 读。
 不做 online-bootstrap。何时 update 是业务逻辑，不是这个数。
 </p>
 <p class="rec">{rec}</p>
@@ -257,50 +363,79 @@ code {{ background: #eee; padding: 1px 4px; }}
     out_path.write_text(html, encoding="utf-8")
 
 
+def _fmt_layer_row(layers, field, k):
+    by = {x["i"]: x.get(field) for x in layers}
+    cells = []
+    for i in range(k + 1):
+        v = by.get(i)
+        cells.append("" if v is None else f"{float(v):.3g}")
+    return " | ".join(cells)
+
+
 def render_report(spec: dict, result: dict) -> str:
+    result = attach_layer_dicts(result)
     rec_i = result["recommend_i"]
     n_new = result["rows"][0]["n_new"] if result["rows"] else ""
     n_large = result.get("n_large", 0)
     k = result["k"]
-    rec = "all trainable"
-    if n_large and rec_i < k:
+    rec = "all-layer backprop"
+    if result.get("all_layer_backprop"):
+        rec = "MA stable → all-layer backprop"
+    elif n_large and rec_i < k:
         rec = f"on large-deviation batches, freeze from model_{rec_i}"
     elif n_large:
         rec = "large deviation present, freeze prototype still says all trainable"
     lines = [
         f"# PO-risk board — {spec['title']}",
         "",
-        "No large deviation → all-layer backprop. Large deviation → from which layer to freeze.",
-        "Raw PO-risk jitters; a causal moving average is the stability readout. No online-bootstrap.",
+        "MA stable (below 2× baseline) → all-layer backprop. No online-bootstrap.",
+        "Large deviation → from which layer to freeze. Then read MSE_Dict next to PO_Dict.",
         "Tabular PO-risk keeps a separate outcome model and a separate propensity model.",
         f"T=1 on the incoming batch. n_ref={result['n_ref']}, n_new={n_new}. baseline={result['po_base']:.4g}.",
         "",
         f"- hidden_dims = `{result['hidden_dims']}`, k = {k}",
         f"- n_batches = {result['n_batches']}, n_large = {n_large}",
+        f"- ma_window = {result.get('ma_window')}, all_layer_backprop = {result.get('all_layer_backprop')}",
         f"- **{rec}**",
         "",
-        "| t | PO-risk | baseline | large | action |",
-        "|---:|---:|---:|---|---|",
+        "| t | PO-risk | MA | baseline | large | action |",
+        "|---:|---:|---:|---:|---|---|",
     ]
     for r in result["rows"]:
         action = "all trainable" if r["all_trainable"] else f"freeze from {r['freeze_from']}"
         flag = "yes" if r["large_deviation"] else ""
-        lines.append(f"| {r['t']} | {r['po_stream']:.3g} | {r['po_base']:.3g} | {flag} | {action} |")
+        ma = r.get("po_ma")
+        ma_s = "" if ma is None else f"{ma:.3g}"
+        lines.append(
+            f"| {r['t']} | {r['po_stream']:.3g} | {ma_s} | {r['po_base']:.3g} | {flag} | {action} |"
+        )
     large_rows = [r for r in result["rows"] if r["large_deviation"] and r["layers"]]
+    keys = result.get("layer_keys") or [layer_key(i) for i in range(k + 1)]
     if large_rows:
         lines += [
             "",
-            "Large-deviation batches, PO-risk conditional on freeze-depth:",
+            "PO_Dict (conditional on freeze-depth):",
             "",
-            "| t | " + " | ".join(result["layer_names"]) + " | freeze from |",
+            "| t | " + " | ".join(keys) + " | freeze from |",
             "|---:|" + "|".join(["---:"] * (k + 1)) + "|---|",
         ]
         for r in large_rows:
-            by = {x["i"]: x["po_fit"] for x in r["layers"]}
-            cells = " | ".join(f"{by[i]:.3g}" for i in range(k + 1))
             action = "all trainable" if r["all_trainable"] else f"freeze from {r['freeze_from']}"
-            lines.append(f"| {r['t']} | {cells} | {action} |")
-    lines += ["", "Read the PO-risk. Nothing else.", ""]
+            lines.append(f"| {r['t']} | {_fmt_layer_row(r['layers'], 'po_fit', k)} | {action} |")
+        has_mse = any(x.get("mse") is not None for r in large_rows for x in r["layers"])
+        if has_mse:
+            lines += [
+                "",
+                "MSE_Dict (new-batch prediction error, same freeze-depths):",
+                "",
+                "| t | " + " | ".join(keys) + " | MSE-best |",
+                "|---:|" + "|".join(["---:"] * (k + 1)) + "|---|",
+            ]
+            for r in large_rows:
+                star = r.get("i_star_mse")
+                star_s = "" if star is None else f"layer{star}"
+                lines.append(f"| {r['t']} | {_fmt_layer_row(r['layers'], 'mse', k)} | {star_s} |")
+    lines += ["", "Read PO_Dict and MSE_Dict. MA stable means every layer can backprop.", ""]
     return "\n".join(lines)
 
 
@@ -422,7 +557,7 @@ def write_index(out: Path) -> None:
         "When to **update** is business logic. PO-risk does not justify that.",
         "Raw PO-risk jitters; a causal moving average is the stability readout.",
         "**MA stable (below 2× baseline) → all-layer backprop.** No online-bootstrap.",
-        "Large MA hop (and the business already wants a hop) → from which layer to freeze.",
+        "Large MA hop → PO_Dict and MSE_Dict per freeze-depth; read which layer starts moving.",
         "",
     ]
     html_items = []
@@ -430,18 +565,19 @@ def write_index(out: Path) -> None:
         sub = out / name
         if (sub / "board.html").exists():
             bits.append(f"- [{name} freeze board]({name}/board.html)")
+            html_items.append(f'<li><a href="{name}/board.html">{name} freeze</a>')
+        else:
+            html_items.append(f"<li>{name}")
         if (sub / "batch_size_gate.png").exists():
             bits.append(f"- [{name} MA gate]({name}/batch_size_gate.png)")
-        if (sub / "board.html").exists() or (sub / "batch_size_gate.png").exists():
-            html_items.append(
-                f'<li><a href="{name}/board.html">{name}</a> · '
-                f'<a href="{name}/batch_size_gate.png">MA</a></li>'
-            )
+            html_items.append(f' · <a href="{name}/batch_size_gate.png">MA</a></li>')
+        else:
+            html_items.append("</li>")
     (out / "REPORT.md").write_text("\n".join(bits) + "\n", encoding="utf-8")
     html = """<!DOCTYPE html><meta charset="utf-8"><title>PO-risk board</title>
 <h1>MA 稳定 → 全层 backprop</h1>
 <p>raw PO-risk 会抖。causal moving average 不过 2× baseline，就全量每一层 back-propagate。
-不做 online-bootstrap。何时 update 是业务逻辑。</p>
+大 hop 上同时看 PO_Dict 和 MSE_Dict。不做 online-bootstrap。何时 update 是业务逻辑。</p>
 <ul>""" + "".join(html_items) + "</ul>"
     (out / "index.html").write_text(html, encoding="utf-8")
 
@@ -492,10 +628,12 @@ def replay_saved_gates(names: list[str]) -> None:
         print(text, flush=True)
         board = sub / "summary.json"
         if board.exists():
-            result = json.loads(board.read_text(encoding="utf-8"))
+            result = attach_layer_dicts(json.loads(board.read_text(encoding="utf-8")))
             spec = {"name": name, "title": result.get("title", name)}
             images = plot_boards(result, spec["title"], sub)
             render_html(spec, result, images, sub / "board.html")
+            (sub / "REPORT.md").write_text(render_report(spec, result) + "\n", encoding="utf-8")
+            board.write_text(json.dumps(jsonable(result), indent=2) + "\n", encoding="utf-8")
 
 
 def main() -> int:

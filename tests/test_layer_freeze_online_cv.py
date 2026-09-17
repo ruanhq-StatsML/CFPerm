@@ -21,18 +21,25 @@ from dl_model_registry import (  # noqa: E402
     construct_dataloader,
     spawn_layer_models,
 )
-from layer_freeze_cv import run_deviation_gate, run_layer_freeze_cv  # noqa: E402
+from layer_freeze_cv import (  # noqa: E402
+    attach_layer_dicts,
+    run_deviation_gate,
+    run_layer_freeze_cv,
+    stack_layer_metric_dicts,
+)
 from streaming_po_risk import (  # noqa: E402
     MIN_STREAM_N,
     REF_N,
     TabularPORisk,
     annotate_moving_average,
+    batch_mse,
     large_deviation,
     ma_window,
     moving_average,
     pack_ref_new,
     po_risk,
     ref_split_baseline,
+    streaming_po_and_mse,
     streaming_po_risk,
 )
 
@@ -191,6 +198,8 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertEqual(len(out["layer_names"]), 4)
         self.assertEqual(out["n_batches"], 2)
         self.assertEqual(len(out["rows"]), 2)
+        self.assertEqual(set(out["MSE_Dict"]), {"layer0", "layer1", "layer2", "layer3"})
+        self.assertEqual(len(out["PO_Dict"]["layer0"]), 2)
         self.assertTrue(all(r["n_new"] == 90 for r in out["rows"]))
         self.assertIn("large_deviation", out["rows"][0])
         self.assertIn("po_base", out["rows"][0])
@@ -225,6 +234,76 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertTrue(all(r["n_new"] == 20 for r in out["rows"]))
         self.assertNotIn("bootstrap", out)
         self.assertTrue(all("po_ma" in r for r in out["rows"]))
+
+    def test_po_and_mse_dicts_align_to_stream(self):
+        rows = [
+            {"t": 0, "n_new": 20, "po_stream": 1e-6, "layers": []},
+            {
+                "t": 1,
+                "n_new": 20,
+                "po_stream": 3e-6,
+                "layers": [
+                    {"i": 0, "po_fit": 1.0, "mse": 0.40},
+                    {"i": 1, "po_fit": 0.8, "mse": 0.30},
+                    {"i": 2, "po_fit": 0.5, "mse": 0.22},
+                ],
+            },
+        ]
+        stacked = stack_layer_metric_dicts(rows, k=2)
+        self.assertEqual(list(stacked["MSE_Dict"]), ["layer0", "layer1", "layer2"])
+        self.assertEqual(list(stacked["PO_Dict"]), ["layer0", "layer1", "layer2"])
+        np.testing.assert_allclose(stacked["MSE_Dict"]["layer1"], [np.nan, 0.30], equal_nan=True)
+        np.testing.assert_allclose(stacked["PO_Dict"]["layer2"], [np.nan, 0.5], equal_nan=True)
+        wrapped = attach_layer_dicts(
+            {"k": 2, "po_base": 1e-6, "n_new": 20, "rows": rows, "n_batches": 2}
+        )
+        self.assertIn("all_layer_backprop", wrapped)
+        self.assertEqual(len(wrapped["MSE_Dict"]["layer0"]), 2)
+
+    def test_batch_mse_and_paired_po(self):
+        y = np.array([0.0, 1.0, 1.0, 0.0])
+        self.assertAlmostEqual(batch_mse(y, y), 0.0)
+        self.assertGreater(batch_mse(y, 1.0 - y), 0.0)
+        rng = np.random.default_rng(9)
+        X0 = rng.normal(size=(60, 3))
+        Y0 = (X0[:, 0] > 0).astype(float)
+        X1 = rng.normal(size=(60, 3)) + 0.8
+        Y1 = (X1[:, 0] > 0).astype(float)
+        po, mse = streaming_po_and_mse(X0, Y0, X1, Y1, mu_fn=None, seed=9)
+        self.assertGreater(po, 0.0)
+        self.assertGreater(mse, 0.0)
+        self.assertLess(mse, 1.0)
+
+    def test_cv_fills_mse_on_large_hops(self):
+        rng = np.random.default_rng(11)
+        n_ref, n_new = 220, 180
+        X0 = rng.normal(size=(n_ref, 4))
+        Y0 = (X0[:, 0] > 0).astype(float)
+        X1 = rng.normal(size=(n_new, 4))
+        Y1 = (1.0 - (X1[:, 0] > 0).astype(float))
+        X = np.vstack([X0, X1])
+        Y = np.concatenate([Y0, Y1])
+        registry = DLModelRegistry(epochs=2, patience=2, amp=False, lr=5e-3, verbose=False)
+        out = run_layer_freeze_cv(
+            X,
+            Y,
+            n_ref=n_ref,
+            batch_size_stream=90,
+            hidden_dims=(8, 4),
+            online_epochs=1,
+            max_batches=2,
+            registry=registry,
+            n_ref_eval=80,
+        )
+        self.assertEqual(set(out["MSE_Dict"]), {"layer0", "layer1", "layer2", "layer3"})
+        self.assertEqual(len(out["PO_Dict"]["layer1"]), out["n_batches"])
+        self.assertIn("all_layer_backprop", out)
+        for r in out["rows"]:
+            if r["large_deviation"]:
+                self.assertEqual(len(r["layers"]), 4)
+                self.assertTrue(all("mse" in x for x in r["layers"]))
+                self.assertIn("i_star_mse", r)
+                self.assertTrue(np.isfinite(out["MSE_Dict"][f"layer{r['i_star']}"][r["t"]]))
 
 
 if __name__ == "__main__":

@@ -118,11 +118,38 @@ def po_risk(X, Y, T, mu=None, clip: float = CLIP, seed: int = 2026) -> float:
     return float(est.risk(X, Y, T, X_outcome=X_outcome)["po_risk"])
 
 
+def batch_mse(Y, mu) -> float:
+    """mean((Y − μ)²). Layer-wise attribution companion to PO-risk."""
+    Y = np.asarray(Y, dtype=float).ravel()
+    mu = np.asarray(mu, dtype=float).ravel()
+    return float(np.mean((Y - mu) ** 2))
+
+
 def streaming_po_risk(X_ref, Y_ref, X_new, Y_new, mu_fn=None, clip: float = CLIP, seed: int = 2026) -> float:
     """PO-risk on (ref ∪ new) with T=1 on the new batch."""
     X, Y, T = pack_ref_new(X_ref, Y_ref, X_new, Y_new)
     mu = None if mu_fn is None else np.asarray(mu_fn(X), dtype=float).ravel()
     return po_risk(X, Y, T, mu=mu, clip=clip, seed=seed)
+
+
+def streaming_po_and_mse(X_ref, Y_ref, X_new, Y_new, mu_fn=None, clip: float = CLIP, seed: int = 2026):
+    """PO-risk on (ref ∪ new) and MSE on the new batch, one μ forward.
+
+    Freeze-depth clones share this call so PO-risk and MSE stay paired.
+    No extra bootstrap inference.
+    """
+    X, Y, T = pack_ref_new(X_ref, Y_ref, X_new, Y_new)
+    n_ref = len(np.asarray(Y_ref, dtype=float).ravel())
+    if mu_fn is None:
+        est = TabularPORisk(clip=clip, seed=seed)
+        out = est.risk(X, Y, T)
+        mu = np.asarray(out["mu"], dtype=float).ravel()
+        po = float(out["po_risk"])
+    else:
+        mu = np.asarray(mu_fn(X), dtype=float).ravel()
+        po = po_risk(X, Y, T, mu=mu, clip=clip, seed=seed)
+    mse = batch_mse(Y_new, mu[n_ref : n_ref + len(np.asarray(Y_new).ravel())])
+    return float(po), float(mse)
 
 
 def ref_split_baseline(X_ref, Y_ref, *, seed: int = 2026, clip: float = CLIP) -> float:

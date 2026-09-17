@@ -7,6 +7,11 @@ Tabular PO-risk keeps its own outcome model μ(Y|X) and propensity e(T|X).
 Conditional on a freeze-depth MLP, the outcome model also sees that model's
 prediction. No online-bootstrap. A causal moving average of PO-risk is the
 stability readout: MA below 2× baseline → all-layer backprop.
+
+When a freeze-depth starts to move, keep PO-risk and MSE together:
+
+    PO_Dict  = {layer0: array, layer1: array, …, layer_k: array}
+    MSE_Dict = {layer0: array, layer1: array, …, layer_k: array}
 """
 from __future__ import annotations
 
@@ -26,8 +31,48 @@ from streaming_po_risk import (
     annotate_moving_average,
     large_deviation,
     ref_split_baseline,
+    streaming_po_and_mse,
     streaming_po_risk,
 )
+
+
+def layer_key(i: int) -> str:
+    return f"layer{int(i)}"
+
+
+def stack_layer_metric_dicts(rows, k: int) -> dict:
+    """PO-risk and MSE per freeze-depth, aligned to the stream index.
+
+    layer i = model_i (train the top i groups). Missing hops are NaN —
+    clones are not trained on a quiet MA.
+    """
+    n = len(rows)
+    keys = [layer_key(i) for i in range(int(k) + 1)]
+    po = {name: np.full(n, np.nan) for name in keys}
+    mse = {name: np.full(n, np.nan) for name in keys}
+    for t, rec in enumerate(rows):
+        for x in rec.get("layers") or []:
+            name = layer_key(x["i"])
+            if name not in po:
+                continue
+            if x.get("po_fit") is not None:
+                po[name][t] = float(x["po_fit"])
+            if x.get("mse") is not None:
+                mse[name][t] = float(x["mse"])
+    return {"PO_Dict": po, "MSE_Dict": mse}
+
+
+def attach_layer_dicts(result: dict) -> dict:
+    """Replay-safe: rebuild PO_Dict / MSE_Dict and the MA readout."""
+    k = int(result["k"])
+    result.update(stack_layer_metric_dicts(result.get("rows") or [], k))
+    n_new = result.get("n_new")
+    rows = result.get("rows") or []
+    if n_new is None and rows:
+        n_new = rows[0].get("n_new")
+    if rows and "po_base" in result:
+        result.update(annotate_moving_average(rows, result["po_base"], n_new=n_new))
+    return result
 
 
 def _mu_fn(registry: DLModelRegistry, model, task="classification") -> Callable:
@@ -192,6 +237,7 @@ def run_layer_freeze_cv(
         else:
             clones = _refresh_clones(full)
             star_i, star_po = 0, float("inf")
+            star_mse_i, star_mse = 0, float("inf")
             layer_rows = []
             for model in clones:
                 i = int(model._freeze_i)
@@ -207,31 +253,48 @@ def run_layer_freeze_cv(
                         restore_best=False,
                     )
                 mu_fn = _mu_fn(registry, model)
-                po_fit = streaming_po_risk(
+                po_fit, mse = streaming_po_and_mse(
                     X_ref[ref_eval], Y_ref[ref_eval], Xb, Yb, mu_fn=mu_fn, seed=seed + t + i
                 )
-                layer_rows.append({"i": i, "name": f"model_{i}", "po_fit": float(po_fit)})
+                layer_rows.append(
+                    {
+                        "i": i,
+                        "name": f"model_{i}",
+                        "layer": layer_key(i),
+                        "po_fit": float(po_fit),
+                        "mse": float(mse),
+                    }
+                )
                 if po_fit < star_po:
                     star_po, star_i = po_fit, i
+                if mse < star_mse:
+                    star_mse, star_mse_i = mse, i
             rec["layers"] = layer_rows
             rec["i_star"] = int(star_i)
             rec["po_star"] = float(star_po)
+            rec["i_star_mse"] = int(star_mse_i)
+            rec["mse_star"] = float(star_mse)
             rec["freeze_from"] = None if star_i == k else f"model_{star_i}"
             rec["all_trainable"] = star_i == k
             winner = next(m for m in clones if int(m._freeze_i) == star_i)
             full.load_state_dict(winner.state_dict())
         rows.append(rec)
     n_large = sum(1 for r in rows if r["large_deviation"])
-    return {
+    out = {
         "k": int(k),
         "n_ref": int(n_ref),
+        "n_new": int(batch_size_stream),
         "n_batches": int(n_batches),
         "hidden_dims": list(hidden_dims),
         "po_base": float(po_base),
         "n_large": int(n_large),
         "rows": rows,
         "layer_names": [f"model_{i}" for i in range(k + 1)],
+        "layer_keys": [layer_key(i) for i in range(k + 1)],
         "recommend_i": int(k) if n_large == 0 else int(
             np.round(np.median([r["i_star"] for r in rows if r["large_deviation"]]))
         ),
     }
+    out.update(annotate_moving_average(rows, po_base, n_new=batch_size_stream))
+    out.update(stack_layer_metric_dicts(rows, k))
+    return out
