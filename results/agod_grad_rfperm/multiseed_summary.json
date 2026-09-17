@@ -11,29 +11,21 @@
     "n_batches": 48,
     "n_burn": 8,
     "alpha": 0.05,
-    "protocol": "frozen_f_ref_grad"
+    "protocol": "unfrozen_l2_single_stream"
   },
   "by_dataset": {
     "synthetic": {
-      "lead_grad_mse_mean": -3.4,
-      "lead_grad_mse_median": -3.0,
-      "lead_grad_mse_std": 1.8547236990991407,
+      "lead_grad_mse_mean": -3.0,
+      "lead_grad_mse_median": -2.0,
+      "lead_grad_mse_std": 2.0976176963403033,
       "p_grad_earlier": 1.0,
-      "lead_share_mse_mean": -2.8,
-      "p_share_earlier": 0.8,
+      "p_grad_not_later": 1.0,
       "leads_grad": [
         -7.0,
+        -1.0,
+        -3.0,
         -2.0,
-        -3.0,
-        -3.0,
         -2.0
-      ],
-      "leads_share": [
-        -7.0,
-        -2.0,
-        -2.0,
-        -3.0,
-        0.0
       ]
     },
     "covertype": {
@@ -41,21 +33,13 @@
       "lead_grad_mse_median": -1.0,
       "lead_grad_mse_std": 2.3151673805580453,
       "p_grad_earlier": 0.6,
-      "lead_share_mse_mean": -1.0,
-      "p_share_earlier": 0.6,
+      "p_grad_not_later": 0.8,
       "leads_grad": [
         -2.0,
         -1.0,
         0.0,
         -5.0,
         2.0
-      ],
-      "leads_share": [
-        -2.0,
-        -1.0,
-        0.0,
-        -3.0,
-        1.0
       ]
     },
     "bank": {
@@ -63,20 +47,12 @@
       "lead_grad_mse_median": 0.0,
       "lead_grad_mse_std": 1.6,
       "p_grad_earlier": 0.4,
-      "lead_share_mse_mean": 0.0,
-      "p_share_earlier": 0.4,
+      "p_grad_not_later": 1.0,
       "leads_grad": [
         0.0,
         0.0,
         0.0,
         -4.0,
-        -2.0
-      ],
-      "leads_share": [
-        1.0,
-        2.0,
-        2.0,
-        -3.0,
         -2.0
       ]
     },
@@ -85,18 +61,10 @@
       "lead_grad_mse_median": -4.0,
       "lead_grad_mse_std": 5.844655678480984,
       "p_grad_earlier": 0.8,
-      "lead_share_mse_mean": -6.0,
-      "p_share_earlier": 0.8,
+      "p_grad_not_later": 1.0,
       "leads_grad": [
         -4.0,
         -17.0,
-        0.0,
-        -3.0,
-        -7.0
-      ],
-      "leads_share": [
-        -4.0,
-        -16.0,
         0.0,
         -3.0,
         -7.0
@@ -107,48 +75,27 @@
       "lead_grad_mse_median": -6.0,
       "lead_grad_mse_std": 3.0724582991474434,
       "p_grad_earlier": 0.8,
-      "lead_share_mse_mean": -4.0,
-      "p_share_earlier": 0.8,
+      "p_grad_not_later": 1.0,
       "leads_grad": [
         0.0,
         -2.0,
         -6.0,
         -7.0,
         -8.0
-      ],
-      "leads_share": [
-        2.0,
-        -2.0,
-        -5.0,
-        -7.0,
-        -8.0
       ]
     }
   },
   "overall": {
-    "mean_lead_grad_mse": -3.32,
+    "mean_lead_grad_mse": -3.24,
     "p_grad_earlier": 0.72,
     "p_grad_not_later": 0.96,
-    "mean_lead_share_mse": -2.76,
-    "p_share_earlier": 0.68,
     "n_runs": 25
   },
   "runs": {
     "0": {
       "synthetic": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 12,
-            "fc2_share": 11,
-            "fc3_share": 8
-          },
+          "grad": 8,
           "mse": 15,
           "mmd": 10,
           "po": 10
@@ -157,7 +104,6 @@
           "grad_minus_mse": -7,
           "grad_minus_mmd": -2,
           "grad_minus_po": -2,
-          "share_minus_mse": -7,
           "grad_minus_mse_postshift": 0
         },
         "detection_delay": {
@@ -167,30 +113,29 @@
           "po": 0
         },
         "duty": {
-          "grad": {
-            "fc1": 0.35,
-            "fc2": 0.35,
-            "fc3": 0.325
-          },
+          "grad": 0.325,
           "mse": 0.225,
           "mmd": 0.225,
           "po": 0.225
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.5655996877707666
+          ],
+          [
+            "fc1",
+            0.22695964536634902
+          ],
+          [
+            "fc2",
+            0.20744066686028584
+          ]
+        ]
       },
       "covertype": {
         "first_reject": {
-          "grad_any": 9,
-          "grad_share_any": 9,
-          "grad_per_layer": {
-            "fc1": 9,
-            "fc2": 9,
-            "fc3": 9
-          },
-          "share_per_layer": {
-            "fc1_share": 11,
-            "fc2_share": 9,
-            "fc3_share": 10
-          },
+          "grad": 9,
           "mse": 11,
           "mmd": 10,
           "po": 10
@@ -198,35 +143,33 @@
         "lead_time": {
           "grad_minus_mse": -2,
           "grad_minus_mmd": -1,
-          "grad_minus_po": -1,
-          "share_minus_mse": -2
+          "grad_minus_po": -1
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.2,
-            "fc2": 0.25,
-            "fc3": 0.275
-          },
+          "grad": 0.25,
           "mse": 0.25,
           "mmd": 0.275,
           "po": 0.175
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.5086340466952044
+          ],
+          [
+            "fc2",
+            0.2596991309350122
+          ],
+          [
+            "fc3",
+            0.2316668223692151
+          ]
+        ]
       },
       "bank": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 9,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 13,
-            "fc2_share": 10,
-            "fc3_share": 9
-          },
+          "grad": 8,
           "mse": 8,
           "mmd": 10,
           "po": 12
@@ -234,35 +177,33 @@
         "lead_time": {
           "grad_minus_mse": 0,
           "grad_minus_mmd": -2,
-          "grad_minus_po": -4,
-          "share_minus_mse": 1
+          "grad_minus_po": -4
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.2,
-            "fc2": 0.25,
-            "fc3": 0.275
-          },
+          "grad": 0.2,
           "mse": 0.325,
           "mmd": 0.35,
           "po": 0.225
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.5007781072553363
+          ],
+          [
+            "fc2",
+            0.34775258425355604
+          ],
+          [
+            "fc3",
+            0.15146930848990328
+          ]
+        ]
       },
       "electricity": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 12,
-            "fc2_share": 12,
-            "fc3_share": 8
-          },
+          "grad": 8,
           "mse": 12,
           "mmd": 12,
           "po": 14
@@ -270,35 +211,33 @@
         "lead_time": {
           "grad_minus_mse": -4,
           "grad_minus_mmd": -4,
-          "grad_minus_po": -6,
-          "share_minus_mse": -4
+          "grad_minus_po": -6
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.25,
-            "fc2": 0.275,
-            "fc3": 0.25
-          },
+          "grad": 0.25,
           "mse": 0.225,
           "mmd": 0.275,
           "po": 0.25
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.48850429517564703
+          ],
+          [
+            "fc2",
+            0.2718720909931321
+          ],
+          [
+            "fc1",
+            0.23962361383104408
+          ]
+        ]
       },
       "eeg": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 10,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 10,
-            "fc2_share": 13,
-            "fc3_share": 15
-          },
+          "grad": 8,
           "mse": 8,
           "mmd": 14,
           "po": 14
@@ -306,46 +245,43 @@
         "lead_time": {
           "grad_minus_mse": 0,
           "grad_minus_mmd": -6,
-          "grad_minus_po": -6,
-          "share_minus_mse": 2
+          "grad_minus_po": -6
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.3,
-            "fc2": 0.225,
-            "fc3": 0.325
-          },
+          "grad": 0.25,
           "mse": 0.15,
           "mmd": 0.175,
           "po": 0.15
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.466048944852675
+          ],
+          [
+            "fc3",
+            0.2951903803047958
+          ],
+          [
+            "fc2",
+            0.23876067484227603
+          ]
+        ]
       }
     },
     "1": {
       "synthetic": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 9
-          },
-          "share_per_layer": {
-            "fc1_share": 8,
-            "fc2_share": 8,
-            "fc3_share": 15
-          },
+          "grad": 9,
           "mse": 10,
           "mmd": 11,
           "po": 11
         },
         "lead_time": {
-          "grad_minus_mse": -2,
-          "grad_minus_mmd": -3,
-          "grad_minus_po": -3,
-          "share_minus_mse": -2,
+          "grad_minus_mse": -1,
+          "grad_minus_mmd": -2,
+          "grad_minus_po": -2,
           "grad_minus_mse_postshift": 0
         },
         "detection_delay": {
@@ -355,30 +291,29 @@
           "po": 0
         },
         "duty": {
-          "grad": {
-            "fc1": 0.275,
-            "fc2": 0.35,
-            "fc3": 0.25
-          },
+          "grad": 0.225,
           "mse": 0.2,
           "mmd": 0.225,
           "po": 0.225
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.3652425971824349
+          ],
+          [
+            "fc1",
+            0.36512405436120404
+          ],
+          [
+            "fc2",
+            0.26963334845342446
+          ]
+        ]
       },
       "covertype": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 14,
-            "fc2_share": 11,
-            "fc3_share": 8
-          },
+          "grad": 8,
           "mse": 9,
           "mmd": 8,
           "po": 8
@@ -386,35 +321,33 @@
         "lead_time": {
           "grad_minus_mse": -1,
           "grad_minus_mmd": 0,
-          "grad_minus_po": 0,
-          "share_minus_mse": -1
+          "grad_minus_po": 0
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.25,
-            "fc2": 0.225,
-            "fc3": 0.225
-          },
+          "grad": 0.225,
           "mse": 0.2,
           "mmd": 0.225,
           "po": 0.15
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.36824788380425705
+          ],
+          [
+            "fc2",
+            0.3353178889376003
+          ],
+          [
+            "fc1",
+            0.2964342272570367
+          ]
+        ]
       },
       "bank": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 10,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 11,
-            "fc2_share": 10,
-            "fc3_share": 12
-          },
+          "grad": 8,
           "mse": 8,
           "mmd": 8,
           "po": 8
@@ -422,35 +355,33 @@
         "lead_time": {
           "grad_minus_mse": 0,
           "grad_minus_mmd": 0,
-          "grad_minus_po": 0,
-          "share_minus_mse": 2
+          "grad_minus_po": 0
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.275,
-            "fc2": 0.25,
-            "fc3": 0.3
-          },
+          "grad": 0.325,
           "mse": 0.275,
           "mmd": 0.225,
           "po": 0.25
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.37797299783358707
+          ],
+          [
+            "fc2",
+            0.3326601433526293
+          ],
+          [
+            "fc3",
+            0.28936685881317986
+          ]
+        ]
       },
       "electricity": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 9,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 9,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 12,
-            "fc2_share": 9,
-            "fc3_share": 9
-          },
+          "grad": 8,
           "mse": 25,
           "mmd": 9,
           "po": 12
@@ -458,35 +389,33 @@
         "lead_time": {
           "grad_minus_mse": -17,
           "grad_minus_mmd": -1,
-          "grad_minus_po": -4,
-          "share_minus_mse": -16
+          "grad_minus_po": -4
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.275,
-            "fc2": 0.25,
-            "fc3": 0.3
-          },
+          "grad": 0.3,
           "mse": 0.175,
           "mmd": 0.225,
           "po": 0.125
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.5844840846272853
+          ],
+          [
+            "fc2",
+            0.2585368269609155
+          ],
+          [
+            "fc3",
+            0.15697908841084948
+          ]
+        ]
       },
       "eeg": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 8,
-            "fc2_share": 15,
-            "fc3_share": 14
-          },
+          "grad": 8,
           "mse": 10,
           "mmd": 13,
           "po": 15
@@ -494,37 +423,35 @@
         "lead_time": {
           "grad_minus_mse": -2,
           "grad_minus_mmd": -5,
-          "grad_minus_po": -7,
-          "share_minus_mse": -2
+          "grad_minus_po": -7
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.275,
-            "fc2": 0.275,
-            "fc3": 0.275
-          },
+          "grad": 0.275,
           "mse": 0.125,
           "mmd": 0.2,
           "po": 0.175
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.5872101324605736
+          ],
+          [
+            "fc2",
+            0.2352908522811445
+          ],
+          [
+            "fc3",
+            0.17749901525800474
+          ]
+        ]
       }
     },
     "2": {
       "synthetic": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 9,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 9
-          },
-          "share_per_layer": {
-            "fc1_share": 13,
-            "fc2_share": 13,
-            "fc3_share": 9
-          },
+          "grad": 8,
           "mse": 11,
           "mmd": 9,
           "po": 11
@@ -533,7 +460,6 @@
           "grad_minus_mse": -3,
           "grad_minus_mmd": -1,
           "grad_minus_po": -3,
-          "share_minus_mse": -2,
           "grad_minus_mse_postshift": 0
         },
         "detection_delay": {
@@ -543,30 +469,29 @@
           "po": 0
         },
         "duty": {
-          "grad": {
-            "fc1": 0.3,
-            "fc2": 0.275,
-            "fc3": 0.225
-          },
+          "grad": 0.25,
           "mse": 0.25,
           "mmd": 0.2,
           "po": 0.175
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.43446149813000784
+          ],
+          [
+            "fc1",
+            0.3363751721467105
+          ],
+          [
+            "fc2",
+            0.2291633297200431
+          ]
+        ]
       },
       "covertype": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 8,
-            "fc2_share": 11,
-            "fc3_share": 13
-          },
+          "grad": 8,
           "mse": 8,
           "mmd": 15,
           "po": 8
@@ -574,35 +499,33 @@
         "lead_time": {
           "grad_minus_mse": 0,
           "grad_minus_mmd": -7,
-          "grad_minus_po": 0,
-          "share_minus_mse": 0
+          "grad_minus_po": 0
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.3,
-            "fc2": 0.3,
-            "fc3": 0.25
-          },
+          "grad": 0.3,
           "mse": 0.25,
           "mmd": 0.3,
           "po": 0.3
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.6462105079290195
+          ],
+          [
+            "fc2",
+            0.23672509433167666
+          ],
+          [
+            "fc3",
+            0.11706439773826853
+          ]
+        ]
       },
       "bank": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 10,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 18,
-            "fc2_share": 10,
-            "fc3_share": 11
-          },
+          "grad": 8,
           "mse": 8,
           "mmd": 8,
           "po": 8
@@ -610,35 +533,33 @@
         "lead_time": {
           "grad_minus_mse": 0,
           "grad_minus_mmd": 0,
-          "grad_minus_po": 0,
-          "share_minus_mse": 2
+          "grad_minus_po": 0
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.225,
-            "fc2": 0.225,
-            "fc3": 0.25
-          },
+          "grad": 0.175,
           "mse": 0.25,
           "mmd": 0.275,
           "po": 0.2
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.5147633972804014
+          ],
+          [
+            "fc2",
+            0.2837709612673027
+          ],
+          [
+            "fc3",
+            0.20146564145040458
+          ]
+        ]
       },
       "electricity": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 12,
-            "fc2_share": 12,
-            "fc3_share": 8
-          },
+          "grad": 8,
           "mse": 8,
           "mmd": 9,
           "po": 8
@@ -646,35 +567,33 @@
         "lead_time": {
           "grad_minus_mse": 0,
           "grad_minus_mmd": -1,
-          "grad_minus_po": 0,
-          "share_minus_mse": 0
+          "grad_minus_po": 0
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.2,
-            "fc2": 0.225,
-            "fc3": 0.2
-          },
+          "grad": 0.2,
           "mse": 0.25,
           "mmd": 0.175,
           "po": 0.25
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.6109746118847214
+          ],
+          [
+            "fc2",
+            0.19742868381628523
+          ],
+          [
+            "fc1",
+            0.19159670429895917
+          ]
+        ]
       },
       "eeg": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 9,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 14,
-            "fc2_share": 9,
-            "fc3_share": 10
-          },
+          "grad": 8,
           "mse": 14,
           "mmd": 14,
           "po": 14
@@ -682,46 +601,43 @@
         "lead_time": {
           "grad_minus_mse": -6,
           "grad_minus_mmd": -6,
-          "grad_minus_po": -6,
-          "share_minus_mse": -5
+          "grad_minus_po": -6
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.25,
-            "fc2": 0.3,
-            "fc3": 0.35
-          },
+          "grad": 0.3,
           "mse": 0.1,
           "mmd": 0.175,
           "po": 0.15
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.49625676797101936
+          ],
+          [
+            "fc3",
+            0.2931971200568215
+          ],
+          [
+            "fc2",
+            0.21054611197195178
+          ]
+        ]
       }
     },
     "3": {
       "synthetic": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 9,
-            "fc3": 11
-          },
-          "share_per_layer": {
-            "fc1_share": 8,
-            "fc2_share": 9,
-            "fc3_share": 11
-          },
+          "grad": 9,
           "mse": 11,
           "mmd": 15,
           "po": 11
         },
         "lead_time": {
-          "grad_minus_mse": -3,
-          "grad_minus_mmd": -7,
-          "grad_minus_po": -3,
-          "share_minus_mse": -3,
+          "grad_minus_mse": -2,
+          "grad_minus_mmd": -6,
+          "grad_minus_po": -2,
           "grad_minus_mse_postshift": 0
         },
         "detection_delay": {
@@ -731,30 +647,29 @@
           "po": 0
         },
         "duty": {
-          "grad": {
-            "fc1": 0.325,
-            "fc2": 0.275,
-            "fc3": 0.2
-          },
+          "grad": 0.275,
           "mse": 0.2,
           "mmd": 0.175,
           "po": 0.2
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.463808956051851
+          ],
+          [
+            "fc2",
+            0.3089684833278047
+          ],
+          [
+            "fc3",
+            0.22722256061633403
+          ]
+        ]
       },
       "covertype": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 10,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 10,
-            "fc2_share": 14,
-            "fc3_share": 11
-          },
+          "grad": 8,
           "mse": 13,
           "mmd": 10,
           "po": 9
@@ -762,35 +677,33 @@
         "lead_time": {
           "grad_minus_mse": -5,
           "grad_minus_mmd": -2,
-          "grad_minus_po": -1,
-          "share_minus_mse": -3
+          "grad_minus_po": -1
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.3,
-            "fc2": 0.325,
-            "fc3": 0.275
-          },
+          "grad": 0.35,
           "mse": 0.175,
           "mmd": 0.15,
           "po": 0.25
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.43901547647234135
+          ],
+          [
+            "fc3",
+            0.3173596557035151
+          ],
+          [
+            "fc2",
+            0.24362486782219167
+          ]
+        ]
       },
       "bank": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 9,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 10,
-            "fc2_share": 9,
-            "fc3_share": 14
-          },
+          "grad": 8,
           "mse": 12,
           "mmd": 14,
           "po": 10
@@ -798,35 +711,33 @@
         "lead_time": {
           "grad_minus_mse": -4,
           "grad_minus_mmd": -6,
-          "grad_minus_po": -2,
-          "share_minus_mse": -3
+          "grad_minus_po": -2
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.3,
-            "fc2": 0.225,
-            "fc3": 0.275
-          },
+          "grad": 0.225,
           "mse": 0.2,
           "mmd": 0.275,
           "po": 0.2
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.36908499923334054
+          ],
+          [
+            "fc2",
+            0.3223018103531844
+          ],
+          [
+            "fc1",
+            0.3086131904116307
+          ]
+        ]
       },
       "electricity": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 12,
-            "fc2_share": 8,
-            "fc3_share": 10
-          },
+          "grad": 8,
           "mse": 11,
           "mmd": 9,
           "po": 14
@@ -834,35 +745,33 @@
         "lead_time": {
           "grad_minus_mse": -3,
           "grad_minus_mmd": -1,
-          "grad_minus_po": -6,
-          "share_minus_mse": -3
+          "grad_minus_po": -6
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.275,
-            "fc2": 0.225,
-            "fc3": 0.3
-          },
+          "grad": 0.225,
           "mse": 0.175,
           "mmd": 0.2,
           "po": 0.2
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc2",
+            0.4587955596052251
+          ],
+          [
+            "fc1",
+            0.3811395669525405
+          ],
+          [
+            "fc3",
+            0.1600648734418571
+          ]
+        ]
       },
       "eeg": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 13,
-            "fc2_share": 13,
-            "fc3_share": 8
-          },
+          "grad": 8,
           "mse": 15,
           "mmd": 8,
           "po": 15
@@ -870,37 +779,35 @@
         "lead_time": {
           "grad_minus_mse": -7,
           "grad_minus_mmd": 0,
-          "grad_minus_po": -7,
-          "share_minus_mse": -7
+          "grad_minus_po": -7
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.275,
-            "fc2": 0.25,
-            "fc3": 0.3
-          },
+          "grad": 0.25,
           "mse": 0.1,
           "mmd": 0.275,
           "po": 0.125
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.41512622714649994
+          ],
+          [
+            "fc1",
+            0.3657782941030505
+          ],
+          [
+            "fc2",
+            0.21909547875016852
+          ]
+        ]
       }
     },
     "4": {
       "synthetic": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 10,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 17
-          },
-          "share_per_layer": {
-            "fc1_share": 11,
-            "fc2_share": 12,
-            "fc3_share": 10
-          },
+          "grad": 8,
           "mse": 10,
           "mmd": 9,
           "po": 12
@@ -909,7 +816,6 @@
           "grad_minus_mse": -2,
           "grad_minus_mmd": -1,
           "grad_minus_po": -4,
-          "share_minus_mse": 0,
           "grad_minus_mse_postshift": 0
         },
         "detection_delay": {
@@ -919,30 +825,29 @@
           "po": 0
         },
         "duty": {
-          "grad": {
-            "fc1": 0.25,
-            "fc2": 0.225,
-            "fc3": 0.2
-          },
+          "grad": 0.225,
           "mse": 0.2,
           "mmd": 0.35,
           "po": 0.225
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.4708546049157066
+          ],
+          [
+            "fc1",
+            0.3150639461279224
+          ],
+          [
+            "fc2",
+            0.21408144895367284
+          ]
+        ]
       },
       "covertype": {
         "first_reject": {
-          "grad_any": 10,
-          "grad_share_any": 9,
-          "grad_per_layer": {
-            "fc1": 10,
-            "fc2": 10,
-            "fc3": 10
-          },
-          "share_per_layer": {
-            "fc1_share": 16,
-            "fc2_share": 13,
-            "fc3_share": 9
-          },
+          "grad": 10,
           "mse": 8,
           "mmd": 8,
           "po": 10
@@ -950,35 +855,33 @@
         "lead_time": {
           "grad_minus_mse": 2,
           "grad_minus_mmd": 2,
-          "grad_minus_po": 0,
-          "share_minus_mse": 1
+          "grad_minus_po": 0
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.2,
-            "fc2": 0.275,
-            "fc3": 0.225
-          },
+          "grad": 0.225,
           "mse": 0.2,
           "mmd": 0.2,
           "po": 0.25
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.38446411888885795
+          ],
+          [
+            "fc1",
+            0.3823748899773713
+          ],
+          [
+            "fc2",
+            0.23316099113100228
+          ]
+        ]
       },
       "bank": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 8,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 11,
-            "fc2_share": 8,
-            "fc3_share": 14
-          },
+          "grad": 8,
           "mse": 10,
           "mmd": 8,
           "po": 8
@@ -986,35 +889,33 @@
         "lead_time": {
           "grad_minus_mse": -2,
           "grad_minus_mmd": 0,
-          "grad_minus_po": 0,
-          "share_minus_mse": -2
+          "grad_minus_po": 0
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.25,
-            "fc2": 0.25,
-            "fc3": 0.3
-          },
+          "grad": 0.25,
           "mse": 0.25,
           "mmd": 0.25,
           "po": 0.25
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.4257285252393662
+          ],
+          [
+            "fc2",
+            0.3560560399818513
+          ],
+          [
+            "fc3",
+            0.21821543477470123
+          ]
+        ]
       },
       "electricity": {
         "first_reject": {
-          "grad_any": 8,
-          "grad_share_any": 8,
-          "grad_per_layer": {
-            "fc1": 10,
-            "fc2": 8,
-            "fc3": 8
-          },
-          "share_per_layer": {
-            "fc1_share": 9,
-            "fc2_share": 8,
-            "fc3_share": 13
-          },
+          "grad": 8,
           "mse": 15,
           "mmd": 10,
           "po": 13
@@ -1022,35 +923,33 @@
         "lead_time": {
           "grad_minus_mse": -7,
           "grad_minus_mmd": -2,
-          "grad_minus_po": -5,
-          "share_minus_mse": -7
+          "grad_minus_po": -5
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.225,
-            "fc2": 0.2,
-            "fc3": 0.275
-          },
+          "grad": 0.275,
           "mse": 0.15,
           "mmd": 0.15,
           "po": 0.25
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc2",
+            0.40240339618945137
+          ],
+          [
+            "fc1",
+            0.3161999428787485
+          ],
+          [
+            "fc3",
+            0.281396660930969
+          ]
+        ]
       },
       "eeg": {
         "first_reject": {
-          "grad_any": 9,
-          "grad_share_any": 9,
-          "grad_per_layer": {
-            "fc1": 9,
-            "fc2": 9,
-            "fc3": 9
-          },
-          "share_per_layer": {
-            "fc1_share": 10,
-            "fc2_share": 12,
-            "fc3_share": 9
-          },
+          "grad": 9,
           "mse": 17,
           "mmd": 10,
           "po": 9
@@ -1058,20 +957,29 @@
         "lead_time": {
           "grad_minus_mse": -8,
           "grad_minus_mmd": -1,
-          "grad_minus_po": 0,
-          "share_minus_mse": -8
+          "grad_minus_po": 0
         },
         "detection_delay": null,
         "duty": {
-          "grad": {
-            "fc1": 0.3,
-            "fc2": 0.3,
-            "fc3": 0.25
-          },
+          "grad": 0.25,
           "mse": 0.175,
           "mmd": 0.225,
           "po": 0.15
-        }
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.4318267624533614
+          ],
+          [
+            "fc1",
+            0.3564263931019888
+          ],
+          [
+            "fc2",
+            0.2117468444443179
+          ]
+        ]
       }
     }
   }

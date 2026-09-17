@@ -1,33 +1,23 @@
 {
   "overall": {
-    "mean_lead_grad_mse": -3.32,
+    "mean_lead_grad_mse": -3.24,
     "p_grad_earlier": 0.72,
     "p_grad_not_later": 0.96,
-    "mean_lead_share_mse": -2.76,
-    "p_share_earlier": 0.68,
     "n_runs": 25
   },
   "by_dataset": {
     "synthetic": {
-      "lead_grad_mse_mean": -3.4,
-      "lead_grad_mse_median": -3.0,
-      "lead_grad_mse_std": 1.8547236990991407,
+      "lead_grad_mse_mean": -3.0,
+      "lead_grad_mse_median": -2.0,
+      "lead_grad_mse_std": 2.0976176963403033,
       "p_grad_earlier": 1.0,
-      "lead_share_mse_mean": -2.8,
-      "p_share_earlier": 0.8,
+      "p_grad_not_later": 1.0,
       "leads_grad": [
         -7.0,
+        -1.0,
+        -3.0,
         -2.0,
-        -3.0,
-        -3.0,
         -2.0
-      ],
-      "leads_share": [
-        -7.0,
-        -2.0,
-        -2.0,
-        -3.0,
-        0.0
       ]
     },
     "covertype": {
@@ -35,21 +25,13 @@
       "lead_grad_mse_median": -1.0,
       "lead_grad_mse_std": 2.3151673805580453,
       "p_grad_earlier": 0.6,
-      "lead_share_mse_mean": -1.0,
-      "p_share_earlier": 0.6,
+      "p_grad_not_later": 0.8,
       "leads_grad": [
         -2.0,
         -1.0,
         0.0,
         -5.0,
         2.0
-      ],
-      "leads_share": [
-        -2.0,
-        -1.0,
-        0.0,
-        -3.0,
-        1.0
       ]
     },
     "bank": {
@@ -57,20 +39,12 @@
       "lead_grad_mse_median": 0.0,
       "lead_grad_mse_std": 1.6,
       "p_grad_earlier": 0.4,
-      "lead_share_mse_mean": 0.0,
-      "p_share_earlier": 0.4,
+      "p_grad_not_later": 1.0,
       "leads_grad": [
         0.0,
         0.0,
         0.0,
         -4.0,
-        -2.0
-      ],
-      "leads_share": [
-        1.0,
-        2.0,
-        2.0,
-        -3.0,
         -2.0
       ]
     },
@@ -79,18 +53,10 @@
       "lead_grad_mse_median": -4.0,
       "lead_grad_mse_std": 5.844655678480984,
       "p_grad_earlier": 0.8,
-      "lead_share_mse_mean": -6.0,
-      "p_share_earlier": 0.8,
+      "p_grad_not_later": 1.0,
       "leads_grad": [
         -4.0,
         -17.0,
-        0.0,
-        -3.0,
-        -7.0
-      ],
-      "leads_share": [
-        -4.0,
-        -16.0,
         0.0,
         -3.0,
         -7.0
@@ -101,19 +67,11 @@
       "lead_grad_mse_median": -6.0,
       "lead_grad_mse_std": 3.0724582991474434,
       "p_grad_earlier": 0.8,
-      "lead_share_mse_mean": -4.0,
-      "p_share_earlier": 0.8,
+      "p_grad_not_later": 1.0,
       "leads_grad": [
         0.0,
         -2.0,
         -6.0,
-        -7.0,
-        -8.0
-      ],
-      "leads_share": [
-        2.0,
-        -2.0,
-        -5.0,
         -7.0,
         -8.0
       ]

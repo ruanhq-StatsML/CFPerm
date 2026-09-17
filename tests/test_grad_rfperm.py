@@ -1,15 +1,16 @@
-"""Smoke tests for Grad-OnlineRFPerm helpers."""
+"""Smoke tests for Grad-OnlineRFPerm helpers (single-stream口径)."""
 from __future__ import annotations
 
 import torch
 import torch.nn as nn
 
 from agod.grad_rfperm import (
-    earliest_layer_reject,
     init_grad_rfperm,
+    init_grad_rfperm_layers,
     layer_grad_norms,
     lead_time,
     relative_grad_shares,
+    unfrozen_grad_l2,
     update_grad_rfperm,
 )
 
@@ -24,28 +25,40 @@ class Tiny(nn.Module):
         return self.fc2(torch.relu(self.fc1(x))).squeeze(-1)
 
 
-def test_layer_grad_norms_and_shares():
+def test_unfrozen_l2_matches_concat():
     m = Tiny()
     x = torch.randn(8, 4)
     y = torch.randn(8)
     loss = ((m(x) - y) ** 2).mean()
     loss.backward()
-    norms = layer_grad_norms(m)
-    assert set(norms) >= {"fc1", "fc2"}
-    assert all(v >= 0 for v in norms.values())
-    shares = relative_grad_shares(norms)
-    assert abs(sum(shares.values()) - 1.0) < 1e-5
+    g = unfrozen_grad_l2(m)
+    flat = torch.cat([p.grad.detach().float().reshape(-1) for p in m.parameters()])
+    assert abs(g - float(torch.linalg.vector_norm(flat).item())) < 1e-5
+    # freeze fc1 → global norm drops frozen grads
+    for p in m.fc1.parameters():
+        p.requires_grad_(False)
+        p.grad = None
+    # recompute only fc2 grads
+    m.zero_grad(set_to_none=True)
+    loss = ((m(x) - y) ** 2).mean()
+    loss.backward()
+    g2 = unfrozen_grad_l2(m)
+    norms = layer_grad_norms(m, unfrozen_only=True)
+    assert "fc1" not in norms
+    assert "fc2" in norms
+    assert abs(g2 - norms["fc2"]) < 1e-5
 
 
-def test_update_and_lead_time():
-    states = init_grad_rfperm(["fc1"])
-    st = states["fc1"]
+def test_single_stream_update():
+    st = init_grad_rfperm("unfrozen_l2")
+    assert not isinstance(st, dict)
     for _ in range(5):
         update_grad_rfperm(st, 1.0, burn_in=True)
-    # spike
     out = update_grad_rfperm(st, 5.0, burn_in=False, alpha=0.2, fdr="fixed")
     assert "p" in out and "reject" in out
     assert lead_time(3, 5) == -2
-    assert lead_time(None, 5) is None
-    er = earliest_layer_reject(states, after=0)
-    assert "__any__" in er
+    # multi-stream helper still exists but is ablation-only
+    layers = init_grad_rfperm_layers(["fc1", "fc2"])
+    assert set(layers) == {"fc1", "fc2"}
+    shares = relative_grad_shares({"fc1": 1.0, "fc2": 3.0})
+    assert abs(shares["fc2"] - 0.75) < 1e-9
