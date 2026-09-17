@@ -42,20 +42,22 @@ Planted order on covariate/both: amount ≻ merchant_gmv ≻ channel ≻ noise. 
 
 ## Table 3 · Post-hoc localization (south vs north, last batch)
 
-| kind | dim | n_south | south MMD vs own-ref | north MMD vs own-ref | pair MMD | south ΔE[Y] | north ΔE[Y] |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| covariate_south | order | 59 | 0.35 | 0.00109 | 0.316 | 0.349 | -0.0489 |
-| covariate_south | merchant | 59 | 0.291 | -0.00538 | 0.286 | 0.349 | -0.0489 |
-| covariate_south | user | 59 | -0.00133 | -0.000738 | -0.00304 | 0.349 | -0.0489 |
-| covariate_south | all | 59 | 0.296 | 0.000566 | 0.261 | 0.349 | -0.0489 |
-| concept_south | order | 59 | -0.00137 | 0.00109 | 0.00159 | -0.0412 | -0.0489 |
-| concept_south | merchant | 59 | -0.00969 | -0.00538 | 0.179 | -0.0412 | -0.0489 |
-| concept_south | user | 59 | -0.00133 | -0.000738 | -0.00304 | -0.0412 | -0.0489 |
-| concept_south | all | 59 | -0.00413 | 0.000566 | 0.0325 | -0.0412 | -0.0489 |
-| both | order | 59 | 0.35 | 0.00109 | 0.316 | -0.262 | -0.0489 |
-| both | merchant | 59 | 0.291 | -0.00538 | 0.286 | -0.262 | -0.0489 |
-| both | user | 59 | -0.00133 | -0.000738 | -0.00304 | -0.262 | -0.0489 |
-| both | all | 59 | 0.296 | 0.000566 | 0.261 | -0.262 | -0.0489 |
+Own-ref clock: this region's new bag vs this region's D_ref. Three readouts together: MMD (P(X)), CMean (||ΔE[X]|| and ΔE[Y]), PO-risk (P(Y|X)). Subset key is region, not Y.
+
+| kind | dim | south MMD | south ‖ΔE[X]‖ | south PO | south ΔE[Y] | north MMD | north ‖ΔE[X]‖ | north PO | north ΔE[Y] |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| covariate_south | order | 0.35 | 2.55 | 7.59e-05 | 0.349 | 0.00109 | 0.302 | 0.000898 | -0.0489 |
+| covariate_south | merchant | 0.291 | 1.7 | 0.000475 | 0.349 | -0.00538 | 0.196 | 0.000359 | -0.0489 |
+| covariate_south | user | -0.00133 | 0.0659 | 0.00329 | 0.349 | -0.000738 | 0.189 | 0.000486 | -0.0489 |
+| covariate_south | all | 0.296 | 3.07 | 0.000224 | 0.349 | 0.000566 | 0.407 | 0.00116 | -0.0489 |
+| concept_south | order | -0.00137 | 0.275 | 0.00307 | -0.0412 | 0.00109 | 0.302 | 0.000898 | -0.0489 |
+| concept_south | merchant | -0.00969 | 0.059 | 0.000936 | -0.0412 | -0.00538 | 0.196 | 0.000359 | -0.0489 |
+| concept_south | user | -0.00133 | 0.0659 | 0.000132 | -0.0412 | -0.000738 | 0.189 | 0.000486 | -0.0489 |
+| concept_south | all | -0.00413 | 0.289 | 0.00376 | -0.0412 | 0.000566 | 0.407 | 0.00116 | -0.0489 |
+| both | order | 0.35 | 2.55 | 0.0015 | -0.262 | 0.00109 | 0.302 | 0.000898 | -0.0489 |
+| both | merchant | 0.291 | 1.7 | 0.000157 | -0.262 | -0.00538 | 0.196 | 0.000359 | -0.0489 |
+| both | user | -0.00133 | 0.0659 | 0.00183 | -0.262 | -0.000738 | 0.189 | 0.000486 | -0.0489 |
+| both | all | 0.296 | 3.07 | 0.000552 | -0.262 | 0.000566 | 0.407 | 0.00116 | -0.0489 |
 
 ## Table 4 · Sequential T_t / p_t on the order grain (OnlineRFPerm Algorithm 1)
 

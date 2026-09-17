@@ -105,8 +105,12 @@ def slim_dim(d: dict) -> dict:
         "loc_pair_mmd": d["localization"].get("pair_mmd"),
         "loc_south_mmd": (d["localization"].get("south") or {}).get("mmd"),
         "loc_north_mmd": (d["localization"].get("north") or {}).get("mmd"),
+        "loc_south_cmean_x": (d["localization"].get("south") or {}).get("cmean_x"),
+        "loc_north_cmean_x": (d["localization"].get("north") or {}).get("cmean_x"),
         "loc_south_cmean_y": (d["localization"].get("south") or {}).get("cmean_y"),
         "loc_north_cmean_y": (d["localization"].get("north") or {}).get("cmean_y"),
+        "loc_south_po": (d["localization"].get("south") or {}).get("po"),
+        "loc_north_po": (d["localization"].get("north") or {}).get("po"),
         "last_T": d["rows"][-1]["rfperm_T"],
         "last_mmd": d["rows"][-1]["mmd"],
         "last_po": d["rows"][-1]["po"],
@@ -250,19 +254,25 @@ def write_markdown(results: dict, dest: Path) -> None:
         "",
         "## Table 3 · Post-hoc localization (south vs north, last batch)",
         "",
+        "Own-ref clock: this region's new bag vs this region's D_ref. "
+        "Three readouts together: MMD (P(X)), CMean (||ΔE[X]|| and ΔE[Y]), PO-risk (P(Y|X)). "
+        "Subset key is region, not Y.",
+        "",
         _md_row(
             [
                 "kind",
                 "dim",
-                "n_south",
-                "south MMD vs own-ref",
-                "north MMD vs own-ref",
-                "pair MMD",
+                "south MMD",
+                "south ‖ΔE[X]‖",
+                "south PO",
                 "south ΔE[Y]",
+                "north MMD",
+                "north ‖ΔE[X]‖",
+                "north PO",
                 "north ΔE[Y]",
             ]
         ),
-        _md_row(["---"] * 8),
+        _md_row(["---"] * 10),
     ]
     for kind in KINDS:
         for dim in DIMS:
@@ -274,11 +284,13 @@ def write_markdown(results: dict, dest: Path) -> None:
                     [
                         kind,
                         dim,
-                        loc.get("n_south"),
                         _fmt(s.get("mmd")),
-                        _fmt(n.get("mmd")),
-                        _fmt(loc.get("pair_mmd")),
+                        _fmt(s.get("cmean_x")),
+                        _fmt(s.get("po")),
                         _fmt(s.get("cmean_y")),
+                        _fmt(n.get("mmd")),
+                        _fmt(n.get("cmean_x")),
+                        _fmt(n.get("po")),
                         _fmt(n.get("cmean_y")),
                     ]
                 )
@@ -444,11 +456,13 @@ def write_tables_html(slim: dict, dest: Path) -> None:
                 "<tr>"
                 + td(kind)
                 + td(dim)
-                + td(d.get("loc_n_south"))
                 + td(_fmt(d.get("loc_south_mmd")))
-                + td(_fmt(d.get("loc_north_mmd")))
-                + td(_fmt(d.get("loc_pair_mmd")))
+                + td(_fmt(d.get("loc_south_cmean_x")))
+                + td(_fmt(d.get("loc_south_po")))
                 + td(_fmt(d.get("loc_south_cmean_y")))
+                + td(_fmt(d.get("loc_north_mmd")))
+                + td(_fmt(d.get("loc_north_cmean_x")))
+                + td(_fmt(d.get("loc_north_po")))
                 + td(_fmt(d.get("loc_north_cmean_y")))
                 + "</tr>"
             )
@@ -475,7 +489,7 @@ code {{ background: #eee; padding: 1px 4px; }}
 </head>
 <body>
 <h1>推荐流按 grain 切开：OnlineRFPerm / RFPerm·CFPerm / FSDS</h1>
-<p class="lead">三张表。Table 1 = WHEN（Algorithm 1 first rejection / delay / FAR）。Table 2 = WHICH columns（Kendall-τ vs planted）。Table 3 = WHICH accounts（south vs north own-ref）。Y 不当特征。T = batch。定位，不是唯一分解。</p>
+<p class="lead">三张表。Table 1 = WHEN。Table 2 = WHICH columns。Table 3 = WHICH accounts，south/north 同时给出 MMD / CMean / PO-risk。Y 不当特征。T = batch。定位，不是唯一分解。</p>
 <p class="note">n_ref={N_REF} · n_new={N_NEW} · batches={N_BATCHES} · onset_true={ONSET} · merchants={N_MERCHANTS} · planted subset = south。<br/>
 covariate / both 种 amount ≻ merchant_gmv ≻ channel；concept 只种 amount 在 Y|X。Delay = first rejection − onset。绿 = hit，红 = FAR，灰 = miss。Hop 是 1.5× jump detector，这批是慢走。</p>
 
@@ -495,9 +509,12 @@ covariate / both 种 amount ≻ merchant_gmv ≻ channel；concept 只种 amount
 </tbody>
 </table>
 
-<h2>Table 3 · Post-hoc localization（south vs north, last batch）</h2>
+<h2>Table 3 · Post-hoc localization（south vs north · MMD / CMean / PO-risk）</h2>
 <table>
-<thead><tr><th>kind</th><th>dim</th><th>n_south</th><th>south MMD</th><th>north MMD</th><th>pair MMD</th><th>south ΔE[Y]</th><th>north ΔE[Y]</th></tr></thead>
+<thead>
+<tr><th rowspan="2">kind</th><th rowspan="2">dim</th><th colspan="4">south own-ref</th><th colspan="4">north own-ref</th></tr>
+<tr><th>MMD</th><th>‖ΔE[X]‖</th><th>PO</th><th>ΔE[Y]</th><th>MMD</th><th>‖ΔE[X]‖</th><th>PO</th><th>ΔE[Y]</th></tr>
+</thead>
 <tbody>
 {''.join(rows3)}
 </tbody>
@@ -508,6 +525,181 @@ covariate / both 种 amount ≻ merchant_gmv ≻ channel；concept 只种 amount
 </html>
 """
     dest.write_text(html, encoding="utf-8")
+
+
+def _tex_status(t_hat, delay, status) -> str:
+    if status == "miss" or t_hat is None:
+        return "miss"
+    if status == "FAR":
+        return f"FAR@${int(t_hat)}$"
+    d = 0 if delay is None else int(delay)
+    return f"${int(t_hat)}$ ($d{{=}}{d}$)"
+
+
+def _tex_num(x, n=3) -> str:
+    s = _fmt(x, n)
+    if s == "":
+        return "---"
+    return f"${s}$"
+
+
+def write_tex(slim: dict, dest: Path) -> None:
+    """Two-page note: Y, X, three tables. Localization prints MMD / CMean / PO together."""
+
+    def when_row(kind, dim):
+        d = slim[kind]["dims"][dim]
+        return (
+            f"{kind.replace('_south', '')} & {dim} & "
+            + _tex_status(d["addis_t"], d.get("addis_delay"), d.get("addis_status"))
+            + " & "
+            + _tex_status(d["onset_rank"], d.get("rank_delay"), d.get("rank_status"))
+            + " & "
+            + _tex_status(d.get("saffron_t"), d.get("saffron_delay"), d.get("saffron_status"))
+            + " & "
+            + _tex_status(d["onset_hat"], d.get("hop_delay"), d.get("hop_status"))
+            + f" & {_tex_num(d['last_T'])} & {_tex_num(d['last_mmd'])} \\\\"
+        )
+
+    def which_row(kind, dim):
+        d = slim[kind]["dims"][dim]
+        planted = ", ".join(d.get("planted") or []) or "---"
+        recov = ", ".join(d.get("fsds_recovered") or []) or "---"
+        planted = planted.replace("_", r"\_")
+        recov = recov.replace("_", r"\_")
+        return (
+            f"{kind.replace('_south', '')} & {dim} & {planted} & {recov} & "
+            f"{_tex_num(d.get('tau_fsds'))} & {_tex_num(d.get('tau_rfperm'))} & "
+            f"{_tex_num(d.get('tau_cfperm'))} \\\\"
+        )
+
+    def loc_row(kind, dim):
+        d = slim[kind]["dims"][dim]
+        return (
+            f"{kind.replace('_south', '')} & {dim} & "
+            f"{_tex_num(d.get('loc_south_mmd'))} & {_tex_num(d.get('loc_south_cmean_x'))} & "
+            f"{_tex_num(d.get('loc_south_po'))} & {_tex_num(d.get('loc_south_cmean_y'))} & "
+            f"{_tex_num(d.get('loc_north_mmd'))} & {_tex_num(d.get('loc_north_cmean_x'))} & "
+            f"{_tex_num(d.get('loc_north_po'))} & {_tex_num(d.get('loc_north_cmean_y'))} \\\\"
+        )
+
+    when_rows = "\n".join(when_row(k, dim) for k in KINDS for dim in DIMS)
+    which_rows = "\n".join(which_row(k, dim) for k in KINDS for dim in DIMS)
+    loc_rows = "\n".join(loc_row(k, dim) for k in KINDS for dim in DIMS)
+    cov = slim["covariate_south"]["dims"]["order"]
+    con = slim["concept_south"]["dims"]["order"]
+    body = r"""% Recsys grain monitor. Compile: pdflatex docs/recsys_grain_monitor.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\title{Recommendation stream by grain:\\
+OnlineRFPerm, RFPerm/CFPerm, and FSDS}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\paragraph{$Y$ (outcome).}
+One row is one order.
+$Y\in\{0,1\}$ is \textbf{conversion} on that order (purchase / not).
+$Y$ is the response only.
+It is never a column of $X$, never a ranking key, never a subset key.
+
+\paragraph{$X$ (covariates).}
+$X$ is the serving table of that order, sliced the way the log is written.
+$Y$ is not in any slice.
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+grain & $X$ columns & what the row is \\
+\midrule
+order & amount, hour, n\_items, channel & this order \\
+merchant & merchant\_cat, merchant\_gmv, n\_skus & the merchant on this order \\
+user & user\_tenure, user\_hist\_freq & the user on this order \\
+all & the nine columns concatenated & anti-pattern; shown as a check \\
+\bottomrule
+\end{tabular}
+\end{center}
+Region (south / north) is a merchant attribute, not a feature and not $Y$.
+The batch index $T$ is a time label ($D_{\mathrm{ref}}$ vs the new batch), not a treatment.
+
+\paragraph{Setup.}
+$n_{\mathrm{ref}}{=}400$, $n_{\mathrm{new}}{=}120$, six batches, labeled onset $t{=}2$.
+After onset, only \textbf{south} merchants are shifted.
+Covariate / both plant $\mathrm{amount}\succ\mathrm{merchant\_gmv}\succ\mathrm{channel}$ in $P(X)$.
+Concept plants amount in $P(Y\mid X)$ only.
+User columns never walk.
+
+\vspace{0.6em}
+\noindent
+Table~\ref{tab:when}: OnlineRFPerm (Algorithm~1) --- first rejection, delay, FAR.\\
+Table~\ref{tab:which}: FSDS / RFPerm $\Delta$MSE / CFPerm $\varphi$-VIMP --- Kendall-$\tau$ vs planted.\\
+Table~\ref{tab:where}: south vs north own-ref. \textbf{MMD, CMean, and PO-risk together.}
+
+\begin{table}[ht]
+\centering
+\caption{WHEN. Frozen RF on $D_{\mathrm{ref}}$. $T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}$.
+Delay $=$ first rejection $-$ onset. FAR $=$ mark before onset.}
+\label{tab:when}
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llcccccc}
+\toprule
+kind & grain & ADDIS & rank-$p$ & SAFFRON & hop & last $T$ & last MMD \\
+\midrule
+""" + when_rows + r"""
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{WHICH columns. Ranking recovery vs planted magnitude.
+User grain has no planted $X$ columns --- the correct negative control.}
+\label{tab:which}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{llllccc}
+\toprule
+kind & grain & planted in $X$ & FSDS recovered & $\tau_{\mathrm{FSDS}}$ & $\tau_{\mathrm{RFPerm}}$ & $\tau_{\mathrm{CFPerm}}$ \\
+\midrule
+""" + which_rows + r"""
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{WHICH accounts. Own-ref clock. Three readouts on the same slice:
+MMD ($P(X)$), CMean ($\Vert\Delta\mathbb{E}[X]\Vert$ and $\Delta\mathbb{E}[Y]$), PO-risk ($P(Y\mid X)$).
+Subset key is region, not $Y$.}
+\label{tab:where}
+\scriptsize
+\setlength{\tabcolsep}{2.8pt}
+\begin{tabular}{llcccc cccc}
+\toprule
+& & \multicolumn{4}{c}{south own-ref} & \multicolumn{4}{c}{north own-ref} \\
+\cmidrule(lr){3-6}\cmidrule(lr){7-10}
+kind & grain & MMD & $\Vert\Delta X\Vert$ & PO & $\Delta\mathbb{E}[Y]$ & MMD & $\Vert\Delta X\Vert$ & PO & $\Delta\mathbb{E}[Y]$ \\
+\midrule
+""" + loc_rows + r"""
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Read-off.}
+Order grain $+$ ADDIS hits at the labeled onset ($d{=}0$).
+The concatenated \texttt{all} grain is FAR at $t{=}0$.
+User $X$ does not move (MMD $\approx 0$); a $T$ mark there is $Y$ walking through another grain.
+FSDS recovers the planted columns on the grain that actually contains them.
+Covariate south order: MMD $""" + _fmt(cov.get("loc_south_mmd")) + r"$, $\Vert\Delta X\Vert=" + _fmt(cov.get("loc_south_cmean_x")) + r"$, PO $=" + _fmt(cov.get("loc_south_po")) + r"$, $\Delta\mathbb{E}[Y]=" + _fmt(cov.get("loc_south_cmean_y")) + r"$; north MMD $=" + _fmt(cov.get("loc_north_mmd")) + r"$. Concept south order: MMD $=" + _fmt(con.get("loc_south_mmd")) + r"$, PO $=" + _fmt(con.get("loc_south_po")) + r"$, $\Delta\mathbb{E}[Y]=" + _fmt(con.get("loc_south_cmean_y")) + r"""$.
+
+\end{document}
+"""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(body, encoding="utf-8")
 
 
 def main() -> int:
@@ -532,6 +724,7 @@ def main() -> int:
     write_justify(slim)
     write_report(slim)
     write_tables_html(slim, OUT / "tables.html")
+    write_tex(slim, ROOT / "docs" / "recsys_grain_monitor.tex")
     print("wrote", OUT)
     return 0
 
@@ -543,12 +736,12 @@ def write_justify(slim: dict) -> None:
         "WHEN = frozen RF, T=MSE−E_ref, last-two hop; rank-p into ADDIS (primary) / SAFFRON (contrast).",
         "Delay = first rejection − onset. FAR = mark before labeled onset. miss = never marked.",
         "WHICH columns = FSDS + RFPerm ΔMSE + CFPerm φ-VIMP. Ranking metric = Kendall-τ vs planted magnitude.",
-        "WHICH accounts = south vs north own-ref. Y never a feature. Localization, not unique decomp. Not a graph method.",
+        "WHICH accounts = south vs north own-ref, each with MMD / CMean / PO-risk. Y never a feature. Localization, not unique decomp. Not a graph method.",
         "",
         f"onset_true={ONSET}. n_ref={N_REF}, n_new={N_NEW}, batches={N_BATCHES}.",
         "",
-        "| kind | dim | ADDIS | rank-p | hop | FSDS recovered | τ_FSDS | τ_RFPerm | τ_CFPerm | south MMD | north MMD |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "| kind | dim | ADDIS | FSDS recovered | south MMD | south ‖ΔX‖ | south PO | south ΔE[Y] | north MMD | north PO |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for kind in KINDS:
         for dim in DIMS:
@@ -560,14 +753,13 @@ def write_justify(slim: dict) -> None:
                         kind,
                         dim,
                         _status_cell(d["addis_t"], d.get("addis_delay"), d.get("addis_status")),
-                        _status_cell(d["onset_rank"], d.get("rank_delay"), d.get("rank_status")),
-                        _status_cell(d["onset_hat"], d.get("hop_delay"), d.get("hop_status")),
                         ",".join(d["fsds_recovered"]) or "—",
-                        _fmt(d.get("tau_fsds")),
-                        _fmt(d.get("tau_rfperm")),
-                        _fmt(d.get("tau_cfperm")),
                         _fmt(d["loc_south_mmd"]),
+                        _fmt(d.get("loc_south_cmean_x")),
+                        _fmt(d.get("loc_south_po")),
+                        _fmt(d.get("loc_south_cmean_y")),
                         _fmt(d["loc_north_mmd"]),
+                        _fmt(d.get("loc_north_po")),
                     ]
                 )
                 + " |"
@@ -660,11 +852,11 @@ def write_report(slim: dict) -> None:
             "",
             "## WHICH accounts (post-hoc FSDS localization)",
             "",
-            "Subset key = region (south / north), not Y. Own-ref MMD: this region's new bag vs this region's D_ref. Pair MMD compares the two regions inside the new batch (heterogeneity, not drift).",
+            "Subset key = region (south / north), not Y. Own-ref clock. Three readouts together: MMD (P(X)), CMean (||ΔE[X]|| and ΔE[Y]), PO-risk (P(Y|X)).",
             "",
-            f"Covariate order-grain: south MMD={_fmt(cov['order']['loc_south_mmd'])}, north MMD={_fmt(cov['order']['loc_north_mmd'])}, pair MMD={_fmt(cov['order']['loc_pair_mmd'])}.",
-            f"Covariate user-grain: south MMD={_fmt(cov['user']['loc_south_mmd'])}, north MMD={_fmt(cov['user']['loc_north_mmd'])} — users mix across merchants, so the region split is quiet on user X.",
-            f"Concept order-grain: south MMD={_fmt(con['order']['loc_south_mmd'])} (X quiet), south ΔE[Y]={_fmt(con['order']['loc_south_cmean_y'])}.",
+            f"Covariate order-grain south: MMD={_fmt(cov['order']['loc_south_mmd'])}, CMean_X={_fmt(cov['order'].get('loc_south_cmean_x'))}, PO={_fmt(cov['order'].get('loc_south_po'))}, CMean_Y={_fmt(cov['order']['loc_south_cmean_y'])}. North MMD={_fmt(cov['order']['loc_north_mmd'])}.",
+            f"Covariate user-grain south MMD={_fmt(cov['user']['loc_south_mmd'])} — users mix across merchants.",
+            f"Concept order-grain south: MMD={_fmt(con['order']['loc_south_mmd'])}, PO={_fmt(con['order'].get('loc_south_po'))}, ΔE[Y]={_fmt(con['order']['loc_south_cmean_y'])}.",
             "",
             "## What to tell a production recsys",
             "",

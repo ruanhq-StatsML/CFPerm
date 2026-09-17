@@ -67,6 +67,18 @@ class RecsysDimTests(unittest.TestCase):
         n = out["localization"]["north"].get("mmd") or 0.0
         self.assertGreater(s, n)
 
+    def test_localization_emits_mmd_cmean_po(self):
+        tables = _tables("covariate_south", seed=6)
+        out = run_dim_stream(tables, "order", seed=6, with_po=True)
+        s = out["localization"]["south"]
+        for key in ("mmd", "cmean_x", "cmean_y", "po"):
+            self.assertIn(key, s)
+        self.assertIsNotNone(s["mmd"])
+        self.assertIsNotNone(s["cmean_x"])
+        self.assertIsNotNone(s["cmean_y"])
+        if out["localization"]["n_south"] >= 40:
+            self.assertIsNotNone(s["po"])
+
     def test_planted_stays_inside_grain(self):
         names = ("amount", "hour", "n_items", "channel")
         planted = planted_in_grain("covariate_south", names)

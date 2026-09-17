@@ -55,11 +55,11 @@ Figures: `rfperm_vimp.png` (red = planted), `fsds_rank.png`.
 
 ## WHICH accounts (post-hoc FSDS localization)
 
-Subset key = region (south / north), not Y. Own-ref MMD: this region's new bag vs this region's D_ref. Pair MMD compares the two regions inside the new batch (heterogeneity, not drift).
+Subset key = region (south / north), not Y. Own-ref clock. Three readouts together: MMD (P(X)), CMean (||ΔE[X]|| and ΔE[Y]), PO-risk (P(Y|X)).
 
-Covariate order-grain: south MMD=0.35, north MMD=0.00109, pair MMD=0.316.
-Covariate user-grain: south MMD=-0.00133, north MMD=-0.000738 — users mix across merchants, so the region split is quiet on user X.
-Concept order-grain: south MMD=-0.00137 (X quiet), south ΔE[Y]=-0.0412.
+Covariate order-grain south: MMD=0.35, CMean_X=2.55, PO=7.59e-05, CMean_Y=0.349. North MMD=0.00109.
+Covariate user-grain south MMD=-0.00133 — users mix across merchants.
+Concept order-grain south: MMD=-0.00137, PO=0.00307, ΔE[Y]=-0.0412.
 
 ## What to tell a production recsys
 

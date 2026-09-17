@@ -21,7 +21,7 @@ code { background: #eee; padding: 1px 4px; }
 </head>
 <body>
 <h1>推荐流按 grain 切开：OnlineRFPerm / RFPerm·CFPerm / FSDS</h1>
-<p class="lead">三张表。Table 1 = WHEN（Algorithm 1 first rejection / delay / FAR）。Table 2 = WHICH columns（Kendall-τ vs planted）。Table 3 = WHICH accounts（south vs north own-ref）。Y 不当特征。T = batch。定位，不是唯一分解。</p>
+<p class="lead">三张表。Table 1 = WHEN。Table 2 = WHICH columns。Table 3 = WHICH accounts，south/north 同时给出 MMD / CMean / PO-risk。Y 不当特征。T = batch。定位，不是唯一分解。</p>
 <p class="note">n_ref=400 · n_new=120 · batches=6 · onset_true=2 · merchants=16 · planted subset = south。<br/>
 covariate / both 种 amount ≻ merchant_gmv ≻ channel；concept 只种 amount 在 Y|X。Delay = first rejection − onset。绿 = hit，红 = FAR，灰 = miss。Hop 是 1.5× jump detector，这批是慢走。</p>
 
@@ -41,11 +41,14 @@ covariate / both 种 amount ≻ merchant_gmv ≻ channel；concept 只种 amount
 </tbody>
 </table>
 
-<h2>Table 3 · Post-hoc localization（south vs north, last batch）</h2>
+<h2>Table 3 · Post-hoc localization（south vs north · MMD / CMean / PO-risk）</h2>
 <table>
-<thead><tr><th>kind</th><th>dim</th><th>n_south</th><th>south MMD</th><th>north MMD</th><th>pair MMD</th><th>south ΔE[Y]</th><th>north ΔE[Y]</th></tr></thead>
+<thead>
+<tr><th rowspan="2">kind</th><th rowspan="2">dim</th><th colspan="4">south own-ref</th><th colspan="4">north own-ref</th></tr>
+<tr><th>MMD</th><th>‖ΔE[X]‖</th><th>PO</th><th>ΔE[Y]</th><th>MMD</th><th>‖ΔE[X]‖</th><th>PO</th><th>ΔE[Y]</th></tr>
+</thead>
 <tbody>
-<tr><td>covariate_south</td><td>order</td><td>59</td><td>0.35</td><td>0.00109</td><td>0.316</td><td>0.349</td><td>-0.0489</td></tr><tr><td>covariate_south</td><td>merchant</td><td>59</td><td>0.291</td><td>-0.00538</td><td>0.286</td><td>0.349</td><td>-0.0489</td></tr><tr><td>covariate_south</td><td>user</td><td>59</td><td>-0.00133</td><td>-0.000738</td><td>-0.00304</td><td>0.349</td><td>-0.0489</td></tr><tr><td>covariate_south</td><td>all</td><td>59</td><td>0.296</td><td>0.000566</td><td>0.261</td><td>0.349</td><td>-0.0489</td></tr><tr><td>concept_south</td><td>order</td><td>59</td><td>-0.00137</td><td>0.00109</td><td>0.00159</td><td>-0.0412</td><td>-0.0489</td></tr><tr><td>concept_south</td><td>merchant</td><td>59</td><td>-0.00969</td><td>-0.00538</td><td>0.179</td><td>-0.0412</td><td>-0.0489</td></tr><tr><td>concept_south</td><td>user</td><td>59</td><td>-0.00133</td><td>-0.000738</td><td>-0.00304</td><td>-0.0412</td><td>-0.0489</td></tr><tr><td>concept_south</td><td>all</td><td>59</td><td>-0.00413</td><td>0.000566</td><td>0.0325</td><td>-0.0412</td><td>-0.0489</td></tr><tr><td>both</td><td>order</td><td>59</td><td>0.35</td><td>0.00109</td><td>0.316</td><td>-0.262</td><td>-0.0489</td></tr><tr><td>both</td><td>merchant</td><td>59</td><td>0.291</td><td>-0.00538</td><td>0.286</td><td>-0.262</td><td>-0.0489</td></tr><tr><td>both</td><td>user</td><td>59</td><td>-0.00133</td><td>-0.000738</td><td>-0.00304</td><td>-0.262</td><td>-0.0489</td></tr><tr><td>both</td><td>all</td><td>59</td><td>0.296</td><td>0.000566</td><td>0.261</td><td>-0.262</td><td>-0.0489</td></tr>
+<tr><td>covariate_south</td><td>order</td><td>0.35</td><td>2.55</td><td>7.59e-05</td><td>0.349</td><td>0.00109</td><td>0.302</td><td>0.000898</td><td>-0.0489</td></tr><tr><td>covariate_south</td><td>merchant</td><td>0.291</td><td>1.7</td><td>0.000475</td><td>0.349</td><td>-0.00538</td><td>0.196</td><td>0.000359</td><td>-0.0489</td></tr><tr><td>covariate_south</td><td>user</td><td>-0.00133</td><td>0.0659</td><td>0.00329</td><td>0.349</td><td>-0.000738</td><td>0.189</td><td>0.000486</td><td>-0.0489</td></tr><tr><td>covariate_south</td><td>all</td><td>0.296</td><td>3.07</td><td>0.000224</td><td>0.349</td><td>0.000566</td><td>0.407</td><td>0.00116</td><td>-0.0489</td></tr><tr><td>concept_south</td><td>order</td><td>-0.00137</td><td>0.275</td><td>0.00307</td><td>-0.0412</td><td>0.00109</td><td>0.302</td><td>0.000898</td><td>-0.0489</td></tr><tr><td>concept_south</td><td>merchant</td><td>-0.00969</td><td>0.059</td><td>0.000936</td><td>-0.0412</td><td>-0.00538</td><td>0.196</td><td>0.000359</td><td>-0.0489</td></tr><tr><td>concept_south</td><td>user</td><td>-0.00133</td><td>0.0659</td><td>0.000132</td><td>-0.0412</td><td>-0.000738</td><td>0.189</td><td>0.000486</td><td>-0.0489</td></tr><tr><td>concept_south</td><td>all</td><td>-0.00413</td><td>0.289</td><td>0.00376</td><td>-0.0412</td><td>0.000566</td><td>0.407</td><td>0.00116</td><td>-0.0489</td></tr><tr><td>both</td><td>order</td><td>0.35</td><td>2.55</td><td>0.0015</td><td>-0.262</td><td>0.00109</td><td>0.302</td><td>0.000898</td><td>-0.0489</td></tr><tr><td>both</td><td>merchant</td><td>0.291</td><td>1.7</td><td>0.000157</td><td>-0.262</td><td>-0.00538</td><td>0.196</td><td>0.000359</td><td>-0.0489</td></tr><tr><td>both</td><td>user</td><td>-0.00133</td><td>0.0659</td><td>0.00183</td><td>-0.262</td><td>-0.000738</td><td>0.189</td><td>0.000486</td><td>-0.0489</td></tr><tr><td>both</td><td>all</td><td>0.296</td><td>3.07</td><td>0.000552</td><td>-0.262</td><td>0.000566</td><td>0.407</td><td>0.00116</td><td>-0.0489</td></tr>
 </tbody>
 </table>
 
