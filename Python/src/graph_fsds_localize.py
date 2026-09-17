@@ -22,6 +22,19 @@ from typing import Mapping, Sequence
 import numpy as np
 
 from logo_modality import as_groups, drop_group, logo_batch, two_layer_ratios
+from order_graph_nx import (
+    GRAPH_PACKAGE,
+    GRAPH_PACKAGE_VERSION,
+    CUT_BUNDLED,
+    CUT_STRUCTURAL,
+    bundled_shift_graph,
+    community_south_frac,
+    graph_localize,
+    loud_community,
+    louvain_int_cut,
+    order_community_labels,
+    y_in_graph_attrs,
+)
 from streaming_po_risk import (
     large_deviation,
     mmd_vs_reference,
@@ -369,6 +382,82 @@ def node_localization(
         )
     rows.sort(key=lambda r: r["vs_full_ref"]["mmd"], reverse=True)
     return rows
+
+
+def node_bundle_scores(node_rows: Sequence[Mapping], *, prefer: str = "vs_own_ref") -> dict[int, dict]:
+    """Flatten node rows into merchant → bundled metrics.
+
+    Default vs_own_ref: did *this* merchant move. vs_full_ref would just
+    say every merchant differs from the global mean (heterogeneity, not shift).
+    """
+    out = {}
+    for r in node_rows:
+        src = dict(r.get(prefer) or r.get("vs_full_ref") or {})
+        full = r.get("vs_full_ref") or {}
+        if src.get("po") is None and full.get("po") is not None:
+            src["po"] = full["po"]
+        nid = int(r["node"])
+        out[nid] = {
+            "mmd": src.get("mmd"),
+            "po": src.get("po"),
+            "cmean_x": src.get("cmean_x"),
+            "cmean_y": src.get("cmean_y"),
+            "n": r.get("n"),
+        }
+    return out
+
+
+def graph_shift_cuts(
+    ref: Mapping,
+    new: Mapping,
+    stats: Mapping,
+    *,
+    seed: int = 2026,
+    k_nn: int = 4,
+    min_n: int = NODE_MIN_N,
+) -> dict:
+    """Structural Louvain vs bundled-shift Louvain. Same networkx solver, different graphs."""
+    structural = graph_localize(new, k_nn=k_nn, seed=seed)
+    nodes = node_localization(
+        ref["X_order"],
+        ref["Y"],
+        new["X_order"],
+        new["Y"],
+        ref["merchant_id"],
+        new["merchant_id"],
+        sigma=stats["sigma_order"],
+        seed=seed,
+        min_n=min_n,
+        with_po=False,
+    )
+    scores = node_bundle_scores(nodes)
+    G_b = bundled_shift_graph(scores)
+    bundled_cut = louvain_int_cut(G_b, seed=seed)
+    region_by_m = {}
+    for m, r in zip(np.asarray(new["merchant_id"]).astype(int), np.asarray(new["region"])):
+        region_by_m.setdefault(int(m), str(r))
+    hot = loud_community(bundled_cut, scores)
+    return {
+        "package": GRAPH_PACKAGE,
+        "package_version": GRAPH_PACKAGE_VERSION,
+        "structural": structural,
+        "bundled": {
+            "cut_name": CUT_BUNDLED,
+            "merchant_cut": bundled_cut,
+            "n_communities": int(len(set(bundled_cut.values()))) if bundled_cut else 0,
+            "n_nodes": int(G_b.number_of_nodes()),
+            "n_edges": int(G_b.number_of_edges()),
+            "south_frac": community_south_frac(bundled_cut, region_by_m),
+            "loud_community": hot,
+            "loud_south_frac": float(community_south_frac(bundled_cut, region_by_m).get(hot, 0.0))
+            if hot
+            else 0.0,
+            "y_in_graph": y_in_graph_attrs(G_b),
+        },
+        "scores": {str(k): v for k, v in scores.items()},
+        "region_by_merchant": {str(k): v for k, v in region_by_m.items()},
+        "y_in_structural": y_in_graph_attrs(structural["graph"]),
+    }
 
 
 def fsds_rank_columns(
@@ -839,16 +928,19 @@ def run_pipeline(
     *,
     grain: str = "order",
     mode: str = "localize",
+    subset_by: str = "community",
     top_k: int = 4,
     seed: int = 2026,
     min_n: int = 20,
     with_logo: bool = True,
     with_po: bool = True,
+    k_nn: int = 4,
 ) -> dict:
-    """Full leakage-safe pass for one incoming batch."""
+    """Graph localization first (networkx Louvain on the bundled-shift graph), then FSDS, then two-layer."""
     cut = slice_stream(tables, t)
     ref, new, meta = cut["ref"], cut["new"], cut["meta"]
     stats = freeze_ref_stats(ref, seed=seed)
+    graph_pack = graph_shift_cuts(ref, new, stats, seed=seed, k_nn=k_nn)
     grains = grain_localization(ref, new, stats, seed=seed, with_po=with_po)
     fsds = fsds_select(ref, new, stats, top_k=top_k, seed=seed)
     uni_ref = unify_to_order(ref, fsds["selected"], stats, mode=mode)
@@ -856,12 +948,27 @@ def run_pipeline(
     if grain == "merchant":
         uni_ref = unify_to_merchant(uni_ref)
         uni_new = unify_to_merchant(uni_new)
-        labels_ref, labels_new = uni_ref["region"], uni_new["region"]
         min_n = min(int(min_n), 2)
-    elif grain == "order":
-        labels_ref, labels_new = uni_ref["region"], uni_new["region"]
-    else:
+    elif grain != "order":
         raise ValueError(f"grain must be order or merchant, got {grain!r}")
+    if subset_by == "community":
+        merchant_cut = graph_pack["bundled"]["merchant_cut"]
+        labels_new = order_community_labels(uni_new["merchant_id"], merchant_cut)
+        labels_ref = order_community_labels(uni_ref["merchant_id"], merchant_cut)
+        south_frac = graph_pack["bundled"]["south_frac"]
+        cut_name = CUT_BUNDLED
+    elif subset_by == "structural":
+        merchant_cut = graph_pack["structural"]["merchant_cut"]
+        labels_new = order_community_labels(uni_new["merchant_id"], merchant_cut)
+        labels_ref = order_community_labels(uni_ref["merchant_id"], merchant_cut)
+        south_frac = graph_pack["structural"]["south_frac"]
+        cut_name = CUT_STRUCTURAL
+    elif subset_by == "region":
+        labels_ref, labels_new = uni_ref["region"], uni_new["region"]
+        south_frac = {}
+        cut_name = "region"
+    else:
+        raise ValueError(f"subset_by must be community, structural, or region, got {subset_by!r}")
     sigma_z = rbf_bandwidth(uni_ref["Z"], seed=seed)
     subsets = subset_three_metrics(
         uni_ref["Z"],
@@ -881,6 +988,9 @@ def run_pipeline(
     for row in subsets:
         portraits.append(characterize_subset(row, shares[row["subset"]]))
     portraits.sort(key=lambda r: r["contribution"], reverse=True)
+    if subset_by in ("community", "structural"):
+        for p in portraits:
+            p["south_frac"] = float(south_frac.get(str(p["subset"]), 0.0))
     logo_full = None
     logo_sub = None
     if with_logo:
@@ -905,11 +1015,39 @@ def run_pipeline(
         "sigma_from_ref": True,
         "bins_from_ref": True,
         "serve_profiles_from_ref": mode == "serve",
+        "graph_package": GRAPH_PACKAGE,
+        "graph_package_version": GRAPH_PACKAGE_VERSION,
+        "graph_cut": cut_name,
+        "y_in_bundled_graph": graph_pack["bundled"]["y_in_graph"],
+        "y_in_structural_graph": graph_pack["y_in_structural"],
     }
     return {
         "t": int(t),
         "grain": grain,
+        "subset_by": subset_by,
         "meta": meta,
+        "graph": {
+            "package": GRAPH_PACKAGE,
+            "package_version": GRAPH_PACKAGE_VERSION,
+            "encoder": graph_pack["structural"]["encoder"],
+            "cut": cut_name,
+            "bundled": {
+                "n_communities": graph_pack["bundled"]["n_communities"],
+                "n_nodes": graph_pack["bundled"]["n_nodes"],
+                "n_edges": graph_pack["bundled"]["n_edges"],
+                "south_frac": graph_pack["bundled"]["south_frac"],
+                "loud_community": graph_pack["bundled"]["loud_community"],
+                "loud_south_frac": graph_pack["bundled"]["loud_south_frac"],
+                "merchant_cut": {str(k): v for k, v in graph_pack["bundled"]["merchant_cut"].items()},
+            },
+            "structural": {
+                "n_communities": graph_pack["structural"]["n_communities"],
+                "n_nodes": graph_pack["structural"]["n_nodes"],
+                "n_edges": graph_pack["structural"]["n_edges"],
+                "south_frac": graph_pack["structural"]["south_frac"],
+                "merchant_cut": {str(k): v for k, v in graph_pack["structural"]["merchant_cut"].items()},
+            },
+        },
         "grains": grains,
         "fsds": {
             "rank": fsds["rank"],
@@ -957,6 +1095,11 @@ __all__ = [
     "fsds_rank_columns",
     "fsds_select",
     "gated_share",
+    "CUT_BUNDLED",
+    "CUT_STRUCTURAL",
+    "GRAPH_PACKAGE",
+    "graph_shift_cuts",
+    "node_bundle_scores",
     "grain_localization",
     "join_profile",
     "layer2_logo",

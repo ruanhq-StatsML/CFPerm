@@ -13,7 +13,7 @@
   → 3. 收到同一粒：订单（或商户）
         localize = 当前窗的 X；serve = 订单 X 用当前、实体列用 D_ref 画像
   → 4. 两层
-        层 1  subset vs other：south/north（图上的割）
+        层 1  subset vs other：默认 **bundled Louvain 社区**（变动子集）；region / structural 只做对照
         层 2  选中块的 LOGO（order / merchant / user）
   → 5. 对 loud subset 出三支肖像 + fingerprint
 ```
@@ -29,7 +29,56 @@
 | 收成一粒 | 评估单位钉死（一张订单，或一个商户） | 订单指标和商户指标不能比份额；「谁贡献大」没有同一个分母 |
 | 两层 | 哪一个 **subset**；这个 subset 里是哪一块 **feature block** | 只报全局 MMD 会漏掉「只有南区商户在走」 |
 
-图在这里就是实体图：`order → merchant`、`order → user`。**节点定位** = 挂在这个点上的订单 vs \(D_{\mathrm{ref}}\)（以及 vs 该点自己的 ref）。不是 GraphSAGE，不把 GNN 当新的面。
+图在这里就是实体图：`order → merchant`、`order → user`。包是 **networkx**（不是 GraphRAG / PyG / DGL）。社区发现有两套目标，不能混。
+
+---
+
+## 表 0 · 用哪个包、社区发现到底在优化什么
+
+| | 结构 Louvain | **Bundled-shift Louvain（默认）** |
+|---|---|---|
+| 包 | `networkx==3.6.x` | 同一个包 |
+| 求解器 | `nx.community.louvain_communities` | **同一个求解器** |
+| 图 | 共单（merchant–user）+ 当前窗 kNN(X) | 商户节点；边 = 三支捆的**同方向亲和** |
+| 目标 \(Q\) | 模块度：谁和谁连得密 | **不是**模块度语义。边是「一样在变」，切出来的社区是变动 subset 的代理 |
+| 种下 south、X 走（covariate） | kNN(X) 可能碰巧把南区聚在一起 | 应用目标：loud 社区的 south_frac 高 |
+| 种下 south、X 不动（concept） | 结构图几乎不变，**切不出变动子集** | 捆里的 \(\Delta\mu_Y\) / PO 把南区商户连在一起 |
+| GraphSAGE | 冻住的 mean-aggregator 读出，不是切 | 不用它来切 |
+| GraphRAG | 不用 | 不用 |
+
+Vanilla Louvain 最大化
+
+\[
+Q=\frac{1}{2m}\sum_{ij}\Big(A_{ij}-\frac{k_i k_j}{2m}\Big)\delta(c_i,c_j).
+\]
+
+这回答「稠密子图」。共单图的稠密块 = 谁共享用户，**不是**谁的 \(P(X)\) / \(P(Y\mid X)\) 在走。
+
+Bundled 图把多指标捆进边：
+
+\[
+v_i=\big(\mathrm{MMD}_i,\;\|\Delta\mu_X\|_i,\;|\Delta\mu_Y|_i,\;\mathrm{PO}_i\big)
+\quad\text{（相对 }D_{\mathrm{ref}}\text{，节点 = 商户的订单袋）}
+\]
+
+\[
+w_{ij}=\mathrm{ReLU}\big(\cos(\tilde v_i,\tilde v_j)\big)\cdot\mathbf{1}[\phi_i\ge\tau\text{ 或 }\phi_j\ge\tau],
+\quad \phi_i=\mathbf{1}^\top \tilde v_i.
+\]
+
+安静的商户孤立。Louvain 在这张图上切 = 把**同方向 loud** 的点收成一块。然后两层归因仍在订单粒上对社区打三支。
+
+Y 进 \(\Delta\mu_Y\) / PO 是监控 outcome，**不进**节点特征、不进 \(Z\)。这不是泄漏进服务模型；用 Y 去找「哪一块转化在 hop」就是 localization 本身。不要用 GraphRAG 合成图来代替这个目标。
+
+**Multi-bundled 三层：**
+
+| 层 | 对象 | 捆 |
+|---|---|---|
+| 节点 | 每个商户的订单袋 vs \(D_{\mathrm{ref}}\) | \(v_i\) |
+| 边 | 同方向亲和 \(w_{ij}\) | \(\cos(\tilde v_i,\tilde v_j)\) |
+| 社区 | 社区内订单并起来，再打三支 + \(\pi\) vs other | 层 1 归因 |
+
+求解器用 networkx Louvain，是因为它现成、无 torch、和冻层看板一样不引入可训练 GNN（可训练 GNN 会把 encoder drift 和 graph drift 糊在一起）。目标换了，求解器没换。
 
 ---
 
@@ -68,7 +117,7 @@ Z = \big[\;X^{\mathrm{order}}_{\mathrm{sel}}\;\big|\;X^{\mathrm{merchant}}_{\mat
 | `localize` | **当前窗** X | **当前窗** 实体 X（不含 Y） | 定位「现在谁在走」 |
 | `serve` | 当前窗 X | **冻结的 \(D_{\mathrm{ref}}\) 画像** | 可进服务 / clever covariate；新商户用 ref 全局均值 |
 
-评估只在 **同一个 \(Z\)** 上比。子集键是图上的割（`region` = south/north，来自 merchant），**不是** Y，也不是 \(Y\) 的残差分箱。
+评估只在 **同一个 \(Z\)** 上比。默认子集键是 **bundled Louvain 社区**（变动 subset 的代理）。`region` 是种下的对照，不是切图目标。`structural` 是共单模块度，用来说明「切错目标会切不出 concept」。
 
 两个对照，回答两个不同的问题：
 
@@ -116,10 +165,10 @@ CMean 份额用 \(\tfrac12|\Delta\mu_Y|+\tfrac12\|\Delta\mu_X\|\)（先各自非
 
 评估（玩具里可回收）按 **订单粒** 写死：
 
-1. **特征回收**：FSDS 集合含种下的列（covariate → `amount`,`channel`,`merchant_gmv`；concept → `amount` 走 CMean_Y），且 **不含 Y**。
-2. **子集回收**：`loud_subset = south`；\(\pi^{\mathrm{MMD}}_{\mathrm{south}}>\pi^{\mathrm{MMD}}_{\mathrm{north}}\)（covariate）或 \(|\Delta\mu_Y|\) 南区更大（concept）。
-3. **构成 vs 强度**：`share_of_batch` 接近 ½ 而 gap>0 → 不是因为南区单更多，是南区内部在走。
-4. **指纹**：covariate 的 mix 偏 MMD；concept 的 mix 偏 PO（PO 够分、n 够时）。对不上也不强行拆。
+1. **特征回收**：FSDS 集合含种下的列，且 **不含 Y**。
+2. **社区回收**：bundled Louvain 的 loud 社区 `south_frac` 高（covariate 应接近 1）。结构 Louvain 对 concept **不要求**回收。
+3. **构成 vs 强度**：社区可以碎成几块；看 loud 那一块的 \(\pi\) 和 gap vs other，不要求全部南区商户在同一社区。
+4. **指纹**：社区上的 mix 偏 MMD / PO / CMean。
 
 ---
 
@@ -160,8 +209,9 @@ HH（划分）选的是图上的 merchant/region，**不是 Y**。FSDS 的 CMean
 
 代码：
 
+- `Python/src/order_graph_nx.py` — networkx 图、结构 Louvain、bundled-shift Louvain、冻住 SAGE-mean
 - `Python/src/graph_fsds_localize.py` — 维度定位、FSDS、unify、subset vs other、肖像
-- `Python/src/stream_dgps.py` — `make_order_graph_stream`
+- `Python/src/stream_dgps.py` — `make_order_graph_stream`（接着用这批合成订单）
 - `scripts/run_graph_fsds_localize.py`
 - `tests/test_graph_fsds_localize.py`
 

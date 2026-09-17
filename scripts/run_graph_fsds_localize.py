@@ -19,10 +19,12 @@ from stream_dgps import make_order_graph_stream  # noqa: E402
 
 OUT = ROOT / "results" / "graph_fsds_localize"
 KINDS = ("covariate_south", "concept_south", "both")
-N_REF = 360
-N_NEW = 100
+N_REF = 480
+N_NEW = 160
 N_BATCHES = 3
 ONSET = 1
+N_MERCHANTS = 16
+N_USERS = 48
 
 
 def _fmt(x, n=3):
@@ -75,6 +77,8 @@ def run_kind(kind: str, seed: int = 2026) -> dict:
         n_new=N_NEW,
         n_batches=N_BATCHES,
         onset_batch=ONSET,
+        n_merchants=N_MERCHANTS,
+        n_users=N_USERS,
         kind=kind,
         seed=seed,
     )
@@ -86,9 +90,10 @@ def run_kind(kind: str, seed: int = 2026) -> dict:
             t=t,
             grain="order",
             mode="localize",
+            subset_by="community",
             top_k=4,
             seed=seed,
-            min_n=20,
+            min_n=16,
             with_logo=use_logo,
             with_po=True,
         )
@@ -105,68 +110,108 @@ def write_markdown(results: dict, dest: Path) -> None:
     lines = [
         "# Graph localization → FSDS unify → two-layer subset (order grain)",
         "",
-        "Shares are localization proxies, not a unique decomposition. "
-        "T is the batch label. Y is never a feature and never the subset key.",
+        "Package: **networkx** `louvain_communities`. Not GraphRAG, not PyG.",
+        "Default cut = **bundled-shift** Louvain (changing-subset objective). "
+        "Structural Louvain is reported only as a contrast — modularity of co-order/kNN is not the shift object.",
+        "Shares are localization proxies, not a unique decomposition. Y is never a feature.",
         "",
-        f"n_ref={N_REF}, n_new={N_NEW}, batches={N_BATCHES}, onset={ONSET}. "
-        "Planted subset is always **south**.",
+        f"n_ref={N_REF}, n_new={N_NEW}, merchants={N_MERCHANTS}, batches={N_BATCHES}, onset={ONSET}. "
+        "Planted region is **south** (second half of merchant ids).",
         "",
-        "## Per-batch order-grain portraits (MMD + PO-risk + Conditional Mean)",
+        "## Graph cuts (networkx Louvain, two objectives)",
         "",
     ]
-    header = [
+    gheader = [
         "kind",
         "t",
         "onset",
+        "package",
+        "bundled loud",
+        "bundled south_frac",
+        "layer2 loud",
+        "bundled n_comm",
+        "bundled n_edges",
+        "struct n_comm",
         "FSDS selected",
-        "loud subset",
-        "south π_MMD",
-        "south π_PO",
-        "south π_CMean",
-        "south mix",
-        "south MMD",
-        "south PO",
-        "south ΔE[Y]",
-        "south ‖ΔE[X]‖",
-        "gap MMD vs other",
         "fingerprint",
-        "LOGO π_MMD o/m/u",
     ]
-    lines.append(_md_row(header))
-    lines.append(_md_row(["---"] * len(header)))
+    lines.append(_md_row(gheader))
+    lines.append(_md_row(["---"] * len(gheader)))
     for kind in KINDS:
         for rec in results[kind]["rows"]:
-            pm = portrait_map(rec["portraits"])
-            s = pm.get("south") or {}
-            logo = rec.get("logo_full") or {}
-            pi = logo.get("pi_mmd") or {}
-            logo_trip = "/".join(_fmt(pi.get(g, 0)) for g in ("order", "merchant", "user"))
-            mix = "/".join(
-                _fmt(s.get(k))
-                for k in ("mix_mmd", "mix_po", "mix_cmean")
-            )
+            g = rec.get("graph") or {}
+            b = g.get("bundled") or {}
+            s = g.get("structural") or {}
+            layer2 = rec.get("loud_subset")
+            fp = ""
+            for p in rec.get("portraits") or []:
+                if str(p.get("subset")) == str(layer2):
+                    fp = p.get("fingerprint") or ""
+                    break
             lines.append(
                 _md_row(
                     [
                         kind,
                         rec["t"],
                         "yes" if rec["onset"] else "",
+                        g.get("package") or "",
+                        b.get("loud_community") or "",
+                        _fmt(b.get("loud_south_frac")),
+                        layer2 or "",
+                        b.get("n_communities"),
+                        b.get("n_edges"),
+                        s.get("n_communities"),
                         ",".join(rec["fsds"]["selected_names"]),
-                        rec["loud_subset"],
-                        _fmt(s.get("pi_mmd")),
-                        _fmt(s.get("pi_po")),
-                        _fmt(s.get("pi_cmean")),
-                        mix,
-                        _fmt(s.get("mmd")),
-                        _fmt(s.get("po")),
-                        _fmt(s.get("cmean_y")),
-                        _fmt(s.get("cmean_x")),
-                        _fmt((s.get("gap_vs_other") or {}).get("mmd")),
-                        s.get("fingerprint") or "",
-                        logo_trip,
+                        fp,
                     ]
                 )
             )
+    lines += [
+        "",
+        "## Community portraits (bundled cut · MMD + PO + CMean)",
+        "",
+    ]
+    header = [
+        "kind",
+        "t",
+        "community",
+        "n",
+        "south_frac",
+        "π_MMD",
+        "π_PO",
+        "π_CMean",
+        "MMD",
+        "PO",
+        "ΔE[Y]",
+        "‖ΔE[X]‖",
+        "fingerprint",
+    ]
+    lines.append(_md_row(header))
+    lines.append(_md_row(["---"] * len(header)))
+    for kind in KINDS:
+        for rec in results[kind]["rows"]:
+            if not rec.get("onset"):
+                continue
+            for p in rec.get("portraits") or []:
+                lines.append(
+                    _md_row(
+                        [
+                            kind,
+                            rec["t"],
+                            p.get("subset"),
+                            p.get("n"),
+                            _fmt(p.get("south_frac")),
+                            _fmt(p.get("pi_mmd")),
+                            _fmt(p.get("pi_po")),
+                            _fmt(p.get("pi_cmean")),
+                            _fmt(p.get("mmd")),
+                            _fmt(p.get("po")),
+                            _fmt(p.get("cmean_y")),
+                            _fmt(p.get("cmean_x")),
+                            p.get("fingerprint") or "",
+                        ]
+                    )
+                )
     lines += [
         "",
         "## FSDS ranking (last batch, top of each grain)",
@@ -201,26 +246,35 @@ def plot_portraits(results: dict, dest: Path) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.4), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.6), sharey=True)
     metrics = [("pi_mmd", "π_MMD"), ("pi_po", "π_PO"), ("pi_cmean", "π_CMean")]
-    colors = {"south": "#c0392b", "north": "#2980b9"}
     for ax, kind in zip(axes, KINDS):
         rec = results[kind]["rows"][-1]
-        pm = portrait_map(rec["portraits"])
+        portraits = rec.get("portraits") or []
+        if not portraits:
+            ax.set_title(kind)
+            continue
         x = np.arange(len(metrics))
-        w = 0.35
-        for i, lab in enumerate(("south", "north")):
-            p = pm.get(lab) or {}
+        w = 0.8 / max(len(portraits), 1)
+        for i, p in enumerate(portraits[:4]):
             vals = [float(p.get(k) or 0.0) for k, _ in metrics]
-            ax.bar(x + (i - 0.5) * w, vals, w, label=lab, color=colors[lab])
+            frac = float(p.get("south_frac") or 0.0)
+            color = (0.75, 0.18, 0.15, 0.35 + 0.65 * frac)
+            ax.bar(
+                x + (i - 0.5 * (len(portraits[:4]) - 1)) * w,
+                vals,
+                w * 0.9,
+                label=f"{p['subset']} s={frac:.2f}",
+                color=color,
+            )
         ax.set_xticks(x)
         ax.set_xticklabels([t for _, t in metrics])
         ax.set_title(kind)
         ax.set_ylim(0, 1.05)
         ax.grid(axis="y", alpha=0.3)
-    axes[0].set_ylabel("subset share")
-    axes[0].legend(frameon=False, fontsize=8)
-    fig.suptitle("Order grain · last batch · subset shares (localization, not Shapley)")
+        ax.legend(frameon=False, fontsize=7)
+    axes[0].set_ylabel("community share")
+    fig.suptitle("Bundled Louvain communities · last batch · redder = higher south fraction")
     fig.tight_layout()
     fig.savefig(dest, dpi=140)
     plt.close(fig)
@@ -244,6 +298,7 @@ def main() -> int:
                     "portraits": rec["portraits"],
                     "logo_full": rec.get("logo_full"),
                     "logo_subset": rec.get("logo_subset"),
+                    "graph": rec.get("graph"),
                     "leakage": rec["leakage"],
                     "fsds_rank": {
                         g: slim_rank(rank, k=4)

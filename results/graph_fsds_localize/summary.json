@@ -11,11 +11,11 @@
       "planted_merchant_feats": [
         "merchant_gmv"
       ],
-      "n_ref": 360,
-      "n_new": 100,
+      "n_ref": 480,
+      "n_new": 160,
       "n_batches": 3,
-      "n_merchants": 8,
-      "n_users": 40,
+      "n_merchants": 16,
+      "n_users": 48,
       "title": "order-graph covariate_south (south after batch 1)",
       "leakage": "Y is outcome only; subset key is region, not Y"
     },
@@ -24,146 +24,188 @@
         "t": 0,
         "onset": false,
         "selected": [
-          "hour",
+          "amount",
           "channel"
         ],
-        "loud_subset": "south",
+        "loud_subset": null,
         "portraits": [
           {
-            "subset": "south",
-            "n": 50,
-            "share_of_batch": 0.5,
-            "mmd": -0.004054544253125347,
-            "po": 6.40599124848031e-05,
-            "cmean_x": 0.2585746150451069,
-            "cmean_y": -0.02877192982456145,
+            "subset": "C0",
+            "n": 145,
+            "share_of_batch": 0.90625,
+            "mmd": -0.0018564216993868232,
+            "po": 0.00019649490559004397,
+            "cmean_x": 0.12434807958120139,
+            "cmean_y": -0.002245388933440229,
             "pi_mmd": 0.0,
             "pi_po": 0.0,
-            "pi_cmean": 0.7419712371724148,
+            "pi_cmean": 0.0,
             "mix_mmd": 0.0,
             "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.7419712371724148,
+            "mix_cmean": 0.0,
+            "contribution": 0.0,
             "gap_vs_other": {
-              "mmd": -0.008042197209160551,
-              "po": -2.110217324485344e-05,
-              "cmean_x": 0.10775380900441878,
-              "cmean_y": -0.03999999999999998
+              "mmd": null,
+              "po": null,
+              "cmean_x": null,
+              "cmean_y": null
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
-          },
-          {
-            "subset": "north",
-            "n": 50,
-            "share_of_batch": 0.5,
-            "mmd": 0.0052447269041675515,
-            "po": 5.986168423877555e-05,
-            "cmean_x": 0.08992220274329059,
-            "cmean_y": -0.04677248677248674,
-            "pi_mmd": 0.0,
-            "pi_po": 0.0,
-            "pi_cmean": 0.2580287628275852,
-            "mix_mmd": 0.0,
-            "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.2580287628275852,
-            "gap_vs_other": {
-              "mmd": 0.008042197209160551,
-              "po": 2.110217324485344e-05,
-              "cmean_x": -0.10775380900441878,
-              "cmean_y": 0.03999999999999998
-            },
-            "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.46153846153846156
           }
         ],
         "logo_full": null,
         "logo_subset": null,
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 1,
+            "n_nodes": 13,
+            "n_edges": 77,
+            "south_frac": {
+              "C0": 0.46153846153846156
+            },
+            "loud_community": "C0",
+            "loud_south_frac": 0.46153846153846156,
+            "merchant_cut": {
+              "0": "C0",
+              "1": "C0",
+              "2": "C0",
+              "3": "C0",
+              "5": "C0",
+              "6": "C0",
+              "7": "C0",
+              "8": "C0",
+              "9": "C0",
+              "11": "C0",
+              "12": "C0",
+              "14": "C0",
+              "15": "C0"
+            }
+          },
+          "structural": {
+            "n_communities": 4,
+            "n_nodes": 61,
+            "n_edges": 189,
+            "south_frac": {
+              "C0": 0.4,
+              "C1": 0.4,
+              "C2": 0.6666666666666666,
+              "C3": 0.6666666666666666
+            },
+            "merchant_cut": {
+              "4": "C0",
+              "10": "C0",
+              "0": "C0",
+              "13": "C0",
+              "3": "C0",
+              "2": "C1",
+              "8": "C1",
+              "14": "C1",
+              "6": "C1",
+              "1": "C1",
+              "15": "C2",
+              "5": "C2",
+              "12": "C2",
+              "7": "C3",
+              "9": "C3",
+              "11": "C3"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
-              "feature": "hour",
-              "score": 1.3845101258894355,
-              "mmd": -0.0006575152924515049,
-              "cmean_x": 0.09351756404194571,
-              "cmean_y": 0.13845101258894355,
+              "feature": "amount",
+              "score": 0.5619432723863116,
+              "mmd": -0.003195380046116747,
+              "cmean_x": 0.10416139922376927,
+              "cmean_y": 0.05619432723863116,
               "loud": false
             },
             {
               "feature": "channel",
-              "score": 0.6516205645215342,
-              "mmd": 0.009774308467823012,
-              "cmean_x": 0.1260315133822457,
-              "cmean_y": 0.04836745617556537,
-              "loud": false
-            },
-            {
-              "feature": "amount",
-              "score": 0.5929487179487181,
-              "mmd": 0.0004158490418614269,
-              "cmean_x": 0.12813502839620125,
-              "cmean_y": 0.059294871794871806,
+              "score": 0.37964801965537354,
+              "mmd": 0.00011486758414713805,
+              "cmean_x": 0.09491200491384338,
+              "cmean_y": 0.022527958010233662,
               "loud": false
             },
             {
               "feature": "n_items",
-              "score": 0.5606060606060603,
-              "mmd": -0.005541868730314592,
-              "cmean_x": 0.07582673789996415,
-              "cmean_y": 0.05606060606060603,
+              "score": 0.11514328525084802,
+              "mmd": -0.0031556410075793684,
+              "cmean_x": 0.028785821312712005,
+              "cmean_y": 0.008122263914946859,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 0.06093701773576601,
+              "mmd": -0.0020878708243746713,
+              "cmean_x": 0.015234254433941502,
+              "cmean_y": 0.001708783184686813,
               "loud": false
             }
           ],
           "merchant": [
             {
+              "feature": "merchant_cat",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07359820264332961,
+              "cmean_x": 1.1102230246251565e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
               "feature": "n_skus",
-              "score": 1.1298284871439665e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 4.440892098500626e-16,
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.07187381284819605,
+              "cmean_x": 2.7755575615628914e-17,
               "cmean_y": 0.0,
               "loud": false
             },
             {
               "feature": "merchant_gmv",
-              "score": 6.346905537141797e-16,
-              "mmd": -0.14527242791897632,
-              "cmean_x": 2.220446049250313e-16,
-              "cmean_y": 0.0,
-              "loud": false
-            },
-            {
-              "feature": "merchant_cat",
-              "score": 0.0,
-              "mmd": -0.15198587233719174,
-              "cmean_x": 0.0,
+              "score": 6.184930350201836e-17,
+              "mmd": -0.07152416510467985,
+              "cmean_x": 5.551115123125783e-17,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_hist_freq",
-              "score": 0.908724930464061,
-              "mmd": 0.00012019676649088762,
-              "cmean_x": 0.002913813576015195,
-              "cmean_y": 0.0908724930464061,
+              "feature": "user_tenure",
+              "score": 0.680066993285734,
+              "mmd": -0.0023258917394761713,
+              "cmean_x": 0.028522684370604345,
+              "cmean_y": 0.0680066993285734,
               "loud": false
             },
             {
-              "feature": "user_tenure",
-              "score": 0.4925030575639231,
-              "mmd": -0.000665856843227286,
-              "cmean_x": 0.12312576439098077,
-              "cmean_y": 0.018142632547089976,
+              "feature": "user_hist_freq",
+              "score": 0.39991376052859184,
+              "mmd": -0.0010287133548747551,
+              "cmean_x": 0.07993576861784182,
+              "cmean_y": 0.039991376052859184,
               "loud": false
             }
           ]
@@ -173,146 +215,192 @@
         "t": 1,
         "onset": true,
         "selected": [
-          "amount",
-          "hour"
+          "channel",
+          "amount"
         ],
-        "loud_subset": "south",
+        "loud_subset": "C0",
         "portraits": [
           {
-            "subset": "south",
-            "n": 47,
-            "share_of_batch": 0.47,
-            "mmd": 0.022614777011037868,
-            "po": 0.00010930184125519437,
-            "cmean_x": 0.5750165382938744,
-            "cmean_y": 0.1720791340052258,
+            "subset": "C0",
+            "n": 108,
+            "share_of_batch": 0.675,
+            "mmd": 0.029479956368955618,
+            "po": 6.173608689040902e-05,
+            "cmean_x": 0.5384324568229508,
+            "cmean_y": 0.01879174256223437,
             "pi_mmd": 1.0,
             "pi_po": 0.0,
-            "pi_cmean": 0.8161838526132629,
-            "mix_mmd": 0.5506050494618837,
+            "pi_cmean": 1.0,
+            "mix_mmd": 0.5,
             "mix_po": 0.0,
-            "mix_cmean": 0.4493949505381164,
-            "contribution": 1.8161838526132628,
+            "mix_cmean": 0.5,
+            "contribution": 2.0,
             "gap_vs_other": {
-              "mmd": 0.025661337848102428,
-              "po": 3.9911886518767756e-05,
-              "cmean_x": 0.3332400101066791,
-              "cmean_y": 0.17141710156563628
+              "mmd": 0.042840953279451366,
+              "po": 3.0406185735212678e-05,
+              "cmean_x": 0.3422245472557812,
+              "cmean_y": 0.01050569800569795
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
-          },
-          {
-            "subset": "north",
-            "n": 53,
-            "share_of_batch": 0.53,
-            "mmd": -0.0027132937325129447,
-            "po": 5.1092583736169405e-05,
-            "cmean_x": 0.1929673145842199,
-            "cmean_y": 0.022661475491664196,
-            "pi_mmd": 0.0,
-            "pi_po": 0.0,
-            "pi_cmean": 0.18381614738673707,
-            "mix_mmd": 0.0,
-            "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.18381614738673707,
-            "gap_vs_other": {
-              "mmd": -0.025661337848102428,
-              "po": -3.9911886518767756e-05,
-              "cmean_x": -0.3332400101066791,
-              "cmean_y": -0.17141710156563628
-            },
-            "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.6
           }
         ],
         "logo_full": null,
         "logo_subset": null,
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 5,
+            "n_nodes": 14,
+            "n_edges": 45,
+            "south_frac": {
+              "C0": 0.6,
+              "C1": 0.0,
+              "C2": 0.0,
+              "C3": 1.0,
+              "C4": 1.0
+            },
+            "loud_community": "C0",
+            "loud_south_frac": 0.6,
+            "merchant_cut": {
+              "2": "C0",
+              "4": "C0",
+              "6": "C0",
+              "7": "C0",
+              "9": "C0",
+              "10": "C0",
+              "11": "C0",
+              "13": "C0",
+              "14": "C0",
+              "15": "C0",
+              "3": "C1",
+              "5": "C2",
+              "8": "C3",
+              "12": "C4"
+            }
+          },
+          "structural": {
+            "n_communities": 3,
+            "n_nodes": 64,
+            "n_edges": 189,
+            "south_frac": {
+              "C0": 0.16666666666666666,
+              "C1": 0.6666666666666666,
+              "C2": 0.75
+            },
+            "merchant_cut": {
+              "13": "C0",
+              "4": "C0",
+              "0": "C0",
+              "2": "C0",
+              "6": "C0",
+              "1": "C0",
+              "15": "C1",
+              "5": "C1",
+              "12": "C1",
+              "8": "C1",
+              "14": "C1",
+              "3": "C1",
+              "7": "C2",
+              "9": "C2",
+              "10": "C2",
+              "11": "C2"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
-              "feature": "amount",
-              "score": 1.4580736732662605,
-              "mmd": 0.01609847007225762,
-              "cmean_x": 0.3645184183165651,
-              "cmean_y": 0.07881049298959752,
-              "loud": false
-            },
-            {
-              "feature": "hour",
-              "score": 1.061965811965812,
-              "mmd": -0.00453126381749025,
-              "cmean_x": 0.06354118659072018,
-              "cmean_y": 0.10619658119658121,
-              "loud": false
-            },
-            {
               "feature": "channel",
-              "score": 1.0376777049690176,
-              "mmd": 0.003805529026511323,
-              "cmean_x": 0.2594194262422544,
-              "cmean_y": 0.01795491143317235,
+              "score": 1.0642765588579133,
+              "mmd": 0.006658420740835114,
+              "cmean_x": 0.2660691397144783,
+              "cmean_y": 0.07780653185684477,
+              "loud": false
+            },
+            {
+              "feature": "amount",
+              "score": 1.0001527453301886,
+              "mmd": 0.008788781646409505,
+              "cmean_x": 0.25003818633254715,
+              "cmean_y": 0.08387254901960789,
               "loud": false
             },
             {
               "feature": "n_items",
-              "score": 0.4865279445111387,
-              "mmd": -0.003029956964601177,
-              "cmean_x": 0.0452991634678875,
-              "cmean_y": 0.04865279445111387,
+              "score": 0.7036429018136336,
+              "mmd": -0.004167888734993297,
+              "cmean_x": 0.012652176971377074,
+              "cmean_y": 0.07036429018136336,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 0.21984253837632534,
+              "mmd": -0.00020321460653216494,
+              "cmean_x": 0.04698578527674492,
+              "cmean_y": 0.026171730759086353,
               "loud": false
             }
           ],
           "merchant": [
             {
               "feature": "merchant_gmv",
-              "score": 0.6635902019582495,
-              "mmd": -0.1274448268815167,
-              "cmean_x": 0.23215506101938282,
-              "cmean_y": 0.0,
-              "loud": false
-            },
-            {
-              "feature": "n_skus",
-              "score": 1.2710570480369624e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 4.996003610813204e-16,
+              "score": 0.24716801149018827,
+              "mmd": -0.05140137261176314,
+              "cmean_x": 0.22183889047211927,
               "cmean_y": 0.0,
               "loud": false
             },
             {
               "feature": "merchant_cat",
-              "score": 1.1102230246251565e-16,
-              "mmd": -0.15198587233719174,
-              "cmean_x": 2.7755575615628914e-17,
+              "score": 4.440892098500626e-16,
+              "mmd": -0.0735982026433295,
+              "cmean_x": 1.1102230246251565e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "n_skus",
+              "score": 2.220446049250313e-16,
+              "mmd": -0.07187381284819605,
+              "cmean_x": 5.551115123125783e-17,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_tenure",
-              "score": 0.622746810940968,
-              "mmd": -0.0017594655620236654,
-              "cmean_x": 0.10408848943287637,
-              "cmean_y": 0.07786195286195291,
+              "feature": "user_hist_freq",
+              "score": 0.43376422291438843,
+              "mmd": -0.003627314634241041,
+              "cmean_x": 0.04072916173383204,
+              "cmean_y": 0.04337642229143884,
               "loud": false
             },
             {
-              "feature": "user_hist_freq",
-              "score": 0.6041586595112358,
-              "mmd": -0.0014062626020705515,
-              "cmean_x": 0.0066356540110234785,
-              "cmean_y": 0.06041586595112358,
+              "feature": "user_tenure",
+              "score": 0.3275042321450228,
+              "mmd": -0.0021413858479255587,
+              "cmean_x": 0.0818760580362557,
+              "cmean_y": 0.02783481159571005,
               "loud": false
             }
           ]
@@ -326,55 +414,57 @@
           "channel",
           "merchant_gmv"
         ],
-        "loud_subset": "south",
+        "loud_subset": "C0",
         "portraits": [
           {
-            "subset": "south",
-            "n": 48,
-            "share_of_batch": 0.48,
-            "mmd": 0.4210750479933823,
-            "po": 2.8485424503809192e-05,
-            "cmean_x": 2.45119911990899,
-            "cmean_y": 0.32456140350877194,
-            "pi_mmd": 1.0,
+            "subset": "C0",
+            "n": 81,
+            "share_of_batch": 0.50625,
+            "mmd": 0.375487633320629,
+            "po": 6.4702428009099e-05,
+            "cmean_x": 2.3384262345284226,
+            "cmean_y": 0.26080246913580246,
+            "pi_mmd": 0.7974415589590955,
             "pi_po": 0.0,
-            "pi_cmean": 0.788888480787191,
-            "mix_mmd": 0.5590063387070139,
+            "pi_cmean": 0.666573202529518,
+            "mix_mmd": 0.544695026263434,
             "mix_po": 0.0,
-            "mix_cmean": 0.4409936612929861,
-            "contribution": 1.788888480787191,
+            "mix_cmean": 0.45530497373656587,
+            "contribution": 1.4640147614886136,
             "gap_vs_other": {
-              "mmd": 0.45017525671739256,
-              "po": -0.00017747138563882294,
-              "cmean_x": 2.2398882251708905,
-              "cmean_y": 0.17948717948717952
+              "mmd": 0.39879381948692805,
+              "po": -7.671680391529122e-05,
+              "cmean_x": 2.2534861849192835,
+              "cmean_y": 0.2492576965150805
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.8571428571428571
           },
           {
-            "subset": "north",
-            "n": 52,
-            "share_of_batch": 0.52,
-            "mmd": -0.003472382064110824,
-            "po": 0.0006996403475246017,
-            "cmean_x": 0.22008831003473192,
-            "cmean_y": 0.1670736670736671,
-            "pi_mmd": 0.0,
+            "subset": "C?",
+            "n": 22,
+            "share_of_batch": 0.1375,
+            "mmd": 0.09537776001396836,
+            "po": null,
+            "cmean_x": 1.2847904098598943,
+            "cmean_y": 0.1184110007639419,
+            "pi_mmd": 0.20255844104090454,
             "pi_po": 0.0,
-            "pi_cmean": 0.21111151921280902,
-            "mix_mmd": 0.0,
+            "pi_cmean": 0.333426797470482,
+            "mix_mmd": 0.3779179471499593,
             "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.21111151921280902,
+            "mix_cmean": 0.6220820528500406,
+            "contribution": 0.5359852385113866,
             "gap_vs_other": {
-              "mmd": -0.45017525671739256,
-              "po": 0.00017747138563882294,
-              "cmean_x": -2.2398882251708905,
-              "cmean_y": -0.17948717948717952
+              "mmd": -0.0478597149148825,
+              "po": null,
+              "cmean_x": -0.020932608384623297,
+              "cmean_y": -0.08893280632411066
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.0
           }
         ],
         "logo_full": {
@@ -384,7 +474,7 @@
           },
           "pi_po": {
             "order": 0.0,
-            "merchant": 0.0
+            "merchant": 1.0
           },
           "pi_mmd": {
             "order": 0.0,
@@ -401,10 +491,10 @@
             },
             "merchant": {
               "pi_loss": 1.0,
-              "pi_po": 0.0,
+              "pi_po": 1.0,
               "pi_mmd": 1.0,
-              "mix_po": 0.0,
-              "mix_mmd": 1.0,
+              "mix_po": 0.5,
+              "mix_mmd": 0.5,
               "quiet": false
             }
           },
@@ -442,90 +532,158 @@
             }
           }
         },
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 6,
+            "n_nodes": 12,
+            "n_edges": 21,
+            "south_frac": {
+              "C0": 0.8571428571428571,
+              "C1": 0.0,
+              "C2": 0.0,
+              "C3": 0.0,
+              "C4": 0.0,
+              "C5": 0.0
+            },
+            "loud_community": "C0",
+            "loud_south_frac": 0.8571428571428571,
+            "merchant_cut": {
+              "5": "C0",
+              "9": "C0",
+              "10": "C0",
+              "11": "C0",
+              "12": "C0",
+              "13": "C0",
+              "14": "C0",
+              "0": "C1",
+              "1": "C2",
+              "3": "C3",
+              "6": "C4",
+              "7": "C5"
+            }
+          },
+          "structural": {
+            "n_communities": 3,
+            "n_nodes": 63,
+            "n_edges": 187,
+            "south_frac": {
+              "C0": 0.0,
+              "C1": 1.0,
+              "C2": 0.5
+            },
+            "merchant_cut": {
+              "7": "C0",
+              "4": "C0",
+              "5": "C0",
+              "0": "C0",
+              "3": "C0",
+              "6": "C0",
+              "1": "C0",
+              "9": "C1",
+              "15": "C1",
+              "10": "C1",
+              "13": "C1",
+              "14": "C1",
+              "11": "C1",
+              "12": "C1",
+              "2": "C2",
+              "8": "C2"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
               "feature": "amount",
-              "score": 5.347460319255119,
-              "mmd": 0.08021190478882678,
-              "cmean_x": 0.774358938840479,
-              "cmean_y": 0.1556372549019609,
+              "score": 6.740750921808733,
+              "mmd": 0.10111126382713098,
+              "cmean_x": 0.9352920642413445,
+              "cmean_y": 0.1666580367790122,
               "loud": true
             },
             {
               "feature": "channel",
-              "score": 3.131818515069984,
-              "mmd": 0.04697727772604976,
-              "cmean_x": 0.685295389802078,
-              "cmean_y": 0.13590686274509806,
+              "score": 2.3354142108734584,
+              "mmd": 0.03503121316310187,
+              "cmean_x": 0.5549611084018483,
+              "cmean_y": 0.16883848133848134,
               "loud": true
             },
             {
               "feature": "hour",
-              "score": 1.588888888888889,
-              "mmd": 0.0040542530343652405,
-              "cmean_x": 0.10631556589401535,
-              "cmean_y": 0.1588888888888889,
+              "score": 0.7087500000000001,
+              "mmd": 0.009788890357983249,
+              "cmean_x": 0.09083455557565068,
+              "cmean_y": 0.08437500000000003,
               "loud": false
             },
             {
               "feature": "n_items",
-              "score": 0.6134305722824401,
-              "mmd": -0.00286610579046942,
-              "cmean_x": 0.06353698086761965,
-              "cmean_y": 0.06134305722824401,
+              "score": 0.24669175473866808,
+              "mmd": -0.002996283088751328,
+              "cmean_x": 0.06167293868466702,
+              "cmean_y": 0.0015712945590993788,
               "loud": false
             }
           ],
           "merchant": [
             {
               "feature": "merchant_gmv",
-              "score": 2.0649123322537406,
-              "mmd": -0.04184832682769901,
-              "cmean_x": 0.7224034458004309,
+              "score": 3.7718773370183367,
+              "mmd": 0.05657816005527505,
+              "cmean_x": 0.7248283211591247,
               "cmean_y": 0.0,
               "loud": true
             },
             {
-              "feature": "n_skus",
-              "score": 1.4122856089299582e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 5.551115123125783e-16,
+              "feature": "merchant_cat",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07359820264332961,
+              "cmean_x": 1.1102230246251565e-16,
               "cmean_y": 0.0,
               "loud": false
             },
             {
-              "feature": "merchant_cat",
-              "score": 1.1102230246251565e-16,
-              "mmd": -0.15198587233719163,
-              "cmean_x": 2.7755575615628914e-17,
+              "feature": "n_skus",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07187381284819616,
+              "cmean_x": 1.1102230246251565e-16,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_hist_freq",
-              "score": 0.7993576870852781,
-              "mmd": -7.646221584445279e-06,
-              "cmean_x": 0.07118601211246713,
-              "cmean_y": 0.07993576870852781,
+              "feature": "user_tenure",
+              "score": 0.5844776408241176,
+              "mmd": -0.0014587631903658638,
+              "cmean_x": 0.07883154607293238,
+              "cmean_y": 0.05844776408241176,
               "loud": false
             },
             {
-              "feature": "user_tenure",
-              "score": 0.5814403698535723,
-              "mmd": 0.0019146983677765794,
-              "cmean_x": 0.14536009246339307,
-              "cmean_y": 0.04293875789378049,
+              "feature": "user_hist_freq",
+              "score": 0.1242058475388319,
+              "mmd": -0.0037805133354713583,
+              "cmean_x": 0.0019444764083068056,
+              "cmean_y": 0.01242058475388319,
               "loud": false
             }
           ]
@@ -542,11 +700,11 @@
         "amount"
       ],
       "planted_merchant_feats": [],
-      "n_ref": 360,
-      "n_new": 100,
+      "n_ref": 480,
+      "n_new": 160,
       "n_batches": 3,
-      "n_merchants": 8,
-      "n_users": 40,
+      "n_merchants": 16,
+      "n_users": 48,
       "title": "order-graph concept_south (south after batch 1)",
       "leakage": "Y is outcome only; subset key is region, not Y"
     },
@@ -555,146 +713,188 @@
         "t": 0,
         "onset": false,
         "selected": [
-          "hour",
+          "amount",
           "channel"
         ],
-        "loud_subset": "south",
+        "loud_subset": null,
         "portraits": [
           {
-            "subset": "south",
-            "n": 50,
-            "share_of_batch": 0.5,
-            "mmd": -0.004054544253125347,
-            "po": 6.40599124848031e-05,
-            "cmean_x": 0.2585746150451069,
-            "cmean_y": -0.02877192982456145,
+            "subset": "C0",
+            "n": 145,
+            "share_of_batch": 0.90625,
+            "mmd": -0.0018564216993868232,
+            "po": 0.00019649490559004397,
+            "cmean_x": 0.12434807958120139,
+            "cmean_y": -0.002245388933440229,
             "pi_mmd": 0.0,
             "pi_po": 0.0,
-            "pi_cmean": 0.7419712371724148,
+            "pi_cmean": 0.0,
             "mix_mmd": 0.0,
             "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.7419712371724148,
+            "mix_cmean": 0.0,
+            "contribution": 0.0,
             "gap_vs_other": {
-              "mmd": -0.008042197209160551,
-              "po": -2.110217324485344e-05,
-              "cmean_x": 0.10775380900441878,
-              "cmean_y": -0.03999999999999998
+              "mmd": null,
+              "po": null,
+              "cmean_x": null,
+              "cmean_y": null
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
-          },
-          {
-            "subset": "north",
-            "n": 50,
-            "share_of_batch": 0.5,
-            "mmd": 0.0052447269041675515,
-            "po": 5.986168423877555e-05,
-            "cmean_x": 0.08992220274329059,
-            "cmean_y": -0.04677248677248674,
-            "pi_mmd": 0.0,
-            "pi_po": 0.0,
-            "pi_cmean": 0.2580287628275852,
-            "mix_mmd": 0.0,
-            "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.2580287628275852,
-            "gap_vs_other": {
-              "mmd": 0.008042197209160551,
-              "po": 2.110217324485344e-05,
-              "cmean_x": -0.10775380900441878,
-              "cmean_y": 0.03999999999999998
-            },
-            "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.46153846153846156
           }
         ],
         "logo_full": null,
         "logo_subset": null,
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 1,
+            "n_nodes": 13,
+            "n_edges": 77,
+            "south_frac": {
+              "C0": 0.46153846153846156
+            },
+            "loud_community": "C0",
+            "loud_south_frac": 0.46153846153846156,
+            "merchant_cut": {
+              "0": "C0",
+              "1": "C0",
+              "2": "C0",
+              "3": "C0",
+              "5": "C0",
+              "6": "C0",
+              "7": "C0",
+              "8": "C0",
+              "9": "C0",
+              "11": "C0",
+              "12": "C0",
+              "14": "C0",
+              "15": "C0"
+            }
+          },
+          "structural": {
+            "n_communities": 4,
+            "n_nodes": 61,
+            "n_edges": 189,
+            "south_frac": {
+              "C0": 0.4,
+              "C1": 0.4,
+              "C2": 0.6666666666666666,
+              "C3": 0.6666666666666666
+            },
+            "merchant_cut": {
+              "4": "C0",
+              "10": "C0",
+              "0": "C0",
+              "13": "C0",
+              "3": "C0",
+              "2": "C1",
+              "8": "C1",
+              "14": "C1",
+              "6": "C1",
+              "1": "C1",
+              "15": "C2",
+              "5": "C2",
+              "12": "C2",
+              "7": "C3",
+              "9": "C3",
+              "11": "C3"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
-              "feature": "hour",
-              "score": 1.3845101258894355,
-              "mmd": -0.0006575152924515049,
-              "cmean_x": 0.09351756404194571,
-              "cmean_y": 0.13845101258894355,
+              "feature": "amount",
+              "score": 0.5619432723863116,
+              "mmd": -0.003195380046116747,
+              "cmean_x": 0.10416139922376927,
+              "cmean_y": 0.05619432723863116,
               "loud": false
             },
             {
               "feature": "channel",
-              "score": 0.6516205645215342,
-              "mmd": 0.009774308467823012,
-              "cmean_x": 0.1260315133822457,
-              "cmean_y": 0.04836745617556537,
-              "loud": false
-            },
-            {
-              "feature": "amount",
-              "score": 0.5929487179487181,
-              "mmd": 0.0004158490418614269,
-              "cmean_x": 0.12813502839620125,
-              "cmean_y": 0.059294871794871806,
+              "score": 0.37964801965537354,
+              "mmd": 0.00011486758414713805,
+              "cmean_x": 0.09491200491384338,
+              "cmean_y": 0.022527958010233662,
               "loud": false
             },
             {
               "feature": "n_items",
-              "score": 0.5606060606060603,
-              "mmd": -0.005541868730314592,
-              "cmean_x": 0.07582673789996415,
-              "cmean_y": 0.05606060606060603,
+              "score": 0.11514328525084802,
+              "mmd": -0.0031556410075793684,
+              "cmean_x": 0.028785821312712005,
+              "cmean_y": 0.008122263914946859,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 0.06093701773576601,
+              "mmd": -0.0020878708243746713,
+              "cmean_x": 0.015234254433941502,
+              "cmean_y": 0.001708783184686813,
               "loud": false
             }
           ],
           "merchant": [
             {
+              "feature": "merchant_cat",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07359820264332961,
+              "cmean_x": 1.1102230246251565e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
               "feature": "n_skus",
-              "score": 1.1298284871439665e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 4.440892098500626e-16,
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.07187381284819605,
+              "cmean_x": 2.7755575615628914e-17,
               "cmean_y": 0.0,
               "loud": false
             },
             {
               "feature": "merchant_gmv",
-              "score": 6.346905537141797e-16,
-              "mmd": -0.14527242791897632,
-              "cmean_x": 2.220446049250313e-16,
-              "cmean_y": 0.0,
-              "loud": false
-            },
-            {
-              "feature": "merchant_cat",
-              "score": 0.0,
-              "mmd": -0.15198587233719174,
-              "cmean_x": 0.0,
+              "score": 6.184930350201836e-17,
+              "mmd": -0.07152416510467985,
+              "cmean_x": 5.551115123125783e-17,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_hist_freq",
-              "score": 0.908724930464061,
-              "mmd": 0.00012019676649088762,
-              "cmean_x": 0.002913813576015195,
-              "cmean_y": 0.0908724930464061,
+              "feature": "user_tenure",
+              "score": 0.680066993285734,
+              "mmd": -0.0023258917394761713,
+              "cmean_x": 0.028522684370604345,
+              "cmean_y": 0.0680066993285734,
               "loud": false
             },
             {
-              "feature": "user_tenure",
-              "score": 0.4925030575639231,
-              "mmd": -0.000665856843227286,
-              "cmean_x": 0.12312576439098077,
-              "cmean_y": 0.018142632547089976,
+              "feature": "user_hist_freq",
+              "score": 0.39991376052859184,
+              "mmd": -0.0010287133548747551,
+              "cmean_x": 0.07993576861784182,
+              "cmean_y": 0.039991376052859184,
               "loud": false
             }
           ]
@@ -705,145 +905,194 @@
         "onset": true,
         "selected": [
           "amount",
-          "channel"
+          "n_items"
         ],
-        "loud_subset": "south",
+        "loud_subset": null,
         "portraits": [
           {
-            "subset": "south",
-            "n": 47,
-            "share_of_batch": 0.47,
-            "mmd": -0.0024695194744532856,
-            "po": 0.0007963296583961393,
-            "cmean_x": 0.3235555883288735,
-            "cmean_y": -0.0832400149309444,
+            "subset": "C0",
+            "n": 87,
+            "share_of_batch": 0.54375,
+            "mmd": 0.006017607082856924,
+            "po": 8.593650335127358e-05,
+            "cmean_x": 0.11228853007115075,
+            "cmean_y": 0.007254569436593139,
             "pi_mmd": 0.0,
             "pi_po": 0.0,
-            "pi_cmean": 0.6874556603481285,
+            "pi_cmean": 0.0,
             "mix_mmd": 0.0,
             "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.6874556603481285,
+            "mix_cmean": 0.0,
+            "contribution": 0.0,
             "gap_vs_other": {
-              "mmd": 0.0016554155494202805,
-              "po": 0.0002407154569261767,
-              "cmean_x": 0.08719485738439162,
-              "cmean_y": 0.0594785672866765
+              "mmd": -0.0006534051676166941,
+              "po": 8.863436091942251e-05,
+              "cmean_x": -0.10667331911121677,
+              "cmean_y": 0.028027082349236343
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
-          },
-          {
-            "subset": "north",
-            "n": 53,
-            "share_of_batch": 0.53,
-            "mmd": -0.003595718254055358,
-            "po": 0.00016276237825759408,
-            "cmean_x": 0.22587021780337005,
-            "cmean_y": 0.022661475491664196,
-            "pi_mmd": 0.0,
-            "pi_po": 0.0,
-            "pi_cmean": 0.3125443396518715,
-            "mix_mmd": 0.0,
-            "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.3125443396518715,
-            "gap_vs_other": {
-              "mmd": -0.0016554155494202805,
-              "po": -0.0002407154569261767,
-              "cmean_x": -0.08719485738439162,
-              "cmean_y": -0.0594785672866765
-            },
-            "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.5
           }
         ],
         "logo_full": null,
         "logo_subset": null,
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 7,
+            "n_nodes": 14,
+            "n_edges": 28,
+            "south_frac": {
+              "C0": 0.5,
+              "C1": 0.0,
+              "C2": 0.0,
+              "C3": 1.0,
+              "C4": 1.0,
+              "C5": 1.0,
+              "C6": 1.0
+            },
+            "loud_community": "C0",
+            "loud_south_frac": 0.5,
+            "merchant_cut": {
+              "2": "C0",
+              "4": "C0",
+              "6": "C0",
+              "7": "C0",
+              "8": "C0",
+              "10": "C0",
+              "11": "C0",
+              "13": "C0",
+              "3": "C1",
+              "5": "C2",
+              "9": "C3",
+              "12": "C4",
+              "14": "C5",
+              "15": "C6"
+            }
+          },
+          "structural": {
+            "n_communities": 4,
+            "n_nodes": 64,
+            "n_edges": 189,
+            "south_frac": {
+              "C0": 0.6666666666666666,
+              "C1": 0.2,
+              "C2": 0.6666666666666666,
+              "C3": 0.5
+            },
+            "merchant_cut": {
+              "15": "C0",
+              "5": "C0",
+              "8": "C0",
+              "14": "C0",
+              "3": "C0",
+              "12": "C0",
+              "13": "C1",
+              "4": "C1",
+              "0": "C1",
+              "2": "C1",
+              "1": "C1",
+              "7": "C2",
+              "10": "C2",
+              "11": "C2",
+              "9": "C3",
+              "6": "C3"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
               "feature": "amount",
-              "score": 1.455627705627706,
-              "mmd": -0.0041858955827105415,
-              "cmean_x": 0.07810770199855398,
-              "cmean_y": 0.14556277056277062,
-              "loud": false
-            },
-            {
-              "feature": "channel",
-              "score": 1.2333333333333334,
-              "mmd": -0.002412747085151268,
-              "cmean_x": 0.07327077021639329,
-              "cmean_y": 0.12333333333333335,
+              "score": 1.3889502536409764,
+              "mmd": 0.006229278694526497,
+              "cmean_x": 0.034951411476450964,
+              "cmean_y": 0.13889502536409765,
               "loud": false
             },
             {
               "feature": "n_items",
-              "score": 1.0660931039082293,
-              "mmd": -0.003029956964601177,
-              "cmean_x": 0.0452991634678875,
-              "cmean_y": 0.10660931039082294,
+              "score": 0.3315353345841149,
+              "mmd": -0.004167888734993297,
+              "cmean_x": 0.012652176971377074,
+              "cmean_y": 0.03315353345841149,
+              "loud": false
+            },
+            {
+              "feature": "channel",
+              "score": 0.26216019073358804,
+              "mmd": -0.002312677664200624,
+              "cmean_x": 0.06554004768339701,
+              "cmean_y": 0.0027925040881995877,
               "loud": false
             },
             {
               "feature": "hour",
-              "score": 0.9658119658119663,
-              "mmd": -0.00453126381749025,
-              "cmean_x": 0.06354118659072018,
-              "cmean_y": 0.09658119658119663,
+              "score": 0.18794314110697968,
+              "mmd": -0.00020321460653216494,
+              "cmean_x": 0.04698578527674492,
+              "cmean_y": 0.013233238381600454,
               "loud": false
             }
           ],
           "merchant": [
             {
+              "feature": "merchant_cat",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.0735982026433295,
+              "cmean_x": 1.1102230246251565e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
               "feature": "n_skus",
-              "score": 1.2710570480369624e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 4.996003610813204e-16,
+              "score": 2.220446049250313e-16,
+              "mmd": -0.07187381284819605,
+              "cmean_x": 5.551115123125783e-17,
               "cmean_y": 0.0,
               "loud": false
             },
             {
               "feature": "merchant_gmv",
-              "score": 6.346905537141797e-16,
-              "mmd": -0.14527242791897643,
-              "cmean_x": 2.220446049250313e-16,
-              "cmean_y": 0.0,
-              "loud": false
-            },
-            {
-              "feature": "merchant_cat",
-              "score": 1.1102230246251565e-16,
-              "mmd": -0.15198587233719174,
-              "cmean_x": 2.7755575615628914e-17,
+              "score": 6.184930350201836e-17,
+              "mmd": -0.07152416510467985,
+              "cmean_x": 5.551115123125783e-17,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_hist_freq",
-              "score": 0.9562995158537724,
-              "mmd": -0.0014062626020705515,
-              "cmean_x": 0.0066356540110234785,
-              "cmean_y": 0.09562995158537724,
+              "feature": "user_tenure",
+              "score": 0.6003260553999973,
+              "mmd": -0.0021413858479255587,
+              "cmean_x": 0.0818760580362557,
+              "cmean_y": 0.06003260553999973,
               "loud": false
             },
             {
-              "feature": "user_tenure",
-              "score": 0.7901786209800901,
-              "mmd": -0.0017594655620236654,
-              "cmean_x": 0.10408848943287637,
-              "cmean_y": 0.09879593031766942,
+              "feature": "user_hist_freq",
+              "score": 0.16291664693532815,
+              "mmd": -0.003627314634241041,
+              "cmean_x": 0.04072916173383204,
+              "cmean_y": 0.0044849091439030375,
               "loud": false
             }
           ]
@@ -853,145 +1102,240 @@
         "t": 2,
         "onset": true,
         "selected": [
-          "amount"
+          "amount",
+          "channel"
         ],
-        "loud_subset": "south",
+        "loud_subset": "C0",
         "portraits": [
           {
-            "subset": "south",
-            "n": 48,
-            "share_of_batch": 0.48,
-            "mmd": 0.01571965180151569,
-            "po": 0.00158244184410343,
-            "cmean_x": 0.27835123361658465,
-            "cmean_y": -0.25877192982456143,
+            "subset": "C0",
+            "n": 72,
+            "share_of_batch": 0.45,
+            "mmd": -0.0038593980234700176,
+            "po": 0.001680277148906231,
+            "cmean_x": 0.14897550295537954,
+            "cmean_y": -0.15868631062001226,
             "pi_mmd": 0.0,
-            "pi_po": 0.6654688127898682,
-            "pi_cmean": 0.6913650728222133,
+            "pi_po": 0.9511430991957818,
+            "pi_cmean": 0.3437368287527151,
             "mix_mmd": 0.0,
-            "mix_po": 0.49045710005220616,
-            "mix_cmean": 0.5095428999477939,
-            "contribution": 1.3568338856120814,
+            "mix_po": 0.7345415421665359,
+            "mix_cmean": 0.2654584578334641,
+            "contribution": 1.2948799279484968,
             "gap_vs_other": {
-              "mmd": 0.015095632602107556,
-              "po": 0.00028071934989702397,
-              "cmean_x": 0.19873155023932404,
-              "cmean_y": 0.09059829059829061
+              "mmd": -0.004858731650004944,
+              "po": 0.00038962559902977836,
+              "cmean_x": -0.024952808179470848,
+              "cmean_y": 0.08585858585858586
             },
             "fingerprint": "concept",
-            "read": "this subset's P(Y|X) hopped; E[Y|S] moved while selected X stayed closer"
+            "read": "this subset's P(Y|X) hopped; E[Y|S] moved while selected X stayed closer",
+            "south_frac": 0.6666666666666666
           },
           {
-            "subset": "north",
-            "n": 52,
-            "share_of_batch": 0.52,
-            "mmd": -0.0011363321173691876,
-            "po": 0.0007954935507489652,
-            "cmean_x": 0.08078196633557129,
-            "cmean_y": 0.1670736670736671,
-            "pi_mmd": 0.0,
-            "pi_po": 0.33453118721013175,
-            "pi_cmean": 0.3086349271777868,
-            "mix_mmd": 0.0,
-            "mix_po": 0.5201318597583375,
-            "mix_cmean": 0.47986814024166236,
-            "contribution": 0.6431661143879186,
+            "subset": "C1",
+            "n": 45,
+            "share_of_batch": 0.28125,
+            "mmd": 0.038770850792376965,
+            "po": 8.630997171415997e-05,
+            "cmean_x": 0.5921163731242959,
+            "cmean_y": 0.06984126984126987,
+            "pi_mmd": 0.7177007873856959,
+            "pi_po": 0.04885690080421824,
+            "pi_cmean": 0.4056014220600299,
+            "mix_mmd": 0.6122895612974059,
+            "mix_po": 0.041681116818518174,
+            "mix_cmean": 0.3460293218840759,
+            "contribution": 1.172159110249944,
             "gap_vs_other": {
-              "mmd": -0.015095632602107556,
-              "po": -0.00028071934989702397,
-              "cmean_x": -0.19873155023932404,
-              "cmean_y": -0.09059829059829061
+              "mmd": 0.02585058943339713,
+              "po": -0.0005982436263930275,
+              "cmean_x": 0.28663104550570434,
+              "cmean_y": -0.04251207729468598
             },
-            "fingerprint": "concept",
-            "read": "this subset's P(Y|X) hopped; E[Y|S] moved while selected X stayed closer"
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.25
+          },
+          {
+            "subset": "C?",
+            "n": 22,
+            "share_of_batch": 0.1375,
+            "mmd": 0.015250060810080734,
+            "po": null,
+            "cmean_x": 0.29413639970695893,
+            "cmean_y": -0.06340718105423993,
+            "pi_mmd": 0.28229921261430413,
+            "pi_po": 0.0,
+            "pi_cmean": 0.2506617491872551,
+            "mix_mmd": 0.5296808450285979,
+            "mix_po": 0.0,
+            "mix_cmean": 0.47031915497140225,
+            "contribution": 0.5329609618015592,
+            "gap_vs_other": {
+              "mmd": -0.0002513161797912389,
+              "po": null,
+              "cmean_x": 0.08421702122242958,
+              "cmean_y": 0.06060606060606061
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.0
           }
         ],
         "logo_full": null,
         "logo_subset": null,
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 4,
+            "n_nodes": 12,
+            "n_edges": 45,
+            "south_frac": {
+              "C0": 0.6666666666666666,
+              "C1": 0.25,
+              "C2": 0.0,
+              "C3": 1.0
+            },
+            "loud_community": "C1",
+            "loud_south_frac": 0.25,
+            "merchant_cut": {
+              "3": "C0",
+              "7": "C0",
+              "9": "C0",
+              "10": "C0",
+              "13": "C0",
+              "14": "C0",
+              "1": "C1",
+              "12": "C1",
+              "5": "C1",
+              "6": "C1",
+              "0": "C2",
+              "11": "C3"
+            }
+          },
+          "structural": {
+            "n_communities": 4,
+            "n_nodes": 63,
+            "n_edges": 191,
+            "south_frac": {
+              "C0": 0.25,
+              "C1": 0.25,
+              "C2": 0.75,
+              "C3": 0.75
+            },
+            "merchant_cut": {
+              "7": "C0",
+              "9": "C0",
+              "4": "C0",
+              "0": "C0",
+              "2": "C1",
+              "8": "C1",
+              "5": "C1",
+              "1": "C1",
+              "13": "C2",
+              "3": "C2",
+              "10": "C2",
+              "11": "C2",
+              "14": "C3",
+              "15": "C3",
+              "6": "C3",
+              "12": "C3"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
               "feature": "amount",
-              "score": 3.046536796536797,
-              "mmd": 0.006200246742020354,
-              "cmean_x": 0.0917499627799937,
-              "cmean_y": 0.30465367965367973,
-              "loud": true
+              "score": 1.7036429018136328,
+              "mmd": -0.003879449658967693,
+              "cmean_x": 0.05558410513892487,
+              "cmean_y": 0.1703642901813633,
+              "loud": false
             },
             {
               "feature": "channel",
-              "score": 0.7887729158303219,
-              "mmd": 0.005076273522195085,
-              "cmean_x": 0.12237997210635064,
-              "cmean_y": 0.0788772915830322,
+              "score": 0.9696115288220553,
+              "mmd": 0.0025492059271413625,
+              "cmean_x": 0.06403354841209252,
+              "cmean_y": 0.09696115288220553,
               "loud": false
             },
             {
               "feature": "hour",
-              "score": 0.4252622635760614,
-              "mmd": 0.0040542530343652405,
-              "cmean_x": 0.10631556589401535,
-              "cmean_y": 0.0411111111111111,
+              "score": 0.6525926905322166,
+              "mmd": 0.009788890357983249,
+              "cmean_x": 0.09083455557565068,
+              "cmean_y": 0.027083333333333348,
               "loud": false
             },
             {
               "feature": "n_items",
-              "score": 0.2541479234704786,
-              "mmd": -0.00286610579046942,
-              "cmean_x": 0.06353698086761965,
-              "cmean_y": 0.012522860074044295,
+              "score": 0.28775797373358336,
+              "mmd": -0.002996283088751328,
+              "cmean_x": 0.06167293868466702,
+              "cmean_y": 0.028775797373358336,
               "loud": false
             }
           ],
           "merchant": [
             {
+              "feature": "merchant_cat",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07359820264332961,
+              "cmean_x": 1.1102230246251565e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
               "feature": "n_skus",
-              "score": 1.4122856089299582e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 5.551115123125783e-16,
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07187381284819616,
+              "cmean_x": 1.1102230246251565e-16,
               "cmean_y": 0.0,
               "loud": false
             },
             {
               "feature": "merchant_gmv",
-              "score": 6.346905537141797e-16,
-              "mmd": -0.14527242791897643,
-              "cmean_x": 2.220446049250313e-16,
-              "cmean_y": 0.0,
-              "loud": false
-            },
-            {
-              "feature": "merchant_cat",
-              "score": 1.1102230246251565e-16,
-              "mmd": -0.15198587233719163,
-              "cmean_x": 2.7755575615628914e-17,
+              "score": 6.184930350201836e-17,
+              "mmd": -0.07152416510467985,
+              "cmean_x": 5.551115123125783e-17,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_hist_freq",
-              "score": 0.6009285841501816,
-              "mmd": -7.646221584445279e-06,
-              "cmean_x": 0.07118601211246713,
-              "cmean_y": 0.06009285841501816,
+              "feature": "user_tenure",
+              "score": 1.0033548165735573,
+              "mmd": -0.0014587631903658638,
+              "cmean_x": 0.07883154607293238,
+              "cmean_y": 0.10033548165735573,
               "loud": false
             },
             {
-              "feature": "user_tenure",
-              "score": 0.5814403698535723,
-              "mmd": 0.0019146983677765794,
-              "cmean_x": 0.14536009246339307,
-              "cmean_y": 0.029310831597188336,
+              "feature": "user_hist_freq",
+              "score": 0.3542181674705486,
+              "mmd": -0.0037805133354713583,
+              "cmean_x": 0.0019444764083068056,
+              "cmean_y": 0.03542181674705486,
               "loud": false
             }
           ]
@@ -1011,11 +1355,11 @@
       "planted_merchant_feats": [
         "merchant_gmv"
       ],
-      "n_ref": 360,
-      "n_new": 100,
+      "n_ref": 480,
+      "n_new": 160,
       "n_batches": 3,
-      "n_merchants": 8,
-      "n_users": 40,
+      "n_merchants": 16,
+      "n_users": 48,
       "title": "order-graph both (south after batch 1)",
       "leakage": "Y is outcome only; subset key is region, not Y"
     },
@@ -1024,146 +1368,188 @@
         "t": 0,
         "onset": false,
         "selected": [
-          "hour",
+          "amount",
           "channel"
         ],
-        "loud_subset": "south",
+        "loud_subset": null,
         "portraits": [
           {
-            "subset": "south",
-            "n": 50,
-            "share_of_batch": 0.5,
-            "mmd": -0.004054544253125347,
-            "po": 6.40599124848031e-05,
-            "cmean_x": 0.2585746150451069,
-            "cmean_y": -0.02877192982456145,
+            "subset": "C0",
+            "n": 145,
+            "share_of_batch": 0.90625,
+            "mmd": -0.0018564216993868232,
+            "po": 0.00019649490559004397,
+            "cmean_x": 0.12434807958120139,
+            "cmean_y": -0.002245388933440229,
             "pi_mmd": 0.0,
             "pi_po": 0.0,
-            "pi_cmean": 0.7419712371724148,
+            "pi_cmean": 0.0,
             "mix_mmd": 0.0,
             "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.7419712371724148,
+            "mix_cmean": 0.0,
+            "contribution": 0.0,
             "gap_vs_other": {
-              "mmd": -0.008042197209160551,
-              "po": -2.110217324485344e-05,
-              "cmean_x": 0.10775380900441878,
-              "cmean_y": -0.03999999999999998
+              "mmd": null,
+              "po": null,
+              "cmean_x": null,
+              "cmean_y": null
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
-          },
-          {
-            "subset": "north",
-            "n": 50,
-            "share_of_batch": 0.5,
-            "mmd": 0.0052447269041675515,
-            "po": 5.986168423877555e-05,
-            "cmean_x": 0.08992220274329059,
-            "cmean_y": -0.04677248677248674,
-            "pi_mmd": 0.0,
-            "pi_po": 0.0,
-            "pi_cmean": 0.2580287628275852,
-            "mix_mmd": 0.0,
-            "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.2580287628275852,
-            "gap_vs_other": {
-              "mmd": 0.008042197209160551,
-              "po": 2.110217324485344e-05,
-              "cmean_x": -0.10775380900441878,
-              "cmean_y": 0.03999999999999998
-            },
-            "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.46153846153846156
           }
         ],
         "logo_full": null,
         "logo_subset": null,
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 1,
+            "n_nodes": 13,
+            "n_edges": 77,
+            "south_frac": {
+              "C0": 0.46153846153846156
+            },
+            "loud_community": "C0",
+            "loud_south_frac": 0.46153846153846156,
+            "merchant_cut": {
+              "0": "C0",
+              "1": "C0",
+              "2": "C0",
+              "3": "C0",
+              "5": "C0",
+              "6": "C0",
+              "7": "C0",
+              "8": "C0",
+              "9": "C0",
+              "11": "C0",
+              "12": "C0",
+              "14": "C0",
+              "15": "C0"
+            }
+          },
+          "structural": {
+            "n_communities": 4,
+            "n_nodes": 61,
+            "n_edges": 189,
+            "south_frac": {
+              "C0": 0.4,
+              "C1": 0.4,
+              "C2": 0.6666666666666666,
+              "C3": 0.6666666666666666
+            },
+            "merchant_cut": {
+              "4": "C0",
+              "10": "C0",
+              "0": "C0",
+              "13": "C0",
+              "3": "C0",
+              "2": "C1",
+              "8": "C1",
+              "14": "C1",
+              "6": "C1",
+              "1": "C1",
+              "15": "C2",
+              "5": "C2",
+              "12": "C2",
+              "7": "C3",
+              "9": "C3",
+              "11": "C3"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
-              "feature": "hour",
-              "score": 1.3845101258894355,
-              "mmd": -0.0006575152924515049,
-              "cmean_x": 0.09351756404194571,
-              "cmean_y": 0.13845101258894355,
+              "feature": "amount",
+              "score": 0.5619432723863116,
+              "mmd": -0.003195380046116747,
+              "cmean_x": 0.10416139922376927,
+              "cmean_y": 0.05619432723863116,
               "loud": false
             },
             {
               "feature": "channel",
-              "score": 0.6516205645215342,
-              "mmd": 0.009774308467823012,
-              "cmean_x": 0.1260315133822457,
-              "cmean_y": 0.04836745617556537,
-              "loud": false
-            },
-            {
-              "feature": "amount",
-              "score": 0.5929487179487181,
-              "mmd": 0.0004158490418614269,
-              "cmean_x": 0.12813502839620125,
-              "cmean_y": 0.059294871794871806,
+              "score": 0.37964801965537354,
+              "mmd": 0.00011486758414713805,
+              "cmean_x": 0.09491200491384338,
+              "cmean_y": 0.022527958010233662,
               "loud": false
             },
             {
               "feature": "n_items",
-              "score": 0.5606060606060603,
-              "mmd": -0.005541868730314592,
-              "cmean_x": 0.07582673789996415,
-              "cmean_y": 0.05606060606060603,
+              "score": 0.11514328525084802,
+              "mmd": -0.0031556410075793684,
+              "cmean_x": 0.028785821312712005,
+              "cmean_y": 0.008122263914946859,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 0.06093701773576601,
+              "mmd": -0.0020878708243746713,
+              "cmean_x": 0.015234254433941502,
+              "cmean_y": 0.001708783184686813,
               "loud": false
             }
           ],
           "merchant": [
             {
+              "feature": "merchant_cat",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07359820264332961,
+              "cmean_x": 1.1102230246251565e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
               "feature": "n_skus",
-              "score": 1.1298284871439665e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 4.440892098500626e-16,
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.07187381284819605,
+              "cmean_x": 2.7755575615628914e-17,
               "cmean_y": 0.0,
               "loud": false
             },
             {
               "feature": "merchant_gmv",
-              "score": 6.346905537141797e-16,
-              "mmd": -0.14527242791897632,
-              "cmean_x": 2.220446049250313e-16,
-              "cmean_y": 0.0,
-              "loud": false
-            },
-            {
-              "feature": "merchant_cat",
-              "score": 0.0,
-              "mmd": -0.15198587233719174,
-              "cmean_x": 0.0,
+              "score": 6.184930350201836e-17,
+              "mmd": -0.07152416510467985,
+              "cmean_x": 5.551115123125783e-17,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_hist_freq",
-              "score": 0.908724930464061,
-              "mmd": 0.00012019676649088762,
-              "cmean_x": 0.002913813576015195,
-              "cmean_y": 0.0908724930464061,
+              "feature": "user_tenure",
+              "score": 0.680066993285734,
+              "mmd": -0.0023258917394761713,
+              "cmean_x": 0.028522684370604345,
+              "cmean_y": 0.0680066993285734,
               "loud": false
             },
             {
-              "feature": "user_tenure",
-              "score": 0.4925030575639231,
-              "mmd": -0.000665856843227286,
-              "cmean_x": 0.12312576439098077,
-              "cmean_y": 0.018142632547089976,
+              "feature": "user_hist_freq",
+              "score": 0.39991376052859184,
+              "mmd": -0.0010287133548747551,
+              "cmean_x": 0.07993576861784182,
+              "cmean_y": 0.039991376052859184,
               "loud": false
             }
           ]
@@ -1173,146 +1559,191 @@
         "t": 1,
         "onset": true,
         "selected": [
-          "n_items",
+          "channel",
           "amount"
         ],
-        "loud_subset": "south",
+        "loud_subset": "C0",
         "portraits": [
           {
-            "subset": "south",
-            "n": 47,
-            "share_of_batch": 0.47,
-            "mmd": 0.024743408614555262,
-            "po": 0.0011790857227122855,
-            "cmean_x": 0.5750599298760755,
-            "cmean_y": -0.0406868234415827,
+            "subset": "C0",
+            "n": 119,
+            "share_of_batch": 0.74375,
+            "mmd": 0.029429173345257964,
+            "po": 0.00015360606292007676,
+            "cmean_x": 0.5518219435250012,
+            "cmean_y": 0.04234784823020121,
             "pi_mmd": 1.0,
-            "pi_po": 0.9427781364675838,
-            "pi_cmean": 0.716083559290746,
-            "mix_mmd": 0.3761007959140167,
-            "mix_po": 0.3545796074957917,
-            "mix_cmean": 0.2693195965901915,
-            "contribution": 2.65886169575833,
+            "pi_po": 0.0,
+            "pi_cmean": 1.0,
+            "mix_mmd": 0.5,
+            "mix_po": 0.0,
+            "mix_cmean": 0.5,
+            "contribution": 2.0,
             "gap_vs_other": {
-              "mmd": 0.0265008137214211,
-              "po": 0.0004223318551167106,
-              "cmean_x": 0.31186175626211304,
-              "cmean_y": 0.01692537579731479
-            },
-            "fingerprint": "both",
-            "read": "P(X) and P(Y|X) both look loud on this subset \u2014 localization, not a split"
-          },
-          {
-            "subset": "north",
-            "n": 53,
-            "share_of_batch": 0.53,
-            "mmd": -0.00019519783443922023,
-            "po": 7.156453857835366e-05,
-            "cmean_x": 0.2280026770152919,
-            "cmean_y": 0.022661475491664196,
-            "pi_mmd": 0.0,
-            "pi_po": 0.057221863532416234,
-            "pi_cmean": 0.28391644070925404,
-            "mix_mmd": 0.0,
-            "mix_po": 0.1677380195097615,
-            "mix_cmean": 0.8322619804902386,
-            "contribution": 0.34113830424167024,
-            "gap_vs_other": {
-              "mmd": -0.0265008137214211,
-              "po": -0.0004223318551167106,
-              "cmean_x": -0.31186175626211304,
-              "cmean_y": -0.01692537579731479
+              "mmd": 0.03630480801133895,
+              "po": 0.00010589693138210656,
+              "cmean_x": 0.2625623441355536,
+              "cmean_y": 0.04039847646375622
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.6363636363636364
           }
         ],
         "logo_full": null,
         "logo_subset": null,
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 4,
+            "n_nodes": 14,
+            "n_edges": 55,
+            "south_frac": {
+              "C0": 0.6363636363636364,
+              "C1": 0.0,
+              "C2": 0.0,
+              "C3": 1.0
+            },
+            "loud_community": "C0",
+            "loud_south_frac": 0.6363636363636364,
+            "merchant_cut": {
+              "2": "C0",
+              "4": "C0",
+              "6": "C0",
+              "7": "C0",
+              "9": "C0",
+              "10": "C0",
+              "11": "C0",
+              "12": "C0",
+              "13": "C0",
+              "14": "C0",
+              "15": "C0",
+              "3": "C1",
+              "5": "C2",
+              "8": "C3"
+            }
+          },
+          "structural": {
+            "n_communities": 3,
+            "n_nodes": 64,
+            "n_edges": 189,
+            "south_frac": {
+              "C0": 0.16666666666666666,
+              "C1": 0.6666666666666666,
+              "C2": 0.75
+            },
+            "merchant_cut": {
+              "13": "C0",
+              "4": "C0",
+              "0": "C0",
+              "2": "C0",
+              "6": "C0",
+              "1": "C0",
+              "15": "C1",
+              "5": "C1",
+              "12": "C1",
+              "8": "C1",
+              "14": "C1",
+              "3": "C1",
+              "7": "C2",
+              "9": "C2",
+              "10": "C2",
+              "11": "C2"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
-              "feature": "n_items",
-              "score": 1.474256369214351,
-              "mmd": -0.003029956964601177,
-              "cmean_x": 0.0452991634678875,
-              "cmean_y": 0.14742563692143512,
+              "feature": "channel",
+              "score": 1.0642765588579133,
+              "mmd": 0.006658420740835114,
+              "cmean_x": 0.2660691397144783,
+              "cmean_y": 0.03303041245385974,
               "loud": false
             },
             {
               "feature": "amount",
-              "score": 1.4580736732662605,
-              "mmd": 0.01609847007225762,
-              "cmean_x": 0.3645184183165651,
-              "cmean_y": 0.09237901402080517,
+              "score": 1.0001527453301886,
+              "mmd": 0.008788781646409505,
+              "cmean_x": 0.25003818633254715,
+              "cmean_y": 0.09406862745098049,
               "loud": false
             },
             {
-              "feature": "channel",
-              "score": 1.0376777049690176,
-              "mmd": 0.003805529026511323,
-              "cmean_x": 0.2594194262422544,
-              "cmean_y": 0.042109500805152966,
+              "feature": "n_items",
+              "score": 0.33778924327704796,
+              "mmd": -0.004167888734993297,
+              "cmean_x": 0.012652176971377074,
+              "cmean_y": 0.033778924327704796,
               "loud": false
             },
             {
               "feature": "hour",
-              "score": 0.9818376068376072,
-              "mmd": -0.00453126381749025,
-              "cmean_x": 0.06354118659072018,
-              "cmean_y": 0.09818376068376072,
+              "score": 0.2902967241652161,
+              "mmd": -0.00020321460653216494,
+              "cmean_x": 0.04698578527674492,
+              "cmean_y": 0.0345591338291924,
               "loud": false
             }
           ],
           "merchant": [
             {
               "feature": "merchant_gmv",
-              "score": 0.6635902019582495,
-              "mmd": -0.1274448268815167,
-              "cmean_x": 0.23215506101938282,
-              "cmean_y": 0.0,
-              "loud": false
-            },
-            {
-              "feature": "n_skus",
-              "score": 1.2710570480369624e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 4.996003610813204e-16,
+              "score": 0.24716801149018827,
+              "mmd": -0.05140137261176314,
+              "cmean_x": 0.22183889047211927,
               "cmean_y": 0.0,
               "loud": false
             },
             {
               "feature": "merchant_cat",
-              "score": 1.1102230246251565e-16,
-              "mmd": -0.15198587233719174,
-              "cmean_x": 2.7755575615628914e-17,
+              "score": 4.440892098500626e-16,
+              "mmd": -0.0735982026433295,
+              "cmean_x": 1.1102230246251565e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "n_skus",
+              "score": 2.220446049250313e-16,
+              "mmd": -0.07187381284819605,
+              "cmean_x": 5.551115123125783e-17,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_hist_freq",
-              "score": 1.3644627811598942,
-              "mmd": -0.0014062626020705515,
-              "cmean_x": 0.0066356540110234785,
-              "cmean_y": 0.13644627811598942,
+              "feature": "user_tenure",
+              "score": 0.8567363118102533,
+              "mmd": -0.0021413858479255587,
+              "cmean_x": 0.0818760580362557,
+              "cmean_y": 0.08567363118102533,
               "loud": false
             },
             {
-              "feature": "user_tenure",
-              "score": 0.49395311091087307,
-              "mmd": -0.0017594655620236654,
-              "cmean_x": 0.10408848943287637,
-              "cmean_y": 0.06175889328063239,
+              "feature": "user_hist_freq",
+              "score": 0.16291664693532815,
+              "mmd": -0.003627314634241041,
+              "cmean_x": 0.04072916173383204,
+              "cmean_y": 0.0022805318804799413,
               "loud": false
             }
           ]
@@ -1326,55 +1757,57 @@
           "channel",
           "merchant_gmv"
         ],
-        "loud_subset": "south",
+        "loud_subset": "C0",
         "portraits": [
           {
-            "subset": "south",
-            "n": 48,
-            "share_of_batch": 0.48,
-            "mmd": 0.4210750479933823,
-            "po": 0.000858533261038827,
-            "cmean_x": 2.45119911990899,
-            "cmean_y": -0.30043859649122806,
-            "pi_mmd": 1.0,
+            "subset": "C0",
+            "n": 81,
+            "share_of_batch": 0.50625,
+            "mmd": 0.375487633320629,
+            "po": 0.00021303267460242233,
+            "cmean_x": 2.3384262345284226,
+            "cmean_y": -0.23302469135802473,
+            "pi_mmd": 0.7974415589590955,
             "pi_po": 0.0,
-            "pi_cmean": 0.7801210975907145,
-            "mix_mmd": 0.5617595349852542,
+            "pi_cmean": 0.663492859743853,
+            "mix_mmd": 0.5458435017686027,
             "mix_po": 0.0,
-            "mix_cmean": 0.43824046501474584,
-            "contribution": 1.7801210975907145,
+            "mix_cmean": 0.45415649823139725,
+            "contribution": 1.4609344187029485,
             "gap_vs_other": {
-              "mmd": 0.45017525671739256,
-              "po": 0.00017992350729228632,
-              "cmean_x": 2.2398882251708905,
-              "cmean_y": 0.13226495726495724
+              "mmd": 0.39879381948692805,
+              "po": -4.679557984264561e-05,
+              "cmean_x": 2.2534861849192835,
+              "cmean_y": 0.18127832473824035
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.8571428571428571
           },
           {
-            "subset": "north",
-            "n": 52,
-            "share_of_batch": 0.52,
-            "mmd": -0.003472382064110824,
-            "po": 0.0006996403475246017,
-            "cmean_x": 0.22008831003473192,
-            "cmean_y": 0.1670736670736671,
-            "pi_mmd": 0.0,
+            "subset": "C?",
+            "n": 22,
+            "share_of_batch": 0.1375,
+            "mmd": 0.09537776001396836,
+            "po": null,
+            "cmean_x": 1.2847904098598943,
+            "cmean_y": -0.10886172650878537,
+            "pi_mmd": 0.20255844104090454,
             "pi_po": 0.0,
-            "pi_cmean": 0.21987890240928565,
-            "mix_mmd": 0.0,
+            "pi_cmean": 0.33650714025614703,
+            "mix_mmd": 0.37575843843253076,
             "mix_po": 0.0,
-            "mix_cmean": 1.0,
-            "contribution": 0.21987890240928565,
+            "mix_cmean": 0.6242415615674693,
+            "contribution": 0.5390655812970515,
             "gap_vs_other": {
-              "mmd": -0.45017525671739256,
-              "po": -0.00017992350729228632,
-              "cmean_x": -2.2398882251708905,
-              "cmean_y": -0.13226495726495724
+              "mmd": -0.0478597149148825,
+              "po": null,
+              "cmean_x": -0.020932608384623297,
+              "cmean_y": 0.026350461133069852
             },
             "fingerprint": "x_shift",
-            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant",
+            "south_frac": 0.0
           }
         ],
         "logo_full": {
@@ -1442,90 +1875,158 @@
             }
           }
         },
+        "graph": {
+          "package": "networkx",
+          "package_version": "3.6.1",
+          "encoder": "graphsage-mean-frozen",
+          "cut": "networkx.community.louvain_communities/bundled-shift",
+          "bundled": {
+            "n_communities": 6,
+            "n_nodes": 12,
+            "n_edges": 21,
+            "south_frac": {
+              "C0": 0.8571428571428571,
+              "C1": 0.0,
+              "C2": 0.0,
+              "C3": 0.0,
+              "C4": 0.0,
+              "C5": 0.0
+            },
+            "loud_community": "C0",
+            "loud_south_frac": 0.8571428571428571,
+            "merchant_cut": {
+              "5": "C0",
+              "9": "C0",
+              "10": "C0",
+              "11": "C0",
+              "12": "C0",
+              "13": "C0",
+              "14": "C0",
+              "0": "C1",
+              "1": "C2",
+              "3": "C3",
+              "6": "C4",
+              "7": "C5"
+            }
+          },
+          "structural": {
+            "n_communities": 3,
+            "n_nodes": 63,
+            "n_edges": 187,
+            "south_frac": {
+              "C0": 0.0,
+              "C1": 1.0,
+              "C2": 0.5
+            },
+            "merchant_cut": {
+              "7": "C0",
+              "4": "C0",
+              "5": "C0",
+              "0": "C0",
+              "3": "C0",
+              "6": "C0",
+              "1": "C0",
+              "9": "C1",
+              "15": "C1",
+              "10": "C1",
+              "13": "C1",
+              "14": "C1",
+              "11": "C1",
+              "12": "C1",
+              "2": "C2",
+              "8": "C2"
+            }
+          }
+        },
         "leakage": {
           "y_in_Z": false,
           "subset_is_y": false,
           "mode": "localize",
           "sigma_from_ref": true,
           "bins_from_ref": true,
-          "serve_profiles_from_ref": false
+          "serve_profiles_from_ref": false,
+          "graph_package": "networkx",
+          "graph_package_version": "3.6.1",
+          "graph_cut": "networkx.community.louvain_communities/bundled-shift",
+          "y_in_bundled_graph": false,
+          "y_in_structural_graph": false
         },
         "fsds_rank": {
           "order": [
             {
               "feature": "amount",
-              "score": 5.50857843137255,
-              "mmd": 0.08021190478882678,
-              "cmean_x": 0.774358938840479,
-              "cmean_y": 0.550857843137255,
+              "score": 6.740750921808733,
+              "mmd": 0.10111126382713098,
+              "cmean_x": 0.9352920642413445,
+              "cmean_y": 0.23157205171656303,
               "loud": true
             },
             {
               "feature": "channel",
-              "score": 3.473039215686274,
-              "mmd": 0.04697727772604976,
-              "cmean_x": 0.685295389802078,
-              "cmean_y": 0.34730392156862744,
+              "score": 2.3354142108734584,
+              "mmd": 0.03503121316310187,
+              "cmean_x": 0.5549611084018483,
+              "cmean_y": 0.11889823496966356,
               "loud": true
             },
             {
-              "feature": "n_items",
-              "score": 1.456465498015077,
-              "mmd": -0.00286610579046942,
-              "cmean_x": 0.06353698086761965,
-              "cmean_y": 0.1456465498015077,
+              "feature": "hour",
+              "score": 0.6525926905322166,
+              "mmd": 0.009788890357983249,
+              "cmean_x": 0.09083455557565068,
+              "cmean_y": 0.03229166666666666,
               "loud": false
             },
             {
-              "feature": "hour",
-              "score": 0.4252622635760614,
-              "mmd": 0.0040542530343652405,
-              "cmean_x": 0.10631556589401535,
-              "cmean_y": 0.0011111111111111183,
+              "feature": "n_items",
+              "score": 0.5002345215759851,
+              "mmd": -0.002996283088751328,
+              "cmean_x": 0.06167293868466702,
+              "cmean_y": 0.050023452157598514,
               "loud": false
             }
           ],
           "merchant": [
             {
               "feature": "merchant_gmv",
-              "score": 2.0649123322537406,
-              "mmd": -0.04184832682769901,
-              "cmean_x": 0.7224034458004309,
+              "score": 3.7718773370183367,
+              "mmd": 0.05657816005527505,
+              "cmean_x": 0.7248283211591247,
               "cmean_y": 0.0,
               "loud": true
             },
             {
-              "feature": "n_skus",
-              "score": 1.4122856089299582e-15,
-              "mmd": -0.14255029236431427,
-              "cmean_x": 5.551115123125783e-16,
+              "feature": "merchant_cat",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07359820264332961,
+              "cmean_x": 1.1102230246251565e-16,
               "cmean_y": 0.0,
               "loud": false
             },
             {
-              "feature": "merchant_cat",
-              "score": 1.1102230246251565e-16,
-              "mmd": -0.15198587233719163,
-              "cmean_x": 2.7755575615628914e-17,
+              "feature": "n_skus",
+              "score": 4.440892098500626e-16,
+              "mmd": -0.07187381284819616,
+              "cmean_x": 1.1102230246251565e-16,
               "cmean_y": 0.0,
               "loud": false
             }
           ],
           "user": [
             {
-              "feature": "user_hist_freq",
-              "score": 0.6753394977508426,
-              "mmd": -7.646221584445279e-06,
-              "cmean_x": 0.07118601211246713,
-              "cmean_y": 0.06753394977508426,
+              "feature": "user_tenure",
+              "score": 1.3027655507669,
+              "mmd": -0.0014587631903658638,
+              "cmean_x": 0.07883154607293238,
+              "cmean_y": 0.13027655507669,
               "loud": false
             },
             {
-              "feature": "user_tenure",
-              "score": 0.5814403698535723,
-              "mmd": 0.0019146983677765794,
-              "cmean_x": 0.14536009246339307,
-              "cmean_y": 0.063793590217878,
+              "feature": "user_hist_freq",
+              "score": 0.8920543150627935,
+              "mmd": -0.0037805133354713583,
+              "cmean_x": 0.0019444764083068056,
+              "cmean_y": 0.08920543150627935,
               "loud": false
             }
           ]

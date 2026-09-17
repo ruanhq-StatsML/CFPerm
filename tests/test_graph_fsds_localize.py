@@ -95,6 +95,7 @@ class PipelineTests(unittest.TestCase):
             t=2,
             grain="order",
             mode="localize",
+            subset_by="region",
             seed=5,
             min_n=15,
             with_logo=False,
@@ -118,6 +119,7 @@ class PipelineTests(unittest.TestCase):
             t=2,
             grain="order",
             mode="localize",
+            subset_by="region",
             seed=6,
             min_n=15,
             with_logo=False,
@@ -137,6 +139,7 @@ class PipelineTests(unittest.TestCase):
             t=2,
             grain="merchant",
             mode="localize",
+            subset_by="region",
             seed=7,
             min_n=1,
             with_logo=False,
@@ -144,6 +147,45 @@ class PipelineTests(unittest.TestCase):
         )
         self.assertEqual(out["loud_subset"], "south")
         self.assertFalse(out["leakage"]["y_in_Z"])
+
+
+class BundledGraphTests(unittest.TestCase):
+    def _pack(self, kind, seed, n_merchants=12):
+        tables = make_order_graph_stream(
+            n_ref=300,
+            n_new=120,
+            n_batches=3,
+            onset_batch=1,
+            n_merchants=n_merchants,
+            n_users=40,
+            kind=kind,
+            seed=seed,
+        )
+        cut = slice_stream(tables, t=2)
+        stats = freeze_ref_stats(cut["ref"], seed=seed)
+        from graph_fsds_localize import graph_shift_cuts
+
+        return graph_shift_cuts(cut["ref"], cut["new"], stats, seed=seed, min_n=6)
+
+    def test_package_is_networkx_not_pyg(self):
+        from order_graph_nx import GRAPH_PACKAGE, CUT_BUNDLED
+
+        self.assertEqual(GRAPH_PACKAGE, "networkx")
+        self.assertIn("louvain", CUT_BUNDLED)
+
+    def test_y_never_enters_graph_attrs(self):
+        pack = self._pack("covariate_south", seed=8)
+        self.assertFalse(pack["bundled"]["y_in_graph"])
+        self.assertFalse(pack["y_in_structural"])
+
+    def test_covariate_bundled_cut_recovers_south(self):
+        pack = self._pack("covariate_south", seed=9)
+        self.assertIsNotNone(pack["bundled"]["loud_community"])
+        self.assertGreaterEqual(pack["bundled"]["loud_south_frac"], 0.75)
+
+    def test_concept_bundled_cut_uses_cmean_not_structure(self):
+        pack = self._pack("concept_south", seed=10)
+        self.assertGreaterEqual(pack["bundled"]["loud_south_frac"], 0.6)
 
 
 if __name__ == "__main__":

@@ -200,6 +200,12 @@ USER_FEATS = ("user_tenure", "user_hist_freq")
 SOUTH_MERCHANTS = (4, 5, 6, 7)
 
 
+def south_merchant_ids(n_merchants: int) -> np.ndarray:
+    """Second half of merchant ids. n=8 → {4,5,6,7}, same as SOUTH_MERCHANTS."""
+    n_merchants = int(n_merchants)
+    return np.arange(n_merchants // 2, n_merchants)
+
+
 def make_order_graph_stream(
     n_ref: int = 480,
     n_new: int = 120,
@@ -234,7 +240,8 @@ def make_order_graph_stream(
 
     merchant_id = rng.integers(0, n_merchants, size=n)
     user_id = rng.integers(0, n_users, size=n)
-    south = np.isin(merchant_id, np.asarray(SOUTH_MERCHANTS[: max(n_merchants // 2, 1)]))
+    south_ids = south_merchant_ids(n_merchants)
+    south = np.isin(merchant_id, south_ids)
     region = np.where(south, "south", "north")
 
     merchant_cat = rng.normal(size=n_merchants)
@@ -280,7 +287,7 @@ def make_order_graph_stream(
     merchant_table = {
         "merchant_id": np.arange(n_merchants, dtype=int),
         "region": np.array(
-            ["south" if i in SOUTH_MERCHANTS else "north" for i in range(n_merchants)]
+            ["south" if i in set(south_ids.tolist()) else "north" for i in range(n_merchants)]
         ),
         "X": np.column_stack([merchant_cat, merchant_gmv0, n_skus]),
         "names": MERCHANT_FEATS,
