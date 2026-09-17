@@ -27,6 +27,8 @@ from layer_freeze_cv import (  # noqa: E402
     run_layer_freeze_cv,
     stack_layer_metric_dicts,
 )
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor  # noqa: E402
+
 from streaming_po_risk import (  # noqa: E402
     ACTION_FREEZE,
     ACTION_KEEP,
@@ -41,6 +43,7 @@ from streaming_po_risk import (  # noqa: E402
     batch_mse,
     large_deviation,
     ma_window,
+    mmd_vs_reference,
     moving_average,
     pack_ref_new,
     po_mse_action,
@@ -122,11 +125,21 @@ class StreamingPOTests(unittest.TestCase):
         Y = (X[:, 0] + 1.5 * T > 0).astype(float)
         est = TabularPORisk(seed=4)
         out = est.risk(X, Y, T)
-        self.assertIsNotNone(est.outcome)
-        self.assertIsNotNone(est.propensity)
+        self.assertIsInstance(est.outcome, RandomForestClassifier)
+        self.assertIsInstance(est.propensity, RandomForestClassifier)
         self.assertGreater(out["po_risk"], 0.0)
         self.assertEqual(len(out["mu"]), 240)
         self.assertEqual(len(out["e"]), 240)
+
+    def test_continuous_outcome_uses_random_forest_regressor(self):
+        rng = np.random.default_rng(4)
+        X = rng.normal(size=(160, 3))
+        T = np.array([0] * 80 + [1] * 80)
+        Y = X[:, 0] + 0.4 * T
+        est = TabularPORisk(seed=4)
+        est.risk(X, Y, T)
+        self.assertIsInstance(est.outcome, RandomForestRegressor)
+        self.assertIsInstance(est.propensity, RandomForestClassifier)
 
     def test_large_deviation_reads_stream_against_ref_split(self):
         rng = np.random.default_rng(5)
@@ -213,8 +226,12 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertIn("large_deviation", out["rows"][0])
         self.assertIn("po_base", out["rows"][0])
         for r in out["rows"]:
-            self.assertIn(r["action"], {ACTION_KEEP, ACTION_WATCH, ACTION_FREEZE})
+            self.assertIn(
+                r["action"],
+                {ACTION_KEEP, ACTION_WATCH, ACTION_FREEZE, ACTION_XSHIFT, ACTION_TRICKY},
+            )
             self.assertIn("mse_stream", r)
+            self.assertIn("mmd_vs_ref", r)
             if r["action"] == ACTION_FREEZE:
                 self.assertEqual(len(r["layers"]), 4)
                 self.assertIn(r["i_star"], {0, 1, 2, 3})
@@ -327,9 +344,9 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertEqual(po_mse_action(False, True, True), ACTION_XSHIFT)
         self.assertEqual(po_mse_action(False, True, False), ACTION_TRICKY)
         rows = [
-            {"t": 0, "n_new": 20, "po_stream": 1e-6, "mse_stream": 0.10, "mmd_stream": 0.01},
-            {"t": 1, "n_new": 20, "po_stream": 3e-6, "mse_stream": 0.11, "mmd_stream": 0.01},
-            {"t": 2, "n_new": 20, "po_stream": 4e-6, "mse_stream": 0.50, "mmd_stream": 0.01},
+            {"t": 0, "n_new": 20, "po_stream": 1e-6, "mse_stream": 0.10, "mmd_vs_ref": 0.01},
+            {"t": 1, "n_new": 20, "po_stream": 3e-6, "mse_stream": 0.11, "mmd_vs_ref": 0.01},
+            {"t": 2, "n_new": 20, "po_stream": 4e-6, "mse_stream": 0.50, "mmd_vs_ref": 0.01},
         ]
         info = annotate_po_mse_contrast(rows, po_base=1e-6, mse_base=0.10, mmd_base=0.01, n_new=20)
         self.assertEqual(rows[0]["action"], ACTION_KEEP)
@@ -339,8 +356,8 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertEqual(info["n_watch"], 1)
         self.assertEqual(info["n_freeze"], 1)
         x_only = [
-            {"t": 0, "n_new": 20, "po_stream": 1e-6, "mse_stream": 0.10, "mmd_stream": 0.01},
-            {"t": 1, "n_new": 20, "po_stream": 1.1e-6, "mse_stream": 0.30, "mmd_stream": 0.05},
+            {"t": 0, "n_new": 20, "po_stream": 1e-6, "mse_stream": 0.10, "mmd_vs_ref": 0.01},
+            {"t": 1, "n_new": 20, "po_stream": 1.1e-6, "mse_stream": 0.30, "mmd_vs_ref": 0.05},
         ]
         info2 = annotate_po_mse_contrast(x_only, po_base=1e-6, mse_base=0.10, mmd_base=0.01, n_new=20)
         self.assertEqual(x_only[1]["action"], ACTION_XSHIFT)
@@ -354,6 +371,24 @@ class FreezeCvSmokeTests(unittest.TestCase):
         hopped = rbf_mmd2(X0, X0 + 2.5, sigma=sigma, seed=13)
         self.assertGreater(hopped, quiet)
         self.assertGreater(hopped, 2.0 * max(quiet, 1e-12))
+
+    def test_mmd_is_vs_reference_not_previous_batch_or_pairwise_history(self):
+        """Board MMD is MMD²(X_new, X_ref). A slow walk looks quiet vs recent batches."""
+        rng = np.random.default_rng(14)
+        X_ref = rng.normal(size=(240, 3))
+        sigma = rbf_bandwidth(X_ref, seed=14)
+        X_prev = X_ref + 3.0
+        X_new = X_ref + 3.1
+        vs_ref = mmd_vs_reference(X_ref, X_new, sigma=sigma, seed=14)
+        vs_prev = rbf_mmd2(X_new, X_prev, sigma=sigma, seed=15)
+        self.assertGreater(vs_ref, vs_prev)
+        self.assertGreater(vs_ref, 2.0 * max(vs_prev, 1e-12))
+        hist = [X_ref + 2.7, X_ref + 2.9, X_prev]
+        pairwise_mean = float(
+            np.mean([rbf_mmd2(X_new, h, sigma=sigma, seed=16 + i) for i, h in enumerate(hist)])
+        )
+        self.assertGreater(vs_ref, pairwise_mean)
+        self.assertAlmostEqual(vs_ref, rbf_mmd2(X_new, X_ref, sigma=sigma, seed=14), places=12)
 
 
 if __name__ == "__main__":

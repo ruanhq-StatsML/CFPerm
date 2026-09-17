@@ -1,18 +1,25 @@
 """Streaming PO-risk on a tabular table.
 
 New batch is T=1, reference is T=0. Outcome model μ(Y|X) and
-propensity e(T|X) are maintained separately — not the serving MLP,
-not a single lstsq. φ = (Y − μ)(T − e), τ̂(X) ≈ φ, risk = mean(τ̂²).
+propensity e(T|X) are Random Forests, maintained separately — not
+the serving MLP, not a single lstsq.
 
-Read the number. Raw PO-risk on a small n_new jitters; a causal
-moving average is the stability readout. No online-bootstrap —
-repeated MLP inference cannot be afforded.
+φ = (Y − μ)(T − e), τ̂(X) ≈ φ, risk = mean(τ̂²).
+
+RF PO-risk is not expected to collapse suddenly. Serving MSE of the
+MLP is the series more likely to break first.
+
+MMD口径 is fixed: RBF MMD²(X_new, X_ref). Same T=0 reference as
+PO-risk. Not the mean pairwise MMD against all previous batches, and
+not MMD on a layer representation vs the last batch. Those answer
+different questions.
+
+No online-bootstrap.
 """
 from __future__ import annotations
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression, Ridge
-from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
 CLIP = 1e-3
 REF_N = 10_000
@@ -55,7 +62,7 @@ def rbf_bandwidth(X, max_n: int = MMD_MAX_N, seed: int = 2026) -> float:
 
 
 def rbf_mmd2(X, Y, sigma: float, max_n: int = MMD_MAX_N, seed: int = 2026) -> float:
-    """Unbiased RBF MMD² between two X clouds. Subsample; no extra MLP inference."""
+    """Unbiased RBF MMD²(X, Y). Call as MMD²(X_new, X_ref) only."""
     rng = np.random.default_rng(seed)
     Xs = _subsample_rows(X, max_n, rng)
     Ys = _subsample_rows(Y, max_n, rng)
@@ -70,16 +77,21 @@ def rbf_mmd2(X, Y, sigma: float, max_n: int = MMD_MAX_N, seed: int = 2026) -> fl
     return float(xx + yy - 2.0 * float(Kxy.mean()))
 
 
+def mmd_vs_reference(X_ref, X_new, sigma: float, max_n: int = MMD_MAX_N, seed: int = 2026) -> float:
+    """Covariate-shift readout: MMD²(X_new, X_ref).
+
+    Same reference batch as PO-risk's T=0. Not pairwise-vs-history, not
+    last-batch layer representations.
+    """
+    return rbf_mmd2(X_new, X_ref, sigma=sigma, max_n=max_n, seed=seed)
+
+
 def ref_split_mmd(X_ref, *, sigma: float, seed: int = 2026, max_n: int = MMD_MAX_N) -> float:
-    """MMD of a fake split of D_ref. Quiet level for P(X)."""
+    """MMD of a fake split of D_ref. Quiet level for P(X) vs itself."""
     X_ref = np.asarray(X_ref, dtype=float)
     n = len(X_ref)
     half = n // 2
     return rbf_mmd2(X_ref[:half], X_ref[half:], sigma=sigma, max_n=max_n, seed=seed)
-    X = np.asarray(X, dtype=float)
-    sd = X.std(axis=0)
-    sd = np.where(sd < 1e-8, 1.0, sd)
-    return (X - X.mean(axis=0)) / sd
 
 
 def zscore(X: np.ndarray) -> np.ndarray:
@@ -107,17 +119,34 @@ def _is_binary(Y: np.ndarray) -> bool:
 
 
 class TabularPORisk:
-    """Own outcome model + own propensity model."""
+    """Own RF outcome model + own RF propensity. Not the serving MLP."""
 
     def __init__(self, clip: float = CLIP, seed: int = 2026):
         self.clip = float(clip)
         self.seed = int(seed)
         self.outcome = None
         self.propensity = None
-        self.scaler = StandardScaler()
+
+    def _rf_cls(self):
+        return RandomForestClassifier(
+            n_estimators=60,
+            max_depth=8,
+            min_samples_leaf=10,
+            n_jobs=1,
+            random_state=self.seed,
+        )
+
+    def _rf_reg(self):
+        return RandomForestRegressor(
+            n_estimators=60,
+            max_depth=8,
+            min_samples_leaf=10,
+            n_jobs=1,
+            random_state=self.seed,
+        )
 
     def fit_nuisance(self, X, Y, T, X_outcome=None):
-        """Fit μ(Y|X_outcome) and e(T|X). X_outcome defaults to X."""
+        """Fit μ(Y|X_outcome) and e(T|X) with RF. X_outcome defaults to X."""
         X = np.asarray(X, dtype=float)
         if X.ndim == 1:
             X = X.reshape(-1, 1)
@@ -126,21 +155,17 @@ class TabularPORisk:
         Xo = X if X_outcome is None else np.asarray(X_outcome, dtype=float)
         if Xo.ndim == 1:
             Xo = Xo.reshape(-1, 1)
-        Xs = self.scaler.fit_transform(X)
-        self.propensity = LogisticRegression(max_iter=300, random_state=self.seed)
-        self.propensity.fit(Xs, T)
-        e = np.clip(self.propensity.predict_proba(Xs)[:, 1], self.clip, 1.0 - self.clip)
-        scale_y = StandardScaler()
-        Xos = scale_y.fit_transform(Xo)
+        self.propensity = self._rf_cls()
+        self.propensity.fit(X, T)
+        e = np.clip(self.propensity.predict_proba(X)[:, 1], self.clip, 1.0 - self.clip)
         if _is_binary(Y):
-            self.outcome = LogisticRegression(max_iter=300, random_state=self.seed)
-            self.outcome.fit(Xos, Y.astype(int))
-            mu = self.outcome.predict_proba(Xos)[:, 1]
+            self.outcome = self._rf_cls()
+            self.outcome.fit(Xo, Y.astype(int))
+            mu = self.outcome.predict_proba(Xo)[:, 1]
         else:
-            self.outcome = Ridge(alpha=1.0)
-            self.outcome.fit(Xos, Y)
-            mu = self.outcome.predict(Xos)
-        self._outcome_scaler = scale_y
+            self.outcome = self._rf_reg()
+            self.outcome.fit(Xo, Y)
+            mu = self.outcome.predict(Xo)
         return mu, e
 
     def tau_risk(self, X, Y, T, mu, e) -> float:
@@ -275,8 +300,9 @@ def large_deviation(stream_po: float, baseline_po: float, ratio: float = DEVIATI
 def po_mse_action(po_broken: bool, mse_broken: bool, mmd_broken: bool | None = None) -> str:
     """PO × MSE contrast. Freeze-from-layer only when both PO and MSE break.
 
-    MSE broken while PO is quiet is not concept drift. Look at MMD of X:
-    MMD large → covariate shift (P(X)); MMD quiet → tricky, not X and not P(Y|X).
+    RF PO-risk is not expected to collapse first. Serving MSE breaking
+    while PO holds is the main cell — then read MMD²(X_new, X_ref).
+    PO broken and MSE holds → watch, do not freeze yet.
     """
     if po_broken and mse_broken:
         return ACTION_FREEZE
@@ -309,8 +335,16 @@ def annotate_po_mse_contrast(rows, po_base, mse_base=None, mmd_base=None, n_new=
         thresh = float(ratio) * max(float(baseline), 1e-12)
         return mx, bool(ma.size == 0 or mx < thresh), True
 
+    def _mmd_key(rows):
+        if rows and all(r.get("mmd_vs_ref") is not None for r in rows):
+            return "mmd_vs_ref"
+        if rows and all(r.get("mmd_stream") is not None for r in rows):
+            return "mmd_stream"
+        return None
+
     mse_max, mse_stable, has_mse = _ma_flag("mse_stream", mse_base)
-    mmd_max, mmd_stable, has_mmd = _ma_flag("mmd_stream", mmd_base)
+    mmd_key = _mmd_key(rows)
+    mmd_max, mmd_stable, has_mmd = _ma_flag(mmd_key, mmd_base) if mmd_key else (0.0, True, None)
     for r in rows:
         r["po_broken"] = bool(r.get("ma_large", r.get("large_deviation")))
         r["mse_broken"] = bool(r.get("mse_large")) if has_mse else False

@@ -7,6 +7,12 @@ n_new; a causal moving average is the stability readout. No
 online-bootstrap — repeated MLP inference cannot be afforded.
 MA below 2× baseline → all-layer backprop.
 
+PO-risk nuisances are Random Forests. RF PO-risk should not collapse
+suddenly; serving MSE of the MLP is likelier to break first.
+
+MMD口径 is MMD²(X_new, X_ref) vs the T=0 reference batch — not
+pairwise vs history, not last-batch layer representations.
+
     PYTHONPATH=Python/src:. python3 scripts/run_layer_freeze_online_cv.py
 """
 from __future__ import annotations
@@ -251,6 +257,14 @@ ACTION_LABEL = {
 }
 
 
+def _mmd_val(row: dict):
+    """Board MMD is vs the reference batch. Alias mmd_stream is the same number."""
+    v = row.get("mmd_vs_ref")
+    if v is None:
+        v = row.get("mmd_stream")
+    return v
+
+
 def _action_of(row: dict) -> str:
     return str(row.get("action") or (ACTION_FREEZE if not row.get("all_trainable", True) else ACTION_KEEP))
 
@@ -263,7 +277,7 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
     ts = np.asarray([r["t"] for r in rows])
     po = np.asarray([r["po_stream"] for r in rows], dtype=float)
     mse = np.asarray([r["mse_stream"] for r in rows], dtype=float)
-    has_mmd = all(r.get("mmd_stream") is not None for r in rows)
+    has_mmd = all(_mmd_val(r) is not None for r in rows)
     n_new = int(rows[0]["n_new"])
     w = int(result.get("ma_window") or ma_window(n_new))
     po_ma = np.asarray([r.get("po_ma", np.nan) for r in rows], dtype=float)
@@ -290,7 +304,7 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
     ax_mse.axhline(mse_base, color="#888", ls="--", lw=1.4, label="baseline")
     ax_mse.axhline(2.0 * mse_base, color="#b33", ls=":", lw=1.0, label="2×")
     if ax_mmd is not None:
-        mmd = np.asarray([r["mmd_stream"] for r in rows], dtype=float)
+        mmd = np.asarray([_mmd_val(r) for r in rows], dtype=float)
         mmd_ma = np.asarray([r.get("mmd_ma", np.nan) for r in rows], dtype=float)
         if not np.isfinite(mmd_ma).all():
             mmd_ma = moving_average(mmd, w)
@@ -299,7 +313,7 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
         ax_mmd.plot(ts, mmd_ma, color="#6b4ea0", lw=2.2, label=f"MA({w})")
         ax_mmd.axhline(mmd_base, color="#888", ls="--", lw=1.4, label="baseline")
         ax_mmd.axhline(2.0 * max(mmd_base, 1e-12), color="#b33", ls=":", lw=1.0, label="2×")
-        ax_mmd.set_ylabel("MMD² of X")
+        ax_mmd.set_ylabel("MMD²(X_new, X_ref)")
         ax_mmd.legend(fontsize=8, ncol=3)
     y_map = {ACTION_KEEP: 0, ACTION_WATCH: 1, ACTION_XSHIFT: 2, ACTION_TRICKY: 3, ACTION_FREEZE: 4}
     act_y = [y_map.get(_action_of(r), 0) for r in rows]
@@ -311,18 +325,18 @@ def plot_po_mse_trend(result: dict, title: str, out_dir: Path) -> str | None:
         ax_po.scatter([x], [r["po_stream"]], s=55, color=color, zorder=4, label=ACTION_LABEL.get(act, act) if act not in seen else None)
         ax_mse.scatter([x], [r["mse_stream"]], s=55, color=color, zorder=4)
         if ax_mmd is not None:
-            ax_mmd.scatter([x], [r["mmd_stream"]], s=55, color=color, zorder=4)
+            ax_mmd.scatter([x], [_mmd_val(r)], s=55, color=color, zorder=4)
         ax_act.scatter([x], [y], s=55, color=color, zorder=4)
         seen.add(act)
     ax_po.set_ylabel("PO-risk")
-    ax_po.set_title(title + " — PO vs MSE vs MMD(X)")
+    ax_po.set_title(title + " — PO vs MSE vs MMD²(X_new, X_ref)")
     ax_po.legend(fontsize=8, ncol=3)
     ax_mse.set_ylabel("serving MSE")
     ax_mse.legend(fontsize=8, ncol=3)
     ax_act.set_yticks([0, 1, 2, 3, 4], labels=["keep", "watch", "X shift", "tricky", "freeze"])
     ax_act.set_ylim(-0.4, 4.4)
     ax_act.set_xlabel("incoming batch (T=1)")
-    ax_act.set_title("PO+MSE break → freeze that layer's training; MSE-only → read MMD of X")
+    ax_act.set_title("MMD is vs the reference batch. MSE is likelier to break first than RF PO-risk.")
     fig.tight_layout()
     p = out_dir / "po_mse_trend.png"
     fig.savefig(p, dpi=140)
@@ -406,14 +420,14 @@ def render_html(spec: dict, result: dict, images: list[str], out_path: Path) -> 
     for img in images:
         cards.append(f'<figure><img src="{img}" alt="{img}"><figcaption>{img}</figcaption></figure>')
     table = [
-        "<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>MMD(X)</th><th>MMD MA</th><th>action</th><th>冻结哪一层的 training</th></tr></thead><tbody>"
+        "<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>MMD vs ref</th><th>MMD MA</th><th>action</th><th>冻结哪一层的 training</th></tr></thead><tbody>"
     ]
     for r in result["rows"]:
         act = _action_of(r)
         po_ma = r.get("po_ma")
         mse = r.get("mse_stream")
         mse_ma = r.get("mse_ma")
-        mmd = r.get("mmd_stream")
+        mmd = _mmd_val(r)
         mmd_ma = r.get("mmd_ma")
         po_ma_s = "" if po_ma is None else f"{float(po_ma):.4g}"
         mse_s = "" if mse is None else f"{float(mse):.4g}"
@@ -465,9 +479,11 @@ code {{ background: #eee; padding: 1px 4px; }}
 <p class="note">
 {spec["title"]}. n_ref={result["n_ref"]}, n_new={n_new}, hidden={result["hidden_dims"]}.
 看板的输出就是：<b>该冻结哪一层的 training</b>（仅当 PO 和 MSE 都崩）。
-MSE 崩了但 PO 正常 → 不是 concept drift，看 MMD(X)：MMD 过线是 X 在动。
-PO 和 MSE 都正常，或只崩 PO → 一层都不冻。
-两都崩 → 开 freeze-depth，<code>model_i</code> 只训 top i，其余层停训。
+PO-risk 用 RF，不该突然崩；<b>更可能先崩的是 serving MSE</b>。
+MSE 崩了但 PO 正常 → 不是 concept drift。MMD 口径是 <b>MMD²(X_new, X_ref)</b>，
+跟 reference batch 比，不是跟历史所有 batch 的 pairwise 均值，也不是上个 batch 的层 representation。
+PO 崩了模型没崩 → 再观察，先不冻。
+两都崩 → 开 freeze-depth，<code>model_i</code> 只训 top i。
 不做 online-bootstrap。
 </p>
 <p class="rec">{rec}</p>
@@ -504,9 +520,9 @@ def render_report(spec: dict, result: dict) -> str:
     lines = [
         f"# PO × MSE board — {spec['title']}",
         "",
-        "PO+MSE both break → freeze that layer's training. PO only → watch.",
-        "MSE broken, PO quiet → not concept drift; read MMD of X (covariate shift).",
-        "Both quiet → keep training. No online-bootstrap.",
+        "RF PO-risk should not collapse first; serving MSE is the series that breaks.",
+        "MMD口径 is MMD²(X_new, X_ref) — vs the reference batch, not history, not layer reps.",
+        "PO broken, MSE holds → watch. MSE broken, PO quiet → read MMD vs ref.",
         f"T=1 on the incoming batch. n_ref={result['n_ref']}, n_new={n_new}.",
         f"po_base={result['po_base']:.4g}. mse_base={mse_base_s}. mmd_base={result.get('mmd_base')}.",
         "",
@@ -525,7 +541,7 @@ def render_report(spec: dict, result: dict) -> str:
         po_ma_s = "" if po_ma is None else f"{float(po_ma):.3g}"
         mse_s = "" if mse is None else f"{float(mse):.3g}"
         mse_ma_s = "" if mse_ma is None else f"{float(mse_ma):.3g}"
-        mmd = r.get("mmd_stream")
+        mmd = _mmd_val(r)
         mmd_ma = r.get("mmd_ma")
         mmd_s = "" if mmd is None else f"{float(mmd):.3g}"
         mmd_ma_s = "" if mmd_ma is None else f"{float(mmd_ma):.3g}"
@@ -679,8 +695,10 @@ def write_index(out: Path) -> None:
         "# PO-risk board",
         "",
         "PO+MSE both break → freeze that layer's training.",
-        "MSE broken, PO quiet → not concept drift; read MMD of X.",
-        "No online-bootstrap.",
+        "RF PO-risk should not collapse first; serving MSE is likelier to break.",
+        "MSE broken, PO quiet → not concept drift; read MMD²(X_new, X_ref).",
+        "MMD is vs the reference batch, not pairwise history, not layer reps.",
+        "PO broken, MSE holds → watch. No online-bootstrap.",
         "",
     ]
     html_items = []
@@ -702,7 +720,7 @@ def write_index(out: Path) -> None:
     (out / "REPORT.md").write_text("\n".join(bits) + "\n", encoding="utf-8")
     html = """<!DOCTYPE html><meta charset="utf-8"><title>PO × MSE board</title>
 <h1>PO × MSE 对照</h1>
-<p>PO 和 MSE 都崩 → 冻结那一层的 training。只崩 PO → 观察。MSE 崩但 PO 正常 → 看 MMD(X)，不是 concept drift。</p>
+<p>MMD 口径是 MMD²(X_new, X_ref)。RF PO-risk 不该先崩；MSE 先崩再看 MMD。PO 崩模型没崩 → 再观察。</p>
 <ul>""" + "".join(html_items) + "</ul>"
     (out / "index.html").write_text(html, encoding="utf-8")
 

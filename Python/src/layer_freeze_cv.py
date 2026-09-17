@@ -4,11 +4,16 @@ PO × MSE contrast on the board:
   both quiet → keep training every layer
   PO broken, MSE holds → watch (do not freeze yet)
   both broken → freeze (this update strategy is not working)
+  MSE broken, PO quiet → not concept drift; read MMD²(X_new, X_ref)
 
-Tabular PO-risk keeps its own outcome model μ(Y|X) and propensity e(T|X).
-No online-bootstrap. Causal MA of both series is the stability readout.
+Tabular PO-risk keeps its own RF outcome μ(Y|X) and RF propensity e(T|X).
+RF PO-risk should not collapse first; serving MSE of the MLP is the
+series more likely to break.
 
-MSE broken while PO is quiet is not concept drift — look at MMD of X.
+MMD口径 is vs the same T=0 reference batch as PO-risk — not mean
+pairwise MMD against previous batches, not last-batch layer reps.
+
+No online-bootstrap. Causal MA is the stability readout.
 
 When we do freeze, that output is which layers stop training:
 
@@ -36,10 +41,10 @@ from streaming_po_risk import (
     batch_mse,
     large_deviation,
     ma_window,
+    mmd_vs_reference,
     moving_average,
     po_mse_action,
     rbf_bandwidth,
-    rbf_mmd2,
     ref_split_baseline,
     ref_split_mmd,
     streaming_po_and_mse,
@@ -272,10 +277,11 @@ def run_layer_freeze_cv(
         Xb, Yb = X_stream[sl], Y_stream[sl]
         po_stream = streaming_po_risk(X_ref[ref_eval], Y_ref[ref_eval], Xb, Yb, mu_fn=None, seed=seed + t)
         mse_stream = batch_mse(Yb, serve(Xb))
-        mmd_stream = rbf_mmd2(X_ref[ref_eval], Xb, sigma=mmd_sigma, seed=seed + t)
+        # MMD口径: X_new vs X_ref only. Not vs previous batches, not layer reps.
+        mmd_vs_ref = mmd_vs_reference(X_ref[ref_eval], Xb, sigma=mmd_sigma, seed=seed + t)
         po_hist.append(float(po_stream))
         mse_hist.append(float(mse_stream))
-        mmd_hist.append(float(mmd_stream))
+        mmd_hist.append(float(mmd_vs_ref))
         po_ma = float(moving_average(po_hist, w)[-1])
         mse_ma = float(moving_average(mse_hist, w)[-1])
         mmd_ma = float(moving_average(mmd_hist, w)[-1])
@@ -293,7 +299,8 @@ def run_layer_freeze_cv(
             "mse_stream": float(mse_stream),
             "mse_base": float(mse_base),
             "mse_ma": float(mse_ma),
-            "mmd_stream": float(mmd_stream),
+            "mmd_vs_ref": float(mmd_vs_ref),
+            "mmd_stream": float(mmd_vs_ref),
             "mmd_base": float(mmd_base),
             "mmd_ma": float(mmd_ma),
             "large_deviation": bool(large_deviation(po_stream, po_base)),
