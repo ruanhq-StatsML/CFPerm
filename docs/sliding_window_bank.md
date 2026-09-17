@@ -11,15 +11,14 @@ MMD 仍是 \(\mathrm{MMD}^2(X_{\mathrm{window}},X_{\mathrm{ref}})\)，不是对�
 | 特征 | 算什么 | 成本 | 直观读法 |
 |---|---|---|---|
 | `mean_l2` | \(\|\bar x_W-\bar x_{\mathrm{ref}}\|\) | \(O(p)\) | X 的位置 |
-| `pca_recon_excess` | 窗在 **冻结** \(\mathrm{PCA}_{\mathrm{ref}}\) 上的重构残差 − 基准 | \(O(npk)\) | \(P(X)\) 有没有离开参考子空间 |
-| `pca_recon_group[g]` | 每个模态自己一块 PCA | 同样便宜 | 哪一座塔的 X 在走（LOGO 的廉价 \(P(X)\) 版） |
-| `pca_score_l2` | 参考 PC 得分均值漂移 | 便宜 | 沿旧主轴的位移 |
-| `pca_subspace_gap` | IncrementalPCA（online）vs \(\mathrm{PCA}_{\mathrm{ref}}\) | 便宜 | 几何变了没有 |
+| `pca_recon_excess` | 窗在冻结 \(\mathrm{PCA}_{\mathrm{ref}}\) 上的重构残差 − 基准。滑动窗用 \(C\leftarrow C\pm X^\top X\) 增量更新就够 | \(O(npk)\) / 增量 \(O(p^2)\) | \(P(X)\) 有没有离开参考子空间 |
+| `pca_recon_group[g]` | 每个模态自己一块 PCA recon | 同样便宜 | 哪一座塔的 X 在走 |
+| `pca_subspace_gap` | 滑动 \(C=X^\top X\) 的 top-k vs \(\mathrm{PCA}_{\mathrm{ref}}\) | 便宜 | 几何变了没有 |
 | `mmd_vs_ref` | 核 MMD vs 参考窗 | 中 | 和看板同一口径 |
 | `rfperm_T` / `brier_excess` | 冻住 RF / 现模型 | 便宜 | **服务误差**、WHEN |
 | `po_risk` / LOGO \(\pi\) | 可选 | 重 | **份额**；算力够再每窗打 |
 
-`SlidingWindowBank.vector()` 就是把上面拼成一条候选向量，后面可以进 shadow / 监控模型。
+`SlidingWindowBank.vector()` 就是 clever covariate：recon、T、Brier、分组 recon 拼成一条，进 shadow / 监控模型。和之前 talk 里的 rolling statistics / clever covariate 是同一件事。
 
 ---
 

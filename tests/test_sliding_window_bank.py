@@ -21,6 +21,17 @@ class BankTests(unittest.TestCase):
         P = np.eye(4)[:, :2]
         self.assertAlmostEqual(subspace_gap(P, P), 0.0, places=6)
 
+    def test_xxT_add_remove_cancels(self):
+        from sliding_window_bank import SlidingSecondMoment
+
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(15, 4))
+        g = SlidingSecondMoment(4)
+        g.add(X)
+        g.remove(X)
+        self.assertLess(np.abs(g.C).max(), 1e-10)
+        self.assertEqual(g.n, 0)
+
     def test_vector_grows_with_groups(self):
         rng = np.random.default_rng(0)
         X = rng.normal(size=(80, 12))

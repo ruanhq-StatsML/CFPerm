@@ -90,7 +90,7 @@ Both $\to$ \texttt{train\_top} on that tower.
 Evaluate the wait by excess serving loss of delayed-update policies, not by which detector fired first.
 
 \paragraph{Sliding-window feature bank.}
-If compute allows, keep rolling statistics on a window and score them against the same frozen $D_{\mathrm{ref}}$: online PCA reconstruction (global and per-group), score drift, MMD vs ref, FrozenRF $T$, serving Brier.
-These are candidate monitoring features (and later clever covariates). Per-group PCA is the cheap $P(X)$ pointer; PO/LOGO stays the $P(Y\mid X)$ pointer.
+If compute allows, keep rolling statistics on a window and score them against the same frozen $D_{\mathrm{ref}}$: PCA reconstruction via a sliding $C\leftarrow C\pm X^\top X$ update (global and per-group), score drift, MMD vs ref, FrozenRF $T$, serving Brier.
+These are the clever covariates: concat the bank vector into a shadow / monitoring model. Per-group recon is the cheap $P(X)$ pointer; PO/LOGO stays the $P(Y\mid X)$ pointer.
 
 \end{document}

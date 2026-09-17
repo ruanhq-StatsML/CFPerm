@@ -15,7 +15,7 @@ from collections import deque
 from typing import Mapping
 
 import numpy as np
-from sklearn.decomposition import PCA, IncrementalPCA
+from sklearn.decomposition import PCA
 
 from logo_modality import as_groups, brier_or_mse, fit_serving, serving_mu
 from online_rfperm import FrozenRFPerm
@@ -46,6 +46,42 @@ def recon_error(pca: PCA, X) -> float:
     Z = pca.transform(X)
     Xh = pca.inverse_transform(Z)
     return float(np.mean((X - Xh) ** 2))
+
+
+class SlidingSecondMoment:
+    """Sliding Gram: C += X.T @ X on enter, C -= X.T @ X on leave.
+
+    Enough for live PCA recon. Same object as a clever covariate.
+    """
+
+    def __init__(self, p: int):
+        p = int(p)
+        self.C = np.zeros((p, p), dtype=float)
+        self.s = np.zeros(p, dtype=float)
+        self.n = 0
+
+    def add(self, X) -> None:
+        X = _as_2d(X)
+        self.C += X.T @ X
+        self.s += X.sum(axis=0)
+        self.n += int(len(X))
+
+    def remove(self, X) -> None:
+        X = _as_2d(X)
+        self.C -= X.T @ X
+        self.s -= X.sum(axis=0)
+        self.n -= int(len(X))
+        self.n = max(self.n, 0)
+
+    def topk(self, k: int):
+        n = max(int(self.n), 1)
+        mu = self.s / n
+        Sigma = self.C / n - np.outer(mu, mu)
+        Sigma = 0.5 * (Sigma + Sigma.T)
+        w, V = np.linalg.eigh(Sigma)
+        order = np.argsort(w)[::-1]
+        k = min(int(k), V.shape[1])
+        return w[order[:k]], V[:, order[:k]]
 
 
 class SlidingWindowBank:
@@ -79,8 +115,7 @@ class SlidingWindowBank:
         self.pca_ref.fit(self.X_ref)
         self.recon_ref = recon_error(self.pca_ref, self.X_ref)
         self.mean_ref = self.X_ref.mean(axis=0)
-        self.pca_live = IncrementalPCA(n_components=k)
-        self.pca_live.partial_fit(self.X_ref[: max(k + 8, min(len(self.X_ref), 256))])
+        self.gram = SlidingSecondMoment(self.X_ref.shape[1])
 
         self.sigma = rbf_bandwidth(self.X_ref, seed=seed)
         self.probe = FrozenRFPerm(self.X_ref, self.Y_ref, seed=seed)
@@ -111,6 +146,7 @@ class SlidingWindowBank:
         while self.n_buf > self.window and self.buf_x:
             x0 = self.buf_x.popleft()
             self.buf_y.popleft()
+            self.gram.remove(x0)
             self.n_buf -= len(x0)
 
     def _window_xy(self):
@@ -123,23 +159,22 @@ class SlidingWindowBank:
         Y_new = np.asarray(Y_new, dtype=float).ravel()
         self.buf_x.append(X_new)
         self.buf_y.append(Y_new)
+        self.gram.add(X_new)
         self.n_buf += len(X_new)
         self._trim()
         Xw, Yw = self._window_xy()
 
-        k_fit = max(self.pca_live.n_components, 8)
-        self.pca_live.partial_fit(X_new[: max(len(X_new), k_fit)])
-
         recon = recon_error(self.pca_ref, Xw)
         score_now = self.pca_ref.transform(Xw).mean(axis=0)
         score_ref = self.pca_ref.transform(self.X_ref).mean(axis=0)
+        _, V_live = self.gram.topk(self.pca_ref.n_components)
         feat = {
             "n_window": int(len(Xw)),
             "mean_l2": float(np.linalg.norm(Xw.mean(axis=0) - self.mean_ref)),
             "pca_recon": float(recon),
             "pca_recon_excess": float(recon - self.recon_ref),
             "pca_score_l2": float(np.linalg.norm(score_now - score_ref)),
-            "pca_subspace_gap": subspace_gap(self.pca_ref.components_.T, self.pca_live.components_.T),
+            "pca_subspace_gap": subspace_gap(self.pca_ref.components_.T, V_live),
             "mmd_vs_ref": mmd_vs_reference(self.X_ref, Xw, sigma=self.sigma, seed=self.seed),
             "brier": brier_or_mse(Yw, serving_mu(self.serve, Xw, self.binary), self.binary),
             "brier_excess": None,
