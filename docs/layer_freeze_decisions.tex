@@ -70,6 +70,14 @@ If MSE moves and MMD vs $D_{\mathrm{ref}}$ is large: treat as $P(X)$ shift, do n
 If both PO-risk and MSE break: freeze training of the bottom groups and keep only the top $i^\star$ trainable.
 Do not shrink the batch to invent an update clock; do not bootstrap the MLP.
 
+\paragraph{Freeze depth is nested policy choice, not layer attribution.}
+The object is $i\in\{0,\ldots,k\}$, model $i$ trains only the top $i$ groups.
+One cannot uniquely attribute $\Delta\mathrm{MSE}$ to layer $j$.
+What can be optimal is constrained risk over this finite class:
+smallest $i$ with $R_i\le R_k+\varepsilon$ (parsimony), or $\arg\min_i R_i$ (serving), among clones whose PO-risk is not worse.
+Current $i^\star=\arg\min_i\mathrm{PO}_i$ after a conservative AND gate (PO and MSE both broken).
+If $i^\star_{\mathrm{PO}}\ne i^\star_{\mathrm{MSE}}$, that is serving error vs share error at freeze-depth; do not let PO alone cut the layer.
+
 \paragraph{Next shape: modality LOGO.}
 If $X$ is grouped (video / audio / text), leave-one-group-out shares on serving loss and on PO vs MMD localize \emph{which tower} the five cells apply to.
 They are not a unique decomposition.
