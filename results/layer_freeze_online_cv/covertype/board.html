@@ -2,11 +2,11 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8"/>
-<title>Layer-freeze online CV</title>
+<title>从哪一层开始 update</title>
 <style>
 body { font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif; margin: 24px; color: #122; background: #f7f5f0; }
 h1 { font-size: 1.5rem; }
-.note { max-width: 820px; line-height: 1.45; }
+.note { max-width: 820px; line-height: 1.5; }
 .rec { background: #1f4e79; color: #fff; padding: 12px 16px; border-radius: 8px; display: inline-block; }
 figure { margin: 18px 0; }
 img { max-width: 100%; background: #fff; border: 1px solid #ddd; }
@@ -16,17 +16,16 @@ code { background: #eee; padding: 1px 4px; }
 </style>
 </head>
 <body>
-<h1>哪一层该 freeze：streaming PO-risk CV</h1>
+<h1>从哪一层开始 update</h1>
 <p class="note">
-covertype (geographic order, class 2 vs rest). n_ref=10000, hidden=[64, 32],
-k=3 layer groups → <code>model_0</code>…<code>model_3</code>.
-新 batch 是 <b>T=1</b>。μ 来自该 freeze-depth 的 AnyMLP；PO-risk 是 leftover hop。
-i* = argmin<sub>i</sub> PO-risk：只更新最上面 i* 层，下面冻住。
+covertype (geographic order, class 2 vs rest). n_ref=10000, n_new=10000, hidden=[64, 32],
+<code>model_0</code>…<code>model_3</code>. 新 batch 是 <b>T=1</b>。
+看板直接读 PO-risk。i* = argmin<sub>i</sub> PO-risk：从这一层开始 update。
+n_new 不宜过小，否则要做 online-bootstrap，计算量太大。
 </p>
-<p class="rec">建议：freeze below top 3 layer(s); train model_3（median i* = 3）</p>
-<figure><img src="po_risk_by_layer.png" alt="po_risk_by_layer.png"><figcaption>po_risk_by_layer.png</figcaption></figure><figure><img src="po_risk_heatmap.png" alt="po_risk_heatmap.png"><figcaption>po_risk_heatmap.png</figcaption></figure><figure><img src="i_star.png" alt="i_star.png"><figcaption>i_star.png</figcaption></figure><figure><img src="brier_tradeoff.png" alt="brier_tradeoff.png"><figcaption>brier_tradeoff.png</figcaption></figure>
-<h2>Last batch</h2>
-<table><thead><tr><th>model</th><th>PO-risk</th><th>Brier new</th><th>Brier ref</th></tr></thead><tbody><tr><td>model_0</td><td>0.00135</td><td>0.176</td><td>0.08252</td></tr><tr><td>model_1</td><td>0.001441</td><td>0.1441</td><td>0.1031</td></tr><tr><td>model_2</td><td>0.0008871</td><td>0.04579</td><td>0.1316</td></tr><tr><td>model_3 ★</td><td>0.0006295</td><td>0.01038</td><td>0.119</td></tr></tbody></table>
-<p class="note">Brier 只是 side gauge，不是 CV。HH chosen 不是这张表的 Y。</p>
+<p class="rec">从 model_3 开始 update（median i* = 3）</p>
+<figure><img src="po_risk_by_layer.png" alt="po_risk_by_layer.png"><figcaption>po_risk_by_layer.png</figcaption></figure><figure><img src="po_risk_heatmap.png" alt="po_risk_heatmap.png"><figcaption>po_risk_heatmap.png</figcaption></figure><figure><img src="i_star.png" alt="i_star.png"><figcaption>i_star.png</figcaption></figure>
+<h2>Last batch — 直接读 PO-risk</h2>
+<table><thead><tr><th>model</th><th>PO-risk</th></tr></thead><tbody><tr><td>model_0</td><td>0.001056</td></tr><tr><td>model_1</td><td>0.002589</td></tr><tr><td>model_2</td><td>0.002584</td></tr><tr><td>model_3 ★</td><td>0.001623</td></tr></tbody></table>
 </body>
 </html>

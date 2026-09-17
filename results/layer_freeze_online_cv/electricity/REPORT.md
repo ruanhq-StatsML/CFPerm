@@ -1,29 +1,23 @@
-# Layer-freeze online CV — electricity (NSW, ordered in time)
+# 从哪一层开始 update — electricity (NSW, ordered in time)
 
-k layers → k+1 models (`model_0` … `model_k`). `model_i` trains the top i layers.
-Incoming batch is T=1. Reference is T=0, n_ref=10000.
-CV statistic = streaming PO-risk of that model's μ. i* = argmin_i PO-risk.
+看板直接读 PO-risk。i* = argmin_i PO-risk：从这一层开始 update。
+T=1 on the incoming batch. n_ref=10000, n_new=5000.
+n_new is large so we do not online-bootstrap.
 
 - hidden_dims = `[64, 32]`
 - k = 3 → models 0…3
-- n_ref = 10000, n_batches = 12
-- **recommend train top 2 layer(s)** (median i*). Freeze below that.
+- n_batches = 7
+- **start updating from model_1** (median i*)
 
-| t | stream hop | model_0 | model_1 | model_2 | model_3 | i* |
-|---:|---:|---:|---:|---:|---:|---:|
-| 0 | 0.0012 | 0.000191 | 0.000192 | 0.000182 | 0.000178 | 3 |
-| 1 | 0.000877 | 0.000318 | 0.000273 | 0.000223 | 0.000208 | 3 |
-| 2 | 0.000886 | 0.000944 | 0.00106 | 0.000967 | 0.000872 | 3 |
-| 3 | 0.00149 | 0.00127 | 0.0011 | 0.00088 | 0.00084 | 3 |
-| 4 | 0.00102 | 0.000877 | 0.000842 | 0.00116 | 0.00117 | 1 |
-| 5 | 0.00364 | 0.00443 | 0.00487 | 0.00723 | 0.00746 | 0 |
-| 6 | 0.0127 | 0.00689 | 0.00588 | 0.00484 | 0.00504 | 2 |
-| 7 | 0.00416 | 0.00456 | 0.00446 | 0.00533 | 0.00563 | 1 |
-| 8 | 0.000445 | 0.000724 | 0.000359 | 0.000339 | 0.000417 | 2 |
-| 9 | 0.00214 | 0.00215 | 0.00243 | 0.00308 | 0.00306 | 0 |
-| 10 | 0.00296 | 0.000228 | 0.000204 | 0.000568 | 0.000607 | 1 |
-| 11 | 0.00124 | 1.34e-05 | 0.000129 | 3.16e-05 | 2.03e-05 | 0 |
+| t | model_0 | model_1 | model_2 | model_3 | start from |
+|---:|---:|---:|---:|---:|---|
+| 0 | 0.000118 | 0.000112 | 9.15e-05 | 8.83e-05 | model_3 |
+| 1 | 0.00107 | 0.00102 | 0.000763 | 0.000753 | model_3 |
+| 2 | 0.00203 | 0.00225 | 0.00374 | 0.00364 | model_0 |
+| 3 | 0.00598 | 0.00484 | 0.00503 | 0.0052 | model_1 |
+| 4 | 0.00185 | 0.00126 | 0.00213 | 0.00234 | model_1 |
+| 5 | 0.000132 | 0.000101 | 0.000202 | 0.000174 | model_1 |
+| 6 | 0.000144 | 0.000195 | 0.000289 | 0.000243 | model_0 |
 
-Read: if `model_0` (frozen) PO-risk stays high while a shallow `model_i` drops, unfreeze that far.
-If a deep i spikes, you over-updated and washed the reference P(Y|X) — freeze those bottom layers.
+Read the PO-risk. Nothing else.
 
