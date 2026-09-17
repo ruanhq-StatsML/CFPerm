@@ -14,7 +14,7 @@ Definition: **alarm rate = (# reject batches) / (# observation batches)** on the
 
 ## Takeaways
 
-- **Baseline alarm rate:** $\mathrm{AR}=n_{\mathrm{alarm}}/n_{\mathrm{batch}}$ (alarms over observation batches). Grad FAR ≈ MSE FAR (~0.20–0.23); grace mainly delays first reject, mild FAR drop.
+- **Baseline alarm rate:** $\mathrm{AR}=n_{\mathrm{alarm}}/n_{\mathrm{batch}}$ (reference only, **not** Type-I FAR — updates break stationary-DGP claim). Grad ≈ MSE (~0.20–0.23); higher OK; grace mildly delays first reject.
 - **Alpha:** lead(g−mse) stays negative for α∈{0.01,0.05,0.10} on synthetic / electricity (directionally stable).
 - **Freeze loop:** on electricity, `freeze_early` / `freeze_low_share` beat `always_adapt` on post-reject MSE (~0.86×) at ~0.7× FLOPs; on synthetic, `freeze_low_share` ≈1.15× MSE at 0.57× FLOPs (better than freeze_early). `no_adapt` collapses.
 - **Extra packs:** stocks_IWM lead −4.0 (100% earlier); stocks_MSFT −1.7; waymo / beijing ≈0; metro Grad later (+2) — pack-dependent, not universal.
