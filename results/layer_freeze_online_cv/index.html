@@ -1,4 +1,4 @@
 <!DOCTYPE html><meta charset="utf-8"><title>PO × MSE board</title>
 <h1>PO × MSE 对照</h1>
-<p>PO 崩且 MSE 崩 → 冻住。只崩 PO → 再观察。两个都正常 → 接着 train。不做 online-bootstrap。</p>
+<p>PO 和 MSE 都崩 → 冻结那一层的 training。只崩 PO → 观察。MSE 崩但 PO 正常 → 看 MMD(X)，不是 concept drift。</p>
 <ul><li><a href="electricity/board.html">electricity freeze</a> · <a href="electricity/po_mse_trend.png">trend</a> · <a href="electricity/batch_size_gate.png">MA</a></li><li><a href="covertype/board.html">covertype freeze</a> · <a href="covertype/po_mse_trend.png">trend</a> · <a href="covertype/batch_size_gate.png">MA</a></li><li>airlines · <a href="airlines/batch_size_gate.png">MA</a></li></ul>

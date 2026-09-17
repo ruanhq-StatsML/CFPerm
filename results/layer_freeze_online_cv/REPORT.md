@@ -1,7 +1,7 @@
 # PO-risk board
 
-When to **update** is business logic. The board only contrasts PO-risk and MSE.
-PO broken and MSE broken → freeze. PO broken, MSE holds → watch. Both quiet → keep training.
+PO+MSE both break → freeze that layer's training.
+MSE broken, PO quiet → not concept drift; read MMD of X.
 No online-bootstrap.
 
 - [electricity freeze board](electricity/board.html)
