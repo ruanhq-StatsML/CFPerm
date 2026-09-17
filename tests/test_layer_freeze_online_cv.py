@@ -22,7 +22,16 @@ from dl_model_registry import (  # noqa: E402
     spawn_layer_models,
 )
 from layer_freeze_cv import run_layer_freeze_cv  # noqa: E402
-from streaming_po_risk import MIN_STREAM_N, REF_N, pack_ref_new, po_risk, streaming_po_risk  # noqa: E402
+from streaming_po_risk import (  # noqa: E402
+    MIN_STREAM_N,
+    REF_N,
+    TabularPORisk,
+    large_deviation,
+    pack_ref_new,
+    po_risk,
+    ref_split_baseline,
+    streaming_po_risk,
+)
 
 
 class RegistryTests(unittest.TestCase):
@@ -82,10 +91,37 @@ class StreamingPOTests(unittest.TestCase):
         rng = np.random.default_rng(1)
         X0, Y0 = rng.normal(size=(80, 3)), rng.integers(0, 2, size=80).astype(float)
         X1, Y1 = rng.normal(size=(80, 3)) + 0.5, rng.integers(0, 2, size=80).astype(float)
-        a = streaming_po_risk(X0, Y0, X1, Y1)
+        a = streaming_po_risk(X0, Y0, X1, Y1, seed=1)
         X, Y, T = pack_ref_new(X0, Y0, X1, Y1)
-        b = po_risk(X, Y, T)
+        b = po_risk(X, Y, T, seed=1)
         self.assertAlmostEqual(a, b, places=12)
+
+    def test_outcome_and_propensity_are_separate_models(self):
+        rng = np.random.default_rng(4)
+        X = rng.normal(size=(240, 4))
+        T = np.array([0] * 120 + [1] * 120)
+        Y = (X[:, 0] + 1.5 * T > 0).astype(float)
+        est = TabularPORisk(seed=4)
+        out = est.risk(X, Y, T)
+        self.assertIsNotNone(est.outcome)
+        self.assertIsNotNone(est.propensity)
+        self.assertGreater(out["po_risk"], 0.0)
+        self.assertEqual(len(out["mu"]), 240)
+        self.assertEqual(len(out["e"]), 240)
+
+    def test_large_deviation_reads_stream_against_ref_split(self):
+        rng = np.random.default_rng(5)
+        X0 = rng.normal(size=(200, 3))
+        Y0 = (X0[:, 0] > 0).astype(float)
+        base = ref_split_baseline(X0, Y0, seed=5)
+        X1 = rng.normal(size=(200, 3))
+        Y1 = (1.0 - (X1[:, 0] > 0).astype(float))
+        hopped = streaming_po_risk(X0, Y0, X1, Y1, seed=5)
+        self.assertTrue(large_deviation(hopped, base))
+        quiet = streaming_po_risk(X0[:100], Y0[:100], X0[100:], Y0[100:], seed=5)
+        self.assertFalse(large_deviation(base, base))
+        self.assertTrue(large_deviation(2.1 * (base + 1e-12), base + 1e-12))
+        self.assertGreaterEqual(hopped, quiet)
 
 
 class FreezeCvSmokeTests(unittest.TestCase):
@@ -103,7 +139,7 @@ class FreezeCvSmokeTests(unittest.TestCase):
         for k, v in model.state_dict().items():
             self.assertTrue(torch.allclose(before[k], v))
 
-    def test_cv_returns_k_plus_one_and_i_star(self):
+    def test_cv_gate_then_rows(self):
         rng = np.random.default_rng(3)
         n_ref, n_new = 220, 180
         X0 = rng.normal(size=(n_ref, 4))
@@ -127,9 +163,17 @@ class FreezeCvSmokeTests(unittest.TestCase):
         self.assertEqual(out["k"], 3)
         self.assertEqual(len(out["layer_names"]), 4)
         self.assertEqual(out["n_batches"], 2)
-        self.assertEqual(len(out["rows"]), 2 * 4)
-        self.assertIn(out["rows"][0]["i_star"], {0, 1, 2, 3})
+        self.assertEqual(len(out["rows"]), 2)
         self.assertTrue(all(r["n_new"] == 90 for r in out["rows"]))
+        self.assertIn("large_deviation", out["rows"][0])
+        self.assertIn("po_base", out["rows"][0])
+        for r in out["rows"]:
+            if r["large_deviation"]:
+                self.assertEqual(len(r["layers"]), 4)
+                self.assertIn(r["i_star"], {0, 1, 2, 3})
+            else:
+                self.assertTrue(r["all_trainable"])
+                self.assertIsNone(r["freeze_from"])
 
 
 if __name__ == "__main__":

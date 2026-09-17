@@ -1,10 +1,11 @@
-"""Online layer-freeze CV: read PO-risk to see where to start updating.
+"""Layer freeze is only for a large PO-risk deviation.
 
-Pretrain AnyMLP on D_ref (T=0, n_ref=10000). Clone k+1 models.
-On each incoming batch (T=1): CosineAnnealingLR from the top i layers,
-then read PO-risk on (ref ∪ new). i* = argmin_i PO-risk is the layer
-to start updating from. Incoming n_new must be large; a small batch
-would need online-bootstrap, which is too expensive for the board.
+No large deviation → all layers stay trainable.
+Large deviation → prototype: from which layer to start freezing.
+
+Tabular PO-risk keeps its own outcome model μ(Y|X) and propensity e(T|X).
+Conditional on a freeze-depth MLP, the outcome model also sees that model's
+prediction. Incoming n_new stays large; no online-bootstrap.
 """
 from __future__ import annotations
 
@@ -19,13 +20,12 @@ from dl_model_registry import (
     construct_dataloader,
     spawn_layer_models,
 )
-from streaming_po_risk import REF_N, streaming_po_risk
-
-
-def _brier(y, p) -> float:
-    y = np.asarray(y, dtype=float).ravel()
-    p = np.asarray(p, dtype=float).ravel()
-    return float(np.mean((p - y) ** 2))
+from streaming_po_risk import (
+    REF_N,
+    large_deviation,
+    ref_split_baseline,
+    streaming_po_risk,
+)
 
 
 def _mu_fn(registry: DLModelRegistry, model, task="classification") -> Callable:
@@ -66,6 +66,10 @@ def pretrain_mlp(
     return model, registry
 
 
+def _refresh_clones(full: AnyMLP):
+    return spawn_layer_models(full)
+
+
 def run_layer_freeze_cv(
     X,
     Y,
@@ -80,21 +84,22 @@ def run_layer_freeze_cv(
     registry: DLModelRegistry | None = None,
     n_ref_eval: int | None = None,
 ):
-    """Stream T=1 batches; return per-layer PO-risk rows plus i*(t)."""
+    """Stream T=1 batches. Freeze search only when PO-risk deviation is large."""
     X = np.asarray(X, dtype=float)
     Y = np.asarray(Y, dtype=float).ravel()
     if len(Y) < n_ref + 50:
         raise ValueError(f"need n_ref={n_ref} plus a stream, got n={len(Y)}")
     X_ref, Y_ref = X[:n_ref], Y[:n_ref]
     X_stream, Y_stream = X[n_ref:], Y[n_ref:]
-    pretrained, registry = pretrain_mlp(
+    full, registry = pretrain_mlp(
         X_ref, Y_ref, hidden_dims=hidden_dims, registry=registry, batch_size=loader_batch, seed=seed
     )
-    models = spawn_layer_models(pretrained)
-    k = pretrained.n_layer_groups
+    apply_train_top_i(full, full.n_layer_groups)
+    k = full.n_layer_groups
     take = int(n_ref if n_ref_eval is None else min(n_ref_eval, n_ref))
     rng = np.random.default_rng(seed + 7)
     ref_eval = np.arange(n_ref) if take == n_ref else rng.choice(n_ref, size=take, replace=False)
+    po_base = ref_split_baseline(X_ref[ref_eval], Y_ref[ref_eval], seed=seed)
 
     rows = []
     n_stream = len(Y_stream)
@@ -106,50 +111,71 @@ def run_layer_freeze_cv(
         sl = slice(cursor, cursor + batch_size_stream)
         cursor += batch_size_stream
         Xb, Yb = X_stream[sl], Y_stream[sl]
-        po_data = streaming_po_risk(X_ref[ref_eval], Y_ref[ref_eval], Xb, Yb, mu_fn=None)
-        star_i, star_po = 0, float("inf")
-        for model in models:
-            i = int(model._freeze_i)
-            apply_train_top_i(model, i)
-            if i > 0:
-                loader = construct_dataloader(Xb, Yb, batch_size=loader_batch, shuffle=True)
-                registry._train_loop(
-                    model,
-                    loader,
-                    val_loader=None,
-                    task="classification",
-                    epochs=online_epochs,
-                    restore_best=False,
+        po_stream = streaming_po_risk(X_ref[ref_eval], Y_ref[ref_eval], Xb, Yb, mu_fn=None, seed=seed + t)
+        large = large_deviation(po_stream, po_base)
+        rec = {
+            "t": t,
+            "n_new": int(len(Yb)),
+            "n_ref": int(take),
+            "po_stream": float(po_stream),
+            "po_base": float(po_base),
+            "large_deviation": bool(large),
+            "all_trainable": (not large),
+            "freeze_from": None,
+            "i_star": int(k) if not large else None,
+            "layers": [],
+        }
+        if not large:
+            loader = construct_dataloader(Xb, Yb, batch_size=loader_batch, shuffle=True)
+            apply_train_top_i(full, k)
+            registry._train_loop(
+                full, loader, val_loader=None, task="classification", epochs=online_epochs, restore_best=False
+            )
+            rec["i_star"] = int(k)
+            rec["freeze_from"] = None
+        else:
+            clones = _refresh_clones(full)
+            star_i, star_po = 0, float("inf")
+            layer_rows = []
+            for model in clones:
+                i = int(model._freeze_i)
+                apply_train_top_i(model, i)
+                if i > 0:
+                    loader = construct_dataloader(Xb, Yb, batch_size=loader_batch, shuffle=True)
+                    registry._train_loop(
+                        model,
+                        loader,
+                        val_loader=None,
+                        task="classification",
+                        epochs=online_epochs,
+                        restore_best=False,
+                    )
+                mu_fn = _mu_fn(registry, model)
+                po_fit = streaming_po_risk(
+                    X_ref[ref_eval], Y_ref[ref_eval], Xb, Yb, mu_fn=mu_fn, seed=seed + t + i
                 )
-            mu_fn = _mu_fn(registry, model)
-            po_fit = streaming_po_risk(X_ref[ref_eval], Y_ref[ref_eval], Xb, Yb, mu_fn=mu_fn)
-            p_new = mu_fn(Xb)
-            p_ref = mu_fn(X_ref[ref_eval])
-            rec = {
-                "t": t,
-                "i": i,
-                "name": f"model_{i}",
-                "n_new": int(len(Yb)),
-                "n_ref": int(take),
-                "po_stream": float(po_data),
-                "po_fit": float(po_fit),
-                "brier_new": _brier(Yb, p_new),
-                "brier_ref": _brier(Y_ref[ref_eval], p_ref),
-                "mean_Y_new": float(np.mean(Yb)),
-                "mean_Y_ref": float(np.mean(Y_ref[ref_eval])),
-            }
-            rows.append(rec)
-            if po_fit < star_po:
-                star_po, star_i = po_fit, i
-        for rec in rows[-len(models) :]:
+                layer_rows.append({"i": i, "name": f"model_{i}", "po_fit": float(po_fit)})
+                if po_fit < star_po:
+                    star_po, star_i = po_fit, i
+            rec["layers"] = layer_rows
             rec["i_star"] = int(star_i)
             rec["po_star"] = float(star_po)
+            rec["freeze_from"] = None if star_i == k else f"model_{star_i}"
+            rec["all_trainable"] = star_i == k
+            winner = next(m for m in clones if int(m._freeze_i) == star_i)
+            full.load_state_dict(winner.state_dict())
+        rows.append(rec)
+    n_large = sum(1 for r in rows if r["large_deviation"])
     return {
         "k": int(k),
         "n_ref": int(n_ref),
         "n_batches": int(n_batches),
         "hidden_dims": list(hidden_dims),
+        "po_base": float(po_base),
+        "n_large": int(n_large),
         "rows": rows,
         "layer_names": [f"model_{i}" for i in range(k + 1)],
-        "recommend_i": int(np.round(np.median([r["i_star"] for r in rows[:: k + 1]]))) if rows else 0,
+        "recommend_i": int(k) if n_large == 0 else int(
+            np.round(np.median([r["i_star"] for r in rows if r["large_deviation"]]))
+        ),
     }

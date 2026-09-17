@@ -75,80 +75,110 @@ def plot_boards(result: dict, title: str, out_dir: Path) -> list[str]:
     rows = result["rows"]
     k = result["k"]
     names = result["layer_names"]
-    ts = sorted({r["t"] for r in rows})
-    by_i = {i: [r for r in rows if r["i"] == i] for i in range(k + 1)}
-    colors = plt.cm.tab10(np.linspace(0, 0.8, k + 1))
+    ts = [r["t"] for r in rows]
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
 
-    fig, ax = plt.subplots(figsize=(8.6, 4.2))
-    for i in range(k + 1):
-        ys = [r["po_fit"] for r in by_i[i]]
-        ax.plot(ts, ys, color=colors[i], lw=2.0, marker="o", ms=3.5, label=names[i])
+    fig, ax = plt.subplots(figsize=(8.6, 4.0))
+    ax.plot(ts, [r["po_stream"] for r in rows], color="#1f4e79", lw=2.2, marker="o", label="stream PO-risk")
+    ax.axhline(result["po_base"], color="#888", ls="--", lw=1.6, label="ref-split baseline")
+    for r in rows:
+        if r["large_deviation"]:
+            ax.scatter([r["t"]], [r["po_stream"]], s=80, color="#b33", zorder=4)
     ax.set_xlabel("incoming batch (T=1)")
     ax.set_ylabel("PO-risk")
-    ax.set_title(title)
-    ax.legend(fontsize=8, ncol=2)
+    ax.set_title(title + " — deviation gate")
+    ax.legend(fontsize=8)
     fig.tight_layout()
-    p = out_dir / "po_risk_by_layer.png"
-    fig.savefig(p, dpi=140)
-    plt.close(fig)
-    written.append(p.name)
-
-    mat = np.array([[by_i[i][t]["po_fit"] for t in ts] for i in range(k + 1)], dtype=float)
-    fig, ax = plt.subplots(figsize=(8.6, 3.6))
-    im = ax.imshow(mat, aspect="auto", cmap="magma_r", origin="lower")
-    ax.set_yticks(range(k + 1), labels=names)
-    ax.set_xlabel("incoming batch (T=1)")
-    ax.set_title("PO-risk")
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    fig.tight_layout()
-    p = out_dir / "po_risk_heatmap.png"
+    p = out_dir / "po_risk_gate.png"
     fig.savefig(p, dpi=140)
     plt.close(fig)
     written.append(p.name)
 
     fig, ax = plt.subplots(figsize=(8.6, 3.4))
-    stars = [by_i[0][t]["i_star"] for t in ts]
-    ax.step(ts, stars, where="mid", color="#1f4e79", lw=2.2)
-    ax.scatter(ts, stars, color="#1f4e79", zorder=3)
+    freeze_y = []
+    for r in rows:
+        freeze_y.append(k if r["all_trainable"] else r["i_star"])
+    ax.step(ts, freeze_y, where="mid", color="#1f4e79", lw=2.2)
+    ax.scatter(ts, freeze_y, color="#1f4e79", zorder=3)
     ax.set_yticks(range(k + 1), labels=names)
     ax.set_xlabel("incoming batch (T=1)")
-    ax.set_title("start updating from this layer  (argmin PO-risk)")
+    ax.set_title("all trainable unless large deviation → freeze from this layer")
     ax.set_ylim(-0.4, k + 0.4)
     fig.tight_layout()
-    p = out_dir / "i_star.png"
+    p = out_dir / "freeze_from.png"
     fig.savefig(p, dpi=140)
     plt.close(fig)
     written.append(p.name)
+
+    large_rows = [r for r in rows if r["large_deviation"] and r["layers"]]
+    if large_rows:
+        colors = plt.cm.tab10(np.linspace(0, 0.8, k + 1))
+        fig, ax = plt.subplots(figsize=(8.6, 4.2))
+        ts_l = [r["t"] for r in large_rows]
+        for i in range(k + 1):
+            ys = []
+            ok = True
+            for r in large_rows:
+                hit = next((x for x in r["layers"] if x["i"] == i), None)
+                if hit is None:
+                    ok = False
+                    break
+                ys.append(hit["po_fit"])
+            if ok:
+                ax.plot(ts_l, ys, color=colors[i], lw=2.0, marker="o", ms=3.5, label=names[i])
+        ax.set_xlabel("incoming batch (T=1), large deviation only")
+        ax.set_ylabel("PO-risk (conditional on freeze-depth)")
+        ax.set_title("from which layer to freeze")
+        ax.legend(fontsize=8, ncol=2)
+        fig.tight_layout()
+        p = out_dir / "po_risk_by_layer.png"
+        fig.savefig(p, dpi=140)
+        plt.close(fig)
+        written.append(p.name)
     return written
 
 
 def render_html(spec: dict, result: dict, images: list[str], out_path: Path) -> None:
     rec_i = result["recommend_i"]
     k = result["k"]
-    rec = f"从 model_{rec_i} 开始 update" if rec_i > 0 else "这一段先不 update（model_0）"
+    n_large = result.get("n_large", 0)
+    if n_large == 0:
+        rec = "没有大 deviation → 一直 trainable"
+    else:
+        rec = f"有大 deviation 的段：从 model_{rec_i} 开始冻（median）"
     n_new = result["rows"][0]["n_new"] if result["rows"] else ""
     cards = []
     for img in images:
         cards.append(f'<figure><img src="{img}" alt="{img}"><figcaption>{img}</figcaption></figure>')
-    rows = result["rows"]
-    last_t = max(r["t"] for r in rows) if rows else 0
-    last = [r for r in rows if r["t"] == last_t]
-    table = ["<table><thead><tr><th>model</th><th>PO-risk</th></tr></thead><tbody>"]
-    for r in last:
-        mark = " ★" if r["i"] == rec_i else ""
-        table.append(f"<tr><td>{r['name']}{mark}</td><td>{r['po_fit']:.4g}</td></tr>")
+    table = [
+        "<table><thead><tr><th>t</th><th>PO-risk</th><th>baseline</th><th>large?</th><th>action</th></tr></thead><tbody>"
+    ]
+    for r in result["rows"]:
+        action = "all trainable" if r["all_trainable"] else f"freeze from {r['freeze_from']}"
+        flag = "yes" if r["large_deviation"] else ""
+        table.append(
+            f"<tr><td>{r['t']}</td><td>{r['po_stream']:.4g}</td><td>{r['po_base']:.4g}</td>"
+            f"<td>{flag}</td><td>{action}</td></tr>"
+        )
     table.append("</tbody></table>")
+    layer_tab = ""
+    last_large = next((r for r in reversed(result["rows"]) if r["large_deviation"] and r["layers"]), None)
+    if last_large:
+        layer_tab = "<h2>Last large-deviation batch — 从哪一层冻</h2><table><thead><tr><th>model</th><th>PO-risk</th></tr></thead><tbody>"
+        for x in last_large["layers"]:
+            mark = " ★" if x["i"] == last_large["i_star"] else ""
+            layer_tab += f"<tr><td>{x['name']}{mark}</td><td>{x['po_fit']:.4g}</td></tr>"
+        layer_tab += "</tbody></table>"
     html = f"""<!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="utf-8"/>
-<title>从哪一层开始 update</title>
+<title>PO-risk 看板</title>
 <style>
 body {{ font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif; margin: 24px; color: #122; background: #f7f5f0; }}
 h1 {{ font-size: 1.5rem; }}
-.note {{ max-width: 820px; line-height: 1.5; }}
+.note {{ max-width: 860px; line-height: 1.5; }}
 .rec {{ background: #1f4e79; color: #fff; padding: 12px 16px; border-radius: 8px; display: inline-block; }}
 figure {{ margin: 18px 0; }}
 img {{ max-width: 100%; background: #fff; border: 1px solid #ddd; }}
@@ -158,17 +188,18 @@ code {{ background: #eee; padding: 1px 4px; }}
 </style>
 </head>
 <body>
-<h1>从哪一层开始 update</h1>
+<h1>除非有大 deviation，否则一直 trainable</h1>
 <p class="note">
-{spec["title"]}. n_ref={result["n_ref"]}, n_new={n_new}, hidden={result["hidden_dims"]},
-<code>model_0</code>…<code>model_{k}</code>. 新 batch 是 <b>T=1</b>。
-看板直接读 PO-risk。i* = argmin<sub>i</sub> PO-risk：从这一层开始 update。
-n_new 不宜过小，否则要做 online-bootstrap，计算量太大。
+{spec["title"]}. n_ref={result["n_ref"]}, n_new={n_new}, hidden={result["hidden_dims"]}.
+表格 PO-risk 单独维护 <b>outcome model</b> μ(Y|X) 和 <b>propensity</b> e(T|X)。
+新 batch 是 <b>T=1</b>。直接读 PO-risk。没有大偏差就全开；有大偏差才看从第几层开始冻。
+n_new 不宜过小，否则要 online-bootstrap。
 </p>
-<p class="rec">{rec}（median i* = {rec_i}）</p>
+<p class="rec">{rec}</p>
 {"".join(cards)}
-<h2>Last batch — 直接读 PO-risk</h2>
+<h2>每一段 — 直接读 PO-risk</h2>
 {"".join(table)}
+{layer_tab}
 </body>
 </html>
 """
@@ -178,26 +209,40 @@ n_new 不宜过小，否则要做 online-bootstrap，计算量太大。
 def render_report(spec: dict, result: dict) -> str:
     rec_i = result["recommend_i"]
     n_new = result["rows"][0]["n_new"] if result["rows"] else ""
+    n_large = result.get("n_large", 0)
+    k = result["k"]
+    rec = "all trainable" if n_large == 0 else f"on large-deviation batches, freeze from model_{rec_i}"
     lines = [
-        f"# 从哪一层开始 update — {spec['title']}",
+        f"# PO-risk board — {spec['title']}",
         "",
-        "看板直接读 PO-risk。i* = argmin_i PO-risk：从这一层开始 update。",
-        f"T=1 on the incoming batch. n_ref={result['n_ref']}, n_new={n_new}.",
-        "n_new is large so we do not online-bootstrap.",
+        "No large deviation → all trainable. Large deviation → from which layer to freeze.",
+        "Tabular PO-risk keeps a separate outcome model and a separate propensity model.",
+        f"T=1 on the incoming batch. n_ref={result['n_ref']}, n_new={n_new}. baseline={result['po_base']:.4g}.",
         "",
-        f"- hidden_dims = `{result['hidden_dims']}`",
-        f"- k = {result['k']} → models 0…{result['k']}",
-        f"- n_batches = {result['n_batches']}",
-        f"- **start updating from model_{rec_i}** (median i*)",
+        f"- hidden_dims = `{result['hidden_dims']}`, k = {k}",
+        f"- n_batches = {result['n_batches']}, n_large = {n_large}",
+        f"- **{rec}**",
         "",
-        "| t | " + " | ".join(result["layer_names"]) + " | start from |",
-        "|---:|" + "|".join(["---:"] * (result["k"] + 1)) + "|---|",
+        "| t | PO-risk | baseline | large | action |",
+        "|---:|---:|---:|---|---|",
     ]
-    ts = sorted({r["t"] for r in result["rows"]})
-    by = {(r["t"], r["i"]): r for r in result["rows"]}
-    for t in ts:
-        cells = " | ".join(f"{by[(t, i)]['po_fit']:.3g}" for i in range(result["k"] + 1))
-        lines.append(f"| {t} | {cells} | model_{by[(t, 0)]['i_star']} |")
+    for r in result["rows"]:
+        action = "all trainable" if r["all_trainable"] else f"freeze from {r['freeze_from']}"
+        flag = "yes" if r["large_deviation"] else ""
+        lines.append(f"| {r['t']} | {r['po_stream']:.3g} | {r['po_base']:.3g} | {flag} | {action} |")
+    large_rows = [r for r in result["rows"] if r["large_deviation"] and r["layers"]]
+    if large_rows:
+        lines += [
+            "",
+            "Large-deviation batches, PO-risk conditional on freeze-depth:",
+            "",
+            "| t | " + " | ".join(result["layer_names"]) + " | freeze from |",
+            "|---:|" + "|".join(["---:"] * (k + 1)) + "|---|",
+        ]
+        for r in large_rows:
+            by = {x["i"]: x["po_fit"] for x in r["layers"]}
+            cells = " | ".join(f"{by[i]:.3g}" for i in range(k + 1))
+            lines.append(f"| {r['t']} | {cells} | {r['freeze_from']} |")
     lines += ["", "Read the PO-risk. Nothing else.", ""]
     return "\n".join(lines)
 
@@ -265,9 +310,10 @@ def main() -> int:
     names = ["electricity", "covertype"] if args.dataset == "both" else [args.dataset]
     OUT.mkdir(parents=True, exist_ok=True)
     index_bits = [
-        "# 从哪一层开始 update",
+        "# PO-risk board",
         "",
-        "看板直接读 PO-risk。Incoming batch is **T=1**, n_ref=10000, n_new ≥ 5000（不做 online-bootstrap）。",
+        "No large deviation → all trainable. Large deviation → from which layer to freeze.",
+        "Tabular PO-risk: separate outcome model + propensity. T=1, n_ref=10000, n_new ≥ 5000.",
         "",
     ]
     for name in names:
@@ -292,12 +338,12 @@ def main() -> int:
         (sub / "REPORT.md").write_text(report + "\n", encoding="utf-8")
         print(report, flush=True)
         index_bits.append(
-            f"- [{result['title']}]({name}/board.html) — start updating from **model_{result['recommend_i']}**"
+            f"- [{result['title']}]({name}/board.html) — large batches: {result.get('n_large', 0)}; recommend **model_{result['recommend_i']}**"
         )
     (OUT / "REPORT.md").write_text("\n".join(index_bits) + "\n", encoding="utf-8")
-    html_index = """<!DOCTYPE html><meta charset="utf-8"><title>从哪一层开始 update</title>
-<h1>从哪一层开始 update</h1>
-<p>直接读 PO-risk。n_new 不宜过小（否则要 online-bootstrap）。</p>
+    html_index = """<!DOCTYPE html><meta charset="utf-8"><title>PO-risk board</title>
+<h1>除非有大 deviation，否则一直 trainable</h1>
+<p>直接读 PO-risk。表格：单独的 outcome + propensity。</p>
 <ul>""" + "".join(
         f'<li><a href="{n}/board.html">{n}</a></li>' for n in names
     ) + "</ul>"

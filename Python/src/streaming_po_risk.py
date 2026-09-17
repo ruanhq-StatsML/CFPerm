@@ -1,19 +1,22 @@
-"""Streaming PO-risk: new batch is T=1, reference is T=0.
+"""Streaming PO-risk on a tabular table.
 
-φ = (Y − μ)(T − e), τ̂(X) ≈ φ, risk = mean(τ̂²).
+New batch is T=1, reference is T=0. Outcome model μ(Y|X) and
+propensity e(T|X) are maintained separately — not the serving MLP,
+not a single lstsq. φ = (Y − μ)(T − e), τ̂(X) ≈ φ, risk = mean(τ̂²).
 
-μ is a linear probe on the table, or the AnyMLP prediction
-for that freeze-depth. Read the number; do not bootstrap.
+Read the number. n_new stays large so we do not online-bootstrap.
 """
 from __future__ import annotations
 
 import numpy as np
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.preprocessing import StandardScaler
 
 CLIP = 1e-3
 REF_N = 10_000
-# Incoming T=1 block. Smaller than this, PO-risk jitters and you would
-# need online-bootstrap on k+1 models — too expensive for the board.
 MIN_STREAM_N = 5_000
+# Stream vs ref-split baseline. Below this, all layers stay trainable.
+DEVIATION_RATIO = 2.0
 
 
 def zscore(X: np.ndarray) -> np.ndarray:
@@ -35,29 +38,101 @@ def pack_ref_new(X_ref, Y_ref, X_new, Y_new):
     return X, Y, T
 
 
-def po_risk(X, Y, T, mu=None, clip: float = CLIP) -> float:
-    """Linear-probe PO-risk. Incoming batch must already be coded T=1."""
+def _is_binary(Y: np.ndarray) -> bool:
+    u = np.unique(np.asarray(Y, dtype=float).ravel())
+    return u.size <= 2 and set(np.round(u, 8)).issubset({0.0, 1.0})
+
+
+class TabularPORisk:
+    """Own outcome model + own propensity model."""
+
+    def __init__(self, clip: float = CLIP, seed: int = 2026):
+        self.clip = float(clip)
+        self.seed = int(seed)
+        self.outcome = None
+        self.propensity = None
+        self.scaler = StandardScaler()
+
+    def fit_nuisance(self, X, Y, T, X_outcome=None):
+        """Fit μ(Y|X_outcome) and e(T|X). X_outcome defaults to X."""
+        X = np.asarray(X, dtype=float)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        Y = np.asarray(Y, dtype=float).ravel()
+        T = np.asarray(T, dtype=float).ravel().astype(int)
+        Xo = X if X_outcome is None else np.asarray(X_outcome, dtype=float)
+        if Xo.ndim == 1:
+            Xo = Xo.reshape(-1, 1)
+        Xs = self.scaler.fit_transform(X)
+        self.propensity = LogisticRegression(max_iter=300, random_state=self.seed)
+        self.propensity.fit(Xs, T)
+        e = np.clip(self.propensity.predict_proba(Xs)[:, 1], self.clip, 1.0 - self.clip)
+        scale_y = StandardScaler()
+        Xos = scale_y.fit_transform(Xo)
+        if _is_binary(Y):
+            self.outcome = LogisticRegression(max_iter=300, random_state=self.seed)
+            self.outcome.fit(Xos, Y.astype(int))
+            mu = self.outcome.predict_proba(Xos)[:, 1]
+        else:
+            self.outcome = Ridge(alpha=1.0)
+            self.outcome.fit(Xos, Y)
+            mu = self.outcome.predict(Xos)
+        self._outcome_scaler = scale_y
+        return mu, e
+
+    def tau_risk(self, X, Y, T, mu, e) -> float:
+        X = np.asarray(X, dtype=float)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        Y = np.asarray(Y, dtype=float).ravel()
+        T = np.asarray(T, dtype=float).ravel()
+        mu = np.asarray(mu, dtype=float).ravel()
+        e = np.clip(np.asarray(e, dtype=float).ravel(), self.clip, 1.0 - self.clip)
+        phi = (Y - mu) * (T - e)
+        Xd = np.column_stack([np.ones(len(X)), zscore(X)])
+        tau, *_ = np.linalg.lstsq(Xd, phi, rcond=None)
+        tau_hat = Xd @ tau
+        return float(np.mean(tau_hat**2))
+
+    def risk(self, X, Y, T, X_outcome=None) -> dict:
+        mu, e = self.fit_nuisance(X, Y, T, X_outcome=X_outcome)
+        value = self.tau_risk(X, Y, T, mu, e)
+        return {"po_risk": value, "mu": mu, "e": e}
+
+
+def po_risk(X, Y, T, mu=None, clip: float = CLIP, seed: int = 2026) -> float:
+    """Tabular PO-risk. μ may be passed (conditional on a serving model);
+    e is always a separate propensity. If μ is None, a separate outcome
+    model is fit too.
+    """
+    est = TabularPORisk(clip=clip, seed=seed)
     X = np.asarray(X, dtype=float)
     Y = np.asarray(Y, dtype=float).ravel()
     T = np.asarray(T, dtype=float).ravel()
-    if X.ndim == 1:
-        X = X.reshape(-1, 1)
-    Xd = np.column_stack([np.ones(len(X)), zscore(X)])
     if mu is None:
-        beta, *_ = np.linalg.lstsq(Xd, Y, rcond=None)
-        mu = Xd @ beta
-    else:
-        mu = np.asarray(mu, dtype=float).ravel()
-    e_beta, *_ = np.linalg.lstsq(Xd, T, rcond=None)
-    e_hat = np.clip(Xd @ e_beta, clip, 1.0 - clip)
-    phi = (Y - mu) * (T - e_hat)
-    tau, *_ = np.linalg.lstsq(Xd, phi, rcond=None)
-    tau_hat = Xd @ tau
-    return float(np.mean(tau_hat**2))
+        return float(est.risk(X, Y, T)["po_risk"])
+    mu = np.asarray(mu, dtype=float).ravel()
+    X_outcome = np.column_stack([X if X.ndim == 2 else X.reshape(-1, 1), mu.reshape(-1, 1)])
+    return float(est.risk(X, Y, T, X_outcome=X_outcome)["po_risk"])
 
 
-def streaming_po_risk(X_ref, Y_ref, X_new, Y_new, mu_fn=None, clip: float = CLIP) -> float:
+def streaming_po_risk(X_ref, Y_ref, X_new, Y_new, mu_fn=None, clip: float = CLIP, seed: int = 2026) -> float:
     """PO-risk on (ref ∪ new) with T=1 on the new batch."""
     X, Y, T = pack_ref_new(X_ref, Y_ref, X_new, Y_new)
     mu = None if mu_fn is None else np.asarray(mu_fn(X), dtype=float).ravel()
-    return po_risk(X, Y, T, mu=mu, clip=clip)
+    return po_risk(X, Y, T, mu=mu, clip=clip, seed=seed)
+
+
+def ref_split_baseline(X_ref, Y_ref, *, seed: int = 2026, clip: float = CLIP) -> float:
+    """PO-risk on a fake T split of D_ref. The quiet level to read against."""
+    X_ref = np.asarray(X_ref, dtype=float)
+    Y_ref = np.asarray(Y_ref, dtype=float).ravel()
+    n = len(Y_ref)
+    half = n // 2
+    return streaming_po_risk(X_ref[:half], Y_ref[:half], X_ref[half:], Y_ref[half:], clip=clip, seed=seed)
+
+
+def large_deviation(stream_po: float, baseline_po: float, ratio: float = DEVIATION_RATIO) -> bool:
+    """Read the two numbers. Large iff stream is clearly above the ref-split baseline."""
+    denom = max(float(baseline_po), 1e-12)
+    return float(stream_po) >= float(ratio) * denom
