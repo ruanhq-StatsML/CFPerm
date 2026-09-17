@@ -221,7 +221,7 @@ def render_report(spec: dict, result: dict) -> str:
         f"- **recommend train top {rec_i} layer(s)** (median i*). Freeze below that.",
         "",
         "| t | stream hop | " + " | ".join(result["layer_names"]) + " | i* |",
-        "|---:|---:|" + "|".join(["---:" ] * (result["k"] + 2)),
+        "|---:|---:|" + "|".join(["---:"] * (result["k"] + 1)) + "|---:|",
     ]
     ts = sorted({r["t"] for r in result["rows"]})
     by = {(r["t"], r["i"]): r for r in result["rows"]}
