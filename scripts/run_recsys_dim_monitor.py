@@ -585,8 +585,6 @@ def write_tex(slim: dict, dest: Path) -> None:
     when_rows = "\n".join(when_row(k, dim) for k in KINDS for dim in DIMS)
     which_rows = "\n".join(which_row(k, dim) for k in KINDS for dim in DIMS)
     loc_rows = "\n".join(loc_row(k, dim) for k in KINDS for dim in DIMS)
-    cov = slim["covariate_south"]["dims"]["order"]
-    con = slim["concept_south"]["dims"]["order"]
     body = r"""% Recsys grain monitor. Compile: pdflatex docs/recsys_grain_monitor.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
@@ -689,12 +687,10 @@ kind & grain & MMD & $\Vert\Delta X\Vert$ & PO & $\Delta\mathbb{E}[Y]$ & MMD & $
 \end{tabular}
 \end{table}
 
-\paragraph{Read-off.}
-Order grain $+$ ADDIS hits at the labeled onset ($d{=}0$).
-The concatenated \texttt{all} grain is FAR at $t{=}0$.
-User $X$ does not move (MMD $\approx 0$); a $T$ mark there is $Y$ walking through another grain.
-FSDS recovers the planted columns on the grain that actually contains them.
-Covariate south order: MMD $""" + _fmt(cov.get("loc_south_mmd")) + r"$, $\Vert\Delta X\Vert=" + _fmt(cov.get("loc_south_cmean_x")) + r"$, PO $=" + _fmt(cov.get("loc_south_po")) + r"$, $\Delta\mathbb{E}[Y]=" + _fmt(cov.get("loc_south_cmean_y")) + r"$; north MMD $=" + _fmt(cov.get("loc_north_mmd")) + r"$. Concept south order: MMD $=" + _fmt(con.get("loc_south_mmd")) + r"$, PO $=" + _fmt(con.get("loc_south_po")) + r"$, $\Delta\mathbb{E}[Y]=" + _fmt(con.get("loc_south_cmean_y")) + r"""$.
+\paragraph{What this means on the serving log.}
+Read the log the way it is written. Conversion is the outcome; the serving table is sliced into order, merchant, and user --- do not dump every id embedding into one table. OnlineRFPerm on the order slice marks the batch where south merchants started to walk: predictive error left the reference pool on time. Concatenating every column false-alarms before anything happened. The user slice stays quiet because those columns never moved; a blip there is just conversion leaking through from another slice.
+
+After a mark, FSDS names the columns that actually sit in that slice (amount and channel on orders, GMV on merchants; none of those on users). South versus north then names the accounts. When the customer mix walks, south orders move in the covariates and the conversion rate follows; north stays near the reference. When only the conversion mechanism walks, south covariates stay put and PO-risk plus the conversion mean move instead. Refresh the model, then reset the error pool. This is localization, not a unique split of blame.
 
 \end{document}
 """
