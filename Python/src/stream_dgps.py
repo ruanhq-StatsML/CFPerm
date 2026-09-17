@@ -266,8 +266,12 @@ def make_order_graph_stream(
 
     logit0 = 0.95 * amount + 0.55 * merchant_cat[merchant_id] + 0.25 * user_tenure[user_id]
     if kind in ("concept_south", "both"):
+        # Flip amount and drop the intercept so E[Y|south] actually moves.
         logit = logit0 * (1.0 - w) + (
-            -0.95 * amount + 0.55 * merchant_cat[merchant_id] + 0.25 * user_tenure[user_id]
+            -0.95 * amount
+            + 0.55 * merchant_cat[merchant_id]
+            + 0.25 * user_tenure[user_id]
+            - 1.15
         ) * w
     else:
         logit = logit0

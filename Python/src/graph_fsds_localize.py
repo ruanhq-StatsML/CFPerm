@@ -197,12 +197,19 @@ def cmean_y(Y_a, Y_b) -> float:
 
 
 def cmean_y_by_ref_bin(x_ref, y_ref, x_new, y_new, median: float) -> float:
-    """E[Y | X≥median_ref] shift. Bins frozen on D_ref."""
-    hi_r = np.asarray(x_ref) >= float(median)
-    hi_n = np.asarray(x_new) >= float(median)
-    if hi_r.sum() < 3 or hi_n.sum() < 3:
-        return 0.0
-    return abs(cmean_y(np.asarray(y_new)[hi_n], np.asarray(y_ref)[hi_r]))
+    """Change in E[Y|high]−E[Y|low] with bins frozen on D_ref.
+
+    A global E[Y] walk must not make every independent column look loud.
+    """
+    def _contrast(x, y):
+        x = np.asarray(x, dtype=float).ravel()
+        y = np.asarray(y, dtype=float).ravel()
+        hi = x >= float(median)
+        if hi.sum() < 3 or (~hi).sum() < 3:
+            return 0.0
+        return float(y[hi].mean() - y[~hi].mean())
+
+    return abs(_contrast(x_new, y_new) - _contrast(x_ref, y_ref))
 
 
 def three_metrics(
@@ -384,6 +391,7 @@ def fsds_rank_columns(
     Y_new = np.asarray(Y_new, dtype=float).ravel()
     names = _names(names, X_ref.shape[1], "x")
     assert_not_outcome(names)
+    use_cy = len(X_ref) >= 30
     rows = []
     for j, name in enumerate(names):
         xr, xn = X_ref[:, [j]], X_new[:, [j]]
@@ -395,7 +403,11 @@ def fsds_rank_columns(
             std = float(bins[name]["std"])
             med = float(bins[name]["median"])
         dx = abs(float(X_new[:, j].mean()) - float(X_ref[:, j].mean())) / max(std, 1e-8)
-        cy = cmean_y_by_ref_bin(X_ref[:, j], Y_ref, X_new[:, j], Y_new, med)
+        cy = (
+            cmean_y_by_ref_bin(X_ref[:, j], Y_ref, X_new[:, j], Y_new, med)
+            if use_cy
+            else 0.0
+        )
         quiet = _column_quiet(xr, Y_ref, seed=seed)
         score = max(
             mmd / max(quiet["mmd"], 1e-8),
@@ -413,7 +425,7 @@ def fsds_rank_columns(
                 "loud": bool(
                     large_deviation(mmd, quiet["mmd"], ratio=DEVIATION_RATIO)
                     or large_deviation(dx, quiet["cmean_x"], ratio=DEVIATION_RATIO)
-                    or (cy >= DEVIATION_RATIO * max(quiet["cmean_y"], 1e-8) and cy > 0.02)
+                    or (cy >= DEVIATION_RATIO * max(quiet["cmean_y"], 1e-8) and cy > 0.12)
                 ),
             }
         )
@@ -434,9 +446,9 @@ def _column_quiet(x_ref, y_ref, seed: int = 2026) -> dict:
     med = float(np.median(x_ref))
     cy = cmean_y_by_ref_bin(x_ref[:half, 0], y_ref[:half], x_ref[half:, 0], y_ref[half:], med)
     return {
-        "mmd": max(float(mmd), 1e-4),
-        "cmean_x": max(float(dx), 0.05),
-        "cmean_y": max(float(cy), 0.02),
+        "mmd": max(float(mmd), 0.015),
+        "cmean_x": max(float(dx), 0.25),
+        "cmean_y": max(float(cy), 0.10),
     }
 
 
@@ -479,9 +491,9 @@ def fsds_select(
         seed=seed,
     )
     selected = {
-        "order": _pick(order_rank, top_k),
-        "merchant": _pick(merchant_rank, max(1, top_k // 2)),
-        "user": _pick(user_rank, max(1, top_k // 2)),
+        "order": _pick(order_rank, top_k, fill_if_quiet=True),
+        "merchant": _pick(merchant_rank, max(1, top_k // 2), fill_if_quiet=False),
+        "user": _pick(user_rank, max(1, top_k // 2), fill_if_quiet=False),
     }
     names = [r["feature"] for g in selected.values() for r in g]
     assert_not_outcome(names)
@@ -510,17 +522,16 @@ def _align_y(id_a, y_a, id_b, y_b):
     )
 
 
-def _pick(rank: Sequence[Mapping], k: int) -> list[dict]:
+def _pick(rank: Sequence[Mapping], k: int, fill_if_quiet: bool = False) -> list[dict]:
+    """Prefer loud columns. Quiet merchant/user blocks stay empty."""
     if not rank:
         return []
     loud = [r for r in rank if r.get("loud")]
-    chosen = list(loud) if loud else []
-    for r in rank:
-        if len(chosen) >= int(k):
-            break
-        if r not in chosen:
-            chosen.append(r)
-    return chosen[: int(k)]
+    if loud:
+        return loud[: int(k)]
+    if fill_if_quiet:
+        return list(rank[: max(1, min(int(k), 2))])
+    return []
 
 
 def unify_to_order(
@@ -651,7 +662,9 @@ def subset_three_metrics(
                 Y_new[m_n],
                 sigma=rbf_bandwidth(Z_ref[m_r], seed=seed),
                 seed=seed,
-                with_po=False,
+                with_po=bool(with_po)
+                and n >= PO_MIN_N
+                and int(m_r.sum()) >= PO_MIN_N,
             )
         other = ~m_n
         vs_other = None
@@ -682,8 +695,12 @@ def subset_shares(rows: Sequence[Mapping], key: str = "vs_own_ref") -> dict[str,
     """Layer-1 shares across subsets on each of the three readouts."""
 
     def _val(row, metric):
-        src = row.get(key) or row.get("vs_full_ref") or {}
+        src = row.get(key) or {}
         v = src.get(metric)
+        if v is None and metric == "po":
+            v = (row.get("vs_full_ref") or {}).get("po")
+        if v is None and key != "vs_full_ref":
+            v = (row.get("vs_full_ref") or {}).get(metric)
         if v is None:
             return 0.0
         if metric == "cmean_y":
@@ -695,9 +712,9 @@ def subset_shares(rows: Sequence[Mapping], key: str = "vs_own_ref") -> dict[str,
     cx = {r["subset"]: _val(r, "cmean_x") for r in rows}
     cy = {r["subset"]: _val(r, "cmean_y") for r in rows}
     pi_mmd = gated_share(mmd, abs_floor=0.02)
-    pi_po = gated_share(po, abs_floor=1e-6)
+    pi_po = gated_share(po, abs_floor=1e-3)
     pi_cx = gated_share(cx, abs_floor=0.15)
-    pi_cy = gated_share(cy, abs_floor=0.02)
+    pi_cy = gated_share(cy, abs_floor=0.05)
     mixed = {}
     for s in mmd:
         mixed[s] = {
@@ -754,8 +771,12 @@ def fingerprint(mix: Mapping, own: Mapping | None) -> str:
         return "quiet"
     if mix_mmd >= 0.5 and mix_po < 0.3:
         return "x_shift"
-    if mix_po >= 0.5 and mix_mmd < 0.3:
+    if mix_mmd < 0.2 and mix_po >= 0.35:
         return "concept"
+    if mix_mmd >= 0.3 and mix_po >= 0.25:
+        return "both"
+    if mix_mmd >= 0.5:
+        return "x_shift"
     if cx > 1e-8 and cy > 1e-8 and mix_po < 0.3:
         return "x_shift"
     return "both"
@@ -763,7 +784,12 @@ def fingerprint(mix: Mapping, own: Mapping | None) -> str:
 
 def characterize_subset(row: Mapping, mix: Mapping) -> dict:
     """Concrete portrait of one subset on the unified grain."""
-    own = row.get("vs_own_ref") or row.get("vs_full_ref") or {}
+    own = dict(row.get("vs_own_ref") or {})
+    full = row.get("vs_full_ref") or {}
+    if own.get("po") is None:
+        own["po"] = full.get("po")
+    if not own:
+        own = dict(full)
     tag = fingerprint(mix, own)
     cy = float((own or {}).get("cmean_y") or 0.0)
     cx = float((own or {}).get("cmean_x") or 0.0)

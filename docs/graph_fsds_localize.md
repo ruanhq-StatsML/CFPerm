@@ -39,7 +39,7 @@
 |---|---|---|---|---|
 | MMD | \(\mathrm{MMD}^2(Z_{\mathrm{new}}(S), Z_{\mathrm{ref}})\) 或 vs **own-ref** \(Z_{\mathrm{ref}}(S)\) | 这个子集的 \(P(X)\) 走了没有 | RBF，σ 钉在该空间的 \(D_{\mathrm{ref}}\) | 不是对历史 pairwise |
 | PO-risk | \(\varphi=(Y-\mu)(T-e)\) 的风险 | 这个子集的 \(P(Y\mid X)\) 有没有 hop | 独立 RF nuisance；T=batch 标签 | 不是 CATE(T)，不是服务 MLP |
-| Conditional Mean | \(\Delta\mu_Y(S)=\mathbb{E}[Y_{\mathrm{new}}\mid S]-\mathbb{E}[Y_{\mathrm{ref}}\mid S]\)，\(\Delta\mu_X(S)=\|\mathbb{E}[Z_{\mathrm{new}}\mid S]-\mathbb{E}[Z_{\mathrm{ref}}\mid S]\|\) | **一阶矩**怎么刻画这个子集 | 分箱用 ref 的 median，不在新窗重切 | \(\Delta\mu_Y\) **不是** concept 检测器 |
+| Conditional Mean | \(\Delta\mu_Y(S)=\mathbb{E}[Y_{\mathrm{new}}\mid S]-\mathbb{E}[Y_{\mathrm{ref}}\mid S]\)，\(\Delta\mu_X(S)=\|\mathbb{E}[Z_{\mathrm{new}}\mid S]-\mathbb{E}[Z_{\mathrm{ref}}\mid S]\|\) | **一阶矩**怎么刻画这个子集 | 子集上用 \(\mathbb{E}[Y\mid S]\)；FSDS 列打分用冻结分箱的 \(\Delta(\mathbb{E}[Y\mid\mathrm{high}]-\mathbb{E}[Y\mid\mathrm{low}])\)，避免全局 \(\mathbb{E}[Y]\) 走的时候每一列都响 | \(\Delta\mu_Y(S)\) **不是** concept 检测器 |
 
 三支一起读才有刻画：
 
@@ -141,9 +141,9 @@ HH（划分）选的是图上的 merchant/region，**不是 Y**。FSDS 的 CMean
 
 | kind | 种下的事 | 订单粒该看到 |
 |---|---|---|
-| `covariate_south` | amount、channel、merchant_gmv 走；\(f\) 不变 | FSDS 含 amount；loud=south；π_MMD、\(\|\Delta\mu_X\|\)、gap_MMD>0；\(\Delta\mu_Y\) 可能跟着走 |
-| `concept_south` | 南区 amount 系数翻号；\(P(X)\) 固定 | loud=south；\(|\Delta\mu_Y|\) 南>北；MMD 不大 |
-| `both` | 两件同时 | MMD 仍在南区；PO / CMean_Y 也在南区 |
+| `covariate_south` | amount、channel、merchant_gmv 走；\(f\) 不变 | FSDS 含 amount / channel / merchant_gmv；loud=south；π_MMD、\(\|\Delta\mu_X\|\)、gap_MMD>0；\(\Delta\mu_Y\) 可能跟着走；fingerprint `x_shift` |
+| `concept_south` | 南区 amount 系数翻号并下移截距；\(P(X)\) 固定 | FSDS 含 amount（靠 CMean 关联差，不是靠 MMD）；loud=south；π_PO 和 \(|\Delta\mu_Y|\) 南>北；MMD 份额被门控掉；fingerprint `concept` |
+| `both` | 两件同时 | 后期 MMD 往往盖过 PO（X 走得更响）；肖像里仍要读 PO 和 \(\Delta\mu_Y\)，不要只看 mix |
 
 实测表：`results/graph_fsds_localize/TABLES.md`。图：`subset_shares.png`。
 

@@ -1,0 +1,1536 @@
+{
+  "covariate_south": {
+    "meta": {
+      "kind": "covariate_south",
+      "onset_batch": 1,
+      "planted_subset": "south",
+      "planted_order_feats": [
+        "amount",
+        "channel"
+      ],
+      "planted_merchant_feats": [
+        "merchant_gmv"
+      ],
+      "n_ref": 360,
+      "n_new": 100,
+      "n_batches": 3,
+      "n_merchants": 8,
+      "n_users": 40,
+      "title": "order-graph covariate_south (south after batch 1)",
+      "leakage": "Y is outcome only; subset key is region, not Y"
+    },
+    "rows": [
+      {
+        "t": 0,
+        "onset": false,
+        "selected": [
+          "hour",
+          "channel"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 50,
+            "share_of_batch": 0.5,
+            "mmd": -0.004054544253125347,
+            "po": 6.40599124848031e-05,
+            "cmean_x": 0.2585746150451069,
+            "cmean_y": -0.02877192982456145,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.7419712371724148,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.7419712371724148,
+            "gap_vs_other": {
+              "mmd": -0.008042197209160551,
+              "po": -2.110217324485344e-05,
+              "cmean_x": 0.10775380900441878,
+              "cmean_y": -0.03999999999999998
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          },
+          {
+            "subset": "north",
+            "n": 50,
+            "share_of_batch": 0.5,
+            "mmd": 0.0052447269041675515,
+            "po": 5.986168423877555e-05,
+            "cmean_x": 0.08992220274329059,
+            "cmean_y": -0.04677248677248674,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.2580287628275852,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.2580287628275852,
+            "gap_vs_other": {
+              "mmd": 0.008042197209160551,
+              "po": 2.110217324485344e-05,
+              "cmean_x": -0.10775380900441878,
+              "cmean_y": 0.03999999999999998
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          }
+        ],
+        "logo_full": null,
+        "logo_subset": null,
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "hour",
+              "score": 1.3845101258894355,
+              "mmd": -0.0006575152924515049,
+              "cmean_x": 0.09351756404194571,
+              "cmean_y": 0.13845101258894355,
+              "loud": false
+            },
+            {
+              "feature": "channel",
+              "score": 0.6516205645215342,
+              "mmd": 0.009774308467823012,
+              "cmean_x": 0.1260315133822457,
+              "cmean_y": 0.04836745617556537,
+              "loud": false
+            },
+            {
+              "feature": "amount",
+              "score": 0.5929487179487181,
+              "mmd": 0.0004158490418614269,
+              "cmean_x": 0.12813502839620125,
+              "cmean_y": 0.059294871794871806,
+              "loud": false
+            },
+            {
+              "feature": "n_items",
+              "score": 0.5606060606060603,
+              "mmd": -0.005541868730314592,
+              "cmean_x": 0.07582673789996415,
+              "cmean_y": 0.05606060606060603,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "n_skus",
+              "score": 1.1298284871439665e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 4.440892098500626e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_gmv",
+              "score": 6.346905537141797e-16,
+              "mmd": -0.14527242791897632,
+              "cmean_x": 2.220446049250313e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 0.0,
+              "mmd": -0.15198587233719174,
+              "cmean_x": 0.0,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_hist_freq",
+              "score": 0.908724930464061,
+              "mmd": 0.00012019676649088762,
+              "cmean_x": 0.002913813576015195,
+              "cmean_y": 0.0908724930464061,
+              "loud": false
+            },
+            {
+              "feature": "user_tenure",
+              "score": 0.4925030575639231,
+              "mmd": -0.000665856843227286,
+              "cmean_x": 0.12312576439098077,
+              "cmean_y": 0.018142632547089976,
+              "loud": false
+            }
+          ]
+        }
+      },
+      {
+        "t": 1,
+        "onset": true,
+        "selected": [
+          "amount",
+          "hour"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 47,
+            "share_of_batch": 0.47,
+            "mmd": 0.022614777011037868,
+            "po": 0.00010930184125519437,
+            "cmean_x": 0.5750165382938744,
+            "cmean_y": 0.1720791340052258,
+            "pi_mmd": 1.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.8161838526132629,
+            "mix_mmd": 0.5506050494618837,
+            "mix_po": 0.0,
+            "mix_cmean": 0.4493949505381164,
+            "contribution": 1.8161838526132628,
+            "gap_vs_other": {
+              "mmd": 0.025661337848102428,
+              "po": 3.9911886518767756e-05,
+              "cmean_x": 0.3332400101066791,
+              "cmean_y": 0.17141710156563628
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          },
+          {
+            "subset": "north",
+            "n": 53,
+            "share_of_batch": 0.53,
+            "mmd": -0.0027132937325129447,
+            "po": 5.1092583736169405e-05,
+            "cmean_x": 0.1929673145842199,
+            "cmean_y": 0.022661475491664196,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.18381614738673707,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.18381614738673707,
+            "gap_vs_other": {
+              "mmd": -0.025661337848102428,
+              "po": -3.9911886518767756e-05,
+              "cmean_x": -0.3332400101066791,
+              "cmean_y": -0.17141710156563628
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          }
+        ],
+        "logo_full": null,
+        "logo_subset": null,
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "amount",
+              "score": 1.4580736732662605,
+              "mmd": 0.01609847007225762,
+              "cmean_x": 0.3645184183165651,
+              "cmean_y": 0.07881049298959752,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 1.061965811965812,
+              "mmd": -0.00453126381749025,
+              "cmean_x": 0.06354118659072018,
+              "cmean_y": 0.10619658119658121,
+              "loud": false
+            },
+            {
+              "feature": "channel",
+              "score": 1.0376777049690176,
+              "mmd": 0.003805529026511323,
+              "cmean_x": 0.2594194262422544,
+              "cmean_y": 0.01795491143317235,
+              "loud": false
+            },
+            {
+              "feature": "n_items",
+              "score": 0.4865279445111387,
+              "mmd": -0.003029956964601177,
+              "cmean_x": 0.0452991634678875,
+              "cmean_y": 0.04865279445111387,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "merchant_gmv",
+              "score": 0.6635902019582495,
+              "mmd": -0.1274448268815167,
+              "cmean_x": 0.23215506101938282,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "n_skus",
+              "score": 1.2710570480369624e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 4.996003610813204e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.15198587233719174,
+              "cmean_x": 2.7755575615628914e-17,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_tenure",
+              "score": 0.622746810940968,
+              "mmd": -0.0017594655620236654,
+              "cmean_x": 0.10408848943287637,
+              "cmean_y": 0.07786195286195291,
+              "loud": false
+            },
+            {
+              "feature": "user_hist_freq",
+              "score": 0.6041586595112358,
+              "mmd": -0.0014062626020705515,
+              "cmean_x": 0.0066356540110234785,
+              "cmean_y": 0.06041586595112358,
+              "loud": false
+            }
+          ]
+        }
+      },
+      {
+        "t": 2,
+        "onset": true,
+        "selected": [
+          "amount",
+          "channel",
+          "merchant_gmv"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 48,
+            "share_of_batch": 0.48,
+            "mmd": 0.4210750479933823,
+            "po": 2.8485424503809192e-05,
+            "cmean_x": 2.45119911990899,
+            "cmean_y": 0.32456140350877194,
+            "pi_mmd": 1.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.788888480787191,
+            "mix_mmd": 0.5590063387070139,
+            "mix_po": 0.0,
+            "mix_cmean": 0.4409936612929861,
+            "contribution": 1.788888480787191,
+            "gap_vs_other": {
+              "mmd": 0.45017525671739256,
+              "po": -0.00017747138563882294,
+              "cmean_x": 2.2398882251708905,
+              "cmean_y": 0.17948717948717952
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          },
+          {
+            "subset": "north",
+            "n": 52,
+            "share_of_batch": 0.52,
+            "mmd": -0.003472382064110824,
+            "po": 0.0006996403475246017,
+            "cmean_x": 0.22008831003473192,
+            "cmean_y": 0.1670736670736671,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.21111151921280902,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.21111151921280902,
+            "gap_vs_other": {
+              "mmd": -0.45017525671739256,
+              "po": 0.00017747138563882294,
+              "cmean_x": -2.2398882251708905,
+              "cmean_y": -0.17948717948717952
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          }
+        ],
+        "logo_full": {
+          "pi_loss": {
+            "order": 0.0,
+            "merchant": 1.0
+          },
+          "pi_po": {
+            "order": 0.0,
+            "merchant": 0.0
+          },
+          "pi_mmd": {
+            "order": 0.0,
+            "merchant": 1.0
+          },
+          "ratios": {
+            "order": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 0.0,
+              "mix_po": 0.0,
+              "mix_mmd": 0.0,
+              "quiet": true
+            },
+            "merchant": {
+              "pi_loss": 1.0,
+              "pi_po": 0.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            }
+          },
+          "global_action": "keep_training"
+        },
+        "logo_subset": {
+          "pi_loss": {
+            "order": 0.0,
+            "merchant": 1.0
+          },
+          "pi_po": {
+            "order": 0.0,
+            "merchant": 1.0
+          },
+          "pi_mmd": {
+            "order": 0.0,
+            "merchant": 1.0
+          },
+          "ratios": {
+            "order": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 0.0,
+              "mix_po": 0.0,
+              "mix_mmd": 0.0,
+              "quiet": true
+            },
+            "merchant": {
+              "pi_loss": 1.0,
+              "pi_po": 1.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.5,
+              "mix_mmd": 0.5,
+              "quiet": false
+            }
+          }
+        },
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "amount",
+              "score": 5.347460319255119,
+              "mmd": 0.08021190478882678,
+              "cmean_x": 0.774358938840479,
+              "cmean_y": 0.1556372549019609,
+              "loud": true
+            },
+            {
+              "feature": "channel",
+              "score": 3.131818515069984,
+              "mmd": 0.04697727772604976,
+              "cmean_x": 0.685295389802078,
+              "cmean_y": 0.13590686274509806,
+              "loud": true
+            },
+            {
+              "feature": "hour",
+              "score": 1.588888888888889,
+              "mmd": 0.0040542530343652405,
+              "cmean_x": 0.10631556589401535,
+              "cmean_y": 0.1588888888888889,
+              "loud": false
+            },
+            {
+              "feature": "n_items",
+              "score": 0.6134305722824401,
+              "mmd": -0.00286610579046942,
+              "cmean_x": 0.06353698086761965,
+              "cmean_y": 0.06134305722824401,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "merchant_gmv",
+              "score": 2.0649123322537406,
+              "mmd": -0.04184832682769901,
+              "cmean_x": 0.7224034458004309,
+              "cmean_y": 0.0,
+              "loud": true
+            },
+            {
+              "feature": "n_skus",
+              "score": 1.4122856089299582e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 5.551115123125783e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.15198587233719163,
+              "cmean_x": 2.7755575615628914e-17,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_hist_freq",
+              "score": 0.7993576870852781,
+              "mmd": -7.646221584445279e-06,
+              "cmean_x": 0.07118601211246713,
+              "cmean_y": 0.07993576870852781,
+              "loud": false
+            },
+            {
+              "feature": "user_tenure",
+              "score": 0.5814403698535723,
+              "mmd": 0.0019146983677765794,
+              "cmean_x": 0.14536009246339307,
+              "cmean_y": 0.04293875789378049,
+              "loud": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "concept_south": {
+    "meta": {
+      "kind": "concept_south",
+      "onset_batch": 1,
+      "planted_subset": "south",
+      "planted_order_feats": [
+        "amount"
+      ],
+      "planted_merchant_feats": [],
+      "n_ref": 360,
+      "n_new": 100,
+      "n_batches": 3,
+      "n_merchants": 8,
+      "n_users": 40,
+      "title": "order-graph concept_south (south after batch 1)",
+      "leakage": "Y is outcome only; subset key is region, not Y"
+    },
+    "rows": [
+      {
+        "t": 0,
+        "onset": false,
+        "selected": [
+          "hour",
+          "channel"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 50,
+            "share_of_batch": 0.5,
+            "mmd": -0.004054544253125347,
+            "po": 6.40599124848031e-05,
+            "cmean_x": 0.2585746150451069,
+            "cmean_y": -0.02877192982456145,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.7419712371724148,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.7419712371724148,
+            "gap_vs_other": {
+              "mmd": -0.008042197209160551,
+              "po": -2.110217324485344e-05,
+              "cmean_x": 0.10775380900441878,
+              "cmean_y": -0.03999999999999998
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          },
+          {
+            "subset": "north",
+            "n": 50,
+            "share_of_batch": 0.5,
+            "mmd": 0.0052447269041675515,
+            "po": 5.986168423877555e-05,
+            "cmean_x": 0.08992220274329059,
+            "cmean_y": -0.04677248677248674,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.2580287628275852,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.2580287628275852,
+            "gap_vs_other": {
+              "mmd": 0.008042197209160551,
+              "po": 2.110217324485344e-05,
+              "cmean_x": -0.10775380900441878,
+              "cmean_y": 0.03999999999999998
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          }
+        ],
+        "logo_full": null,
+        "logo_subset": null,
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "hour",
+              "score": 1.3845101258894355,
+              "mmd": -0.0006575152924515049,
+              "cmean_x": 0.09351756404194571,
+              "cmean_y": 0.13845101258894355,
+              "loud": false
+            },
+            {
+              "feature": "channel",
+              "score": 0.6516205645215342,
+              "mmd": 0.009774308467823012,
+              "cmean_x": 0.1260315133822457,
+              "cmean_y": 0.04836745617556537,
+              "loud": false
+            },
+            {
+              "feature": "amount",
+              "score": 0.5929487179487181,
+              "mmd": 0.0004158490418614269,
+              "cmean_x": 0.12813502839620125,
+              "cmean_y": 0.059294871794871806,
+              "loud": false
+            },
+            {
+              "feature": "n_items",
+              "score": 0.5606060606060603,
+              "mmd": -0.005541868730314592,
+              "cmean_x": 0.07582673789996415,
+              "cmean_y": 0.05606060606060603,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "n_skus",
+              "score": 1.1298284871439665e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 4.440892098500626e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_gmv",
+              "score": 6.346905537141797e-16,
+              "mmd": -0.14527242791897632,
+              "cmean_x": 2.220446049250313e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 0.0,
+              "mmd": -0.15198587233719174,
+              "cmean_x": 0.0,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_hist_freq",
+              "score": 0.908724930464061,
+              "mmd": 0.00012019676649088762,
+              "cmean_x": 0.002913813576015195,
+              "cmean_y": 0.0908724930464061,
+              "loud": false
+            },
+            {
+              "feature": "user_tenure",
+              "score": 0.4925030575639231,
+              "mmd": -0.000665856843227286,
+              "cmean_x": 0.12312576439098077,
+              "cmean_y": 0.018142632547089976,
+              "loud": false
+            }
+          ]
+        }
+      },
+      {
+        "t": 1,
+        "onset": true,
+        "selected": [
+          "amount",
+          "channel"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 47,
+            "share_of_batch": 0.47,
+            "mmd": -0.0024695194744532856,
+            "po": 0.0007963296583961393,
+            "cmean_x": 0.3235555883288735,
+            "cmean_y": -0.0832400149309444,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.6874556603481285,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.6874556603481285,
+            "gap_vs_other": {
+              "mmd": 0.0016554155494202805,
+              "po": 0.0002407154569261767,
+              "cmean_x": 0.08719485738439162,
+              "cmean_y": 0.0594785672866765
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          },
+          {
+            "subset": "north",
+            "n": 53,
+            "share_of_batch": 0.53,
+            "mmd": -0.003595718254055358,
+            "po": 0.00016276237825759408,
+            "cmean_x": 0.22587021780337005,
+            "cmean_y": 0.022661475491664196,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.3125443396518715,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.3125443396518715,
+            "gap_vs_other": {
+              "mmd": -0.0016554155494202805,
+              "po": -0.0002407154569261767,
+              "cmean_x": -0.08719485738439162,
+              "cmean_y": -0.0594785672866765
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          }
+        ],
+        "logo_full": null,
+        "logo_subset": null,
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "amount",
+              "score": 1.455627705627706,
+              "mmd": -0.0041858955827105415,
+              "cmean_x": 0.07810770199855398,
+              "cmean_y": 0.14556277056277062,
+              "loud": false
+            },
+            {
+              "feature": "channel",
+              "score": 1.2333333333333334,
+              "mmd": -0.002412747085151268,
+              "cmean_x": 0.07327077021639329,
+              "cmean_y": 0.12333333333333335,
+              "loud": false
+            },
+            {
+              "feature": "n_items",
+              "score": 1.0660931039082293,
+              "mmd": -0.003029956964601177,
+              "cmean_x": 0.0452991634678875,
+              "cmean_y": 0.10660931039082294,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 0.9658119658119663,
+              "mmd": -0.00453126381749025,
+              "cmean_x": 0.06354118659072018,
+              "cmean_y": 0.09658119658119663,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "n_skus",
+              "score": 1.2710570480369624e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 4.996003610813204e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_gmv",
+              "score": 6.346905537141797e-16,
+              "mmd": -0.14527242791897643,
+              "cmean_x": 2.220446049250313e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.15198587233719174,
+              "cmean_x": 2.7755575615628914e-17,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_hist_freq",
+              "score": 0.9562995158537724,
+              "mmd": -0.0014062626020705515,
+              "cmean_x": 0.0066356540110234785,
+              "cmean_y": 0.09562995158537724,
+              "loud": false
+            },
+            {
+              "feature": "user_tenure",
+              "score": 0.7901786209800901,
+              "mmd": -0.0017594655620236654,
+              "cmean_x": 0.10408848943287637,
+              "cmean_y": 0.09879593031766942,
+              "loud": false
+            }
+          ]
+        }
+      },
+      {
+        "t": 2,
+        "onset": true,
+        "selected": [
+          "amount"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 48,
+            "share_of_batch": 0.48,
+            "mmd": 0.01571965180151569,
+            "po": 0.00158244184410343,
+            "cmean_x": 0.27835123361658465,
+            "cmean_y": -0.25877192982456143,
+            "pi_mmd": 0.0,
+            "pi_po": 0.6654688127898682,
+            "pi_cmean": 0.6913650728222133,
+            "mix_mmd": 0.0,
+            "mix_po": 0.49045710005220616,
+            "mix_cmean": 0.5095428999477939,
+            "contribution": 1.3568338856120814,
+            "gap_vs_other": {
+              "mmd": 0.015095632602107556,
+              "po": 0.00028071934989702397,
+              "cmean_x": 0.19873155023932404,
+              "cmean_y": 0.09059829059829061
+            },
+            "fingerprint": "concept",
+            "read": "this subset's P(Y|X) hopped; E[Y|S] moved while selected X stayed closer"
+          },
+          {
+            "subset": "north",
+            "n": 52,
+            "share_of_batch": 0.52,
+            "mmd": -0.0011363321173691876,
+            "po": 0.0007954935507489652,
+            "cmean_x": 0.08078196633557129,
+            "cmean_y": 0.1670736670736671,
+            "pi_mmd": 0.0,
+            "pi_po": 0.33453118721013175,
+            "pi_cmean": 0.3086349271777868,
+            "mix_mmd": 0.0,
+            "mix_po": 0.5201318597583375,
+            "mix_cmean": 0.47986814024166236,
+            "contribution": 0.6431661143879186,
+            "gap_vs_other": {
+              "mmd": -0.015095632602107556,
+              "po": -0.00028071934989702397,
+              "cmean_x": -0.19873155023932404,
+              "cmean_y": -0.09059829059829061
+            },
+            "fingerprint": "concept",
+            "read": "this subset's P(Y|X) hopped; E[Y|S] moved while selected X stayed closer"
+          }
+        ],
+        "logo_full": null,
+        "logo_subset": null,
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "amount",
+              "score": 3.046536796536797,
+              "mmd": 0.006200246742020354,
+              "cmean_x": 0.0917499627799937,
+              "cmean_y": 0.30465367965367973,
+              "loud": true
+            },
+            {
+              "feature": "channel",
+              "score": 0.7887729158303219,
+              "mmd": 0.005076273522195085,
+              "cmean_x": 0.12237997210635064,
+              "cmean_y": 0.0788772915830322,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 0.4252622635760614,
+              "mmd": 0.0040542530343652405,
+              "cmean_x": 0.10631556589401535,
+              "cmean_y": 0.0411111111111111,
+              "loud": false
+            },
+            {
+              "feature": "n_items",
+              "score": 0.2541479234704786,
+              "mmd": -0.00286610579046942,
+              "cmean_x": 0.06353698086761965,
+              "cmean_y": 0.012522860074044295,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "n_skus",
+              "score": 1.4122856089299582e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 5.551115123125783e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_gmv",
+              "score": 6.346905537141797e-16,
+              "mmd": -0.14527242791897643,
+              "cmean_x": 2.220446049250313e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.15198587233719163,
+              "cmean_x": 2.7755575615628914e-17,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_hist_freq",
+              "score": 0.6009285841501816,
+              "mmd": -7.646221584445279e-06,
+              "cmean_x": 0.07118601211246713,
+              "cmean_y": 0.06009285841501816,
+              "loud": false
+            },
+            {
+              "feature": "user_tenure",
+              "score": 0.5814403698535723,
+              "mmd": 0.0019146983677765794,
+              "cmean_x": 0.14536009246339307,
+              "cmean_y": 0.029310831597188336,
+              "loud": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "both": {
+    "meta": {
+      "kind": "both",
+      "onset_batch": 1,
+      "planted_subset": "south",
+      "planted_order_feats": [
+        "amount",
+        "channel"
+      ],
+      "planted_merchant_feats": [
+        "merchant_gmv"
+      ],
+      "n_ref": 360,
+      "n_new": 100,
+      "n_batches": 3,
+      "n_merchants": 8,
+      "n_users": 40,
+      "title": "order-graph both (south after batch 1)",
+      "leakage": "Y is outcome only; subset key is region, not Y"
+    },
+    "rows": [
+      {
+        "t": 0,
+        "onset": false,
+        "selected": [
+          "hour",
+          "channel"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 50,
+            "share_of_batch": 0.5,
+            "mmd": -0.004054544253125347,
+            "po": 6.40599124848031e-05,
+            "cmean_x": 0.2585746150451069,
+            "cmean_y": -0.02877192982456145,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.7419712371724148,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.7419712371724148,
+            "gap_vs_other": {
+              "mmd": -0.008042197209160551,
+              "po": -2.110217324485344e-05,
+              "cmean_x": 0.10775380900441878,
+              "cmean_y": -0.03999999999999998
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          },
+          {
+            "subset": "north",
+            "n": 50,
+            "share_of_batch": 0.5,
+            "mmd": 0.0052447269041675515,
+            "po": 5.986168423877555e-05,
+            "cmean_x": 0.08992220274329059,
+            "cmean_y": -0.04677248677248674,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.2580287628275852,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.2580287628275852,
+            "gap_vs_other": {
+              "mmd": 0.008042197209160551,
+              "po": 2.110217324485344e-05,
+              "cmean_x": -0.10775380900441878,
+              "cmean_y": 0.03999999999999998
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          }
+        ],
+        "logo_full": null,
+        "logo_subset": null,
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "hour",
+              "score": 1.3845101258894355,
+              "mmd": -0.0006575152924515049,
+              "cmean_x": 0.09351756404194571,
+              "cmean_y": 0.13845101258894355,
+              "loud": false
+            },
+            {
+              "feature": "channel",
+              "score": 0.6516205645215342,
+              "mmd": 0.009774308467823012,
+              "cmean_x": 0.1260315133822457,
+              "cmean_y": 0.04836745617556537,
+              "loud": false
+            },
+            {
+              "feature": "amount",
+              "score": 0.5929487179487181,
+              "mmd": 0.0004158490418614269,
+              "cmean_x": 0.12813502839620125,
+              "cmean_y": 0.059294871794871806,
+              "loud": false
+            },
+            {
+              "feature": "n_items",
+              "score": 0.5606060606060603,
+              "mmd": -0.005541868730314592,
+              "cmean_x": 0.07582673789996415,
+              "cmean_y": 0.05606060606060603,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "n_skus",
+              "score": 1.1298284871439665e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 4.440892098500626e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_gmv",
+              "score": 6.346905537141797e-16,
+              "mmd": -0.14527242791897632,
+              "cmean_x": 2.220446049250313e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 0.0,
+              "mmd": -0.15198587233719174,
+              "cmean_x": 0.0,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_hist_freq",
+              "score": 0.908724930464061,
+              "mmd": 0.00012019676649088762,
+              "cmean_x": 0.002913813576015195,
+              "cmean_y": 0.0908724930464061,
+              "loud": false
+            },
+            {
+              "feature": "user_tenure",
+              "score": 0.4925030575639231,
+              "mmd": -0.000665856843227286,
+              "cmean_x": 0.12312576439098077,
+              "cmean_y": 0.018142632547089976,
+              "loud": false
+            }
+          ]
+        }
+      },
+      {
+        "t": 1,
+        "onset": true,
+        "selected": [
+          "n_items",
+          "amount"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 47,
+            "share_of_batch": 0.47,
+            "mmd": 0.024743408614555262,
+            "po": 0.0011790857227122855,
+            "cmean_x": 0.5750599298760755,
+            "cmean_y": -0.0406868234415827,
+            "pi_mmd": 1.0,
+            "pi_po": 0.9427781364675838,
+            "pi_cmean": 0.716083559290746,
+            "mix_mmd": 0.3761007959140167,
+            "mix_po": 0.3545796074957917,
+            "mix_cmean": 0.2693195965901915,
+            "contribution": 2.65886169575833,
+            "gap_vs_other": {
+              "mmd": 0.0265008137214211,
+              "po": 0.0004223318551167106,
+              "cmean_x": 0.31186175626211304,
+              "cmean_y": 0.01692537579731479
+            },
+            "fingerprint": "both",
+            "read": "P(X) and P(Y|X) both look loud on this subset \u2014 localization, not a split"
+          },
+          {
+            "subset": "north",
+            "n": 53,
+            "share_of_batch": 0.53,
+            "mmd": -0.00019519783443922023,
+            "po": 7.156453857835366e-05,
+            "cmean_x": 0.2280026770152919,
+            "cmean_y": 0.022661475491664196,
+            "pi_mmd": 0.0,
+            "pi_po": 0.057221863532416234,
+            "pi_cmean": 0.28391644070925404,
+            "mix_mmd": 0.0,
+            "mix_po": 0.1677380195097615,
+            "mix_cmean": 0.8322619804902386,
+            "contribution": 0.34113830424167024,
+            "gap_vs_other": {
+              "mmd": -0.0265008137214211,
+              "po": -0.0004223318551167106,
+              "cmean_x": -0.31186175626211304,
+              "cmean_y": -0.01692537579731479
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          }
+        ],
+        "logo_full": null,
+        "logo_subset": null,
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "n_items",
+              "score": 1.474256369214351,
+              "mmd": -0.003029956964601177,
+              "cmean_x": 0.0452991634678875,
+              "cmean_y": 0.14742563692143512,
+              "loud": false
+            },
+            {
+              "feature": "amount",
+              "score": 1.4580736732662605,
+              "mmd": 0.01609847007225762,
+              "cmean_x": 0.3645184183165651,
+              "cmean_y": 0.09237901402080517,
+              "loud": false
+            },
+            {
+              "feature": "channel",
+              "score": 1.0376777049690176,
+              "mmd": 0.003805529026511323,
+              "cmean_x": 0.2594194262422544,
+              "cmean_y": 0.042109500805152966,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 0.9818376068376072,
+              "mmd": -0.00453126381749025,
+              "cmean_x": 0.06354118659072018,
+              "cmean_y": 0.09818376068376072,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "merchant_gmv",
+              "score": 0.6635902019582495,
+              "mmd": -0.1274448268815167,
+              "cmean_x": 0.23215506101938282,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "n_skus",
+              "score": 1.2710570480369624e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 4.996003610813204e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.15198587233719174,
+              "cmean_x": 2.7755575615628914e-17,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_hist_freq",
+              "score": 1.3644627811598942,
+              "mmd": -0.0014062626020705515,
+              "cmean_x": 0.0066356540110234785,
+              "cmean_y": 0.13644627811598942,
+              "loud": false
+            },
+            {
+              "feature": "user_tenure",
+              "score": 0.49395311091087307,
+              "mmd": -0.0017594655620236654,
+              "cmean_x": 0.10408848943287637,
+              "cmean_y": 0.06175889328063239,
+              "loud": false
+            }
+          ]
+        }
+      },
+      {
+        "t": 2,
+        "onset": true,
+        "selected": [
+          "amount",
+          "channel",
+          "merchant_gmv"
+        ],
+        "loud_subset": "south",
+        "portraits": [
+          {
+            "subset": "south",
+            "n": 48,
+            "share_of_batch": 0.48,
+            "mmd": 0.4210750479933823,
+            "po": 0.000858533261038827,
+            "cmean_x": 2.45119911990899,
+            "cmean_y": -0.30043859649122806,
+            "pi_mmd": 1.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.7801210975907145,
+            "mix_mmd": 0.5617595349852542,
+            "mix_po": 0.0,
+            "mix_cmean": 0.43824046501474584,
+            "contribution": 1.7801210975907145,
+            "gap_vs_other": {
+              "mmd": 0.45017525671739256,
+              "po": 0.00017992350729228632,
+              "cmean_x": 2.2398882251708905,
+              "cmean_y": 0.13226495726495724
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          },
+          {
+            "subset": "north",
+            "n": 52,
+            "share_of_batch": 0.52,
+            "mmd": -0.003472382064110824,
+            "po": 0.0006996403475246017,
+            "cmean_x": 0.22008831003473192,
+            "cmean_y": 0.1670736670736671,
+            "pi_mmd": 0.0,
+            "pi_po": 0.0,
+            "pi_cmean": 0.21987890240928565,
+            "mix_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_cmean": 1.0,
+            "contribution": 0.21987890240928565,
+            "gap_vs_other": {
+              "mmd": -0.45017525671739256,
+              "po": -0.00017992350729228632,
+              "cmean_x": -2.2398882251708905,
+              "cmean_y": -0.13226495726495724
+            },
+            "fingerprint": "x_shift",
+            "read": "this subset's P(X) moved vs its own D_ref; E[Y|S] may follow because f is not constant"
+          }
+        ],
+        "logo_full": {
+          "pi_loss": {
+            "order": 1.0,
+            "merchant": 0.0
+          },
+          "pi_po": {
+            "order": 1.0,
+            "merchant": 0.0
+          },
+          "pi_mmd": {
+            "order": 0.0,
+            "merchant": 1.0
+          },
+          "ratios": {
+            "order": {
+              "pi_loss": 1.0,
+              "pi_po": 1.0,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "merchant": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            }
+          },
+          "global_action": "keep_training"
+        },
+        "logo_subset": {
+          "pi_loss": {
+            "order": 1.0,
+            "merchant": 0.0
+          },
+          "pi_po": {
+            "order": 1.0,
+            "merchant": 0.0
+          },
+          "pi_mmd": {
+            "order": 0.0,
+            "merchant": 1.0
+          },
+          "ratios": {
+            "order": {
+              "pi_loss": 1.0,
+              "pi_po": 1.0,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "merchant": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            }
+          }
+        },
+        "leakage": {
+          "y_in_Z": false,
+          "subset_is_y": false,
+          "mode": "localize",
+          "sigma_from_ref": true,
+          "bins_from_ref": true,
+          "serve_profiles_from_ref": false
+        },
+        "fsds_rank": {
+          "order": [
+            {
+              "feature": "amount",
+              "score": 5.50857843137255,
+              "mmd": 0.08021190478882678,
+              "cmean_x": 0.774358938840479,
+              "cmean_y": 0.550857843137255,
+              "loud": true
+            },
+            {
+              "feature": "channel",
+              "score": 3.473039215686274,
+              "mmd": 0.04697727772604976,
+              "cmean_x": 0.685295389802078,
+              "cmean_y": 0.34730392156862744,
+              "loud": true
+            },
+            {
+              "feature": "n_items",
+              "score": 1.456465498015077,
+              "mmd": -0.00286610579046942,
+              "cmean_x": 0.06353698086761965,
+              "cmean_y": 0.1456465498015077,
+              "loud": false
+            },
+            {
+              "feature": "hour",
+              "score": 0.4252622635760614,
+              "mmd": 0.0040542530343652405,
+              "cmean_x": 0.10631556589401535,
+              "cmean_y": 0.0011111111111111183,
+              "loud": false
+            }
+          ],
+          "merchant": [
+            {
+              "feature": "merchant_gmv",
+              "score": 2.0649123322537406,
+              "mmd": -0.04184832682769901,
+              "cmean_x": 0.7224034458004309,
+              "cmean_y": 0.0,
+              "loud": true
+            },
+            {
+              "feature": "n_skus",
+              "score": 1.4122856089299582e-15,
+              "mmd": -0.14255029236431427,
+              "cmean_x": 5.551115123125783e-16,
+              "cmean_y": 0.0,
+              "loud": false
+            },
+            {
+              "feature": "merchant_cat",
+              "score": 1.1102230246251565e-16,
+              "mmd": -0.15198587233719163,
+              "cmean_x": 2.7755575615628914e-17,
+              "cmean_y": 0.0,
+              "loud": false
+            }
+          ],
+          "user": [
+            {
+              "feature": "user_hist_freq",
+              "score": 0.6753394977508426,
+              "mmd": -7.646221584445279e-06,
+              "cmean_x": 0.07118601211246713,
+              "cmean_y": 0.06753394977508426,
+              "loud": false
+            },
+            {
+              "feature": "user_tenure",
+              "score": 0.5814403698535723,
+              "mmd": 0.0019146983677765794,
+              "cmean_x": 0.14536009246339307,
+              "cmean_y": 0.063793590217878,
+              "loud": false
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
