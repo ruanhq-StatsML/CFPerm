@@ -70,4 +70,10 @@ If MSE moves and MMD vs $D_{\mathrm{ref}}$ is large: treat as $P(X)$ shift, do n
 If both PO-risk and MSE break: freeze training of the bottom groups and keep only the top $i^\star$ trainable.
 Do not shrink the batch to invent an update clock; do not bootstrap the MLP.
 
+\paragraph{Next shape: modality LOGO.}
+If $X$ is grouped (video / audio / text), leave-one-group-out shares on serving loss and on PO vs MMD localize \emph{which tower} the five cells apply to.
+They are not a unique decomposition.
+A quiet full-batch cell can still have a hot subset; localize the slice first.
+\texttt{train\_top} on a PO-loud tower, \texttt{train\_stem} on an MMD-loud tower.
+
 \end{document}

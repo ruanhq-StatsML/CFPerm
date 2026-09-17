@@ -63,3 +63,7 @@ PYTHONPATH=Python/src:. python3 scripts/render_flow_html.py
 ```
 
 给老板看的总页：`results/layer_freeze_online_cv/mvp.html`。
+
+## 下一层：模态 LOGO（定位，不是唯一分解）
+
+冻层看板仍只回答「从哪一层停训」。多模态时先 LOGO 再按塔执行同一套五格：每个模态对 Brier/MSE 的份额是第一层比例，对 PO-risk / MMD 的份额是第二层。读法、阈值和 MSR-VTT 形状在 `docs/logo_modality_next.md`。全 batch 安静时仍要看子集；子集响了也不等于该冻全模型。

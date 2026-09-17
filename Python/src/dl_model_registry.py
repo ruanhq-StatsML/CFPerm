@@ -264,6 +264,16 @@ def apply_train_top_i(model: AnyMLP, i: int) -> AnyMLP:
     return model
 
 
+def apply_train_stem(model: AnyMLP) -> AnyMLP:
+    """Train only the bottom layer group. Covariate-local stem adapt, not concept freeze."""
+    groups = model.layer_param_groups()
+    for j, ps in enumerate(groups):
+        trainable = j == 0
+        for p in ps:
+            p.requires_grad = trainable
+    return model
+
+
 def spawn_layer_models(pretrained: AnyMLP) -> list[AnyMLP]:
     """k layers → k+1 clones: model_0 … model_k."""
     k = pretrained.n_layer_groups
