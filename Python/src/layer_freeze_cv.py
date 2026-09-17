@@ -70,6 +70,56 @@ def _refresh_clones(full: AnyMLP):
     return spawn_layer_models(full)
 
 
+def run_deviation_gate(
+    X,
+    Y,
+    *,
+    n_ref: int = REF_N,
+    batch_size_stream: int = 5000,
+    max_batches: int | None = None,
+    seed: int = 2026,
+    n_ref_eval: int | None = None,
+):
+    """PO-risk gate only. Does not decide when to update — that is business logic."""
+    X = np.asarray(X, dtype=float)
+    Y = np.asarray(Y, dtype=float).ravel()
+    X_ref, Y_ref = X[:n_ref], Y[:n_ref]
+    X_stream, Y_stream = X[n_ref:], Y[n_ref:]
+    take = int(n_ref if n_ref_eval is None else min(n_ref_eval, n_ref))
+    rng = np.random.default_rng(seed + 7)
+    ref_eval = np.arange(n_ref) if take == n_ref else rng.choice(n_ref, size=take, replace=False)
+    po_base = ref_split_baseline(X_ref[ref_eval], Y_ref[ref_eval], seed=seed)
+    n_batches = len(Y_stream) // batch_size_stream
+    if max_batches is not None:
+        n_batches = min(n_batches, int(max_batches))
+    rows = []
+    cursor = 0
+    for t in range(n_batches):
+        sl = slice(cursor, cursor + batch_size_stream)
+        cursor += batch_size_stream
+        po_stream = streaming_po_risk(
+            X_ref[ref_eval], Y_ref[ref_eval], X_stream[sl], Y_stream[sl], mu_fn=None, seed=seed + t
+        )
+        large = large_deviation(po_stream, po_base)
+        rows.append(
+            {
+                "t": t,
+                "n_new": int(batch_size_stream),
+                "po_stream": float(po_stream),
+                "po_base": float(po_base),
+                "large_deviation": bool(large),
+            }
+        )
+    return {
+        "n_ref": int(n_ref),
+        "n_new": int(batch_size_stream),
+        "n_batches": int(n_batches),
+        "po_base": float(po_base),
+        "frac_large": float(np.mean([r["large_deviation"] for r in rows])) if rows else 0.0,
+        "rows": rows,
+    }
+
+
 def run_layer_freeze_cv(
     X,
     Y,

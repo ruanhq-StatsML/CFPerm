@@ -27,7 +27,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from dl_model_registry import DLModelRegistry  # noqa: E402
-from layer_freeze_cv import run_layer_freeze_cv  # noqa: E402
+from layer_freeze_cv import run_deviation_gate, run_layer_freeze_cv  # noqa: E402
 from streaming_po_risk import MIN_STREAM_N, REF_N  # noqa: E402
 
 OUT = ROOT / "results" / "layer_freeze_online_cv"
@@ -193,7 +193,7 @@ code {{ background: #eee; padding: 1px 4px; }}
 {spec["title"]}. n_ref={result["n_ref"]}, n_new={n_new}, hidden={result["hidden_dims"]}.
 表格 PO-risk 单独维护 <b>outcome model</b> μ(Y|X) 和 <b>propensity</b> e(T|X)。
 新 batch 是 <b>T=1</b>。直接读 PO-risk。没有大偏差就全开；有大偏差才看从第几层开始冻。
-n_new 不宜过小，否则要 online-bootstrap。
+何时 update 是业务逻辑，不是这个数。n_new 太小旗标会抖，更不能当 update 开关。
 </p>
 <p class="rec">{rec}</p>
 {"".join(cards)}
@@ -283,6 +283,46 @@ def run_one(name: str, n_ref: int, batch: int, max_batches: int, hidden, online_
     return result
 
 
+def plot_size_compare(by_size: dict, title: str, out_dir: Path) -> str:
+    """Small n_new makes the statistical 'large' flag flicker — not a when-to-update rule."""
+    sizes = sorted(by_size)
+    fig, axes = plt.subplots(len(sizes), 1, figsize=(8.8, 2.2 * len(sizes)), sharex=False)
+    if len(sizes) == 1:
+        axes = [axes]
+    for ax, n_new in zip(axes, sizes):
+        rec = by_size[n_new]
+        rows = rec["rows"]
+        ts = [r["t"] for r in rows]
+        ax.plot(ts, [r["po_stream"] for r in rows], color="#1f4e79", lw=1.5)
+        ax.axhline(rec["po_base"], color="#888", ls="--", lw=1.2)
+        for r in rows:
+            if r["large_deviation"]:
+                ax.scatter([r["t"]], [r["po_stream"]], s=28, color="#b33", zorder=4)
+        ax.set_ylabel("PO-risk")
+        ax.set_title(f"n_new={n_new}  frac large={rec['frac_large']:.2f}", fontsize=10)
+    axes[-1].set_xlabel("incoming batch index (T=1)")
+    fig.suptitle(title + " — small batch ≠ when to update", y=1.01)
+    fig.tight_layout()
+    path = out_dir / "batch_size_gate.png"
+    fig.savefig(path, dpi=140, bbox_inches="tight")
+    plt.close(fig)
+    return path.name
+
+
+def run_size_compare(name: str, n_ref: int, sizes: list[int], stream_cap: int) -> dict:
+    X, Y, title, cols = LOADERS[name]()
+    X = _standardize_from_ref(X, n_ref)
+    keep = min(len(Y), n_ref + stream_cap)
+    X, Y = X[:keep], Y[:keep]
+    by_size = {}
+    for n_new in sizes:
+        max_batches = max(1, stream_cap // n_new)
+        rec = run_deviation_gate(X, Y, n_ref=n_ref, batch_size_stream=n_new, max_batches=max_batches)
+        by_size[int(n_new)] = rec
+        print(f"  n_new={n_new} batches={rec['n_batches']} frac_large={rec['frac_large']:.2f}", flush=True)
+    return {"title": title, "dataset": name, "n_ref": n_ref, "by_size": by_size}
+
+
 def jsonable(obj):
     if isinstance(obj, dict):
         return {k: jsonable(v) for k, v in obj.items()}
@@ -310,47 +350,71 @@ def main() -> int:
     p.add_argument("--max-batches", type=int, default=8)
     p.add_argument("--hidden", default="64,32")
     p.add_argument("--online-epochs", type=int, default=2)
+    p.add_argument("--skip-freeze", action="store_true", help="only the batch-size gate, no freeze prototype")
+    p.add_argument("--sizes", default="500,1000,2000,5000")
+    p.add_argument("--stream-cap", type=int, default=30000)
     args = p.parse_args()
     hidden = tuple(int(x) for x in args.hidden.split(",") if x.strip())
     names = ["electricity", "covertype"] if args.dataset == "both" else [args.dataset]
+    sizes = [int(x) for x in args.sizes.split(",") if x.strip()]
     OUT.mkdir(parents=True, exist_ok=True)
     index_bits = [
         "# PO-risk board",
         "",
-        "No large deviation → all trainable. Large deviation → from which layer to freeze.",
-        "Tabular PO-risk: separate outcome model + propensity. T=1, n_ref=10000, n_new ≥ 5000.",
+        "When to **update** is business logic. PO-risk does not justify that.",
+        "No large deviation → all trainable. Large deviation (and the business already wants a hop) → from which layer to freeze.",
         "",
     ]
     for name in names:
-        batch = args.batch if args.batch > 0 else DEFAULT_STREAM[name]
-        if batch < MIN_STREAM_N:
-            print(
-                f"warning: n_new={batch} < {MIN_STREAM_N}; "
-                "PO-risk will jitter and you would need online-bootstrap",
-                flush=True,
+        if not args.skip_freeze:
+            batch = args.batch if args.batch > 0 else DEFAULT_STREAM[name]
+            if batch < MIN_STREAM_N:
+                print(
+                    f"warning: n_new={batch} < {MIN_STREAM_N}; "
+                    "PO-risk will jitter and you would need online-bootstrap",
+                    flush=True,
+                )
+            spec = {"name": name, "title": name}
+            print(f"=== {name} n_ref={args.n_ref} n_new={batch} ===", flush=True)
+            result = run_one(name, args.n_ref, batch, args.max_batches, hidden, args.online_epochs)
+            spec["title"] = result["title"]
+            sub = OUT / name
+            sub.mkdir(parents=True, exist_ok=True)
+            (sub / "summary.json").write_text(json.dumps(jsonable(result), indent=2) + "\n", encoding="utf-8")
+            images = plot_boards(result, result["title"], sub)
+            render_html(spec, result, images, sub / "board.html")
+            report = render_report(spec, result)
+            (sub / "REPORT.md").write_text(report + "\n", encoding="utf-8")
+            print(report, flush=True)
+            index_bits.append(
+                f"- [{result['title']}]({name}/board.html) — large batches: {result.get('n_large', 0)}"
             )
-        max_batches = args.max_batches
-        spec = {"name": name, "title": name}
-        print(f"=== {name} n_ref={args.n_ref} n_new={batch} ===", flush=True)
-        result = run_one(name, args.n_ref, batch, max_batches, hidden, args.online_epochs)
-        spec["title"] = result["title"]
+        print(f"=== {name} batch-size gate (when-to-update is NOT this) ===", flush=True)
+        cmp_ = run_size_compare(name, args.n_ref, sizes, args.stream_cap)
         sub = OUT / name
         sub.mkdir(parents=True, exist_ok=True)
-        (sub / "summary.json").write_text(json.dumps(jsonable(result), indent=2) + "\n", encoding="utf-8")
-        images = plot_boards(result, result["title"], sub)
-        render_html(spec, result, images, sub / "board.html")
-        report = render_report(spec, result)
-        (sub / "REPORT.md").write_text(report + "\n", encoding="utf-8")
-        print(report, flush=True)
-        index_bits.append(
-            f"- [{result['title']}]({name}/board.html) — large batches: {result.get('n_large', 0)}; recommend **model_{result['recommend_i']}**"
-        )
+        img = plot_size_compare(cmp_["by_size"], cmp_["title"], sub)
+        (sub / "batch_size.json").write_text(json.dumps(jsonable(cmp_), indent=2) + "\n", encoding="utf-8")
+        lines = [
+            f"# Batch size is not when to update — {cmp_['title']}",
+            "",
+            "When to update is business logic. Shrinking n_new only makes the PO-risk flag flicker.",
+            "",
+            "| n_new | batches | frac large |",
+            "|---:|---:|---:|",
+        ]
+        for n_new in sorted(cmp_["by_size"]):
+            rec = cmp_["by_size"][n_new]
+            lines.append(f"| {n_new} | {rec['n_batches']} | {rec['frac_large']:.2f} |")
+        (sub / "BATCH_SIZE.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print("\n".join(lines), flush=True)
+        index_bits.append(f"- [{name} small vs large n_new]({name}/{img})")
     (OUT / "REPORT.md").write_text("\n".join(index_bits) + "\n", encoding="utf-8")
     html_index = """<!DOCTYPE html><meta charset="utf-8"><title>PO-risk board</title>
-<h1>除非有大 deviation，否则一直 trainable</h1>
-<p>直接读 PO-risk。表格：单独的 outcome + propensity。</p>
+<h1>何时 update 是业务逻辑</h1>
+<p>PO-risk 不能 justify 什么时候该 update。没有大 deviation 就一直 trainable；业务已经要 hop 且 PO-risk 大，才看从哪层冻。缩小 batch 只会让统计旗标抖。</p>
 <ul>""" + "".join(
-        f'<li><a href="{n}/board.html">{n}</a></li>' for n in names
+        f'<li><a href="{n}/board.html">{n}</a> · <a href="{n}/batch_size_gate.png">n_new</a></li>' for n in names
     ) + "</ul>"
     (OUT / "index.html").write_text(html_index, encoding="utf-8")
     print("wrote", OUT)

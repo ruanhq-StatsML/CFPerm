@@ -21,7 +21,7 @@ from dl_model_registry import (  # noqa: E402
     construct_dataloader,
     spawn_layer_models,
 )
-from layer_freeze_cv import run_layer_freeze_cv  # noqa: E402
+from layer_freeze_cv import run_deviation_gate, run_layer_freeze_cv  # noqa: E402
 from streaming_po_risk import (  # noqa: E402
     MIN_STREAM_N,
     REF_N,
@@ -174,6 +174,16 @@ class FreezeCvSmokeTests(unittest.TestCase):
             else:
                 self.assertTrue(r["all_trainable"])
                 self.assertIsNone(r["freeze_from"])
+
+    def test_deviation_gate_does_not_claim_when_to_update(self):
+        rng = np.random.default_rng(6)
+        X = rng.normal(size=(400, 3))
+        Y = (X[:, 0] > 0).astype(float)
+        out = run_deviation_gate(X, Y, n_ref=200, batch_size_stream=50, max_batches=4)
+        self.assertEqual(out["n_batches"], 4)
+        self.assertEqual(out["n_new"], 50)
+        self.assertIn("frac_large", out)
+        self.assertTrue(all("large_deviation" in r for r in out["rows"]))
 
 
 if __name__ == "__main__":
