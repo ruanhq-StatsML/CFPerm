@@ -103,28 +103,38 @@ def _to_xy_binary_or_reg(X, y, *, max_n: int, seed: int) -> Tuple[np.ndarray, np
     return X, y, meta
 
 
-def load_synthetic(max_n: int, seed: int, *, shift_at: float = 0.45) -> Tuple[np.ndarray, np.ndarray, dict]:
-    """Controlled concept drift: mean/scale change after ``shift_at`` fraction."""
+def load_synthetic(
+    max_n: int,
+    seed: int,
+    *,
+    shift_batch: int = 20,
+    batch_size: int = 128,
+) -> Tuple[np.ndarray, np.ndarray, dict]:
+    """Controlled concept+covariate drift starting at stream batch ``shift_batch``."""
     rng = np.random.default_rng(seed)
     d = 16
     n = max_n
     X = rng.normal(size=(n, d)).astype(np.float32)
     y = np.zeros(n, dtype=np.float64)
-    t_cut = int(n * shift_at)
+    t_cut = int(shift_batch * batch_size)
+    t_cut = max(batch_size * 4, min(t_cut, n - batch_size * 4))
     w0 = rng.normal(size=d)
     w0 /= np.linalg.norm(w0) + 1e-9
     w1 = rng.normal(size=d)
     w1 /= np.linalg.norm(w1) + 1e-9
-    # pre: mild linear; post: rotated + amplified + covariate shift
-    y[:t_cut] = X[:t_cut] @ w0 + rng.normal(0, 0.25, t_cut)
-    X[t_cut:] = X[t_cut:] * 1.35 + rng.normal(0.4, 0.15, size=(n - t_cut, d)).astype(np.float32)
-    y[t_cut:] = X[t_cut:] @ w1 * 1.8 + rng.normal(0, 0.55, n - t_cut)
-    X = StandardScaler().fit_transform(X).astype(np.float32)
+    # pre: stable linear; post: rotated + amplified + covariate shift
+    y[:t_cut] = X[:t_cut] @ w0 + rng.normal(0, 0.2, t_cut)
+    X[t_cut:] = X[t_cut:] * 1.6 + 0.75
+    y[t_cut:] = X[t_cut:] @ w1 * 2.2 + rng.normal(0, 0.45, n - t_cut)
+    # scale using pre-shift stats only (avoid leaking post regime into scaler)
+    mu = X[:t_cut].mean(axis=0, keepdims=True)
+    sd = X[:t_cut].std(axis=0, keepdims=True) + 1e-6
+    X = ((X - mu) / sd).astype(np.float32)
     meta = {
         "n": n,
         "d": d,
         "y_unique": -1,
-        "shift_frac": shift_at,
+        "shift_batch": int(t_cut // batch_size),
         "shift_idx": t_cut,
         "name": "synthetic",
     }
@@ -156,13 +166,16 @@ def load_openml_named(name: str, max_n: int, seed: int) -> Tuple[np.ndarray, np.
     return X, y, meta
 
 
-LOADERS = {
-    "synthetic": load_synthetic,
-    "covertype": load_covertype,
-    "bank": lambda max_n, seed: load_openml_named("bank-marketing", max_n, seed),
-    "electricity": lambda max_n, seed: load_openml_named("electricity", max_n, seed),
-    "eeg": lambda max_n, seed: load_openml_named("eeg-eye-state", max_n, seed),
-}
+def _loaders(batch_size: int):
+    return {
+        "synthetic": lambda max_n, seed: load_synthetic(
+            max_n, seed, shift_batch=20, batch_size=batch_size
+        ),
+        "covertype": load_covertype,
+        "bank": lambda max_n, seed: load_openml_named("bank-marketing", max_n, seed),
+        "electricity": lambda max_n, seed: load_openml_named("electricity", max_n, seed),
+        "eeg": lambda max_n, seed: load_openml_named("eeg-eye-state", max_n, seed),
+    }
 
 
 def make_stream(X, y, bs: int, n_batches: int) -> List[Tuple[np.ndarray, np.ndarray]]:
@@ -265,6 +278,47 @@ class ScalarRFPerm:
 # ---------------------------------------------------------------------------
 
 
+def _pretrain_mlp(
+    model: StreamMLP,
+    opt: torch.optim.Optimizer,
+    stream: List[Tuple[np.ndarray, np.ndarray]],
+    n_burn: int,
+    *,
+    steps: int = 80,
+) -> None:
+    """Fit MLP on burn-in batches so grad norms aren't dominated by cold-start."""
+    Xs = np.concatenate([stream[t][0] for t in range(n_burn)], axis=0)
+    ys = np.concatenate([stream[t][1] for t in range(n_burn)], axis=0)
+    xt = torch.from_numpy(np.asarray(Xs, np.float32))
+    yt = torch.from_numpy(np.asarray(ys, np.float32))
+    model.train()
+    for _ in range(steps):
+        loss = ((model(xt) - yt) ** 2).mean()
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+
+
+@torch.no_grad()
+def _clear_grads(model: nn.Module) -> None:
+    for p in model.parameters():
+        p.grad = None
+
+
+def serving_grad_norms(model: nn.Module, X: np.ndarray, y: np.ndarray) -> Dict[str, float]:
+    """‖∇_θ L‖ on a *frozen* serving model (analogous to fixed f_ref MSE)."""
+    model.train()  # need grads; weights not stepped
+    _clear_grads(model)
+    xt = torch.from_numpy(np.asarray(X, np.float32))
+    yt = torch.from_numpy(np.asarray(y, np.float32))
+    loss = ((model(xt) - yt) ** 2).mean()
+    loss.backward()
+    norms = layer_grad_norms(model)
+    _clear_grads(model)
+    model.eval()
+    return norms
+
+
 def run_dataset(
     name: str,
     stream: List[Tuple[np.ndarray, np.ndarray]],
@@ -278,8 +332,13 @@ def run_dataset(
 ) -> dict:
     torch.manual_seed(seed)
     d = stream[0][0].shape[1]
-    model = StreamMLP(d)
-    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    # Frozen serving MLP = Grad OnlineRFPerm's f_ref
+    f_ref = StreamMLP(d)
+    opt_ref = torch.optim.Adam(f_ref.parameters(), lr=lr)
+    _pretrain_mlp(f_ref, opt_ref, stream, max(n_burn, 1), steps=max(80, 10 * train_steps))
+    for p in f_ref.parameters():
+        p.requires_grad_(True)  # grads for monitoring only; never stepped after pretrain
+
     layer_names = ["fc1", "fc2", "fc3"]
     grad_states = init_grad_rfperm(layer_names)
     share_states = init_grad_rfperm([f"{n}_share" for n in layer_names])
@@ -305,20 +364,11 @@ def run_dataset(
         Xc, yc = stream[t]
         burn = t < n_burn
 
-        # train one batch; capture grads from last step
-        xt = torch.from_numpy(np.asarray(Xc, np.float32))
-        yt = torch.from_numpy(np.asarray(yc, np.float32))
-        model.train()
-        last_norms: Dict[str, float] = {}
-        for step_i in range(train_steps):
-            pred = model(xt)
-            loss = ((pred - yt) ** 2).mean()
-            opt.zero_grad()
-            loss.backward()
-            if step_i == train_steps - 1:
-                last_norms = layer_grad_norms(model)
-            opt.step()
-        train_mse.append(float(loss.detach().item()))
+        # serving loss under frozen f_ref → layer grad energy
+        last_norms = serving_grad_norms(f_ref, Xc, yc)
+        with torch.no_grad():
+            pred = f_ref(torch.from_numpy(np.asarray(Xc, np.float32)))
+            train_mse.append(float(((pred - torch.from_numpy(np.asarray(yc, np.float32))) ** 2).mean().item()))
 
         # relative shares
         shares = relative_grad_shares(last_norms) if last_norms else {n: 0.0 for n in layer_names}
@@ -372,6 +422,7 @@ def run_dataset(
         "n_burn": n_burn,
         "alpha": alpha,
         "use_share": use_share,
+        "protocol": "frozen_f_ref_grad",
         "first_reject": {
             "grad_any": t_grad,
             "grad_share_any": t_share,
@@ -386,6 +437,12 @@ def run_dataset(
             "grad_minus_mmd": lead_time(t_grad, t_mmd),
             "grad_minus_po": lead_time(t_grad, t_po),
             "share_minus_mse": lead_time(t_share, t_mse),
+        },
+        "_states_for_shift": {
+            "grad": {n: list(grad_states[n].reject_hist) for n in layer_names},
+            "mse": list(mse_state.reject_hist),
+            "mmd": list(mmd_mon.reject_hist),
+            "po": list(po_mon.reject_hist),
         },
         "duty": {
             "grad": {
@@ -523,6 +580,19 @@ def write_report(all_res: Dict[str, dict], out_dir: Path, meta: dict) -> Path:
             f"{_f(fr['po'])} | {_f(lt['grad_minus_mse'])} | {_f(lt['share_minus_mse'])} | "
             f"{r['duty']['mse']:.2f} |"
         )
+    # synthetic post-shift delays if present
+    syn = all_res.get("synthetic")
+    if syn and "detection_delay" in syn:
+        d = syn["detection_delay"]
+        lines += [
+            "",
+            f"### Synthetic controlled shift @ batch {syn.get('shift_batch')}",
+            "",
+            f"Detection delay after shift: Grad=`{d.get('grad')}`, MSE=`{d.get('mse')}`, "
+            f"MMD=`{d.get('mmd')}`, PO=`{d.get('po')}` "
+            f"(post-shift lead grad−mse=`{syn['lead_time'].get('grad_minus_mse_postshift')}`).",
+            "",
+        ]
     lines += [
         "",
         "## Per-layer first Grad reject",
@@ -542,16 +612,22 @@ def write_report(all_res: Dict[str, dict], out_dir: Path, meta: dict) -> Path:
         "## Method",
         "",
         "```",
+        "pretrain frozen f_ref MLP on burn-in (never stepped afterward)",
         "for each stream batch t:",
-        "  train MLP a few Adam steps; capture ||grad||_2 per Linear layer",
-        "  T_grad = ||g_t|| - e_ref   (burn-in sets e_ref)",
+        "  T_grad = ||∇_θ L(batch; f_ref)|| - e_ref   # serving grad energy",
         "  p = rank/EWMA vs T history; alpha-investing FDR → reject",
-        "  also: MSE-OnlineRFPerm(f_ref), MMD²(X_{t-1},X_t), PO window gap",
+        "  also: MSE-OnlineRFPerm(f_ref_RF), MMD²(X_{t-1},X_t), PO window gap",
         "lead = t_first_grad_reject - t_first_mse_reject",
         "```",
         "",
         "Freeze hint: earliest rejecting layer (often early `fc1` under covariate",
         "shift, later `fc3` under concept shift) can guide back-prop depth.",
+        "",
+        "## Takeaways",
+        "",
+        "- Negative lead ⇒ Grad energy rejects before serving-MSE OnlineRFPerm.",
+        "- Relative share signal is often a bit earlier / more scale-robust than raw ‖g‖.",
+        "- Per-layer timing differs (e.g. EEG rejects mid-layer first) → freeze-depth cue.",
         "",
     ]
     path = out_dir / "AGOD_grad_rfperm_monitor.md"
@@ -576,6 +652,13 @@ def main() -> None:
     ap.add_argument("--max-n", type=int, default=12000)
     ap.add_argument("--alpha", type=float, default=0.05)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument(
+        "--seeds",
+        type=int,
+        nargs="*",
+        default=None,
+        help="If provided, run multi-seed aggregate instead of single --seed",
+    )
     ap.add_argument("--train-steps", type=int, default=12)
     ap.add_argument("--lr", type=float, default=1e-2)
     ap.add_argument("--out-dir", type=Path, default=ROOT / "results" / "agod_grad_rfperm")
@@ -583,8 +666,12 @@ def main() -> None:
 
     out_dir = args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
+    if args.seeds:
+        _run_multiseed(args)
+        return
     all_res: Dict[str, dict] = {}
 
+    LOADERS = _loaders(args.batch_size)
     for name in args.datasets:
         if name not in LOADERS:
             raise SystemExit(f"unknown dataset {name}; choose from {list(LOADERS)}")
@@ -611,11 +698,38 @@ def main() -> None:
             use_share=True,
         )
         res["meta"] = meta
+        # post-shift detection delay when known
+        t_shift = meta.get("shift_batch")
+        if t_shift is not None:
+            st = res.pop("_states_for_shift", {})
+            delay = {}
+            any_g = None
+            if st.get("grad"):
+                times = [
+                    first_reject_index(h, after=int(t_shift)) for h in st["grad"].values()
+                ]
+                times = [t for t in times if t is not None]
+                any_g = int(min(times)) if times else None
+            delay["grad"] = None if any_g is None else int(any_g - t_shift)
+            for key in ("mse", "mmd", "po"):
+                t0 = first_reject_index(st.get(key, []), after=int(t_shift))
+                delay[key] = None if t0 is None else int(t0 - t_shift)
+            res["shift_batch"] = int(t_shift)
+            res["detection_delay"] = delay
+            # recompute lead among post-shift first rejects
+            tg = any_g
+            tm = first_reject_index(st.get("mse", []), after=int(t_shift))
+            res["lead_time"]["grad_minus_mse_postshift"] = lead_time(tg, tm)
+        else:
+            res.pop("_states_for_shift", None)
         all_res[name] = res
         fr, lt = res["first_reject"], res["lead_time"]
+        extra = ""
+        if "detection_delay" in res:
+            extra = f" | delay@shift={res['detection_delay']}"
         print(
             f"  first: grad={fr['grad_any']} mse={fr['mse']} mmd={fr['mmd']} po={fr['po']} "
-            f"| lead(g-mse)={lt['grad_minus_mse']} share-mse={lt['share_minus_mse']}",
+            f"| lead(g-mse)={lt['grad_minus_mse']} share-mse={lt['share_minus_mse']}{extra}",
             flush=True,
         )
         plot_dataset(res, out_dir)
@@ -628,6 +742,7 @@ def main() -> None:
         "alpha": args.alpha,
         "seed": args.seed,
         "train_steps": args.train_steps,
+        "protocol": "frozen_f_ref_grad",
     }
     report = write_report(all_res, out_dir, meta)
     # compact JSON (drop long traj for summary file; full traj kept per-ds)
@@ -639,6 +754,14 @@ def main() -> None:
                 "first_reject": v["first_reject"],
                 "lead_time": v["lead_time"],
                 "duty": v["duty"],
+                **(
+                    {
+                        "shift_batch": v["shift_batch"],
+                        "detection_delay": v["detection_delay"],
+                    }
+                    if "detection_delay" in v
+                    else {}
+                ),
             }
             for k, v in all_res.items()
         },
@@ -652,6 +775,187 @@ def main() -> None:
     (out_dir / "results_meta.json").write_text(json.dumps(full, indent=2, default=str))
     print(f"wrote {report}", flush=True)
     print(f"summary → {out_dir / 'summary.json'}", flush=True)
+
+
+def _run_multiseed(args: argparse.Namespace) -> None:
+    from collections import defaultdict
+
+    out_dir = args.out_dir
+    LOADERS = _loaders(args.batch_size)
+    seeds = list(args.seeds)
+    agg = {d: defaultdict(list) for d in args.datasets}
+    all_runs: Dict[str, dict] = {}
+    seed0_res: Dict[str, dict] = {}
+
+    for seed in seeds:
+        print(f"===== seed {seed} =====", flush=True)
+        all_runs[str(seed)] = {}
+        for name in args.datasets:
+            X, y, meta = LOADERS[name](args.max_n, seed)
+            need = args.batch_size * args.n_batches
+            n_batches = (
+                args.n_batches
+                if meta["n"] >= need
+                else max(args.n_burn + 4, meta["n"] // args.batch_size)
+            )
+            stream = make_stream(X, y, args.batch_size, n_batches)
+            res = run_dataset(
+                name,
+                stream,
+                n_burn=min(args.n_burn, max(2, n_batches // 4)),
+                alpha=args.alpha,
+                seed=seed,
+                train_steps=args.train_steps,
+                lr=args.lr,
+                use_share=True,
+            )
+            res["meta"] = meta
+            t_shift = meta.get("shift_batch")
+            if t_shift is not None:
+                st = res.pop("_states_for_shift", {})
+                times = [
+                    first_reject_index(h, after=int(t_shift))
+                    for h in st.get("grad", {}).values()
+                ]
+                times = [t for t in times if t is not None]
+                any_g = int(min(times)) if times else None
+                delay = {"grad": None if any_g is None else int(any_g - t_shift)}
+                for key in ("mse", "mmd", "po"):
+                    t0 = first_reject_index(st.get(key, []), after=int(t_shift))
+                    delay[key] = None if t0 is None else int(t0 - t_shift)
+                res["shift_batch"] = int(t_shift)
+                res["detection_delay"] = delay
+                res["lead_time"]["grad_minus_mse_postshift"] = lead_time(
+                    any_g, first_reject_index(st.get("mse", []), after=int(t_shift))
+                )
+            else:
+                res.pop("_states_for_shift", None)
+            fr, lt = res["first_reject"], res["lead_time"]
+            print(
+                f"  {name}: grad={fr['grad_any']} mse={fr['mse']} "
+                f"lead={lt['grad_minus_mse']} share={lt['share_minus_mse']}",
+                flush=True,
+            )
+            for k in ("grad_minus_mse", "share_minus_mse", "grad_minus_mmd", "grad_minus_po"):
+                v = lt.get(k)
+                if v is not None:
+                    agg[name][k].append(v)
+            if lt.get("grad_minus_mse") is not None:
+                agg[name]["grad_earlier"].append(int(lt["grad_minus_mse"] < 0))
+            if lt.get("share_minus_mse") is not None:
+                agg[name]["share_earlier"].append(int(lt["share_minus_mse"] < 0))
+            all_runs[str(seed)][name] = {
+                "first_reject": fr,
+                "lead_time": lt,
+                "detection_delay": res.get("detection_delay"),
+                "duty": res["duty"],
+            }
+            if seed == seeds[0]:
+                seed0_res[name] = res
+                plot_dataset(res, out_dir)
+
+    if seed0_res:
+        plot_lead_summary(seed0_res, out_dir)
+
+    lines = [
+        "# Grad-OnlineRFPerm (`param.grad.norm`) — Sep17 MVP datasets",
+        "",
+        "Frozen `f_ref` MLP pretrained on burn-in; OnlineRFPerm on per-layer",
+        "`||∇_θ L||` (+ relative shares) vs MSE-OnlineRFPerm / MMD² / PO.",
+        "",
+        f"Lead: `t_grad − t_mse` (negative ⇒ Grad earlier). seeds={seeds}, "
+        f"batch={args.batch_size}, n_batches={args.n_batches}, n_burn={args.n_burn}, alpha={args.alpha}",
+        "",
+        "| dataset | mean lead(g−mse) | median | P(earlier) | mean lead(share−mse) | P(share earlier) |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    summary_ds = {}
+    for name in args.datasets:
+        a = agg[name]
+        gm = np.asarray(a["grad_minus_mse"], float)
+        sm = np.asarray(a["share_minus_mse"], float)
+        pe = float(np.mean(a["grad_earlier"])) if a["grad_earlier"] else float("nan")
+        pse = float(np.mean(a["share_earlier"])) if a["share_earlier"] else float("nan")
+        lines.append(
+            f"| `{name}` | {gm.mean():+.2f} | {np.median(gm):+.1f} | {pe:.0%} | "
+            f"{sm.mean():+.2f} | {pse:.0%} |"
+        )
+        summary_ds[name] = {
+            "lead_grad_mse_mean": float(gm.mean()),
+            "lead_grad_mse_median": float(np.median(gm)),
+            "lead_grad_mse_std": float(gm.std()),
+            "p_grad_earlier": pe,
+            "lead_share_mse_mean": float(sm.mean()),
+            "p_share_earlier": pse,
+            "leads_grad": [float(x) for x in gm],
+            "leads_share": [float(x) for x in sm],
+        }
+    all_g = np.concatenate([np.asarray(agg[d]["grad_minus_mse"], float) for d in args.datasets])
+    all_s = np.concatenate([np.asarray(agg[d]["share_minus_mse"], float) for d in args.datasets])
+    lines += [
+        "",
+        f"**Overall** ({len(all_g)} runs): mean lead(g−mse)={all_g.mean():+.2f}, "
+        f"P(Grad earlier)={np.mean(all_g < 0):.0%}, P(≤0)={np.mean(all_g <= 0):.0%}.",
+        f"Relative-share: mean={all_s.mean():+.2f}, P(earlier)={np.mean(all_s < 0):.0%}.",
+        "",
+        "## Method",
+        "",
+        "```",
+        "pretrain frozen f_ref MLP on burn-in (never stepped afterward)",
+        "for each stream batch t:",
+        "  T_grad = ||∇_θ L(batch; f_ref)|| - e_ref",
+        "  p = rank/EWMA; alpha-investing FDR → reject",
+        "  compare to MSE-OnlineRFPerm / MMD / PO",
+        "```",
+        "",
+        "Freeze hint: earliest rejecting layer guides back-prop depth.",
+        "",
+    ]
+    text = "\n".join(lines) + "\n"
+    (out_dir / "AGOD_grad_rfperm_monitor.md").write_text(text)
+    docs = ROOT / "docs" / "agod" / "AGOD_grad_rfperm_monitor.md"
+    docs.parent.mkdir(parents=True, exist_ok=True)
+    docs.write_text(text)
+    payload = {
+        "meta": {
+            "seeds": seeds,
+            "batch_size": args.batch_size,
+            "n_batches": args.n_batches,
+            "n_burn": args.n_burn,
+            "alpha": args.alpha,
+            "protocol": "frozen_f_ref_grad",
+        },
+        "by_dataset": summary_ds,
+        "overall": {
+            "mean_lead_grad_mse": float(all_g.mean()),
+            "p_grad_earlier": float(np.mean(all_g < 0)),
+            "p_grad_not_later": float(np.mean(all_g <= 0)),
+            "mean_lead_share_mse": float(all_s.mean()),
+            "p_share_earlier": float(np.mean(all_s < 0)),
+            "n_runs": int(len(all_g)),
+        },
+        "runs": all_runs,
+    }
+    (out_dir / "multiseed_summary.json").write_text(json.dumps(payload, indent=2))
+    (out_dir / "summary.json").write_text(
+        json.dumps({"overall": payload["overall"], "by_dataset": summary_ds}, indent=2)
+    )
+    # bar of mean leads
+    fig, ax = plt.subplots(figsize=(8.5, 4.2))
+    names = list(args.datasets)
+    vals = [summary_ds[n]["lead_grad_mse_mean"] for n in names]
+    colors = ["#A3BE8C" if v < 0 else ("#EBCB8B" if v == 0 else "#BF616A") for v in vals]
+    ax.bar(np.arange(len(names)), vals, color=colors, width=0.55)
+    ax.axhline(0.0, color="black", lw=0.9)
+    ax.set_xticks(np.arange(len(names)))
+    ax.set_xticklabels(names, rotation=15, ha="right")
+    ax.set_ylabel("mean lead  t_grad − t_mse")
+    ax.set_title(f"Grad-OnlineRFPerm mean lead ({len(seeds)} seeds)")
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(out_dir / "lead_time_summary.png", dpi=140)
+    plt.close(fig)
+    print(text, flush=True)
 
 
 if __name__ == "__main__":

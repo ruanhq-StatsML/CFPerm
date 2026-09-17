@@ -1,0 +1,1078 @@
+{
+  "meta": {
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "batch_size": 128,
+    "n_batches": 48,
+    "n_burn": 8,
+    "alpha": 0.05,
+    "protocol": "frozen_f_ref_grad"
+  },
+  "by_dataset": {
+    "synthetic": {
+      "lead_grad_mse_mean": -3.4,
+      "lead_grad_mse_median": -3.0,
+      "lead_grad_mse_std": 1.8547236990991407,
+      "p_grad_earlier": 1.0,
+      "lead_share_mse_mean": -2.8,
+      "p_share_earlier": 0.8,
+      "leads_grad": [
+        -7.0,
+        -2.0,
+        -3.0,
+        -3.0,
+        -2.0
+      ],
+      "leads_share": [
+        -7.0,
+        -2.0,
+        -2.0,
+        -3.0,
+        0.0
+      ]
+    },
+    "covertype": {
+      "lead_grad_mse_mean": -1.2,
+      "lead_grad_mse_median": -1.0,
+      "lead_grad_mse_std": 2.3151673805580453,
+      "p_grad_earlier": 0.6,
+      "lead_share_mse_mean": -1.0,
+      "p_share_earlier": 0.6,
+      "leads_grad": [
+        -2.0,
+        -1.0,
+        0.0,
+        -5.0,
+        2.0
+      ],
+      "leads_share": [
+        -2.0,
+        -1.0,
+        0.0,
+        -3.0,
+        1.0
+      ]
+    },
+    "bank": {
+      "lead_grad_mse_mean": -1.2,
+      "lead_grad_mse_median": 0.0,
+      "lead_grad_mse_std": 1.6,
+      "p_grad_earlier": 0.4,
+      "lead_share_mse_mean": 0.0,
+      "p_share_earlier": 0.4,
+      "leads_grad": [
+        0.0,
+        0.0,
+        0.0,
+        -4.0,
+        -2.0
+      ],
+      "leads_share": [
+        1.0,
+        2.0,
+        2.0,
+        -3.0,
+        -2.0
+      ]
+    },
+    "electricity": {
+      "lead_grad_mse_mean": -6.2,
+      "lead_grad_mse_median": -4.0,
+      "lead_grad_mse_std": 5.844655678480984,
+      "p_grad_earlier": 0.8,
+      "lead_share_mse_mean": -6.0,
+      "p_share_earlier": 0.8,
+      "leads_grad": [
+        -4.0,
+        -17.0,
+        0.0,
+        -3.0,
+        -7.0
+      ],
+      "leads_share": [
+        -4.0,
+        -16.0,
+        0.0,
+        -3.0,
+        -7.0
+      ]
+    },
+    "eeg": {
+      "lead_grad_mse_mean": -4.6,
+      "lead_grad_mse_median": -6.0,
+      "lead_grad_mse_std": 3.0724582991474434,
+      "p_grad_earlier": 0.8,
+      "lead_share_mse_mean": -4.0,
+      "p_share_earlier": 0.8,
+      "leads_grad": [
+        0.0,
+        -2.0,
+        -6.0,
+        -7.0,
+        -8.0
+      ],
+      "leads_share": [
+        2.0,
+        -2.0,
+        -5.0,
+        -7.0,
+        -8.0
+      ]
+    }
+  },
+  "overall": {
+    "mean_lead_grad_mse": -3.32,
+    "p_grad_earlier": 0.72,
+    "p_grad_not_later": 0.96,
+    "mean_lead_share_mse": -2.76,
+    "p_share_earlier": 0.68,
+    "n_runs": 25
+  },
+  "runs": {
+    "0": {
+      "synthetic": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 12,
+            "fc2_share": 11,
+            "fc3_share": 8
+          },
+          "mse": 15,
+          "mmd": 10,
+          "po": 10
+        },
+        "lead_time": {
+          "grad_minus_mse": -7,
+          "grad_minus_mmd": -2,
+          "grad_minus_po": -2,
+          "share_minus_mse": -7,
+          "grad_minus_mse_postshift": 0
+        },
+        "detection_delay": {
+          "grad": 0,
+          "mse": 0,
+          "mmd": 0,
+          "po": 0
+        },
+        "duty": {
+          "grad": {
+            "fc1": 0.35,
+            "fc2": 0.35,
+            "fc3": 0.325
+          },
+          "mse": 0.225,
+          "mmd": 0.225,
+          "po": 0.225
+        }
+      },
+      "covertype": {
+        "first_reject": {
+          "grad_any": 9,
+          "grad_share_any": 9,
+          "grad_per_layer": {
+            "fc1": 9,
+            "fc2": 9,
+            "fc3": 9
+          },
+          "share_per_layer": {
+            "fc1_share": 11,
+            "fc2_share": 9,
+            "fc3_share": 10
+          },
+          "mse": 11,
+          "mmd": 10,
+          "po": 10
+        },
+        "lead_time": {
+          "grad_minus_mse": -2,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": -1,
+          "share_minus_mse": -2
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.2,
+            "fc2": 0.25,
+            "fc3": 0.275
+          },
+          "mse": 0.25,
+          "mmd": 0.275,
+          "po": 0.175
+        }
+      },
+      "bank": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 9,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 13,
+            "fc2_share": 10,
+            "fc3_share": 9
+          },
+          "mse": 8,
+          "mmd": 10,
+          "po": 12
+        },
+        "lead_time": {
+          "grad_minus_mse": 0,
+          "grad_minus_mmd": -2,
+          "grad_minus_po": -4,
+          "share_minus_mse": 1
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.2,
+            "fc2": 0.25,
+            "fc3": 0.275
+          },
+          "mse": 0.325,
+          "mmd": 0.35,
+          "po": 0.225
+        }
+      },
+      "electricity": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 12,
+            "fc2_share": 12,
+            "fc3_share": 8
+          },
+          "mse": 12,
+          "mmd": 12,
+          "po": 14
+        },
+        "lead_time": {
+          "grad_minus_mse": -4,
+          "grad_minus_mmd": -4,
+          "grad_minus_po": -6,
+          "share_minus_mse": -4
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.25,
+            "fc2": 0.275,
+            "fc3": 0.25
+          },
+          "mse": 0.225,
+          "mmd": 0.275,
+          "po": 0.25
+        }
+      },
+      "eeg": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 10,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 10,
+            "fc2_share": 13,
+            "fc3_share": 15
+          },
+          "mse": 8,
+          "mmd": 14,
+          "po": 14
+        },
+        "lead_time": {
+          "grad_minus_mse": 0,
+          "grad_minus_mmd": -6,
+          "grad_minus_po": -6,
+          "share_minus_mse": 2
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.3,
+            "fc2": 0.225,
+            "fc3": 0.325
+          },
+          "mse": 0.15,
+          "mmd": 0.175,
+          "po": 0.15
+        }
+      }
+    },
+    "1": {
+      "synthetic": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 9
+          },
+          "share_per_layer": {
+            "fc1_share": 8,
+            "fc2_share": 8,
+            "fc3_share": 15
+          },
+          "mse": 10,
+          "mmd": 11,
+          "po": 11
+        },
+        "lead_time": {
+          "grad_minus_mse": -2,
+          "grad_minus_mmd": -3,
+          "grad_minus_po": -3,
+          "share_minus_mse": -2,
+          "grad_minus_mse_postshift": 0
+        },
+        "detection_delay": {
+          "grad": 0,
+          "mse": 0,
+          "mmd": 0,
+          "po": 0
+        },
+        "duty": {
+          "grad": {
+            "fc1": 0.275,
+            "fc2": 0.35,
+            "fc3": 0.25
+          },
+          "mse": 0.2,
+          "mmd": 0.225,
+          "po": 0.225
+        }
+      },
+      "covertype": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 14,
+            "fc2_share": 11,
+            "fc3_share": 8
+          },
+          "mse": 9,
+          "mmd": 8,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": -1,
+          "grad_minus_mmd": 0,
+          "grad_minus_po": 0,
+          "share_minus_mse": -1
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.25,
+            "fc2": 0.225,
+            "fc3": 0.225
+          },
+          "mse": 0.2,
+          "mmd": 0.225,
+          "po": 0.15
+        }
+      },
+      "bank": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 10,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 11,
+            "fc2_share": 10,
+            "fc3_share": 12
+          },
+          "mse": 8,
+          "mmd": 8,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": 0,
+          "grad_minus_mmd": 0,
+          "grad_minus_po": 0,
+          "share_minus_mse": 2
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.275,
+            "fc2": 0.25,
+            "fc3": 0.3
+          },
+          "mse": 0.275,
+          "mmd": 0.225,
+          "po": 0.25
+        }
+      },
+      "electricity": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 9,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 9,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 12,
+            "fc2_share": 9,
+            "fc3_share": 9
+          },
+          "mse": 25,
+          "mmd": 9,
+          "po": 12
+        },
+        "lead_time": {
+          "grad_minus_mse": -17,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": -4,
+          "share_minus_mse": -16
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.275,
+            "fc2": 0.25,
+            "fc3": 0.3
+          },
+          "mse": 0.175,
+          "mmd": 0.225,
+          "po": 0.125
+        }
+      },
+      "eeg": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 8,
+            "fc2_share": 15,
+            "fc3_share": 14
+          },
+          "mse": 10,
+          "mmd": 13,
+          "po": 15
+        },
+        "lead_time": {
+          "grad_minus_mse": -2,
+          "grad_minus_mmd": -5,
+          "grad_minus_po": -7,
+          "share_minus_mse": -2
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.275,
+            "fc2": 0.275,
+            "fc3": 0.275
+          },
+          "mse": 0.125,
+          "mmd": 0.2,
+          "po": 0.175
+        }
+      }
+    },
+    "2": {
+      "synthetic": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 9,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 9
+          },
+          "share_per_layer": {
+            "fc1_share": 13,
+            "fc2_share": 13,
+            "fc3_share": 9
+          },
+          "mse": 11,
+          "mmd": 9,
+          "po": 11
+        },
+        "lead_time": {
+          "grad_minus_mse": -3,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": -3,
+          "share_minus_mse": -2,
+          "grad_minus_mse_postshift": 0
+        },
+        "detection_delay": {
+          "grad": 0,
+          "mse": 0,
+          "mmd": 0,
+          "po": 0
+        },
+        "duty": {
+          "grad": {
+            "fc1": 0.3,
+            "fc2": 0.275,
+            "fc3": 0.225
+          },
+          "mse": 0.25,
+          "mmd": 0.2,
+          "po": 0.175
+        }
+      },
+      "covertype": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 8,
+            "fc2_share": 11,
+            "fc3_share": 13
+          },
+          "mse": 8,
+          "mmd": 15,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": 0,
+          "grad_minus_mmd": -7,
+          "grad_minus_po": 0,
+          "share_minus_mse": 0
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.3,
+            "fc2": 0.3,
+            "fc3": 0.25
+          },
+          "mse": 0.25,
+          "mmd": 0.3,
+          "po": 0.3
+        }
+      },
+      "bank": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 10,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 18,
+            "fc2_share": 10,
+            "fc3_share": 11
+          },
+          "mse": 8,
+          "mmd": 8,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": 0,
+          "grad_minus_mmd": 0,
+          "grad_minus_po": 0,
+          "share_minus_mse": 2
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.225,
+            "fc2": 0.225,
+            "fc3": 0.25
+          },
+          "mse": 0.25,
+          "mmd": 0.275,
+          "po": 0.2
+        }
+      },
+      "electricity": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 12,
+            "fc2_share": 12,
+            "fc3_share": 8
+          },
+          "mse": 8,
+          "mmd": 9,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": 0,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": 0,
+          "share_minus_mse": 0
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.2,
+            "fc2": 0.225,
+            "fc3": 0.2
+          },
+          "mse": 0.25,
+          "mmd": 0.175,
+          "po": 0.25
+        }
+      },
+      "eeg": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 9,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 14,
+            "fc2_share": 9,
+            "fc3_share": 10
+          },
+          "mse": 14,
+          "mmd": 14,
+          "po": 14
+        },
+        "lead_time": {
+          "grad_minus_mse": -6,
+          "grad_minus_mmd": -6,
+          "grad_minus_po": -6,
+          "share_minus_mse": -5
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.25,
+            "fc2": 0.3,
+            "fc3": 0.35
+          },
+          "mse": 0.1,
+          "mmd": 0.175,
+          "po": 0.15
+        }
+      }
+    },
+    "3": {
+      "synthetic": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 9,
+            "fc3": 11
+          },
+          "share_per_layer": {
+            "fc1_share": 8,
+            "fc2_share": 9,
+            "fc3_share": 11
+          },
+          "mse": 11,
+          "mmd": 15,
+          "po": 11
+        },
+        "lead_time": {
+          "grad_minus_mse": -3,
+          "grad_minus_mmd": -7,
+          "grad_minus_po": -3,
+          "share_minus_mse": -3,
+          "grad_minus_mse_postshift": 0
+        },
+        "detection_delay": {
+          "grad": 0,
+          "mse": 0,
+          "mmd": 0,
+          "po": 0
+        },
+        "duty": {
+          "grad": {
+            "fc1": 0.325,
+            "fc2": 0.275,
+            "fc3": 0.2
+          },
+          "mse": 0.2,
+          "mmd": 0.175,
+          "po": 0.2
+        }
+      },
+      "covertype": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 10,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 10,
+            "fc2_share": 14,
+            "fc3_share": 11
+          },
+          "mse": 13,
+          "mmd": 10,
+          "po": 9
+        },
+        "lead_time": {
+          "grad_minus_mse": -5,
+          "grad_minus_mmd": -2,
+          "grad_minus_po": -1,
+          "share_minus_mse": -3
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.3,
+            "fc2": 0.325,
+            "fc3": 0.275
+          },
+          "mse": 0.175,
+          "mmd": 0.15,
+          "po": 0.25
+        }
+      },
+      "bank": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 9,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 10,
+            "fc2_share": 9,
+            "fc3_share": 14
+          },
+          "mse": 12,
+          "mmd": 14,
+          "po": 10
+        },
+        "lead_time": {
+          "grad_minus_mse": -4,
+          "grad_minus_mmd": -6,
+          "grad_minus_po": -2,
+          "share_minus_mse": -3
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.3,
+            "fc2": 0.225,
+            "fc3": 0.275
+          },
+          "mse": 0.2,
+          "mmd": 0.275,
+          "po": 0.2
+        }
+      },
+      "electricity": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 12,
+            "fc2_share": 8,
+            "fc3_share": 10
+          },
+          "mse": 11,
+          "mmd": 9,
+          "po": 14
+        },
+        "lead_time": {
+          "grad_minus_mse": -3,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": -6,
+          "share_minus_mse": -3
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.275,
+            "fc2": 0.225,
+            "fc3": 0.3
+          },
+          "mse": 0.175,
+          "mmd": 0.2,
+          "po": 0.2
+        }
+      },
+      "eeg": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 13,
+            "fc2_share": 13,
+            "fc3_share": 8
+          },
+          "mse": 15,
+          "mmd": 8,
+          "po": 15
+        },
+        "lead_time": {
+          "grad_minus_mse": -7,
+          "grad_minus_mmd": 0,
+          "grad_minus_po": -7,
+          "share_minus_mse": -7
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.275,
+            "fc2": 0.25,
+            "fc3": 0.3
+          },
+          "mse": 0.1,
+          "mmd": 0.275,
+          "po": 0.125
+        }
+      }
+    },
+    "4": {
+      "synthetic": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 10,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 17
+          },
+          "share_per_layer": {
+            "fc1_share": 11,
+            "fc2_share": 12,
+            "fc3_share": 10
+          },
+          "mse": 10,
+          "mmd": 9,
+          "po": 12
+        },
+        "lead_time": {
+          "grad_minus_mse": -2,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": -4,
+          "share_minus_mse": 0,
+          "grad_minus_mse_postshift": 0
+        },
+        "detection_delay": {
+          "grad": 0,
+          "mse": 0,
+          "mmd": 0,
+          "po": 0
+        },
+        "duty": {
+          "grad": {
+            "fc1": 0.25,
+            "fc2": 0.225,
+            "fc3": 0.2
+          },
+          "mse": 0.2,
+          "mmd": 0.35,
+          "po": 0.225
+        }
+      },
+      "covertype": {
+        "first_reject": {
+          "grad_any": 10,
+          "grad_share_any": 9,
+          "grad_per_layer": {
+            "fc1": 10,
+            "fc2": 10,
+            "fc3": 10
+          },
+          "share_per_layer": {
+            "fc1_share": 16,
+            "fc2_share": 13,
+            "fc3_share": 9
+          },
+          "mse": 8,
+          "mmd": 8,
+          "po": 10
+        },
+        "lead_time": {
+          "grad_minus_mse": 2,
+          "grad_minus_mmd": 2,
+          "grad_minus_po": 0,
+          "share_minus_mse": 1
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.2,
+            "fc2": 0.275,
+            "fc3": 0.225
+          },
+          "mse": 0.2,
+          "mmd": 0.2,
+          "po": 0.25
+        }
+      },
+      "bank": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 8,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 11,
+            "fc2_share": 8,
+            "fc3_share": 14
+          },
+          "mse": 10,
+          "mmd": 8,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": -2,
+          "grad_minus_mmd": 0,
+          "grad_minus_po": 0,
+          "share_minus_mse": -2
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.25,
+            "fc2": 0.25,
+            "fc3": 0.3
+          },
+          "mse": 0.25,
+          "mmd": 0.25,
+          "po": 0.25
+        }
+      },
+      "electricity": {
+        "first_reject": {
+          "grad_any": 8,
+          "grad_share_any": 8,
+          "grad_per_layer": {
+            "fc1": 10,
+            "fc2": 8,
+            "fc3": 8
+          },
+          "share_per_layer": {
+            "fc1_share": 9,
+            "fc2_share": 8,
+            "fc3_share": 13
+          },
+          "mse": 15,
+          "mmd": 10,
+          "po": 13
+        },
+        "lead_time": {
+          "grad_minus_mse": -7,
+          "grad_minus_mmd": -2,
+          "grad_minus_po": -5,
+          "share_minus_mse": -7
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.225,
+            "fc2": 0.2,
+            "fc3": 0.275
+          },
+          "mse": 0.15,
+          "mmd": 0.15,
+          "po": 0.25
+        }
+      },
+      "eeg": {
+        "first_reject": {
+          "grad_any": 9,
+          "grad_share_any": 9,
+          "grad_per_layer": {
+            "fc1": 9,
+            "fc2": 9,
+            "fc3": 9
+          },
+          "share_per_layer": {
+            "fc1_share": 10,
+            "fc2_share": 12,
+            "fc3_share": 9
+          },
+          "mse": 17,
+          "mmd": 10,
+          "po": 9
+        },
+        "lead_time": {
+          "grad_minus_mse": -8,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": 0,
+          "share_minus_mse": -8
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": {
+            "fc1": 0.3,
+            "fc2": 0.3,
+            "fc3": 0.25
+          },
+          "mse": 0.175,
+          "mmd": 0.225,
+          "po": 0.15
+        }
+      }
+    }
+  }
+}
