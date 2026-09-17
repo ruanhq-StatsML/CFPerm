@@ -18,12 +18,56 @@ from graph_fsds_localize import (
     three_metrics,
 )
 from online_fdr import addis, saffron
-from online_rfperm import FrozenRFPerm, onset_from_rows
+from online_rfperm import FrozenRFPerm, onset_from_rows, probe_mse
 from stream_dgps import planted_how_for_kind
 from streaming_po_risk import TabularPORisk, pack_ref_new, rbf_bandwidth, mmd_vs_reference
 
 DIMS = ("order", "merchant", "user", "all")
 PO_MIN_N = 40
+
+# DGP shift magnitudes. amount walks by `shift`, channel by 0.7, gmv by 0.8.
+# Concept plants amount in Y|X only. Ranking recovery uses this order, not Shapley.
+PLANTED_MAG = {
+    "covariate_south": {"amount": 1.0, "channel": 0.7, "merchant_gmv": 0.8},
+    "concept_south": {"amount": 1.0},
+    "both": {"amount": 1.0, "channel": 0.7, "merchant_gmv": 0.8},
+}
+
+
+def planted_in_grain(kind: str, names: Sequence[str]) -> dict[str, float]:
+    mag = dict(PLANTED_MAG.get(str(kind)) or {})
+    if not mag:
+        mag = {k: 1.0 for k in planted_how_for_kind(kind)}
+    return {n: float(mag[n]) for n in names if n in mag}
+
+
+def mark_delay(t_hat, onset_true: int) -> dict:
+    """OnlineRFPerm paper: delay = first rejection − labeled onset. Negative = FAR."""
+    if t_hat is None:
+        return {"t": None, "delay": None, "status": "miss"}
+    t_hat = int(t_hat)
+    d = t_hat - int(onset_true)
+    return {"t": t_hat, "delay": int(d), "status": "FAR" if d < 0 else "hit"}
+
+
+def kendall_vs_planted(rank_rows: Sequence[Mapping], planted: Mapping[str, float], *, score_key: str) -> float | None:
+    """Kendall-τ of estimated scores vs planted magnitudes (MetaLearner §ranking)."""
+    if not planted:
+        return None
+    from scipy.stats import kendalltau
+
+    scores = []
+    truth = []
+    for r in rank_rows:
+        name = str(r["feature"])
+        scores.append(float(r[score_key]))
+        truth.append(float(planted.get(name, 0.0)))
+    if len(set(truth)) < 2:
+        return None
+    tau, _ = kendalltau(scores, truth)
+    if tau is None or not np.isfinite(tau):
+        return None
+    return float(tau)
 
 
 def slice_xy(window: Mapping, dim: str) -> tuple[np.ndarray, tuple[str, ...]]:
@@ -95,6 +139,33 @@ def rfperm_po_vimp(
         "max_vimp": mx,
         "null_q95": q95,
         "reject": bool(mx > q95 and mx > 1e-8),
+        "top": [r["feature"] for r in ranked[:3]],
+    }
+
+
+def rfperm_mse_vimp(model, X_new, Y_new, names: Sequence[str], *, seed: int = 2026) -> dict:
+    """PermOOB-style VIMP on the frozen OnlineRFPerm model. Not CATE.
+
+    v_j = MSE(Y, f_ref(X with column j shuffled)) − MSE(Y, f_ref(X)).
+    """
+    names = tuple(str(n) for n in names)
+    assert_not_outcome(names)
+    X_new = np.asarray(X_new, dtype=float)
+    Y_new = np.asarray(Y_new, dtype=float).ravel()
+    base = probe_mse(model, X_new, Y_new)
+    rng = np.random.default_rng(int(seed) + 5)
+    scores = []
+    for j in range(X_new.shape[1]):
+        Xp = X_new.copy()
+        rng.shuffle(Xp[:, j])
+        scores.append(float(probe_mse(model, Xp, Y_new) - base))
+    ranked = sorted(
+        [{"feature": names[j], "vimp": float(scores[j])} for j in range(len(names))],
+        key=lambda r: -r["vimp"],
+    )
+    return {
+        "rank": ranked,
+        "base_mse": float(base),
         "top": [r["feature"] for r in ranked[:3]],
     }
 
@@ -215,17 +286,17 @@ def run_dim_stream(
         names,
         seed=seed,
     )
-    vimp = rfperm_po_vimp(
-        X_ref,
-        Y_ref,
-        slice_xy(last_new, dim)[0],
-        np.asarray(last_new["Y"], dtype=float).ravel(),
-        names,
-        seed=seed,
-    )
+    X_last, _ = slice_xy(last_new, dim)
+    Y_last = np.asarray(last_new["Y"], dtype=float).ravel()
+    vimp = rfperm_po_vimp(X_ref, Y_ref, X_last, Y_last, names, seed=seed)
+    mse_vimp = rfperm_mse_vimp(probe.probe, X_last, Y_last, names, seed=seed)
     loc = posthoc_region(cut0["ref"], last_new, dim, seed=seed)
-    planted = planted_how_for_kind(meta["kind"])
+    planted = planted_in_grain(meta["kind"], names)
     recovered = [r["feature"] for r in fsds if r.get("loud") and r["feature"] in planted]
+    hop_mark = mark_delay(onset["onset_hat"], onset_true)
+    rank_mark = mark_delay(onset["onset_rank"], onset_true)
+    addis_mark = mark_delay(addis_t, onset_true)
+    saffron_mark = mark_delay(saffron_t, onset_true)
     return {
         "dim": dim,
         "kind": meta["kind"],
@@ -236,14 +307,27 @@ def run_dim_stream(
         "addis_t": addis_t,
         "saffron_t": saffron_t,
         "n_hop": onset["n_rfperm_hop"],
+        "hop_delay": hop_mark["delay"],
+        "hop_status": hop_mark["status"],
+        "rank_delay": rank_mark["delay"],
+        "rank_status": rank_mark["status"],
+        "addis_delay": addis_mark["delay"],
+        "addis_status": addis_mark["status"],
+        "saffron_delay": saffron_mark["delay"],
+        "saffron_status": saffron_mark["status"],
         "rows": rows,
         "fsds": fsds,
         "vimp": vimp,
+        "mse_vimp": mse_vimp,
         "localization": loc,
         "planted": planted,
         "fsds_recovered": recovered,
         "vimp_top": vimp["top"],
         "vimp_reject": vimp["reject"],
+        "mse_vimp_top": mse_vimp["top"],
+        "tau_fsds": kendall_vs_planted(fsds, planted, score_key="score"),
+        "tau_cfperm": kendall_vs_planted(vimp["rank"], planted, score_key="vimp"),
+        "tau_rfperm": kendall_vs_planted(mse_vimp["rank"], planted, score_key="vimp"),
         "y_in_X": any(n in ("y", "Y", "label") for n in names),
     }
 

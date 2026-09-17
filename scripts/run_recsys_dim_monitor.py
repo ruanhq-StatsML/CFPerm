@@ -71,6 +71,8 @@ def run_kind(kind: str, seed: int = 2026) -> dict:
 
 
 def slim_dim(d: dict) -> dict:
+    planted = d["planted"]
+    planted_names = list(planted) if isinstance(planted, dict) else list(planted)
     return {
         "dim": d["dim"],
         "onset_true": d["onset_true"],
@@ -79,13 +81,25 @@ def slim_dim(d: dict) -> dict:
         "addis_t": d["addis_t"],
         "saffron_t": d["saffron_t"],
         "n_hop": d["n_hop"],
+        "hop_status": d.get("hop_status"),
+        "rank_status": d.get("rank_status"),
+        "addis_status": d.get("addis_status"),
+        "saffron_status": d.get("saffron_status"),
+        "hop_delay": d.get("hop_delay"),
+        "rank_delay": d.get("rank_delay"),
+        "addis_delay": d.get("addis_delay"),
+        "saffron_delay": d.get("saffron_delay"),
         "fsds_top": [r["feature"] for r in d["fsds"][:4]],
         "fsds_loud": [r["feature"] for r in d["fsds"] if r.get("loud")],
         "fsds_recovered": d["fsds_recovered"],
         "vimp_top": d["vimp_top"],
         "vimp_reject": d["vimp_reject"],
         "vimp_max": d["vimp"]["max_vimp"],
-        "planted": d["planted"],
+        "mse_vimp_top": d.get("mse_vimp_top") or d.get("mse_vimp", {}).get("top", []),
+        "tau_fsds": d.get("tau_fsds"),
+        "tau_cfperm": d.get("tau_cfperm"),
+        "tau_rfperm": d.get("tau_rfperm"),
+        "planted": planted_names,
         "y_in_X": d["y_in_X"],
         "loc_n_south": d["localization"]["n_south"],
         "loc_pair_mmd": d["localization"].get("pair_mmd"),
@@ -116,7 +130,24 @@ def slim_dim(d: dict) -> dict:
             for r in d["fsds"]
         ],
         "vimp_rank": d["vimp"]["rank"][:6],
+        "mse_vimp_rank": d.get("mse_vimp", {}).get("rank", [])[:6],
     }
+
+
+def _planted_names(d: dict) -> list[str]:
+    planted = d.get("planted") or {}
+    if isinstance(planted, dict):
+        return list(planted)
+    return list(planted)
+
+
+def _status_cell(t_hat, delay, status) -> str:
+    if status == "miss" or t_hat is None:
+        return "miss"
+    if status == "FAR":
+        return f"FAR@{t_hat}"
+    d = "" if delay is None else str(delay)
+    return f"{t_hat} (d={d})"
 
 
 def write_markdown(results: dict, dest: Path) -> None:
@@ -125,30 +156,31 @@ def write_markdown(results: dict, dest: Path) -> None:
         "",
         "Data: synthetic order / merchant / user stream (recommendation-shaped table). "
         "Y = conversion, never a feature. T = batch label. "
-        "OnlineRFPerm marks WHEN (Algorithm 1). RFPerm/CFPerm VIMP and FSDS mark WHICH columns. "
+        "OnlineRFPerm (Algorithm 1) marks WHEN. RFPerm ΔMSE and CFPerm/PermuCATE VIMP "
+        "plus FSDS mark WHICH columns; Kendall-τ is the ranking recovery in the MetaLearner paper. "
         "Post-hoc region split marks WHICH accounts (south vs north). "
         "Localization, not a unique decomposition. Not a graph method.",
         "",
         f"n_ref={N_REF}, n_new={N_NEW}, batches={N_BATCHES}, onset_true={ONSET}, "
-        f"merchants={N_MERCHANTS}. Planted subset = south.",
+        f"merchants={N_MERCHANTS}. Planted subset = south. "
+        "Delay = first rejection − onset_true. Negative / FAR = mark before labeled onset.",
         "",
-        "## Table 1 · OnlineRFPerm (WHEN)",
+        "## Table 1 · OnlineRFPerm (WHEN) — first rejection and delay",
         "",
         _md_row(
             [
                 "kind",
                 "dim",
                 "onset_true",
-                "onset_hat (hop)",
-                "onset_rank (p<0.05)",
-                "ADDIS first rej",
-                "SAFFRON first rej",
-                "n_hop",
+                "hop",
+                "rank-p (p<0.05)",
+                "ADDIS",
+                "SAFFRON",
                 "last T",
                 "last MMD",
             ]
         ),
-        _md_row(["---"] * 10),
+        _md_row(["---"] * 9),
     ]
     for kind in KINDS:
         for dim in DIMS:
@@ -159,11 +191,10 @@ def write_markdown(results: dict, dest: Path) -> None:
                         kind,
                         dim,
                         d["onset_true"],
-                        "" if d["onset_hat"] is None else d["onset_hat"],
-                        "" if d["onset_rank"] is None else d["onset_rank"],
-                        "" if d["addis_t"] is None else d["addis_t"],
-                        "" if d["saffron_t"] is None else d["saffron_t"],
-                        d["n_hop"],
+                        _status_cell(d["onset_hat"], d.get("hop_delay"), d.get("hop_status")),
+                        _status_cell(d["onset_rank"], d.get("rank_delay"), d.get("rank_status")),
+                        _status_cell(d["addis_t"], d.get("addis_delay"), d.get("addis_status")),
+                        _status_cell(d["saffron_t"], d.get("saffron_delay"), d.get("saffron_status")),
                         _fmt(d["rows"][-1]["rfperm_T"]),
                         _fmt(d["rows"][-1]["mmd"]),
                     ]
@@ -171,36 +202,46 @@ def write_markdown(results: dict, dest: Path) -> None:
             )
     lines += [
         "",
-        "## Table 2 · RFPerm/CFPerm VIMP and FSDS (WHICH columns)",
+        "## Table 2 · Ranking recovery (WHICH columns) — Kendall-τ vs planted magnitude",
+        "",
+        "Planted order on covariate/both: amount ≻ merchant_gmv ≻ channel ≻ noise. "
+        "Concept plants amount in Y|X only. τ is Kendall’s τ between scores and that magnitude. "
+        "CFPerm reject = max φ-VIMP vs 95% of T-permuted nulls (B=12). Empty reject is a miss, not a quiet stream.",
         "",
         _md_row(
             [
                 "kind",
                 "dim",
-                "planted",
-                "FSDS loud",
+                "planted in grain",
                 "FSDS recovered",
-                "VIMP top-3",
+                "τ_FSDS",
+                "RFPerm ΔMSE top-3",
+                "τ_RFPerm",
+                "CFPerm φ top-3",
+                "τ_CFPerm",
                 "CFPerm reject",
             ]
         ),
-        _md_row(["---"] * 7),
+        _md_row(["---"] * 10),
     ]
     for kind in KINDS:
         for dim in DIMS:
             d = results[kind]["dims"][dim]
-            planted = ",".join(d["planted"]) or "—"
-            loud = ",".join(r["feature"] for r in d["fsds"] if r.get("loud")) or "—"
+            planted = ",".join(_planted_names(d)) or "—"
             recov = ",".join(d["fsds_recovered"]) or "—"
+            mse_top = d.get("mse_vimp_top") or [r["feature"] for r in d.get("mse_vimp", {}).get("rank", [])[:3]]
             lines.append(
                 _md_row(
                     [
                         kind,
                         dim,
                         planted,
-                        loud,
                         recov,
+                        _fmt(d.get("tau_fsds")),
+                        ",".join(mse_top) or "—",
+                        _fmt(d.get("tau_rfperm")),
                         ",".join(d["vimp_top"]),
+                        _fmt(d.get("tau_cfperm")),
                         "yes" if d["vimp_reject"] else "",
                     ]
                 )
@@ -242,6 +283,29 @@ def write_markdown(results: dict, dest: Path) -> None:
                     ]
                 )
             )
+    lines += [
+        "",
+        "## Table 4 · Sequential T_t / p_t on the order grain (OnlineRFPerm Algorithm 1)",
+        "",
+        _md_row(["kind", "t", "onset", "T = MSE−E_ref", "p", "hop", "MMD", "ΔE[Y]"]),
+        _md_row(["---"] * 8),
+    ]
+    for kind in KINDS:
+        for r in results[kind]["dims"]["order"]["rows"]:
+            lines.append(
+                _md_row(
+                    [
+                        kind,
+                        r["t"],
+                        "yes" if r["onset"] else "",
+                        _fmt(r["rfperm_T"]),
+                        _fmt(r["rfperm_p"], 3),
+                        "yes" if r["rfperm_hop"] else "",
+                        _fmt(r["mmd"]),
+                        _fmt(r["cmean_y"]),
+                    ]
+                )
+            )
     dest.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -274,28 +338,53 @@ def plot_vimp(results: dict, dest: Path) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    fig, axes = plt.subplots(1, 3, figsize=(11.2, 4.2), sharey=False)
-    for ax, kind in zip(axes, KINDS):
-        d = results[kind]["dims"]["all"]
-        rank = d["vimp"]["rank"][:8]
-        planted = set(d["planted"])
-        y = np.arange(len(rank))[::-1]
-        colors = ["#b33026" if r["feature"] in planted else "#8aa0b4" for r in rank]
-        ax.barh(y, [r["vimp"] for r in rank], color=colors, height=0.72)
-        ax.set_yticks(y)
-        ax.set_yticklabels([r["feature"] for r in rank], fontsize=8)
-        ax.set_title(kind)
-        ax.grid(axis="x", alpha=0.3)
-    axes[0].set_xlabel("RFPerm VIMP on φ")
-    fig.suptitle("WHICH columns · all-grain VIMP · red = planted · last batch")
+    fig, axes = plt.subplots(2, 3, figsize=(11.2, 7.2), sharey=False)
+    row_keys = (("vimp", "CFPerm φ-VIMP"), ("mse_vimp", "RFPerm ΔMSE"))
+    for row, (key, ylabel) in enumerate(row_keys):
+        for col, kind in enumerate(KINDS):
+            ax = axes[row][col]
+            d = results[kind]["dims"]["all"]
+            pack = d[key]
+            rank = pack["rank"][:8]
+            planted = set(_planted_names(d))
+            y = np.arange(len(rank))[::-1]
+            colors = ["#b33026" if r["feature"] in planted else "#8aa0b4" for r in rank]
+            ax.barh(y, [r["vimp"] for r in rank], color=colors, height=0.72)
+            ax.set_yticks(y)
+            ax.set_yticklabels([r["feature"] for r in rank], fontsize=8)
+            if row == 0:
+                ax.set_title(kind)
+            ax.set_xlabel(ylabel, fontsize=8)
+            ax.grid(axis="x", alpha=0.3)
+    fig.suptitle("WHICH columns · all-grain · red = planted · last batch")
     fig.tight_layout()
     fig.savefig(dest, dpi=140)
     plt.close(fig)
 
 
-def write_reports(results: dict) -> None:
-    # filled after slim exists; JUSTIFY/REPORT written in main from slim numbers
-    pass
+def plot_fsds(results: dict, dest: Path) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 3, figsize=(11.2, 4.2), sharey=False)
+    for ax, kind in zip(axes, KINDS):
+        d = results[kind]["dims"]["all"]
+        rank = d["fsds"][:8]
+        planted = set(_planted_names(d))
+        y = np.arange(len(rank))[::-1]
+        colors = ["#b33026" if r["feature"] in planted else "#8aa0b4" for r in rank]
+        ax.barh(y, [r["score"] for r in rank], color=colors, height=0.72)
+        ax.set_yticks(y)
+        ax.set_yticklabels([r["feature"] for r in rank], fontsize=8)
+        ax.set_title(kind)
+        ax.grid(axis="x", alpha=0.3)
+    axes[0].set_xlabel("FSDS score")
+    fig.suptitle("WHICH columns · all-grain FSDS · red = planted · last batch")
+    fig.tight_layout()
+    fig.savefig(dest, dpi=140)
+    plt.close(fig)
 
 
 def main() -> int:
@@ -304,6 +393,7 @@ def main() -> int:
     write_markdown(results, OUT / "TABLES.md")
     plot_T(results, OUT / "online_rfperm_T.png")
     plot_vimp(results, OUT / "rfperm_vimp.png")
+    plot_fsds(results, OUT / "fsds_rank.png")
     slim = {}
     for kind, pack in results.items():
         slim[kind] = {
@@ -322,13 +412,14 @@ def write_justify(slim: dict) -> None:
         "# Justify: recsys stream × grain — OnlineRFPerm / RFPerm / FSDS",
         "",
         "WHEN = frozen RF, T=MSE−E_ref, last-two hop; rank-p into ADDIS (primary) / SAFFRON (contrast).",
-        "WHICH columns = FSDS + RFPerm VIMP on frozen φ (T=batch). WHICH accounts = south vs north.",
-        "Y never a feature. Localization, not unique decomp. Not a graph method.",
+        "Delay = first rejection − onset. FAR = mark before labeled onset. miss = never marked.",
+        "WHICH columns = FSDS + RFPerm ΔMSE + CFPerm φ-VIMP. Ranking metric = Kendall-τ vs planted magnitude.",
+        "WHICH accounts = south vs north own-ref. Y never a feature. Localization, not unique decomp. Not a graph method.",
         "",
         f"onset_true={ONSET}. n_ref={N_REF}, n_new={N_NEW}, batches={N_BATCHES}.",
         "",
-        "| kind | dim | hop | rank-p | ADDIS | FSDS recovered | VIMP top | CFPerm | south MMD | north MMD |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| kind | dim | ADDIS | rank-p | hop | FSDS recovered | τ_FSDS | τ_RFPerm | τ_CFPerm | south MMD | north MMD |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for kind in KINDS:
         for dim in DIMS:
@@ -339,12 +430,13 @@ def write_justify(slim: dict) -> None:
                     [
                         kind,
                         dim,
-                        "" if d["onset_hat"] is None else str(d["onset_hat"]),
-                        "" if d["onset_rank"] is None else str(d["onset_rank"]),
-                        "" if d["addis_t"] is None else str(d["addis_t"]),
+                        _status_cell(d["addis_t"], d.get("addis_delay"), d.get("addis_status")),
+                        _status_cell(d["onset_rank"], d.get("rank_delay"), d.get("rank_status")),
+                        _status_cell(d["onset_hat"], d.get("hop_delay"), d.get("hop_status")),
                         ",".join(d["fsds_recovered"]) or "—",
-                        ",".join(d["vimp_top"][:3]),
-                        "yes" if d["vimp_reject"] else "",
+                        _fmt(d.get("tau_fsds")),
+                        _fmt(d.get("tau_rfperm")),
+                        _fmt(d.get("tau_cfperm")),
                         _fmt(d["loc_south_mmd"]),
                         _fmt(d["loc_north_mmd"]),
                     ]
@@ -357,52 +449,105 @@ def write_justify(slim: dict) -> None:
 def write_report(slim: dict) -> None:
     cov = slim["covariate_south"]["dims"]
     con = slim["concept_south"]["dims"]
-    body = f"""# Recsys grain monitor — conclusions in OnlineRFPerm / CFPerm form
-
-Same two questions as the papers. **OnlineRFPerm** (Sep 15 Algorithm 1): when did predictive error leave the reference pool? **CFPerm / RFPerm VIMP** (MetaLearner Algorithm 1): which columns contribute to the PO-risk between \(D_{{\\mathrm{{ref}}}}\) and the new batch? **FSDS + south/north** is the post-hoc localization on this table — not a graph cut.
-
-Data is the synthetic recommendation-shaped order stream: user, merchant, order, conversion Y. Slice X by grain. Y is never a feature. T is the batch label. Shares are localization, not Shapley or CATE.
-
-n_ref={N_REF}, n_new={N_NEW}, batches={N_BATCHES}, labeled onset={ONSET}. Planted accounts = south merchants.
-
-## WHEN (OnlineRFPerm)
-
-Frozen RF on \(D_{{\\mathrm{{ref}}}}\). Each batch \(T_t=\\mathrm{{MSE}}_t-E_{{\\mathrm{{ref}}}}\). Hop = last-two 1.5×. Rank-p vs a ref-null pool; ADDIS primary, SAFFRON contrast. Quiet \(T\\le 0\) is fed as \(p=1\).
-
-| kind | grain that should fire | what the stream did |
-|---|---|---|
-| covariate_south | order / all (amount, channel in X) | order last T={_fmt(cov["order"]["last_T"])}, MMD={_fmt(cov["order"]["last_mmd"])}; user last T={_fmt(cov["user"]["last_T"])} (user X is not planted) |
-| concept_south | order via \(Y\\mid X\), MMD quiet | order MMD={_fmt(con["order"]["last_mmd"])}, ΔE[Y] south={_fmt(con["order"]["loc_south_cmean_y"])} |
-| both | order / all | same X-shift as covariate, PO still to be read |
-
-Hop / ADDIS can stay empty on a short six-batch walk — that matches the paper: last-two is a jump detector; a gradual walk shows up as T / MMD trends. Figure: `online_rfperm_T.png`.
-
-## WHICH columns (RFPerm / FSDS)
-
-Nuisances on φ=(Y−μ)(T−e) fit once. VIMP = extra MSE of predicting φ after permuting a column. CFPerm reject = max VIMP above the 95% quantile of T-permuted nulls. FSDS is the univariate MMD / CMean catalog on the same grain.
-
-Covariate, all-grain FSDS recovered: {", ".join(cov["all"]["fsds_recovered"]) or "—"}. VIMP top: {", ".join(cov["all"]["vimp_top"])}.
-Concept FSDS recovered: {", ".join(con["all"]["fsds_recovered"]) or "—"} (amount should lead on CMean_Y, not MMD).
-User grain should not recover amount/channel — those columns are not in that slice.
-
-Figure: `rfperm_vimp.png` (red = planted).
-
-## WHICH accounts (post-hoc)
-
-Subset key = region (south / north), not Y. Own-ref MMD: this region's new bag vs this region's \(D_{{\\mathrm{{ref}}}}\). Pair MMD compares the two regions inside the new batch (heterogeneity, not drift).
-
-Covariate order-grain: south MMD={_fmt(cov["order"]["loc_south_mmd"])}, north MMD={_fmt(cov["order"]["loc_north_mmd"])}.
-User grain south vs north should stay closer — users mix across merchants.
-
-## What to tell a production recsys
-
-1. Slice the serving table the way the log is written (order / merchant / user). Do not dump every id embedding into one simplex.
-2. OnlineRFPerm on the slice that actually moved. A quiet user grain does not mean the order grain is quiet.
-3. After a mark, FSDS + RFPerm VIMP name the columns; south/north (or any frozen account key) names the accounts.
-4. Reset the error pool after a refresh (paper Appendix A.2).
-
-Fine tables: `TABLES.md`. One-pager: `JUSTIFY.md`.
-"""
+    both = slim["both"]["dims"]
+    body = "\n".join(
+        [
+            "# Recsys grain monitor — conclusions in OnlineRFPerm / CFPerm form",
+            "",
+            "Same two questions as the papers. **OnlineRFPerm** (Sep 15 Algorithm 1): when did predictive error leave the reference pool? First rejection, delay, FAR. **CFPerm / RFPerm VIMP** (MetaLearner Algorithm 1): which columns contribute, recovered by Kendall-τ against the planted magnitude amount ≻ merchant_gmv ≻ channel. **FSDS + south/north** is the post-hoc localization on this table — not a graph cut.",
+            "",
+            "Data is the synthetic recommendation-shaped order stream: user, merchant, order, conversion Y. Slice X by grain (order / merchant / user / all). Y is never a feature. T is the batch label. Shares are localization, not Shapley or CATE.",
+            "",
+            f"n_ref={N_REF}, n_new={N_NEW}, batches={N_BATCHES}, labeled onset={ONSET}. Planted accounts = south merchants. Planted columns: covariate/both = amount, channel, merchant_gmv; concept = amount in Y|X.",
+            "",
+            "## Dataset (paper §5 style)",
+            "",
+            "Each incoming batch is 120 orders. Frozen RF is fit once on D_ref (400 orders). After onset, only **south** merchants are shifted. User features never walk. Concatenating every grain into `all` is the anti-pattern: more columns, optimistic in-sample E_ref, rank-p FAR at t=0.",
+            "",
+            "## WHEN (OnlineRFPerm Algorithm 1)",
+            "",
+            "Frozen RF on D_ref. Each batch T_t = MSE_t − E_ref. Hop = last-two 1.5× (jump detector). Rank-p vs a ref-null pool; ADDIS primary, SAFFRON contrast. Quiet T≤0 is fed as p=1. Delay = first rejection − onset_true.",
+            "",
+            "| kind | grain | ADDIS | rank-p | hop | last T | last MMD |",
+            "|---|---|---|---|---|---|---|",
+            "| covariate_south | order | "
+            + _status_cell(cov["order"]["addis_t"], cov["order"].get("addis_delay"), cov["order"].get("addis_status"))
+            + " | "
+            + _status_cell(cov["order"]["onset_rank"], cov["order"].get("rank_delay"), cov["order"].get("rank_status"))
+            + " | "
+            + _status_cell(cov["order"]["onset_hat"], cov["order"].get("hop_delay"), cov["order"].get("hop_status"))
+            + f" | {_fmt(cov['order']['last_T'])} | {_fmt(cov['order']['last_mmd'])} |",
+            "| covariate_south | user | "
+            + _status_cell(cov["user"]["addis_t"], cov["user"].get("addis_delay"), cov["user"].get("addis_status"))
+            + " | "
+            + _status_cell(cov["user"]["onset_rank"], cov["user"].get("rank_delay"), cov["user"].get("rank_status"))
+            + f" | miss | {_fmt(cov['user']['last_T'])} | {_fmt(cov['user']['last_mmd'])} |",
+            "| covariate_south | all | "
+            + _status_cell(cov["all"]["addis_t"], cov["all"].get("addis_delay"), cov["all"].get("addis_status"))
+            + " | "
+            + _status_cell(cov["all"]["onset_rank"], cov["all"].get("rank_delay"), cov["all"].get("rank_status"))
+            + f" | miss | {_fmt(cov['all']['last_T'])} | {_fmt(cov['all']['last_mmd'])} |",
+            "| concept_south | order | "
+            + _status_cell(con["order"]["addis_t"], con["order"].get("addis_delay"), con["order"].get("addis_status"))
+            + " | "
+            + _status_cell(con["order"]["onset_rank"], con["order"].get("rank_delay"), con["order"].get("rank_status"))
+            + f" | miss | {_fmt(con['order']['last_T'])} | {_fmt(con['order']['last_mmd'])} |",
+            "| both | order | "
+            + _status_cell(both["order"]["addis_t"], both["order"].get("addis_delay"), both["order"].get("addis_status"))
+            + " | "
+            + _status_cell(both["order"]["onset_rank"], both["order"].get("rank_delay"), both["order"].get("rank_status"))
+            + f" | miss | {_fmt(both['order']['last_T'])} | {_fmt(both['order']['last_mmd'])} |",
+            "",
+            "Findings (OnlineRFPerm §5.2 style):",
+            "",
+            f"1. Order grain + ADDIS hits at the labeled onset on covariate (delay={cov['order'].get('addis_delay')}), concept, and both. That is the slice that actually moved.",
+            "2. Last-two hop never fires on this six-batch walk. Gradual south-only amount/channel walk is a trend in T / MMD, not a 1.5× jump. Rank-p and ADDIS are the marks, matching the paper: hop is a jump detector.",
+            f"3. User grain MMD stays quiet ({_fmt(cov['user']['last_mmd'])}). ADDIS can still mark t=2 because Y moved (amount is in the logit) while user X did not — performance-relevant shift with quiet X, the concept fingerprint on the wrong grain.",
+            "4. Concatenated `all` grain rank-p / ADDIS fire at t=0 (FAR). Nine-column in-sample E_ref is optimistic. Slice the log the way it is written.",
+            "5. Concept order-grain MMD is quiet while T rises — Y|X moved, P(X) did not.",
+            "",
+            "Figure: `online_rfperm_T.png`. Sequential T_t / p_t: Table 4 in `TABLES.md`.",
+            "",
+            "## WHICH columns (RFPerm / CFPerm / FSDS, MetaLearner Algorithm 1)",
+            "",
+            "Nuisances on φ=(Y−μ)(T−e) fit once. CFPerm VIMP = extra MSE of predicting φ after permuting a column. RFPerm ΔMSE = extra MSE of the frozen f_ref after permuting a column of the new batch. FSDS is the univariate MMD / CMean catalog. Kendall-τ vs planted magnitude is the ranking metric in the MetaLearner paper. CFPerm global reject = max VIMP vs 95% of T-permuted nulls (B=12, not 500).",
+            "",
+            "| kind | grain | FSDS recovered | τ_FSDS | RFPerm ΔMSE top | τ_RFPerm | CFPerm φ top | τ_CFPerm | reject |",
+            "|---|---|---|---|---|---|---|---|---|",
+            f"| covariate | order | {','.join(cov['order']['fsds_recovered']) or '—'} | {_fmt(cov['order'].get('tau_fsds'))} | {','.join(cov['order'].get('mse_vimp_top') or [])} | {_fmt(cov['order'].get('tau_rfperm'))} | {','.join(cov['order']['vimp_top'])} | {_fmt(cov['order'].get('tau_cfperm'))} | {'yes' if cov['order']['vimp_reject'] else ''} |",
+            f"| covariate | all | {','.join(cov['all']['fsds_recovered']) or '—'} | {_fmt(cov['all'].get('tau_fsds'))} | {','.join(cov['all'].get('mse_vimp_top') or [])} | {_fmt(cov['all'].get('tau_rfperm'))} | {','.join(cov['all']['vimp_top'])} | {_fmt(cov['all'].get('tau_cfperm'))} | {'yes' if cov['all']['vimp_reject'] else ''} |",
+            f"| concept | order | {','.join(con['order']['fsds_recovered']) or '—'} | {_fmt(con['order'].get('tau_fsds'))} | {','.join(con['order'].get('mse_vimp_top') or [])} | {_fmt(con['order'].get('tau_rfperm'))} | {','.join(con['order']['vimp_top'])} | {_fmt(con['order'].get('tau_cfperm'))} | {'yes' if con['order']['vimp_reject'] else ''} |",
+            f"| both | all | {','.join(both['all']['fsds_recovered']) or '—'} | {_fmt(both['all'].get('tau_fsds'))} | {','.join(both['all'].get('mse_vimp_top') or [])} | {_fmt(both['all'].get('tau_rfperm'))} | {','.join(both['all']['vimp_top'])} | {_fmt(both['all'].get('tau_cfperm'))} | {'yes' if both['all']['vimp_reject'] else ''} |",
+            f"| covariate | user | {','.join(cov['user']['fsds_recovered']) or '—'} | {_fmt(cov['user'].get('tau_fsds'))} | {','.join(cov['user'].get('mse_vimp_top') or [])} | {_fmt(cov['user'].get('tau_rfperm'))} | {','.join(cov['user']['vimp_top'])} | {_fmt(cov['user'].get('tau_cfperm'))} |  |",
+            "",
+            "Findings (MetaLearner ranking style):",
+            "",
+            f"1. FSDS on the native grains recovers the planted columns: covariate order → {', '.join(cov['order']['fsds_recovered']) or '—'}; covariate all → {', '.join(cov['all']['fsds_recovered']) or '—'}; concept order → {', '.join(con['order']['fsds_recovered']) or '—'} (amount via CMean_Y, not MMD).",
+            "2. User grain recovers nothing of amount/channel/gmv — those columns are not in that slice. A quiet user catalog is the correct negative control.",
+            "3. CFPerm global reject at B=12 does not fire. Ranking, not the max-vs-null test, is the readout here (paper uses B=500).",
+            "4. φ-VIMP can put a noise column (n_items) first on covariate; FSDS and RFPerm ΔMSE are the methods that track the planted X-walk. Concept is the reverse: amount leads φ-VIMP because Y|X moved.",
+            "",
+            "Figures: `rfperm_vimp.png` (red = planted), `fsds_rank.png`.",
+            "",
+            "## WHICH accounts (post-hoc FSDS localization)",
+            "",
+            "Subset key = region (south / north), not Y. Own-ref MMD: this region's new bag vs this region's D_ref. Pair MMD compares the two regions inside the new batch (heterogeneity, not drift).",
+            "",
+            f"Covariate order-grain: south MMD={_fmt(cov['order']['loc_south_mmd'])}, north MMD={_fmt(cov['order']['loc_north_mmd'])}, pair MMD={_fmt(cov['order']['loc_pair_mmd'])}.",
+            f"Covariate user-grain: south MMD={_fmt(cov['user']['loc_south_mmd'])}, north MMD={_fmt(cov['user']['loc_north_mmd'])} — users mix across merchants, so the region split is quiet on user X.",
+            f"Concept order-grain: south MMD={_fmt(con['order']['loc_south_mmd'])} (X quiet), south ΔE[Y]={_fmt(con['order']['loc_south_cmean_y'])}.",
+            "",
+            "## What to tell a production recsys",
+            "",
+            "1. Slice the serving table the way the log is written (order / merchant / user). Do not dump every id embedding into one simplex — `all` is the FAR grain.",
+            "2. OnlineRFPerm + ADDIS on the slice that actually moved. A quiet user MMD does not mean the order grain is quiet, and a user-grain T mark can just be Y walking through another grain.",
+            "3. After a mark, FSDS names the columns (Kendall-τ); RFPerm ΔMSE is the frozen-model companion; CFPerm φ-VIMP is for Y|X. South/north (or any frozen account key) names the accounts.",
+            "4. Reset the error pool after a refresh (paper Appendix A.2).",
+            "",
+            "Fine tables: `TABLES.md`. One-pager: `JUSTIFY.md`.",
+            "",
+        ]
+    )
     (OUT / "REPORT.md").write_text(body, encoding="utf-8")
 
 

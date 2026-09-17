@@ -10,7 +10,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "Python" / "src"
 sys.path.insert(0, str(SRC))
 
-from recsys_dim_monitor import run_dim_stream, slice_xy  # noqa: E402
+from recsys_dim_monitor import (  # noqa: E402
+    kendall_vs_planted,
+    planted_in_grain,
+    run_dim_stream,
+    slice_xy,
+)
 from stream_dgps import make_order_graph_stream  # noqa: E402
 
 
@@ -61,6 +66,29 @@ class RecsysDimTests(unittest.TestCase):
         s = out["localization"]["south"].get("mmd") or 0.0
         n = out["localization"]["north"].get("mmd") or 0.0
         self.assertGreater(s, n)
+
+    def test_planted_stays_inside_grain(self):
+        names = ("amount", "hour", "n_items", "channel")
+        planted = planted_in_grain("covariate_south", names)
+        self.assertIn("amount", planted)
+        self.assertIn("channel", planted)
+        self.assertNotIn("merchant_gmv", planted)
+
+    def test_kendall_recovers_perfect_order(self):
+        rank = [
+            {"feature": "amount", "score": 3.0},
+            {"feature": "channel", "score": 2.0},
+            {"feature": "hour", "score": 0.1},
+        ]
+        tau = kendall_vs_planted(rank, {"amount": 1.0, "channel": 0.7}, score_key="score")
+        self.assertGreater(tau, 0.5)
+
+    def test_rfperm_mse_vimp_keys(self):
+        tables = _tables("covariate_south", seed=5)
+        out = run_dim_stream(tables, "order", seed=5, with_po=False)
+        self.assertIn("amount", out["names"])
+        self.assertTrue(out["mse_vimp"]["top"])
+        self.assertIn(out["addis_status"], ("hit", "FAR", "miss"))
 
 
 if __name__ == "__main__":
