@@ -192,3 +192,132 @@ def make_trimodal_gradual_concept(
         "n_batches": n_batches,
     }
     return X, Y, alpha, tau, meta
+
+
+ORDER_FEATS = ("amount", "hour", "n_items", "channel")
+MERCHANT_FEATS = ("merchant_cat", "merchant_gmv", "n_skus")
+USER_FEATS = ("user_tenure", "user_hist_freq")
+SOUTH_MERCHANTS = (4, 5, 6, 7)
+
+
+def make_order_graph_stream(
+    n_ref: int = 480,
+    n_new: int = 120,
+    n_batches: int = 4,
+    onset_batch: int = 1,
+    n_merchants: int = 8,
+    n_users: int = 40,
+    kind: str = "covariate_south",
+    shift: float = 2.4,
+    seed: int = 2026,
+):
+    """Order–merchant–user graph. Y is never a feature.
+
+    Edges: order→merchant, order→user. Region is a merchant attribute
+    (north = ids 0..3, south = 4..7). After onset, only **south** orders
+    are shifted:
+
+      covariate_south — amount, channel, and merchant_gmv walk; f fixed
+      concept_south   — amount coefficient flips; P(X) fixed
+      both            — both of the above
+
+    Subset key is region / merchant_group, not Y.
+    """
+    rng = np.random.default_rng(seed)
+    n_ref = int(n_ref)
+    n_new = int(n_new)
+    n_batches = int(n_batches)
+    n_merchants = int(n_merchants)
+    n_users = int(n_users)
+    n = n_ref + n_new * n_batches
+    kind = str(kind)
+
+    merchant_id = rng.integers(0, n_merchants, size=n)
+    user_id = rng.integers(0, n_users, size=n)
+    south = np.isin(merchant_id, np.asarray(SOUTH_MERCHANTS[: max(n_merchants // 2, 1)]))
+    region = np.where(south, "south", "north")
+
+    merchant_cat = rng.normal(size=n_merchants)
+    merchant_gmv0 = rng.normal(size=n_merchants)
+    n_skus = rng.normal(size=n_merchants)
+    user_tenure = rng.normal(size=n_users)
+    user_hist_freq = rng.normal(size=n_users)
+
+    amount0 = rng.normal(size=n) + 0.35 * merchant_cat[merchant_id]
+    hour = rng.normal(size=n)
+    n_items = rng.normal(size=n)
+    channel0 = rng.normal(size=n)
+
+    a = _alpha(n_ref, n_new, n_batches, onset_batch)
+    w = a * south.astype(float)
+    amount = amount0.copy()
+    channel = channel0.copy()
+    merchant_gmv = merchant_gmv0[merchant_id].copy()
+    if kind in ("covariate_south", "both"):
+        amount = amount + w * float(shift)
+        channel = channel + w * (0.7 * float(shift))
+        merchant_gmv = merchant_gmv + w * (0.8 * float(shift))
+
+    X_order = np.column_stack([amount, hour, n_items, channel])
+    X_merchant = np.column_stack(
+        [merchant_cat[merchant_id], merchant_gmv, n_skus[merchant_id]]
+    )
+    X_user = np.column_stack([user_tenure[user_id], user_hist_freq[user_id]])
+
+    logit0 = 0.95 * amount + 0.55 * merchant_cat[merchant_id] + 0.25 * user_tenure[user_id]
+    if kind in ("concept_south", "both"):
+        logit = logit0 * (1.0 - w) + (
+            -0.95 * amount + 0.55 * merchant_cat[merchant_id] + 0.25 * user_tenure[user_id]
+        ) * w
+    else:
+        logit = logit0
+    Y = rng.binomial(1, _sigmoid(logit)).astype(float)
+
+    merchant_table = {
+        "merchant_id": np.arange(n_merchants, dtype=int),
+        "region": np.array(
+            ["south" if i in SOUTH_MERCHANTS else "north" for i in range(n_merchants)]
+        ),
+        "X": np.column_stack([merchant_cat, merchant_gmv0, n_skus]),
+        "names": MERCHANT_FEATS,
+    }
+    user_table = {
+        "user_id": np.arange(n_users, dtype=int),
+        "X": np.column_stack([user_tenure, user_hist_freq]),
+        "names": USER_FEATS,
+    }
+    meta = {
+        "kind": kind,
+        "onset_batch": int(onset_batch),
+        "planted_subset": "south",
+        "planted_order_feats": (
+            ("amount", "channel") if kind in ("covariate_south", "both") else ("amount",)
+        ),
+        "planted_merchant_feats": (
+            ("merchant_gmv",) if kind in ("covariate_south", "both") else ()
+        ),
+        "n_ref": n_ref,
+        "n_new": n_new,
+        "n_batches": n_batches,
+        "n_merchants": n_merchants,
+        "n_users": n_users,
+        "title": f"order-graph {kind} (south after batch {onset_batch})",
+        "leakage": "Y is outcome only; subset key is region, not Y",
+    }
+    tables = {
+        "order_id": np.arange(n, dtype=int),
+        "merchant_id": merchant_id,
+        "user_id": user_id,
+        "region": region,
+        "X_order": X_order,
+        "X_merchant": X_merchant,
+        "X_user": X_user,
+        "names_order": ORDER_FEATS,
+        "names_merchant": MERCHANT_FEATS,
+        "names_user": USER_FEATS,
+        "Y": Y,
+        "merchant_table": merchant_table,
+        "user_table": user_table,
+        "meta": meta,
+    }
+    return tables
