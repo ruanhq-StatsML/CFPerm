@@ -82,4 +82,11 @@ WHEN is the level of FrozenRF $T(\tau)$ (and serving Brier) against the referenc
 Evaluable latency is excess serving loss while waiting, plus windowing delay and compute lag---not a single $\hat\tau-\tau_0$.
 Default action is watch; freeze-from-layer waits for serving error to walk, not for a hop.
 
+\paragraph{Serving error vs share error.}
+Hop and continuous time are the same score $S(\tau)$.
+The coupling that needs latency is serving Brier/MSE versus the LOGO pointer.
+Share-only $\to$ watch (do not freeze a tower). Serve-only $\to$ may update, but do not freeze-from-layer by share.
+Both $\to$ \texttt{train\_top} on that tower.
+Evaluate the wait by excess serving loss of delayed-update policies, not by which detector fired first.
+
 \end{document}

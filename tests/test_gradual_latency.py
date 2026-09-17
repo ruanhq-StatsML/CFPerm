@@ -14,9 +14,12 @@ sys.path.insert(0, str(SRC))
 
 from gradual_latency import (  # noqa: E402
     delay_obs,
+    disagreement_cell,
     excess_area,
     first_index,
+    lead_lag,
     pre_onset_false_alarms,
+    share_error,
     summarize_detector,
 )
 from stream_dgps import make_trimodal_gradual_concept  # noqa: E402
@@ -46,7 +49,17 @@ class GradualLatencyTests(unittest.TestCase):
         self.assertAlmostEqual(excess_area(loss, oracle, 2, None), 0.3)
         self.assertAlmostEqual(excess_area(loss, oracle, 2, 3), 0.1)
 
-    def test_hop_false_alarms_pre_onset(self):
+    def test_share_error_and_cells(self):
+        self.assertEqual(disagreement_cell(False, False), "quiet")
+        self.assertEqual(disagreement_cell(False, True), "share_only")
+        self.assertEqual(disagreement_cell(True, False), "serve_only")
+        self.assertEqual(disagreement_cell(True, True), "both")
+        self.assertAlmostEqual(share_error(0.8, after_onset=True), 0.2)
+        self.assertAlmostEqual(share_error(0.8, after_onset=False), 0.8)
+        lag = lead_lag(7, 6)
+        self.assertEqual(lag["lag_batches"], 1)
+        self.assertFalse(lag["share_first"])
+        self.assertIsNone(lead_lag(None, 6)["lag_batches"])
         flags = [False, True, False, True]
         self.assertEqual(pre_onset_false_alarms(flags, 2), 1)
         s = summarize_detector(

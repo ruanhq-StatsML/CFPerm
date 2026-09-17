@@ -89,3 +89,53 @@ def summarize_detector(name, flags, *, t0, n_new, alpha_batch, loss, oracle) -> 
         "area_until_hat": excess_area(loss, oracle, t0, hat),
         "area_full": excess_area(loss, oracle, t0, None),
     }
+
+
+# Hop and continuous time read the same score S(τ).
+# Hop is S(τ)/S(τ−W) ≥ g. Level is S(τ) vs S_ref.
+# The remaining coupling is serving error vs share error.
+
+SERVE_QUIET_SHARE_QUIET = "quiet"
+SERVE_QUIET_SHARE_LOUD = "share_only"
+SERVE_LOUD_SHARE_QUIET = "serve_only"
+SERVE_LOUD_SHARE_LOUD = "both"
+
+
+def disagreement_cell(serve_loud: bool, share_loud: bool) -> str:
+    """Serving rent vs localization pointer. Four cells, not a unique decomp."""
+    if serve_loud and share_loud:
+        return SERVE_LOUD_SHARE_LOUD
+    if share_loud:
+        return SERVE_QUIET_SHARE_LOUD
+    if serve_loud:
+        return SERVE_LOUD_SHARE_QUIET
+    return SERVE_QUIET_SHARE_QUIET
+
+
+def share_error(pi_true: float, *, after_onset: bool) -> float:
+    """How wrong the localization pointer is.
+
+    After onset, true group should take the mass: 1 − π.
+    Before onset, mass on that group is a false pointer: π.
+    This is not Shapley error. It is pointer noise.
+    """
+    p = float(np.clip(pi_true, 0.0, 1.0))
+    return float(1.0 - p) if after_onset else p
+
+
+def lead_lag(hat_share: int | None, hat_serve: int | None) -> dict:
+    """Share clock minus serving clock. None if either never fires."""
+    if hat_share is None or hat_serve is None:
+        return {
+            "lag_batches": None,
+            "share_first": None,
+            "never_share": hat_share is None,
+            "never_serve": hat_serve is None,
+        }
+    d = int(hat_share) - int(hat_serve)
+    return {
+        "lag_batches": d,
+        "share_first": d < 0,
+        "never_share": False,
+        "never_serve": False,
+    }

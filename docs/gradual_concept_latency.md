@@ -2,7 +2,7 @@
 
 假设：**没有 drastic 跳变**，\(P(Y\mid X)\) 沿连续时钟 \(\tau\) 慢慢转。LOGO 代码好写；难的是 latency 怎么刻画、怎么评估。
 
-连续时间不是把 batch 换成更小的 batch。是把分数当成过程 \(S(\tau)\)，决策看 **水平/斜率**，不看相邻窗比。
+Hop 和连续时间是同一条 \(S(\tau)\)（比 vs 水平）。其余好说。要跟 latency 绑在一起的是服务误差 vs 份额误差：`docs/serving_vs_share.md`。
 
 ---
 
