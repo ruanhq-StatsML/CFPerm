@@ -123,7 +123,7 @@
       "i_log1p_n_covisit",
       "ui_pop_mismatch"
     ],
-    "sec_select": 0.0036401748657226562,
+    "sec_select": 0.004519224166870117,
     "models": {
       "note": "test missing both classes \u2014 ranking only"
     },
@@ -171,17 +171,17 @@
       "i_log1p_n_covisit",
       "ui_pop_mismatch"
     ],
-    "sec_select": 0.003035306930541992,
+    "sec_select": 0.003053903579711914,
     "models": {
       "hgb": {
         "auc": 0.4450785298888317,
         "ap": 0.002691753123869707,
-        "sec": 0.15571808815002441
+        "sec": 0.15871572494506836
       },
       "logreg": {
         "auc": 0.35834206986588596,
         "ap": 0.002105723506616553,
-        "sec": 0.016434907913208008
+        "sec": 0.010030746459960938
       }
     },
     "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",

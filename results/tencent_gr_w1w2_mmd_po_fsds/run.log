@@ -1,3 +1,4 @@
+[behavior-shift] root=data/tencent_subset out=results/tencent_gr_w1w2_mmd_po_fsds max_users=20000 gap=30 k=200
 scan timeline ...
 span=231.3d  W1=45d  gap=30d  W2=45d
 FE W1 ...
@@ -12,5 +13,21 @@ fit global PO-risk ...
 localized items k=200
 localized edges W1-train=962 W1-holdout=314 W2=8815
 FSDS ranking on localized subset (StandardScaler → var → SelectKBest) ...
-wrote /workspace/results/tencent_gr_w1w2_mmd_po_fsds
+GT eval: {'n_gt': 42.0, 'precision@100': 0.4, 'recall@100': 0.9523809523809523}
+wrote results/tencent_gr_w1w2_mmd_po_fsds
 top features: i_share_linear, i_credit_linear, i_share_first, i_credit_first, i_log1p_n_users, i_log1p_n_covisit, i_n_covisit_neighbors, i_log1p_n_exp
+[behavior-shift] done → results/tencent_gr_w1w2_mmd_po_fsds
+total 268
+drwxr-xr-x  2 ubuntu ubuntu   4096 Sep 18 18:37 .
+drwxr-xr-x 26 ubuntu ubuntu   4096 Sep 18 18:20 ..
+-rw-r--r--  1 ubuntu ubuntu    328 Sep 18 18:37 demo_gt_items.csv
+-rw-r--r--  1 ubuntu ubuntu    364 Sep 18 18:37 demo_gt_orders.csv
+-rw-r--r--  1 ubuntu ubuntu   2853 Sep 18 19:15 feature_shift_diagnostics.csv
+-rw-r--r--  1 ubuntu ubuntu    824 Sep 18 19:15 fsds_feature_ranking.csv
+-rw-r--r--  1 ubuntu ubuntu    673 Sep 18 19:15 gt_eval.json
+-rw-r--r--  1 ubuntu ubuntu  39565 Sep 18 19:15 item_subset_scores.csv
+-rw-r--r--  1 ubuntu ubuntu  20303 Sep 18 19:15 localized_subset_items.csv
+-rw-r--r--  1 ubuntu ubuntu    950 Sep 18 19:15 run.log
+-rw-r--r--  1 ubuntu ubuntu   5572 Sep 18 19:15 summary.json
+-rw-r--r--  1 ubuntu ubuntu 167419 Sep 18 19:15 w1w2_mmd_po_localize_fsds.png
+-rw-r--r--  1 ubuntu ubuntu   2634 Sep 18 19:15 W1W2_MMD_PO_LOCALIZE_FSDS_REPORT.md

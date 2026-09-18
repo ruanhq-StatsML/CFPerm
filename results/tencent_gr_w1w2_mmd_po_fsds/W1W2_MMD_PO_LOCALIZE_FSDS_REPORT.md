@@ -53,10 +53,9 @@ global PO-risk = **0.000001**
 | 15 | `i_share_last` | 0.034 | 1 |
 
 ## Holdout
-- W1 user-holdout: ranking-focused (see `summary.json`)
-- W2 temporal: see `summary.json` models
+- W1 user-holdout: n=962/314 | ranking only | selected: `u_n_events`, `u_log1p_n_events`, `u_log1p_n_uniq`, `i_n_exp`, `i_n_users`, `i_credit_first`, `i_credit_linear`, `i_share_first`
+- W2 temporal: n=962/8815 | hgb AUC=0.445 | logreg AUC=0.358 | selected: `u_n_events`, `u_log1p_n_events`, `u_log1p_n_uniq`, `i_n_exp`, `i_n_users`, `i_credit_first`, `i_credit_linear`, `i_share_first`
 
-## GT evaluator (demo smoke)
+## GT evaluator
 - items: n_gt=42 | P@100=0.400 | R@100=0.952
 - orders: n=31 | coverage=0.968
-- demo files: `demo_gt_items.csv`, `demo_gt_orders.csv`（换成真实 GT 即可）

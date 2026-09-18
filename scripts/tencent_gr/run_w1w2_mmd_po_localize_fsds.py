@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""W1 vs W2: MMD + PO-risk + conditional-mean subset localization → FSDS ranking.
+"""Behavior / purchase-intent shift attribution (TencentGR).
 
-落地流程（无 network；FSDS 标准流 + 换 dataset）
-----------------------------------------------
-0. **Standardization**（最上面）：W1 上 fit ``StandardScaler``，全程共用
-1. ``feature_engineer`` 独立跑 W1 / W2（gap ≥ 30d）
-2. **Subset localization**（item 级）用三个直观分数：
-   - conditional-mean ‖μ_W2 − μ_W1‖（standardized space）
+Concise landing pipeline (no network; FSDS standard + dataset swap)
+-------------------------------------------------------------------
+0. **Standardization** — fit ``StandardScaler`` on W1 (top of everything)
+1. ``feature_engineer`` independently on W1 / W2 (gap ≥ 30d)
+2. **Subset localization** (item-level) via three intuitive scores:
+   - conditional-mean ‖μ_W2 − μ_W1‖ (standardized space)
    - RBF-MMD²(X|item,W1 ; X|item,W2)
-   - PO-risk 聚集：全局 τ̂ 在该 item 上的 mean(τ̂²)
-3. Rank-average → top-k subset，可视化
-4. **FSDS** 标准流：StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg
-   给出特征 ranking（W1-train fit；W2 temporal holdout）
+   - PO-risk aggregation: mean(τ̂²) on the item
+3. Rank-average → top-k subset → **visualize**
+4. **FSDS** standard: StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg
+   → feature ranking (W1-train fit; W2 temporal holdout)
+5. Optional **GT evaluator**: ``--gt-items`` / ``--gt-orders`` → hit / P / R @k
 
   PYTHONPATH=. python3 scripts/tencent_gr/run_w1w2_mmd_po_localize_fsds.py \\
     --root data/tencent_subset --max-users 20000 --gap-days 30 --localize-k 200

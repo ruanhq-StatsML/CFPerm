@@ -15,15 +15,21 @@ Standardize(W1)
 
 ## Run
 ```bash
+# one-command
+bash scripts/tencent_gr/run_behavior_shift_attribution.sh
+
+# or direct
 PYTHONPATH=. python3 scripts/tencent_gr/run_w1w2_mmd_po_localize_fsds.py \
   --root data/tencent_subset --max-users 20000 --gap-days 30 --localize-k 200
 
 # 有 ground-truth 时直接挂上：
-PYTHONPATH=. python3 scripts/tencent_gr/run_w1w2_mmd_po_localize_fsds.py \
-  --root data/tencent_subset --gt-items path/to/gt_items.csv --gt-orders path/to/gt_orders.csv
+bash scripts/tencent_gr/run_behavior_shift_attribution.sh \
+  --gt-items path/to/gt_items.csv --gt-orders path/to/gt_orders.csv
 ```
 
 GT CSV 列名兼容：`item_id` / `oid` / `sku_id` / `goods_id`；订单表可带 `order_id`。
+
+Env overrides: `TENCENT_ROOT`, `OUT_DIR`, `MAX_USERS`, `GAP_DAYS`, `LOCALIZE_K`, `GT_ITEMS`, `GT_ORDERS`.
 
 ## Outputs (`results/tencent_gr_w1w2_mmd_po_fsds/`)
 | file | 含义 |
