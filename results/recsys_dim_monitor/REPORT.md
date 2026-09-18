@@ -18,7 +18,7 @@ Frozen RF on D_ref. Each batch T_t = MSE_t − E_ref. Hop = last-two 1.5× (jump
 |---|---|---|---|---|---|---|
 | covariate_south | order | 2 (d=0) | 2 (d=0) | miss | 0.067 | 0.0952 |
 | covariate_south | user | 2 (d=0) | FAR@0 | miss | 0.0569 | 0.000627 |
-| covariate_south | all | FAR@0 | FAR@0 | miss | 0.0531 | 0.0773 |
+| covariate_south | all | 2 (d=0) | FAR@0 | miss | 0.0602 | 0.0865 |
 | concept_south | order | 2 (d=0) | 2 (d=0) | miss | 0.113 | -0.000532 |
 | both | order | 2 (d=0) | 2 (d=0) | miss | 0.157 | 0.0952 |
 
@@ -39,14 +39,14 @@ Nuisances on φ=(Y−μ)(T−e) fit once. CFPerm VIMP = extra MSE of predicting 
 | kind | grain | FSDS recovered | τ_FSDS | RFPerm ΔMSE top | τ_RFPerm | CFPerm φ top | τ_CFPerm | reject |
 |---|---|---|---|---|---|---|---|---|
 | covariate | order | amount,channel | 0.913 | amount,n_items,channel | 0.548 | n_items,channel,amount | -0.183 |  |
-| covariate | all | amount,channel,merchant_gmv | 0.691 | amount,merchant_cat,user_hist_freq | 0.182 | n_items,channel,user_hist_freq | -0.182 |  |
+| covariate | all | merchant_gmv,amount,channel | 0.691 | amount,merchant_cat,n_items | 0.0364 | n_skus,n_items,user_hist_freq | -0.109 |  |
 | concept | order | amount | 0.236 | channel,amount,hour | 0.236 | amount,hour,channel | 0.707 |  |
-| both | all | amount,channel,merchant_gmv | 0.691 | merchant_cat,merchant_gmv,channel | 0.0364 | channel,user_hist_freq,amount | 0.255 |  |
+| both | all | merchant_gmv,amount,channel | 0.691 | merchant_gmv,merchant_cat,hour | -0.109 | user_hist_freq,channel,n_items | -0.0364 |  |
 | covariate | user | — |  | user_tenure,user_hist_freq |  | user_hist_freq,user_tenure |  |  |
 
 Findings (MetaLearner ranking style):
 
-1. FSDS on the native grains recovers the planted columns: covariate order → amount, channel; covariate all → amount, channel, merchant_gmv; concept order → amount (amount via CMean_Y, not MMD).
+1. FSDS on the native grains recovers the planted columns: covariate order → amount, channel; covariate all → merchant_gmv, amount, channel; concept order → amount (amount via CMean_Y, not MMD).
 2. User grain recovers nothing of amount/channel/gmv — those columns are not in that slice. A quiet user catalog is the correct negative control.
 3. CFPerm global reject at B=12 does not fire. Ranking, not the max-vs-null test, is the readout here (paper uses B=500).
 4. φ-VIMP can put a noise column (n_items) first on covariate; FSDS and RFPerm ΔMSE are the methods that track the planted X-walk. Concept is the reverse: amount leads φ-VIMP because Y|X moved.

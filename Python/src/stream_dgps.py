@@ -197,20 +197,144 @@ def make_trimodal_gradual_concept(
 ORDER_FEATS = ("amount", "hour", "n_items", "channel")
 MERCHANT_FEATS = ("merchant_cat", "merchant_gmv", "n_skus")
 USER_FEATS = ("user_tenure", "user_hist_freq")
+GRAIN_FEATS = {
+    "order": ORDER_FEATS,
+    "merchant": MERCHANT_FEATS,
+    "user": USER_FEATS,
+}
 SOUTH_MERCHANTS = (4, 5, 6, 7)
+GMV_EMA_LAM = 0.25
 
 # Native-grain catalog. Y is not a feature. planted_how is filled per kind in meta.
 FEATURE_LIBRARY = (
-    {"feature": "amount", "grain": "order", "role": "订单金额（进 logit）"},
+    {"feature": "amount", "grain": "order", "role": "本单金额（进 logit）"},
     {"feature": "hour", "grain": "order", "role": "下单时刻（噪声列）"},
     {"feature": "n_items", "grain": "order", "role": "件数（噪声列）"},
-    {"feature": "channel", "grain": "order", "role": "渠道"},
+    {"feature": "channel", "grain": "order", "role": "本单渠道"},
     {"feature": "merchant_cat", "grain": "merchant", "role": "商户类目（进 logit，不种 shift）"},
-    {"feature": "merchant_gmv", "grain": "merchant", "role": "商户 GMV"},
+    {
+        "feature": "merchant_gmv",
+        "grain": "merchant",
+        "role": "商户 GMV：上一窗订单金额 EMA，不含本窗、不含 Y、不含未来",
+    },
     {"feature": "n_skus", "grain": "merchant", "role": "SKU 数（噪声列）"},
-    {"feature": "user_tenure", "grain": "user", "role": "用户 tenure（进 logit，不种 shift）"},
-    {"feature": "user_hist_freq", "grain": "user", "role": "历史频次（噪声列）"},
+    {"feature": "user_tenure", "grain": "user", "role": "进流前 tenure（进 logit，不种 shift）"},
+    {
+        "feature": "user_hist_freq",
+        "grain": "user",
+        "role": "用户历史频次：进流前快照，本窗不更新（不含本单、不含 Y、不含未来）",
+    },
 )
+
+
+def causal_ema_lookup(ids, values, n_entities, prior, lam: float = GMV_EMA_LAM):
+    """Serve entity state, then update. No current row, no future, no Y."""
+    ids = np.asarray(ids, dtype=int)
+    values = np.asarray(values, dtype=float).ravel()
+    state = np.asarray(prior, dtype=float).ravel().copy()
+    if state.shape[0] != int(n_entities):
+        raise ValueError("prior length != n_entities")
+    if ids.shape[0] != values.shape[0]:
+        raise ValueError("ids/values length mismatch")
+    lam = float(lam)
+    out = np.empty(ids.shape[0], dtype=float)
+    for i, e in enumerate(ids):
+        out[i] = state[e]
+        state[e] = (1.0 - lam) * state[e] + lam * values[i]
+    return out
+
+
+def causal_batch_ema(
+    ids, values, n_entities, prior, n_ref, n_new, n_batches, lam: float = GMV_EMA_LAM
+):
+    """GMV at batch t is the close of t-1. Current batch, Y, and future stay out."""
+    ids = np.asarray(ids, dtype=int)
+    values = np.asarray(values, dtype=float).ravel()
+    n_ref = int(n_ref)
+    n_new = int(n_new)
+    n_batches = int(n_batches)
+    state = np.asarray(prior, dtype=float).ravel().copy()
+    out = np.empty(ids.shape[0], dtype=float)
+    lam = float(lam)
+    for i in range(n_ref):
+        e = ids[i]
+        out[i] = state[e]
+        state[e] = (1.0 - lam) * state[e] + lam * values[i]
+    for b in range(n_batches):
+        lo = n_ref + b * n_new
+        hi = lo + n_new
+        snap = state.copy()
+        for i in range(lo, hi):
+            out[i] = snap[ids[i]]
+        for i in range(lo, hi):
+            e = ids[i]
+            state[e] = (1.0 - lam) * state[e] + lam * values[i]
+    return out
+
+
+def causal_batch_share(ids, n_entities, prior, n_ref, n_new, n_batches, win: int):
+    """User share at batch t uses only ids before t. No current batch, no Y."""
+    from collections import deque
+
+    ids = np.asarray(ids, dtype=int)
+    n_ref = int(n_ref)
+    n_new = int(n_new)
+    n_batches = int(n_batches)
+    win = max(int(win), 1)
+    prior = np.asarray(prior, dtype=float).ravel()
+    ps = np.exp(prior - float(np.max(prior)))
+    ps = ps / ps.sum()
+    buf = deque()
+    counts = np.zeros(int(n_entities), dtype=float)
+    out = np.empty(ids.shape[0], dtype=float)
+
+    def _share(e):
+        return counts[e] / len(buf) if buf else float(ps[e])
+
+    def _push(e):
+        buf.append(int(e))
+        counts[e] += 1.0
+        if len(buf) > win:
+            old = buf.popleft()
+            counts[old] -= 1.0
+
+    for i in range(n_ref):
+        e = ids[i]
+        out[i] = _share(e)
+        _push(e)
+    for b in range(n_batches):
+        lo = n_ref + b * n_new
+        hi = lo + n_new
+        snap = np.array([_share(e) for e in range(int(n_entities))], dtype=float)
+        for i in range(lo, hi):
+            out[i] = snap[ids[i]]
+        for i in range(lo, hi):
+            _push(ids[i])
+    return out
+
+
+def causal_rolling_share(ids, n_entities, prior, win: int):
+    """Serve this entity's share of the last `win` ids, then push. No Y."""
+    from collections import deque
+
+    ids = np.asarray(ids, dtype=int)
+    prior = np.asarray(prior, dtype=float).ravel()
+    if prior.shape[0] != int(n_entities):
+        raise ValueError("prior length != n_entities")
+    win = max(int(win), 1)
+    ps = np.exp(prior - float(np.max(prior)))
+    ps = ps / ps.sum()
+    buf = deque()
+    counts = np.zeros(int(n_entities), dtype=float)
+    out = np.empty(ids.shape[0], dtype=float)
+    for i, e in enumerate(ids):
+        out[i] = counts[e] / len(buf) if buf else float(ps[e])
+        buf.append(int(e))
+        counts[e] += 1.0
+        if len(buf) > win:
+            old = buf.popleft()
+            counts[old] -= 1.0
+    return out
 
 
 def planted_how_for_kind(kind: str) -> dict[str, str]:
@@ -248,10 +372,17 @@ def make_order_graph_stream(
     (north = ids 0..3, south = 4..7). After onset, only **south** orders
     are shifted:
 
-      covariate_south — amount, channel, and merchant_gmv walk; f fixed
+      covariate_south — amount and channel walk; f fixed. GMV follows
+                        from past amounts (not planted on the row).
       concept_south   — amount coefficient flips; P(X) fixed
       both            — both of the above
 
+    Grain features are computed as they would be at serving:
+      order    — this ticket (amount, hour, items, channel)
+      merchant — lookup + GMV EMA of past amounts for that store
+      user     — pre-period tenure and pre-period frequency (frozen snapshots)
+
+    GMV / hist_freq never see the current row, Y, or future rows.
     Subset key is region / merchant_group, not Y.
     """
     rng = np.random.default_rng(seed)
@@ -284,17 +415,30 @@ def make_order_graph_stream(
     w = a * south.astype(float)
     amount = amount0.copy()
     channel = channel0.copy()
-    merchant_gmv = merchant_gmv0[merchant_id].copy()
     if kind in ("covariate_south", "both"):
         amount = amount + w * float(shift)
         channel = channel + w * (0.7 * float(shift))
-        merchant_gmv = merchant_gmv + w * (0.8 * float(shift))
+
+    # Merchant GMV and user frequency are serving lookups: update after serve.
+    merchant_gmv = causal_batch_ema(
+        merchant_id,
+        amount,
+        n_merchants,
+        merchant_gmv0,
+        n_ref,
+        n_new,
+        n_batches,
+        lam=GMV_EMA_LAM,
+    )
+    # Frequency is a closed-period snapshot. Updating it online would write
+    # the clock into the user table (D_ref cold-start vs later batches).
+    user_freq = user_hist_freq[user_id]
 
     X_order = np.column_stack([amount, hour, n_items, channel])
     X_merchant = np.column_stack(
         [merchant_cat[merchant_id], merchant_gmv, n_skus[merchant_id]]
     )
-    X_user = np.column_stack([user_tenure[user_id], user_hist_freq[user_id]])
+    X_user = np.column_stack([user_tenure[user_id], user_freq])
 
     logit0 = 0.95 * amount + 0.55 * merchant_cat[merchant_id] + 0.25 * user_tenure[user_id]
     if kind in ("concept_south", "both"):
@@ -338,7 +482,12 @@ def make_order_graph_stream(
         "n_merchants": n_merchants,
         "n_users": n_users,
         "title": f"order stream {kind} (south after batch {onset_batch})",
-        "leakage": "Y is outcome only; subset key is region, not Y",
+        "leakage": (
+            "Y is outcome only; subset key is region, not Y; "
+            "GMV is previous-batch amount EMA (no current batch/Y/future); "
+            "hist_freq is a pre-period snapshot (no current/Y/future/clock)"
+        ),
+        "gmv_ema_lam": float(GMV_EMA_LAM),
         "feature_library": list(FEATURE_LIBRARY),
         "planted_how": planted_how_for_kind(kind),
     }

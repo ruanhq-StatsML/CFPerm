@@ -56,7 +56,7 @@ class LeakageTests(unittest.TestCase):
         stats = freeze_ref_stats(cut["ref"], seed=2)
         joined = join_profile(cut["new"]["merchant_id"], stats["merchant_profile"])
         shifted = cut["new"]["X_merchant"]
-        # Frozen gmv is not the current (shifted) gmv on south orders.
+        # Frozen gmv is the D_ref serving lookup, not the current (amount-driven) gmv.
         south = cut["new"]["region"] == "south"
         gmv_j = list(cut["ref"]["names_merchant"]).index("merchant_gmv")
         self.assertGreater(

@@ -19,13 +19,14 @@ from graph_fsds_localize import (
 )
 from online_fdr import addis, saffron
 from online_rfperm import FrozenRFPerm, onset_from_rows, probe_mse
-from stream_dgps import planted_how_for_kind
+from stream_dgps import GRAIN_FEATS, planted_how_for_kind
 from streaming_po_risk import TabularPORisk, pack_ref_new, rbf_bandwidth, mmd_vs_reference
 
 DIMS = ("order", "merchant", "user", "all")
 PO_MIN_N = 40
 
-# DGP shift magnitudes. amount walks by `shift`, channel by 0.7, gmv by 0.8.
+# DGP: amount walks by `shift`, channel by 0.7. GMV is not planted on the row —
+# it is a past-amount EMA, so it follows amount on south merchants.
 # Concept plants amount in Y|X only. Ranking recovery uses this order, not Shapley.
 PLANTED_MAG = {
     "covariate_south": {"amount": 1.0, "channel": 0.7, "merchant_gmv": 0.8},
@@ -70,30 +71,33 @@ def kendall_vs_planted(rank_rows: Sequence[Mapping], planted: Mapping[str, float
     return float(tau)
 
 
-def slice_xy(window: Mapping, dim: str) -> tuple[np.ndarray, tuple[str, ...]]:
-    """Native-grain X. Region / id / Y stay out."""
-    dim = str(dim)
-    if dim == "order":
-        X, names = window["X_order"], tuple(window["names_order"])
-    elif dim == "merchant":
-        X, names = window["X_merchant"], tuple(window["names_merchant"])
-    elif dim == "user":
-        X, names = window["X_user"], tuple(window["names_user"])
-    elif dim == "all":
-        X = np.hstack(
-            [
-                np.asarray(window["X_order"], dtype=float),
-                np.asarray(window["X_merchant"], dtype=float),
-                np.asarray(window["X_user"], dtype=float),
-            ]
-        )
-        names = tuple(window["names_order"]) + tuple(window["names_merchant"]) + tuple(
-            window["names_user"]
-        )
-    else:
-        raise ValueError(f"dim must be one of {DIMS}, got {dim!r}")
+def _grain_block(window: Mapping, dim: str) -> tuple[np.ndarray, tuple[str, ...]]:
+    """One native grain. Columns are the catalog for that grain only."""
+    feats = GRAIN_FEATS[dim]
+    X = np.asarray(window[f"X_{dim}"], dtype=float)
+    names = tuple(window[f"names_{dim}"])
     assert_not_outcome(names)
-    return np.asarray(X, dtype=float), names
+    missing = [f for f in feats if f not in names]
+    extra = [n for n in names if n not in feats]
+    if missing or extra:
+        raise ValueError(f"{dim} grain columns mismatch catalog: extra={extra} missing={missing}")
+    idx = [names.index(f) for f in feats]
+    return X[:, idx], tuple(feats)
+
+
+def slice_xy(window: Mapping, dim: str) -> tuple[np.ndarray, tuple[str, ...]]:
+    """Native-grain X. Region / id / Y stay out. Grains do not share columns."""
+    dim = str(dim)
+    if dim in GRAIN_FEATS:
+        return _grain_block(window, dim)
+    if dim == "all":
+        blocks = [_grain_block(window, g) for g in GRAIN_FEATS]
+        names = tuple(n for _, ng in blocks for n in ng)
+        if len(names) != len(set(names)):
+            raise ValueError(f"grain columns overlap: {names}")
+        assert_not_outcome(names)
+        return np.hstack([X for X, _ in blocks]), names
+    raise ValueError(f"dim must be one of {DIMS}, got {dim!r}")
 
 
 def rfperm_po_vimp(

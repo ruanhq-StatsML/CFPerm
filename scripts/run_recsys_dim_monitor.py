@@ -689,7 +689,9 @@ The merchant table is the store on that ticket.
 The user table is the buyer.
 Those three clocks are not the same clock.
 Ticket size and channel mix move when south stores start selling a different basket.
-Merchant GMV moves when a cluster of stores walks.
+Merchant GMV is last window's ticket size for that store --- not this ticket, not conversion.
+User frequency is a closed-period snapshot --- not this ticket, not conversion, and not a running clock.
+Tenure is age at the start of the stream, not a function of this conversion.
 Tenure and past frequency move only if the buyer panel itself walks.
 Users shop across south and north, so a south-store mix shift does not show up as a user-feature incident.
 Dump every column into one table and a quiet user grain is drowned by a loud order grain: the frozen predictor looks broken before anything real has happened.
@@ -722,7 +724,8 @@ The order table is the one that actually moved.
 It rings when south merchants start to walk.
 The user table never moved on mix --- tenure and frequency were never the walk --- but the watch can still ring because conversion leaked in from the order table.
 That ring is not a growth-team incident.
-The dumped table rings before the walk: too many columns were fit on the quiet window, so the frozen model looks better than it is, and a quiet table is mixed with a loud one.
+The dumped table rings with the order table, because GMV is last window's ticket size --- the same south walk, copied onto extra columns.
+It is still the wrong clock: a quiet user grain mixed with a loud order grain.
 Leave it out of production.
 
 \paragraph{Where to look, who to page.}
