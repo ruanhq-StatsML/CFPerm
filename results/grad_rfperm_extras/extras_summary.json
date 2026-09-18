@@ -1,0 +1,48 @@
+{
+  "null_grace": {
+    "by_grace": {
+      "0": {
+        "AR_grad_monitor_mean": 0.2333333333333333,
+        "AR_grad_grace_mean": 0.2333333333333333,
+        "AR_mse_monitor_mean": 0.225,
+        "AR_mse_grace_mean": 0.225,
+        "mean_n_alarm_grad": 9.333333333333334,
+        "mean_n_batch": 40.0,
+        "mean_t_grad": 8.0,
+        "fpr_first": 1.0,
+        "mean_duty": 0.2333333333333333,
+        "mean_duty_mse": 0.225,
+        "n": 3,
+        "definition": "AR = n_alarm / n_batch (baseline reference, not Type-I FAR)"
+      },
+      "2": {
+        "AR_grad_monitor_mean": 0.2333333333333333,
+        "AR_grad_grace_mean": 0.21052631578947367,
+        "AR_mse_monitor_mean": 0.225,
+        "AR_mse_grace_mean": 0.2280701754385965,
+        "mean_n_alarm_grad": 8.0,
+        "mean_n_batch": 38.0,
+        "mean_t_grad": 10.666666666666666,
+        "fpr_first": 1.0,
+        "mean_duty": 0.21052631578947367,
+        "mean_duty_mse": 0.2280701754385965,
+        "n": 3,
+        "definition": "AR = n_alarm / n_batch (baseline reference, not Type-I FAR)"
+      },
+      "4": {
+        "AR_grad_monitor_mean": 0.2333333333333333,
+        "AR_grad_grace_mean": 0.2037037037037037,
+        "AR_mse_monitor_mean": 0.225,
+        "AR_mse_grace_mean": 0.2222222222222222,
+        "mean_n_alarm_grad": 7.333333333333333,
+        "mean_n_batch": 36.0,
+        "mean_t_grad": 15.333333333333334,
+        "fpr_first": 1.0,
+        "mean_duty": 0.2037037037037037,
+        "mean_duty_mse": 0.2222222222222222,
+        "n": 3,
+        "definition": "AR = n_alarm / n_batch (baseline reference, not Type-I FAR)"
+      }
+    }
+  }
+}

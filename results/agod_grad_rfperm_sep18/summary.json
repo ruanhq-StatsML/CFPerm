@@ -1,0 +1,38 @@
+{
+  "overall": {
+    "mean_lead_grad_mse": -3.6,
+    "p_grad_earlier": 0.8,
+    "p_grad_not_later": 1.0,
+    "n_runs": 10
+  },
+  "by_dataset": {
+    "adult": {
+      "lead_grad_mse_mean": -3.2,
+      "lead_grad_mse_median": -3.0,
+      "lead_grad_mse_std": 2.227105745132009,
+      "p_grad_earlier": 0.8,
+      "p_grad_not_later": 1.0,
+      "leads_grad": [
+        -3.0,
+        -3.0,
+        -7.0,
+        0.0,
+        -3.0
+      ]
+    },
+    "nomao": {
+      "lead_grad_mse_mean": -4.0,
+      "lead_grad_mse_median": -4.0,
+      "lead_grad_mse_std": 3.521363372331802,
+      "p_grad_earlier": 0.8,
+      "p_grad_not_later": 1.0,
+      "leads_grad": [
+        -1.0,
+        -4.0,
+        -5.0,
+        -10.0,
+        0.0
+      ]
+    }
+  }
+}
