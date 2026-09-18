@@ -1,0 +1,14 @@
+{
+  "n_users": 3000,
+  "n_conv_users": 1697,
+  "n_items": 194344,
+  "n_edges_ui": 286949,
+  "n_convert_path_rows": 90823,
+  "co_window": 8,
+  "top_covisit": 10,
+  "main_dims": [
+    "user_id",
+    "item_id"
+  ],
+  "note": "No graph/network algorithms \u2014 only groupby aggregations into tables."
+}
