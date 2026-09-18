@@ -1,0 +1,31 @@
+{
+  "ks": [
+    50,
+    100,
+    200
+  ],
+  "available": true,
+  "orders": {
+    "n_orders": 31.0,
+    "order_coverage": 0.967741935483871,
+    "order_coverage@50": 0.967741935483871,
+    "order_coverage@100": 0.967741935483871,
+    "order_coverage@200": 0.967741935483871
+  },
+  "items": {
+    "n_pred": 200.0,
+    "n_gt": 42.0,
+    "n_hit_all": 40.0,
+    "recall_all": 0.9523809523809523,
+    "precision_all": 0.2,
+    "hit@50": 40.0,
+    "precision@50": 0.8,
+    "recall@50": 0.9523809523809523,
+    "hit@100": 40.0,
+    "precision@100": 0.4,
+    "recall@100": 0.9523809523809523,
+    "hit@200": 40.0,
+    "precision@200": 0.2,
+    "recall@200": 0.9523809523809523
+  }
+}

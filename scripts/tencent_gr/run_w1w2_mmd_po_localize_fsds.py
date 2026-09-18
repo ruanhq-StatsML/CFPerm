@@ -51,6 +51,7 @@ from time_window_feats import (  # noqa: E402
     propose_two_windows,
     scan_time_range,
 )
+from gt_subset_evaluator import evaluate_gt  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -400,27 +401,27 @@ def plot_results(
     ax.set_yticks(range(len(top_i)))
     ax.set_yticklabels([str(x) for x in top_i["item_id"][::-1]], fontsize=7)
     ax.set_xlabel("conditional-mean ‖μ₂−μ₁‖")
-    ax.set_title("Subset: cmean")
+    ax.set_title("Behavior-shift subset · cmean")
 
     ax = axes[0, 1]
     ax.barh(range(len(top_i)), top_i["mmd2"][::-1], color="#F58518")
     ax.set_yticks(range(len(top_i)))
     ax.set_yticklabels([str(x) for x in top_i["item_id"][::-1]], fontsize=7)
     ax.set_xlabel("MMD²")
-    ax.set_title("Subset: MMD")
+    ax.set_title("Purchase-intent shift · MMD")
 
     ax = axes[1, 0]
     ax.scatter(subset["cmean_l2"], subset["mmd2"], c=subset["po_tau2_mean"], cmap="viridis", s=18)
     ax.set_xlabel("cmean")
     ax.set_ylabel("MMD²")
-    ax.set_title("Items (color=PO τ²)")
+    ax.set_title("Items (color = PO-risk τ²)")
 
     ax = axes[1, 1]
     ax.barh(range(len(top_f)), top_f["f_score"][::-1], color="#54A24B")
     ax.set_yticks(range(len(top_f)))
     ax.set_yticklabels(top_f["feature"][::-1], fontsize=8)
     ax.set_xlabel("FSDS F-score")
-    ax.set_title("Feature ranking (FSDS)")
+    ax.set_title("Attribution feature ranking (FSDS)")
 
     fig.suptitle(title, fontsize=11)
     fig.tight_layout()
@@ -441,6 +442,18 @@ def main() -> None:
     ap.add_argument("--select-k", type=int, default=15)
     ap.add_argument("--co-window", type=int, default=8)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument(
+        "--gt-items",
+        type=Path,
+        default=None,
+        help="GT item list CSV/parquet/txt (item_id / oid / sku_id …)",
+    )
+    ap.add_argument(
+        "--gt-orders",
+        type=Path,
+        default=None,
+        help="GT order×item CSV/parquet (item_id + optional order_id)",
+    )
     ap.add_argument(
         "--out-dir",
         type=Path,
@@ -569,6 +582,23 @@ def main() -> None:
     ranking.to_csv(args.out_dir / "fsds_feature_ranking.csv", index=False)
     feat_diag.to_csv(args.out_dir / "feature_shift_diagnostics.csv", index=False)
 
+    # optional GT evaluator (orders / items) — plug in when available
+    gt_eval = evaluate_gt(
+        loc_items,
+        gt_items_path=args.gt_items,
+        gt_orders_path=args.gt_orders,
+        ks=(50, 100, min(200, len(loc_items)) or 1),
+    )
+    if gt_eval.get("available"):
+        (args.out_dir / "gt_eval.json").write_text(json.dumps(gt_eval, indent=2))
+        print(
+            "GT eval:",
+            {k: gt_eval.get("items", {}).get(k) for k in ("n_gt", "precision@100", "recall@100")},
+            flush=True,
+        )
+    else:
+        print("GT eval skipped (pass --gt-items / --gt-orders to enable)", flush=True)
+
     def _strip(res: Dict) -> Dict:
         out = {k: v for k, v in res.items() if k != "ranking"}
         if "ranking" in res and isinstance(res["ranking"], pd.DataFrame):
@@ -580,8 +610,9 @@ def main() -> None:
             "Standardization: StandardScaler fit on W1 (top of pipeline)",
             "FE(time) independently on W1 and W2 (gap >= 30d)",
             "subset localization = rank-average(cmean, MMD, PO-risk) over items (standardized X)",
-            "visualize localized subset",
+            "visualize localized subset (行为/购买欲变动归因)",
             "FSDS: StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg → feature ranking",
+            "optional GT evaluator on orders/items → hit/precision/recall@k",
         ],
         "timeline": {
             "span_days": (t_max - t_min) / DAY,
@@ -603,6 +634,7 @@ def main() -> None:
         },
         "fsds_W1_holdout": _strip(res_w1),
         "fsds_W2_temporal": _strip(res_w2),
+        "gt_eval": gt_eval,
     }
     (args.out_dir / "summary.json").write_text(json.dumps(blob, indent=2, default=str))
 
@@ -610,19 +642,19 @@ def main() -> None:
         scor,
         ranking,
         out_path=args.out_dir / "w1w2_mmd_po_localize_fsds.png",
-        title=f"W1↔W2 subset (MMD/PO/cmean, standardized) → FSDS  gap={gap_d:.0f}d  k={len(loc_items)}",
+        title=f"Behavior / purchase-intent shift  W1↔W2  gap={gap_d:.0f}d  k={len(loc_items)}",
     )
 
     # report
     md = [
-        "# W1 vs W2: MMD + PO-risk + conditional-mean → subset → FSDS",
+        "# 行为 / 购买欲变动归因：MMD + PO-risk + conditional-mean → FSDS",
         "",
-        "不用 SMD。**Subset localization** 用三个直观量（**先 Standardization**）：",
-        "- **conditional-mean** ‖μ_W2−μ_W1‖（standardized space）",
-        "- **MMD²** (RBF)",
-        "- **PO-risk** 聚集 mean(τ̂²)",
-        "",
-        "找到 subset 后可视化，再跑 **FSDS 标准流** 出特征 ranking。",
+        "直观 concise 链路（**先 Standardization**）：",
+        "1. W1/W2 独立 FE → standardized X",
+        "2. **Subset localization**：conditional-mean / MMD² / PO-risk",
+        "3. **可视化** 漂移商品 subset（用户行为 & 购买欲变动）",
+        "4. **FSDS** 标准流 → 归因特征 ranking",
+        "5. （可选）GT 订单/商品 list → hit / precision / recall@k",
         "",
         "## Protocol",
         "0. **StandardScaler** fit on W1（pipeline 最上面）",
@@ -630,6 +662,7 @@ def main() -> None:
         f"2. Item subset rank-average(cmean, MMD, PO) → top-**{len(loc_items)}**",
         "3. Viz subset",
         f"4. FSDS: **StandardScaler** → var → SelectKBest(k={args.select_k}) → HGB/LogReg",
+        "5. GT evaluator（`--gt-items` / `--gt-orders`）",
         "",
         "## Localized subset (head)",
         "| rank | item_id | cmean | MMD² | PO τ² | n_W1 | n_W2 |",
@@ -673,7 +706,24 @@ def main() -> None:
         _auc_line("W1 user-holdout", res_w1),
         _auc_line("W2 temporal", res_w2),
         "",
+        "## GT evaluator",
     ]
+    if gt_eval.get("available"):
+        it = gt_eval.get("items") or {}
+        md.append(
+            f"- items: n_gt={int(it.get('n_gt', 0))} | "
+            f"P@100={it.get('precision@100', float('nan')):.3f} | "
+            f"R@100={it.get('recall@100', float('nan')):.3f}"
+        )
+        if "orders" in gt_eval:
+            od = gt_eval["orders"]
+            md.append(
+                f"- orders: n={int(od.get('n_orders', 0))} | "
+                f"coverage={od.get('order_coverage', float('nan')):.3f}"
+            )
+    else:
+        md.append("- skipped（提供 `--gt-items` / `--gt-orders` 即可评 hit/precision/recall）")
+    md.append("")
     (args.out_dir / "W1W2_MMD_PO_LOCALIZE_FSDS_REPORT.md").write_text("\n".join(md))
     print("wrote", args.out_dir)
     print("top features:", ", ".join(ranking.head(8)["feature"].astype(str).tolist()))

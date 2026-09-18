@@ -3,8 +3,9 @@
     "Standardization: StandardScaler fit on W1 (top of pipeline)",
     "FE(time) independently on W1 and W2 (gap >= 30d)",
     "subset localization = rank-average(cmean, MMD, PO-risk) over items (standardized X)",
-    "visualize localized subset",
-    "FSDS: StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 HGB/LogReg \u2192 feature ranking"
+    "visualize localized subset (\u884c\u4e3a/\u8d2d\u4e70\u6b32\u53d8\u52a8\u5f52\u56e0)",
+    "FSDS: StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 HGB/LogReg \u2192 feature ranking",
+    "optional GT evaluator on orders/items \u2192 hit/precision/recall@k"
   ],
   "timeline": {
     "span_days": 231.27605324074074,
@@ -201,5 +202,36 @@
       "u_log1p_n_uniq",
       "i_share_last"
     ]
+  },
+  "gt_eval": {
+    "ks": [
+      50,
+      100,
+      200
+    ],
+    "available": true,
+    "orders": {
+      "n_orders": 31.0,
+      "order_coverage": 0.967741935483871,
+      "order_coverage@50": 0.967741935483871,
+      "order_coverage@100": 0.967741935483871,
+      "order_coverage@200": 0.967741935483871
+    },
+    "items": {
+      "n_pred": 200.0,
+      "n_gt": 42.0,
+      "n_hit_all": 40.0,
+      "recall_all": 0.9523809523809523,
+      "precision_all": 0.2,
+      "hit@50": 40.0,
+      "precision@50": 0.8,
+      "recall@50": 0.9523809523809523,
+      "hit@100": 40.0,
+      "precision@100": 0.4,
+      "recall@100": 0.9523809523809523,
+      "hit@200": 40.0,
+      "precision@200": 0.2,
+      "recall@200": 0.9523809523809523
+    }
   }
 }

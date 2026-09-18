@@ -111,3 +111,22 @@ def test_fsds_pipeline_starts_with_standardizer():
     assert res["ok"]
     assert res["pipeline"].startswith("StandardScaler")
     assert "f_sig" in res["selected"] or res["ranking"].iloc[0]["feature"] == "f_sig"
+
+
+def test_gt_subset_evaluator(tmp_path):
+    from gt_subset_evaluator import evaluate_gt, evaluate_item_subset, load_gt_items
+
+    items = tmp_path / "gt_items.csv"
+    items.write_text("item_id\n10\n20\n30\n40\n")
+    orders = tmp_path / "gt_orders.csv"
+    orders.write_text("order_id,sku_id\nA,10\nA,99\nB,20\nC,50\n")
+    assert load_gt_items(items) == {10, 20, 30, 40}
+    pred = [10, 20, 99, 7]
+    m = evaluate_item_subset(pred, {10, 20, 30, 40}, ks=(2, 4))
+    assert m["hit@2"] == 2.0
+    assert abs(m["precision@2"] - 1.0) < 1e-9
+    assert abs(m["recall@2"] - 0.5) < 1e-9
+    blob = evaluate_gt(pred, gt_items_path=items, gt_orders_path=orders, ks=(2, 4))
+    assert blob["available"]
+    assert blob["orders"]["n_orders"] == 3.0
+    assert blob["orders"]["order_coverage"] > 0.0

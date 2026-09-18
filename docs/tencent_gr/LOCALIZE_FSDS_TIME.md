@@ -1,5 +1,10 @@
 # TencentGR prototype: time-window localization → FSDS
 
+> **主落地路径已换成** [`W1W2_MMD_PO_LOCALIZE_FSDS.md`](W1W2_MMD_PO_LOCALIZE_FSDS.md)  
+> （MMD + PO-risk + conditional-mean subset → viz → FSDS，带 Standardization / GT evaluator）
+
+本文档保留 share-linear localize 的早期时间窗原型，仅作对照。
+
 两步：**Localization → FSDS**。FE 带时间范围；两窗间隔 ≥1 个月；无 network。
 
 > TencentGR-1M labels = exposure(0)/click(1)；terminal success = **click**。
@@ -8,7 +13,7 @@
 1. `feature_engineer(root, t_start, t_end)` — 只用窗内事件
 2. W1 early / W2 late，gap = **30.0** days (≥ 30)
 3. Localization subset = W1 `share_linear` top-k（三段启发式 aggregate through）
-4. FSDS select+train 只在 W1；W2 仅作 temporal holdout
+4. FSDS: **StandardScaler** → SelectKBest+train 只在 W1；W2 仅作 temporal holdout
 
 ## Windows
 - timeline span: **231.3** days
