@@ -1,0 +1,11 @@
+scan timeline ...
+span=231.3d users_scan_cap=60000 W1=[1737673172,1741993172) 50.0d  gap=30.0d  W2=[1744585172,1748905172) 50.0d
+FE W1 ...
+FE W2 ...
+W1 edges=129641 pos=0.0001 | W2 edges=4310736 pos=0.0003
+localize subset from W1-train users only: k=500
+localized edges W1-train=8435 W1-holdout=2714 W2=11963
+FSDS candidate cols=24
+wrote results/tencent_gr_localize_fsds_time
+- W1→W1 user-holdout: HGB AUC=0.642 AP=0.001 | LR AUC=0.147 AP=0.000 | n=8435/2714 sel=24
+- W1→W2 temporal: HGB AUC=0.473 AP=0.001 | LR AUC=0.677 AP=0.002 | n=8435/11963 sel=24
