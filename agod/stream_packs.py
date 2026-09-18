@@ -38,6 +38,7 @@ def load_metro_interstate(root: Path, max_n: int = 20000) -> ArrayPack:
     oh = _onehot(df["weather_main"], "wm")
     X = pd.concat([base, oh], axis=1).fillna(0).to_numpy(np.float32)
     y = df["traffic_volume"].to_numpy(np.float64)
+    day_codes = df["date_time"].dt.floor("D").astype("category").cat.codes.to_numpy(np.int32)
     n = min(max_n, len(X))
     meta = {
         "name": "metro_interstate",
@@ -46,6 +47,8 @@ def load_metro_interstate(root: Path, max_n: int = 20000) -> ArrayPack:
         "target": "traffic_volume",
         "freq": "hourly",
         "proxy": False,
+        "day_id": day_codes[:n],
+        "n_days": int(np.unique(day_codes[:n]).size),
     }
     return X[:n], y[:n], meta
 
@@ -68,6 +71,7 @@ def load_beijing_pm25(root: Path, max_n: int = 20000) -> ArrayPack:
     oh = _onehot(df["cbwd"], "wind")
     X = pd.concat([base, oh], axis=1).fillna(0).to_numpy(np.float32)
     y = df[ycol].to_numpy(np.float64)
+    day_codes = df["stamp"].dt.floor("D").astype("category").cat.codes.to_numpy(np.int32)
     n = min(max_n, len(X))
     meta = {
         "name": "beijing_pm25",
@@ -76,6 +80,8 @@ def load_beijing_pm25(root: Path, max_n: int = 20000) -> ArrayPack:
         "target": ycol,
         "freq": "hourly",
         "proxy": False,
+        "day_id": day_codes[:n],
+        "n_days": int(np.unique(day_codes[:n]).size),
     }
     return X[:n], y[:n], meta
 
@@ -176,6 +182,57 @@ def ensure_waymo_proxy(root: Path, n: int = 12000, seed: int = 0) -> Path:
     return out
 
 
+def load_nyc_taxi(root: Path, max_n: int = 20000) -> ArrayPack:
+    """NAB NYC taxi passenger counts (half-hourly). y = value; clock = timestamp.
+
+    Builds lag / clock features so OnlineRFPerm can run as a regression stream.
+    Meta includes per-row ``day_id`` for day-level DetRate tables (~215 unique days
+    in the NAB dump; manuscript often targets ~300 day slices).
+    """
+    folder = root / "data/stream_packs/nyc_taxi"
+    matches = sorted(folder.glob("*.csv"))
+    if not matches:
+        raise FileNotFoundError(f"nyc_taxi csv missing under {folder}")
+    df = pd.read_csv(matches[0])
+    if "timestamp" not in df.columns or "value" not in df.columns:
+        raise ValueError(f"nyc_taxi expects timestamp,value columns in {matches[0]}")
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.sort_values("timestamp").reset_index(drop=True)
+    y = df["value"].astype(np.float64).to_numpy()
+    day = df["timestamp"].dt.floor("D")
+    day_codes = day.astype("category").cat.codes.to_numpy(np.int32)
+    # features: lags + clock
+    s = pd.Series(y)
+    feats = [
+        s.shift(1).fillna(s.median()).rename("lag1"),
+        s.shift(2).fillna(s.median()).rename("lag2"),
+        s.shift(48).fillna(s.median()).rename("lag_day"),  # 48 × 30min
+        s.rolling(6, min_periods=1).mean().rename("roll3h"),
+        s.rolling(48, min_periods=1).mean().rename("roll1d"),
+        s.rolling(48, min_periods=1).std().fillna(0.0).rename("roll1d_std"),
+        df["timestamp"].dt.hour.astype(float).rename("hour"),
+        df["timestamp"].dt.dayofweek.astype(float).rename("dow"),
+        df["timestamp"].dt.month.astype(float).rename("month"),
+        ((df["timestamp"].dt.hour * 2 + df["timestamp"].dt.minute // 30)).astype(float).rename(
+            "slot"
+        ),
+    ]
+    X = pd.concat(feats, axis=1).fillna(0).to_numpy(np.float32)
+    n = min(max_n, len(X))
+    meta = {
+        "name": "nyc_taxi",
+        "n": n,
+        "d": int(X.shape[1]),
+        "target": "value",
+        "freq": "30min",
+        "proxy": False,
+        "day_id": day_codes[:n],
+        "n_days": int(np.unique(day_codes[:n]).size),
+        "timestamps": df["timestamp"].iloc[:n].to_numpy(),
+    }
+    return X[:n], y[:n], meta
+
+
 def load_waymo_proxy(root: Path, max_n: int = 12000, seed: int = 0) -> ArrayPack:
     p = ensure_waymo_proxy(root, n=max_n, seed=seed)
     z = np.load(p)
@@ -225,6 +282,7 @@ def _stocks(ticker: str):
 LOADERS: Dict[str, Callable[..., Optional[ArrayPack]]] = {
     "metro_interstate": load_metro_interstate,
     "beijing_pm25": load_beijing_pm25,
+    "nyc_taxi": load_nyc_taxi,
     "stocks_SPY": _stocks("SPY"),
     "stocks_QQQ": _stocks("QQQ"),
     "stocks_AAPL": _stocks("AAPL"),

@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-"""SAFFRON vs ADDIS on real OnlineRFPerm streams — delay / FAR / detection.
+"""SAFFRON / ADDIS / α-investing on OnlineRFPerm streams — manuscript form.
 
-Elaboration target:
-  - SAFFRON: often slower (larger mean delay) at matched α
-  - ADDIS (default λ≈0.25): higher detection but FAR/alarm rate can look high
-    on real streams (conservative-null adaptivity spends more aggressively)
-  - Conservative ADDIS: increase λ (shrinks wealth factor τ−λ / makes candidate
-    rule stricter in the spending sense) and re-run
+Report form (OnlinePermOOB / OnlineRFPerm.pdf):
 
-Uses ``online_fdr`` package (Saffron / Addis). No new FDR theory.
+  first1 / first2 / first3   — first k consecutive rejects (1-based end idx)
+  alarm P25 / median / P75   — distribution of *all* alarm times on the trail
+  day DetRate                — e.g. NYC-taxi: n_alarm_days / n_days
 
   PYTHONPATH=. python3 scripts/run_saffron_addis_realdata.py \\
-    --datasets synthetic electricity bank eeg adult \\
-    --seeds 0 1 2 --addis-lambdas 0.25 0.35 0.40
+    --datasets all --seeds 0 1 2 --addis-lambdas 0.25 0.35 0.40
 """
 from __future__ import annotations
 
@@ -28,14 +24,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from online_fdr import Addis, Saffron
+from sklearn.preprocessing import StandardScaler
 
-from agod.online_rfperm import fit_online_rfperm, batch_T, rank_pvalue
+from agod.first_k_metrics import (
+    aggregate_day_forms,
+    first_k_form,
+    fmt_num,
+)
+from agod.online_rfperm import batch_T, fit_online_rfperm, rank_pvalue
+from agod.stream_packs import LOADERS as PACK_LOADERS
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 # ---------------------------------------------------------------------------
-# Data loaders (reuse OpenML / synthetic style from grad monitor)
+# Data loaders
 # ---------------------------------------------------------------------------
 
 
@@ -62,7 +65,7 @@ def load_synthetic(max_n: int, seed: int, *, shift_batch: int = 20, bs: int = 12
 
 def load_openml(name: str, max_n: int, seed: int):
     from sklearn.datasets import fetch_openml, fetch_covtype
-    from sklearn.preprocessing import LabelEncoder, StandardScaler
+    from sklearn.preprocessing import LabelEncoder
 
     if name == "covertype":
         bun = fetch_covtype()
@@ -95,7 +98,22 @@ def load_openml(name: str, max_n: int, seed: int):
     return X, y, {"name": name, "shift_batch": None}
 
 
-LOADERS = {
+def load_pack(name: str, max_n: int, seed: int):
+    if name not in PACK_LOADERS:
+        raise KeyError(name)
+    X, y, meta = PACK_LOADERS[name](ROOT, max_n=max_n)
+    # time-ordered packs: do not shuffle; scale on prefix
+    n = len(X)
+    fit_n = max(64, n // 5)
+    sc = StandardScaler().fit(X[:fit_n])
+    X = sc.transform(X).astype(np.float32)
+    meta = dict(meta)
+    meta["shift_batch"] = None
+    meta["seed"] = seed
+    return X, y, meta
+
+
+OPENML_LOADERS = {
     "synthetic": lambda max_n, seed, bs: load_synthetic(max_n, seed, bs=bs),
     "covertype": lambda max_n, seed, bs: load_openml("covertype", max_n, seed),
     "bank": lambda max_n, seed, bs: load_openml("bank-marketing", max_n, seed),
@@ -103,6 +121,24 @@ LOADERS = {
     "eeg": lambda max_n, seed, bs: load_openml("eeg-eye-state", max_n, seed),
     "adult": lambda max_n, seed, bs: load_openml("adult", max_n, seed),
 }
+
+PACK_NAMES = [
+    "metro_interstate",
+    "beijing_pm25",
+    "nyc_taxi",
+    "stocks_AAPL",
+    "stocks_MSFT",
+    "stocks_IWM",
+    "waymo_proxy",
+]
+
+ALL_DATASETS = list(OPENML_LOADERS.keys()) + PACK_NAMES
+
+
+def load_any(name: str, max_n: int, seed: int, bs: int):
+    if name in OPENML_LOADERS:
+        return OPENML_LOADERS[name](max_n, seed, bs)
+    return load_pack(name, max_n, seed)
 
 
 def make_stream(X, y, bs: int, n_batches: int):
@@ -114,7 +150,7 @@ def make_stream(X, y, bs: int, n_batches: int):
 
 
 # ---------------------------------------------------------------------------
-# p-stream from OnlineRFPerm (EWMA rank p), then FDR procedures
+# p-stream + FDR
 # ---------------------------------------------------------------------------
 
 
@@ -125,12 +161,10 @@ def p_stream_from_rfperm(
     seed: int,
     ewma_lam: float = 1.0,
 ) -> Tuple[List[float], List[float]]:
-    """Return (T_list including burn, p_list for post-burn only aligned to t>=burn)."""
     X0 = np.vstack([stream[t][0] for t in range(n_burn)])
     y0 = np.concatenate([stream[t][1] for t in range(n_burn)])
     st = fit_online_rfperm(X0, y0, seed=seed)
     T_hist: List[float] = []
-    # burn
     for t in range(n_burn):
         T = batch_T(st, stream[t][0], stream[t][1])
         T_hist.append(T)
@@ -145,19 +179,19 @@ def p_stream_from_rfperm(
     return Ts, ps
 
 
-def run_procedure(ps: Sequence[float], name: str, **kw) -> Dict:
-    """Apply sequential FDR; return rejects + metrics."""
+def rejects_from_procedure(ps: Sequence[float], name: str, **kw) -> List[int]:
     if name == "saffron":
         proc = Saffron(alpha=kw["alpha"], wealth=kw["wealth"], lambda_=kw["lambda_"])
-    elif name.startswith("addis"):
+        return [int(proc.test_one(float(p))) for p in ps]
+    if name.startswith("addis"):
         proc = Addis(
             alpha=kw["alpha"],
             wealth=kw["wealth"],
             lambda_=kw["lambda_"],
             tau=kw["tau"],
         )
-    elif name == "alpha_investing":
-        # local Foster-Stine style (matches agod.online_rfperm)
+        return [int(proc.test_one(float(p))) for p in ps]
+    if name == "alpha_investing":
         wealth = 1.0
         alpha = kw["alpha"]
         rejects = []
@@ -166,74 +200,167 @@ def run_procedure(ps: Sequence[float], name: str, **kw) -> Dict:
             rej = bool(p < alpha_t)
             wealth = wealth + alpha if rej else max(wealth - alpha_t, 1e-8)
             rejects.append(int(rej))
-        return _metrics(
-            rejects, kw.get("shift_rel"), kw.get("n_burn", 0), grace=kw.get("grace", 0)
-        )
-    else:
-        raise ValueError(name)
-
-    rejects = [int(proc.test_one(float(p))) for p in ps]
-    return _metrics(
-        rejects, kw.get("shift_rel"), kw.get("n_burn", 0), grace=kw.get("grace", 0)
-    )
+        return rejects
+    raise ValueError(name)
 
 
-def _metrics(
-    rejects: List[int],
-    shift_rel: Optional[int],
-    n_burn: int,
-    *,
-    grace: int = 0,
-) -> Dict:
-    """shift_rel: shift index relative to post-burn stream (0 = first monitor batch)."""
-    n = len(rejects)
-    # ignore rejects in grace window when scoring first-detect / early FAR
-    g = max(0, int(grace))
+def apply_grace(rejects: List[int], grace: int) -> List[int]:
     scored = list(rejects)
-    for i in range(min(g, n)):
-        scored[i] = 0  # for first-detect only; raw AR still uses rejects
+    for i in range(min(max(0, grace), len(scored))):
+        scored[i] = 0
+    return scored
 
-    n_alarm = int(sum(rejects))
-    far = n_alarm / n if n else float("nan")
-    first_raw = next((i for i, r in enumerate(rejects) if r), None)
-    first = next((i for i, r in enumerate(scored) if r), None)
 
-    # early window AR (post-burn, first 10 monitor batches) — FAR proxy on real data
-    early = rejects[: min(10, n)]
-    early_ar = (sum(early) / len(early)) if early else float("nan")
-
-    if shift_rel is None:
-        delay = None if first is None else int(first)
-        detected = first is not None
-        far_pre = early_ar
-        far_post = far
-        detect_rate = float(detected)
+def run_one_stream(
+    X,
+    y,
+    *,
+    bs: int,
+    n_batches: int,
+    n_burn: int,
+    seed: int,
+    procedures: List[Tuple[str, dict]],
+    alpha: float,
+    wealth: float,
+    addis_tau: float,
+    saffron_lambda: float,
+    grace: int,
+    shift_batch: Optional[int],
+) -> List[Dict]:
+    need = bs * n_batches
+    if len(X) < need:
+        nb = max(n_burn + 4, len(X) // bs)
     else:
-        pre = rejects[: max(0, shift_rel)]
-        post = rejects[max(0, shift_rel) :]
-        far_pre = (sum(pre) / len(pre)) if pre else float("nan")
-        far_post = (sum(post) / len(post)) if post else float("nan")
-        if first is None:
-            delay = None
-            detected = False
-        else:
-            delay = int(first - shift_rel)
-            detected = first >= shift_rel
-        detect_rate = float(detected)
-    return {
-        "n_monitor": n,
-        "n_alarm": n_alarm,
-        "alarm_rate": far,
-        "early10_alarm_rate": early_ar,
-        "far_pre_shift": far_pre,
-        "alarm_rate_post": far_post,
-        "t_first": None if first is None else int(first + n_burn),
-        "t_first_raw": None if first_raw is None else int(first_raw + n_burn),
-        "t_first_rel": first,
-        "delay_vs_shift": delay,
-        "detected_after_shift": detect_rate,
-        "grace": g,
-    }
+        nb = n_batches
+    stream = make_stream(X, y, bs, nb)
+    n_burn_eff = min(n_burn, max(2, nb // 4))
+    _, ps = p_stream_from_rfperm(stream, n_burn=n_burn_eff, seed=seed)
+    shift_rel = None if shift_batch is None else int(shift_batch - n_burn_eff)
+    rows = []
+    for pname, extra in procedures:
+        kw = {
+            "alpha": alpha,
+            "wealth": wealth,
+            "tau": addis_tau,
+            "lambda_": saffron_lambda,
+        }
+        kw.update(extra)
+        rejects = rejects_from_procedure(
+            ps, "addis" if pname.startswith("addis") else pname, **kw
+        )
+        scored = apply_grace(rejects, grace)
+        form = first_k_form(scored)
+        # also raw (no grace) for SUM / day alarms
+        form_raw = first_k_form(rejects)
+        delay = None
+        if shift_rel is not None and np.isfinite(form["first1"]):
+            # first1 is 1-based end idx on post-burn trail
+            delay = float(form["first1"] - 1 - shift_rel)
+        rows.append(
+            {
+                "procedure": pname,
+                "lambda": extra.get("lambda_", None),
+                "n_burn": n_burn_eff,
+                "n_batches": nb,
+                "n_monitor": len(rejects),
+                "shift_batch": shift_batch,
+                "grace": grace,
+                "delay_vs_shift": delay,
+                **{f"g_{k}": v for k, v in form.items()},
+                **{f"raw_{k}": v for k, v in form_raw.items()},
+            }
+        )
+    return rows
+
+
+def day_slices(
+    X: np.ndarray,
+    y: np.ndarray,
+    day_id: np.ndarray,
+    *,
+    min_len: int,
+    max_days: Optional[int] = None,
+) -> List[Tuple[np.ndarray, np.ndarray]]:
+    out = []
+    for d in np.unique(day_id):
+        m = day_id == d
+        if int(m.sum()) < min_len:
+            continue
+        out.append((X[m], y[m]))
+        if max_days is not None and len(out) >= max_days:
+            break
+    return out
+
+
+def run_day_level(
+    X,
+    y,
+    day_id,
+    *,
+    bs: int,
+    n_burn: int,
+    seed: int,
+    procedures: List[Tuple[str, dict]],
+    alpha: float,
+    wealth: float,
+    addis_tau: float,
+    saffron_lambda: float,
+    grace: int,
+    max_days: Optional[int],
+) -> List[Dict]:
+    """Each calendar day = one stream unit → DetRate + first1 quantiles."""
+    slices = day_slices(X, y, day_id, min_len=max(bs * (n_burn + 2), bs * 4), max_days=max_days)
+    rows = []
+    for pname, extra in procedures:
+        day_forms = []
+        for di, (Xd, yd) in enumerate(slices):
+            nb = len(Xd) // bs
+            if nb < n_burn + 2:
+                continue
+            sub = run_one_stream(
+                Xd,
+                yd,
+                bs=bs,
+                n_batches=nb,
+                n_burn=n_burn,
+                seed=seed + di,
+                procedures=[(pname, extra)],
+                alpha=alpha,
+                wealth=wealth,
+                addis_tau=addis_tau,
+                saffron_lambda=saffron_lambda,
+                grace=grace,
+                shift_batch=None,
+            )
+            if not sub:
+                continue
+            r = sub[0]
+            day_forms.append(
+                {
+                    "SUM": r["g_SUM"],
+                    "first1": r["g_first1"],
+                    "first2": r["g_first2"],
+                    "first3": r["g_first3"],
+                }
+            )
+        agg = aggregate_day_forms(day_forms)
+        rows.append(
+            {
+                "procedure": pname,
+                "lambda": extra.get("lambda_", None),
+                "mode": "day_level",
+                **agg,
+            }
+        )
+    return rows
+
+
+def build_procedures(saffron_lambda: float, addis_lambdas: Sequence[float]):
+    return [
+        ("saffron", {"lambda_": saffron_lambda}),
+        *[(f"addis_lam{lam:g}", {"lambda_": lam}) for lam in addis_lambdas],
+        ("alpha_investing", {}),
+    ]
 
 
 def main() -> None:
@@ -241,7 +368,8 @@ def main() -> None:
     ap.add_argument(
         "--datasets",
         nargs="+",
-        default=["synthetic", "electricity", "bank", "eeg", "adult"],
+        default=["all"],
+        help="dataset names or 'all'",
     )
     ap.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     ap.add_argument("--batch-size", type=int, default=128)
@@ -255,15 +383,17 @@ def main() -> None:
         type=float,
         nargs="+",
         default=[0.25, 0.35, 0.40],
-        help="ADDIS candidate λ; larger → (τ−λ) smaller → more conservative spend",
     )
     ap.add_argument("--addis-tau", type=float, default=0.5)
+    ap.add_argument("--grace", type=int, default=4)
     ap.add_argument(
-        "--grace",
+        "--day-batch-size",
         type=int,
-        default=4,
-        help="Ignore rejects in first `grace` post-burn batches when scoring delay",
+        default=8,
+        help="Batch size inside each calendar-day stream (NYC/metro/beijing)",
     )
+    ap.add_argument("--day-burn", type=int, default=2)
+    ap.add_argument("--max-days", type=int, default=None)
     ap.add_argument(
         "--out-dir",
         type=Path,
@@ -272,217 +402,258 @@ def main() -> None:
     args = ap.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
+    datasets = ALL_DATASETS if "all" in args.datasets else list(args.datasets)
     wealth = args.alpha / 2.0
-    rows = []
+    procedures = build_procedures(args.saffron_lambda, args.addis_lambdas)
 
-    for ds in args.datasets:
-        if ds not in LOADERS:
-            raise SystemExit(f"unknown dataset {ds}")
+    stream_rows: List[Dict] = []
+    day_rows: List[Dict] = []
+
+    for ds in datasets:
+        print(f"######## dataset={ds} ########", flush=True)
         for seed in args.seeds:
             print(f"=== {ds} seed={seed} ===", flush=True)
-            X, y, meta = LOADERS[ds](args.max_n, seed, args.batch_size)
-            need = args.batch_size * args.n_batches
-            if len(X) < need:
-                nb = max(args.n_burn + 4, len(X) // args.batch_size)
-            else:
-                nb = args.n_batches
-            stream = make_stream(X, y, args.batch_size, nb)
-            n_burn = min(args.n_burn, max(2, nb // 4))
-            Ts, ps = p_stream_from_rfperm(stream, n_burn=n_burn, seed=seed)
+            try:
+                X, y, meta = load_any(ds, args.max_n, seed, args.batch_size)
+            except Exception as e:
+                print(f"  SKIP load {ds}: {e}", flush=True)
+                continue
             shift_batch = meta.get("shift_batch")
-            shift_rel = None if shift_batch is None else int(shift_batch - n_burn)
-
-            procs = [
-                ("saffron", {"lambda_": args.saffron_lambda}),
-                *[
-                    (f"addis_lam{lam:g}", {"lambda_": lam, "tau": args.addis_tau})
-                    for lam in args.addis_lambdas
-                ],
-                ("alpha_investing", {}),
-            ]
-            for pname, extra in procs:
-                kw = {
-                    "alpha": args.alpha,
-                    "wealth": wealth,
-                    "shift_rel": shift_rel,
-                    "n_burn": n_burn,
-                    "tau": args.addis_tau,
-                    "lambda_": args.saffron_lambda,
-                    "grace": args.grace,
-                }
-                kw.update(extra)
-                m = run_procedure(
-                    ps,
-                    "addis" if pname.startswith("addis") else pname,
-                    **kw,
+            try:
+                rows = run_one_stream(
+                    X,
+                    y,
+                    bs=args.batch_size,
+                    n_batches=args.n_batches,
+                    n_burn=args.n_burn,
+                    seed=seed,
+                    procedures=procedures,
+                    alpha=args.alpha,
+                    wealth=wealth,
+                    addis_tau=args.addis_tau,
+                    saffron_lambda=args.saffron_lambda,
+                    grace=args.grace,
+                    shift_batch=shift_batch,
                 )
-                rows.append(
-                    {
-                        "dataset": ds,
-                        "seed": seed,
-                        "procedure": pname,
-                        "lambda": extra.get("lambda_", None),
-                        "n_burn": n_burn,
-                        "n_batches": nb,
-                        "shift_batch": shift_batch,
-                        "grace": args.grace,
-                        **m,
-                    }
-                )
+            except Exception as e:
+                print(f"  SKIP stream {ds}: {e}", flush=True)
+                continue
+            for r in rows:
+                stream_rows.append({"dataset": ds, "seed": seed, "mode": "stream", **r})
                 print(
-                    f"  {pname}: AR={m['alarm_rate']:.3f} early10={m['early10_alarm_rate']:.3f} "
-                    f"far_pre={m['far_pre_shift']:.3f} "
-                    f"t_first={m['t_first']} (raw={m['t_first_raw']}) delay={m['delay_vs_shift']} "
-                    f"detect={m['detected_after_shift']}",
+                    f"  {r['procedure']}: first1={fmt_num(r['g_first1'])} "
+                    f"first2={fmt_num(r['g_first2'])} first3={fmt_num(r['g_first3'])} "
+                    f"P25/med/P75={fmt_num(r['g_alarm_p25'])}/"
+                    f"{fmt_num(r['g_alarm_median'])}/{fmt_num(r['g_alarm_p75'])} "
+                    f"SUM={r['g_SUM']}",
                     flush=True,
                 )
 
-    df = pd.DataFrame(rows)
+            # day-level for packs with day_id (NYC / metro / beijing)
+            day_id = meta.get("day_id")
+            if day_id is not None and seed == args.seeds[0]:
+                print(f"  -- day-level ({meta.get('n_days')} calendar days) --", flush=True)
+                try:
+                    drows = run_day_level(
+                        X,
+                        y,
+                        np.asarray(day_id),
+                        bs=args.day_batch_size,
+                        n_burn=args.day_burn,
+                        seed=seed,
+                        procedures=procedures,
+                        alpha=args.alpha,
+                        wealth=wealth,
+                        addis_tau=args.addis_tau,
+                        saffron_lambda=args.saffron_lambda,
+                        grace=max(0, args.grace // 2),
+                        max_days=args.max_days,
+                    )
+                    for r in drows:
+                        day_rows.append({"dataset": ds, **r})
+                        print(
+                            f"  day {r['procedure']}: "
+                            f"{r['n_alarm_days']}/{r['n_days']} days alarmed "
+                            f"(DetRate={r['det_rate']:.3f}) "
+                            f"first1 med={fmt_num(r['first1_median'])} "
+                            f"P25/P75={fmt_num(r['first1_p25'])}/{fmt_num(r['first1_p75'])}",
+                            flush=True,
+                        )
+                except Exception as e:
+                    print(f"  SKIP day-level {ds}: {e}", flush=True)
+
+    df = pd.DataFrame(stream_rows)
     df.to_csv(args.out_dir / "saffron_addis_runs.csv", index=False)
 
-    # aggregate
-    agg = (
-        df.groupby(["dataset", "procedure"], as_index=False)
-        .agg(
-            mean_alarm_rate=("alarm_rate", "mean"),
-            mean_early10=("early10_alarm_rate", "mean"),
-            mean_far_pre=("far_pre_shift", "mean"),
-            mean_t_first=("t_first", "mean"),
-            mean_delay=("delay_vs_shift", "mean"),
-            detect_rate=("detected_after_shift", "mean"),
-            lambda_=("lambda", "first"),
+    # ---- manuscript form tables ----
+    form_cols = [
+        "dataset",
+        "procedure",
+        "g_first1",
+        "g_first2",
+        "g_first3",
+        "g_alarm_p25",
+        "g_alarm_median",
+        "g_alarm_p75",
+        "g_alarm_mean",
+        "g_alarm_std",
+        "g_SUM",
+        "g_n_trail",
+    ]
+    if len(df):
+        form_agg = (
+            df.groupby(["dataset", "procedure"], as_index=False)
+            .agg(
+                first1=("g_first1", "median"),
+                first2=("g_first2", "median"),
+                first3=("g_first3", "median"),
+                alarm_p25=("g_alarm_p25", "median"),
+                alarm_median=("g_alarm_median", "median"),
+                alarm_p75=("g_alarm_p75", "median"),
+                alarm_mean=("g_alarm_mean", "mean"),
+                alarm_std=("g_alarm_std", "mean"),
+                SUM=("g_SUM", "mean"),
+                n_trail=("g_n_trail", "first"),
+                lambda_=("lambda", "first"),
+            )
+            .sort_values(["dataset", "procedure"])
         )
-        .sort_values(["dataset", "procedure"])
-    )
-    agg.to_csv(args.out_dir / "saffron_addis_summary.csv", index=False)
+        form_agg.to_csv(args.out_dir / "saffron_addis_firstk_form.csv", index=False)
+    else:
+        form_agg = pd.DataFrame()
+
+    day_df = pd.DataFrame(day_rows)
+    if len(day_df):
+        day_df.to_csv(args.out_dir / "saffron_addis_day_detrate.csv", index=False)
 
     overall = (
         df.groupby("procedure", as_index=False)
         .agg(
-            mean_alarm_rate=("alarm_rate", "mean"),
-            mean_early10=("early10_alarm_rate", "mean"),
-            mean_far_pre=("far_pre_shift", "mean"),
-            mean_t_first=("t_first", "mean"),
-            mean_delay=("delay_vs_shift", "mean"),
-            detect_rate=("detected_after_shift", "mean"),
+            first1_med=("g_first1", "median"),
+            first2_med=("g_first2", "median"),
+            first3_med=("g_first3", "median"),
+            alarm_p25=("g_alarm_p25", "median"),
+            alarm_median=("g_alarm_median", "median"),
+            alarm_p75=("g_alarm_p75", "median"),
+            mean_SUM=("g_SUM", "mean"),
             lambda_=("lambda", "first"),
         )
         .sort_values("procedure")
+        if len(df)
+        else pd.DataFrame()
     )
-    overall.to_csv(args.out_dir / "saffron_addis_overall.csv", index=False)
+    if len(overall):
+        overall.to_csv(args.out_dir / "saffron_addis_overall.csv", index=False)
 
-    # plots
-    fig, axes = plt.subplots(1, 3, figsize=(12.5, 4.0))
-    procs_order = ["saffron"] + [f"addis_lam{lam:g}" for lam in args.addis_lambdas] + [
-        "alpha_investing"
-    ]
-    # filter existing
-    procs_order = [p for p in procs_order if p in set(overall["procedure"])]
-    o = overall.set_index("procedure").loc[procs_order]
-
-    ax = axes[0]
-    ax.bar(range(len(o)), o["mean_alarm_rate"], color="#E45756", label="full AR")
-    if "mean_early10" in o.columns:
-        ax.bar(
-            range(len(o)),
-            o["mean_early10"],
-            color="#F58518",
-            alpha=0.55,
-            label="early10 AR",
+    # plot: first1 + alarm median across procedures
+    if len(overall):
+        procs_order = ["saffron"] + [
+            f"addis_lam{lam:g}" for lam in args.addis_lambdas
+        ] + ["alpha_investing"]
+        procs_order = [p for p in procs_order if p in set(overall["procedure"])]
+        o = overall.set_index("procedure").loc[procs_order]
+        fig, axes = plt.subplots(1, 3, figsize=(12.5, 4.0))
+        ax = axes[0]
+        ax.bar(range(len(o)), o["first1_med"], color="#4C78A8")
+        ax.set_xticks(range(len(o)))
+        ax.set_xticklabels(procs_order, rotation=30, ha="right", fontsize=8)
+        ax.set_ylabel("median first1")
+        ax.set_title("first1 (first reject)")
+        ax = axes[1]
+        ax.bar(range(len(o)), o["alarm_median"], color="#F58518", label="median")
+        ax.plot(range(len(o)), o["alarm_p25"], "v", color="#54A24B", label="P25")
+        ax.plot(range(len(o)), o["alarm_p75"], "^", color="#E45756", label="P75")
+        ax.set_xticks(range(len(o)))
+        ax.set_xticklabels(procs_order, rotation=30, ha="right", fontsize=8)
+        ax.set_ylabel("alarm time")
+        ax.set_title("Alarm-time P25 / median / P75")
+        ax.legend(fontsize=7)
+        ax = axes[2]
+        ax.bar(range(len(o)), o["mean_SUM"], color="#B279A2")
+        ax.set_xticks(range(len(o)))
+        ax.set_xticklabels(procs_order, rotation=30, ha="right", fontsize=8)
+        ax.set_ylabel("mean SUM")
+        ax.set_title("Total alarms (SUM)")
+        fig.suptitle(
+            f"OnlineRFPerm → SAFFRON/ADDIS  first1/2/3 form  (α={args.alpha})",
+            fontsize=11,
         )
-    ax.set_xticks(range(len(o)))
-    ax.set_xticklabels(procs_order, rotation=30, ha="right", fontsize=8)
-    ax.set_ylabel("alarm rate")
-    ax.set_title("Alarm / early FAR proxy")
-    ax.legend(fontsize=7)
-
-    ax = axes[1]
-    # delay only meaningful where defined (synthetic); still plot mean_t_first
-    ax.bar(range(len(o)), o["mean_t_first"], color="#4C78A8")
-    ax.set_xticks(range(len(o)))
-    ax.set_xticklabels(procs_order, rotation=30, ha="right", fontsize=8)
-    ax.set_ylabel("mean t_first (batch idx)")
-    ax.set_title("SAFFRON vs ADDIS: mean first-reject time")
-
-    ax = axes[2]
-    ax.bar(range(len(o)), o["detect_rate"], color="#54A24B")
-    ax.set_xticks(range(len(o)))
-    ax.set_xticklabels(procs_order, rotation=30, ha="right", fontsize=8)
-    ax.set_ylim(0, 1.05)
-    ax.set_ylabel("detection rate")
-    ax.set_title("Detection rate (reject after shift / any)")
-
-    fig.suptitle(
-        f"OnlineRFPerm p-stream → SAFFRON / ADDIS  (α={args.alpha}, real+synth)",
-        fontsize=11,
-    )
-    fig.tight_layout()
-    fig.savefig(args.out_dir / "saffron_addis_compare.png", dpi=140, bbox_inches="tight")
-    plt.close(fig)
+        fig.tight_layout()
+        fig.savefig(args.out_dir / "saffron_addis_compare.png", dpi=140, bbox_inches="tight")
+        plt.close(fig)
 
     # markdown report
-    syn = df[df["dataset"] == "synthetic"]
-    syn_agg = (
-        syn.groupby("procedure")
-        .agg(
-            mean_delay=("delay_vs_shift", "mean"),
-            mean_far_pre=("far_pre_shift", "mean"),
-            mean_AR=("alarm_rate", "mean"),
-            mean_early10=("early10_alarm_rate", "mean"),
-            mean_t_first=("t_first", "mean"),
-            detect=("detected_after_shift", "mean"),
-        )
-        .round(3)
-    )
-    real = df[df["dataset"] != "synthetic"]
-    real_agg = (
-        real.groupby("procedure")
-        .agg(
-            mean_AR=("alarm_rate", "mean"),
-            mean_early10=("early10_alarm_rate", "mean"),
-            mean_t_first=("t_first", "mean"),
-            detect=("detected_after_shift", "mean"),
-        )
-        .round(3)
-    )
-
     md = [
-        "# SAFFRON vs ADDIS on real OnlineRFPerm streams",
+        "# SAFFRON / ADDIS — manuscript first1/2/3 form",
         "",
-        "## What the objectives are",
-        "",
-        "- **SAFFRON**: adaptive online FDR; candidates `p≤λ`; never rejects `p>λ`.",
-        "  Wealth spend scaled by `(1-λ)`. Often **slower** (larger delay) when nulls are conservative.",
-        "- **ADDIS**: SAFFRON + discard `p>τ`; candidates after rescaling; spend scaled by `(τ-λ)`.",
-        "  Designed to **recover power** under conservative nulls → on real streams can look like **higher FAR / alarm rate**.",
-        "- **Conservative ADDIS (this re-run)**: **increase `λ`** toward `τ` → shrinks `(τ-λ)`",
-        "  wealth multiplier → **less α spent per step** → lower alarm rate (more conservative), usually **larger delay**.",
+        "Counting rule (`agod/first_k_metrics.py`, OnlinePermOOB):",
+        "```python",
+        "first_k = first 1-based end index of k consecutive rejects",
+        "P25 / median / P75 = quantiles of *all* alarm times on the trail",
+        "DetRate = n_alarm_days / n_days   # NYC-taxi / metro / beijing",
+        "```",
         "",
         f"Settings: α={args.alpha}, wealth=α/2, SAFFRON λ={args.saffron_lambda}, "
         f"ADDIS τ={args.addis_tau}, ADDIS λ∈{args.addis_lambdas}, "
-        f"burn={args.n_burn}, grace={args.grace}, batch={args.batch_size}, seeds={args.seeds}.",
+        f"burn={args.n_burn}, grace={args.grace}, batch={args.batch_size}, "
+        f"seeds={args.seeds}.",
         "",
-        "## Synthetic (known shift) — delay & pre-shift FAR",
-        "```",
-        syn_agg.to_string() if len(syn_agg) else "(no synthetic)",
-        "```",
+        f"Datasets: {', '.join(datasets)}.",
         "",
-        "## Real data — alarm rate & mean t_first (post-grace)",
-        "```",
-        real_agg.to_string() if len(real_agg) else "(no real)",
-        "```",
+        "## Stream form — first1 / first2 / first3 + alarm P25/median/P75",
         "",
-        "## Overall",
+        "| dataset | procedure | first1 | first2 | first3 | P25 | median | P75 | SUM |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    if len(form_agg):
+        for _, r in form_agg.iterrows():
+            md.append(
+                f"| {r['dataset']} | {r['procedure']} | "
+                f"{fmt_num(r['first1'])} | {fmt_num(r['first2'])} | {fmt_num(r['first3'])} | "
+                f"{fmt_num(r['alarm_p25'])} | {fmt_num(r['alarm_median'])} | "
+                f"{fmt_num(r['alarm_p75'])} | {fmt_num(r['SUM'], 1)} |"
+            )
+    md += ["", "## Day-level DetRate (NYC-taxi / metro / beijing)", ""]
+    if len(day_df):
+        md += [
+            "| dataset | procedure | n_days | n_alarm_days | DetRate | "
+            "first1 med | first1 P25 | first1 P75 | first1 mean±std |",
+            "|---|---|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+        for _, r in day_df.iterrows():
+            md.append(
+                f"| {r['dataset']} | {r['procedure']} | {r['n_days']} | "
+                f"{r['n_alarm_days']} | {r['det_rate']:.3f} | "
+                f"{fmt_num(r['first1_median'])} | {fmt_num(r['first1_p25'])} | "
+                f"{fmt_num(r['first1_p75'])} | "
+                f"{fmt_num(r['first1_mean'], 2)}±{fmt_num(r['first1_std'], 2)} |"
+            )
+        nyc = day_df[day_df["dataset"] == "nyc_taxi"]
+        if len(nyc):
+            md += [
+                "",
+                "### NYC-taxi headline",
+                "",
+            ]
+            for _, r in nyc.iterrows():
+                md.append(
+                    f"- **{r['procedure']}**: **{int(r['n_alarm_days'])}/{int(r['n_days'])}** "
+                    f"days alarmed (DetRate={r['det_rate']:.3f})"
+                )
+    else:
+        md.append("_no day-level rows_")
+
+    md += [
+        "",
+        "## Overall (median across datasets×seeds)",
         "```",
-        overall.to_string(index=False),
+        overall.to_string(index=False) if len(overall) else "(empty)",
         "```",
         "",
         "## Takeaway",
-        "- **alpha-investing** is the aggressive baseline: highest AR (~0.25) and fastest t_first.",
-        "- **SAFFRON / ADDIS** are slower (~+2 batches mean t_first vs alpha-investing) — matches “比较慢”.",
-        "- Raising ADDIS λ (0.25→0.40) gently lowers real-data AR (more conservative via smaller `(τ−λ)` spend).",
-        "- On this EWMA-p stream, SAFFRON vs ADDIS separation is mild; α-investing is where FAR blows up.",
-        "- AR here is baseline alarm rate under updates — not classical Type-I FAR.",
+        "- Real-data readout is **first1/2/3 + running alarm-time range (P25/median/P75)**, not overall AR.",
+        "- Day packs report **how many calendar days fired** (NYC-taxi DetRate).",
+        "- Raising ADDIS λ → more conservative (smaller `(τ−λ)` spend).",
         "",
     ]
     (args.out_dir / "SAFFRON_ADDIS_REPORT.md").write_text("\n".join(md))
@@ -493,14 +664,18 @@ def main() -> None:
                 "saffron_lambda": args.saffron_lambda,
                 "addis_lambdas": args.addis_lambdas,
                 "addis_tau": args.addis_tau,
-                "datasets": args.datasets,
+                "datasets": datasets,
                 "seeds": args.seeds,
+                "form": "first1/2/3 + alarm P25/median/P75 + day DetRate",
             },
             indent=2,
         )
     )
     print("wrote", args.out_dir)
-    print(overall.to_string(index=False))
+    if len(overall):
+        print(overall.to_string(index=False))
+    if len(day_df):
+        print(day_df.to_string(index=False))
 
 
 if __name__ == "__main__":
