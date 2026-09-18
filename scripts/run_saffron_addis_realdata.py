@@ -292,6 +292,11 @@ def day_slices(
     return out
 
 
+def _day_min_len(bs: int, n_burn: int) -> int:
+    """Need burn + ≥2 monitor batches; do not require a full 4×bs if day is short."""
+    return int(bs * (n_burn + 2))
+
+
 def run_day_level(
     X,
     y,
@@ -314,7 +319,7 @@ def run_day_level(
     procedure (avoids re-fitting RF × n_procedures).
     """
     slices = day_slices(
-        X, y, day_id, min_len=max(bs * (n_burn + 2), bs * 4), max_days=max_days
+        X, y, day_id, min_len=_day_min_len(bs, n_burn), max_days=max_days
     )
     forms_by_proc: Dict[str, List[Dict]] = {p: [] for p, _ in procedures}
     extras = {p: e for p, e in procedures}
@@ -400,11 +405,11 @@ def main() -> None:
     ap.add_argument(
         "--day-batch-size",
         type=int,
-        default=8,
-        help="Batch size inside each calendar-day stream (NYC/metro/beijing)",
+        default=4,
+        help="Batch size inside each calendar-day stream (hourly packs need ≤4)",
     )
     ap.add_argument("--day-burn", type=int, default=2)
-    ap.add_argument("--max-days", type=int, default=None)
+    ap.add_argument("--max-days", type=int, default=300, help="Cap day-level units (NYC~215)")
     ap.add_argument(
         "--out-dir",
         type=Path,
