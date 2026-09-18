@@ -1,0 +1,138 @@
+{
+  "synthetic": {
+    "dataset": "synthetic",
+    "n_batches": 48,
+    "n_burn": 8,
+    "alpha": 0.05,
+    "use_share": true,
+    "protocol": "frozen_f_ref_grad",
+    "first_reject": {
+      "grad_any": 8,
+      "grad_share_any": 8,
+      "grad_per_layer": {
+        "fc1": 8,
+        "fc2": 8,
+        "fc3": 10
+      },
+      "share_per_layer": {
+        "fc1_share": 8,
+        "fc2_share": 8,
+        "fc3_share": 10
+      },
+      "mse": 10,
+      "mmd": 11,
+      "po": 11
+    },
+    "lead_time": {
+      "grad_minus_mse": -2,
+      "grad_minus_mmd": -3,
+      "grad_minus_po": -3,
+      "share_minus_mse": -2,
+      "grad_minus_mse_postshift": 0
+    },
+    "duty": {
+      "grad": {
+        "fc1": 0.35,
+        "fc2": 0.325,
+        "fc3": 0.225
+      },
+      "mse": 0.2,
+      "mmd": 0.225,
+      "po": 0.225
+    },
+    "meta": {
+      "n": 12000,
+      "d": 16,
+      "y_unique": -1,
+      "shift_batch": 20,
+      "shift_idx": 2560,
+      "name": "synthetic"
+    },
+    "shift_batch": 20,
+    "detection_delay": {
+      "grad": 0,
+      "mse": 0,
+      "mmd": 0,
+      "po": 0
+    },
+    "traj_keys": [
+      "train_mse",
+      "mse_T",
+      "mse_p",
+      "mse_rej",
+      "mmd_T",
+      "mmd_p",
+      "mmd_rej",
+      "po_T",
+      "po_p",
+      "po_rej",
+      "grad_p",
+      "share_p",
+      "grad_g",
+      "grad_rej"
+    ]
+  },
+  "electricity": {
+    "dataset": "electricity",
+    "n_batches": 48,
+    "n_burn": 8,
+    "alpha": 0.05,
+    "use_share": true,
+    "protocol": "frozen_f_ref_grad",
+    "first_reject": {
+      "grad_any": 8,
+      "grad_share_any": 9,
+      "grad_per_layer": {
+        "fc1": 8,
+        "fc2": 8,
+        "fc3": 9
+      },
+      "share_per_layer": {
+        "fc1_share": 13,
+        "fc2_share": 9,
+        "fc3_share": 11
+      },
+      "mse": 25,
+      "mmd": 9,
+      "po": 12
+    },
+    "lead_time": {
+      "grad_minus_mse": -17,
+      "grad_minus_mmd": -1,
+      "grad_minus_po": -4,
+      "share_minus_mse": -16
+    },
+    "duty": {
+      "grad": {
+        "fc1": 0.25,
+        "fc2": 0.275,
+        "fc3": 0.225
+      },
+      "mse": 0.175,
+      "mmd": 0.225,
+      "po": 0.125
+    },
+    "meta": {
+      "n": 12000,
+      "d": 8,
+      "y_unique": 2,
+      "name": "electricity"
+    },
+    "traj_keys": [
+      "train_mse",
+      "mse_T",
+      "mse_p",
+      "mse_rej",
+      "mmd_T",
+      "mmd_p",
+      "mmd_rej",
+      "po_T",
+      "po_p",
+      "po_rej",
+      "grad_p",
+      "share_p",
+      "grad_g",
+      "grad_rej"
+    ]
+  }
+}
