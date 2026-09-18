@@ -48,3 +48,19 @@ def test_fsds_drops_leak_cols():
     assert "e_n_cnv" not in cols
     assert "u_cvr" not in cols
     assert "y_convert" not in cols
+
+
+def test_w1w2_candidate_drops_within_window_ranks():
+    from run_w1w2_feature_select import w1w2_candidate_columns
+
+    cols = [
+        "i_share_linear",
+        "u_n_events",
+        "u_user_activity_rank",
+        "i_item_pop_rank",
+        "i_item_credit_rank",
+        "ui_pop_mismatch",
+    ]
+    got = w1w2_candidate_columns(cols)
+    assert got == ["i_share_linear", "u_n_events", "ui_pop_mismatch"]
+    assert all("rank" not in c for c in got)

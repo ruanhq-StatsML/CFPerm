@@ -1,0 +1,16 @@
+feature,rank
+i_share_linear,1
+u_n_events,2
+u_n_uniq_items,3
+u_log1p_n_events,4
+u_log1p_n_uniq,5
+u_n_exp,6
+i_log1p_n_covisit,7
+i_n_covisit_neighbors,8
+i_log1p_n_users,9
+i_n_users,10
+i_log1p_n_exp,11
+i_n_exp,12
+ui_pop_mismatch,13
+i_share_last,14
+i_share_first,15
