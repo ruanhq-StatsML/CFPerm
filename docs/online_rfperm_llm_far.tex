@@ -1,0 +1,46 @@
+% Compile: pdflatex docs/online_rfperm_llm_far.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{microtype}
+\title{OnlineRFPerm with LLM routing --- false-alarm rate}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\paragraph{Setup.}
+One row is one observation. $Y$ is the numeric outcome, never a feature.
+$X$ is routed: high-VIMP columns go to a frozen RF, low-VIMP columns go to a
+TabPFN-style context $k$NN. The blend is fit once on $D_{\mathrm{ref}}$.
+Each new batch is $T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}$. ADDIS is the primary
+OnlineRFPerm mark. The remaining rows are the same MSE stream, other detectors.
+
+Stationary: $Y=X^\top w+\varepsilon$, no onset. Random-noise: $X$ and $Y$ independent $N(0,1)$, no onset.
+FAR is the share of replications that reject at least once. There is no labeled change, so any ring is a false alarm.
+
+\begin{table}[ht]
+\centering
+\caption{False-alarm rate on streams with no labeled onset. Routing is high-VIMP RF + low-VIMP TabPFN-style kNN. FAR is the share of 25 replications that reject at least once over 20 batches. ADDIS is the primary OnlineRFPerm mark.}
+\label{tab:far}
+\begin{tabular}{lcc}
+\toprule
+method & stationary FAR (\%) & random-noise FAR (\%) \\
+\midrule
+OnlineRFPerm + ADDIS & 0.0 & 0.0 \\
+OnlineRFPerm + SAFFRON & 0.0 & 0.0 \\
+OnlineRFPerm + fix-$\alpha$ & 60.0 & 80.0 \\
+last-two hop ($1.5\times$) & 96.0 & 92.0 \\
+Page--Hinkley & 64.0 & 40.0 \\
+EWMA & 8.0 & 0.0 \\
+CUSUM & 48.0 & 32.0 \\
+DDM & 4.0 & 4.0 \\
+ADWIN-lite & 4.0 & 4.0 \\
+betting martingale & 20.0 & 36.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\end{document}
