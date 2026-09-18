@@ -64,3 +64,50 @@ def test_w1w2_candidate_drops_within_window_ranks():
     got = w1w2_candidate_columns(cols)
     assert got == ["i_share_linear", "u_n_events", "ui_pop_mismatch"]
     assert all("rank" not in c for c in got)
+
+
+def test_mmd_po_cmean_helpers():
+    from run_w1w2_mmd_po_localize_fsds import (
+        conditional_mean_l2,
+        feature_conditional_mean,
+        fit_standardizer,
+        rbf_mmd2,
+        standardize,
+        w1w2_candidate_columns,
+    )
+
+    rng = np.random.default_rng(0)
+    raw0 = rng.normal(scale=[1.0, 100.0, 0.01, 50.0], size=(80, 4))
+    raw1 = raw0 + np.array([0.5, 20.0, 0.0, -5.0])
+    sc = fit_standardizer(raw0)
+    X0, X1 = standardize(sc, raw0), standardize(sc, raw1)
+    assert conditional_mean_l2(X0, X1) > conditional_mean_l2(X0, X0 + 0.01)
+    assert conditional_mean_l2(X0, X1) < 50.0  # standardized — no 1e11 blowup
+    assert rbf_mmd2(X0, X1, max_n=40, rng=rng) >= 0.0
+    cm = feature_conditional_mean(X0, X1, [f"f{i}" for i in range(4)])
+    assert len(cm) == 4 and (cm["cmean_abs"] >= 0).all()
+    assert "f_rank" not in w1w2_candidate_columns(["f", "f_rank"])
+
+
+def test_fsds_pipeline_starts_with_standardizer():
+    from run_w1w2_mmd_po_localize_fsds import run_fsds
+
+    rng = np.random.default_rng(1)
+    n = 120
+    # scale blowup without standardization
+    g = pd.DataFrame(
+        {
+            "user_id": rng.integers(0, 20, n),
+            "item_id": rng.integers(0, 10, n),
+            "y_convert": np.concatenate([np.zeros(60, int), np.ones(60, int)]),
+            "f_big": rng.normal(scale=1e6, size=n),
+            "f_small": rng.normal(scale=1e-3, size=n),
+            "f_sig": np.concatenate([rng.normal(0, 1, 60), rng.normal(2, 1, 60)]),
+        }
+    )
+    cols = ["f_big", "f_small", "f_sig"]
+    tr, te = g.iloc[:80], g.iloc[80:]
+    res = run_fsds(tr, te, cols, select_k=2, seed=0)
+    assert res["ok"]
+    assert res["pipeline"].startswith("StandardScaler")
+    assert "f_sig" in res["selected"] or res["ranking"].iloc[0]["feature"] == "f_sig"

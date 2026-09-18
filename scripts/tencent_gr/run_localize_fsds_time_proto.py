@@ -73,6 +73,7 @@ def run_fsds(
     k = min(select_k, Xtr.shape[1], max(1, Xtr.shape[0] - 1))
     pipe_prep = Pipeline(
         [
+            ("sc", StandardScaler(with_mean=True, with_std=True)),
             ("var", VarianceThreshold(1e-8)),
             ("sel", SelectKBest(f_classif, k=k)),
         ]
@@ -116,14 +117,9 @@ def run_fsds(
         "sec": float(time.time() - t0),
     }
 
-    # LogReg
+    # LogReg (already standardized in pipe_prep)
     t0 = time.time()
-    lr = Pipeline(
-        [
-            ("sc", StandardScaler()),
-            ("lr", LogisticRegression(max_iter=500, C=0.5, class_weight="balanced", random_state=seed)),
-        ]
-    )
+    lr = LogisticRegression(max_iter=500, C=0.5, class_weight="balanced", random_state=seed)
     lr.fit(Xt, ytr)
     pl = lr.predict_proba(Xv)[:, 1]
     out["models"]["logreg"] = {
