@@ -8,22 +8,26 @@
 3. FSDS ranking   # StandardScaler → var → SelectKBest → HGB/LR
 ```
 
-其他（PO-risk / conditional-mean / SMD 堆指标）不在主路径里。
+## 三步下钻（可选）：merchant → user → order
 
-## Run
-```bash
-bash scripts/tencent_gr/run_behavior_shift_attribution.sh
+在漂移 subset 上再做定位：
 
-# optional GT
-bash scripts/tencent_gr/run_behavior_shift_attribution.sh \
-  --gt-items path/to/gt_items.csv --gt-orders path/to/gt_orders.csv
+```
+Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
 ```
 
-## Outputs (`results/tencent_gr_standardize_mmd_fsds/`)
-| file | 含义 |
-|---|---|
-| `item_mmd_scores.csv` | item-level MMD² |
-| `localized_subset_items.csv` | MMD top-k subset |
-| `fsds_feature_ranking.csv` | FSDS 特征 ranking |
-| `standardize_mmd_fsds.png` | subset-MMD + FSDS 图 |
-| `STANDARDIZE_MMD_FSDS_REPORT.md` | 报告 |
+```bash
+PYTHONPATH=. python3 scripts/tencent_gr/run_three_step_subset_localize.py \
+  --root data/tencent_subset --max-users 20000 --gap-days 30
+```
+
+商户 id 默认用 `item_feat.122`（加密 shop/advertiser 代理）；订单 = 终端成功边 `user_item_ts`（TencentGR 上即 click）。
+
+## Run（扁平 item-MMD）
+```bash
+bash scripts/tencent_gr/run_behavior_shift_attribution.sh
+```
+
+## Outputs
+- 扁平：`results/tencent_gr_standardize_mmd_fsds/`
+- 三层：`results/tencent_gr_three_step_localize/`

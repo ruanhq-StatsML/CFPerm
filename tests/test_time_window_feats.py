@@ -124,3 +124,33 @@ def test_gt_subset_evaluator(tmp_path):
     assert blob["available"]
     assert blob["orders"]["n_orders"] == 3.0
     assert blob["orders"]["order_coverage"] > 0.0
+
+
+def test_three_step_entity_mmd_ranks_shifted():
+    from run_standardize_mmd_fsds import fit_standardizer, standardize
+    from run_three_step_subset_localize import _entity_mmd
+
+    rng = np.random.default_rng(0)
+    rows1, rows2 = [], []
+    for mid in range(5):
+        for _ in range(8):
+            base = rng.normal(size=3)
+            shift = np.array([3.0, 0, 0]) if mid == 0 else 0.0
+            rows1.append({"merchant_id": mid, "f0": base[0], "f1": base[1], "f2": base[2]})
+            rows2.append(
+                {
+                    "merchant_id": mid,
+                    "f0": base[0] + (shift[0] if isinstance(shift, np.ndarray) else shift),
+                    "f1": base[1],
+                    "f2": base[2],
+                }
+            )
+    g1, g2 = pd.DataFrame(rows1), pd.DataFrame(rows2)
+    cols = ["f0", "f1", "f2"]
+    sc = fit_standardizer(g1[cols].to_numpy(float))
+    scor = _entity_mmd(
+        g1, g2, cols, sc,
+        entity_col="merchant_id", seed=0, max_cand=10, min_edges=3, mmd_max_n=32,
+    )
+    assert int(scor.iloc[0]["merchant_id"]) == 0
+    assert scor.iloc[0]["mmd2"] >= scor.iloc[-1]["mmd2"]
