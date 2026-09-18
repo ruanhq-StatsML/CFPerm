@@ -1,45 +1,29 @@
-# 行为 / 购买欲变动归因（TencentGR）
+# Streamlined: Standardization → subset-MMD → FSDS
 
-一条 concise 落地链路：
+就三步：
 
 ```
-Standardize(W1)
-  → FE(W1) / FE(W2)          # gap ≥ 30d，无泄漏
-  → subset = cmean ⊕ MMD ⊕ PO-risk
-  → 可视化漂移商品
-  → FSDS ranking             # StandardScaler → var → SelectKBest → HGB/LR
-  → (可选) GT 订单/商品 evaluator
+1. StandardScaler(W1)
+2. subset-level MMD²(item | W1 vs W2)
+3. FSDS ranking   # StandardScaler → var → SelectKBest → HGB/LR
 ```
 
-**读法：** 两窗之间用户行为与购买欲变了 → 哪些商品 subset 在动 → 哪些图谱特征在归因。
+其他（PO-risk / conditional-mean / SMD 堆指标）不在主路径里。
 
 ## Run
 ```bash
-# one-command
 bash scripts/tencent_gr/run_behavior_shift_attribution.sh
 
-# or direct
-PYTHONPATH=. python3 scripts/tencent_gr/run_w1w2_mmd_po_localize_fsds.py \
-  --root data/tencent_subset --max-users 20000 --gap-days 30 --localize-k 200
-
-# 有 ground-truth 时直接挂上：
+# optional GT
 bash scripts/tencent_gr/run_behavior_shift_attribution.sh \
   --gt-items path/to/gt_items.csv --gt-orders path/to/gt_orders.csv
 ```
 
-GT CSV 列名兼容：`item_id` / `oid` / `sku_id` / `goods_id`；订单表可带 `order_id`。
-
-Env overrides: `TENCENT_ROOT`, `OUT_DIR`, `MAX_USERS`, `GAP_DAYS`, `LOCALIZE_K`, `GT_ITEMS`, `GT_ORDERS`.
-
-## Outputs (`results/tencent_gr_w1w2_mmd_po_fsds/`)
+## Outputs (`results/tencent_gr_standardize_mmd_fsds/`)
 | file | 含义 |
 |---|---|
-| `localized_subset_items.csv` | 漂移商品 subset |
-| `w1w2_mmd_po_localize_fsds.png` | 归因可视化 |
-| `fsds_feature_ranking.csv` | 特征 ranking |
-| `gt_eval.json` | GT hit/P/R（有 `--gt-*` 时） |
-| `W1W2_MMD_PO_LOCALIZE_FSDS_REPORT.md` | 报告 |
-
-## 备注
-- 旧的 share-linear localize→FSDS 原型见 `LOCALIZE_FSDS_TIME.md`（参考用）
-- 主路径就是本文件这条：**MMD / PO / cmean → subset → viz → FSDS**
+| `item_mmd_scores.csv` | item-level MMD² |
+| `localized_subset_items.csv` | MMD top-k subset |
+| `fsds_feature_ranking.csv` | FSDS 特征 ranking |
+| `standardize_mmd_fsds.png` | subset-MMD + FSDS 图 |
+| `STANDARDIZE_MMD_FSDS_REPORT.md` | 报告 |

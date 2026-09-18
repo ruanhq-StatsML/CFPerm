@@ -67,9 +67,7 @@ def test_w1w2_candidate_drops_within_window_ranks():
 
 
 def test_mmd_po_cmean_helpers():
-    from run_w1w2_mmd_po_localize_fsds import (
-        conditional_mean_l2,
-        feature_conditional_mean,
+    from run_standardize_mmd_fsds import (
         fit_standardizer,
         rbf_mmd2,
         standardize,
@@ -81,20 +79,16 @@ def test_mmd_po_cmean_helpers():
     raw1 = raw0 + np.array([0.5, 20.0, 0.0, -5.0])
     sc = fit_standardizer(raw0)
     X0, X1 = standardize(sc, raw0), standardize(sc, raw1)
-    assert conditional_mean_l2(X0, X1) > conditional_mean_l2(X0, X0 + 0.01)
-    assert conditional_mean_l2(X0, X1) < 50.0  # standardized — no 1e11 blowup
+    assert rbf_mmd2(X0, X1, max_n=40, rng=rng) > rbf_mmd2(X0, X0 + 0.01, max_n=40, rng=rng)
     assert rbf_mmd2(X0, X1, max_n=40, rng=rng) >= 0.0
-    cm = feature_conditional_mean(X0, X1, [f"f{i}" for i in range(4)])
-    assert len(cm) == 4 and (cm["cmean_abs"] >= 0).all()
     assert "f_rank" not in w1w2_candidate_columns(["f", "f_rank"])
 
 
 def test_fsds_pipeline_starts_with_standardizer():
-    from run_w1w2_mmd_po_localize_fsds import run_fsds
+    from run_standardize_mmd_fsds import run_fsds
 
     rng = np.random.default_rng(1)
     n = 120
-    # scale blowup without standardization
     g = pd.DataFrame(
         {
             "user_id": rng.integers(0, 20, n),

@@ -1,7 +1,7 @@
 # TencentGR prototype: time-window localization → FSDS
 
-> **主落地路径已换成** [`W1W2_MMD_PO_LOCALIZE_FSDS.md`](W1W2_MMD_PO_LOCALIZE_FSDS.md)  
-> （MMD + PO-risk + conditional-mean subset → viz → FSDS，带 Standardization / GT evaluator）
+> **主落地路径** [`W1W2_MMD_PO_LOCALIZE_FSDS.md`](W1W2_MMD_PO_LOCALIZE_FSDS.md)：  
+> **Standardization → subset-level MMD → FSDS**（streamlined）。
 
 本文档保留 share-linear localize 的早期时间窗原型，仅作对照。
 
