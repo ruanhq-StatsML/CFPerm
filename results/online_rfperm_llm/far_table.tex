@@ -1,6 +1,6 @@
 \begin{table}[ht]
 \centering
-\caption{False-alarm rate on streams with no labeled onset. Routing is high-VIMP RF + low-VIMP TabPFN-style kNN. FAR is the share of 25 replications that reject at least once over 20 batches. ADDIS is the primary OnlineRFPerm mark.}
+\caption{False-alarm rate, no labeled onset. high-VIMP RF + low-VIMP TabPFN-style $k$NN. Share of 12 replications with at least one rejection over 40 batches. ADDIS is the primary OnlineRFPerm mark.}
 \label{tab:far}
 \begin{tabular}{lcc}
 \toprule
@@ -8,14 +8,14 @@ method & stationary FAR (\%) & random-noise FAR (\%) \\
 \midrule
 OnlineRFPerm + ADDIS & 0.0 & 0.0 \\
 OnlineRFPerm + SAFFRON & 0.0 & 0.0 \\
-OnlineRFPerm + fix-$\alpha$ & 60.0 & 80.0 \\
-last-two hop ($1.5\times$) & 96.0 & 92.0 \\
-Page--Hinkley & 64.0 & 40.0 \\
-EWMA & 8.0 & 0.0 \\
-CUSUM & 48.0 & 32.0 \\
-DDM & 4.0 & 4.0 \\
-ADWIN-lite & 4.0 & 4.0 \\
-betting martingale & 20.0 & 36.0 \\
+OnlineRFPerm + fix-$\alpha$ & 41.7 & 33.3 \\
+last-two hop ($1.5\times$) & 100.0 & 100.0 \\
+Page--Hinkley & 58.3 & 66.7 \\
+EWMA & 0.0 & 8.3 \\
+CUSUM & 75.0 & 41.7 \\
+DDM & 8.3 & 16.7 \\
+ADWIN-lite & 0.0 & 25.0 \\
+betting martingale & 0.0 & 0.0 \\
 \bottomrule
 \end{tabular}
 \end{table}

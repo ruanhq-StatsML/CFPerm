@@ -3,32 +3,32 @@
     "far": {
       "addis": 0.0,
       "saffron": 0.0,
-      "fix_alpha": 0.6,
-      "hop": 0.96,
-      "page_hinkley": 0.64,
-      "ewma": 0.08,
-      "cusum": 0.48,
-      "ddm": 0.04,
-      "adwin": 0.04,
-      "martingale": 0.2
+      "fix": 0.4166666666666667,
+      "hop": 1.0,
+      "PH": 0.5833333333333334,
+      "EWMA": 0.0,
+      "CUSUM": 0.75,
+      "DDM": 0.08333333333333333,
+      "ADWIN": 0.0,
+      "martingale": 0.0
     },
-    "n_reps": 25,
-    "n_batches": 20
+    "n_reps": 12,
+    "n_batches": 40
   },
   "random_noise": {
     "far": {
       "addis": 0.0,
       "saffron": 0.0,
-      "fix_alpha": 0.8,
-      "hop": 0.92,
-      "page_hinkley": 0.4,
-      "ewma": 0.0,
-      "cusum": 0.32,
-      "ddm": 0.04,
-      "adwin": 0.04,
-      "martingale": 0.36
+      "fix": 0.3333333333333333,
+      "hop": 1.0,
+      "PH": 0.6666666666666666,
+      "EWMA": 0.08333333333333333,
+      "CUSUM": 0.4166666666666667,
+      "DDM": 0.16666666666666666,
+      "ADWIN": 0.25,
+      "martingale": 0.0
     },
-    "n_reps": 25,
-    "n_batches": 20
+    "n_reps": 12,
+    "n_batches": 40
   }
 }
