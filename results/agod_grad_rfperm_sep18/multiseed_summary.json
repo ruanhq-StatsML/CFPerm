@@ -1,0 +1,404 @@
+{
+  "meta": {
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "batch_size": 128,
+    "n_batches": 48,
+    "n_burn": 8,
+    "alpha": 0.05,
+    "protocol": "unfrozen_l2_single_stream"
+  },
+  "by_dataset": {
+    "adult": {
+      "lead_grad_mse_mean": -3.2,
+      "lead_grad_mse_median": -3.0,
+      "lead_grad_mse_std": 2.227105745132009,
+      "p_grad_earlier": 0.8,
+      "p_grad_not_later": 1.0,
+      "leads_grad": [
+        -3.0,
+        -3.0,
+        -7.0,
+        0.0,
+        -3.0
+      ]
+    },
+    "nomao": {
+      "lead_grad_mse_mean": -4.0,
+      "lead_grad_mse_median": -4.0,
+      "lead_grad_mse_std": 3.521363372331802,
+      "p_grad_earlier": 0.8,
+      "p_grad_not_later": 1.0,
+      "leads_grad": [
+        -1.0,
+        -4.0,
+        -5.0,
+        -10.0,
+        0.0
+      ]
+    }
+  },
+  "overall": {
+    "mean_lead_grad_mse": -3.6,
+    "p_grad_earlier": 0.8,
+    "p_grad_not_later": 1.0,
+    "n_runs": 10
+  },
+  "runs": {
+    "0": {
+      "adult": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 11,
+          "mmd": 9,
+          "po": 11
+        },
+        "lead_time": {
+          "grad_minus_mse": -3,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": -3
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.2,
+          "mse": 0.225,
+          "mmd": 0.3,
+          "po": 0.25
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.4665434522350291
+          ],
+          [
+            "fc2",
+            0.33199119732407933
+          ],
+          [
+            "fc3",
+            0.20146535043978575
+          ]
+        ]
+      },
+      "nomao": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 9,
+          "mmd": 11,
+          "po": 11
+        },
+        "lead_time": {
+          "grad_minus_mse": -1,
+          "grad_minus_mmd": -3,
+          "grad_minus_po": -3
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.275,
+          "mse": 0.25,
+          "mmd": 0.225,
+          "po": 0.175
+        },
+        "top_share_at_reject": [
+          [
+            "fc2",
+            0.454257747968223
+          ],
+          [
+            "fc1",
+            0.42885389125601875
+          ],
+          [
+            "fc3",
+            0.1168883607751447
+          ]
+        ]
+      }
+    },
+    "1": {
+      "adult": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 11,
+          "mmd": 9,
+          "po": 11
+        },
+        "lead_time": {
+          "grad_minus_mse": -3,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": -3
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.325,
+          "mse": 0.15,
+          "mmd": 0.325,
+          "po": 0.225
+        },
+        "top_share_at_reject": [
+          [
+            "fc2",
+            0.4340495666590772
+          ],
+          [
+            "fc1",
+            0.4086507149105932
+          ],
+          [
+            "fc3",
+            0.15729971842935278
+          ]
+        ]
+      },
+      "nomao": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 12,
+          "mmd": 8,
+          "po": 12
+        },
+        "lead_time": {
+          "grad_minus_mse": -4,
+          "grad_minus_mmd": 0,
+          "grad_minus_po": -4
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.325,
+          "mse": 0.175,
+          "mmd": 0.3,
+          "po": 0.25
+        },
+        "top_share_at_reject": [
+          [
+            "fc3",
+            0.4577792429770671
+          ],
+          [
+            "fc2",
+            0.3230867658982958
+          ],
+          [
+            "fc1",
+            0.21913399109463086
+          ]
+        ]
+      }
+    },
+    "2": {
+      "adult": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 15,
+          "mmd": 10,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": -7,
+          "grad_minus_mmd": -2,
+          "grad_minus_po": 0
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.175,
+          "mse": 0.2,
+          "mmd": 0.175,
+          "po": 0.25
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.43196844861076283
+          ],
+          [
+            "fc2",
+            0.4188772077885987
+          ],
+          [
+            "fc3",
+            0.14915434359990865
+          ]
+        ]
+      },
+      "nomao": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 13,
+          "mmd": 17,
+          "po": 13
+        },
+        "lead_time": {
+          "grad_minus_mse": -5,
+          "grad_minus_mmd": -9,
+          "grad_minus_po": -5
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.25,
+          "mse": 0.3,
+          "mmd": 0.2,
+          "po": 0.125
+        },
+        "top_share_at_reject": [
+          [
+            "fc2",
+            0.403754286908482
+          ],
+          [
+            "fc1",
+            0.3491150468888639
+          ],
+          [
+            "fc3",
+            0.24713066620103213
+          ]
+        ]
+      }
+    },
+    "3": {
+      "adult": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 8,
+          "mmd": 8,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": 0,
+          "grad_minus_mmd": 0,
+          "grad_minus_po": 0
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.275,
+          "mse": 0.25,
+          "mmd": 0.225,
+          "po": 0.225
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.49573331290169786
+          ],
+          [
+            "fc2",
+            0.31445284972132603
+          ],
+          [
+            "fc3",
+            0.18981383737598823
+          ]
+        ]
+      },
+      "nomao": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 18,
+          "mmd": 10,
+          "po": 11
+        },
+        "lead_time": {
+          "grad_minus_mse": -10,
+          "grad_minus_mmd": -2,
+          "grad_minus_po": -3
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.325,
+          "mse": 0.15,
+          "mmd": 0.325,
+          "po": 0.175
+        },
+        "top_share_at_reject": [
+          [
+            "fc2",
+            0.3458613469985163
+          ],
+          [
+            "fc3",
+            0.3284012931775617
+          ],
+          [
+            "fc1",
+            0.32573735982307
+          ]
+        ]
+      }
+    },
+    "4": {
+      "adult": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 11,
+          "mmd": 8,
+          "po": 10
+        },
+        "lead_time": {
+          "grad_minus_mse": -3,
+          "grad_minus_mmd": 0,
+          "grad_minus_po": -2
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.25,
+          "mse": 0.2,
+          "mmd": 0.2,
+          "po": 0.225
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.4581385489532159
+          ],
+          [
+            "fc2",
+            0.3146025727086556
+          ],
+          [
+            "fc3",
+            0.22725887833626626
+          ]
+        ]
+      },
+      "nomao": {
+        "first_reject": {
+          "grad": 8,
+          "mse": 8,
+          "mmd": 9,
+          "po": 8
+        },
+        "lead_time": {
+          "grad_minus_mse": 0,
+          "grad_minus_mmd": -1,
+          "grad_minus_po": 0
+        },
+        "detection_delay": null,
+        "duty": {
+          "grad": 0.35,
+          "mse": 0.2,
+          "mmd": 0.275,
+          "po": 0.175
+        },
+        "top_share_at_reject": [
+          [
+            "fc1",
+            0.4403917200474993
+          ],
+          [
+            "fc2",
+            0.3748347250578759
+          ],
+          [
+            "fc3",
+            0.1847735548769881
+          ]
+        ]
+      }
+    }
+  }
+}

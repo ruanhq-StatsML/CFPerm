@@ -1,0 +1,31 @@
+{
+  "alpha": 0.05,
+  "saffron_lambda": 0.5,
+  "addis_lambdas": [
+    0.25,
+    0.35,
+    0.4
+  ],
+  "addis_tau": 0.5,
+  "datasets": [
+    "synthetic",
+    "covertype",
+    "bank",
+    "electricity",
+    "eeg",
+    "adult",
+    "metro_interstate",
+    "beijing_pm25",
+    "nyc_taxi",
+    "stocks_AAPL",
+    "stocks_MSFT",
+    "stocks_IWM",
+    "waymo_proxy"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "form": "first1/2/3 + alarm P25/median/P75 + day DetRate"
+}

@@ -1,0 +1,303 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{enumitem}
+
+\title{\textbf{Grad-OnlineRFPerm}\\
+\large Continuous-time OnlineRFPerm on Unfrozen Gradient Energy\\
+\large (Single-stream; No Cross-parameter Multiple Testing)}
+\author{Sep17 MVP writeup (formula sheet)}
+\date{2026-09-17}
+
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We monitor distribution / concept shift through the \emph{serving}
+gradient energy of a frozen reference network, rather than through
+serving MSE alone. The test statistic is a \textbf{single} scalar
+$\| \nabla_{\theta_U} L \|_2$ over all \emph{unfrozen} parameters.
+One continuous-time OnlineRFPerm stream (rank / EWMA $p$ + online FDR)
+yields a global reject. Per-layer gradient shares are diagnostics only
+and do \emph{not} receive separate hypothesis tests---avoiding
+cross-parameter multiple testing. Empirically, on five MVP stream packs
+$\times$ five seeds, the Grad reject leads serving-MSE OnlineRFPerm by
+about $3.2$ batches on average (earlier in $72\%$ of runs).
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+%----------------------------------------------------------------------
+\section{Setup}
+\label{sec:setup}
+
+Let $f_{\mathrm{ref}}(\,\cdot\,;\theta)$ be a reference predictor
+pretrained on a burn-in regime and then \textbf{frozen}
+(weights are not stepped during monitoring).
+At stream time $t=0,1,2,\ldots$ we observe a batch
+$(X_t,Y_t)$ and a serving loss $L_t(\theta)=L\bigl(f_{\mathrm{ref}}(X_t;\theta),Y_t\bigr)$
+(e.g.\ batch MSE).
+
+\begin{definition}[Unfrozen parameter set]
+Write
+\begin{equation}
+  \theta_U
+  \;=\;
+  \bigl\{\,
+    \theta_i \in \theta
+    \;\big|\;
+    \texttt{requires\_grad}(\theta_i)=\mathrm{true}
+  \,\bigr\}.
+\end{equation}
+Frozen / stopped parameters are excluded from the statistic.
+\end{definition}
+
+A single backward pass on $L_t$ yields gradients
+$\nabla_{\theta_i} L_t$ for each $\theta_i\in\theta_U$.
+
+%----------------------------------------------------------------------
+\section{Scalar gradient energy (the gate)}
+\label{sec:scalar}
+
+\begin{definition}[Global unfrozen grad energy]
+Concatenate all unfrozen grads into one Euclidean vector and set
+\begin{equation}
+\label{eq:gt}
+  g_t
+  \;=\;
+  \bigl\| \nabla_{\theta_U} L_t \bigr\|_2
+  \;=\;
+  \Biggl(
+    \sum_{\theta_i \in \theta_U}
+      \bigl\| \nabla_{\theta_i} L_t \bigr\|_2^{2}
+  \Biggr)^{1/2}.
+\end{equation}
+\end{definition}
+
+\begin{remark}[What $g_t$ is \emph{not}]
+\label{rem:not}
+\begin{enumerate}[leftmargin=*,itemsep=0.25em]
+  \item \textbf{Not} a mean of per-layer / per-parameter norms:
+  \[
+    g_t
+    \;\neq\;
+    \frac{1}{|\theta_U|}
+    \sum_{i}
+      \bigl\| \nabla_{\theta_i} L_t \bigr\|_2,
+  \]
+  nor a mean of ``normalized'' layer norms.
+  \item \textbf{Not} a family of per-layer OnlineRFPerm tests whose
+  rejects are OR-ed together (that is cross-parameter multiple testing).
+\end{enumerate}
+Equation~\eqref{eq:gt} is one scalar, hence one hypothesis stream.
+\end{remark}
+
+%----------------------------------------------------------------------
+\section{Continuous-time OnlineRFPerm on $g_t$}
+\label{sec:rfperm}
+
+Let $b$ be the burn-in length. During burn-in we estimate a baseline
+\begin{equation}
+\label{eq:eref}
+  e_{\mathrm{ref}}
+  \;=\;
+  \frac{1}{b}\sum_{s=0}^{b-1} g_s
+\end{equation}
+and accumulate the historical process without rejecting.
+
+\begin{definition}[Grad test statistic]
+For $t\ge b$,
+\begin{equation}
+\label{eq:Tt}
+  T_t
+  \;=\;
+  g_t - e_{\mathrm{ref}}.
+\end{equation}
+Large unexpected gradient energy $\Rightarrow$ large $T_t$
+(same orientation as MSE-OnlineRFPerm's $T=\mathrm{MSE}-E_{\mathrm{ref}}$).
+\end{definition}
+
+\begin{definition}[Rank / EWMA $p$-value]
+Let $\mathcal{H}_{t}=\{T_s:s<t\}$ be the history (burn-in + past
+monitoring). Uniform rank:
+\begin{equation}
+\label{eq:prank}
+  p_t^{\mathrm{rank}}
+  \;=\;
+  \frac{1 + \#\{\, T\in\mathcal{H}_{t}: T_t \le T \,\}}
+       {|\mathcal{H}_{t}| + 1}.
+\end{equation}
+EWMA (default; recent history weighted more), with ages
+$a(T)=0$ for the newest entry and exponential weights
+$w(T)=e^{-\lambda a(T)}$:
+\begin{equation}
+\label{eq:pewma}
+  p_t^{\mathrm{EWMA}}
+  \;=\;
+  \frac{\varepsilon + \sum_{T\in\mathcal{H}_{t}} w(T)\,
+        \mathbf{1}\{T_t \le T\}}
+       {\varepsilon + \sum_{T\in\mathcal{H}_{t}} w(T)},
+  \qquad \varepsilon\downarrow 0.
+\end{equation}
+Large $T_t$ $\Rightarrow$ few historical $T$ above it $\Rightarrow$ small $p_t$.
+\end{definition}
+
+\begin{definition}[Online FDR (alpha-investing)]
+Maintain wealth $W_0=1$. At step $t\ge b$ spend
+\begin{equation}
+\label{eq:alphat}
+  \alpha_t
+  \;=\;
+  W_t \cdot \frac{\alpha}{1+\alpha},
+\end{equation}
+reject if $p_t < \alpha_t$, and update
+\begin{equation}
+\label{eq:wealth}
+  W_{t+1}
+  \;=\;
+  \begin{cases}
+    W_t + \alpha, & \text{if reject},\\[0.25em]
+    \max(W_t - \alpha_t,\,\varepsilon), & \text{otherwise}.
+  \end{cases}
+\end{equation}
+(Fixed-$\alpha$ is the special case $\mathrm{reject}\iff p_t<\alpha$.)
+\end{definition}
+
+Write the global Grad reject indicator
+\begin{equation}
+\label{eq:Rt}
+  R_t^{\mathrm{grad}}
+  \;=\;
+  \mathbf{1}\{ p_t < \alpha_t \}.
+\end{equation}
+\textbf{There is exactly one such stream.} No layer-wise FDR.
+
+%----------------------------------------------------------------------
+\section{Layer shares (diagnostic only)}
+\label{sec:shares}
+
+Partition $\theta_U$ into layers / modules $\{\ell\in\mathcal{L}$
+(e.g.\ Linear blocks). Define
+\begin{equation}
+\label{eq:gl}
+  g_{t,\ell}
+  \;=\;
+  \bigl\| \nabla_{\theta_{U\cap\ell}} L_t \bigr\|_2,
+  \qquad
+  \pi_{t,\ell}
+  \;=\;
+  \frac{g_{t,\ell}}{g_t+\varepsilon}.
+\end{equation}
+Then $\sum_{\ell}\pi_{t,\ell}=1$.
+
+\begin{remark}
+$\{\pi_{t,\ell}\}$ are used \emph{only after} $R_t^{\mathrm{grad}}=1$,
+e.g.\ to rank freeze / unfreeze depth:
+\begin{equation}
+  \ell^\star_t
+  \;=\;
+  \arg\max_{\ell\in\mathcal{L}} \pi_{t,\ell}.
+\end{equation}
+They do \textbf{not} enter~\eqref{eq:prank}--\eqref{eq:Rt}.
+\end{remark}
+
+%----------------------------------------------------------------------
+\section{Comparators and lead time}
+\label{sec:lead}
+
+On the same stream we run three parallel monitors with the \emph{same}
+OnlineRFPerm skeleton:
+\begin{align}
+  T_t^{\mathrm{MSE}}
+  &=
+  \mathrm{MSE}\bigl(f_{\mathrm{ref}}^{\mathrm{RF}},X_t,Y_t\bigr)
+  - E_{\mathrm{ref}},
+  \label{eq:mse}\\[0.25em]
+  T_t^{\mathrm{MMD}}
+  &=
+  \widehat{\mathrm{MMD}}^2(X_{t-1},X_t)
+  - e_{\mathrm{MMD}},
+  \label{eq:mmd}\\[0.25em]
+  T_t^{\mathrm{PO}}
+  &=
+  \mathrm{PO\text{-}gap}(t-1\!\to\! t)
+  - e_{\mathrm{PO}}.
+  \label{eq:po}
+\end{align}
+Let $t_{\bullet}=\min\{t\ge b: R_t^{\bullet}=1\}$ (or $\infty$ if never).
+\begin{definition}[Lead time]
+\begin{equation}
+\label{eq:lead}
+  \mathrm{Lead}
+  \;=\;
+  t_{\mathrm{grad}} - t_{\mathrm{MSE}}.
+\end{equation}
+$\mathrm{Lead}<0$ means Grad rejects \emph{before} serving-MSE OnlineRFPerm.
+\end{definition}
+
+%----------------------------------------------------------------------
+\section{Algorithm (one page)}
+\label{sec:algo}
+
+\begin{enumerate}[leftmargin=*,itemsep=0.35em]
+  \item Fit / pretrain $f_{\mathrm{ref}}$ on burn-in batches; freeze weights.
+  \item For $t=0,\ldots,b-1$: compute $g_t$ via~\eqref{eq:gt}; update
+        $e_{\mathrm{ref}}$~\eqref{eq:eref}; append $T_t$ to history; no reject.
+  \item For $t\ge b$:
+  \begin{enumerate}[label=(\alph*),itemsep=0.2em]
+    \item one backward on $L_t$; $g_t\leftarrow\|\nabla_{\theta_U}L_t\|_2$;
+    \item $T_t\leftarrow g_t-e_{\mathrm{ref}}$; $p_t$ via~\eqref{eq:pewma};
+    \item online FDR~\eqref{eq:alphat}--\eqref{eq:wealth} $\Rightarrow R_t^{\mathrm{grad}}$;
+    \item if $R_t^{\mathrm{grad}}=1$, record shares $\pi_{t,\ell}$~\eqref{eq:gl}
+          for freeze-depth ranking;
+    \item (parallel) update MSE / MMD / PO OnlineRFPerm.
+  \end{enumerate}
+\end{enumerate}
+
+%----------------------------------------------------------------------
+\section{MVP numbers (for context)}
+\label{sec:mvp}
+
+Five datasets (synthetic, Covertype, bank-marketing, electricity,
+eeg-eye-state), five seeds, $b=8$, batch $128$, $48$ batches, $\alpha=0.05$.
+Under~\eqref{eq:gt}--\eqref{eq:lead}:
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+dataset & mean Lead & median & $P(\mathrm{Lead}<0)$ & $P(\mathrm{Lead}\le 0)$ \\
+\midrule
+synthetic   & $-3.0$ & $-2$ & $100\%$ & $100\%$ \\
+covertype   & $-1.2$ & $-1$ & $60\%$  & $80\%$ \\
+bank        & $-1.2$ & $0$  & $40\%$  & $100\%$ \\
+electricity & $-6.2$ & $-4$ & $80\%$  & $100\%$ \\
+eeg         & $-4.6$ & $-6$ & $80\%$  & $100\%$ \\
+\midrule
+\textbf{overall (25)} & $\mathbf{-3.24}$ & --- & $\mathbf{72\%}$ & $\mathbf{96\%}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%----------------------------------------------------------------------
+\section{Pointers}
+\label{sec:code}
+
+\begin{itemize}[leftmargin=*]
+  \item Module: \texttt{agod/grad\_rfperm.py}
+        (\texttt{unfrozen\_grad\_l2}, single-stream update).
+  \item Bench: \texttt{scripts/run\_agod\_grad\_rfperm\_monitor.py}
+        \texttt{--seeds 0 1 2 3 4}.
+  \item Empirics: \texttt{results/agod\_grad\_rfperm/}.
+  \item PR: \url{https://github.com/ruanhq-StatsML/CFPerm/pull/64}.
+\end{itemize}
+
+\end{document}
