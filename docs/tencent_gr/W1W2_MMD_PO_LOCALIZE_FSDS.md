@@ -8,6 +8,11 @@
 3. FSDS ranking   # StandardScaler → var → SelectKBest → HGB/LR
 ```
 
+**定位：** 更快找到下钻归因的那部分客群 / subset 的方法论。
+
+- **没有因果性** — 比较的是时段分布差异与排序，不声称 treatment effect
+- **modality-agnostic** — 不绑图、不绑文本/图像；同一套 procedure 可在多层级、多颗粒度下钻（如 merchant → user → order，或任意实体粒度）
+
 ## 三步下钻（可选）：merchant → user → order
 
 在漂移 subset 上再做定位：
