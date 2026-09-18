@@ -29,6 +29,9 @@ Sep18 iteration: +adult, +nomao}
 \maketitle
 
 \begin{abstract}
+\textbf{One-line conclusion.}
+It can detect the freezing point earlier than the other procedures.
+
 We monitor distribution / concept shift through the \emph{serving}
 gradient energy of a frozen reference network, rather than through
 serving MSE alone. The test statistic is a \textbf{single} scalar
@@ -525,6 +528,11 @@ as a universal earlier-alarm.
 \section{Discussion}
 \label{sec:disc}
 
+\noindent\textbf{Conclusion (one sentence).}
+It can detect the freezing point earlier than the other procedures
+(MSE / MMD / PO OnlineRFPerm), with mean $\Lead\approx -3.3$ batches
+across $35$ runs (MVP + adult / nomao).
+
 \begin{enumerate}[leftmargin=*,itemsep=0.35em]
   \item \textbf{Engineering口径 is locked:} one unfrozen
         $\ell_2$ scalar + one OnlineRFPerm stream. No
@@ -569,7 +577,7 @@ as a universal earlier-alarm.
 \end{itemize}
 
 \vspace{1em}
-\noindent\textbf{One-liner.}
+\noindent\textbf{Formula one-liner.}
 \[
 \boxed{\;
   g_t=\bigl\|\gradU L_t\bigr\|_2,\quad
@@ -578,5 +586,11 @@ as a universal earlier-alarm.
   \;\text{(one stream)}
 \;}
 \]
+
+\vspace{0.75em}
+\noindent\textbf{Empirical one-liner.}
+\begin{center}
+\emph{It can detect the freezing point earlier than the other procedures.}
+\end{center}
 
 \end{document}
