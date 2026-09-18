@@ -1,19 +1,6 @@
 {
-  "n_users": 3000,
-  "n_conv_users": 1697,
-  "n_items": 194344,
-  "n_edges_ui": 286949,
-  "n_convert_path_rows": 90823,
-  "co_window": 8,
-  "top_covisit": 10,
-  "main_dims": [
-    "user_id",
-    "item_id"
-  ],
-  "note": "\u56fe\u8c31\u7279\u5f81=\u5173\u7cfb\u805a\u5408\u5217\uff1b\u6574\u5408\u6210\u7f51\u683c\u9762\u677f\uff1b\u65e0\u56fe\u7b97\u6cd5\u3002",
-  "n_grid_rows": 286949,
-  "n_feature_cols": 48,
-  "feature_cols": [
+  "label": "y_convert",
+  "features": [
     "e_n_exp",
     "e_n_clk",
     "e_n_cnv",
@@ -62,7 +49,5 @@
     "e_log1p_exp",
     "e_log1p_clk",
     "ui_pop_mismatch"
-  ],
-  "label": "y_convert",
-  "grid": "(user_id, item_id) panel = edge \u22c8 user_\u56fe\u8c31\u7279\u5f81 \u22c8 item_\u56fe\u8c31\u7279\u5f81"
+  ]
 }

@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""TencentGR tabular user/item features + localization drill-down (NO graphs).
+"""TencentGR 图谱特征 → 网格面板（不用图算法）.
 
-Main dimensions only: **user** and **item**.
-Everything else aggregates into columns on these two tables.
-Localization = flat drill-down tables (groupby), not network algorithms.
+主维只有 user / item。所谓「图谱特征」= 关系型聚合列
+（度/共现强度/触点 credit/漏斗），全部写成表格字段，再 join 成
+``(user_id, item_id)`` 网格行，直接给 sklearn / 下游用。
 
-Outputs (under results/tencent_gr_tabular_ui/):
-  - user_features.parquet / .csv
-  - item_features.parquet / .csv
-  - edge_ui_features.parquet      (optional (u,i) aggregates)
-  - localize_convert_path.csv    (convert → path items with touch credit)
-  - localize_item_covisit.csv    (item → top co-visited items by count)
+不做 NetworkX / PageRank / GNN。
+
+Outputs under results/tencent_gr_tabular_ui/:
+  - user_features / item_features / edge_ui_features
+  - feature_grid.parquet          ← 建模主表（网格）
+  - feature_grid_sample.csv
+  - localize_convert_path.csv
+  - localize_item_covisit.parquet
 
   PYTHONPATH=. python3 scripts/tencent_gr/run_tabular_user_item_feats.py \\
     --root data/tencent_subset --max-users 3000
@@ -287,6 +289,55 @@ def accumulate(users, *, co_window: int = 8, top_covisit: int = 10):
     return user_df, item_df, edge_df, convert_df, covisit_df, meta
 
 
+def enrich_spectrum_cols(user_df: pd.DataFrame, item_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Add lightweight 图谱-style aggregate columns (ranks / log counts). No graph API."""
+    u = user_df.copy()
+    i = item_df.copy()
+    for c in ("n_events", "n_uniq_items", "n_exp", "n_clk", "n_cnv"):
+        if c in u.columns:
+            u[f"log1p_{c}"] = np.log1p(u[c].astype(float))
+    u["user_activity_rank"] = u["n_events"].rank(method="average", ascending=False)
+    u["user_ctcvr_rank"] = u["ctcvr"].rank(method="average", ascending=False)
+
+    for c in ("n_exp", "n_clk", "n_cnv", "n_users", "n_covisit_neighbors", "credit_linear"):
+        if c in i.columns:
+            i[f"log1p_{c}"] = np.log1p(i[c].astype(float))
+    i["item_pop_rank"] = i["n_users"].rank(method="average", ascending=False)
+    i["item_credit_rank"] = i["share_linear"].rank(method="average", ascending=False)
+    i["item_cnv_rank"] = i["n_cnv"].rank(method="average", ascending=False)
+    return u, i
+
+
+def build_feature_grid(
+    user_df: pd.DataFrame, item_df: pd.DataFrame, edge_df: pd.DataFrame
+) -> pd.DataFrame:
+    """Join 图谱特征 onto (user, item) rows → modeling grid / panel."""
+    if edge_df is None or len(edge_df) == 0:
+        return pd.DataFrame()
+    u = user_df.add_prefix("u_").rename(columns={"u_user_id": "user_id"})
+    i = item_df.add_prefix("i_").rename(columns={"i_item_id": "item_id"})
+    e = edge_df.rename(
+        columns={
+            "n_exp": "e_n_exp",
+            "n_clk": "e_n_clk",
+            "n_cnv": "e_n_cnv",
+            "last_ts": "e_last_ts",
+            "ctr": "e_ctr",
+            "has_convert": "y_convert",
+        }
+    )
+    grid = e.merge(u, on="user_id", how="left").merge(i, on="item_id", how="left")
+    # simple interaction columns (still tabular)
+    grid["e_log1p_exp"] = np.log1p(grid["e_n_exp"].astype(float))
+    grid["e_log1p_clk"] = np.log1p(grid["e_n_clk"].astype(float))
+    if "u_n_uniq_items" in grid.columns and "i_n_users" in grid.columns:
+        grid["ui_pop_mismatch"] = (
+            np.log1p(grid["i_n_users"].astype(float))
+            - np.log1p(grid["u_n_uniq_items"].astype(float))
+        )
+    return grid
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", type=Path, default=ROOT / "data" / "tencent_subset")
@@ -300,11 +351,13 @@ def main() -> None:
     )
     args = ap.parse_args()
 
-    print(f"scan ≤{args.max_users} users (tabular only) ...", flush=True)
+    print(f"scan ≤{args.max_users} users (图谱特征→网格, no graph algos) ...", flush=True)
     users = iter_users(args.root / "seq", args.max_users)
     user_df, item_df, edge_df, convert_df, covisit_df, meta = accumulate(
         users, co_window=args.co_window, top_covisit=args.top_covisit
     )
+    user_df, item_df = enrich_spectrum_cols(user_df, item_df)
+    grid = build_feature_grid(user_df, item_df, edge_df)
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     user_df.to_parquet(args.out_dir / "user_features.parquet", index=False)
@@ -314,17 +367,47 @@ def main() -> None:
     convert_df.to_csv(args.out_dir / "localize_convert_path.csv", index=False)
     covisit_df.to_parquet(args.out_dir / "localize_item_covisit.parquet", index=False)
     if len(covisit_df):
-        top_ids = (
-            covisit_df.groupby("item_id").size().nlargest(200).index
-            if len(covisit_df)
-            else []
-        )
+        top_ids = covisit_df.groupby("item_id").size().nlargest(200).index
         covisit_df[covisit_df["item_id"].isin(top_ids)].to_csv(
             args.out_dir / "localize_item_covisit_sample.csv", index=False
         )
+
+    feat_cols = [
+        c
+        for c in grid.columns
+        if c not in ("user_id", "item_id", "y_convert", "e_last_ts")
+    ]
+    meta.update(
+        {
+            "n_grid_rows": int(len(grid)),
+            "n_feature_cols": len(feat_cols),
+            "feature_cols": feat_cols,
+            "label": "y_convert",
+            "grid": "(user_id, item_id) panel = edge ⋈ user_图谱特征 ⋈ item_图谱特征",
+            "note": "图谱特征=关系聚合列；整合成网格面板；无图算法。",
+        }
+    )
+    if len(grid):
+        grid.to_parquet(args.out_dir / "feature_grid.parquet", index=False)
+        # stratified-ish sample for eyeballing
+        pos = grid[grid["y_convert"] == 1]
+        neg = grid[grid["y_convert"] == 0]
+        n_pos = min(200, len(pos))
+        n_neg = min(800, len(neg))
+        sample = pd.concat(
+            [
+                pos.sample(n_pos, random_state=0) if n_pos else pos,
+                neg.sample(n_neg, random_state=0) if n_neg else neg,
+            ],
+            ignore_index=True,
+        )
+        sample.to_csv(args.out_dir / "feature_grid_sample.csv", index=False)
+        (args.out_dir / "feature_cols.json").write_text(
+            json.dumps({"label": "y_convert", "features": feat_cols}, indent=2)
+        )
+
     (args.out_dir / "meta.json").write_text(json.dumps(meta, indent=2))
 
-    # small preview markdown
     top_items = (
         item_df.sort_values("share_linear", ascending=False)
         .head(10)[
@@ -336,6 +419,7 @@ def main() -> None:
                 "share_first",
                 "share_last",
                 "n_covisit_neighbors",
+                "item_credit_rank",
             ]
         ]
         .to_string(index=False)
@@ -343,18 +427,20 @@ def main() -> None:
     (args.out_dir / "README.md").write_text(
         "\n".join(
             [
-                "# Tabular user / item features + localization drill-down",
+                "# 图谱特征 → 网格面板（无图算法）",
                 "",
-                "Main dims: **user_id**, **item_id**. No NetworkX / PageRank / Markov graph.",
+                "主维：**user_id / item_id**。",
+                "图谱特征 = 漏斗 / 触点 credit / 共现强度 / 活跃度 rank 等聚合列。",
+                "网格 = `(user, item)` 行，左连 user 特征、右连 item 特征。",
                 "",
-                "## Tables",
-                "- `user_features.*` — one row per user",
-                "- `item_features.parquet` — one row per item (funnel + first/last/linear credit shares)",
-                "- `edge_ui_features.parquet` — one row per (user, item)",
-                "- `localize_convert_path.csv` — drill-down: convert → path items + linear credit",
-                "- `localize_item_covisit.parquet` (+ `_sample.csv`) — item → top co-visited items (count)",
+                "## 主产出",
+                "- `feature_grid.parquet` — 建模网格（label=`y_convert`）",
+                "- `feature_grid_sample.csv` / `feature_cols.json`",
+                "- `user_features.*` / `item_features.parquet` / `edge_ui_features.parquet`",
+                "- `localize_convert_path.csv` — convert 路径下钻",
+                "- `localize_item_covisit.parquet` — 共现 top-k 下钻（count only）",
                 "",
-                f"meta: `{json.dumps(meta)}`",
+                f"- grid rows: **{meta.get('n_grid_rows')}**, feature cols: **{meta.get('n_feature_cols')}**",
                 "",
                 "## Top items by linear credit share",
                 "```",
@@ -364,10 +450,10 @@ def main() -> None:
             ]
         )
     )
-    print(json.dumps(meta, indent=2))
+    print(json.dumps({k: meta[k] for k in meta if k != "feature_cols"}, indent=2))
     print("wrote", args.out_dir)
-    print("user cols:", list(user_df.columns))
-    print("item cols:", list(item_df.columns))
+    print("grid shape:", grid.shape, "label pos rate:", float(grid["y_convert"].mean()) if len(grid) else None)
+    print("feature cols:", len(feat_cols))
 
 
 if __name__ == "__main__":
