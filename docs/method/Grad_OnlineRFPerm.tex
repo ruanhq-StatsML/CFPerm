@@ -14,8 +14,9 @@
 \title{\textbf{Grad-OnlineRFPerm}\\[0.35em]
 \large Continuous-time OnlineRFPerm on Unfrozen Gradient Energy\\[0.15em]
 \large Single-stream protocol, lead-time evidence, and freeze closed-loop}
-\author{Formula + experiment writeup \quad (standalone; not AGOD)}
-\date{2026-09-17}
+\author{Formula + experiment writeup \quad (standalone; not AGOD)\\
+Sep18 iteration: +adult, +nomao}
+\date{2026-09-18}
 
 \newtheorem{definition}{Definition}
 \newtheorem{remark}{Remark}
@@ -39,9 +40,13 @@ cross-parameter multiple testing.
 
 On five MVP packs $\times$ five seeds, Grad rejects before
 serving-MSE OnlineRFPerm by about $3.2$ batches on average
-($72\%$ earlier). Supplementary experiments cover baseline alarm rate / grace,
-$\alpha$-sensitivity, a freeze closed-loop (MSE vs.\ FLOPs), and
-extra stream packs (metro / beijing / stocks / waymo).
+($72\%$ earlier). A Sep18 add-on on two OpenML packs
+(\texttt{adult}, \texttt{nomao}) repeats the same protocol and
+yields mean $\Lead\approx -3.6$ ($80\%$ earlier; $100\%$ not later).
+Pooled over all $35$ runs: mean $\Lead\approx -3.34$,
+$P(\Lead<0)\approx 74\%$. Supplementary experiments cover baseline
+alarm rate / grace, $\alpha$-sensitivity, a freeze closed-loop
+(MSE vs.\ FLOPs), and extra stream packs (metro / beijing / stocks / waymo).
 \end{abstract}
 
 \tableofcontents
@@ -320,6 +325,58 @@ Grad energy is a usable early gate---about three batches ahead of
 serving-MSE on average, without per-layer multiple testing.
 
 %======================================================================
+\section{Sep18 add-on: adult + nomao}
+\label{sec:sep18}
+
+Same locked protocol as~\S\ref{sec:mvp}
+($b=8$, batch $128$, $48$ batches, $\alpha=0.05$, five seeds).
+Two new OpenML packs:
+\begin{itemize}[leftmargin=*,itemsep=0.2em]
+  \item \texttt{adult} --- UCI Adult income (binary; $d{=}14$ after encoding);
+  \item \texttt{nomao} --- Nomao duplicate-detection (binary; $d{=}118$).
+\end{itemize}
+(\texttt{MagicTelescope} was also probed: Grad always rejects while
+serving-MSE OnlineRFPerm stays silent under this horizon, so
+$\Lead$ is undefined; we keep it as a Grad-only-detect diagnostic,
+not in the lead table.)
+
+\begin{table}[h]
+\centering
+\caption{Sep18 add-on lead under the same single-stream gate.}
+\label{tab:sep18}
+\begin{tabular}{lrrrr}
+\toprule
+dataset & mean Lead & median & $P(\Lead<0)$ & $P(\Lead\le 0)$ \\
+\midrule
+adult & $-3.20$ & $-3$ & $80\%$ & $100\%$ \\
+nomao & $-4.00$ & $-4$ & $80\%$ & $100\%$ \\
+\midrule
+\textbf{add-on (10)} & $\mathbf{-3.60}$ & --- & $\mathbf{80\%}$ & $\mathbf{100\%}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Pooled MVP~\ref{tab:mvp} + Sep18 add-on (35 runs).}
+\label{tab:pooled}
+\begin{tabular}{lrrr}
+\toprule
+pool & $n$ & mean Lead & $P(\Lead<0)$ \\
+\midrule
+MVP (5 packs) & $25$ & $-3.24$ & $72\%$ \\
+Sep18 add-on & $10$ & $-3.60$ & $80\%$ \\
+\textbf{pooled} & $\mathbf{35}$ & $\mathbf{-3.34}$ & $\mathbf{74\%}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textit{Takeaway:} the early-gate effect \emph{replicates} on
+adult / nomao at least as strongly as the Sep17 MVP mean
+(add-on $-3.6$ vs.\ MVP $-3.2$). Pooled mean Lead stays about
+$-3.3$ batches.
+
+%======================================================================
 \section{Supplementary experiments}
 \label{sec:extras}
 
@@ -474,6 +531,9 @@ as a universal earlier-alarm.
         per-parameter / per-layer multiple testing.
   \item \textbf{MVP lead is real under that口径:}
         mean $\Lead\approx -3.2$, earlier $72\%$ of the time.
+  \item \textbf{Sep18 replication:} adult / nomao add-on mean
+        $\Lead\approx -3.6$ ($80\%$ earlier); pooled $35$ runs
+        $\Lead\approx -3.34$ ($74\%$ earlier).
   \item \textbf{Baseline alarm rate:}
         $\mathrm{AR}=n_{\mathrm{alarm}}/n_{\mathrm{batch}}$
         (reference only --- \emph{not} Type-I FAR; updates preclude
@@ -495,10 +555,14 @@ as a universal earlier-alarm.
   \item MVP bench:
         \texttt{scripts/run\_agod\_grad\_rfperm\_monitor.py}
         \texttt{--seeds 0 1 2 3 4}.
+  \item Sep18 add-on:
+        \texttt{--datasets adult nomao --seeds 0 1 2 3 4}
+        $\to$ \texttt{results/agod\_grad\_rfperm\_sep18/}.
   \item Extras:
         \texttt{scripts/run\_grad\_rfperm\_extras.py --all}.
   \item Empirics:
         \texttt{results/agod\_grad\_rfperm/},
+        \texttt{results/agod\_grad\_rfperm\_sep18/},
         \texttt{results/grad\_rfperm\_extras/}.
   \item PR:
         \url{https://github.com/ruanhq-StatsML/CFPerm/pull/64}.
