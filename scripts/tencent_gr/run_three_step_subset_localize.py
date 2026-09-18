@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Three-step subset localization: merchant → user → order.
 
-Extends the flat item-MMD localize with a drill-down:
+Methodology (not causal; modality-agnostic multi-granularity drill-down):
+  find the drifting cohort faster via hierarchical subset localization.
 
   1. Standardization (fit on W1)
   2. Merchant-level MMD² → top merchants
   3. User-level MMD² (within those merchants) → top users
   4. Order-level score (within those users) → top orders
   5. FSDS ranking on the localized order edges
+
+No causality claim — distribution shift ranking only.
+Same procedure works at other entity granularities / modalities.
 
 Merchant id = item_feat column (default ``122``, encrypted advertiser/shop proxy).
 Order id   = ``{user_id}_{item_id}_{ts}`` for terminal-success edges (click on TencentGR).
