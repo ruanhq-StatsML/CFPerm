@@ -308,46 +308,57 @@ def run_day_level(
     grace: int,
     max_days: Optional[int],
 ) -> List[Dict]:
-    """Each calendar day = one stream unit → DetRate + first1 quantiles."""
-    slices = day_slices(X, y, day_id, min_len=max(bs * (n_burn + 2), bs * 4), max_days=max_days)
-    rows = []
-    for pname, extra in procedures:
-        day_forms = []
-        for di, (Xd, yd) in enumerate(slices):
-            nb = len(Xd) // bs
-            if nb < n_burn + 2:
-                continue
-            sub = run_one_stream(
-                Xd,
-                yd,
-                bs=bs,
-                n_batches=nb,
-                n_burn=n_burn,
-                seed=seed + di,
-                procedures=[(pname, extra)],
-                alpha=alpha,
-                wealth=wealth,
-                addis_tau=addis_tau,
-                saffron_lambda=saffron_lambda,
-                grace=grace,
-                shift_batch=None,
+    """Each calendar day = one stream unit → DetRate + first1 quantiles.
+
+    Computes the OnlineRFPerm p-stream **once per day**, then applies every FDR
+    procedure (avoids re-fitting RF × n_procedures).
+    """
+    slices = day_slices(
+        X, y, day_id, min_len=max(bs * (n_burn + 2), bs * 4), max_days=max_days
+    )
+    forms_by_proc: Dict[str, List[Dict]] = {p: [] for p, _ in procedures}
+    extras = {p: e for p, e in procedures}
+
+    for di, (Xd, yd) in enumerate(slices):
+        nb = len(Xd) // bs
+        if nb < n_burn + 2:
+            continue
+        need = bs * nb
+        stream = make_stream(Xd[:need], yd[:need], bs, nb)
+        n_burn_eff = min(n_burn, max(2, nb // 4))
+        try:
+            _, ps = p_stream_from_rfperm(stream, n_burn=n_burn_eff, seed=seed + di)
+        except Exception:
+            continue
+        for pname, extra in procedures:
+            kw = {
+                "alpha": alpha,
+                "wealth": wealth,
+                "tau": addis_tau,
+                "lambda_": saffron_lambda,
+            }
+            kw.update(extra)
+            rejects = rejects_from_procedure(
+                ps, "addis" if pname.startswith("addis") else pname, **kw
             )
-            if not sub:
-                continue
-            r = sub[0]
-            day_forms.append(
+            scored = apply_grace(rejects, grace)
+            form = first_k_form(scored)
+            forms_by_proc[pname].append(
                 {
-                    "SUM": r["g_SUM"],
-                    "first1": r["g_first1"],
-                    "first2": r["g_first2"],
-                    "first3": r["g_first3"],
+                    "SUM": form["SUM"],
+                    "first1": form["first1"],
+                    "first2": form["first2"],
+                    "first3": form["first3"],
                 }
             )
-        agg = aggregate_day_forms(day_forms)
+
+    rows = []
+    for pname, _ in procedures:
+        agg = aggregate_day_forms(forms_by_proc[pname])
         rows.append(
             {
                 "procedure": pname,
-                "lambda": extra.get("lambda_", None),
+                "lambda": extras[pname].get("lambda_", None),
                 "mode": "day_level",
                 **agg,
             }
