@@ -6,11 +6,11 @@ Engineering口径 (no cross-param multiple testing):
   one OnlineRFPerm on T_t = g_t - e_ref
   per-layer shares = diagnostics only (freeze-depth), not separate tests
 
-Datasets (Sep17 MVP): synthetic, Covertype, bank-marketing, electricity,
-eeg-eye-state.
+Datasets (Sep17 MVP + Sep18 add-on): synthetic, Covertype, bank-marketing,
+electricity, eeg-eye-state, MagicTelescope, adult.
 
   PYTHONPATH=. python3 scripts/run_agod_grad_rfperm_monitor.py \\
-    --datasets synthetic covertype bank electricity eeg \\
+    --datasets synthetic covertype bank electricity eeg magictelescope adult \\
     --seeds 0 1 2 3 4 --batch-size 128 --n-batches 48 --n-burn 8
 """
 from __future__ import annotations
@@ -176,6 +176,11 @@ def _loaders(batch_size: int):
         "bank": lambda max_n, seed: load_openml_named("bank-marketing", max_n, seed),
         "electricity": lambda max_n, seed: load_openml_named("electricity", max_n, seed),
         "eeg": lambda max_n, seed: load_openml_named("eeg-eye-state", max_n, seed),
+        # Sep18 add-on packs (OpenML): physics + classic tabular income
+        "magictelescope": lambda max_n, seed: load_openml_named(
+            "MagicTelescope", max_n, seed
+        ),
+        "adult": lambda max_n, seed: load_openml_named("adult", max_n, seed),
     }
 
 
@@ -646,7 +651,15 @@ def main() -> None:
     ap.add_argument(
         "--datasets",
         nargs="+",
-        default=["synthetic", "covertype", "bank", "electricity", "eeg"],
+        default=[
+            "synthetic",
+            "covertype",
+            "bank",
+            "electricity",
+            "eeg",
+            "magictelescope",
+            "adult",
+        ],
     )
     ap.add_argument("--batch-size", type=int, default=128)
     ap.add_argument("--n-batches", type=int, default=48)
