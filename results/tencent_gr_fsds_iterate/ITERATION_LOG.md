@@ -585,4 +585,4 @@ See `iter06_s2/FINDINGS.md`.
 | Z_combined_PO | 0.7115 | 0.1709 | 0.0067 |
 | P_po_boot_pi | 0.7013 | 0.1555 | 0.0066 |
 
-See .
+See `iter06/FINDINGS.md`.
