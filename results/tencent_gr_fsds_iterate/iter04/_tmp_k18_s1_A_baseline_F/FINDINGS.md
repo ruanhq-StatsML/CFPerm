@@ -1,0 +1,18 @@
+# FSDS multi-step iteration `iter04/_tmp_k18_s1_A_baseline_F`
+
+- grids: `W1_localized_grid.parquet` / `W2_localized_grid_sample.parquet`
+- n_train=8449 n_va=2700 n_w2=11963 feats=21 k=18
+- fuse_official_fsds=True (Scaler→Var→SelectKBest→model; W2 never selects)
+- pos_train=0.000355 (rare-positive regime)
+
+## Variant table
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 18 | 1.0000 | 0.7666 | 0.0011 | 0.1738 | 0.5285 | 0.0012 | 0.3323 | 0.4950 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+
+## Findings
+
+- Best **W2** HGB AUC: `A_baseline_F|W1hold` = 0.5285 (baseline A=0.5285)
+- Best **W1-hold** HGB AUC: `A_baseline_F|W1hold` = 0.7666
+- Scope locked: graph features only; selection steps only; no graph algorithms.

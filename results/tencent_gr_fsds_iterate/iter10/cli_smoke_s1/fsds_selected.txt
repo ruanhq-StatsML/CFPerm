@@ -1,0 +1,15 @@
+u_span_sec
+ui_pop_mismatch
+i_n_users
+i_log1p_n_users
+i_log1p_n_exp
+i_n_covisit_neighbors
+i_n_exp
+i_log1p_n_covisit
+u_log1p_n_uniq
+u_n_exp
+u_n_uniq_items
+u_n_events
+i_credit_linear
+i_share_linear
+i_share_last

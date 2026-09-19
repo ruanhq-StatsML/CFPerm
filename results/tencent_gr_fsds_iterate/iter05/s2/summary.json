@@ -1,0 +1,65 @@
+{
+  "iter_tag": "iter05/s2",
+  "n_train": 8315,
+  "n_va": 2834,
+  "n_w2": 11963,
+  "n_feats": 21,
+  "compare": [
+    {
+      "variant": "A_baseline_F|W1hold",
+      "notes": "Scaler\u2192Var\u2192SelectKBest(F) | metrics=official_run_fsds",
+      "n_selected": 15,
+      "jaccard_vs_baseline": 1.0,
+      "W1_hgb_auc": 0.5458877515001765,
+      "W1_hgb_ap": 0.0006724949562878278,
+      "W1_logreg_auc": 0.48464525238263323,
+      "W2_hgb_auc": 0.8362898502217387,
+      "W2_hgb_ap": 0.017055797184651396,
+      "W2_logreg_auc": 0.6457060775946225,
+      "sec": 0.3328702449798584,
+      "top5": "e_n_exp,u_n_exp,u_n_uniq_items,u_log1p_n_events,u_log1p_n_uniq"
+    },
+    {
+      "variant": "Z_combined|W1hold",
+      "notes": "COMBINED(=cmean+\u03c0\u2192FSDS): cmean pre\u219221 + \u03c0-stable F\u219215 | fused\u2192official_FSDS",
+      "n_selected": 15,
+      "jaccard_vs_baseline": 0.6666666666666666,
+      "W1_hgb_auc": 0.622132015531239,
+      "W1_hgb_ap": 0.000531632110579479,
+      "W1_logreg_auc": 0.5428873985174727,
+      "W2_hgb_auc": 0.8428897163417287,
+      "W2_hgb_ap": 0.00901259805414031,
+      "W2_logreg_auc": 0.7445402058405154,
+      "sec": 0.42563819885253906,
+      "top5": "i_share_first,i_credit_first,i_n_exp,e_log1p_exp,e_n_exp"
+    },
+    {
+      "variant": "P_po_vimp_FSDS|W1hold",
+      "notes": "PO-VIMP pre\u219221 (risk=1.15413e-06) then FSDS-F\u219215 | fused\u2192official_FSDS",
+      "n_selected": 15,
+      "jaccard_vs_baseline": 1.0,
+      "W1_hgb_auc": 0.5464172255559477,
+      "W1_hgb_ap": 0.0006724949562878278,
+      "W1_logreg_auc": 0.48464525238263323,
+      "W2_hgb_auc": 0.8412162162162161,
+      "W2_hgb_ap": 0.017069990355616727,
+      "W2_logreg_auc": 0.6457060775946225,
+      "sec": 2.57820987701416,
+      "top5": "ui_pop_mismatch,i_log1p_n_exp,u_n_exp,i_n_exp,u_n_uniq_items"
+    },
+    {
+      "variant": "Z_combined_PO|W1hold",
+      "notes": "COMBINED-PO: cmean\u22c8PO-VIMP\u219221 | 5-fold \u03c0-stable SelectKBest(F) | PO-risk=1.15413e-06 | \u2192FSDS | fused\u2192official_FSDS",
+      "n_selected": 15,
+      "jaccard_vs_baseline": 0.6666666666666666,
+      "W1_hgb_auc": 0.622132015531239,
+      "W1_hgb_ap": 0.000531632110579479,
+      "W1_logreg_auc": 0.5428873985174727,
+      "W2_hgb_auc": 0.8428897163417287,
+      "W2_hgb_ap": 0.00901259805414031,
+      "W2_logreg_auc": 0.7445402058405154,
+      "sec": 2.7340056896209717,
+      "top5": "i_share_first,i_credit_first,i_n_exp,e_log1p_exp,e_n_exp"
+    }
+  ]
+}

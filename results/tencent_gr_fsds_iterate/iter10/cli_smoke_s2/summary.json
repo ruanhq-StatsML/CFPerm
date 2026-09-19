@@ -1,0 +1,66 @@
+{
+  "recipe": "po_help_select \u2192 official FSDS",
+  "note": "W=period; PO-risk/VIMP is a shift ranking prior for FSDS \u2014 not an ATE. Hand `pool` to official Scaler\u2192Var\u2192SelectKBest.",
+  "po_risk": 1.1541262333133707e-06,
+  "k": 15,
+  "pool": [
+    "ui_pop_mismatch",
+    "u_span_sec",
+    "i_log1p_n_users",
+    "i_n_users",
+    "i_log1p_n_exp",
+    "u_n_exp",
+    "i_n_exp",
+    "u_n_events",
+    "i_n_covisit_neighbors",
+    "u_n_uniq_items",
+    "u_log1p_n_uniq",
+    "i_log1p_n_covisit",
+    "u_log1p_n_events",
+    "i_credit_linear",
+    "i_share_linear",
+    "i_credit_first",
+    "i_share_first",
+    "i_credit_last"
+  ],
+  "selected": [
+    "ui_pop_mismatch",
+    "u_span_sec",
+    "i_n_users",
+    "i_log1p_n_exp",
+    "u_n_exp",
+    "i_n_exp",
+    "u_n_uniq_items",
+    "u_log1p_n_uniq",
+    "i_log1p_n_covisit",
+    "u_log1p_n_events",
+    "i_credit_linear",
+    "i_share_linear",
+    "i_credit_first",
+    "i_share_first",
+    "i_credit_last"
+  ],
+  "W1_hold_hgb": {
+    "auc": 0.69219908224497,
+    "ap": 0.000980392156862745,
+    "sec": 0.42412567138671875
+  },
+  "W2_hgb": {
+    "auc": 0.8709835996987699,
+    "ap": 0.01359683589075088,
+    "sec": 0.39733052253723145
+  },
+  "W2_logreg": {
+    "auc": 0.5152916073968705,
+    "ap": 0.001037000138641765,
+    "sec": 0.01846003532409668
+  },
+  "n_train": 8315,
+  "n_w2": 11963,
+  "pos_train": 0.0003607937462417318,
+  "tips": {
+    "k": "prefer 15; try 18 for plain PO-VIMP",
+    "freeze": "for one frozen list use LOO-pos majority (see iter09); not seed-maj2",
+    "seeds": "always report mean\u00b1std under rare convert"
+  }
+}

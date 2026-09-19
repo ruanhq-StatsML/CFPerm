@@ -1,0 +1,3 @@
+risk=1.14753e-06
+pool=u_span_sec,ui_pop_mismatch,u_n_exp,i_log1p_n_covisit,i_n_exp,i_log1p_n_users,i_n_users,i_n_covisit_neighbors,i_log1p_n_exp,u_n_events,u_log1p_n_events,u_log1p_n_uniq,u_n_uniq_items,i_credit_linear,i_share_linear,i_share_first,i_share_last,i_credit_last
+note=W=period; PO-risk/VIMP is a shift ranking prior for FSDS — not an ATE. Hand `pool` to official Scaler→Var→SelectKBest.

@@ -1,0 +1,2 @@
+variant,notes,n_selected,jaccard_vs_baseline,W1_hgb_auc,W1_hgb_ap,W1_logreg_auc,W2_hgb_auc,W2_hgb_ap,W2_logreg_auc,sec,top5
+Z_combined|W1hold,COMBINED(=cmean+π→FSDS): cmean pre→20 + π-stable F→10 | fused→official_FSDS,10,,0.5632487667371389,0.0007710100231303007,0.365045806906272,0.36868253702619025,0.0009849114604440394,0.2613519091847265,0.27611470222473145,"e_log1p_exp,e_n_exp,i_log1p_n_exp,i_share_first,u_n_uniq_items"

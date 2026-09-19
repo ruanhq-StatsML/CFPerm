@@ -1,0 +1,3 @@
+PO-risk=1.1475341e-06
+n=6000
+note=W=period; PO-risk is a shift proxy, not an ATE

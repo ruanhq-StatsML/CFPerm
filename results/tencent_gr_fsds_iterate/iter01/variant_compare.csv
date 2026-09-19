@@ -1,0 +1,7 @@
+variant,notes,n_selected,jaccard_vs_baseline,W1_hgb_auc,W1_logreg_auc,W2_hgb_auc,W2_logreg_auc,sec,top5
+A_baseline_F|W1hold,Scaler→Var→SelectKBest(F),15,1.0,0.6620859760394644,0.9154334038054969,0.7679169107187682,0.4668507516804731,0.40644383430480957,"e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec"
+C_cmean_then_F|W1hold,cmean|δ| prefilter→30 then F→15,15,1.0,0.6620859760394644,0.9154334038054969,0.7664386522745655,0.4668507516804731,0.43004441261291504,"u_span_sec,ui_pop_mismatch,i_n_exp,u_n_events,u_n_uniq_items"
+D_F_corr_prune|W1hold,F wide=21 → corr-prune@0.92 →10,10,0.47058823529411764,0.4924242424242424,0.872093023255814,0.6437048503611971,0.7116733606671687,0.45022058486938477,"e_n_exp,u_n_exp,u_span_sec,u_log1p_n_uniq,i_n_covisit_neighbors"
+E_stable_pi_F|W1hold,5-fold π-stable SelectKBest(F),15,1.0,0.6620859760394644,0.9154334038054969,0.7735126767634507,0.4668507516804731,0.49784135818481445,"u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp"
+F_cmean_stable|W1hold,cmean pre→30 + π-stable F→15,15,1.0,0.6620859760394644,0.9154334038054969,0.7735126767634507,0.4668507516804731,0.4843916893005371,"u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp"
+G_F_then_HGB_perm|W1hold,F screen=21 → HGB perm-imp →15,15,0.5789473684210527,0.6434108527131783,0.9467935165609584,0.7729966808914177,0.7042158257328536,2.1339077949523926,"i_n_exp,i_share_linear,ui_pop_mismatch,u_n_exp,u_span_sec"

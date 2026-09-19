@@ -1,0 +1,2 @@
+variant,notes,n_selected,jaccard_vs_baseline,W1_hgb_auc,W1_hgb_ap,W1_logreg_auc,W2_hgb_auc,W2_hgb_ap,W2_logreg_auc,sec,top5
+Z_combined_MI|W1hold,COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→20 + π-stable MI→10 | fused→official_FSDS,10,,0.7625046313449426,0.001221001221001221,0.13078918117821414,0.5598276294870722,0.0011443829868395957,0.43504727637854573,1.6685326099395752,"i_share_last,i_share_first,e_log1p_exp,i_n_users,u_n_events"

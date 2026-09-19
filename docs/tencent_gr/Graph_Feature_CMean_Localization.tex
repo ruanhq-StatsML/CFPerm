@@ -1,0 +1,406 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{enumitem}
+\geometry{margin=1in}
+
+\title{\textbf{Graph-Feature Conditional-Mean Localization}\\
+\large Standardization $\to$ cmean $(\delta,\,D,\,r)$ $\to$ $K^\star$ $\to$ FSDS\\
+\large (Non-causal; Not Subgroup Analysis; No Graph Algorithms)}
+\author{TencentGR multimodal attribution --- locked prototype}
+\date{2026-09-19}
+
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\|#1\right\|_2}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We formulate a \emph{locked} localization protocol for period-to-period
+shift on \textbf{graph-derived tabular features} only.
+Pipeline:
+\[
+  \underbrace{X}_{\text{graph features}}
+  \;\xrightarrow{\;\mathrm{StandardScaler}(W_1)\;}
+  \underbrace{(\delta,\,D,\,r)}_{\text{conditional means}}
+  \;\xrightarrow{\;\text{early stop}\;}
+  K^\star
+  \;\xrightarrow{\;\text{one FSDS}\;}
+  \text{feature ranking}.
+\]
+Here \(K^\star\) is merely the final edge/entity support after cmean
+row-spectrum shrinkage---not a community, ego-net, or graph-algorithm
+object. The protocol is modality-agnostic, non-causal
+(\(W=\) period), and not subgroup analysis (retrieval kernel, not
+\(\tau(S)\)). Out of scope: community detection, ego-centric networks,
+ULS/PPR-Nibble/GraphScan, GNN attribution.
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+%======================================================================
+\section{Scope (locked)}
+\label{sec:scope}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{In scope} & \textbf{Out of scope} \\
+\midrule
+Graph features $X$ (covisit, credit, activity, \ldots)
+  & Community detection (Louvain, Infomap, \ldots) \\
+W1-fit standardization & Ego-centric network analysis \\
+Conditional-mean $\delta$, $D$, row spectrum $r$
+  & ULS / PPR-Nibble / GraphScan / conductance kernels \\
+Early-stop support $K^\star$ + one FSDS
+  & GNN / graph-algorithm attribution \\
+Non-causal, non-subgroup justification
+  & ATE / CATE / effect language \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{One-liner.}
+\[
+  \text{graph features}\to X\to\text{cmean}\to K^\star\to\text{FSDS once}.
+\]
+
+%======================================================================
+\section{Justification (required)}
+\label{sec:justify}
+
+\paragraph{Target.}
+Localize where period mean-shift of $X$ concentrates by shrinking
+support $S_{t+1}\subset S_t$; deliver a retrieval set $K^\star$.
+
+\paragraph{Not claimed.}
+No treatment effect; $W\in\{0,1\}$ is period ($W_1$/$W_2$), not
+treatment. Drill gates are descriptive thresholds, not $\alpha$-tests.
+
+\paragraph{Looks like subgroup analysis; is not.}
+Control flow shrinks support data-dependently (same \emph{shape} as
+post-hoc subgroups). The functional differs:
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+ & Subgroup analysis & This protocol \\
+\midrule
+Object & $\tau(S)$ & $\delta(S)=\mu_S^{(1)}-\mu_S^{(0)}$ on $X$ \\
+Role of set & inferential subgroup & retrieval / delivery support \\
+``Better'' & larger / significant effect
+  & sharper $r$ / lower residual $R$ \\
+Justify & identification + selective inference
+  & stable retrieval + business cap + descriptive gates \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Write-time checklist (J1--J8): task $=$ period-shift localization;
+entity key atoms; column vs row split; stop $=$ flat rows / business
+cap / rejected $R$; deliver $\pi$-stable sets; Lift (if any) $=$
+enrichment $\bar s_S/\bar s_C$; optional holdout; business granularity
+cap. Forbidden phrases: ``larger effect'', ``significant lift as ATE'',
+``detected community''.
+
+%======================================================================
+\section{Setup: graph features and periods}
+\label{sec:setup}
+
+Each row $i=1,\ldots,n$ is an edge (interaction) with
+\begin{itemize}[leftmargin=1.4em]
+  \item $X_i\in\R^d$: \textbf{graph features} only
+    (tabular aggregates from the interaction graph---not a graph
+    algorithm pass);
+  \item $W_i\in\{0,1\}$: period ($0=W_1$, $1=W_2$);
+  \item entity key $e_i$ (e.g.\ merchant / user / order id).
+\end{itemize}
+Scaler for $X$ is fit on $W_1$ only. Parent support $S\subseteq\{1,\ldots,n\}$
+starts as all edges (or a mass-filtered parent).
+
+\begin{definition}[Mass gate]
+\[
+  U_{\mathrm{ok}}
+  =\bigl\{
+    v:\ n_1(v)\ge n_{\min},\ n_2(v)\ge n_{\min}
+  \bigr\},
+\]
+where $n_w(v)=\#\{i\in S: e_i=v,\,W_i=w\}$.
+\end{definition}
+
+%======================================================================
+\section{Primitive: conditional means}
+\label{sec:cmean}
+
+\begin{definition}[Parent gap and entity--feature matrix]
+\begin{align}
+  \mu_S^{(w)}
+  &=\E[X\mid i\in S,\,W=w],
+  &
+  \delta(S)
+  &=\mu_S^{(1)}-\mu_S^{(0)}\in\R^d,
+  \label{eq:delta}\\
+  \mu_v^{(w)}
+  &=\E[X\mid e=v,\,i\in S,\,W=w],
+  &
+  D_{v:}
+  &=\mu_v^{(1)}-\mu_v^{(0)}\in\R^d.
+  \label{eq:D}
+\end{align}
+Stacking $v\in U_{\mathrm{ok}}$ gives $D\in\R^{|U_{\mathrm{ok}}|\times d}$:
+\textbf{rows $=$ entities, columns $=$ features}.
+\end{definition}
+
+\begin{remark}
+All gates below are projections of the same $(\delta,D)$. No MMD
+leave-one-entity loop; optional MMD is audit-only on few candidates.
+\end{remark}
+
+%======================================================================
+\section{Column view: feature guidance}
+\label{sec:cols}
+
+\begin{definition}[Feature shares]
+\[
+  \mathrm{share}_j(S)
+  =\frac{\delta_j(S)^2}{\norm{\delta(S)}^2+\varepsilon},
+  \qquad
+  J^\star(S)=\mathrm{TopShare}\bigl(\mathrm{share}(S)\bigr).
+\]
+\end{definition}
+
+\begin{definition}[Gates G0--G2 (not drill)]
+\begin{description}[leftmargin=2.2em]
+  \item[G0] $\norm{\delta(S)}<\varepsilon_\delta$: skip FSDS if stop here.
+  \item[G1] large $\norm{\delta}$ + concentrated share:
+    if stop at $S$, run FSDS once; report $J^\star$.
+  \item[G2] large $\norm{\delta}$ + flat share: weak tip; FSDS optional.
+\end{description}
+\end{definition}
+\noindent
+Allowed: ``shifted / not'', ``watch $J^\star$'', ``FSDS if stop''.
+Forbidden: inferring entity drill from columns alone.
+
+%======================================================================
+\section{Row view: drill / stop}
+\label{sec:rows}
+
+\begin{definition}[Row spectrum]
+\[
+  r_v=\norm{D_{v:}},
+  \qquad
+  a_v=\frac{\langle D_{v:},\,\delta(S)\rangle}
+           {\norm{D_{v:}}\,\norm{\delta(S)}+\varepsilon}.
+\]
+\end{definition}
+
+\begin{definition}[Drill gates]
+\begin{description}[leftmargin=2.8em]
+  \item[D-stop] low $\mathrm{Tail}(r)$ / $\mathrm{CV}(r)$
+    (and $a_v\approx 1$): do not refine entity key.
+  \item[D-drill] high Tail or CV:
+    $K=\mathrm{Top}(r)\cap\{\pi_v\ge\pi^\star\}$
+    ($\pi_v=$ probe/bootstrap TopK frequency).
+  \item[D-check]
+    \[
+      R(K)
+      =\frac{\norm{\delta(S\setminus K)}^2}{\norm{\delta(S)}^2+\varepsilon}.
+    \]
+    Accept iff $R(K)\le R^\star$; else reject false tip.
+\end{description}
+\end{definition}
+
+\paragraph{Rates.}
+\[
+  \alpha=\frac{|S_K|}{|S|},\quad
+  \gamma=1-R(K),\quad
+  \mathrm{eff}=\frac{\gamma}{\alpha+\varepsilon}.
+\]
+Early stop when further shrink yields $\gamma\approx 0$.
+Business cap truncates delivery depth independently of $\gamma$.
+
+%======================================================================
+\section{When to drill further (argument)}
+\label{sec:when-drill}
+
+Drill is not the default. It is justified only when the
+\emph{same} conditional-mean object says the parent support is still
+heterogeneous under the next entity key.
+
+\paragraph{Necessary condition (parent still shifted).}
+If $\norm{\delta(S)}$ is negligible (G0), there is nothing to
+localize: stop. Column concentration alone (large $\delta$, sharp
+$J^\star$) only licenses a feature story / FSDS \emph{at $S$}; it does
+not license a finer entity cut.
+
+\paragraph{Sufficient condition (rows are not homogeneous).}
+Compute $\{r_v\}$ on the next key inside $S$. Further drill is
+warranted only if the row spectrum is sharp---high $\mathrm{Tail}(r)$
+or $\mathrm{CV}(r)$---so that a few values carry most of the
+mean-shift. If $r$ is flat and $a_v\approx 1$, every entity looks like
+the parent $\delta$: shrinking support cannot raise capture rate
+$\gamma$, so stop and (if G1) run FSDS on $S$.
+
+\paragraph{Acceptance, not nomination.}
+A sharp $r$ only proposes $K=\mathrm{Top}(r)\cap\{\pi\ge\pi^\star\}$.
+Accept the drill iff residual mean-shift drops,
+$R(K)\le R^\star$ (equivalently $\gamma$ large enough at tolerable
+$\alpha$). If $R\not\downarrow$, the tip is false---revert and stop.
+Mass / $\pi$ failures likewise block delivery even when $r$ looks
+sharp.
+
+\paragraph{What does not justify drill.}
+Feature-only $\delta$ tips; $\mathrm{Var}(\hat\tau)$; community /
+ego / graph-local backends; ``effects look stronger downstairs.''
+Those are out of scope or the wrong functional.
+
+\paragraph{Rule.}
+\[
+  \mathrm{Drill}
+  \;=\;
+  \mathbf{1}\{\norm{\delta(S)}\ge\varepsilon_\delta\}
+  \cdot
+  \mathbf{1}\{\mathrm{Tail}(r)\ge\tau\ \lor\ \mathrm{CV}(r)\ge c^\star\}
+  \cdot
+  \mathbf{1}\{R(K)\le R^\star\}
+  \cdot
+  \mathbf{1}\{\mathrm{mass}/\pi\ \mathrm{ok}\}.
+\]
+Else $K^\star\leftarrow S$ (or last accepted support). Business cap may
+forbid delivery even when $\mathrm{Drill}=1$.
+
+%======================================================================
+\section{Feature--entity joint (optional order on same $D$)}
+\label{sec:joint}
+
+\begin{description}[leftmargin=1.8em]
+  \item[$\mathrm{F}\to\mathrm{E}$ (default)]
+    Restrict to $J^\star$ columns, then $r_v=\norm{D_{v,J^\star}}$;
+    drill on that $r$.
+  \item[$\mathrm{E}\to\mathrm{F}$]
+    Full-dim $r$ $\to K$, then recompute $\delta(K)$, $J^\star(K)$.
+\end{description}
+Declare order; do not silently union two orders.
+Multiple entity keys (nested merchant$\to$user$\to$order, or sibling
+keys) each get their own $D^{(k)}$; compare $\mathrm{eff}$ and $\pi$;
+report \texttt{drill\_key}.
+
+%======================================================================
+\section{What $K^\star$ is}
+\label{sec:kstar}
+
+\begin{definition}[$K^\star$]
+The final support after cmean early-stop (and optional accepted drills)
+on graph-feature $X$: the edge set (or entity-id set) on which
+\textbf{one} FSDS pass is run.
+\end{definition}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+$K^\star$ \textbf{is} & $K^\star$ \textbf{is not} \\
+\midrule
+retrieval subset on graph features
+  & output of a graph algorithm \\
+cmean ($+\pi$/mass) shrunk support
+  & community / ego / ULS / PPR kernel \\
+delivery edge/entity ids for FSDS
+  & causal kernel / effect subgroup \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%======================================================================
+\section{FSDS (once)}
+\label{sec:fsds}
+
+On edges in $K^\star$ only:
+\[
+  \mathrm{StandardScaler}
+  \to\mathrm{VarianceThreshold}
+  \to\mathrm{SelectKBest}
+  \to\mathrm{HGB/LR}
+  \Rightarrow\text{feature ranking}.
+\]
+Do not re-run FSDS at every exploratory layer.
+If stop under G0, FSDS may be skipped.
+
+%======================================================================
+\section{Optional side score}
+\label{sec:po}
+
+Edge scores $s\in\R^n$ from a \emph{single} period-score fit may be
+aggregated $g_v=\mathrm{mean}(s\mid e=v)$. Concordant sharpness with
+$r_v$ adds confidence; by default $g$ does not overturn D-stop.
+Forbidden: $\mathrm{Var}_x(\hat\tau(x))$ as heterogeneity;
+per-entity PO refits.
+
+%======================================================================
+\section{Decision table}
+\label{sec:table}
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$\norm{\delta}$ & row $r$ & action & FSDS \\
+\midrule
+small & flat & stop & no \\
+large & flat & stop drill; feature story & once on $S$ if G1 \\
+large & sharp & drill to $K$; recurse / deliver & once on final $K^\star$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%======================================================================
+\section{Algorithm}
+\label{sec:algo}
+
+\begin{verbatim}
+# X: graph features; W: period; e: entity key; S: parent edges
+fit StandardScaler on W1; transform X
+delta = mean(X|S,W=1) - mean(X|S,W=0)
+J_star = top_share(delta)                 # column guidance
+
+for v in mass_ok(e, S):
+    D[v] = mean(X|v,W=1) - mean(X|v,W=0)
+r[v] = ||D[v]||   # or ||D[v, J_star]|| if F->E
+
+if flat(r):  K_star = S; maybe FSDS(S) if ||delta|| large
+else:
+    K = top(r) intersect stable_pi
+    R = ||delta(S\K)||^2 / ||delta(S)||^2
+    if R <= R_star: S <- edges in K; recurse or stop at business cap
+    else: K_star = S   # reject false tip
+FSDS once on K_star
+\end{verbatim}
+
+%======================================================================
+\section{Companions}
+\label{sec:docs}
+
+Markdown:
+\texttt{docs/tencent\_gr/ATTRIBUTION\_DRILL\_STOP.md},
+\texttt{W1W2\_MMD\_PO\_LOCALIZE\_FSDS.md}.
+Related formula note:
+\texttt{Feature\_Entity\_Joint\_CMean.tex}.
+Graph-localization backends: deferred / out of scope
+(\texttt{GRAPH\_LOCALIZATION\_NO\_COMMUNITY.md}).
+
+\vspace{1em}
+\noindent\textbf{Locked claim.}
+Input $=$ graph features; gate $=$ conditional means; output $=$
+$K^\star$ + one FSDS ranking. Everything else is out of syllabus.
+
+\end{document}

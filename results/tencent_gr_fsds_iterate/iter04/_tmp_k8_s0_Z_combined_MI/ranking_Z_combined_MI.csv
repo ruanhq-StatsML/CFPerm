@@ -1,0 +1,9 @@
+feature,score,rank,selected
+i_log1p_n_exp,0.874024770471903,1,1
+u_n_events,0.24386567367805684,2,1
+u_log1p_n_uniq,0.1592385550926889,3,1
+ui_pop_mismatch,0.0992312420461597,4,1
+i_credit_linear,0.04929472407984588,5,1
+i_n_covisit_neighbors,0.04132922425563856,6,1
+i_credit_last,0.028018082824999437,7,1
+u_log1p_n_events,0.013654900023032043,8,1

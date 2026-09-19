@@ -1,0 +1,23 @@
+{
+  "iter_tag": "iter04/_tmp_k12_s0_A_baseline_F",
+  "n_train": 8310,
+  "n_va": 2839,
+  "n_w2": 11963,
+  "n_feats": 21,
+  "compare": [
+    {
+      "variant": "A_baseline_F|W1hold",
+      "notes": "Scaler\u2192Var\u2192SelectKBest(F) | metrics=official_run_fsds",
+      "n_selected": 12,
+      "jaccard_vs_baseline": 1.0,
+      "W1_hgb_auc": 0.5909090909090909,
+      "W1_hgb_ap": 0.0008561643835616438,
+      "W1_logreg_auc": 0.8252290345313601,
+      "W2_hgb_auc": 0.39364558056508525,
+      "W2_hgb_ap": 0.0016373679853171853,
+      "W2_logreg_auc": 0.37300225922516944,
+      "sec": 0.2870676517486572,
+      "top5": "e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec"
+    }
+  ]
+}
