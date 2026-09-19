@@ -23,3 +23,4 @@ Results: `results/tencent_gr_fsds_iterate/` (`ITERATION_LOG.md` + per-iter `FIND
 
 Timer: every **20 minutes** until morning.
 - **iter08**: k&lt;15 hurts; P_po best at **k=18** (0.724); τ̂²-rows ≈ P_po (no clear win)
+- **iter09**: seed-maj2 hurts mean; **LOO-pos maj** lowest σ (**0.114**); avg-VIMP topk alone fails — still hand pool to FSDS

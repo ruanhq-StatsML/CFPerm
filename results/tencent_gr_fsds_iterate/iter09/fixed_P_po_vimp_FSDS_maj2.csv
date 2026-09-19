@@ -1,0 +1,16 @@
+feature,votes
+i_credit_linear,3
+i_log1p_n_covisit,3
+i_log1p_n_exp,3
+i_n_exp,3
+i_share_linear,3
+u_log1p_n_uniq,3
+u_n_exp,3
+u_n_uniq_items,3
+u_span_sec,3
+ui_pop_mismatch,3
+i_credit_first,2
+i_credit_last,2
+i_log1p_n_users,2
+i_n_covisit_neighbors,2
+i_n_users,2

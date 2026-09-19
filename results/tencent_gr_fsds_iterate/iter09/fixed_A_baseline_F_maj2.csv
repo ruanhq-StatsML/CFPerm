@@ -1,0 +1,16 @@
+feature,votes
+e_log1p_exp,3
+e_n_exp,3
+i_n_exp,3
+i_share_linear,3
+u_n_exp,3
+u_n_uniq_items,3
+i_credit_first,2
+i_credit_last,2
+i_credit_linear,2
+i_log1p_n_covisit,2
+i_log1p_n_exp,2
+i_log1p_n_users,2
+i_share_first,2
+i_share_last,2
+u_log1p_n_uniq,2
