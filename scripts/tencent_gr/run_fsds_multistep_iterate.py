@@ -38,7 +38,10 @@ from time_window_feats import fsds_feature_columns  # noqa: E402
 from run_standardize_mmd_fsds import run_fsds, w1w2_candidate_columns  # noqa: E402
 from po_risk_fsds import (  # noqa: E402
     blend_cmean_po_scores,
+    bootstrap_pi_select,
     fit_po_on_windows,
+    po_help_select,
+    rare_pos_n_splits,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -437,6 +440,49 @@ def build_combined_po(g_tr, g_w2, cols, *, k, seed):
     return selected, ranking, note
 
 
+def build_po_boot_pi(g_tr, g_w2, cols, *, k, seed):
+    """PO-VIMP pool → stratified bootstrap π → FSDS (rare-pos friendly)."""
+    help_ = po_help_select(g_tr, g_w2, cols, k=k, seed=seed, pool_extra=3)
+    guided = help_["pool"]
+    X = StandardScaler().fit_transform(_matrix(g_tr, guided))
+    y = g_tr["y_convert"].to_numpy(int)
+    vt = VarianceThreshold(1e-8)
+    Xv = vt.fit_transform(X)
+    cols_v = [c for c, m in zip(guided, vt.get_support()) if m]
+    selected, tab = bootstrap_pi_select(
+        Xv, y, cols_v, k=k, n_boot=40, seed=seed, score_fn=f_classif
+    )
+    ranking = tab.rename(columns={"mean_score": "score"})
+    n_ok = int(tab["n_boot_ok"].iloc[0]) if len(tab) else 0
+    note = (
+        f"PO-boot-π: PO-help pool→{len(guided)} | bootπ×{n_ok}→{k} | "
+        f"PO-risk={help_['risk']:.6g} | →FSDS"
+    )
+    return selected, ranking, note
+
+
+def build_combined_po_rare(g_tr, g_w2, cols, *, k, seed):
+    """cmean⋈PO → rare-pos-capped π folds → FSDS."""
+    help_ = po_help_select(g_tr, g_w2, cols, k=k, seed=seed, pool_extra=3)
+    guided = help_["pool"]
+    X = StandardScaler().fit_transform(_matrix(g_tr, guided))
+    y = g_tr["y_convert"].to_numpy(int)
+    vt = VarianceThreshold(1e-8)
+    Xv = vt.fit_transform(X)
+    cols_v = [c for c, m in zip(guided, vt.get_support()) if m]
+    n_splits = rare_pos_n_splits(y, prefer=3)
+    selected, tab = _stability_select(
+        Xv, y, cols_v, k=k, n_splits=n_splits, seed=seed, score_fn=f_classif
+    )
+    ranking = tab.rename(columns={"mean_score": "score"})
+    note = (
+        f"COMBINED-PO-rare: cmean⋈PO→{len(guided)} | "
+        f"{n_splits}-fold π (n_pos={int(y.sum())})→{k} | "
+        f"PO-risk={help_['risk']:.6g} | →FSDS"
+    )
+    return selected, ranking, note
+
+
 def build_soft_corr_prune(g_tr, g_w2, cols, *, k, seed):
     """FSDS-wide then soft corr prune @0.98 (less aggressive than 0.92)."""
     wide = min(len(cols), max(k * 2, k + 8))
@@ -503,6 +549,8 @@ VARIANTS: Dict[str, Callable] = {
     "Z_combined_MI": build_combined_mi,
     "P_po_vimp_FSDS": build_po_vimp_fsds,
     "Z_combined_PO": build_combined_po,
+    "P_po_boot_pi": build_po_boot_pi,
+    "Z_combined_PO_rare": build_combined_po_rare,
 }
 
 
@@ -554,7 +602,8 @@ def main() -> None:
         "--variants",
         type=str,
         default=(
-            "A_baseline_F,Z_combined,P_po_vimp_FSDS,Z_combined_PO"
+            "A_baseline_F,Z_combined,P_po_vimp_FSDS,Z_combined_PO,"
+            "P_po_boot_pi,Z_combined_PO_rare"
         ),
     )
     ap.add_argument(

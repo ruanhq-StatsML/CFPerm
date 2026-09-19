@@ -8,16 +8,22 @@ Locked framing (讲武德):
 
 Usage from iterate / localize scripts:
 
-  from po_risk_fsds import fit_period_po, po_feature_table
+  from po_risk_fsds import fit_period_po, po_feature_table, po_help_select
+
+DS one-liner (period shift → ranking prior → FSDS pool):
+
+  report = po_help_select(g_w1, g_w2, cols, k=15)
+  # report["pool"] → hand to official FSDS; report["feature_table"] for notebooks
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
@@ -168,3 +174,133 @@ def blend_cmean_po_scores(
     )
     tab["rank"] = np.arange(1, len(tab) + 1)
     return tab
+
+
+def rare_pos_n_splits(y: np.ndarray, *, prefer: int = 5) -> int:
+    """Cap CV folds by positive count (rare-convert regime)."""
+    n_pos = int(np.sum(np.asarray(y).ravel() > 0))
+    if n_pos <= 1:
+        return 2
+    return max(2, min(prefer, n_pos))
+
+
+def bootstrap_pi_select(
+    X: np.ndarray,
+    y: np.ndarray,
+    cols: Sequence[str],
+    *,
+    k: int,
+    n_boot: int = 40,
+    seed: int = 0,
+    score_fn=f_classif,
+) -> Tuple[List[str], pd.DataFrame]:
+    """Stratified bootstrap π-stability (rare-pos friendly vs K-fold).
+
+    Each draw keeps class balance; π_j = fraction of boots where j ∈ TopK.
+    With tiny n_pos this still runs (unlike 5-fold when a fold has 0 pos).
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, int).ravel()
+    cols = list(cols)
+    n, d = X.shape
+    assert d == len(cols)
+    rng = np.random.default_rng(seed)
+    pos = np.where(y == 1)[0]
+    neg = np.where(y == 0)[0]
+    hits = np.zeros(d, dtype=float)
+    score_sum = np.zeros(d, dtype=float)
+    n_ok = 0
+    kk = min(k, d, max(1, n - 1))
+    for b in range(n_boot):
+        if len(pos) == 0 or len(neg) == 0:
+            break
+        # draw all positives with replacement; same count of negatives
+        i_pos = rng.choice(pos, size=len(pos), replace=True)
+        i_neg = rng.choice(neg, size=len(neg), replace=True)
+        idx = np.concatenate([i_pos, i_neg])
+        yb = y[idx]
+        if len(np.unique(yb)) < 2:
+            continue
+        sel = SelectKBest(score_fn, k=min(kk, len(idx) - 1))
+        try:
+            sel.fit(X[idx], yb)
+        except Exception:
+            continue
+        hits += sel.get_support().astype(float)
+        sc = np.nan_to_num(sel.scores_, nan=0.0)
+        score_sum += sc
+        n_ok += 1
+    if n_ok == 0:
+        # fallback: single F on full data
+        sel = SelectKBest(score_fn, k=kk)
+        sel.fit(X, y)
+        selected = [cols[j] for j, m in enumerate(sel.get_support()) if m]
+        tab = (
+            pd.DataFrame(
+                {
+                    "feature": cols,
+                    "pi": sel.get_support().astype(float),
+                    "mean_score": np.nan_to_num(sel.scores_, nan=0.0),
+                }
+            )
+            .sort_values(["pi", "mean_score"], ascending=False)
+            .reset_index(drop=True)
+        )
+        tab["rank"] = np.arange(1, len(tab) + 1)
+        tab["selected"] = tab["feature"].isin(selected).astype(int)
+        tab["n_boot_ok"] = 0
+        return selected, tab
+    pi = hits / n_ok
+    mean_sc = score_sum / n_ok
+    order = sorted(range(d), key=lambda j: (-pi[j], -mean_sc[j]))
+    selected = [cols[j] for j in order[:k]]
+    tab = (
+        pd.DataFrame({"feature": cols, "pi": pi, "mean_score": mean_sc})
+        .sort_values(["pi", "mean_score"], ascending=False)
+        .reset_index(drop=True)
+    )
+    tab["rank"] = np.arange(1, len(tab) + 1)
+    tab["selected"] = tab["feature"].isin(selected).astype(int)
+    tab["n_boot_ok"] = int(n_ok)
+    return selected, tab
+
+
+def po_help_select(
+    g_w1: pd.DataFrame,
+    g_w2: pd.DataFrame,
+    cols: Sequence[str],
+    *,
+    k: int = 15,
+    seed: int = 0,
+    alpha: float = 0.5,
+    max_n: int = 6000,
+    pool_extra: int = 3,
+) -> Dict:
+    """DS entrypoint: fit PO once, blend with |δ|, return FSDS pool + tables.
+
+    Returns
+    -------
+    dict with keys:
+      risk, feature_table, blend_table, pool, note
+    """
+    cols = list(cols)
+    po = fit_po_on_windows(g_w1, g_w2, cols, seed=seed, max_n=max_n)
+    X1 = g_w1.loc[:, cols].to_numpy(float)
+    X2 = g_w2.loc[:, cols].to_numpy(float)
+    dlt = np.abs(X2.mean(axis=0) - X1.mean(axis=0))
+    blend = blend_cmean_po_scores(cols, dlt, po["vimp"], alpha=alpha)
+    pre_n = min(len(cols), max(k, k + pool_extra))
+    pool = list(blend["feature"].head(pre_n))
+    return {
+        "risk": po["risk"],
+        "feature_table": po["feature_table"],
+        "blend_table": blend,
+        "pool": pool,
+        "k": int(k),
+        "n_w1": po["n_w1"],
+        "n_w2": po["n_w2"],
+        "note": (
+            "W=period; PO-risk/VIMP is a shift ranking prior for FSDS — "
+            "not an ATE. Hand `pool` to official Scaler→Var→SelectKBest."
+        ),
+    }

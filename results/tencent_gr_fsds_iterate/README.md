@@ -1,7 +1,12 @@
 # FSDS multi-step overnight iterations
 
-Locked scope: **图谱特征** → multi-step selection only.  
+Locked scope: **图谱特征** → multi-step selection + **official FSDS** fuse.  
 No community / ego / graph-local backends.
+
+Official FSDS (stats method): `StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg`  
+(fit W1 only; W2 = temporal holdout).
+
+PO-risk (讲武德): `docs/tencent_gr/PO_RISK_FOR_DS.md` — period W; ranking prior only.
 
 ```bash
 PYTHONPATH=. python3 scripts/tencent_gr/run_fsds_multistep_iterate.py --iter-tag iterNN
@@ -9,7 +14,10 @@ PYTHONPATH=. python3 scripts/tencent_gr/run_fsds_multistep_iterate.py --iter-tag
 
 Results: `results/tencent_gr_fsds_iterate/` (`ITERATION_LOG.md` + per-iter `FINDINGS.md`).
 
-## iter01 headline
-- π-stable F / cmean+π beat baseline slightly on W2 HGB (0.7735 vs 0.7679)
-- Hard corr-prune@0.92 **hurts** (W2 0.64) — too aggressive on 21 feats
-- Rare positives (≈3 in train) make 5-fold fragile — next iters: softer prune, fewer folds, seed sweeps
+## Headlines
+- **iter01**: π-stable / cmean+π slightly beat baseline on W2; hard corr@0.92 hurts
+- **iter02**: fused official FSDS; soft-corr@0.98 best W2; J*-only prefilter hurts; rare-pos AP tiny; 3-fold π unstable
+- **iter05**: PO-VIMP → FSDS mean W2 **0.722** > Z **0.720** > A **0.716** (seeds 0/1/2)
+- **iter06**: rare-pos bootstrap π + PO-help pool (`P_po_boot_pi`, `Z_combined_PO_rare`)
+
+Timer: every **20 minutes** until morning.

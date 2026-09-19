@@ -27,6 +27,10 @@
 [`Graph_Feature_CMean_Localization.tex`](./Graph_Feature_CMean_Localization.tex)
 — 图谱特征 → cmean → \(K^\star\) → FSDS；scope 锁死；可 compile 的 formulation。
 
+**PO-risk for DS（讲武德）：**
+[`PO_RISK_FOR_DS.md`](./PO_RISK_FOR_DS.md)
+— period-PO `mean(τ̂²)` / VIMP → FSDS ranking prior；`po_help_select` one-liner；**不是** ATE。
+
 **多层图调研 × 多模态归因逻辑：**
 [`MULTILAYER_GRAPH_AND_MM_ATTR.md`](./MULTILAYER_GRAPH_AND_MM_ATTR.md)
 — 多层图算法族取舍；模态=列块 / key；接到同一套 cmean 缩支撑闭环。
