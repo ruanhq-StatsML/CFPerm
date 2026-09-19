@@ -22,3 +22,4 @@ Results: `results/tencent_gr_fsds_iterate/` (`ITERATION_LOG.md` + per-iter `FIND
 - **iter07**: α∈{0.3,0.5,0.7} **identical** on d=21; tight pool k hurts; P_po still best mean, rare-π best σ
 
 Timer: every **20 minutes** until morning.
+- **iter08**: k&lt;15 hurts; P_po best at **k=18** (0.724); τ̂²-rows ≈ P_po (no clear win)

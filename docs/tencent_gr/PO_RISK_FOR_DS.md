@@ -50,6 +50,12 @@ print(report["note"])
 Default **α=0.5** (`|δ| ⋈ PO-VIMP`). On the current graph-feat width (d≈21, pool=k+3),
 α∈{0.3,0.5,0.7} is a no-op — keep 0.5; do not over-tune. Prefer pool slack (k+3) over tight k.
 
+
+## k and τ̂² rows
+
+- Prefer **k=15** (or **18** for plain PO-VIMP). k∈{10,12} underperforms on this grid.
+- Optional `filter_by_tau2_quantile` keeps high-τ̂² rows (+ all positives) before FSDS — optional knob; not better than plain PO-VIMP by default.
+
 ## Do / Don't
 
 - Do use PO-VIMP as a **ranking prior** into FSDS  
