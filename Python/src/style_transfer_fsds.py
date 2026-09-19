@@ -2,20 +2,24 @@
 
 Prototype:
 
-  1. ContentTower + StyleTower
+  1. ContentTower (style tokens masked) + StyleTower + prefix adapter
   2. Four losses: style / align / contrast / fluency + MINE
-  3. FSDS (MMD / CMean / PO) + LOGO groups → alpha routing
-  4. Attribution-driven LR modulation (soft adapter)
+  3. Group-first FSDS (MMD / CMean / PO) + LOGO → alpha routing
+  4. Soft-adapter LR: MMD-loud stem / PO-loud prefix+top
 
 Serving table (Y is never a feature):
   X = source token ids as float columns
   Y = target style id (s_tgt)
   groups: content=topic words, style_src=source style markers, noise=pad
 
+User-style entry:
+    styleTransferFSDS(df, groups, ref_batch_size, batch_size)
+    last column of df is Y
+
 Real-deploy swap points:
   ContentTower.backbone → hfl/chinese-roberta-wwm-ext
+  PrefixAdapter         → GPT-2 / Qwen prefix-tuning
   fsds_route            → RF-domain + MMD-LOCO + PO-risk (this file)
-  decoder               → GPT-2 / Qwen prefix-tuning
 
 Run:
     python Python/src/style_transfer_fsds.py
@@ -26,7 +30,7 @@ import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Mapping, Optional, Sequence
 
 import numpy as np
 import torch
@@ -47,10 +51,11 @@ from logo_modality import (
     TOWER_INFER,
     TOWER_STEM,
     TOWER_TOP,
+    as_groups,
     logo_batch,
     plan_next_batch,
 )
-from streaming_po_risk import ACTION_KEEP, ACTION_XSHIFT, large_deviation
+from streaming_po_risk import ACTION_FREEZE, ACTION_KEEP, ACTION_XSHIFT, large_deviation
 
 QUIET_FLOOR_MMD = 0.015
 QUIET_FLOOR_PO = 0.01
@@ -69,6 +74,7 @@ class Config:
     max_len: int = 32
     n_topics: int = 20
     n_style_markers: int = 4
+    n_prefix: int = 4
 
     embed_dim: int = 96
     content_dim: int = 128
@@ -119,6 +125,13 @@ def _as_np(t) -> np.ndarray:
     return np.asarray(t)
 
 
+def _group_idx(groups: Mapping, name: str) -> np.ndarray:
+    v = groups[name]
+    if isinstance(v, slice):
+        return np.arange(int(v.start), int(v.stop))
+    return np.asarray(v, dtype=int)
+
+
 # ============================================================
 # 1. Synthetic data
 # ============================================================
@@ -138,24 +151,17 @@ def make_lexicon(cfg: Config, seed: int = 0):
 def make_data(n, cfg: Config, seed=0, drift=False, concept=False, lexicon=None):
     """Synthetic style-transfer rows.
 
-    content : topic id (0..n_topics-1)
-    s_src   : source style
-    s_tgt   : target style (≠ s_src unless concept=True redraws it)
-    src     : topic words (4) + source style markers (4) + noise
-
     drift=True   : noise ~ Unif(0, vocab) instead of 400..vocab  (covariate)
-    concept=True : s_tgt independent of src                     (P(Y|X) hop)
+    concept=True : s_tgt = (s_src + 1 + K/2) mod K              (P(Y|X) hop)
 
     Y for FSDS is s_tgt. It is not written into src.
-    Lexicon is frozen (seed 0) unless the caller passes one.
     """
     rng = np.random.RandomState(seed)
     topics = rng.randint(0, cfg.n_topics, size=n)
     s_src = rng.randint(0, cfg.num_styles, size=n)
-    offset = rng.randint(1, cfg.num_styles, size=n)
-    s_tgt = (s_src + offset) % cfg.num_styles
+    s_tgt = (s_src + 1) % cfg.num_styles
     if concept:
-        s_tgt = rng.randint(0, cfg.num_styles, size=n)
+        s_tgt = (s_src + 1 + cfg.num_styles // 2) % cfg.num_styles
 
     topic_words, style_tokens = lexicon if lexicon is not None else make_lexicon(cfg, seed=0)
 
@@ -197,12 +203,15 @@ class PairDataset(Dataset):
 class ContentTower(nn.Module):
     """Token sequence → content vector.
 
-    Real deploy: self.backbone = AutoModel.from_pretrained(
-        "hfl/chinese-roberta-wwm-ext")
+    Style-marker positions are padding-masked so the content pool cannot
+    read source style. Real deploy: AutoModel.from_pretrained(
+        "hfl/chinese-roberta-wwm-ext") with the same span mask.
     """
 
     def __init__(self, cfg: Config):
         super().__init__()
+        self.style_lo = N_TOPIC_TOKS
+        self.style_hi = N_TOPIC_TOKS + int(cfg.n_style_markers)
         self.tok = nn.Embedding(cfg.vocab_size, cfg.embed_dim)
         self.pos = nn.Embedding(cfg.max_len, cfg.embed_dim)
         layer = nn.TransformerEncoderLayer(
@@ -225,8 +234,14 @@ class ContentTower(nn.Module):
         B, L = ids.shape
         pos = torch.arange(L, device=ids.device).unsqueeze(0).expand(B, L)
         x = self.tok(ids) + self.pos(pos)
-        x = self.encoder(x)
-        x = x.mean(dim=1)
+        pad = torch.zeros(B, L, dtype=torch.bool, device=ids.device)
+        lo, hi = self.style_lo, min(self.style_hi, L)
+        if hi > lo:
+            pad[:, lo:hi] = True
+            x = x.masked_fill(pad.unsqueeze(-1), 0.0)
+        x = self.encoder(x, src_key_padding_mask=pad)
+        keep = (~pad).float().unsqueeze(-1)
+        x = (x * keep).sum(dim=1) / keep.sum(dim=1).clamp(min=1.0)
         return self.proj(x)
 
 
@@ -245,6 +260,24 @@ class StyleTower(nn.Module):
 
     def forward(self, s):
         return self.net(self.emb(s))
+
+
+class PrefixAdapter(nn.Module):
+    """Learnable prefix on the fused hidden.
+
+    Real deploy: GPT-2 / Qwen prefix-tuning (virtual tokens in the decoder).
+    Here the prefix is a soft adapter on h_f — same slot, toy decoder.
+    """
+
+    def __init__(self, cfg: Config):
+        super().__init__()
+        self.prefix = nn.Parameter(torch.zeros(int(cfg.n_prefix), cfg.decoder_hidden))
+        nn.init.normal_(self.prefix, std=0.02)
+        self.proj = nn.Linear(cfg.decoder_hidden, cfg.decoder_hidden)
+
+    def forward(self, h_f):
+        p = self.proj(self.prefix.mean(dim=0))
+        return h_f + p.unsqueeze(0)
 
 
 class MINE(nn.Module):
@@ -279,6 +312,7 @@ class DisentangledStyleTransfer(nn.Module):
             nn.GELU(),
             nn.LayerNorm(cfg.decoder_hidden),
         )
+        self.prefix = PrefixAdapter(cfg)
         self.decoder = nn.Sequential(
             nn.Linear(cfg.decoder_hidden, cfg.decoder_hidden),
             nn.GELU(),
@@ -292,7 +326,7 @@ class DisentangledStyleTransfer(nn.Module):
     def forward(self, src_ids, tgt_style_ids):
         h_c = self.content(src_ids)
         h_s = self.style(tgt_style_ids)
-        h_f = self.fusion(torch.cat([h_c, h_s], dim=-1))
+        h_f = self.prefix(self.fusion(torch.cat([h_c, h_s], dim=-1)))
         logits = self.decoder(h_f).view(-1, self.cfg.n_style_markers, self.cfg.vocab_size)
         return {
             "h_c": h_c,
@@ -387,12 +421,13 @@ def serving_xy(data: Mapping) -> tuple[np.ndarray, np.ndarray]:
     return X, Y
 
 
-def attribution_to_alpha(cov: float, con: float, cfg: Config) -> float:
-    """(cov, con) excess → alpha in (0, 1).
+def pack_style_df(data: Mapping) -> np.ndarray:
+    """Last column Y. Same contract as onlinePermOOB_with_LLM."""
+    X, Y = serving_xy(data)
+    return np.column_stack([X, Y.reshape(-1, 1)])
 
-    cov high → P(X) walk → content / stem
-    con high → P(Y|X) hop → style / top
-    """
+
+def attribution_to_alpha(cov: float, con: float, cfg: Config) -> float:
     s = cfg.cov_weight * float(cov) + cfg.con_weight * float(con)
     return float(1.0 / (1.0 + math.exp(-s / max(cfg.alpha_tau, 1e-6))))
 
@@ -415,20 +450,137 @@ def _excess(stream: Optional[float], quiet: Optional[float], floor: float) -> fl
     return max(float(stream) / q - 1.0, 0.0)
 
 
-def overlay_fsds_plan(logo: Mapping, mmd_broken: bool, po_broken: bool) -> dict:
-    """If the PO×MSE gate stays keep but FSDS MMD is loud, stem-adapt.
+def group_three_metrics(X_e, Y_e, X_n, Y_n, groups, seed: int) -> dict:
+    """FSDS three-metrics on each modality block. Grain first, then columns."""
+    groups = as_groups(groups)
+    out = {}
+    for name, idx in groups.items():
+        out[name] = three_metrics(
+            X_e[:, idx], Y_e, X_n[:, idx], Y_n, seed=seed, with_po=True
+        )
+    return out
 
-    Same rule as the LOGO note: a quiet global gate is not 'no drift'.
+
+WIDE_GROUP = 8
+
+
+def sketch_groups(X, groups, names):
+    """Wide pad blocks → 4-stat sketch so LOGO is not dim-dominated."""
+    groups = as_groups(groups)
+    X = np.asarray(X, dtype=float)
+    blocks, new_g, new_names, col = [], {}, [], 0
+    for g, idx in groups.items():
+        block = X[:, idx]
+        gn = [names[int(i)] for i in idx]
+        if block.shape[1] > WIDE_GROUP:
+            stats = np.column_stack(
+                [block.mean(1), block.std(1), block.min(1), block.max(1)]
+            )
+            blocks.append(stats)
+            new_g[g] = np.arange(col, col + 4)
+            new_names += [f"{g}_mean", f"{g}_std", f"{g}_min", f"{g}_max"]
+            col += 4
+        else:
+            blocks.append(block)
+            new_g[g] = np.arange(col, col + block.shape[1])
+            new_names += gn
+            col += block.shape[1]
+    return np.hstack(blocks), new_g, new_names
+
+
+def pick_loud_group(g_new: Mapping, logo: Optional[Mapping] = None) -> tuple[Optional[dict], list]:
+    """Grain first: a 2× MMD peak is covariate; a 2× PO peak is concept.
+
+    Localization, not a unique decomp. T is the batch label.
     """
+    names = list(g_new)
+    mmds = {g: max(float(g_new[g]["mmd"]), 0.0) for g in names}
+    pos = {g: max(float(g_new[g]["po"] or 0.0), 0.0) for g in names}
+    rows = [
+        {
+            "group": g,
+            "cov": float(mmds[g]),
+            "con": float(pos[g]),
+            "kind": "mmd" if mmds[g] >= pos[g] else "po",
+            "score": float(max(mmds[g], pos[g])),
+        }
+        for g in names
+    ]
+    g_m = max(mmds, key=mmds.get)
+    rest_m = [mmds[g] for g in names if g != g_m]
+    if mmds[g_m] >= QUIET_FLOOR_MMD and mmds[g_m] >= 2.0 * max(rest_m + [1e-12]):
+        hit = {"group": g_m, "kind": "mmd", "cov": mmds[g_m], "con": pos[g_m], "score": mmds[g_m]}
+        rows.sort(key=lambda r: r["score"], reverse=True)
+        return hit, rows
+    g_p = max(pos, key=pos.get)
+    rest_p = [pos[g] for g in names if g != g_p]
+    if pos[g_p] >= QUIET_FLOOR_PO and pos[g_p] >= 2.0 * max(rest_p + [1e-12]):
+        hit = {"group": g_p, "kind": "po", "cov": mmds[g_p], "con": pos[g_p], "score": pos[g_p]}
+        rows.sort(key=lambda r: r["score"], reverse=True)
+        return hit, rows
+    if logo is not None:
+        pi_mmd = logo.get("pi_mmd") or {}
+        pi_po = logo.get("pi_po") or {}
+        if pi_mmd and max(pi_mmd.values()) >= max(list(pi_po.values()) + [0.0]) and max(pi_mmd.values()) > 0:
+            g = max(pi_mmd, key=pi_mmd.get)
+            hit = {"group": g, "kind": "mmd", "cov": mmds.get(g, 0.0), "con": pos.get(g, 0.0), "score": pi_mmd[g]}
+            rows.sort(key=lambda r: r["score"], reverse=True)
+            return hit, rows
+        if pi_po and max(pi_po.values()) > 0:
+            g = max(pi_po, key=pi_po.get)
+            hit = {"group": g, "kind": "po", "cov": mmds.get(g, 0.0), "con": pos.get(g, 0.0), "score": pi_po[g]}
+            rows.sort(key=lambda r: r["score"], reverse=True)
+            return hit, rows
+    rows.sort(key=lambda r: r["score"], reverse=True)
+    if not rows or rows[0]["score"] <= 0:
+        return None, rows
+    return rows[0], rows
+
+
+def rank_inside_group(X_e, X_n, Y_e, Y_n, names, groups, loud_name, seed: int):
+    idx = _group_idx(groups, loud_name)
+    sub = [names[int(j)] for j in idx]
+    assert_not_outcome(sub)
+    return fsds_rank_columns(X_e[:, idx], X_n[:, idx], Y_e, Y_n, sub, seed=seed)
+
+
+def overlay_fsds_plan(
+    logo: Mapping,
+    mmd_broken: bool,
+    po_broken: bool,
+    loud: Optional[Mapping] = None,
+) -> dict:
+    """Quiet PO×MSE gate is not 'no drift'. FSDS grain picks stem vs top."""
     plan = dict(logo["plan"])
-    if (
-        str(plan.get("global_action")) == ACTION_KEEP
-        and mmd_broken
-        and not po_broken
-    ):
+    raw = str(plan.get("global_action"))
+    if loud and float(loud.get("score") or 0) > 0:
+        g = str(loud["group"])
+        if loud["kind"] == "mmd" and not po_broken:
+            plan = plan_next_batch(ACTION_XSHIFT, logo["ratios"])
+            if g in plan["towers"]:
+                plan["towers"][g] = {
+                    "tower": TOWER_STEM,
+                    "i_star": 0,
+                    "reason": "FSDS grain MMD-loud: stem-adapt",
+                }
+            plan["overlay"] = "fsds_group_mmd"
+            plan["global_action_raw"] = raw
+            return plan
+        if loud["kind"] == "po" and not mmd_broken:
+            plan = plan_next_batch(ACTION_FREEZE, logo["ratios"])
+            if g in plan["towers"]:
+                plan["towers"][g] = {
+                    "tower": TOWER_TOP,
+                    "i_star": "top",
+                    "reason": "FSDS grain PO-loud: train top + prefix",
+                }
+            plan["overlay"] = "fsds_group_po"
+            plan["global_action_raw"] = raw
+            return plan
+    if raw == ACTION_KEEP and mmd_broken and not po_broken:
         plan = plan_next_batch(ACTION_XSHIFT, logo["ratios"])
         plan["overlay"] = "fsds_mmd_keep"
-        plan["global_action_raw"] = ACTION_KEEP
+        plan["global_action_raw"] = raw
     return plan
 
 
@@ -448,13 +600,14 @@ def module_scales_from_plan(plan: Mapping, cfg: Config) -> dict[str, float]:
     """Map LOGO tower actions onto the style-transfer modules.
 
     content / noise → ContentTower (covariate lives in the token stem)
-    style_src       → StyleTower   (concept lives in P(Y|X))
+    style_src       → StyleTower + prefix (concept lives in P(Y|X))
     Shares are localization, not Shapley / CATE. T is the batch label.
     """
     scales = {
         "content": cfg.lr_lo,
         "style": 1.0,
         "fusion": 1.0,
+        "prefix": 1.0,
         "decoder": 1.0,
         "style_cls": 1.0,
         "content_cls": cfg.lr_lo,
@@ -462,7 +615,7 @@ def module_scales_from_plan(plan: Mapping, cfg: Config) -> dict[str, float]:
     }
     mapping = {
         "content": ("content", "content_cls"),
-        "style_src": ("style", "style_cls"),
+        "style_src": ("style", "style_cls", "prefix"),
         "noise": ("content",),
     }
     for g, mods in mapping.items():
@@ -478,38 +631,47 @@ def module_scales_from_plan(plan: Mapping, cfg: Config) -> dict[str, float]:
     elif fusion == FUSION_HEAD:
         scales["fusion"] = cfg.lr_hi
         scales["decoder"] = cfg.lr_hi
+        scales["prefix"] = max(scales["prefix"], cfg.lr_hi)
         scales["style_cls"] = max(scales["style_cls"], cfg.lr_hi)
     else:
         scales["fusion"] = min(scales["fusion"], cfg.lr_lo)
         scales["decoder"] = min(scales["decoder"], cfg.lr_lo)
+        if str(plan.get("overlay", "")).endswith("_mmd"):
+            scales["prefix"] = min(scales["prefix"], cfg.lr_lo)
     return scales
 
 
-def fsds_route(
-    exist: Mapping,
-    new: Mapping,
+def fsds_route_xy(
+    X_e,
+    Y_e,
+    X_n,
+    Y_n,
+    groups,
+    names,
     cfg: Config,
     *,
     seed: int = 2026,
     with_logo: bool = True,
 ) -> dict:
-    """RF-domain FSDS + MMD-LOCO + PO-risk on the serving table.
-
-    Replaces the toy neural FSDSAttribution head.
-    """
-    X_e, Y_e = serving_xy(exist)
-    X_n, Y_n = serving_xy(new)
-    names = feature_names(cfg)
+    """RF-domain FSDS + MMD-LOCO + PO-risk. Y is not in X."""
+    X_e = np.asarray(X_e, dtype=float)
+    X_n = np.asarray(X_n, dtype=float)
+    Y_e = np.asarray(Y_e, dtype=float).ravel()
+    Y_n = np.asarray(Y_n, dtype=float).ravel()
+    names = [str(n) for n in names]
     if X_e.shape[1] != len(names):
         raise ValueError(f"X cols ({X_e.shape[1]}) != names ({len(names)})")
     assert_not_outcome(names)
+    raw_groups = as_groups(groups)
+    raw_names = list(names)
+    X_e, groups, names = sketch_groups(X_e, raw_groups, raw_names)
+    X_n, _, _ = sketch_groups(X_n, raw_groups, raw_names)
 
     metrics = three_metrics(X_e, Y_e, X_n, Y_n, seed=seed, with_po=True)
     Xq1, Yq1, Xq2, Yq2 = _quiet_split(X_e, Y_e, seed)
     quiet = three_metrics(Xq1, Yq1, Xq2, Yq2, seed=seed, with_po=True)
+    g_new = group_three_metrics(X_e, Y_e, X_n, Y_n, groups, seed)
 
-    ranked = fsds_rank_columns(X_e, X_n, Y_e, Y_n, names, seed=seed)
-    groups = style_groups(cfg)
     logo = None
     if with_logo:
         logo = logo_batch(
@@ -523,11 +685,18 @@ def fsds_route(
             mse_base=quiet.get("mse"),
             mmd_base=quiet.get("mmd"),
         )
+    loud, group_board = pick_loud_group(g_new, logo)
+    if loud is not None:
+        ranked = rank_inside_group(X_e, X_n, Y_e, Y_n, names, groups, loud["group"], seed)
+    else:
+        ranked = fsds_rank_columns(X_e, X_n, Y_e, Y_n, names, seed=seed)
 
     cov = _excess(metrics["mmd"], quiet["mmd"], QUIET_FLOOR_MMD)
     con = _excess(metrics["po"], quiet["po"], QUIET_FLOOR_PO)
     if metrics["po"] is None:
         con = _excess(abs(metrics["cmean_y"]), abs(quiet["cmean_y"]), QUIET_FLOOR_CMEAN_Y)
+    if loud is not None:
+        cov, con = float(loud["cov"]), float(loud["con"])
     alpha = attribution_to_alpha(cov, con, cfg)
     mmd_broken = bool(large_deviation(metrics["mmd"], max(quiet["mmd"] or 0.0, QUIET_FLOOR_MMD)))
     po_broken = bool(
@@ -535,10 +704,13 @@ def fsds_route(
         and quiet["po"] is not None
         and large_deviation(metrics["po"], max(quiet["po"], QUIET_FLOOR_PO))
     )
-    plan = None if logo is None else overlay_fsds_plan(logo, mmd_broken, po_broken)
+    plan = None if logo is None else overlay_fsds_plan(logo, mmd_broken, po_broken, loud)
     return {
         "metrics": metrics,
         "quiet": quiet,
+        "group_metrics": g_new,
+        "loud": loud,
+        "group_board": group_board,
         "cov": float(cov),
         "con": float(con),
         "alpha": float(alpha),
@@ -546,13 +718,113 @@ def fsds_route(
         "fsds_top": ranked[:8],
         "fsds_all": ranked,
         "feature_names": names,
-        "groups": {k: [int(groups[k].start), int(groups[k].stop)] for k in groups},
+        "groups": {k: _group_idx(groups, k).tolist() for k in groups},
         "logo": logo,
         "plan": plan,
         "y_in_x": False,
         "mmd_broken": mmd_broken,
         "po_broken": po_broken,
     }
+
+
+def fsds_route(
+    exist: Mapping,
+    new: Mapping,
+    cfg: Config,
+    *,
+    seed: int = 2026,
+    with_logo: bool = True,
+) -> dict:
+    X_e, Y_e = serving_xy(exist)
+    X_n, Y_n = serving_xy(new)
+    return fsds_route_xy(
+        X_e,
+        Y_e,
+        X_n,
+        Y_n,
+        style_groups(cfg),
+        feature_names(cfg),
+        cfg,
+        seed=seed,
+        with_logo=with_logo,
+    )
+
+
+def styleTransferFSDS(
+    df,
+    groups,
+    ref_batch_size,
+    batch_size,
+    seed=2026,
+    names: Optional[Sequence[str]] = None,
+    cfg: Optional[Config] = None,
+) -> list[dict]:
+    """Last column is Y. Groups index X only. Each trail batch vs frozen D_ref."""
+    cfg = cfg or Config()
+    df = np.asarray(df, dtype=float)
+    if df.ndim != 2 or df.shape[1] < 2:
+        raise ValueError("df needs X columns and Y last")
+    Y = df[:, -1]
+    X = df[:, :-1]
+    g = as_groups(groups)
+    max_j = max(int(idx.max()) for idx in g.values())
+    if max_j >= X.shape[1]:
+        raise ValueError("group index hits Y or past X")
+    names = [str(n) for n in names] if names is not None else [f"x{j}" for j in range(X.shape[1])]
+    assert_not_outcome(names)
+    n_ref = int(ref_batch_size)
+    X_e, Y_e = X[:n_ref], Y[:n_ref]
+    recs = []
+    t = 0
+    i = n_ref
+    bs = int(batch_size)
+    while i < len(df):
+        X_n, Y_n = X[i : i + bs], Y[i : i + bs]
+        if len(X_n) < 8:
+            break
+        route = fsds_route_xy(X_e, Y_e, X_n, Y_n, g, names, cfg, seed=int(seed) + t)
+        plan = route.get("plan") or {}
+        loud = route.get("loud")
+        recs.append(
+            {
+                "t": t,
+                "n": int(len(X_n)),
+                "alpha": route["alpha"],
+                "loud_group": None if loud is None else loud["group"],
+                "loud_kind": None if loud is None else loud["kind"],
+                "action": plan.get("global_action"),
+                "update": plan.get("update"),
+                "overlay": plan.get("overlay"),
+                "towers": {k: v["tower"] for k, v in plan.get("towers", {}).items()},
+                "mmd": route["metrics"]["mmd"],
+                "po": route["metrics"]["po"],
+                "y_in_x": False,
+            }
+        )
+        t += 1
+        i += bs
+    return recs
+
+
+def routing_board_latex(rows: Sequence[Mapping]) -> str:
+    """Two-scene board: which grain rang, which tower to touch next."""
+    lines = [
+        r"\begin{tabular}{@{}llll@{}}",
+        r"\toprule",
+        r"scene & FSDS grain & next tower & note \\",
+        r"\midrule",
+    ]
+    for r in rows:
+        scene = str(r.get("scene", r.get("t", "")))
+        grain = str(r.get("loud_group", "")) + "/" + str(r.get("loud_kind", ""))
+        towers = r.get("towers") or {}
+        nxt = ",".join(f"{k}:{v}" for k, v in towers.items() if v not in (TOWER_INFER, TOWER_FREEZE))
+        if not nxt:
+            nxt = r.get("update", "")
+        note = str(r.get("overlay") or r.get("action") or "")
+        lines.append(f"{scene} & {grain} & {nxt} & {note} \\\\")
+    lines += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(lines)
 
 
 def build_optimizer_with_routing(
@@ -569,6 +841,7 @@ def build_optimizer_with_routing(
             "style": scale_style,
             "content": 0.3 * scale_content,
             "fusion": scale_style,
+            "prefix": scale_style,
             "decoder": scale_style,
             "style_cls": scale_style,
             "content_cls": 0.3 * scale_content,
@@ -580,6 +853,7 @@ def build_optimizer_with_routing(
         {"params": model.style.parameters(), "lr": cfg.lr_base * scales["style"]},
         {"params": model.content.parameters(), "lr": cfg.lr_base * scales["content"]},
         {"params": model.fusion.parameters(), "lr": cfg.lr_base * scales["fusion"]},
+        {"params": model.prefix.parameters(), "lr": cfg.lr_base * scales["prefix"]},
         {"params": model.decoder.parameters(), "lr": cfg.lr_base * scales["decoder"]},
         {"params": model.style_cls.parameters(), "lr": cfg.lr_base * scales["style_cls"]},
         {"params": model.content_cls.parameters(), "lr": cfg.lr_base * scales["content_cls"]},
@@ -613,11 +887,13 @@ def _print_route(route: Mapping) -> None:
     m = route["metrics"]
     po = m["po"]
     po_s = "na" if po is None else f"{po:.4f}"
+    loud = route.get("loud")
+    loud_s = "none" if not loud else f"{loud['group']}/{loud['kind']}={loud['score']:.2f}"
     print(
         f"[FSDS] mmd={m['mmd']:.4f}  po={po_s}  "
         f"cmean_x={m['cmean_x']:.4f}  cmean_y={m['cmean_y']:+.4f}  "
         f"cov={route['cov']:.3f}  con={route['con']:.3f}  "
-        f"alpha={route['alpha']:.3f}  lr_scale={route['lr_scale']:.3f}"
+        f"alpha={route['alpha']:.3f}  loud={loud_s}"
     )
     top = ", ".join(f"{r['feature']}:{r['score']:.2f}" for r in route["fsds_top"][:5])
     print(f"[FSDS] top = {top}")
@@ -635,14 +911,46 @@ def _print_route(route: Mapping) -> None:
     print(f"[LOGO] towers = {towers}")
 
 
+def _write_board(rows, cfg: Config) -> Path:
+    tex = routing_board_latex(rows)
+    body = "\n".join(
+        [
+            r"\documentclass[11pt]{article}",
+            r"\usepackage[margin=1in]{geometry}",
+            r"\usepackage{booktabs}",
+            r"\begin{document}",
+            r"\paragraph{Claim.}",
+            r"FSDS ranks a modality grain first (content / style / noise),",
+            r"then columns inside that grain. $Y$ is the target style, never a feature.",
+            r"$T$ is the batch label. Shares are localization, not Shapley / CATE.",
+            r"MMD-loud grain $\to$ stem-adapt the content tower.",
+            r"PO-loud grain $\to$ train style top + prefix (GPT-2 slot).",
+            r"A quiet PO$\times$MSE gate is not `no drift'.",
+            r"\vspace{0.8em}",
+            tex,
+            r"\end{document}",
+        ]
+    )
+    out_dir = Path(__file__).resolve().parents[2] / "docs"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "style_transfer_fsds.tex"
+    path.write_text(body, encoding="utf-8")
+    res = Path(__file__).resolve().parents[2] / "results" / "style_transfer_fsds"
+    res.mkdir(parents=True, exist_ok=True)
+    (res / "board.tex").write_text(tex, encoding="utf-8")
+    return path
+
+
 def train(cfg: Config):
     set_seed(cfg.seed)
     device = cfg.device
+    lex = make_lexicon(cfg, seed=0)
 
-    train_data = make_data(cfg.n_train, cfg, seed=1, drift=False)
-    val_data = make_data(cfg.n_val, cfg, seed=2, drift=False)
-    exist_data = make_data(cfg.n_attr, cfg, seed=3, drift=False)
-    new_data = make_data(cfg.n_attr, cfg, seed=4, drift=True)
+    train_data = make_data(cfg.n_train, cfg, seed=1, lexicon=lex)
+    val_data = make_data(cfg.n_val, cfg, seed=2, lexicon=lex)
+    exist_data = make_data(cfg.n_attr, cfg, seed=3, lexicon=lex)
+    cov_data = make_data(cfg.n_attr, cfg, seed=4, drift=True, lexicon=lex)
+    con_data = make_data(cfg.n_attr, cfg, seed=5, concept=True, lexicon=lex)
 
     train_loader = DataLoader(PairDataset(train_data), batch_size=cfg.batch_size, shuffle=True)
     val_loader = DataLoader(PairDataset(val_data), batch_size=cfg.batch_size, shuffle=False)
@@ -651,11 +959,48 @@ def train(cfg: Config):
     loss_fn = MultiLoss(cfg)
 
     print("[FSDS] covariate walk vs D_ref (noise support) ...")
-    route = fsds_route(exist_data, new_data, cfg, seed=cfg.seed, with_logo=True)
+    route = fsds_route(exist_data, cov_data, cfg, seed=cfg.seed, with_logo=True)
     _print_route(route)
-    concept_data = make_data(cfg.n_attr, cfg, seed=5, concept=True)
     print("[FSDS] concept redraw of s_tgt vs D_ref ...")
-    _print_route(fsds_route(exist_data, concept_data, cfg, seed=cfg.seed, with_logo=True))
+    route_c = fsds_route(exist_data, con_data, cfg, seed=cfg.seed, with_logo=True)
+    _print_route(route_c)
+
+    df = np.vstack([pack_style_df(exist_data), pack_style_df(cov_data), pack_style_df(con_data)])
+    recs = styleTransferFSDS(
+        df,
+        style_groups(cfg),
+        ref_batch_size=cfg.n_attr,
+        batch_size=cfg.n_attr,
+        seed=cfg.seed,
+        names=feature_names(cfg),
+        cfg=cfg,
+    )
+    print("[FSDS] styleTransferFSDS(df) batches:")
+    for r in recs:
+        print(
+            f"  t={r['t']} loud={r['loud_group']}/{r['loud_kind']}  "
+            f"update={r['update']}  overlay={r['overlay']}"
+        )
+    board_rows = [
+        {
+            "scene": "covariate noise",
+            "loud_group": (route.get("loud") or {}).get("group"),
+            "loud_kind": (route.get("loud") or {}).get("kind"),
+            "towers": {k: v["tower"] for k, v in (route.get("plan") or {}).get("towers", {}).items()},
+            "overlay": (route.get("plan") or {}).get("overlay"),
+            "action": (route.get("plan") or {}).get("global_action"),
+        },
+        {
+            "scene": "concept $s_{tgt}$",
+            "loud_group": (route_c.get("loud") or {}).get("group"),
+            "loud_kind": (route_c.get("loud") or {}).get("kind"),
+            "towers": {k: v["tower"] for k, v in (route_c.get("plan") or {}).get("towers", {}).items()},
+            "overlay": (route_c.get("plan") or {}).get("overlay"),
+            "action": (route_c.get("plan") or {}).get("global_action"),
+        },
+    ]
+    tex_path = _write_board(board_rows, cfg)
+    print(f"[FSDS] board → {tex_path}")
 
     optimizer = build_optimizer_with_routing(model, cfg, route["alpha"], plan=route.get("plan"))
 
@@ -678,7 +1023,6 @@ def train(cfg: Config):
                     f"loss={parts['total']:.4f}  "
                     f"style={parts['style']:.4f}  "
                     f"align={parts['align']:.4f}  "
-                    f"contrast={parts['contrast']:.4f}  "
                     f"fluency={parts['fluency']:.4f}  "
                     f"MI={parts['mi']:+.4f}  |  "
                     f"val style_acc={metrics['style_acc']:.3f}  "
@@ -695,27 +1039,32 @@ def train(cfg: Config):
 
     model.eval()
     with torch.no_grad():
-        batch = next(iter(val_loader))
-        batch = {k: v.to(device) for k, v in batch.items()}
-        out = model(batch["src"], batch["s_tgt"])
+        hs, ys = [], []
+        for batch in val_loader:
+            batch = {k: v.to(device) for k, v in batch.items()}
+            out = model(batch["src"], batch["s_tgt"])
+            hs.append(out["h_c"].cpu())
+            ys.append(batch["s_tgt"].cpu())
+        h_c_np = torch.cat(hs).numpy()
+        s_np = torch.cat(ys).numpy()
         mi_final = out["mi"].item()
         leak = float("nan")
+        n = len(s_np)
+        half = max(n // 2, 8)
         try:
             import warnings
 
             from sklearn.linear_model import LogisticRegression
 
-            h_c_np = out["h_c"].cpu().numpy()
-            s_np = batch["s_tgt"].cpu().numpy()
-            if len(set(s_np.tolist())) > 1:
+            if len(set(s_np[:half].tolist())) > 1 and len(set(s_np[half:].tolist())) > 1:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    clf = LogisticRegression(max_iter=400).fit(h_c_np, s_np)
-                leak = clf.score(h_c_np, s_np)
+                    clf = LogisticRegression(max_iter=400).fit(h_c_np[:half], s_np[:half])
+                leak = clf.score(h_c_np[half:], s_np[half:])
         except Exception:
             pass
         print(f"  MI lower bound    = {mi_final:+.4f}")
-        print(f"  h_c -> style leak = {leak:.4f}  (lower is better)")
+        print(f"  h_c -> style leak = {leak:.4f}  (held-out, lower is better)")
 
     return model, route, final
 
