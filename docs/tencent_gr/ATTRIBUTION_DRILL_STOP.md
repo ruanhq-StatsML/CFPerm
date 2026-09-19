@@ -472,12 +472,14 @@ feature-level conditional-mean difference = 好 guidance；
 ## 14. 报告模板（强制分栏）
 
 ```text
-## Layer L  (parent=S, next_entity=user_id, business_cap=user)
+## Layer L  (parent=S, drill_key=user_id, business_cap=user)
 
 ### Justification (non-causal; not subgroup effect)
 - Task: period W1/W2 distribution-shift localization (retrieval)
 - W = period, not treatment; r/Lift/R are descriptive gates
 - Delivered kernel = stable π set under business cap (J1–J8)
+- Joint order: full-dim | F→E (J* then r) | E→F  (declare one)
+- Alt keys compared (if any): [category: eff=…; geo: eff=…]
 
 ### Feature guidance
 - ||δ||_2 = …
