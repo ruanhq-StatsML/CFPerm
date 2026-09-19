@@ -268,6 +268,159 @@ g_u=\mathrm{mean}(s\mid e=u)
 
 ---
 
+## 11. 逐步 elaborate：一整层怎么看
+
+下面按「人在读报告」的顺序走一遍。假设业务顶在 user，当前停在 **某个商户核 \(S\)**，下一层 `entity = user_id`。
+
+### Step A — 只算一次矩阵
+
+```text
+1. 边属于 S；X 用 W1-scaler
+2. 按 (user, window) group mean → μ_u^(0), μ_u^(1)
+3. D[u, :] = μ_u^(1) - μ_u^(0)          # (U_ok, d)
+4. δ[:]    = μ_S^(1) - μ_S^(0)          # (d,)
+5. r[u]    = ||D[u, :]||_2
+6. share[j] = δ[j]^2 / ||δ||_2^2
+```
+
+到这里 **还没有** FSDS、没有千次 MMD。输出三块数：`δ`、`share`、`r`。
+
+### Step B — 先读列（Feature guidance）
+
+问三句，只许答特征侧：
+
+1. \(\|\delta\|_2\) 算大吗？→ 否则 **G0**，本层故事很弱。  
+2. 大的话，能量是否堆在少数维？→ `cumsum(sorted share)` 看 Top‑10% 维。  
+3. 若集中 → 记下 \(J^\star\)（维名 / 图谱特征名），标记「本层 *若最终停在这里* 值得 FSDS」——**此刻先不跑**。
+
+报告栏标题建议：`[Feature guidance] ||δ||=…; J*={…}; FSDS_if_stop=yes/no`
+
+### Step C — 再读行（Drill）
+
+问两句，只许答实体侧：
+
+1. `r` 的 Tail@10% / CV 高不高？  
+2. `a_u = cos(D_u, δ)` 是不是大多数靠近 1？
+
+- 行平 + 多数对齐 → **D_stop**：商户内核里用户「一起漂」，再切 user 没信息。  
+- 行尖 → **D_drill**：取出 `K = Top(r) ∩ {π≥π*}`（若还没有 π，先用 Top(r)+mass，下一轮 probe 补 π）。
+
+报告栏：`[Drill] Tail(r)=…; CV=…; decision=STOP|DRILL; K=…`
+
+### Step D — 若 DRILL，做 D_check（仍是 cmean）
+
+```text
+S' = S \ K 的边
+δ_remain = mean(X|S',W2) - mean(X|S',W1)
+R = ||δ_remain||² / ||δ||²
+```
+
+- \(R\) 降到位 → 承认 \(K\)，下一层父集换成 \(K\) 的边，**entity 换成 order**（或业务下一粒），回到 Step A。  
+- \(R\approx1\) → 行谱假尖，**撤回**，按 D_stop 处理。
+
+### Step E — 停层才 FSDS
+
+当本层 `Drill=STOP`，或已触业务顶：
+
+```text
+K* = 当前交付支撑（停层的 S，或最后一次通过 D_check 的 K）
+在 K* 的边上跑一次 FSDS
+```
+
+若 Step B 是 G0，可跳过 FSDS。  
+若一路钻到业务顶仍行尖，交付截在顶，报告里可写「统计仍建议更细，但超业务顶，未交付」。
+
+---
+
+## 12. 四个格子的玩具数例
+
+约定：\(d=2\)，\(U=4\) 个 user，数字是示意。
+
+### 格 1：\(\|\delta\|\) 小、行平 → 全停
+
+\[
+D=\begin{bmatrix}0.05&0.02\\0.04&0.03\\0.06&0.01\\0.05&0.02\end{bmatrix},
+\quad \delta\approx(0.05,0.02),\ \|\delta\|_2\text{ 小},\ r\approx\text{全相近}
+\]
+
+→ G0 + D_stop：不 FSDS、不下钻。  
+话术：「本层均值几乎无漂移，用户间也无尖核。」
+
+### 格 2：\(\|\delta\|\) 大、行平 → 停钻、本层特征
+
+四个 user 都约等于 \(\delta=(2.0,\ 0.2)\)：
+
+\[
+r_u\approx\text{相同},\ a_u\approx1,\ \mathrm{share}_1\approx0.99
+\]
+
+→ G1 + D_stop。  
+话术：「整层一起漂，且几乎全在 feature‑1；**不要下钻**；在当前 \(S\) 上跑 FSDS，盯 feature‑1。」  
+这是「feature-level cmean 当 guidance」的 canonical 胜利场景。
+
+### 格 3：\(\|\delta\|\) 大、行尖 → 下钻
+
+\[
+D=\begin{bmatrix}3.0&0.2\\ 2.8&0.1\\ 0.1&0.0\\ 0.1&0.0\end{bmatrix}
+\quad\Rightarrow\quad
+r\approx(3.0,\ 2.8,\ 0.1,\ 0.1),\ \mathrm{Tail@50\%}\text{ 很高}
+\]
+
+父 \(\delta\) 也会大（被前两行拉起来）。  
+→ G1 信号有，但 **Drill 优先**：\(K=\{u_1,u_2\}\)，算 \(R\)；FSDS **先别跑**，等 \(K^\star\)。  
+若只看 \(\delta\) / share，会误判成「本层做 FSDS 就收工」——漏掉实体局部化。
+
+### 格 4：行尖但 \(R\not\downarrow\) → 撤回
+
+Top(r) 取出的 \(K\) 去掉后 \(\delta_{S\setminus K}\approx\delta\) → \(R\approx1\)。  
+常见原因：mass 极小的实体范数虚高、或 TopK 与真正载体不一致。  
+→ 撤回下钻；收紧 mass / 改用份额加权 \(r_u\cdot n_u\) 再看一眼。
+
+---
+
+## 13. 和「只看 feature-level δ」的口径对照
+
+| 你想回答的问题 | 该看 | 不该看 |
+|---|---|---|
+| 本层有没有均值漂移？ | \(\|\delta\|_2\) | 单次 MMD TopK |
+| 盯哪些维 / 要不要本层 FSDS？ | \(\mathrm{share}(\delta)\) | \(r_u\) |
+| 要不要再细一层实体？ | \(\mathrm{Tail}/\mathrm{CV}(r)\)、\(a_u\)、\(R\) | 单独的 \(\delta\) |
+| 最终特征排序 | \(K^\star\) 上的 FSDS | 每一层探索都 FSDS |
+| PO 旁证 | 同 `entity` 的 \(g_u,\eta^2\) | \(\mathrm{Var}(\hat\tau(x))\) |
+
+**一句话对齐（重复强调）：**  
+feature-level conditional-mean difference = 好 guidance；  
+同一套 cmean 的 **行谱** = 下钻 / 停止的完整 signal；少算行谱会把格 2 和格 3 混掉。
+
+---
+
+## 14. 报告模板（强制分栏）
+
+```text
+## Layer L  (parent=S, next_entity=user_id, business_cap=user)
+
+### Feature guidance
+- ||δ||_2 = …
+- Top share features J* = […]
+- Gate: G0 | G1 | G2
+- FSDS_if_stop: yes/no
+
+### Drill decision
+- Tail(r)=…  CV(r)=…  mean(a_u)=…
+- Gate: D_stop | D_drill
+- K (if drill) = […]
+- R (if drill) = …  → accept | reject
+
+### Kernel / stop
+- K* = …
+- Reason: row-flat | business_cap | R-reject | …
+- FSDS: run_once_on(K*) | skipped(G0)
+```
+
+三栏不能合成一句「因为特征漂了所以下钻」。
+
+---
+
 **收束：**  
 列 \(\delta\) = 本层漂不漂、看哪维、要不要 FSDS；  
 行 \(r_u\) = 要不要下钻、钻到谁；  
