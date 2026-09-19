@@ -654,6 +654,9 @@ cell 热力     → 解释用；进门需降范围并标注
 **LaTeX prototype（公式 + justification）：**
 [`Feature_Entity_Joint_CMean.tex`](./Feature_Entity_Joint_CMean.tex)。
 
+**定稿整链 LaTeX：**
+[`Graph_Feature_CMean_Localization.tex`](./Graph_Feature_CMean_Localization.tex)。
+
 ---
 
 **收束：**  

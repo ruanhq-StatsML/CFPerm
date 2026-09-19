@@ -23,6 +23,10 @@
 [`Feature_Entity_Joint_CMean.tex`](./Feature_Entity_Joint_CMean.tex)
 — conditional mean 原语、\(D\) 矩阵、F→E / E→F、非 subgroup justification。
 
+**定稿 LaTeX prototype（整条闭环）：**
+[`Graph_Feature_CMean_Localization.tex`](./Graph_Feature_CMean_Localization.tex)
+— 图谱特征 → cmean → \(K^\star\) → FSDS；scope 锁死；可 compile 的 formulation。
+
 **多层图调研 × 多模态归因逻辑：**
 [`MULTILAYER_GRAPH_AND_MM_ATTR.md`](./MULTILAYER_GRAPH_AND_MM_ATTR.md)
 — 多层图算法族取舍；模态=列块 / key；接到同一套 cmean 缩支撑闭环。
