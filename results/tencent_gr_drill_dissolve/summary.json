@@ -1,0 +1,193 @@
+{
+  "sec": 5.080422878265381,
+  "n_leaf": 11963,
+  "po_risk": 1.1475340965091446e-06,
+  "note": "dissolve = hierarchical score rollup (not PyPI dissolve API migrator); W=period, not ATE",
+  "overlap_merchant_l2": [
+    {
+      "k": 5,
+      "jaccard": 0.6666666666666666,
+      "n_dissolve": 5,
+      "n_ref": 5
+    },
+    {
+      "k": 10,
+      "jaccard": 0.5384615384615384,
+      "n_dissolve": 10,
+      "n_ref": 10
+    },
+    {
+      "k": 20,
+      "jaccard": 0.6,
+      "n_dissolve": 20,
+      "n_ref": 20
+    },
+    {
+      "k": 50,
+      "jaccard": 0.7857142857142857,
+      "n_dissolve": 50,
+      "n_ref": 50
+    }
+  ],
+  "overlap_merchant_tau2": [
+    {
+      "k": 5,
+      "jaccard": 0.0,
+      "n_dissolve": 5,
+      "n_ref": 5
+    },
+    {
+      "k": 10,
+      "jaccard": 0.05263157894736842,
+      "n_dissolve": 10,
+      "n_ref": 10
+    },
+    {
+      "k": 20,
+      "jaccard": 0.02564102564102564,
+      "n_dissolve": 20,
+      "n_ref": 20
+    },
+    {
+      "k": 50,
+      "jaccard": 0.05263157894736842,
+      "n_dissolve": 50,
+      "n_ref": 50
+    }
+  ],
+  "overlap_user_l2": [
+    {
+      "k": 5,
+      "jaccard": 0.0,
+      "n_dissolve": 5,
+      "n_ref": 5
+    },
+    {
+      "k": 10,
+      "jaccard": 0.0,
+      "n_dissolve": 10,
+      "n_ref": 10
+    },
+    {
+      "k": 20,
+      "jaccard": 0.0,
+      "n_dissolve": 20,
+      "n_ref": 20
+    },
+    {
+      "k": 50,
+      "jaccard": 0.0,
+      "n_dissolve": 50,
+      "n_ref": 50
+    }
+  ],
+  "overlap_user_tau2": [
+    {
+      "k": 5,
+      "jaccard": 0.0,
+      "n_dissolve": 5,
+      "n_ref": 5
+    },
+    {
+      "k": 10,
+      "jaccard": 0.0,
+      "n_dissolve": 10,
+      "n_ref": 10
+    },
+    {
+      "k": 20,
+      "jaccard": 0.0,
+      "n_dissolve": 20,
+      "n_ref": 20
+    },
+    {
+      "k": 50,
+      "jaccard": 0.0,
+      "n_dissolve": 50,
+      "n_ref": 50
+    }
+  ],
+  "overlap_user_cascade": [
+    {
+      "k": 5,
+      "jaccard": 0.0,
+      "n_dissolve": 5,
+      "n_ref": 5
+    },
+    {
+      "k": 10,
+      "jaccard": 0.0,
+      "n_dissolve": 10,
+      "n_ref": 10
+    },
+    {
+      "k": 20,
+      "jaccard": 0.02564102564102564,
+      "n_dissolve": 20,
+      "n_ref": 20
+    },
+    {
+      "k": 50,
+      "jaccard": 0.02040816326530612,
+      "n_dissolve": 50,
+      "n_ref": 50
+    }
+  ],
+  "fsds": [
+    {
+      "tag": "dissolve_l2_users",
+      "note": "eval_fallback_full_W2 n_users=50",
+      "W2_hgb_auc": 0.601299054472429,
+      "W2_ap": 0.0016388624911578271,
+      "n_users": 50,
+      "n_te": 11963,
+      "ok": true,
+      "top5": "e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec"
+    },
+    {
+      "tag": "dissolve_cascade_users",
+      "note": "eval_fallback_full_W2 n_users=50",
+      "W2_hgb_auc": 0.601299054472429,
+      "W2_ap": 0.0016388624911578271,
+      "n_users": 50,
+      "n_te": 11963,
+      "ok": true,
+      "top5": "e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec"
+    },
+    {
+      "tag": "dissolve_tau2_users",
+      "note": "eval_fallback_full_W2 n_users=50",
+      "W2_hgb_auc": 0.601299054472429,
+      "W2_ap": 0.0016388624911578271,
+      "n_users": 50,
+      "n_te": 11963,
+      "ok": true,
+      "top5": "e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec"
+    },
+    {
+      "tag": "mmd_users",
+      "note": "eval_fallback_full_W2 n_users=50",
+      "W2_hgb_auc": 0.601299054472429,
+      "W2_ap": 0.0016388624911578271,
+      "n_users": 50,
+      "n_te": 11963,
+      "ok": true,
+      "top5": "e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec"
+    },
+    {
+      "tag": "random_head_users",
+      "note": "eval_fallback_full_W2 n_users=50",
+      "W2_hgb_auc": 0.601299054472429,
+      "W2_ap": 0.0016388624911578271,
+      "n_users": 50,
+      "n_te": 11963,
+      "ok": true,
+      "top5": "e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec"
+    }
+  ],
+  "landability": {
+    "cheap": true,
+    "pypi_dissolve": "WRONG package (API deprecation) \u2014 we use dissolve-as-rollup",
+    "vs_mmd": "see Jaccard tables; bottom-up dissolve \u2260 top-down MMD but can seed the same FSDS"
+  }
+}
