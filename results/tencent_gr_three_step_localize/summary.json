@@ -1,0 +1,162 @@
+{
+  "procedure": [
+    "Standardization",
+    "L1 merchant MMD",
+    "L2 user MMD (in merchants)",
+    "L3 order shift (in users)",
+    "FSDS on localized merchant\u00d7user edges"
+  ],
+  "merchant_col": "122",
+  "merchant_mapped_rate_W1": 0.0980212375794277,
+  "gap_days": 30.0,
+  "k": {
+    "merchant": 80,
+    "user": 47,
+    "order": 52
+  },
+  "n_edges": {
+    "W1_loc": 324,
+    "W2_loc": 6743
+  },
+  "fsds_W1": {
+    "ok": true,
+    "n_train": 243,
+    "n_test": 81,
+    "pos_train": 0.00823045267489712,
+    "pos_test": 0.0,
+    "n_in": 21,
+    "n_selected": 15,
+    "selected": [
+      "u_n_exp",
+      "u_span_sec",
+      "i_n_exp",
+      "i_n_users",
+      "i_credit_first",
+      "i_credit_last",
+      "i_credit_linear",
+      "i_share_first",
+      "i_share_last",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_exp",
+      "i_log1p_n_users",
+      "i_log1p_n_covisit",
+      "ui_pop_mismatch"
+    ],
+    "sec_select": 0.00335693359375,
+    "models": {
+      "note": "test missing both classes \u2014 ranking only"
+    },
+    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "top_features": [
+      "u_span_sec",
+      "i_credit_last",
+      "i_share_last",
+      "i_n_users",
+      "i_n_covisit_neighbors",
+      "i_credit_first",
+      "i_share_first",
+      "i_log1p_n_users",
+      "i_n_exp",
+      "ui_pop_mismatch",
+      "i_credit_linear",
+      "i_share_linear",
+      "i_log1p_n_exp",
+      "i_log1p_n_covisit",
+      "u_n_exp"
+    ]
+  },
+  "fsds_W2": {
+    "ok": true,
+    "n_train": 243,
+    "n_test": 6743,
+    "pos_train": 0.00823045267489712,
+    "pos_test": 0.00029660388551090017,
+    "n_in": 21,
+    "n_selected": 15,
+    "selected": [
+      "u_n_exp",
+      "u_span_sec",
+      "i_n_exp",
+      "i_n_users",
+      "i_credit_first",
+      "i_credit_last",
+      "i_credit_linear",
+      "i_share_first",
+      "i_share_last",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_exp",
+      "i_log1p_n_users",
+      "i_log1p_n_covisit",
+      "ui_pop_mismatch"
+    ],
+    "sec_select": 0.0027284622192382812,
+    "models": {
+      "hgb": {
+        "auc": 0.38840676457498885,
+        "ap": 0.00036837913181999205,
+        "sec": 0.07225847244262695
+      },
+      "logreg": {
+        "auc": 0.4907283785788459,
+        "ap": 0.0004339021046966086,
+        "sec": 0.00768733024597168
+      }
+    },
+    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "top_features": [
+      "u_span_sec",
+      "i_credit_last",
+      "i_share_last",
+      "i_n_users",
+      "i_n_covisit_neighbors",
+      "i_credit_first",
+      "i_share_first",
+      "i_log1p_n_users",
+      "i_n_exp",
+      "ui_pop_mismatch",
+      "i_credit_linear",
+      "i_share_linear",
+      "i_log1p_n_exp",
+      "i_log1p_n_covisit",
+      "u_n_exp"
+    ]
+  },
+  "W1_meta": {
+    "window_name": "W1_early",
+    "t_start": 1738536258,
+    "t_end": 1742424258,
+    "n_days": 45.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 20000,
+    "n_users_scanned": 20000,
+    "n_users_active": 2574,
+    "n_conv_users": 1838,
+    "n_events": 53312,
+    "n_items": 36811,
+    "n_edges": 46898,
+    "n_grid": 46898,
+    "pos_rate": 0.00017058296729071602,
+    "co_window": 8
+  },
+  "W2_meta": {
+    "window_name": "W2_late",
+    "t_start": 1745016258,
+    "t_end": 1748904258,
+    "n_days": 45.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 20000,
+    "n_users_scanned": 20000,
+    "n_users_active": 19999,
+    "n_conv_users": 19254,
+    "n_events": 1544422,
+    "n_items": 474110,
+    "n_edges": 1393339,
+    "n_grid": 1393339,
+    "pos_rate": 0.0002863624717315743,
+    "co_window": 8
+  }
+}

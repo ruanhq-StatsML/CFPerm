@@ -1,0 +1,210 @@
+{
+  "procedure": [
+    "Standardization",
+    "subset-level MMD",
+    "FSDS"
+  ],
+  "timeline": {
+    "span_days": 231.27605324074074,
+    "W1": {
+      "name": "W1_early",
+      "t_start": 1738536258,
+      "t_end": 1742424258
+    },
+    "W2": {
+      "name": "W2_late",
+      "t_start": 1745016258,
+      "t_end": 1748904258
+    },
+    "gap_days": 30.0
+  },
+  "W1_meta": {
+    "window_name": "W1_early",
+    "t_start": 1738536258,
+    "t_end": 1742424258,
+    "n_days": 45.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 20000,
+    "n_users_scanned": 20000,
+    "n_users_active": 2574,
+    "n_conv_users": 1838,
+    "n_events": 53312,
+    "n_items": 36811,
+    "n_edges": 46898,
+    "n_grid": 46898,
+    "pos_rate": 0.00017058296729071602,
+    "co_window": 8
+  },
+  "W2_meta": {
+    "window_name": "W2_late",
+    "t_start": 1745016258,
+    "t_end": 1748904258,
+    "n_days": 45.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 20000,
+    "n_users_scanned": 20000,
+    "n_users_active": 19999,
+    "n_conv_users": 19254,
+    "n_events": 1544422,
+    "n_items": 474110,
+    "n_edges": 1393339,
+    "n_grid": 1393339,
+    "pos_rate": 0.0002863624717315743,
+    "co_window": 8
+  },
+  "n_features": 21,
+  "localize_k": 200,
+  "localized_items_head": [
+    226288,
+    3757633,
+    86522,
+    2708068,
+    543572,
+    498321,
+    3885368,
+    4486643,
+    2160858,
+    259284,
+    1608867,
+    107021,
+    518981,
+    4194222,
+    1863797,
+    3782465,
+    3774164,
+    4227048,
+    3926596,
+    4680184,
+    3576787,
+    3848343,
+    3663009,
+    1843266,
+    4420529,
+    1440054,
+    345842,
+    3914247,
+    2189611,
+    4156
+  ],
+  "n_localized_edges": {
+    "W1_train": 937,
+    "W1_holdout": 298,
+    "W2": 7223
+  },
+  "fsds_W1_holdout": {
+    "ok": true,
+    "n_train": 937,
+    "n_test": 298,
+    "pos_train": 0.0021344717182497333,
+    "pos_test": 0.0,
+    "n_in": 21,
+    "n_selected": 15,
+    "selected": [
+      "u_n_exp",
+      "u_n_uniq_items",
+      "u_span_sec",
+      "u_log1p_n_uniq",
+      "i_n_exp",
+      "i_n_users",
+      "i_credit_first",
+      "i_credit_last",
+      "i_credit_linear",
+      "i_share_first",
+      "i_share_last",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_covisit",
+      "ui_pop_mismatch"
+    ],
+    "sec_select": 0.004421710968017578,
+    "models": {
+      "note": "test missing both classes \u2014 ranking only"
+    },
+    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "top_features": [
+      "i_credit_last",
+      "i_share_last",
+      "u_span_sec",
+      "u_n_exp",
+      "i_share_first",
+      "i_credit_first",
+      "i_credit_linear",
+      "i_share_linear",
+      "u_n_uniq_items",
+      "i_n_covisit_neighbors",
+      "i_n_users",
+      "i_n_exp",
+      "ui_pop_mismatch",
+      "u_log1p_n_uniq",
+      "i_log1p_n_covisit"
+    ]
+  },
+  "fsds_W2_temporal": {
+    "ok": true,
+    "n_train": 937,
+    "n_test": 7223,
+    "pos_train": 0.0021344717182497333,
+    "pos_test": 0.00221514606119341,
+    "n_in": 21,
+    "n_selected": 15,
+    "selected": [
+      "u_n_exp",
+      "u_n_uniq_items",
+      "u_span_sec",
+      "u_log1p_n_uniq",
+      "i_n_exp",
+      "i_n_users",
+      "i_credit_first",
+      "i_credit_last",
+      "i_credit_linear",
+      "i_share_first",
+      "i_share_last",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_covisit",
+      "ui_pop_mismatch"
+    ],
+    "sec_select": 0.003072500228881836,
+    "models": {
+      "hgb": {
+        "auc": 0.2950083252393506,
+        "ap": 0.0017241017670040558,
+        "sec": 0.199737548828125
+      },
+      "logreg": {
+        "auc": 0.18870542528097684,
+        "ap": 0.0013540617167663448,
+        "sec": 0.009158611297607422
+      }
+    },
+    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "top_features": [
+      "i_credit_last",
+      "i_share_last",
+      "u_span_sec",
+      "u_n_exp",
+      "i_share_first",
+      "i_credit_first",
+      "i_credit_linear",
+      "i_share_linear",
+      "u_n_uniq_items",
+      "i_n_covisit_neighbors",
+      "i_n_users",
+      "i_n_exp",
+      "ui_pop_mismatch",
+      "u_log1p_n_uniq",
+      "i_log1p_n_covisit"
+    ]
+  },
+  "gt_eval": {
+    "ks": [
+      50,
+      100,
+      200
+    ],
+    "available": false,
+    "note": "no GT items/orders provided"
+  }
+}

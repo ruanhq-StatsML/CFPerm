@@ -1,0 +1,237 @@
+{
+  "protocol": [
+    "Standardization: StandardScaler fit on W1 (top of pipeline)",
+    "FE(time) independently on W1 and W2 (gap >= 30d)",
+    "subset localization = rank-average(cmean, MMD, PO-risk) over items (standardized X)",
+    "visualize localized subset (\u884c\u4e3a/\u8d2d\u4e70\u6b32\u53d8\u52a8\u5f52\u56e0)",
+    "FSDS: StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 HGB/LogReg \u2192 feature ranking",
+    "optional GT evaluator on orders/items \u2192 hit/precision/recall@k"
+  ],
+  "timeline": {
+    "span_days": 231.27605324074074,
+    "W1": {
+      "name": "W1_early",
+      "t_start": 1738536258,
+      "t_end": 1742424258
+    },
+    "W2": {
+      "name": "W2_late",
+      "t_start": 1745016258,
+      "t_end": 1748904258
+    },
+    "gap_days": 30.0
+  },
+  "W1_meta": {
+    "window_name": "W1_early",
+    "t_start": 1738536258,
+    "t_end": 1742424258,
+    "n_days": 45.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 20000,
+    "n_users_scanned": 20000,
+    "n_users_active": 2574,
+    "n_conv_users": 1838,
+    "n_events": 53312,
+    "n_items": 36811,
+    "n_edges": 46898,
+    "n_grid": 46898,
+    "pos_rate": 0.00017058296729071602,
+    "co_window": 8
+  },
+  "W2_meta": {
+    "window_name": "W2_late",
+    "t_start": 1745016258,
+    "t_end": 1748904258,
+    "n_days": 45.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 20000,
+    "n_users_scanned": 20000,
+    "n_users_active": 19999,
+    "n_conv_users": 19254,
+    "n_events": 1544422,
+    "n_items": 474110,
+    "n_edges": 1393339,
+    "n_grid": 1393339,
+    "pos_rate": 0.0002863624717315743,
+    "co_window": 8
+  },
+  "n_features": 21,
+  "standardization": true,
+  "localize_k": 200,
+  "localized_items_head": [
+    226288,
+    3885368,
+    749302,
+    53521,
+    560077,
+    2189611,
+    3757633,
+    3576787,
+    345842,
+    1510013,
+    1971100,
+    2535188,
+    1238603,
+    3161041,
+    3975971,
+    226325,
+    403683,
+    139953,
+    3037755,
+    4420529,
+    708155,
+    543572,
+    2160858,
+    2963495,
+    2506320,
+    4680184,
+    3877201,
+    1613010,
+    2370398,
+    119308
+  ],
+  "po_risk_global": 9.5638854722253e-07,
+  "n_localized_edges": {
+    "W1_train": 962,
+    "W1_holdout": 314,
+    "W2": 8815
+  },
+  "fsds_W1_holdout": {
+    "ok": true,
+    "n_train": 962,
+    "n_test": 314,
+    "pos_train": 0.0031185031185031187,
+    "pos_test": 0.0,
+    "n_in": 21,
+    "n_selected": 15,
+    "selected": [
+      "u_n_events",
+      "u_log1p_n_events",
+      "u_log1p_n_uniq",
+      "i_n_exp",
+      "i_n_users",
+      "i_credit_first",
+      "i_credit_linear",
+      "i_share_first",
+      "i_share_last",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_exp",
+      "i_log1p_n_users",
+      "i_log1p_n_covisit",
+      "ui_pop_mismatch"
+    ],
+    "sec_select": 0.004519224166870117,
+    "models": {
+      "note": "test missing both classes \u2014 ranking only"
+    },
+    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "top_features": [
+      "i_share_linear",
+      "i_credit_linear",
+      "i_share_first",
+      "i_credit_first",
+      "i_log1p_n_users",
+      "i_log1p_n_covisit",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_exp",
+      "i_n_users",
+      "i_n_exp",
+      "ui_pop_mismatch",
+      "u_log1p_n_events",
+      "u_n_events",
+      "u_log1p_n_uniq",
+      "i_share_last"
+    ]
+  },
+  "fsds_W2_temporal": {
+    "ok": true,
+    "n_train": 962,
+    "n_test": 8815,
+    "pos_train": 0.0031185031185031187,
+    "pos_test": 0.0026091888825865,
+    "n_in": 21,
+    "n_selected": 15,
+    "selected": [
+      "u_n_events",
+      "u_log1p_n_events",
+      "u_log1p_n_uniq",
+      "i_n_exp",
+      "i_n_users",
+      "i_credit_first",
+      "i_credit_linear",
+      "i_share_first",
+      "i_share_last",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_exp",
+      "i_log1p_n_users",
+      "i_log1p_n_covisit",
+      "ui_pop_mismatch"
+    ],
+    "sec_select": 0.003053903579711914,
+    "models": {
+      "hgb": {
+        "auc": 0.4450785298888317,
+        "ap": 0.002691753123869707,
+        "sec": 0.15871572494506836
+      },
+      "logreg": {
+        "auc": 0.35834206986588596,
+        "ap": 0.002105723506616553,
+        "sec": 0.010030746459960938
+      }
+    },
+    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "top_features": [
+      "i_share_linear",
+      "i_credit_linear",
+      "i_share_first",
+      "i_credit_first",
+      "i_log1p_n_users",
+      "i_log1p_n_covisit",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_exp",
+      "i_n_users",
+      "i_n_exp",
+      "ui_pop_mismatch",
+      "u_log1p_n_events",
+      "u_n_events",
+      "u_log1p_n_uniq",
+      "i_share_last"
+    ]
+  },
+  "gt_eval": {
+    "ks": [
+      50,
+      100,
+      200
+    ],
+    "available": true,
+    "orders": {
+      "n_orders": 31.0,
+      "order_coverage": 0.967741935483871,
+      "order_coverage@50": 0.967741935483871,
+      "order_coverage@100": 0.967741935483871,
+      "order_coverage@200": 0.967741935483871
+    },
+    "items": {
+      "n_pred": 200.0,
+      "n_gt": 42.0,
+      "n_hit_all": 40.0,
+      "recall_all": 0.9523809523809523,
+      "precision_all": 0.2,
+      "hit@50": 40.0,
+      "precision@50": 0.8,
+      "recall@50": 0.9523809523809523,
+      "hit@100": 40.0,
+      "precision@100": 0.4,
+      "recall@100": 0.9523809523809523,
+      "hit@200": 40.0,
+      "precision@200": 0.2,
+      "recall@200": 0.9523809523809523
+    }
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "protocol": [
+    "FE(time_range) on W1 and W2 independently",
+    "gap_days >= 30 between W1.end and W2.start",
+    "user-grouped split on W1; localization shares from W1-train users only",
+    "localization subset = top-k share_linear from W1-train",
+    "FSDS select+train on W1-train localized edges",
+    "evaluate on W1-holdout users and W2 temporal holdout"
+  ],
+  "timeline": {
+    "t_min": 1728922007,
+    "t_max": 1748905172,
+    "span_days": 231.28663194444445,
+    "W1": {
+      "name": "W1_early",
+      "t_start": 1737673172,
+      "t_end": 1741993172
+    },
+    "W2": {
+      "name": "W2_late",
+      "t_start": 1744585172,
+      "t_end": 1748905172
+    },
+    "gap_days": 30.0
+  },
+  "W1_meta": {
+    "window_name": "W1_early",
+    "t_start": 1737673172,
+    "t_end": 1741993172,
+    "n_days": 50.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 60000,
+    "n_users_scanned": 60000,
+    "n_users_active": 6801,
+    "n_conv_users": 5127,
+    "n_events": 149393,
+    "n_items": 83416,
+    "n_edges": 129641,
+    "n_grid": 129641,
+    "pos_rate": 0.00014655857329085706,
+    "co_window": 8
+  },
+  "W2_meta": {
+    "window_name": "W2_late",
+    "t_start": 1744585172,
+    "t_end": 1748905172,
+    "n_days": 50.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 60000,
+    "n_users_scanned": 60000,
+    "n_users_active": 60000,
+    "n_conv_users": 58012,
+    "n_events": 4780429,
+    "n_items": 926413,
+    "n_edges": 4310736,
+    "n_grid": 4310736,
+    "pos_rate": 0.00030482033694478156,
+    "co_window": 8
+  },
+  "localize_k": 500,
+  "n_localize_items": 500,
+  "n_W1_train_loc_edges": 8435,
+  "n_W1_holdout_loc_edges": 2714,
+  "n_W2_loc_edges": 11963,
+  "feature_cols": [
+    "e_n_exp",
+    "u_n_events",
+    "u_n_exp",
+    "u_n_uniq_items",
+    "u_span_sec",
+    "u_log1p_n_events",
+    "u_log1p_n_uniq",
+    "u_user_activity_rank",
+    "i_n_exp",
+    "i_n_users",
+    "i_n_covisit_neighbors",
+    "i_log1p_n_exp",
+    "i_log1p_n_users",
+    "i_log1p_n_covisit",
+    "i_item_pop_rank",
+    "e_log1p_exp",
+    "ui_pop_mismatch",
+    "i_share_first",
+    "i_share_last",
+    "i_share_linear",
+    "i_credit_first",
+    "i_credit_last",
+    "i_credit_linear",
+    "i_item_credit_rank"
+  ],
+  "fsds_W1_holdout": {
+    "ok": true,
+    "n_train": 8435,
+    "n_test": 2714,
+    "pos_train": 0.00035566093657379963,
+    "pos_test": 0.00036845983787767134,
+    "n_in": 24,
+    "n_selected": 24,
+    "selected": [
+      "e_n_exp",
+      "u_n_events",
+      "u_n_exp",
+      "u_n_uniq_items",
+      "u_span_sec",
+      "u_log1p_n_events",
+      "u_log1p_n_uniq",
+      "u_user_activity_rank",
+      "i_n_exp",
+      "i_n_users",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_exp",
+      "i_log1p_n_users",
+      "i_log1p_n_covisit",
+      "i_item_pop_rank",
+      "e_log1p_exp",
+      "ui_pop_mismatch",
+      "i_share_first",
+      "i_share_last",
+      "i_share_linear",
+      "i_credit_first",
+      "i_credit_last",
+      "i_credit_linear",
+      "i_item_credit_rank"
+    ],
+    "sec_select": 0.007349252700805664,
+    "models": {
+      "hgb": {
+        "auc": 0.6417250276446738,
+        "ap": 0.0010277492291880781,
+        "sec": 0.22534990310668945
+      },
+      "logreg": {
+        "auc": 0.14670106892738666,
+        "ap": 0.0004317789291882556,
+        "sec": 0.011445283889770508
+      }
+    }
+  },
+  "fsds_W2_temporal": {
+    "ok": true,
+    "n_train": 8435,
+    "n_test": 11963,
+    "pos_train": 0.00035566093657379963,
+    "pos_test": 0.001003092869681518,
+    "n_in": 24,
+    "n_selected": 24,
+    "selected": [
+      "e_n_exp",
+      "u_n_events",
+      "u_n_exp",
+      "u_n_uniq_items",
+      "u_span_sec",
+      "u_log1p_n_events",
+      "u_log1p_n_uniq",
+      "u_user_activity_rank",
+      "i_n_exp",
+      "i_n_users",
+      "i_n_covisit_neighbors",
+      "i_log1p_n_exp",
+      "i_log1p_n_users",
+      "i_log1p_n_covisit",
+      "i_item_pop_rank",
+      "e_log1p_exp",
+      "ui_pop_mismatch",
+      "i_share_first",
+      "i_share_last",
+      "i_share_linear",
+      "i_credit_first",
+      "i_credit_last",
+      "i_credit_linear",
+      "i_item_credit_rank"
+    ],
+    "sec_select": 0.004983186721801758,
+    "models": {
+      "hgb": {
+        "auc": 0.4725685437759741,
+        "ap": 0.001086553863244352,
+        "sec": 0.26556921005249023
+      },
+      "logreg": {
+        "auc": 0.6766030736618972,
+        "ap": 0.0019939655663475542,
+        "sec": 0.022551536560058594
+      }
+    }
+  },
+  "leakage_guards": [
+    "events outside [t_start,t_end) never enter FE",
+    "y / n_clk / n_cnv / ctr / cvr dropped from X",
+    "localization shares fit on W1-train users only (frozen onto W2)",
+    "SelectKBest fit on W1-train only; W2 never used for selection"
+  ]
+}

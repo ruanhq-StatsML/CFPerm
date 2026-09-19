@@ -1,0 +1,12 @@
+{
+  "merchant_spearman_cf_vs_mmd": -0.3299221357063403,
+  "merchant_top_overlap": 0.0,
+  "user_spearman_cf_vs_mmd": 0.07709773819289815,
+  "user_top_overlap": 0.0,
+  "global_po_risk_proxy": 452.8156896577165,
+  "cf_fit_sec": 1.6039690971374512,
+  "disclaimer": "W=period indicator; CF is a parsimonious empirical heterogeneity tool, NOT a causal ATE claim. Compare rankings to MMD localization.",
+  "gap_days": 30.0,
+  "n_rows": 8000,
+  "n_features": 21
+}

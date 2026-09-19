@@ -1,0 +1,87 @@
+{
+  "protocol": [
+    "FE(time_range) independently on W1 and W2 (gap >= 30d)",
+    "optional localization subset from W1 share_linear",
+    "COMPARE W1 vs W2 \u2192 feature selection (SMD / domain-AUC / KS / perm-imp)",
+    "selected features = temporal shift drivers (\u843d\u5730)"
+  ],
+  "timeline": {
+    "t_min": 1728922007,
+    "t_max": 1748904258,
+    "span_days": 231.27605324074074,
+    "W1": {
+      "name": "W1_early",
+      "t_start": 1738536258,
+      "t_end": 1742424258
+    },
+    "W2": {
+      "name": "W2_late",
+      "t_start": 1745016258,
+      "t_end": 1748904258
+    },
+    "gap_days": 30.0
+  },
+  "W1_meta": {
+    "window_name": "W1_early",
+    "t_start": 1738536258,
+    "t_end": 1742424258,
+    "n_days": 45.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 20000,
+    "n_users_scanned": 20000,
+    "n_users_active": 2574,
+    "n_conv_users": 1838,
+    "n_events": 53312,
+    "n_items": 36811,
+    "n_edges": 46898,
+    "n_grid": 46898,
+    "pos_rate": 0.00017058296729071602,
+    "co_window": 8
+  },
+  "W2_meta": {
+    "window_name": "W2_late",
+    "t_start": 1745016258,
+    "t_end": 1748904258,
+    "n_days": 45.0,
+    "terminal_action": 1,
+    "terminal_name": "click",
+    "max_users_scan": 20000,
+    "n_users_scanned": 20000,
+    "n_users_active": 19999,
+    "n_conv_users": 19254,
+    "n_events": 1544422,
+    "n_items": 474110,
+    "n_edges": 1393339,
+    "n_grid": 1393339,
+    "pos_rate": 0.0002863624717315743,
+    "co_window": 8
+  },
+  "n_W1": 2051,
+  "n_W2": 1788,
+  "n_features": 21,
+  "top_k": 15,
+  "selected": [
+    "i_share_linear",
+    "u_n_events",
+    "u_n_uniq_items",
+    "u_log1p_n_events",
+    "u_log1p_n_uniq",
+    "u_n_exp",
+    "i_log1p_n_covisit",
+    "i_n_covisit_neighbors",
+    "i_log1p_n_users",
+    "i_n_users",
+    "i_log1p_n_exp",
+    "i_n_exp",
+    "ui_pop_mismatch",
+    "i_share_last",
+    "i_share_first"
+  ],
+  "y_snapshot": {
+    "W1_pos_rate": 0.0,
+    "W2_pos_rate": 0.0,
+    "period_clf_auc": 1.0
+  },
+  "multi_sec": 0.49091649055480957
+}
