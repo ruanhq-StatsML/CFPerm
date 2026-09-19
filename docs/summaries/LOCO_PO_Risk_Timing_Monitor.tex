@@ -1,0 +1,93 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,hyperref}
+\geometry{margin=1in}
+
+\newcommand{\Ltip}{L_{\mathrm{tip}}}
+\newcommand{\Jstar}{J^\star}
+
+\title{\textbf{LOCO PO-risk Continuous Monitor}\\
+\large Pinning the change-point of attributed tip features\\
+\large (OnlineRFPerm on tip-group LOCO)}
+\author{Method note --- CFPerm / AGOD + TencentGR}
+\date{2026-09-19}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Attribution (cmean / FSDS / PO-VIMP) delivers tip features $\Jstar$ and
+a support $K^\star$, plus a signed direction (正向/负向).
+This note adds the \textbf{timing} layer: stream consecutive batches,
+compute tip-group LOCO PO-risk, form
+$S_t=|L_{\mathrm{tip}}(t)-\bar L_{\mathrm{burn}}|$, and run one
+OnlineRFPerm scalar stream. The first FDR reject after burn-in is the
+\textbf{accurate change-point} of the attributed tips---when their
+PO-risk contribution collapses or rises---not merely that a global
+shift occurred.
+\end{abstract}
+
+\section{Why LOCO PO-risk (not only full PO)}
+Full-batch PO-risk $\mathrm{PO}_t$ fires when \emph{anything} in
+$(X,y)$ degrades $\mu_{t-1}$ on batch $t$.
+After attribution we already know \emph{which} tips matter; the
+open question is \emph{when} those tips moved.
+
+Leave-one-covariate-out (group) PO-risk isolates $\Jstar$:
+\[
+  L_{\mathrm{tip}}(t)
+  \;=\;
+  \mathrm{MAE}\!\big(y_t,\mu_{t-1}^{-\Jstar}(X_t)\big)
+  \;-\;
+  \mathrm{MAE}\!\big(y_t,\mu_{t-1}(X_t)\big),
+\]
+with tip columns masked to control means.
+$L_{\mathrm{tip}}>0$ $\Leftrightarrow$ the attributed tips reduce probe risk
+under the previous-batch fit.
+
+Raw $L_{\mathrm{tip}}$ is often \emph{stably high} when tips always matter.
+The monitor freezes burn mean $\bar L$ and forms
+\[
+  S_t \;=\; \bigl|L_{\mathrm{tip}}(t)-\bar L\bigr| \;+\; \mathrm{PO}_t.
+\]
+\textbf{Primary timing} uses a burn-calibrated hard gate
+\[
+  S_t \;>\; \overline{S}_{\mathrm{burn}} + k\,\mathrm{sd}(S_{\mathrm{burn}})
+  \qquad (k{=}5\ \mathrm{default}).
+\]
+A tip mean/coef shift typically \emph{collapses} $L_{\mathrm{tip}}$ on the
+transition batch while $\mathrm{PO}_t$ spikes; $S_t$ pins that batch.
+OnlineRFPerm on $S_t$ / $\mathrm{PO}_t$ remains a peer FDR stream
+(Lead $= t_{\mathrm{tip}}-t_{\mathrm{PO}}$).
+Also log $\mathrm{sign}(L_{\mathrm{tip}}-\bar L)$ next to the
+正向/负向 outcome direction.
+
+\section{OnlineRFPerm shell (peer)}
+Burn-in reference on $S_t$ $\to$ $T_t=S_t-e_{\mathrm{ref}}$ $\to$
+rank/EWMA $p_t$ $\to$ online FDR.
+Reported change-point defaults to the \textbf{hard gate}; RFPerm
+first-reject is logged for AR comparison.
+Detection delay vs known shift $t_0$:
+$\mathrm{delay}=t^\star_{\mathrm{tip}}-t_0$.
+\section{Protocol (locked with attribution)}
+\begin{enumerate}[leftmargin=*,itemsep=0.35em]
+  \item Localize $\to K^\star$; tip features $\Jstar$ (PO-VIMP / $|\delta|$ / FSDS).
+  \item Report signed direction $\mathrm{sign}(\Delta\bar y)$, $\mathrm{sign}(\delta_j)$.
+  \item Freeze $\Jstar$; start LOCO-PO OnlineRFPerm on the live batch stream.
+  \item Emit $t^\star_{\mathrm{tip}}$, delay, Lead vs full-PO, tip-share traj.
+\end{enumerate}
+\textbf{Does not} re-enter the Drill product rule; timing is downstream
+of a fixed attributed tip set.
+
+\section{Synthetic smoke (repo)}
+\texttt{scripts/run\_loco\_po\_timing\_monitor.py}: tip mean-shift +
+coef flip at known batch; tip-LOCO first reject near the shift.
+Module: \texttt{agod/loco\_po\_monitor.py}.
+
+\section{Takeaway}
+Attribution answers \emph{where/which/which way}.
+LOCO-PO OnlineRFPerm answers \emph{when} those tips started moving
+PO-risk---the accurate time point after attribution.
+
+\end{document}

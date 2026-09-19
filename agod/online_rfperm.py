@@ -154,3 +154,56 @@ def gate_blend(reject: bool, po_w: np.ndarray, *, soft: bool = False, p: float =
     if reject:
         return po_w
     return ones
+
+
+@dataclass
+class ScalarOnlineRFPerm:
+    """OnlineRFPerm on an arbitrary scalar series (PO / LOCO tip / MMD).
+
+    Same orientation as MSE / Grad streams: large ``value`` relative to
+    burn-in ``e_ref`` → large ``T`` → small rank/EWMA ``p`` → FDR reject.
+    """
+
+    e_ref: float = 0.0
+    T_hist: List[float] = field(default_factory=list)
+    p_hist: List[float] = field(default_factory=list)
+    reject_hist: List[int] = field(default_factory=list)
+    value_hist: List[float] = field(default_factory=list)
+    wealth: float = 1.0
+    n_burn: int = 0
+
+    def step(
+        self,
+        value: float,
+        *,
+        burn_in: bool = False,
+        alpha: float = 0.05,
+        ewma: bool = True,
+        fdr: str = "alpha_investing",
+    ) -> dict:
+        value = float(value)
+        self.value_hist.append(value)
+        T = value - float(self.e_ref)
+        out = {"value": value, "T": T, "p": 1.0, "reject": False, "burn_in": burn_in}
+        if burn_in:
+            self.T_hist.append(T)
+            self.n_burn += 1
+            self.p_hist.append(1.0)
+            self.reject_hist.append(0)
+            self.e_ref = float(np.mean(self.value_hist))
+            self.T_hist[-1] = value - float(self.e_ref)
+            return out
+        p = rank_pvalue(T, self.T_hist, ewma=ewma)
+        rej = online_fdr_step(self, p, alpha=alpha, procedure=fdr)  # type: ignore[arg-type]
+        self.T_hist.append(T)
+        self.p_hist.append(p)
+        out.update({"p": float(p), "reject": bool(rej)})
+        return out
+
+
+def first_reject_index(reject_hist: List[int], *, after: int = 0) -> Optional[int]:
+    """First reject time with ``t >= after``; ``None`` if never."""
+    for t, r in enumerate(reject_hist):
+        if t >= after and int(r) == 1:
+            return int(t)
+    return None
