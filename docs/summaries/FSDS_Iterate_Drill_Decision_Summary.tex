@@ -133,6 +133,71 @@ $\pi_v=\frac{1}{B}\sum_b \mathbf{1}\{v\in\mathrm{Top}K^{(b)}\}$;
 require $\pi_v\ge\pi^\star$ for delivery.
 
 %----------------------------------------------------------------------
+\section{Signed direction of the attributed subgroup (required)}
+\label{sec:sign}
+
+Magnitude alone is incomplete attribution.
+Once $K^\star$ (or stop-layer $S$) is fixed, the report
+\textbf{must} state whether the localized support moved
+\textbf{up} or \textbf{down} between periods---both on the
+outcome and on the tipping features.
+This is still descriptive ($P^{W_1}$ vs $P^{W_2}$), not a
+causal $\mathrm{sign}(\tau)$.
+
+\subsection{Outcome direction on the delivered support}
+Let $\bar y_W(K)=\mathrm{mean}(y_{\mathrm{convert}}\mid K,W)$.
+\[
+  \Delta\bar y(K^\star)
+  \;=\;
+  \bar y_{W_2}(K^\star)-\bar y_{W_1}(K^\star).
+\]
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+$\Delta\bar y(K^\star)$ & label & reading \\
+\midrule
+$>0$ & \textbf{positive / 正向} & convert rate \emph{rose} on the attributed support \\
+$<0$ & \textbf{negative / 负向} & convert rate \emph{fell} on the attributed support \\
+$\approx 0$ & flat & localization may still hold on $X$; outcome did not move \\
+\bottomrule
+\end{tabular}
+\end{center}
+Always report $(\bar y_{W_1},\bar y_{W_2},\Delta\bar y)$ next to
+$K^\star$---not only $\|\delta\|$ or FSDS AUC.
+
+\subsection{Feature-tip direction (signed $\delta$)}
+For each tip $j\in J^\star$:
+\[
+  \mathrm{sign}(\delta_j)
+  =\mathrm{sign}\!\big(\mu_{W_2,j}-\mu_{W_1,j}\big).
+\]
+Positive tip $=$ that graph feature \emph{increased} on $K^\star$;
+negative tip $=$ it \emph{decreased}.
+Rank by $\delta_j^2$ (energy) but \textbf{print the sign} in the
+feature card. Mixing unsigned TopShare with a signed business
+story is a reporting bug.
+
+\subsection{Entity contribution direction (when drilling)}
+For candidate $v$, keep both $r_v=\|D_{v:}\|$ and the
+signed projection onto parent $\delta$:
+\[
+  s_v
+  =\langle D_{v:},\delta(S)\rangle
+  \quad\text{(or }a_v\cdot r_v\text{)}.
+\]
+$s_v>0$: entity shift co-directional with parent;
+$s_v<0$: opposing / compensatory.
+Drill nomination still uses $r$ / Tail / CV;
+direction enters the \textbf{attribution narrative} and the
+optional side-check against $\Delta\bar y$.
+
+\subsection{Report bar (do not omit)}
+\texttt{[Direction] Dy=... (pos|neg|flat); tip\_signs=\{j: +/- \};}
+\texttt{entity\_co\_dir=...}.
+Forbidden: delivering $K^\star$ with only ``Top merchants / users''
+and no 正向/负向 on convert or on $J^\star$.
+
+%----------------------------------------------------------------------
 \section{Further-drill decision logic (elaborated)}
 \label{sec:drill}
 
@@ -337,12 +402,14 @@ D-stop; co-sharp with \(r\) adds confidence to drill;
 \textbf{out} of~\eqref{eq:drill}.
 
 \subsection{Report discipline}
-Three separate bars---never one fused sentence:
+Four separate bars---never one fused sentence:
 \textbf{Feature guidance} $|$ \textbf{Drill decision} $|$
-\textbf{Kernel \(K^\star\)}.
+\textbf{Kernel \(K^\star\)} $|$ \textbf{Direction (pos/neg)}.
 Forbidden: concluding ``drill to user'' from G1 alone;
-calling \(K^\star\) an ATE subgroup; using Lift/$\Delta$/``more
-significant'' language that invites causal reading.
+calling \(K^\star\) an ATE subgroup; using Lift/``more
+significant'' language that invites causal reading;
+omitting $\mathrm{sign}(\Delta\bar y)$ / tip signs on the
+delivered support.
 
 %----------------------------------------------------------------------
 \section{Further FSDS iteration opportunities}
@@ -391,6 +458,10 @@ $Q$ or $\mathrm{Var}(\hat\tau)$ as Drill factors.
         stop and run one FSDS on current $S$.
   \item Columns tip features; rows tip entities; $R$ accepts tips;
         business cap truncates delivery.
+  \item Attribution without \textbf{正向/负向} is incomplete:
+        always report $\mathrm{sign}(\Delta\bar y(K^\star))$ and
+        $\mathrm{sign}(\delta_j)$ for $J^\star$ (descriptive, not
+        $\mathrm{sign}(\tau)$).
   \item Next iteration value is in \textbf{support quality + stop
         instrumentation}, not more selector micro-ablations.
 \end{enumerate}
