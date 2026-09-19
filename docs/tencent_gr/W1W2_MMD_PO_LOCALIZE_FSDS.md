@@ -13,9 +13,13 @@
 - **没有因果性** — 比较的是时段分布差异与排序，不声称 treatment effect
 - **modality-agnostic** — 不绑图、不绑文本/图像；同一套 procedure 可在多层级、多颗粒度下钻（如 merchant → user → order，或任意实体粒度）
 
+**停止 / 是否下钻：** 见
+[`ATTRIBUTION_DRILL_STOP.md`](./ATTRIBUTION_DRILL_STOP.md)
+（父集同一套 cmean：列 \(\delta\) = feature guidance / 是否本层 FSDS；行 \(r_u\) = drill；早停得 \(K^\star\) 再 FSDS）。
+
 ## 三步下钻（可选）：merchant → user → order
 
-在漂移 subset 上再做定位：
+在漂移 subset 上再做定位（**每层应过停止表，勿强制钻穿**）：
 
 ```
 Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
