@@ -1,0 +1,2 @@
+variant,notes,n_selected,jaccard_vs_baseline,W1_hgb_auc,W1_hgb_ap,W1_logreg_auc,W2_hgb_auc,W2_hgb_ap,W2_logreg_auc,sec,top5
+A_baseline_F|W1hold,Scaler→Var→SelectKBest(F) | metrics=official_run_fsds,12,1.0,0.7236145428873985,0.000945179584120983,0.5481821390751853,0.8067874375923911,0.009951499376002114,0.6758360527710373,0.30718231201171875,"e_n_exp,u_n_exp,u_n_uniq_items,u_log1p_n_events,i_n_exp"

@@ -1,0 +1,23 @@
+{
+  "iter_tag": "iter04/_tmp_k12_s0_Z_combined_MI",
+  "n_train": 8310,
+  "n_va": 2839,
+  "n_w2": 11963,
+  "n_feats": 21,
+  "compare": [
+    {
+      "variant": "Z_combined_MI|W1hold",
+      "notes": "COMBINED-MI(=cmean+\u03c0-MI\u2192FSDS): cmean pre\u219221 + \u03c0-stable MI\u219212 | fused\u2192official_FSDS",
+      "n_selected": 12,
+      "jaccard_vs_baseline": NaN,
+      "W1_hgb_auc": 0.505461592670895,
+      "W1_hgb_ap": 0.0007092198581560284,
+      "W1_logreg_auc": 0.6293164200140944,
+      "W2_hgb_auc": 0.34651214682174436,
+      "W2_hgb_ap": 0.0018544659897036051,
+      "W2_logreg_auc": 0.7971578389535046,
+      "sec": 1.859377384185791,
+      "top5": "e_log1p_exp,e_n_exp,i_share_last,i_share_linear,i_share_first"
+    }
+  ]
+}

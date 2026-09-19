@@ -351,6 +351,34 @@ def build_hgb_importance_refine(g_tr, g_w2, cols, *, k, seed):
     return selected, tab, f"F screen={wide} → HGB perm-imp →{k}"
 
 
+def build_cmean_stable_mi(g_tr, g_w2, cols, *, k, seed):
+    """Like F_cmean_stable but SelectKBest uses mutual_info (auto_feats path)."""
+    X1 = _matrix(g_tr, cols)
+    X2 = _matrix(g_w2, cols)
+    dlt = _cmean_abs_delta(X1, X2)
+    pre_n = min(len(cols), max(k * 2, k + 5, int(0.6 * len(cols))))
+    pre_cols = [cols[i] for i in np.argsort(-dlt)[:pre_n]]
+    X = StandardScaler().fit_transform(_matrix(g_tr, pre_cols))
+    y = g_tr["y_convert"].to_numpy(int)
+    vt = VarianceThreshold(1e-8)
+    Xv = vt.fit_transform(X)
+    cols_v = [c for c, m in zip(pre_cols, vt.get_support()) if m]
+    selected, tab = _stability_select(
+        Xv,
+        y,
+        cols_v,
+        k=k,
+        n_splits=5,
+        seed=seed,
+        score_fn=lambda a, b: mutual_info_classif(a, b, random_state=seed),
+    )
+    return (
+        selected,
+        tab.rename(columns={"mean_score": "score"}),
+        f"cmean pre→{pre_n} + π-stable MI→{k}",
+    )
+
+
 def build_combined(g_tr, g_w2, cols, *, k, seed):
     """ empirically combined recipe (iter01–03):
 
@@ -361,6 +389,11 @@ def build_combined(g_tr, g_w2, cols, *, k, seed):
     selected, ranking, note_f = build_cmean_stable(g_tr, g_w2, cols, k=k, seed=seed)
     note = f"COMBINED(=cmean+π→FSDS): {note_f}"
     return selected, ranking, note
+
+
+def build_combined_mi(g_tr, g_w2, cols, *, k, seed):
+    selected, ranking, note_f = build_cmean_stable_mi(g_tr, g_w2, cols, k=k, seed=seed)
+    return selected, ranking, f"COMBINED-MI(=cmean+π-MI→FSDS): {note_f}"
 
 
 def build_soft_corr_prune(g_tr, g_w2, cols, *, k, seed):
@@ -426,6 +459,7 @@ VARIANTS: Dict[str, Callable] = {
     "I_stable_pi_F3": build_stable_pi_f3,
     "J_delta_share_FSDS": build_delta_share_then_fsds_cols,
     "Z_combined": build_combined,
+    "Z_combined_MI": build_combined_mi,
 }
 
 

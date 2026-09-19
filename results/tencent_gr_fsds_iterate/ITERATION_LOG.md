@@ -27,3 +27,437 @@ See `iter01/FINDINGS.md`.
 | G_F_then_HGB_perm|W1hold | F screen=21 → HGB perm-imp →15 | fused→official_FSDS_on_pool | 15 | 0.6667 | 0.6434 | 0.0010 | 0.9641 | 0.7730 | 0.0064 | 0.6912 | 1.8905 | i_n_exp,i_share_linear,ui_pop_mismatch,u_n_exp,u_span_sec |
 
 See `iter02/FINDINGS.md`.
+
+## iter03 (2026-09-19 07:58 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4146 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| C_cmean_then_F|W1hold | cmean|δ| prefilter→21 then F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7664 | 0.0107 | 0.4669 | 0.3815 | u_span_sec,ui_pop_mismatch,i_n_exp,u_n_events,u_n_uniq_items |
+| H_soft_corr|W1hold | F wide=21 → soft-corr@0.98 →13 | fused→official_FSDS | 13 | 0.6471 | 0.7463 | 0.0010 | 0.8580 | 0.6821 | 0.0061 | 0.4168 | 0.3918 | e_n_exp,u_n_exp,u_n_uniq_items,u_span_sec,u_log1p_n_uniq |
+| I_stable_pi_F3|W1hold | 3-fold π-stable SelectKBest(F) (n_pos=3) | fused→official_FSDS | 15 | 0.6667 | 0.4415 | 0.0006 | 0.9073 | 0.4871 | 0.0021 | 0.4609 | 0.3296 | u_n_uniq_items,i_n_covisit_neighbors,i_n_users,ui_pop_mismatch,u_log1p_n_events |
+| J_delta_share_FSDS|W1hold | J* cumshare≥0.8 →15 cols then FSDS-F→15 | fused→official_FSDS | 15 | 0.5789 | 0.6015 | 0.0009 | 0.9119 | 0.3960 | 0.0011 | 0.4527 | 0.4300 | u_span_sec,ui_pop_mismatch,i_n_covisit_neighbors,i_n_users,i_n_exp |
+| F_cmean_stable|W1hold | cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.4116 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+| G_F_then_HGB_perm|W1hold | F screen=21 → HGB perm-imp →15 | fused→official_FSDS | 15 | 0.5789 | 0.6434 | 0.0010 | 0.9468 | 0.7730 | 0.0064 | 0.7042 | 1.8236 | i_n_exp,i_share_linear,ui_pop_mismatch,u_n_exp,u_span_sec |
+
+See `iter03/FINDINGS.md`.
+
+## iter03 (2026-09-19 07:58 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4245 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| H_soft_corr|W1hold | F wide=21 → soft-corr@0.98 →13 | fused→official_FSDS | 13 | 0.6471 | 0.7463 | 0.0010 | 0.8580 | 0.6821 | 0.0061 | 0.4168 | 0.4169 | e_n_exp,u_n_exp,u_n_uniq_items,u_span_sec,u_log1p_n_uniq |
+| F_cmean_stable|W1hold | cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.4013 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+| G_F_then_HGB_perm|W1hold | F screen=21 → HGB perm-imp →15 | fused→official_FSDS | 15 | 0.5789 | 0.6434 | 0.0010 | 0.9468 | 0.7730 | 0.0064 | 0.7042 | 1.8476 | i_n_exp,i_share_linear,ui_pop_mismatch,u_n_exp,u_span_sec |
+| Z_combined|W1hold | COMBINED: cmean-soft→21 | F-wide→21 | π3 | soft-corr@0.98→13 | k=15 | fused→official_FSDS | 13 | 0.6471 | 0.7463 | 0.0010 | 0.8566 | 0.6968 | 0.0074 | 0.4161 | 0.4037 | e_log1p_exp,u_span_sec,i_share_first,i_log1p_n_exp,u_n_uniq_items |
+
+See `iter03/FINDINGS.md`.
+
+## iter03 (2026-09-19 07:58 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4135 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| F_cmean_stable|W1hold | cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.3908 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+| Z_combined|W1hold | COMBINED: cmean-soft→21 | F-wide→21 | π3 | soft-corr@0.98→13 | k=15 | fused→official_FSDS | 13 | 0.6471 | 0.7463 | 0.0010 | 0.8566 | 0.6968 | 0.0074 | 0.4161 | 0.4139 | e_log1p_exp,u_span_sec,i_share_first,i_log1p_n_exp,u_n_uniq_items |
+
+See `iter03/FINDINGS.md`.
+
+## iter03 (2026-09-19 07:59 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4373 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| F_cmean_stable|W1hold | cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.4225 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+| Z_combined|W1hold | COMBINED: cmean-soft→21 | π3→13 | twin-dedupe@0.999 | k=15 | fused→official_FSDS | 13 | 0.5556 | 0.4415 | 0.0006 | 0.8682 | 0.4905 | 0.0021 | 0.4463 | 0.3509 | e_log1p_exp,e_n_exp,i_share_first,i_log1p_n_exp,u_n_uniq_items |
+
+See `iter03/FINDINGS.md`.
+
+## iter03 (2026-09-19 07:59 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4216 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| F_cmean_stable|W1hold | cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.4033 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+| Z_combined|W1hold | COMBINED: cmean-soft→21 | π3→13 | twin-dedupe@0.999 | k=15 | fused→official_FSDS | 13 | 0.5556 | 0.4415 | 0.0006 | 0.8682 | 0.4905 | 0.0021 | 0.4463 | 0.3305 | e_log1p_exp,e_n_exp,i_share_first,i_log1p_n_exp,u_n_uniq_items |
+| H_soft_corr|W1hold | F wide=21 → soft-corr@0.98 →13 | fused→official_FSDS | 13 | 0.6471 | 0.7463 | 0.0010 | 0.8580 | 0.6821 | 0.0061 | 0.4168 | 0.4074 | e_n_exp,u_n_exp,u_n_uniq_items,u_span_sec,u_log1p_n_uniq |
+
+See `iter03/FINDINGS.md`.
+
+## iter03 (2026-09-19 07:59 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4446 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| F_cmean_stable|W1hold | cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.4048 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.3930 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+
+See `iter03/FINDINGS.md`.
+
+## iter04/_tmp_k8_s0_A_baseline_F (2026-09-19 08:02 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 8 | 1.0000 | 0.4748 | 0.0006 | 0.2533 | 0.3268 | 0.0018 | 0.2558 | 0.2096 | e_n_exp,u_n_uniq_items,u_span_sec,i_n_exp,i_log1p_n_exp |
+
+See `iter04/_tmp_k8_s0_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k8_s0_Z_combined (2026-09-19 08:02 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→16 + π-stable F→8 | fused→official_FSDS | 8 |  | 0.5775 | 0.0008 | 0.6050 | 0.2894 | 0.0008 | 0.2917 | 0.2648 | i_log1p_n_exp,u_n_uniq_items,i_n_exp,i_log1p_n_covisit,u_n_exp |
+
+See `iter04/_tmp_k8_s0_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k8_s0_Z_combined_MI (2026-09-19 08:02 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→16 + π-stable MI→8 | fused→official_FSDS | 8 |  | 0.4190 | 0.0006 | 0.6022 | 0.5969 | 0.0015 | 0.4512 | 1.4762 | u_log1p_n_uniq,i_credit_last,i_log1p_n_exp,ui_pop_mismatch,u_n_events |
+
+See `iter04/_tmp_k8_s0_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k8_s1_A_baseline_F (2026-09-19 08:02 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 8 | 1.0000 | 0.5815 | 0.0008 | 0.1438 | 0.5720 | 0.0012 | 0.3253 | 0.2565 | e_n_exp,u_n_exp,u_n_uniq_items,u_span_sec,i_n_users |
+
+See `iter04/_tmp_k8_s1_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k8_s1_Z_combined (2026-09-19 08:02 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→16 + π-stable F→8 | fused→official_FSDS | 8 |  | 0.5921 | 0.0007 | 0.1152 | 0.7394 | 0.0039 | 0.3235 | 0.3276 | u_span_sec,i_n_users,i_credit_last,i_n_covisit_neighbors,u_n_exp |
+
+See `iter04/_tmp_k8_s1_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k8_s1_Z_combined_MI (2026-09-19 08:02 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→16 + π-stable MI→8 | fused→official_FSDS | 8 |  | 0.6878 | 0.0010 | 0.3472 | 0.4159 | 0.0010 | 0.3091 | 1.3433 | u_n_exp,i_log1p_n_users,u_log1p_n_uniq,i_log1p_n_exp,i_credit_last |
+
+See `iter04/_tmp_k8_s1_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k8_s2_A_baseline_F (2026-09-19 08:02 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 8 | 1.0000 | 0.5708 | 0.0007 | 0.0754 | 0.8224 | 0.0086 | 0.3656 | 0.1953 | e_n_exp,u_log1p_n_events,i_n_exp,i_log1p_n_exp,e_log1p_exp |
+
+See `iter04/_tmp_k8_s2_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k8_s2_Z_combined (2026-09-19 08:02 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→16 + π-stable F→8 | fused→official_FSDS | 8 |  | 0.7245 | 0.0009 | 0.6738 | 0.8191 | 0.0096 | 0.4102 | 0.3081 | i_n_exp,i_credit_first,i_log1p_n_exp,u_log1p_n_events,ui_pop_mismatch |
+
+See `iter04/_tmp_k8_s2_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k8_s2_Z_combined_MI (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→16 + π-stable MI→8 | fused→official_FSDS | 8 |  | 0.6400 | 0.0008 | 0.3413 | 0.7929 | 0.0050 | 0.4833 | 1.3420 | u_log1p_n_events,u_n_events,ui_pop_mismatch,u_n_uniq_items,i_credit_first |
+
+See `iter04/_tmp_k8_s2_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k10_s0_A_baseline_F (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 10 | 1.0000 | 0.5638 | 0.0008 | 0.3650 | 0.3687 | 0.0010 | 0.2614 | 0.3230 | e_n_exp,u_n_exp,u_n_uniq_items,u_span_sec,i_n_exp |
+
+See `iter04/_tmp_k10_s0_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k10_s0_Z_combined (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→20 + π-stable F→10 | fused→official_FSDS | 10 |  | 0.5632 | 0.0008 | 0.3650 | 0.3687 | 0.0010 | 0.2614 | 0.2761 | e_log1p_exp,e_n_exp,i_log1p_n_exp,i_share_first,u_n_uniq_items |
+
+See `iter04/_tmp_k10_s0_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k10_s0_Z_combined_MI (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→20 + π-stable MI→10 | fused→official_FSDS | 10 |  | 0.6542 | 0.0010 | 0.9521 | 0.2804 | 0.0016 | 0.7524 | 1.7060 | i_share_last,i_credit_linear,i_share_first,i_credit_last,u_n_exp |
+
+See `iter04/_tmp_k10_s0_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k10_s1_A_baseline_F (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 10 | 1.0000 | 0.5572 | 0.0007 | 0.1149 | 0.6133 | 0.0013 | 0.3616 | 0.2656 | e_n_exp,u_n_exp,u_n_uniq_items,u_span_sec,i_n_users |
+
+See `iter04/_tmp_k10_s1_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k10_s1_Z_combined (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→20 + π-stable F→10 | fused→official_FSDS | 10 |  | 0.5572 | 0.0007 | 0.1149 | 0.6060 | 0.0013 | 0.3616 | 0.2787 | u_span_sec,i_n_users,i_credit_last,i_share_last,e_log1p_exp |
+
+See `iter04/_tmp_k10_s1_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k10_s1_Z_combined_MI (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→20 + π-stable MI→10 | fused→official_FSDS | 10 |  | 0.7625 | 0.0012 | 0.1308 | 0.5598 | 0.0011 | 0.4350 | 1.6685 | i_share_last,i_share_first,e_log1p_exp,i_n_users,u_n_events |
+
+See `iter04/_tmp_k10_s1_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k10_s2_A_baseline_F (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 10 | 1.0000 | 0.5879 | 0.0007 | 0.3893 | 0.6958 | 0.0032 | 0.3617 | 0.1957 | e_n_exp,u_n_exp,u_n_uniq_items,u_log1p_n_events,i_n_exp |
+
+See `iter04/_tmp_k10_s2_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k10_s2_Z_combined (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→20 + π-stable F→10 | fused→official_FSDS | 10 |  | 0.4529 | 0.0006 | 0.3258 | 0.6956 | 0.0025 | 0.3664 | 0.2805 | i_n_exp,e_log1p_exp,e_n_exp,i_share_first,i_credit_first |
+
+See `iter04/_tmp_k10_s2_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k10_s2_Z_combined_MI (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→20 + π-stable MI→10 | fused→official_FSDS | 10 |  | 0.6400 | 0.0008 | 0.3159 | 0.7929 | 0.0050 | 0.4823 | 1.6240 | u_log1p_n_events,u_n_events,ui_pop_mismatch,i_share_first,u_log1p_n_uniq |
+
+See `iter04/_tmp_k10_s2_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k12_s0_A_baseline_F (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 12 | 1.0000 | 0.5909 | 0.0009 | 0.8252 | 0.3936 | 0.0016 | 0.3730 | 0.2871 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+
+See `iter04/_tmp_k12_s0_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k12_s0_Z_combined (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→12 | fused→official_FSDS | 12 |  | 0.5913 | 0.0009 | 0.8252 | 0.3938 | 0.0016 | 0.3730 | 0.2889 | e_log1p_exp,e_n_exp,i_log1p_n_exp,i_share_first,i_credit_first |
+
+See `iter04/_tmp_k12_s0_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k12_s0_Z_combined_MI (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→12 | fused→official_FSDS | 12 |  | 0.5055 | 0.0007 | 0.6293 | 0.3465 | 0.0019 | 0.7972 | 1.8594 | e_log1p_exp,e_n_exp,i_share_last,i_share_linear,i_share_first |
+
+See `iter04/_tmp_k12_s0_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k12_s1_A_baseline_F (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 12 | 1.0000 | 0.5921 | 0.0007 | 0.1397 | 0.7429 | 0.0039 | 0.4089 | 0.3991 | e_n_exp,u_n_exp,u_n_uniq_items,u_span_sec,i_n_users |
+
+See `iter04/_tmp_k12_s1_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k12_s1_Z_combined (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→12 | fused→official_FSDS | 12 |  | 0.5921 | 0.0007 | 0.1397 | 0.7389 | 0.0039 | 0.4089 | 0.4094 | u_span_sec,i_n_users,i_n_covisit_neighbors,i_credit_last,i_share_last |
+
+See `iter04/_tmp_k12_s1_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k12_s1_Z_combined_MI (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→12 | fused→official_FSDS | 12 |  | 0.4854 | 0.0007 | 0.1401 | 0.5919 | 0.0013 | 0.3628 | 1.8095 | i_share_first,i_credit_last,i_log1p_n_users,u_log1p_n_uniq,u_n_uniq_items |
+
+See `iter04/_tmp_k12_s1_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k12_s2_A_baseline_F (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 12 | 1.0000 | 0.7236 | 0.0009 | 0.5482 | 0.8068 | 0.0100 | 0.6758 | 0.3072 | e_n_exp,u_n_exp,u_n_uniq_items,u_log1p_n_events,i_n_exp |
+
+See `iter04/_tmp_k12_s2_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k12_s2_Z_combined (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→12 | fused→official_FSDS | 12 |  | 0.6490 | 0.0008 | 0.5457 | 0.7786 | 0.0081 | 0.6872 | 0.4064 | i_n_exp,e_log1p_exp,e_n_exp,i_share_first,i_credit_first |
+
+See `iter04/_tmp_k12_s2_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k12_s2_Z_combined_MI (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→12 | fused→official_FSDS | 12 |  | 0.6092 | 0.0007 | 0.3593 | 0.8410 | 0.0085 | 0.5505 | 1.7550 | u_n_events,u_log1p_n_events,ui_pop_mismatch,u_n_uniq_items,i_share_first |
+
+See `iter04/_tmp_k12_s2_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k15_s0_A_baseline_F (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4263 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+
+See `iter04/_tmp_k15_s0_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k15_s0_Z_combined (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 |  | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.4150 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+
+See `iter04/_tmp_k15_s0_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k15_s0_Z_combined_MI (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→15 | fused→official_FSDS | 15 |  | 0.5802 | 0.0008 | 0.8020 | 0.5402 | 0.0015 | 0.7980 | 1.8975 | e_log1p_exp,e_n_exp,i_share_last,i_credit_linear,i_share_first |
+
+See `iter04/_tmp_k15_s0_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k15_s1_A_baseline_F (2026-09-19 08:03 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.7544 | 0.0010 | 0.1497 | 0.5426 | 0.0012 | 0.5088 | 0.4540 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+
+See `iter04/_tmp_k15_s1_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k15_s1_Z_combined (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 |  | 0.7544 | 0.0010 | 0.1497 | 0.5426 | 0.0012 | 0.5088 | 0.4690 | u_span_sec,i_n_users,i_n_covisit_neighbors,i_credit_last,i_share_last |
+
+See `iter04/_tmp_k15_s1_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k15_s1_Z_combined_MI (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→15 | fused→official_FSDS | 15 |  | 0.6250 | 0.0010 | 0.1552 | 0.4158 | 0.0010 | 0.4164 | 1.7833 | e_log1p_exp,i_share_first,i_log1p_n_users,u_log1p_n_uniq,i_share_linear |
+
+See `iter04/_tmp_k15_s1_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k15_s2_A_baseline_F (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.5459 | 0.0007 | 0.4846 | 0.8363 | 0.0171 | 0.6457 | 0.3121 | e_n_exp,u_n_exp,u_n_uniq_items,u_log1p_n_events,u_log1p_n_uniq |
+
+See `iter04/_tmp_k15_s2_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k15_s2_Z_combined (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 |  | 0.6221 | 0.0005 | 0.5429 | 0.8429 | 0.0090 | 0.7445 | 0.4461 | i_share_first,i_credit_first,i_n_exp,e_log1p_exp,e_n_exp |
+
+See `iter04/_tmp_k15_s2_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k15_s2_Z_combined_MI (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→15 | fused→official_FSDS | 15 |  | 0.4682 | 0.0005 | 0.4229 | 0.8192 | 0.0097 | 0.4850 | 1.8228 | u_n_events,u_log1p_n_events,ui_pop_mismatch,e_log1p_exp,e_n_exp |
+
+See `iter04/_tmp_k15_s2_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k18_s0_A_baseline_F (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 18 | 1.0000 | 0.6441 | 0.0010 | 0.9204 | 0.7454 | 0.0058 | 0.4596 | 0.5559 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+
+See `iter04/_tmp_k18_s0_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k18_s0_Z_combined (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→18 | fused→official_FSDS | 18 |  | 0.6441 | 0.0010 | 0.9204 | 0.7454 | 0.0058 | 0.4596 | 0.5408 | e_log1p_exp,e_n_exp,u_n_uniq_items,i_n_exp,i_log1p_n_covisit |
+
+See `iter04/_tmp_k18_s0_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k18_s0_Z_combined_MI (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→18 | fused→official_FSDS | 18 |  | 0.5981 | 0.0009 | 0.9144 | 0.7465 | 0.0031 | 0.8223 | 1.8947 | e_log1p_exp,e_n_exp,i_credit_last,i_share_last,i_log1p_n_covisit |
+
+See `iter04/_tmp_k18_s0_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k18_s1_A_baseline_F (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 18 | 1.0000 | 0.7666 | 0.0011 | 0.1738 | 0.5285 | 0.0012 | 0.3323 | 0.4950 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+
+See `iter04/_tmp_k18_s1_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k18_s1_Z_combined (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→18 | fused→official_FSDS | 18 |  | 0.7666 | 0.0011 | 0.1738 | 0.5286 | 0.0012 | 0.3323 | 0.5287 | u_span_sec,i_n_users,i_n_covisit_neighbors,u_n_exp,u_n_uniq_items |
+
+See `iter04/_tmp_k18_s1_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k18_s1_Z_combined_MI (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→18 | fused→official_FSDS | 18 |  | 0.6380 | 0.0010 | 0.1790 | 0.5819 | 0.0020 | 0.3982 | 1.9823 | i_credit_last,e_log1p_exp,i_share_last,e_n_exp,i_share_first |
+
+See `iter04/_tmp_k18_s1_Z_combined_MI/FINDINGS.md`.
+
+## iter04/_tmp_k18_s2_A_baseline_F (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 18 | 1.0000 | 0.6927 | 0.0010 | 0.5012 | 0.8672 | 0.0131 | 0.6612 | 0.4376 | e_n_exp,u_n_exp,u_n_uniq_items,u_span_sec,u_log1p_n_events |
+
+See `iter04/_tmp_k18_s2_A_baseline_F/FINDINGS.md`.
+
+## iter04/_tmp_k18_s2_Z_combined (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→18 | fused→official_FSDS | 18 |  | 0.6929 | 0.0010 | 0.5556 | 0.8671 | 0.0131 | 0.7212 | 0.4480 | e_log1p_exp,e_n_exp,i_share_first,i_credit_first,i_n_exp |
+
+See `iter04/_tmp_k18_s2_Z_combined/FINDINGS.md`.
+
+## iter04/_tmp_k18_s2_Z_combined_MI (2026-09-19 08:04 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Z_combined_MI|W1hold | COMBINED-MI(=cmean+π-MI→FSDS): cmean pre→21 + π-stable MI→18 | fused→official_FSDS | 18 |  | 0.6160 | 0.0007 | 0.5372 | 0.8304 | 0.0176 | 0.7541 | 1.9056 | u_n_events,u_log1p_n_events,ui_pop_mismatch,e_log1p_exp,e_n_exp |
+
+See `iter04/_tmp_k18_s2_Z_combined_MI/FINDINGS.md`.
+
+## iter04 (2026-09-19 08:05 UTC)
+
+- k×seed×{A,Z,Z-MI} sweep (45 runs)
+- Seed variance dwarfs method gap; Z≈A at k=15 mean; MI hurts; k≈15–18 sweet.
+- See iter04/FINDINGS.md
+
