@@ -17,6 +17,9 @@
 
 若以后单开实验，可复活分数驱动局部化；**默认闭环不依赖图上收核。**
 
+**Leiden 上游 key（审阅稿，非默认）：**  
+见 [`LEIDEN_FOR_DRILL_ELABORATION.md`](./LEIDEN_FOR_DRILL_ELABORATION.md)——社区只作 `drill_key` 候选，**不**用模块度当 Drill 门。
+
 ## 默认闭环（仅此）
 
 ```text

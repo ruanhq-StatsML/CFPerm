@@ -145,7 +145,8 @@ MSR-VTT 脚本是 **M1 + 模态 LOGO 份额**（PO/RF/MMD），尚未接行谱�
 | 真多层 GNN / GenLouvain 归因门 | **否** | 目标函数不对 |
 | CF τ 方差当异质 | **否** | 已否决 |
 | Seeded PPR / ULS / GraphScan / conductance | **否（本阶段超纲）** | deferred；见 [`GRAPH_LOCALIZATION_NO_COMMUNITY.md`](./GRAPH_LOCALIZATION_NO_COMMUNITY.md) |
-| Ego-centric / 全局社区发现 | **否** | 超 scope |
+| Ego-centric / 全局社区发现当归因门 | **否** | 超 scope |
+| **Leiden 作上游 entity_key（试验）** | **审阅中** | 见 [`LEIDEN_FOR_DRILL_ELABORATION.md`](./LEIDEN_FOR_DRILL_ELABORATION.md)；门仍只认 δ/R |
 
 ---
 
