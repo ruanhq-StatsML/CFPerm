@@ -436,11 +436,17 @@ def lr_scale(alpha: float, cfg: Config) -> float:
     return cfg.lr_lo + (cfg.lr_hi - cfg.lr_lo) * float(alpha)
 
 
-def _quiet_split(X, Y, seed: int):
+def _quiet_pair(X, Y, seed: int, n: int = 40):
+    """Own-ref pair with n≥40 so PO-risk is defined. Bootstrap, same P(X,Y)."""
     rng = np.random.RandomState(int(seed))
-    idx = rng.permutation(len(X))
-    h = max(len(X) // 2, 1)
-    return X[idx[:h]], Y[idx[:h]], X[idx[h:]], Y[idx[h:]]
+    k = max(int(n), 40)
+    i1 = rng.choice(len(X), size=k, replace=True)
+    i2 = rng.choice(len(X), size=k, replace=True)
+    return X[i1], Y[i1], X[i2], Y[i2]
+
+
+def _quiet_split(X, Y, seed: int):
+    return _quiet_pair(X, Y, seed)
 
 
 def _excess(stream: Optional[float], quiet: Optional[float], floor: float) -> float:
@@ -550,12 +556,17 @@ def overlay_fsds_plan(
     po_broken: bool,
     loud: Optional[Mapping] = None,
 ) -> dict:
-    """Quiet PO×MSE gate is not 'no drift'. FSDS grain picks stem vs top."""
+    """Overlay only when the global MMD or PO gate is actually broken.
+
+    A 2× peak among groups on a quiet window is sampling noise, not a hop.
+    """
     plan = dict(logo["plan"])
     raw = str(plan.get("global_action"))
+    if not mmd_broken and not po_broken:
+        return plan
     if loud and float(loud.get("score") or 0) > 0:
         g = str(loud["group"])
-        if loud["kind"] == "mmd" and not po_broken:
+        if loud["kind"] == "mmd" and mmd_broken:
             plan = plan_next_batch(ACTION_XSHIFT, logo["ratios"])
             if g in plan["towers"]:
                 plan["towers"][g] = {
@@ -566,7 +577,7 @@ def overlay_fsds_plan(
             plan["overlay"] = "fsds_group_mmd"
             plan["global_action_raw"] = raw
             return plan
-        if loud["kind"] == "po" and not mmd_broken:
+        if loud["kind"] == "po" and po_broken:
             plan = plan_next_batch(ACTION_FREEZE, logo["ratios"])
             if g in plan["towers"]:
                 plan["towers"][g] = {
@@ -668,9 +679,17 @@ def fsds_route_xy(
     X_n, _, _ = sketch_groups(X_n, raw_groups, raw_names)
 
     metrics = three_metrics(X_e, Y_e, X_n, Y_n, seed=seed, with_po=True)
-    Xq1, Yq1, Xq2, Yq2 = _quiet_split(X_e, Y_e, seed)
+    Xq1, Yq1, Xq2, Yq2 = _quiet_pair(X_e, Y_e, seed)
     quiet = three_metrics(Xq1, Yq1, Xq2, Yq2, seed=seed, with_po=True)
     g_new = group_three_metrics(X_e, Y_e, X_n, Y_n, groups, seed)
+
+    po_base = quiet.get("po")
+    if po_base is None:
+        po_base = QUIET_FLOOR_PO
+    else:
+        po_base = max(float(po_base), QUIET_FLOOR_PO)
+    mmd_base = max(float(quiet.get("mmd") or 0.0), QUIET_FLOOR_MMD)
+    mse_base = quiet.get("mse")
 
     logo = None
     if with_logo:
@@ -681,11 +700,15 @@ def fsds_route_xy(
             Y_n,
             groups,
             seed=seed,
-            po_base=quiet.get("po"),
-            mse_base=quiet.get("mse"),
-            mmd_base=quiet.get("mmd"),
+            po_base=po_base,
+            mse_base=mse_base,
+            mmd_base=mmd_base,
         )
     loud, group_board = pick_loud_group(g_new, logo)
+    mmd_broken = bool(large_deviation(metrics["mmd"], mmd_base))
+    po_broken = bool(metrics["po"] is not None and large_deviation(metrics["po"], po_base))
+    if not mmd_broken and not po_broken:
+        loud = None
     if loud is not None:
         ranked = rank_inside_group(X_e, X_n, Y_e, Y_n, names, groups, loud["group"], seed)
     else:
@@ -698,12 +721,6 @@ def fsds_route_xy(
     if loud is not None:
         cov, con = float(loud["cov"]), float(loud["con"])
     alpha = attribution_to_alpha(cov, con, cfg)
-    mmd_broken = bool(large_deviation(metrics["mmd"], max(quiet["mmd"] or 0.0, QUIET_FLOOR_MMD)))
-    po_broken = bool(
-        metrics["po"] is not None
-        and quiet["po"] is not None
-        and large_deviation(metrics["po"], max(quiet["po"], QUIET_FLOOR_PO))
-    )
     plan = None if logo is None else overlay_fsds_plan(logo, mmd_broken, po_broken, loud)
     return {
         "metrics": metrics,
@@ -806,6 +823,57 @@ def styleTransferFSDS(
     return recs
 
 
+def routing_effect(cfg: Config, n_rep: int = 6, n: int = 64) -> dict:
+    """Hit rate: quiet stays quiet; covariate → noise/mmd; concept → style_src/po."""
+    lex = make_lexicon(cfg, seed=0)
+    scenes = [
+        ("quiet", {}, None, None),
+        ("covariate", {"drift": True}, "noise", "mmd"),
+        ("concept", {"concept": True}, "style_src", "po"),
+    ]
+    out = {}
+    for name, kw, want_g, want_k in scenes:
+        ok = 0
+        for r in range(int(n_rep)):
+            exist = make_data(n, cfg, seed=20 + r, lexicon=lex)
+            new = make_data(n, cfg, seed=200 + r, lexicon=lex, **kw)
+            route = fsds_route(exist, new, cfg, seed=7 + r)
+            loud = route.get("loud")
+            overlay = (route.get("plan") or {}).get("overlay")
+            if name == "quiet":
+                hit = overlay is None and loud is None
+            else:
+                hit = (
+                    loud is not None
+                    and loud.get("group") == want_g
+                    and loud.get("kind") == want_k
+                )
+            ok += int(hit)
+        out[name] = {
+            "hit": int(ok),
+            "n": int(n_rep),
+            "rate": float(ok) / max(int(n_rep), 1),
+            "want": "quiet" if name == "quiet" else f"{want_g}/{want_k}",
+        }
+    return out
+
+
+def effect_table_latex(effect: Mapping) -> str:
+    lines = [
+        r"\begin{tabular}{@{}lccc@{}}",
+        r"\toprule",
+        r"scene & want & hit & rate \\",
+        r"\midrule",
+    ]
+    for name in ("quiet", "covariate", "concept"):
+        row = effect.get(name) or {}
+        lines.append(
+            f"{name} & {row.get('want','')} & {row.get('hit',0)}/{row.get('n',0)} & {row.get('rate',0):.2f} \\\\"
+        )
+    lines += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(lines)
+
+
 def routing_board_latex(rows: Sequence[Mapping]) -> str:
     """Two-scene board: which grain rang, which tower to touch next."""
     lines = [
@@ -816,7 +884,9 @@ def routing_board_latex(rows: Sequence[Mapping]) -> str:
     ]
     for r in rows:
         scene = str(r.get("scene", r.get("t", "")))
-        grain = str(r.get("loud_group", "")) + "/" + str(r.get("loud_kind", ""))
+        g = r.get("loud_group")
+        k = r.get("loud_kind")
+        grain = "---" if not g else f"{g}/{k}"
         towers = r.get("towers") or {}
         nxt = ",".join(f"{k}:{v}" for k, v in towers.items() if v not in (TOWER_INFER, TOWER_FREEZE))
         if not nxt:
@@ -911,8 +981,11 @@ def _print_route(route: Mapping) -> None:
     print(f"[LOGO] towers = {towers}")
 
 
-def _write_board(rows, cfg: Config) -> Path:
+def _write_board(rows, cfg: Config, effect: Optional[Mapping] = None) -> Path:
     tex = routing_board_latex(rows)
+    extra = ""
+    if effect:
+        extra = r"\vspace{1.2em}" + "\n" + r"\paragraph{Hit rate.}" + "\n" + effect_table_latex(effect)
     body = "\n".join(
         [
             r"\documentclass[11pt]{article}",
@@ -925,9 +998,10 @@ def _write_board(rows, cfg: Config) -> Path:
             r"$T$ is the batch label. Shares are localization, not Shapley / CATE.",
             r"MMD-loud grain $\to$ stem-adapt the content tower.",
             r"PO-loud grain $\to$ train style top + prefix (GPT-2 slot).",
-            r"A quiet PO$\times$MSE gate is not `no drift'.",
+            r"A quiet window must not overlay freeze. Overlay only if global MMD or PO is broken.",
             r"\vspace{0.8em}",
             tex,
+            extra,
             r"\end{document}",
         ]
     )
@@ -937,7 +1011,11 @@ def _write_board(rows, cfg: Config) -> Path:
     path.write_text(body, encoding="utf-8")
     res = Path(__file__).resolve().parents[2] / "results" / "style_transfer_fsds"
     res.mkdir(parents=True, exist_ok=True)
-    (res / "board.tex").write_text(tex, encoding="utf-8")
+    (res / "board.tex").write_text(tex + ("\n" + extra if extra else ""), encoding="utf-8")
+    if effect:
+        import json
+
+        (res / "effect.json").write_text(json.dumps(effect, indent=2), encoding="utf-8")
     return path
 
 
@@ -961,9 +1039,18 @@ def train(cfg: Config):
     print("[FSDS] covariate walk vs D_ref (noise support) ...")
     route = fsds_route(exist_data, cov_data, cfg, seed=cfg.seed, with_logo=True)
     _print_route(route)
-    print("[FSDS] concept redraw of s_tgt vs D_ref ...")
+    print("[FSDS] concept remap of s_tgt vs D_ref ...")
     route_c = fsds_route(exist_data, con_data, cfg, seed=cfg.seed, with_logo=True)
     _print_route(route_c)
+    quiet_data = make_data(cfg.n_attr, cfg, seed=6, lexicon=lex)
+    print("[FSDS] quiet same-DGP vs D_ref ...")
+    route_q = fsds_route(exist_data, quiet_data, cfg, seed=cfg.seed, with_logo=True)
+    _print_route(route_q)
+
+    print("[FSDS] routing hit rate (6 reps) ...")
+    effect = routing_effect(cfg, n_rep=6, n=cfg.n_attr)
+    for k, v in effect.items():
+        print(f"  {k:10s}  want={v['want']:16s}  {v['hit']}/{v['n']}  ({v['rate']:.2f})")
 
     df = np.vstack([pack_style_df(exist_data), pack_style_df(cov_data), pack_style_df(con_data)])
     recs = styleTransferFSDS(
@@ -983,6 +1070,15 @@ def train(cfg: Config):
         )
     board_rows = [
         {
+            "scene": "quiet",
+            "loud_group": (route_q.get("loud") or {}).get("group"),
+            "loud_kind": (route_q.get("loud") or {}).get("kind"),
+            "towers": {k: v["tower"] for k, v in (route_q.get("plan") or {}).get("towers", {}).items()},
+            "overlay": (route_q.get("plan") or {}).get("overlay"),
+            "action": (route_q.get("plan") or {}).get("global_action"),
+            "update": (route_q.get("plan") or {}).get("update"),
+        },
+        {
             "scene": "covariate noise",
             "loud_group": (route.get("loud") or {}).get("group"),
             "loud_kind": (route.get("loud") or {}).get("kind"),
@@ -999,7 +1095,7 @@ def train(cfg: Config):
             "action": (route_c.get("plan") or {}).get("global_action"),
         },
     ]
-    tex_path = _write_board(board_rows, cfg)
+    tex_path = _write_board(board_rows, cfg, effect=effect)
     print(f"[FSDS] board → {tex_path}")
 
     optimizer = build_optimizer_with_routing(model, cfg, route["alpha"], plan=route.get("plan"))

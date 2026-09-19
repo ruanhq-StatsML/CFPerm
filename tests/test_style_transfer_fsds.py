@@ -73,6 +73,11 @@ class StyleTransferFsdsTests(unittest.TestCase):
         self.assertFalse(recs[0]["y_in_x"])
         self.assertEqual(recs[0]["loud_group"], "noise")
 
+        quiet = make_data(64, cfg, seed=6, lexicon=lex)
+        route_q = fsds_route(exist, quiet, cfg, seed=7, with_logo=True)
+        self.assertIsNone(route_q["loud"])
+        self.assertIsNone((route_q.get("plan") or {}).get("overlay"))
+
 
 if __name__ == "__main__":
     unittest.main()

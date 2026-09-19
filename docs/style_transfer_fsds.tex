@@ -8,14 +8,26 @@ then columns inside that grain. $Y$ is the target style, never a feature.
 $T$ is the batch label. Shares are localization, not Shapley / CATE.
 MMD-loud grain $\to$ stem-adapt the content tower.
 PO-loud grain $\to$ train style top + prefix (GPT-2 slot).
-A quiet PO$\times$MSE gate is not `no drift'.
+A quiet window must not overlay freeze. Overlay only if global MMD or PO is broken.
 \vspace{0.8em}
 \begin{tabular}{@{}llll@{}}
 \toprule
 scene & FSDS grain & next tower & note \\
 \midrule
+quiet & --- & content:full_train,style_src:full_train,noise:full_train & keep_training \\
 covariate noise & noise/mmd & noise:train_stem & fsds_group_mmd \\
 concept $s_{tgt}$ & style_src/po & style_src:train_top & fsds_group_po \\
+\bottomrule
+\end{tabular}
+\vspace{1.2em}
+\paragraph{Hit rate.}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+scene & want & hit & rate \\
+\midrule
+quiet & quiet & 6/6 & 1.00 \\
+covariate & noise/mmd & 6/6 & 1.00 \\
+concept & style_src/po & 6/6 & 1.00 \\
 \bottomrule
 \end{tabular}
 \end{document}
