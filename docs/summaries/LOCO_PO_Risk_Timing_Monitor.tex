@@ -90,4 +90,32 @@ Attribution answers \emph{where/which/which way}.
 LOCO-PO OnlineRFPerm answers \emph{when} those tips started moving
 PO-risk---the accurate time point after attribution.
 
+
+\section{v2 iteration (score modes)}
+\label{sec:v2}
+Multi-seed sweep ($5$ seeds, shift@$20$, true tips $\{0,1\}$ vs wrong $\{6,7\}$):
+
+\begin{table}[h]
+\centering
+\caption{LOCO tip-timing v2 score modes.}
+\label{tab:loco-v2}
+\begin{tabular}{lrrrrr}
+\toprule
+mode & true delay & hit$\pm1$ & early/run & wrong hit$\pm1$ & wrong miss \\
+\midrule
+sum & $0.00\pm0.00$ & $100\%$ & $0.00$ & $100\%$ & $0\%$ \\
+abs\_dev & $-2.20\pm4.40$ & $80\%$ & $0.40$ & $40\%$ & $0\%$ \\
+po & $0.00\pm0.00$ & $100\%$ & $0.00$ & $100\%$ & $0\%$ \\
+collapse & $-0.80\pm1.60$ & $80\%$ & $0.20$ & $100\%$ & $0\%$ \\
+cusum & $0.00\pm0.00$ & $100\%$ & $0.00$ & $100\%$ & $0\%$ \\
+\textbf{confirm} & $\mathbf{0.00\pm0.00}$ & $\mathbf{100\%}$ & $\mathbf{0.00}$ & $\mathbf{0\%}$ & $\mathbf{100\%}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Default = confirm}: hard-gate only if tip-collapse
+$\max(0,\bar L-L_{\mathrm{tip}})$ \emph{and} $\mathrm{PO}_t$ both exceed
+burn $k$-sigma gates. PO-only / sum fire on any shift (wrong tips also hit);
+confirm is tip-attributed timing.
+
 \end{document}

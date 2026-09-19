@@ -55,15 +55,32 @@ def test_stream_detects_tip_shift_near_known_time():
         seed=2,
         n_estimators=20,
         per_tip=False,
+        score_mode="confirm",
         known_shift=18,
     )
     assert summary["tip_first_reject_t"] is not None
     assert summary["tip_first_reject_t"] >= 8
     assert summary["detection_delay_tip"] is not None
-    # abs-dev tip change should fire at/near the known shift (not deep early)
     assert summary["detection_delay_tip"] >= -2
     assert summary["detection_delay_tip"] <= 6
     assert abs(summary["tip_first_reject_t"] - 18) <= 6
+
+
+def test_evaluate_score_modes_confirm_beats_wrong_tips():
+    from agod.loco_po_monitor import evaluate_score_modes
+
+    out = evaluate_score_modes(
+        seeds=(0, 1, 2),
+        modes=("confirm", "sum"),
+        shift_at=20,
+        true_tips=(0, 1),
+        wrong_tips=(6, 7),
+        n_estimators=15,
+    )
+    by = {r["mode"]: r for r in out["rows"]}
+    assert by["confirm"]["true_hit_pm1"] >= 0.66
+    # wrong tips should hit the known tip-shift less often than true tips
+    assert by["confirm"]["wrong_hit_pm1"] <= by["confirm"]["true_hit_pm1"]
 
 
 def test_update_appends_histories():
