@@ -31,6 +31,10 @@
 [`PO_RISK_FOR_DS.md`](./PO_RISK_FOR_DS.md)
 — period-PO `mean(τ̂²)` / VIMP → FSDS ranking prior；`po_help_select` one-liner；**不是** ATE。
 
+**多层次下钻 × dissolve rollup（落地试探）：**
+[`DRILL_DISSOLVE_LANDABILITY.md`](./DRILL_DISSOLVE_LANDABILITY.md)
+— 叶子分向上聚合（非 PyPI dissolve）；商户层与 MMD 有重叠，不替换官方 drill。
+
 **多层图调研 × 多模态归因逻辑：**
 [`MULTILAYER_GRAPH_AND_MM_ATTR.md`](./MULTILAYER_GRAPH_AND_MM_ATTR.md)
 — 多层图算法族取舍；模态=列块 / key；接到同一套 cmean 缩支撑闭环。
