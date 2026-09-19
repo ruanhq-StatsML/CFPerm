@@ -1,0 +1,20 @@
+{
+  "quiet": {
+    "hit": 6,
+    "n": 6,
+    "rate": 1.0,
+    "want": "quiet"
+  },
+  "covariate": {
+    "hit": 6,
+    "n": 6,
+    "rate": 1.0,
+    "want": "noise/mmd"
+  },
+  "concept": {
+    "hit": 6,
+    "n": 6,
+    "rate": 1.0,
+    "want": "style_src/po"
+  }
+}

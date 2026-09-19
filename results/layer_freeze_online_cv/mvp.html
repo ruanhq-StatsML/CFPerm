@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>在线层冻结 · 启发式看板 MVP</title>
+<style>
+:root {
+  --ink:#15202b; --paper:#f4f1ea; --card:#fff; --line:#ddd6c8;
+  --navy:#1f4e79; --muted:#5f5b53; --green:#2a7d4f; --gold:#d48b16; --purple:#6b4ea0;
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family:"IBM Plex Sans","Noto Sans SC","Source Han Sans SC",sans-serif; color:var(--ink); background:var(--paper); }
+header { background:linear-gradient(160deg,#163a5c 0%,#1f4e79 60%,#2c6a99 100%); color:#fff; padding:36px 32px 28px; }
+header .kicker { letter-spacing:.12em; font-size:.72rem; opacity:.8; text-transform:uppercase; margin:0 0 10px; }
+header h1 { margin:0 0 10px; font-size:1.7rem; font-weight:650; line-height:1.25; }
+header p { margin:0; max-width:760px; line-height:1.55; opacity:.94; font-size:1.02rem; }
+nav { position:sticky; top:0; background:#eef2f6; border-bottom:1px solid var(--line); padding:10px 32px; z-index:3; }
+nav a { color:var(--navy); margin-right:16px; text-decoration:none; font-size:.9rem; }
+nav a:hover { text-decoration:underline; }
+main { padding:8px 32px 72px; max-width:1120px; margin:0 auto; }
+h2 { font-size:1.22rem; margin:32px 0 10px; }
+.muted { color:var(--muted); font-size:.95rem; line-height:1.5; }
+.flow { display:grid; grid-template-columns:1fr 28px 1fr 28px 1fr 28px 1fr; gap:0; align-items:stretch; margin:18px 0 8px; }
+.step { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 14px 16px; }
+.step b { display:block; color:var(--navy); margin-bottom:6px; font-size:.95rem; }
+.step p { margin:0; font-size:.88rem; line-height:1.45; color:#333; }
+.arrow { display:flex; align-items:center; justify-content:center; color:#9aa; font-size:1.4rem; }
+.rules { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin:16px 0; }
+.rule { background:var(--card); border-radius:12px; border-top:5px solid #ccc; padding:12px 12px 14px; min-height:128px; }
+.rule b { display:block; margin-bottom:6px; }
+.rule span { font-size:.84rem; color:#444; line-height:1.4; }
+.cards { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0 8px; }
+a.card { display:block; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; text-decoration:none; color:inherit; min-height:148px; }
+a.card:hover { border-color:var(--navy); }
+a.card strong { display:block; margin:8px 0 6px; font-size:.98rem; }
+a.card span:last-child { font-size:.86rem; color:var(--muted); line-height:1.4; }
+.pill { display:inline-block; color:#fff; padding:3px 10px; border-radius:999px; font-size:.8rem; }
+table { border-collapse:collapse; background:var(--card); width:100%; font-variant-numeric:tabular-nums; }
+th, td { border:1px solid var(--line); padding:6px 9px; font-size:.86rem; }
+th { background:#eef2f6; text-align:left; }
+.scroll { overflow-x:auto; }
+.shot img { max-width:100%; background:#fff; border:1px solid var(--line); border-radius:8px; }
+.dataset { margin-top:40px; padding-top:4px; border-top:1px solid var(--line); }
+.headrow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.headrow h2 { margin:18px 0 0; }
+.blurb { margin:8px 0; line-height:1.5; }
+.meta { color:var(--muted); font-size:.88rem; }
+.note { background:#fff; border-left:4px solid var(--navy); padding:12px 16px; margin:18px 0; }
+code { background:#eee; padding:1px 5px; border-radius:3px; font-size:.86em; }
+footer { color:var(--muted); font-size:.82rem; margin-top:48px; }
+@media (max-width: 980px) {
+  .flow, .rules, .cards { grid-template-columns:1fr; }
+  .arrow { display:none; }
+  header, nav, main { padding-left:16px; padding-right:16px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <p class="kicker">Layer-freeze online CV · MVP</p>
+  <h1>新数据来了，这张看板告诉你：<br>机制变了没有、模型还能不能用、该不该冻层。</h1>
+  <p>启发式，不是自动停训器。三句话：<b>PO-risk</b> 看 P(Y|X) 有没有 hop，
+  <b>模型 MSE</b> 看现模型还付不付得起房租，
+  <b>MMD</b> 看是不是 X 自己在走。何时真正去 update，仍归业务。</p>
+</header>
+<nav>
+  <a href="#flow">怎么读</a>
+  <a href="#rules">五种动作</a>
+  <a href="#boards">六张看板</a>
+  <a href="#contrast">对照实验</a>
+  <a href="#dgp_concept">concept</a>
+  <a href="#dgp_covariate">covariate</a>
+  <a href="#electricity">电价</a>
+  <a href="#covertype">covertype</a>
+  <a href="#bankmarketing">银行</a>
+  <a href="#eeg">脑电</a>
+</nav>
+<main>
+<section id="flow">
+  <h2>每一段新 batch 怎么读</h2>
+  <div class="flow">
+    <div class="step"><b>1 · 钉死参考窗</b><p>前面 1 万行是 T=0。新来的这一段是 T=1。参考窗不再改。</p></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>2 · PO-risk</b><p>独立随机森林估 μ(Y|X)、e(T|X)。问的是机制，不是现模型好不好。RF 不该突然崩。</p></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>3 · 模型 MSE + MMD</b><p>MSE：现网络在新段上的误差。<br>MMD：只跟参考窗比 X，<code>MMD²(X_new, X_ref)</code>。</p></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>4 · 动作</b><p>两都崩才冻层。PO 崩、模型没崩 → 再看。MSE 崩、PO 没崩 → 先看是不是 X 在动。</p></div>
+  </div>
+  <p class="note">口径钉死：MMD 只对 <b>参考窗</b>，不对历史所有 batch 的 pairwise 均值，也不对上一层 representation。
+  冻住的 <code>RandomForestRegressor().predict(X_new)</code> 只用来标「何时跳了一下」。不做 online-bootstrap。</p>
+</section>
+
+<section id="rules">
+  <h2>五种启发式动作</h2>
+  <div class="rules">
+    <div class="rule" style="border-top-color:var(--green)"><b>接着 train</b><span>PO 安静、MSE 安静。没有 hop，模型还在拟合。一层都不冻。</span></div>
+    <div class="rule" style="border-top-color:var(--gold)"><b>再观察</b><span>PO 崩了，MSE 没崩。机制可能动了，误差还在线内。先不冻。</span></div>
+    <div class="rule" style="border-top-color:#b33"><b>冻这一层</b><span>PO 和 MSE 都崩。现策略不太行。开 freeze-depth，只训上面几层。</span></div>
+    <div class="rule" style="border-top-color:var(--purple)"><b>X 在动</b><span>MSE 崩了，PO 没崩，MMD 过线。不是 concept drift，是 P(X) 在变。不按机制去冻层。</span></div>
+    <div class="rule" style="border-top-color:#555"><b>tricky</b><span>MSE 崩了，PO 和 MMD 都安静。不是 P(Y|X) 也不是 X。先不冻。</span></div>
+  </div>
+  <p class="muted">崩 = 因果移动平均 ≥ 2× 各自在参考窗上的 baseline。重点：RF 的 PO-risk 不该先突然塌；更可能先崩的是模型 MSE。</p>
+</section>
+
+<section id="boards">
+  <h2>六张看板，一句话结论</h2>
+  <div class="cards">
+    
+<a class="card" href="#dgp_concept">
+  <span class="pill" style="background:#d48b16">再观察</span>
+  <strong>DGP gradual concept (β flips after batch 2)</strong>
+  <span>机制在慢慢翻（β），X 没动。PO / MSE 抬，MMD 安静 → 再观察，先不冻层。</span>
+</a>
+
+<a class="card" href="#dgp_covariate">
+  <span class="pill" style="background:#2a7d4f">接着 train</span>
+  <strong>DGP gradual covariate (bump; μ walks after batch 2)</strong>
+  <span>同一套 P(Y|X)，X 的均值在走。MMD 过线，PO 安静，模型还能用 → 接着 train。</span>
+</a>
+
+<a class="card" href="#electricity">
+  <span class="pill" style="background:#2a7d4f">接着 train</span>
+  <strong>electricity (NSW, ordered in time)</strong>
+  <span>电价流。RF 的 PO-risk 没崩，MSE 的移动平均也没过 2× → 每一层接着 backprop。</span>
+</a>
+
+<a class="card" href="#covertype">
+  <span class="pill" style="background:#6b4ea0">X 在动</span>
+  <strong>covertype (geographic order, class 2 vs rest)</strong>
+  <span>地理顺序。MSE 先崩、PO 安静、MMD vs 参考窗过线 → 不是 concept，是 X 在动。</span>
+</a>
+
+<a class="card" href="#bankmarketing">
+  <span class="pill" style="background:#6b4ea0">X 在动</span>
+  <strong>bank-marketing (campaign order)</strong>
+  <span>营销活动顺序。t=4 模型误差跳，PO 仍安静，MMD 过线 → X shift。</span>
+</a>
+
+<a class="card" href="#eeg">
+  <span class="pill" style="background:#6b4ea0">X 在动</span>
+  <strong>eeg-eye-state (time-ordered EEG)</strong>
+  <span>脑电时间序。t=2 误差跳，PO 安静，MMD 过线 → 同样是 X shift。</span>
+</a>
+
+  </div>
+</section>
+
+
+<section id="contrast">
+  <h2>对照实验：机制在变 vs X 在走</h2>
+  <p class="muted">左：concept（β 慢慢翻）— MMD 安静，PO / MSE 动。右：covariate（均值走）— MMD 过线，PO 安静。灰虚线是标好的 onset，橙线是冻住 RF 标到的跳变。</p>
+  <p class="shot"><img src="dgp_contrast.png" alt="concept vs covariate"></p>
+</section>
+
+
+
+<section id="dgp_concept" class="dataset">
+  <div class="headrow">
+    <h2>DGP gradual concept (β flips after batch 2)</h2>
+    <span class="pill" style="background:#d48b16">再观察</span>
+  </div>
+  <p class="blurb">机制在慢慢翻（β），X 没动。PO / MSE 抬，MMD 安静 → 再观察，先不冻层。</p>
+  <p class="meta">n_ref=10000 · 每段 n=2000 · 10 段 · <a href="dgp_concept/board.html">明细看板</a></p>
+  <p class="shot"><img src="dgp_concept/po_mse_trend.png" alt="dgp_concept"></p>
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>段</th><th>PO-risk</th><th>模型 MSE</th><th>MMD vs 参考窗</th>
+      <th>冻住 RF 的 T</th><th>跳变</th><th>动作</th>
+    </tr></thead>
+    <tbody><tr><td>0</td><td>1.92e-05</td><td>0.135</td><td>-0.000318</td><td>0.00381</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>1</td><td>1.11e-05</td><td>0.136</td><td>0.000667</td><td>0.00985</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>2</td><td>1.65e-05</td><td>0.14</td><td>0.000328</td><td>0.0122</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>3</td><td>4.04e-05</td><td>0.168</td><td>-0.000625</td><td>0.0325</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>4</td><td>0.000155</td><td>0.199</td><td>0.000576</td><td>0.0554</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>5</td><td>0.000551</td><td>0.237</td><td>1.52e-05</td><td>0.0966</td><td></td><td style='color:#d48b16;font-weight:600'>再观察</td></tr><tr><td>6</td><td>0.00114</td><td>0.258</td><td>0.000453</td><td>0.136</td><td></td><td style='color:#d48b16;font-weight:600'>再观察</td></tr><tr><td>7</td><td>0.00265</td><td>0.278</td><td>0.00195</td><td>0.198</td><td></td><td style='color:#d48b16;font-weight:600'>再观察</td></tr><tr><td>8</td><td>0.00385</td><td>0.264</td><td>-0.000778</td><td>0.232</td><td></td><td style='color:#d48b16;font-weight:600'>再观察</td></tr><tr><td>9</td><td>0.0049</td><td>0.247</td><td>-0.000794</td><td>0.262</td><td></td><td style='color:#d48b16;font-weight:600'>再观察</td></tr></tbody>
+  </table>
+  </div>
+</section>
+
+<section id="dgp_covariate" class="dataset">
+  <div class="headrow">
+    <h2>DGP gradual covariate (bump; μ walks after batch 2)</h2>
+    <span class="pill" style="background:#2a7d4f">接着 train</span>
+  </div>
+  <p class="blurb">同一套 P(Y|X)，X 的均值在走。MMD 过线，PO 安静，模型还能用 → 接着 train。</p>
+  <p class="meta">n_ref=10000 · 每段 n=2000 · 10 段 · <a href="dgp_covariate/board.html">明细看板</a></p>
+  <p class="shot"><img src="dgp_covariate/po_mse_trend.png" alt="dgp_covariate"></p>
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>段</th><th>PO-risk</th><th>模型 MSE</th><th>MMD vs 参考窗</th>
+      <th>冻住 RF 的 T</th><th>跳变</th><th>动作</th>
+    </tr></thead>
+    <tbody><tr><td>0</td><td>8.64e-06</td><td>0.199</td><td>-0.000318</td><td>0.00924</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>1</td><td>1.29e-05</td><td>0.193</td><td>0.000667</td><td>0.00349</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>2</td><td>2.02e-05</td><td>0.188</td><td>0.0054</td><td>0.000426</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>3</td><td>8.39e-06</td><td>0.175</td><td>0.0221</td><td>-0.0129</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>4</td><td>1.02e-05</td><td>0.156</td><td>0.0677</td><td>-0.0288</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>5</td><td>4.55e-06</td><td>0.132</td><td>0.125</td><td>-0.0531</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>6</td><td>9.44e-06</td><td>0.0927</td><td>0.198</td><td>-0.0895</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>7</td><td>4.03e-06</td><td>0.0746</td><td>0.241</td><td>-0.108</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>8</td><td>1.76e-06</td><td>0.0513</td><td>0.316</td><td>-0.134</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>9</td><td>1.51e-06</td><td>0.0282</td><td>0.397</td><td>-0.156</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr></tbody>
+  </table>
+  </div>
+</section>
+
+<section id="electricity" class="dataset">
+  <div class="headrow">
+    <h2>electricity (NSW, ordered in time)</h2>
+    <span class="pill" style="background:#2a7d4f">接着 train</span>
+  </div>
+  <p class="blurb">电价流。RF 的 PO-risk 没崩，MSE 的移动平均也没过 2× → 每一层接着 backprop。</p>
+  <p class="meta">n_ref=10000 · 每段 n=5000 · 7 段 · <a href="electricity/board.html">明细看板</a></p>
+  <p class="shot"><img src="electricity/po_mse_trend.png" alt="electricity"></p>
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>段</th><th>PO-risk</th><th>模型 MSE</th><th>MMD vs 参考窗</th>
+      <th>冻住 RF 的 T</th><th>跳变</th><th>动作</th>
+    </tr></thead>
+    <tbody><tr><td>0</td><td>3.06e-05</td><td>0.119</td><td>0.0166</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>1</td><td>0.000205</td><td>0.205</td><td>0.0226</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>2</td><td>5.48e-09</td><td>0.232</td><td>0.121</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>3</td><td>3.54e-09</td><td>0.159</td><td>0.124</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>4</td><td>1.86e-08</td><td>0.188</td><td>0.155</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>5</td><td>1.98e-08</td><td>0.27</td><td>0.0476</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>6</td><td>3.33e-09</td><td>0.122</td><td>0.00996</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr></tbody>
+  </table>
+  </div>
+</section>
+
+<section id="covertype" class="dataset">
+  <div class="headrow">
+    <h2>covertype (geographic order, class 2 vs rest)</h2>
+    <span class="pill" style="background:#6b4ea0">X 在动</span>
+  </div>
+  <p class="blurb">地理顺序。MSE 先崩、PO 安静、MMD vs 参考窗过线 → 不是 concept，是 X 在动。</p>
+  <p class="meta">n_ref=10000 · 每段 n=10000 · 8 段 · <a href="covertype/board.html">明细看板</a></p>
+  <p class="shot"><img src="covertype/po_mse_trend.png" alt="covertype"></p>
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>段</th><th>PO-risk</th><th>模型 MSE</th><th>MMD vs 参考窗</th>
+      <th>冻住 RF 的 T</th><th>跳变</th><th>动作</th>
+    </tr></thead>
+    <tbody><tr><td>0</td><td>0.000199</td><td>0.182</td><td>0.0571</td><td></td><td></td><td style='color:#555;font-weight:600'>tricky</td></tr><tr><td>1</td><td>0.000251</td><td>0.157</td><td>0.214</td><td></td><td></td><td style='color:#6b4ea0;font-weight:600'>X 在动</td></tr><tr><td>2</td><td>0.000319</td><td>0.134</td><td>0.188</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>3</td><td>0.000444</td><td>0.077</td><td>0.183</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>4</td><td>0.000389</td><td>0.127</td><td>0.207</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>5</td><td>0.000381</td><td>0.219</td><td>0.213</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>6</td><td>0.000499</td><td>0.198</td><td>0.195</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>7</td><td>0.000685</td><td>0.14</td><td>0.177</td><td></td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr></tbody>
+  </table>
+  </div>
+</section>
+
+<section id="bankmarketing" class="dataset">
+  <div class="headrow">
+    <h2>bank-marketing (campaign order)</h2>
+    <span class="pill" style="background:#6b4ea0">X 在动</span>
+  </div>
+  <p class="blurb">营销活动顺序。t=4 模型误差跳，PO 仍安静，MMD 过线 → X shift。</p>
+  <p class="meta">n_ref=10000 · 每段 n=5000 · 6 段 · 跳变点 t=4 · <a href="bankmarketing/board.html">明细看板</a></p>
+  <p class="shot"><img src="bankmarketing/po_mse_trend.png" alt="bankmarketing"></p>
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>段</th><th>PO-risk</th><th>模型 MSE</th><th>MMD vs 参考窗</th>
+      <th>冻住 RF 的 T</th><th>跳变</th><th>动作</th>
+    </tr></thead>
+    <tbody><tr><td>0</td><td>1.68e-07</td><td>0.0344</td><td>0.288</td><td>0.0117</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>1</td><td>7.5e-09</td><td>0.0383</td><td>0.477</td><td>0.0167</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>2</td><td>1.17e-06</td><td>0.043</td><td>0.647</td><td>0.024</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>3</td><td>2.13e-08</td><td>0.0436</td><td>0.47</td><td>0.0182</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>4</td><td>4.35e-08</td><td>0.144</td><td>0.426</td><td>0.123</td><td>跳</td><td style='color:#6b4ea0;font-weight:600'>X 在动</td></tr><tr><td>5</td><td>1.63e-07</td><td>0.0775</td><td>0.0853</td><td>0.0598</td><td></td><td style='color:#6b4ea0;font-weight:600'>X 在动</td></tr></tbody>
+  </table>
+  </div>
+</section>
+
+<section id="eeg" class="dataset">
+  <div class="headrow">
+    <h2>eeg-eye-state (time-ordered EEG)</h2>
+    <span class="pill" style="background:#6b4ea0">X 在动</span>
+  </div>
+  <p class="blurb">脑电时间序。t=2 误差跳，PO 安静，MMD 过线 → 同样是 X shift。</p>
+  <p class="meta">n_ref=6000 · 每段 n=1500 · 5 段 · 跳变点 t=2 · <a href="eeg/board.html">明细看板</a></p>
+  <p class="shot"><img src="eeg/po_mse_trend.png" alt="eeg"></p>
+  <div class="scroll">
+  <table>
+    <thead><tr>
+      <th>段</th><th>PO-risk</th><th>模型 MSE</th><th>MMD vs 参考窗</th>
+      <th>冻住 RF 的 T</th><th>跳变</th><th>动作</th>
+    </tr></thead>
+    <tbody><tr><td>0</td><td>0.000774</td><td>0.319</td><td>0.0943</td><td>0.206</td><td></td><td style='color:#6b4ea0;font-weight:600'>X 在动</td></tr><tr><td>1</td><td>0.00045</td><td>0.155</td><td>0.116</td><td>0.0731</td><td></td><td style='color:#2a7d4f;font-weight:600'>接着 train</td></tr><tr><td>2</td><td>0.000513</td><td>0.722</td><td>0.114</td><td>0.35</td><td>跳</td><td style='color:#6b4ea0;font-weight:600'>X 在动</td></tr><tr><td>3</td><td>0.000301</td><td>0.377</td><td>0.177</td><td>0.179</td><td></td><td style='color:#6b4ea0;font-weight:600'>X 在动</td></tr><tr><td>4</td><td>0.000639</td><td>0.345</td><td>0.0818</td><td>0.179</td><td></td><td style='color:#6b4ea0;font-weight:600'>X 在动</td></tr></tbody>
+  </table>
+  </div>
+</section>
+
+
+<footer>
+  这是启发式 MVP，用来一起看数，不是上线决策器。何时 update 仍是业务逻辑。
+  明细图和表都在本页；需要原始 JSON 看各数据集目录下的 summary.json。
+</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,118 @@
+% Recsys grain monitor. Compile: pdflatex docs/recsys_grain_monitor.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,float}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\title{Recommendation stream by grain}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\paragraph{$Y$ and $X$.}
+One row is one order. $Y$ is conversion on that order --- purchase or not.
+It is the outcome only: never a feature, never a ranking key, never a subset key.
+$X$ is the serving table, sliced the way the log is written.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+table & what sits in $X$ & what the row is \\
+\midrule
+order & amount, hour, items, channel & this ticket \\
+merchant & category, GMV, SKU count & the store on this ticket \\
+user & tenure, past frequency & the buyer on this ticket \\
+dumped all & every column concatenated & do not put this in production \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+South / north is a merchant attribute, not $Y$.
+The batch index only marks a quiet reference window versus new traffic --- it is not a treatment.
+
+\paragraph{How the marketplace actually logs.}
+A recsys serving log is three tables that share a foreign key, not one embedding soup.
+The order table is this ticket: amount, hour, items, channel.
+The merchant table is the store on that ticket.
+The user table is the buyer.
+Those three clocks are not the same clock.
+Ticket size and channel mix move when south stores start selling a different basket.
+Merchant GMV is last window's ticket size for that store --- not this ticket, not conversion.
+User frequency is a closed-period snapshot --- not this ticket, not conversion, and not a running clock.
+Tenure is age at the start of the stream, not a function of this conversion.
+Tenure and past frequency move only if the buyer panel itself walks.
+Users shop across south and north, so a south-store mix shift does not show up as a user-feature incident.
+Dump every column into one table and a quiet user grain is drowned by a loud order grain: the frozen predictor looks broken before anything real has happened.
+The working rule is: watch each table on its own, then join back with merchant id or user id.
+
+\paragraph{Two incidents, three tables.}
+Fit a conversion predictor once on the quiet window.
+Each new batch is scored against that frozen error floor.
+A ring means this table is no longer paying rent the way it did on reference.
+
+We look at two business incidents on the same south accounts.
+The first is a \emph{customer-mix} walk: south ticket size and channel leave the reference panel, and conversion follows because the people in the basket changed --- an acquisition / category story.
+The second is a \emph{conversion} walk: south mix stays put, but purchase given the same basket moves --- ranking, creative, or the conversion surface, not growth.
+Table~\ref{tab:when} is the watch on each serving table, written as ops time.
+
+\begin{table}[H]
+\centering
+\caption{Frozen watch on each serving table. ``Too early'' is a false alarm. ``Leak'' means mix did not move --- conversion came in from the order table; do not page growth.}
+\label{tab:when}
+\begin{tabular}{lll}
+\toprule
+serving table & south customer mix & south conversion \\
+\midrule
+order & rang with south & rang, mix still \\
+user & leak & leak \\
+dumped all & rang with south & rang, mix still \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The order table is the one that actually moved.
+It rings when south merchants start to walk.
+The user table never moved on mix --- tenure and frequency were never the walk --- but the watch can still ring because conversion leaked in from the order table.
+That ring is not a growth-team incident.
+The dumped table rings with the order table, because GMV is last window's ticket size --- the same south walk, copied onto extra columns.
+It is still the wrong clock: a quiet user grain mixed with a loud order grain.
+Leave it out of production.
+
+\paragraph{Where to look, who to page.}
+After a ring, do not retrain the whole stack.
+Name the fields on the table that moved, then name the accounts.
+On the mix walk the order table points at amount, channel; the merchant table points at GMV; the user table recovers nothing --- those fields do not live on that table.
+On the conversion walk the order table still names amount (it sits in the conversion surface) while the mix of $X$ itself has not walked.
+Table~\ref{tab:where} splits the same order table by south versus north.
+
+\begin{table}[H]
+\centering
+\caption{South versus north on the order table. Mix is the basket (ticket size, channel). Conversion is purchase on that ticket. North is the control.}
+\label{tab:where}
+\begin{tabular}{lcccc}
+\toprule
+incident & south mix & south conversion & north mix & north conversion \\
+\midrule
+customer mix & moved & moved & still & still \\
+conversion & still & moved & still & still \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+South is where the walk lives; north stays near reference on both incidents.
+On a mix walk, south ticket size and channel move and conversion follows --- page category ops on those south stores, check the basket, do not open the conversion model first.
+On a conversion walk, south mix is still and conversion moves --- page ranking / conversion on south, do not tell category that ``the panel changed.''
+Users mix across merchants, so the user table cannot tell south from north.
+Do not page the growth team for a user-feature incident that is actually a south-store mix shift.
+
+\paragraph{What to do next.}
+Do not concatenate the serving log. Watch the order table.
+When it rings, split south versus north and read mix next to conversion on the same clock.
+If south ticket size and channel walked and conversion followed, category ops checks those stores first --- ranking does not open a model ticket yet.
+If the same south stores, same basket, conversion moved, ranking checks the south conversion surface --- growth is not paged, because the user table never moved.
+Refresh, then reset the error pool so Monday's walk is not Wednesday's alarm.
+Where to look first: not a unique split of blame across columns.
+
+\end{document}

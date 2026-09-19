@@ -1,0 +1,2363 @@
+{
+  "concept_video": {
+    "meta": {
+      "kind": "concept_video",
+      "onset_batch": 2,
+      "groups": {
+        "video": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "audio": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "text": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      "shifted_slice": 3,
+      "n_slices": 4,
+      "title": "trimodal concept_video (slice 3 after batch 2)",
+      "n_ref": 640,
+      "n_new": 160
+    },
+    "oracle": "full_update",
+    "loss_frozen": [
+      0.19726308991666186,
+      0.20066360094558622,
+      0.17745031166469474,
+      0.23271740681463998,
+      0.2269177257856919
+    ],
+    "loss_full": [
+      0.19726308991666186,
+      0.2009682295152996,
+      0.17911341005871073,
+      0.22791957355620066,
+      0.21400637376775347
+    ],
+    "loss_logo": [
+      0.19726308991666186,
+      0.2009682295152996,
+      0.17911341005871073,
+      0.22791957355620066,
+      0.21400637376775347
+    ],
+    "regret": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rows": [
+      {
+        "t": 0,
+        "onset": false,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.030242371182606444,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 1.0,
+            "pi_po": 0.5095295067075691,
+            "pi_mmd": 1.0,
+            "mix_po": 0.3375419323991239,
+            "mix_mmd": 0.6624580676008761,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.4602281221098243,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.19726308991666186,
+        "po_full": 0.0002881870472260014,
+        "mmd_full": -0.0006368742170705932,
+        "online_brier_frozen": 0.19726308991666186,
+        "online_brier_full": 0.19726308991666186,
+        "online_brier_logo": 0.19726308991666186,
+        "subset": [
+          {
+            "subset": 1,
+            "n": 38,
+            "loss": 0.23264586026194345,
+            "excess_loss": 0.05419226011780562,
+            "mse": 0.16241915026252654,
+            "po": 0.0002686840965376596,
+            "mmd": -0.007302518799310764
+          },
+          {
+            "subset": 0,
+            "n": 40,
+            "loss": 0.21909220375960717,
+            "excess_loss": 0.04063860361546934,
+            "mse": 0.15906519509933742,
+            "po": 0.00014734148988297674,
+            "mmd": 0.0007226984009632842
+          },
+          {
+            "subset": 2,
+            "n": 49,
+            "loss": 0.17751766759109744,
+            "excess_loss": -0.0009359325530403917,
+            "mse": 0.15217643541874162,
+            "po": 0.00012044881826039156,
+            "mmd": 0.0027478314136645254
+          },
+          {
+            "subset": 3,
+            "n": 33,
+            "loss": 0.1593787222534541,
+            "excess_loss": -0.01907487789068374,
+            "mse": 0.11927437305863986,
+            "po": 0.00017283519318094022,
+            "mmd": -0.002047007331466344
+          }
+        ],
+        "subset_logo": {
+          "subset": 1,
+          "n": 38,
+          "excess_loss": 0.05419226011780562,
+          "pi_loss": {
+            "video": 0.0,
+            "audio": 0.0,
+            "text": 1.0
+          },
+          "pi_po": {
+            "video": 0.6283765757899131,
+            "audio": 0.29808386780582496,
+            "text": 0.07353955640426187
+          },
+          "pi_mmd": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 0.0,
+              "pi_po": 0.6283765757899131,
+              "pi_mmd": 1.0,
+              "mix_po": 0.38589143637434875,
+              "mix_mmd": 0.6141085636256512,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.29808386780582496,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 1.0,
+              "pi_po": 0.07353955640426187,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            }
+          },
+          "dominant": "text"
+        }
+      },
+      {
+        "t": 1,
+        "onset": false,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_mmd": 0.0,
+            "quiet": true
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 1.0,
+            "pi_mmd": 0.4691660714431129,
+            "mix_po": 0.6806582451347609,
+            "mix_mmd": 0.3193417548652391,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 0.5308339285568872,
+            "mix_po": 0.0,
+            "mix_mmd": 1.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.20066360094558622,
+        "po_full": 0.000316591513125778,
+        "mmd_full": -0.0012805321752358267,
+        "online_brier_frozen": 0.20066360094558622,
+        "online_brier_full": 0.2009682295152996,
+        "online_brier_logo": 0.2009682295152996,
+        "subset": [
+          {
+            "subset": 0,
+            "n": 43,
+            "loss": 0.25303167216328054,
+            "excess_loss": 0.07457807201914271,
+            "mse": 0.1523605917406059,
+            "po": 0.00010212203320644433,
+            "mmd": 0.002384876746366671
+          },
+          {
+            "subset": 2,
+            "n": 38,
+            "loss": 0.1965281478250416,
+            "excess_loss": 0.018074547680903774,
+            "mse": 0.15208326639367029,
+            "po": 8.946664121123598e-05,
+            "mmd": -0.004202889316210934
+          },
+          {
+            "subset": 1,
+            "n": 40,
+            "loss": 0.1747412174719965,
+            "excess_loss": -0.003712382672141329,
+            "mse": 0.13307839881758754,
+            "po": 9.99723988489921e-05,
+            "mmd": -0.00021973746762959934
+          },
+          {
+            "subset": 3,
+            "n": 39,
+            "loss": 0.17354092133439197,
+            "excess_loss": -0.004912678809745857,
+            "mse": 0.13554151258275815,
+            "po": 0.00011076791731635518,
+            "mmd": -0.005057417907934236
+          }
+        ],
+        "subset_logo": {
+          "subset": 0,
+          "n": 43,
+          "excess_loss": 0.07457807201914271,
+          "pi_loss": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 0.41011187647410485,
+            "audio": 0.4691814567170821,
+            "text": 0.12070666680881306
+          },
+          "pi_mmd": {
+            "video": 0.5911344699214358,
+            "audio": 0.0,
+            "text": 0.4088655300785642
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 1.0,
+              "pi_po": 0.41011187647410485,
+              "pi_mmd": 0.5911344699214358,
+              "mix_po": 0.40960137128139973,
+              "mix_mmd": 0.5903986287186002,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.4691814567170821,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.12070666680881306,
+              "pi_mmd": 0.4088655300785642,
+              "mix_po": 0.22793240943969617,
+              "mix_mmd": 0.7720675905603038,
+              "quiet": false
+            }
+          },
+          "dominant": "video"
+        }
+      },
+      {
+        "t": 2,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.10395285450202356,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.03761511400482402,
+            "pi_mmd": 1.0,
+            "mix_po": 0.036251509347857425,
+            "mix_mmd": 0.9637484906521426,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.8584320314931524,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.17745031166469474,
+        "po_full": 0.0002310143933250832,
+        "mmd_full": -0.0012503845062555863,
+        "online_brier_frozen": 0.17745031166469474,
+        "online_brier_full": 0.17911341005871073,
+        "online_brier_logo": 0.17911341005871073,
+        "subset": [
+          {
+            "subset": 3,
+            "n": 54,
+            "loss": 0.19202753039436224,
+            "excess_loss": 0.013573930250224409,
+            "mse": 0.14583120615502068,
+            "po": 0.00012179304563760481,
+            "mmd": 0.006849206337348757
+          },
+          {
+            "subset": 2,
+            "n": 44,
+            "loss": 0.1845292913566567,
+            "excess_loss": 0.006075691212518858,
+            "mse": 0.12619003747646074,
+            "po": 0.00015452378450697235,
+            "mmd": -0.0038213737190389008
+          },
+          {
+            "subset": 0,
+            "n": 36,
+            "loss": 0.18034163170157932,
+            "excess_loss": 0.001888031557441494,
+            "mse": 0.1413068668955276,
+            "po": 2.4949931174066797e-05,
+            "mmd": 0.007207640592339359
+          },
+          {
+            "subset": 1,
+            "n": 26,
+            "loss": 0.13119137169637873,
+            "excess_loss": -0.0472622284477591,
+            "mse": 0.10594577964156085,
+            "po": 5.7896592093662994e-05,
+            "mmd": -0.010816019504005348
+          }
+        ],
+        "subset_logo": {
+          "subset": 3,
+          "n": 54,
+          "excess_loss": 0.013573930250224409,
+          "pi_loss": {
+            "video": 0.0,
+            "audio": 1.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_mmd": {
+            "video": 0.0,
+            "audio": 1.0,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 0.0,
+              "pi_po": 1.0,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 1.0,
+              "pi_po": 0.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 0.0,
+              "mix_po": 0.0,
+              "mix_mmd": 0.0,
+              "quiet": true
+            }
+          },
+          "dominant": "audio"
+        }
+      },
+      {
+        "t": 3,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "video"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 1.0,
+            "pi_po": 0.8001092389455924,
+            "pi_mmd": 1.0,
+            "mix_po": 0.4444781581223668,
+            "mix_mmd": 0.5555218418776332,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0367160720529214,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.16317468900148618,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.23271740681463998,
+        "po_full": 0.0005195436949319063,
+        "mmd_full": -3.610332046521947e-05,
+        "online_brier_frozen": 0.23271740681463998,
+        "online_brier_full": 0.22791957355620066,
+        "online_brier_logo": 0.22791957355620066,
+        "subset": [
+          {
+            "subset": 3,
+            "n": 39,
+            "loss": 0.34097737296384356,
+            "excess_loss": 0.16252377281970573,
+            "mse": 0.20884616805007894,
+            "po": 0.0004227829995852411,
+            "mmd": -0.004696613547886974
+          },
+          {
+            "subset": 2,
+            "n": 31,
+            "loss": 0.25376317456456365,
+            "excess_loss": 0.07530957442042582,
+            "mse": 0.1525290900149074,
+            "po": 0.0001128236770798791,
+            "mmd": 0.0007575434415513227
+          },
+          {
+            "subset": 0,
+            "n": 39,
+            "loss": 0.18991639133724214,
+            "excess_loss": 0.01146279119310431,
+            "mse": 0.13223817173118002,
+            "po": 8.174382031499191e-05,
+            "mmd": 0.010501113425453457
+          },
+          {
+            "subset": 1,
+            "n": 51,
+            "loss": 0.1698680366882074,
+            "excess_loss": -0.008585563455930423,
+            "mse": 0.12717222155019775,
+            "po": 0.00012220054673117535,
+            "mmd": -0.003252642456937571
+          }
+        ],
+        "subset_logo": {
+          "subset": 3,
+          "n": 39,
+          "excess_loss": 0.16252377281970573,
+          "pi_loss": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 0.8425466572023954,
+            "audio": 0.15745334279760456,
+            "text": 0.0
+          },
+          "pi_mmd": {
+            "video": 0.05901945173126386,
+            "audio": 0.9409805482687361,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 1.0,
+              "pi_po": 0.8425466572023954,
+              "pi_mmd": 0.05901945173126386,
+              "mix_po": 0.9345367453962194,
+              "mix_mmd": 0.06546325460378052,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.15745334279760456,
+              "pi_mmd": 0.9409805482687361,
+              "mix_po": 0.14334348573745442,
+              "mix_mmd": 0.8566565142625455,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 0.0,
+              "mix_po": 0.0,
+              "mix_mmd": 0.0,
+              "quiet": true
+            }
+          },
+          "dominant": "video"
+        }
+      },
+      {
+        "t": 4,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "video"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.4670765074762092,
+            "pi_mmd": 1.0,
+            "mix_po": 0.3183722901266508,
+            "mix_mmd": 0.6816277098733493,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.2309876082994953,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.30193588422429546,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.2269177257856919,
+        "po_full": 0.0004064306068244984,
+        "mmd_full": -0.0004933754991802708,
+        "online_brier_frozen": 0.2269177257856919,
+        "online_brier_full": 0.21400637376775347,
+        "online_brier_logo": 0.21400637376775347,
+        "subset": [
+          {
+            "subset": 3,
+            "n": 44,
+            "loss": 0.3685766305781548,
+            "excess_loss": 0.190123030434017,
+            "mse": 0.2189320526985883,
+            "po": 0.000579148648617665,
+            "mmd": -0.007728197411845161
+          },
+          {
+            "subset": 0,
+            "n": 37,
+            "loss": 0.18906123231357758,
+            "excess_loss": 0.010607632169439746,
+            "mse": 0.12457015921523902,
+            "po": 0.0001106405503170356,
+            "mmd": -0.005867682055543666
+          },
+          {
+            "subset": 2,
+            "n": 43,
+            "loss": 0.17049359810088888,
+            "excess_loss": -0.007960002043248954,
+            "mse": 0.1242815583485102,
+            "po": 7.378170030739444e-05,
+            "mmd": 0.011349796610705343
+          },
+          {
+            "subset": 1,
+            "n": 36,
+            "loss": 0.16008261295364698,
+            "excess_loss": -0.01837098719049085,
+            "mse": 0.11737256211065386,
+            "po": 7.612360881627245e-05,
+            "mmd": -0.005641034887238772
+          }
+        ],
+        "subset_logo": {
+          "subset": 3,
+          "n": 44,
+          "excess_loss": 0.190123030434017,
+          "pi_loss": {
+            "video": 0.9879396834743467,
+            "audio": 0.012060316525653316,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 0.8072408526040369,
+            "audio": 0.00040918698818686537,
+            "text": 0.1923499604077762
+          },
+          "pi_mmd": {
+            "video": 0.0,
+            "audio": 0.08775624952945973,
+            "text": 0.9122437504705403
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 0.9879396834743467,
+              "pi_po": 0.8072408526040369,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.012060316525653316,
+              "pi_po": 0.00040918698818686537,
+              "pi_mmd": 0.08775624952945973,
+              "mix_po": 0.0046411270033803464,
+              "mix_mmd": 0.9953588729966196,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.1923499604077762,
+              "pi_mmd": 0.9122437504705403,
+              "mix_po": 0.17413638925648897,
+              "mix_mmd": 0.8258636107435109,
+              "quiet": false
+            }
+          },
+          "dominant": "video"
+        }
+      }
+    ]
+  },
+  "covariate_audio": {
+    "meta": {
+      "kind": "covariate_audio",
+      "onset_batch": 2,
+      "groups": {
+        "video": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "audio": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "text": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      "shifted_slice": 3,
+      "n_slices": 4,
+      "title": "trimodal covariate_audio (slice 3 after batch 2)",
+      "n_ref": 640,
+      "n_new": 160
+    },
+    "oracle": "frozen",
+    "loss_frozen": [
+      0.19726308991666186,
+      0.20066360094558622,
+      0.1680437454782331,
+      0.20993704268261298,
+      0.16909702473625074
+    ],
+    "loss_full": [
+      0.19726308991666186,
+      0.2009682295152996,
+      0.16859057330758587,
+      0.20790610244147123,
+      0.16339949851145966
+    ],
+    "loss_logo": [
+      0.19726308991666186,
+      0.2009682295152996,
+      0.16859057330758587,
+      0.20790610244147123,
+      0.16339949851145966
+    ],
+    "regret": [
+      0.0,
+      0.0003046285697133888,
+      0.0008514563990661694,
+      -0.0011794838420755849,
+      -0.006877010066866668
+    ],
+    "rows": [
+      {
+        "t": 0,
+        "onset": false,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.030242371182606444,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 1.0,
+            "pi_po": 0.5095295067075691,
+            "pi_mmd": 1.0,
+            "mix_po": 0.3375419323991239,
+            "mix_mmd": 0.6624580676008761,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.4602281221098243,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.19726308991666186,
+        "po_full": 0.0002881870472260014,
+        "mmd_full": -0.0006368742170705932,
+        "online_brier_frozen": 0.19726308991666186,
+        "online_brier_full": 0.19726308991666186,
+        "online_brier_logo": 0.19726308991666186,
+        "subset": [
+          {
+            "subset": 1,
+            "n": 38,
+            "loss": 0.23264586026194345,
+            "excess_loss": 0.05419226011780562,
+            "mse": 0.16241915026252654,
+            "po": 0.0002686840965376596,
+            "mmd": -0.007302518799310764
+          },
+          {
+            "subset": 0,
+            "n": 40,
+            "loss": 0.21909220375960717,
+            "excess_loss": 0.04063860361546934,
+            "mse": 0.15906519509933742,
+            "po": 0.00014734148988297674,
+            "mmd": 0.0007226984009632842
+          },
+          {
+            "subset": 2,
+            "n": 49,
+            "loss": 0.17751766759109744,
+            "excess_loss": -0.0009359325530403917,
+            "mse": 0.15217643541874162,
+            "po": 0.00012044881826039156,
+            "mmd": 0.0027478314136645254
+          },
+          {
+            "subset": 3,
+            "n": 33,
+            "loss": 0.1593787222534541,
+            "excess_loss": -0.01907487789068374,
+            "mse": 0.11927437305863986,
+            "po": 0.00017283519318094022,
+            "mmd": -0.002047007331466344
+          }
+        ],
+        "subset_logo": {
+          "subset": 1,
+          "n": 38,
+          "excess_loss": 0.05419226011780562,
+          "pi_loss": {
+            "video": 0.0,
+            "audio": 0.0,
+            "text": 1.0
+          },
+          "pi_po": {
+            "video": 0.6283765757899131,
+            "audio": 0.29808386780582496,
+            "text": 0.07353955640426187
+          },
+          "pi_mmd": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 0.0,
+              "pi_po": 0.6283765757899131,
+              "pi_mmd": 1.0,
+              "mix_po": 0.38589143637434875,
+              "mix_mmd": 0.6141085636256512,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.29808386780582496,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 1.0,
+              "pi_po": 0.07353955640426187,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            }
+          },
+          "dominant": "text"
+        }
+      },
+      {
+        "t": 1,
+        "onset": false,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_mmd": 0.0,
+            "quiet": true
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 1.0,
+            "pi_mmd": 0.4691660714431129,
+            "mix_po": 0.6806582451347609,
+            "mix_mmd": 0.3193417548652391,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 0.5308339285568872,
+            "mix_po": 0.0,
+            "mix_mmd": 1.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.20066360094558622,
+        "po_full": 0.000316591513125778,
+        "mmd_full": -0.0012805321752358267,
+        "online_brier_frozen": 0.20066360094558622,
+        "online_brier_full": 0.2009682295152996,
+        "online_brier_logo": 0.2009682295152996,
+        "subset": [
+          {
+            "subset": 0,
+            "n": 43,
+            "loss": 0.25303167216328054,
+            "excess_loss": 0.07457807201914271,
+            "mse": 0.1523605917406059,
+            "po": 0.00010212203320644433,
+            "mmd": 0.002384876746366671
+          },
+          {
+            "subset": 2,
+            "n": 38,
+            "loss": 0.1965281478250416,
+            "excess_loss": 0.018074547680903774,
+            "mse": 0.15208326639367029,
+            "po": 8.946664121123598e-05,
+            "mmd": -0.004202889316210934
+          },
+          {
+            "subset": 1,
+            "n": 40,
+            "loss": 0.1747412174719965,
+            "excess_loss": -0.003712382672141329,
+            "mse": 0.13307839881758754,
+            "po": 9.99723988489921e-05,
+            "mmd": -0.00021973746762959934
+          },
+          {
+            "subset": 3,
+            "n": 39,
+            "loss": 0.17354092133439197,
+            "excess_loss": -0.004912678809745857,
+            "mse": 0.13554151258275815,
+            "po": 0.00011076791731635518,
+            "mmd": -0.005057417907934236
+          }
+        ],
+        "subset_logo": {
+          "subset": 0,
+          "n": 43,
+          "excess_loss": 0.07457807201914271,
+          "pi_loss": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 0.41011187647410485,
+            "audio": 0.4691814567170821,
+            "text": 0.12070666680881306
+          },
+          "pi_mmd": {
+            "video": 0.5911344699214358,
+            "audio": 0.0,
+            "text": 0.4088655300785642
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 1.0,
+              "pi_po": 0.41011187647410485,
+              "pi_mmd": 0.5911344699214358,
+              "mix_po": 0.40960137128139973,
+              "mix_mmd": 0.5903986287186002,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.4691814567170821,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.12070666680881306,
+              "pi_mmd": 0.4088655300785642,
+              "mix_po": 0.22793240943969617,
+              "mix_mmd": 0.7720675905603038,
+              "quiet": false
+            }
+          },
+          "dominant": "video"
+        }
+      },
+      {
+        "t": 2,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_mmd": 0.0,
+            "quiet": true
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.39187016009312076,
+            "pi_mmd": 1.0,
+            "mix_po": 0.28154218067790415,
+            "mix_mmd": 0.7184578193220958,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.6081298399068793,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.1680437454782331,
+        "po_full": 0.0002571166710432051,
+        "mmd_full": 0.0014523865678058856,
+        "online_brier_frozen": 0.1680437454782331,
+        "online_brier_full": 0.16859057330758587,
+        "online_brier_logo": 0.16859057330758587,
+        "subset": [
+          {
+            "subset": 2,
+            "n": 44,
+            "loss": 0.1845292913566567,
+            "excess_loss": 0.006075691212518858,
+            "mse": 0.12619003747646074,
+            "po": 0.00015452378450697235,
+            "mmd": -0.0038213737190389008
+          },
+          {
+            "subset": 0,
+            "n": 36,
+            "loss": 0.18034163170157932,
+            "excess_loss": 0.001888031557441494,
+            "mse": 0.1413068668955276,
+            "po": 2.4949931174066797e-05,
+            "mmd": 0.007207640592339359
+          },
+          {
+            "subset": 3,
+            "n": 54,
+            "loss": 0.16415622317521666,
+            "excess_loss": -0.014297376968921166,
+            "mse": 0.13598899010776322,
+            "po": 0.00020249271946781939,
+            "mmd": 0.014827345355821864
+          },
+          {
+            "subset": 1,
+            "n": 26,
+            "loss": 0.13119137169637873,
+            "excess_loss": -0.0472622284477591,
+            "mse": 0.10594577964156085,
+            "po": 5.7896592093662994e-05,
+            "mmd": -0.010816019504005348
+          }
+        ],
+        "subset_logo": {
+          "subset": 2,
+          "n": 44,
+          "excess_loss": 0.006075691212518858,
+          "pi_loss": {
+            "video": 0.0,
+            "audio": 0.0,
+            "text": 1.0
+          },
+          "pi_po": {
+            "video": 0.14040205281731932,
+            "audio": 0.0,
+            "text": 0.8595979471826807
+          },
+          "pi_mmd": {
+            "video": 0.0,
+            "audio": 1.0,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 0.0,
+              "pi_po": 0.14040205281731932,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 1.0,
+              "pi_po": 0.8595979471826807,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            }
+          },
+          "dominant": "text"
+        }
+      },
+      {
+        "t": 3,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.6390447128694945,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.024672393885062593,
+            "pi_mmd": 1.0,
+            "mix_po": 0.024078323991453304,
+            "mix_mmd": 0.9759216760085467,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.33628289324544297,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.20993704268261298,
+        "po_full": 0.0003202341731635734,
+        "mmd_full": 0.00453130094367904,
+        "online_brier_frozen": 0.20993704268261298,
+        "online_brier_full": 0.20790610244147123,
+        "online_brier_logo": 0.20790610244147123,
+        "subset": [
+          {
+            "subset": 2,
+            "n": 31,
+            "loss": 0.25376317456456365,
+            "excess_loss": 0.07530957442042582,
+            "mse": 0.1525290900149074,
+            "po": 0.0001128236770798791,
+            "mmd": 0.0007575434415513227
+          },
+          {
+            "subset": 3,
+            "n": 39,
+            "loss": 0.24751946883245077,
+            "excess_loss": 0.06906586868831294,
+            "mse": 0.1699598115124917,
+            "po": 6.824725726638524e-05,
+            "mmd": 0.13085933534510308
+          },
+          {
+            "subset": 0,
+            "n": 39,
+            "loss": 0.18991639133724214,
+            "excess_loss": 0.01146279119310431,
+            "mse": 0.13223817173118002,
+            "po": 8.174382031499191e-05,
+            "mmd": 0.010501113425453457
+          },
+          {
+            "subset": 1,
+            "n": 51,
+            "loss": 0.1698680366882074,
+            "excess_loss": -0.008585563455930423,
+            "mse": 0.12717222155019775,
+            "po": 0.00012220054673117535,
+            "mmd": -0.003252642456937571
+          }
+        ],
+        "subset_logo": {
+          "subset": 2,
+          "n": 31,
+          "excess_loss": 0.07530957442042582,
+          "pi_loss": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 0.7253451070748642,
+            "audio": 0.0,
+            "text": 0.27465489292513573
+          },
+          "pi_mmd": {
+            "video": 0.8877125096004638,
+            "audio": 0.013005331225906075,
+            "text": 0.09928215917363012
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 1.0,
+              "pi_po": 0.7253451070748642,
+              "pi_mmd": 0.8877125096004638,
+              "mix_po": 0.4496709228340352,
+              "mix_mmd": 0.5503290771659647,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 0.013005331225906075,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.27465489292513573,
+              "pi_mmd": 0.09928215917363012,
+              "mix_po": 0.7344949942339298,
+              "mix_mmd": 0.2655050057660702,
+              "quiet": false
+            }
+          },
+          "dominant": "video"
+        }
+      },
+      {
+        "t": 4,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.018389339119763235,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 1.0,
+            "mix_po": 0.0,
+            "mix_mmd": 1.0,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.9816106608802367,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.16909702473625074,
+        "po_full": 0.0002401200816029618,
+        "mmd_full": 0.022028435148910508,
+        "online_brier_frozen": 0.16909702473625074,
+        "online_brier_full": 0.16339949851145966,
+        "online_brier_logo": 0.16339949851145966,
+        "subset": [
+          {
+            "subset": 0,
+            "n": 37,
+            "loss": 0.18906123231357758,
+            "excess_loss": 0.010607632169439746,
+            "mse": 0.12457015921523902,
+            "po": 0.0001106405503170356,
+            "mmd": -0.005867682055543666
+          },
+          {
+            "subset": 2,
+            "n": 43,
+            "loss": 0.17049359810088888,
+            "excess_loss": -0.007960002043248954,
+            "mse": 0.1242815583485102,
+            "po": 7.378170030739444e-05,
+            "mmd": 0.011349796610705343
+          },
+          {
+            "subset": 1,
+            "n": 36,
+            "loss": 0.16008261295364698,
+            "excess_loss": -0.01837098719049085,
+            "mse": 0.11737256211065386,
+            "po": 7.612360881627245e-05,
+            "mmd": -0.005641034887238772
+          },
+          {
+            "subset": 3,
+            "n": 44,
+            "loss": 0.15831953585291444,
+            "excess_loss": -0.020134064291223386,
+            "mse": 0.13061765271856252,
+            "po": 3.063045869209735e-05,
+            "mmd": 0.31353832952570104
+          }
+        ],
+        "subset_logo": {
+          "subset": 0,
+          "n": 37,
+          "excess_loss": 0.010607632169439746,
+          "pi_loss": {
+            "video": 0.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 0.0,
+            "audio": 0.1832249423450793,
+            "text": 0.8167750576549206
+          },
+          "pi_mmd": {
+            "video": 0.0,
+            "audio": 0.0,
+            "text": 1.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 0.0,
+              "mix_po": 0.0,
+              "mix_mmd": 0.0,
+              "quiet": true
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.1832249423450793,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.8167750576549206,
+              "pi_mmd": 1.0,
+              "mix_po": 0.44957412543367237,
+              "mix_mmd": 0.5504258745663276,
+              "quiet": false
+            }
+          },
+          "dominant": "text"
+        }
+      }
+    ]
+  },
+  "both": {
+    "meta": {
+      "kind": "both",
+      "onset_batch": 2,
+      "groups": {
+        "video": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "audio": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "text": [
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      "shifted_slice": 3,
+      "n_slices": 4,
+      "title": "trimodal both (slice 3 after batch 2)",
+      "n_ref": 640,
+      "n_new": 160
+    },
+    "oracle": "frozen",
+    "loss_frozen": [
+      0.19726308991666186,
+      0.20066360094558622,
+      0.17385626620345493,
+      0.22144163093767516,
+      0.20881450780226424
+    ],
+    "loss_full": [
+      0.19726308991666186,
+      0.2009682295152996,
+      0.17491975534144846,
+      0.21795364421180435,
+      0.20077793878558853
+    ],
+    "loss_logo": [
+      0.19726308991666186,
+      0.2009682295152996,
+      0.17491975534144846,
+      0.21795364421180435,
+      0.20077793878558853
+    ],
+    "regret": [
+      0.0,
+      0.0003046285697133888,
+      0.0013681177077069229,
+      -0.0021198690181638835,
+      -0.010156438034839593
+    ],
+    "rows": [
+      {
+        "t": 0,
+        "onset": false,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.030242371182606444,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 1.0,
+            "pi_po": 0.5095295067075691,
+            "pi_mmd": 1.0,
+            "mix_po": 0.3375419323991239,
+            "mix_mmd": 0.6624580676008761,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.4602281221098243,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.19726308991666186,
+        "po_full": 0.0002881870472260014,
+        "mmd_full": -0.0006368742170705932,
+        "online_brier_frozen": 0.19726308991666186,
+        "online_brier_full": 0.19726308991666186,
+        "online_brier_logo": 0.19726308991666186,
+        "subset": [
+          {
+            "subset": 1,
+            "n": 38,
+            "loss": 0.23264586026194345,
+            "excess_loss": 0.05419226011780562,
+            "mse": 0.16241915026252654,
+            "po": 0.0002686840965376596,
+            "mmd": -0.007302518799310764
+          },
+          {
+            "subset": 0,
+            "n": 40,
+            "loss": 0.21909220375960717,
+            "excess_loss": 0.04063860361546934,
+            "mse": 0.15906519509933742,
+            "po": 0.00014734148988297674,
+            "mmd": 0.0007226984009632842
+          },
+          {
+            "subset": 2,
+            "n": 49,
+            "loss": 0.17751766759109744,
+            "excess_loss": -0.0009359325530403917,
+            "mse": 0.15217643541874162,
+            "po": 0.00012044881826039156,
+            "mmd": 0.0027478314136645254
+          },
+          {
+            "subset": 3,
+            "n": 33,
+            "loss": 0.1593787222534541,
+            "excess_loss": -0.01907487789068374,
+            "mse": 0.11927437305863986,
+            "po": 0.00017283519318094022,
+            "mmd": -0.002047007331466344
+          }
+        ],
+        "subset_logo": {
+          "subset": 1,
+          "n": 38,
+          "excess_loss": 0.05419226011780562,
+          "pi_loss": {
+            "video": 0.0,
+            "audio": 0.0,
+            "text": 1.0
+          },
+          "pi_po": {
+            "video": 0.6283765757899131,
+            "audio": 0.29808386780582496,
+            "text": 0.07353955640426187
+          },
+          "pi_mmd": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 0.0,
+              "pi_po": 0.6283765757899131,
+              "pi_mmd": 1.0,
+              "mix_po": 0.38589143637434875,
+              "mix_mmd": 0.6141085636256512,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.29808386780582496,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 1.0,
+              "pi_po": 0.07353955640426187,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            }
+          },
+          "dominant": "text"
+        }
+      },
+      {
+        "t": 1,
+        "onset": false,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_mmd": 0.0,
+            "quiet": true
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 1.0,
+            "pi_mmd": 0.4691660714431129,
+            "mix_po": 0.6806582451347609,
+            "mix_mmd": 0.3193417548652391,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 0.5308339285568872,
+            "mix_po": 0.0,
+            "mix_mmd": 1.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.20066360094558622,
+        "po_full": 0.000316591513125778,
+        "mmd_full": -0.0012805321752358267,
+        "online_brier_frozen": 0.20066360094558622,
+        "online_brier_full": 0.2009682295152996,
+        "online_brier_logo": 0.2009682295152996,
+        "subset": [
+          {
+            "subset": 0,
+            "n": 43,
+            "loss": 0.25303167216328054,
+            "excess_loss": 0.07457807201914271,
+            "mse": 0.1523605917406059,
+            "po": 0.00010212203320644433,
+            "mmd": 0.002384876746366671
+          },
+          {
+            "subset": 2,
+            "n": 38,
+            "loss": 0.1965281478250416,
+            "excess_loss": 0.018074547680903774,
+            "mse": 0.15208326639367029,
+            "po": 8.946664121123598e-05,
+            "mmd": -0.004202889316210934
+          },
+          {
+            "subset": 1,
+            "n": 40,
+            "loss": 0.1747412174719965,
+            "excess_loss": -0.003712382672141329,
+            "mse": 0.13307839881758754,
+            "po": 9.99723988489921e-05,
+            "mmd": -0.00021973746762959934
+          },
+          {
+            "subset": 3,
+            "n": 39,
+            "loss": 0.17354092133439197,
+            "excess_loss": -0.004912678809745857,
+            "mse": 0.13554151258275815,
+            "po": 0.00011076791731635518,
+            "mmd": -0.005057417907934236
+          }
+        ],
+        "subset_logo": {
+          "subset": 0,
+          "n": 43,
+          "excess_loss": 0.07457807201914271,
+          "pi_loss": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 0.41011187647410485,
+            "audio": 0.4691814567170821,
+            "text": 0.12070666680881306
+          },
+          "pi_mmd": {
+            "video": 0.5911344699214358,
+            "audio": 0.0,
+            "text": 0.4088655300785642
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 1.0,
+              "pi_po": 0.41011187647410485,
+              "pi_mmd": 0.5911344699214358,
+              "mix_po": 0.40960137128139973,
+              "mix_mmd": 0.5903986287186002,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.4691814567170821,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.12070666680881306,
+              "pi_mmd": 0.4088655300785642,
+              "mix_po": 0.22793240943969617,
+              "mix_mmd": 0.7720675905603038,
+              "quiet": false
+            }
+          },
+          "dominant": "video"
+        }
+      },
+      {
+        "t": 2,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 0.0,
+            "mix_po": 0.0,
+            "mix_mmd": 0.0,
+            "quiet": true
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.30534165828753435,
+            "pi_mmd": 1.0,
+            "mix_po": 0.2339170410665582,
+            "mix_mmd": 0.7660829589334418,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.6946583417124657,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.17385626620345493,
+        "po_full": 0.0002500923102636467,
+        "mmd_full": 0.0014523865678058856,
+        "online_brier_frozen": 0.17385626620345493,
+        "online_brier_full": 0.17491975534144846,
+        "online_brier_logo": 0.17491975534144846,
+        "subset": [
+          {
+            "subset": 2,
+            "n": 44,
+            "loss": 0.1845292913566567,
+            "excess_loss": 0.006075691212518858,
+            "mse": 0.12619003747646074,
+            "po": 0.00015452378450697235,
+            "mmd": -0.0038213737190389008
+          },
+          {
+            "subset": 3,
+            "n": 54,
+            "loss": 0.18137850680550366,
+            "excess_loss": 0.002924906661365828,
+            "mse": 0.1501182596927915,
+            "po": 0.00013839623891080934,
+            "mmd": 0.014827345355821864
+          },
+          {
+            "subset": 0,
+            "n": 36,
+            "loss": 0.18034163170157932,
+            "excess_loss": 0.001888031557441494,
+            "mse": 0.1413068668955276,
+            "po": 2.4949931174066797e-05,
+            "mmd": 0.007207640592339359
+          },
+          {
+            "subset": 1,
+            "n": 26,
+            "loss": 0.13119137169637873,
+            "excess_loss": -0.0472622284477591,
+            "mse": 0.10594577964156085,
+            "po": 5.7896592093662994e-05,
+            "mmd": -0.010816019504005348
+          }
+        ],
+        "subset_logo": {
+          "subset": 2,
+          "n": 44,
+          "excess_loss": 0.006075691212518858,
+          "pi_loss": {
+            "video": 0.0,
+            "audio": 0.0,
+            "text": 1.0
+          },
+          "pi_po": {
+            "video": 0.14040205281731932,
+            "audio": 0.0,
+            "text": 0.8595979471826807
+          },
+          "pi_mmd": {
+            "video": 0.0,
+            "audio": 1.0,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 0.0,
+              "pi_po": 0.14040205281731932,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 1.0,
+              "pi_po": 0.8595979471826807,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            }
+          },
+          "dominant": "text"
+        }
+      },
+      {
+        "t": 3,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.8306665022685652,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 1.0,
+            "mix_po": 0.0,
+            "mix_mmd": 1.0,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.16933349773143483,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.22144163093767516,
+        "po_full": 0.00037251331430438904,
+        "mmd_full": 0.00453130094367904,
+        "online_brier_frozen": 0.22144163093767516,
+        "online_brier_full": 0.21795364421180435,
+        "online_brier_logo": 0.21795364421180435,
+        "subset": [
+          {
+            "subset": 3,
+            "n": 39,
+            "loss": 0.29471777962244944,
+            "excess_loss": 0.11626417947831161,
+            "mse": 0.1776009280244436,
+            "po": 0.000210420092691555,
+            "mmd": 0.13085933534510308
+          },
+          {
+            "subset": 2,
+            "n": 31,
+            "loss": 0.25376317456456365,
+            "excess_loss": 0.07530957442042582,
+            "mse": 0.1525290900149074,
+            "po": 0.0001128236770798791,
+            "mmd": 0.0007575434415513227
+          },
+          {
+            "subset": 0,
+            "n": 39,
+            "loss": 0.18991639133724214,
+            "excess_loss": 0.01146279119310431,
+            "mse": 0.13223817173118002,
+            "po": 8.174382031499191e-05,
+            "mmd": 0.010501113425453457
+          },
+          {
+            "subset": 1,
+            "n": 51,
+            "loss": 0.1698680366882074,
+            "excess_loss": -0.008585563455930423,
+            "mse": 0.12717222155019775,
+            "po": 0.00012220054673117535,
+            "mmd": -0.003252642456937571
+          }
+        ],
+        "subset_logo": {
+          "subset": 3,
+          "n": 39,
+          "excess_loss": 0.11626417947831161,
+          "pi_loss": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_mmd": {
+            "video": 0.0,
+            "audio": 1.0,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 1.0,
+              "pi_po": 1.0,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 0.0,
+              "mix_po": 0.0,
+              "mix_mmd": 0.0,
+              "quiet": true
+            }
+          },
+          "dominant": "video"
+        }
+      },
+      {
+        "t": 4,
+        "onset": true,
+        "global_action": "keep_training",
+        "plan": {
+          "global_action": "keep_training",
+          "update": "full_train",
+          "fusion": "fusion_full",
+          "towers": {
+            "video": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "audio": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            },
+            "text": {
+              "tower": "full_train",
+              "i_star": null,
+              "reason": "global quiet: full backprop"
+            }
+          },
+          "dominant": "audio"
+        },
+        "ratios": {
+          "video": {
+            "pi_loss": 0.0,
+            "pi_po": 0.29692674612706765,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          },
+          "audio": {
+            "pi_loss": 0.0,
+            "pi_po": 0.0,
+            "pi_mmd": 1.0,
+            "mix_po": 0.0,
+            "mix_mmd": 1.0,
+            "quiet": false
+          },
+          "text": {
+            "pi_loss": 0.0,
+            "pi_po": 0.7030732538729323,
+            "pi_mmd": 0.0,
+            "mix_po": 1.0,
+            "mix_mmd": 0.0,
+            "quiet": false
+          }
+        },
+        "loss_full": 0.20881450780226424,
+        "po_full": 0.0002353831899773111,
+        "mmd_full": 0.022028435148910508,
+        "online_brier_frozen": 0.20881450780226424,
+        "online_brier_full": 0.20077793878558853,
+        "online_brier_logo": 0.20077793878558853,
+        "subset": [
+          {
+            "subset": 3,
+            "n": 44,
+            "loss": 0.30274674700205445,
+            "excess_loss": 0.12429314685791662,
+            "mse": 0.1795631196347284,
+            "po": 0.00015431130764295754,
+            "mmd": 0.31353832952570104
+          },
+          {
+            "subset": 0,
+            "n": 37,
+            "loss": 0.18906123231357758,
+            "excess_loss": 0.010607632169439746,
+            "mse": 0.12457015921523902,
+            "po": 0.0001106405503170356,
+            "mmd": -0.005867682055543666
+          },
+          {
+            "subset": 2,
+            "n": 43,
+            "loss": 0.17049359810088888,
+            "excess_loss": -0.007960002043248954,
+            "mse": 0.1242815583485102,
+            "po": 7.378170030739444e-05,
+            "mmd": 0.011349796610705343
+          },
+          {
+            "subset": 1,
+            "n": 36,
+            "loss": 0.16008261295364698,
+            "excess_loss": -0.01837098719049085,
+            "mse": 0.11737256211065386,
+            "po": 7.612360881627245e-05,
+            "mmd": -0.005641034887238772
+          }
+        ],
+        "subset_logo": {
+          "subset": 3,
+          "n": 44,
+          "excess_loss": 0.12429314685791662,
+          "pi_loss": {
+            "video": 1.0,
+            "audio": 0.0,
+            "text": 0.0
+          },
+          "pi_po": {
+            "video": 0.8475089548493913,
+            "audio": 0.0,
+            "text": 0.15249104515060868
+          },
+          "pi_mmd": {
+            "video": 0.0,
+            "audio": 1.0,
+            "text": 0.0
+          },
+          "ratios": {
+            "video": {
+              "pi_loss": 1.0,
+              "pi_po": 0.8475089548493913,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            },
+            "audio": {
+              "pi_loss": 0.0,
+              "pi_po": 0.0,
+              "pi_mmd": 1.0,
+              "mix_po": 0.0,
+              "mix_mmd": 1.0,
+              "quiet": false
+            },
+            "text": {
+              "pi_loss": 0.0,
+              "pi_po": 0.15249104515060868,
+              "pi_mmd": 0.0,
+              "mix_po": 1.0,
+              "mix_mmd": 0.0,
+              "quiet": false
+            }
+          },
+          "dominant": "video"
+        }
+      }
+    ]
+  }
+}

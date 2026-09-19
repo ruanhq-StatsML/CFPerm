@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"/>
+<title>特征库监控 · 简报</title>
+<style>
+body { font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif; margin: 28px auto; max-width: 980px; color: #122; background: #f7f5f0; line-height: 1.55; }
+h1 { font-size: 1.45rem; margin-bottom: 0.3rem; }
+h2 { font-size: 1.12rem; margin-top: 1.6rem; }
+.lead { background: #1f4e79; color: #fff; padding: 12px 16px; border-radius: 8px; }
+.note { color: #334; }
+figure { margin: 18px 0; }
+img { max-width: 100%; background: #fff; border: 1px solid #ddd; }
+figcaption { font-size: 0.9rem; color: #445; margin-top: 6px; }
+table { border-collapse: collapse; background: #fff; font-size: 0.88rem; }
+td, th { border: 1px solid #ccc; padding: 6px 9px; font-variant-numeric: tabular-nums; }
+th { background: #ece7dc; }
+code { background: #eee; padding: 1px 4px; }
+.foot { color: #667; font-size: 0.85rem; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<h1>特征库监控：哪几列在走、怎么走、落在哪些商户</h1>
+<p class="lead">全局看板管「要不要冻层」。特征库管「具体是哪几列、哪些商户」。定位，不是唯一分解。Y 不当特征。</p>
+<p class="note">
+合成订单流：参考窗 480 单，之后每批 160 单，onset = 第 1 批。16 个商户，南区（后一半 id）被种下偏移。
+三套场景：只动金额/渠道/GMV 的分布（covariate）、只动转化机制（concept）、两头一起（both）。
+<code>merchant_id</code> 是外键，用来把商户对回订单——<b>不是图方法</b>。
+</p>
+
+<h2>三张图</h2>
+<figure>
+<img src="library_heatmap.png" alt="各列 shift 程度"/>
+<figcaption><b>图 1 — 各 feature 的 shift 程度。</b> 行是目录里的列，颜色越红越响。MMD / ‖Δμ<sub>X</sub>‖ 管分布和均值，|Δμ<sub>Y</sub>| 管转化均值差。* = 种下的列；蓝框 = FSDS 选中。covariate：amount / channel / merchant_gmv 亮；噪声列淡。concept：amount 靠 |Δμ<sub>Y</sub>| 亮，MMD 接近 0。</figcaption>
+</figure>
+<figure>
+<img src="library_time.png" alt="程度随 batch"/>
+<figcaption><b>图 2 — 程度随 batch 怎么抬。</b> 粗线 = 种下的列。虚线 = onset。用来看何时开始、是否还在走。</figcaption>
+</figure>
+<figure>
+<img src="merchant_scan.png" alt="哪些商户在走"/>
+<figcaption><b>图 3 — 不是 feature 的 shift 程度。</b> 每根条是一个商户相对自己历史的响度。红 = 南区，蓝 = 北区。● = 过门槛。问的是「哪些商户」，不是「哪一列变了多少」。前两张才是列。</figcaption>
+</figure>
+
+<h2>怎么刻画</h2>
+<p>目录九列，分订单 / 商户 / 用户。每一窗给每一列打 MMD、均值差、是否选中。选中列收到同一张订单表上，再看 loud 商户 vs 其他。不要把商户指标和订单指标加进同一个份额。</p>
+<table>
+<thead><tr><th>看到</th><th>刻画</th></tr></thead>
+<tbody>
+<tr><td>MMD / ‖Δμ<sub>X</sub>‖ 亮，PO 安静</td><td>这列的客群或金额结构在走</td></tr>
+<tr><td>MMD 安静，|Δμ<sub>Y</sub>| 亮</td><td>这列上转化机制在 hop</td></tr>
+<tr><td>三支都响</td><td>只报这列贡献大，不要拆成唯一份额</td></tr>
+</tbody>
+</table>
+
+<h2>怎么评估（这批玩具）</h2>
+<table>
+<thead><tr><th>检查</th><th>covariate</th><th>concept</th><th>both</th></tr></thead>
+<tbody>
+<tr><td>Y 是否进目录</td><td>否</td><td>否</td><td>否</td></tr>
+<tr><td>FSDS 选中</td><td>amount, channel, merchant_gmv</td><td>amount, channel</td><td>amount, channel, merchant_gmv</td></tr>
+<tr><td>loud 订单南区比例</td><td>0.85</td><td>0.52</td><td>0.85</td></tr>
+<tr><td>商户 vs 南区 Jaccard</td><td>0.77</td><td>0.46</td><td>0.77</td></tr>
+<tr><td>用户 vs 南区 Jaccard</td><td>0</td><td>0</td><td>0</td></tr>
+</tbody>
+</table>
+<p>用户 Jaccard = 0 是对的：用户跨商户随机挂，变动不在用户粒。concept 比 covariate 难收，因为 \(X\) 没动。</p>
+
+<h2>为什么有用</h2>
+<ol>
+<li>一半商户在走时，全窗 MMD 可能还没到冻层阈值。库按列、按商户切开，子集先报。</li>
+<li>「金额走了」和「南区走了」是两件事。图 1/2 管列，图 3 管商户。</li>
+<li>钟和现有冻层看板同一套：MMD / PO / 条件均值 vs 冻结参考窗。没有新的因果故事。</li>
+<li>九列各打一次一维 MMD；16 个商户排个序。算得起。</li>
+</ol>
+<p>局限：这是定位，不是「金额贡献了 60%」那种唯一分解。新商户没有自己的历史，不进商户排名。</p>
+<p class="foot">细表 <a href="TABLES.md">TABLES.md</a> · 口径 <a href="REPORT.md">REPORT.md</a> · 一页 <a href="JUSTIFY.md">JUSTIFY.md</a></p>
+</body>
+</html>

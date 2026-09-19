@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"/>
+<title>PO-risk 看板</title>
+<style>
+body { font-family: "IBM Plex Sans", "Noto Sans SC", sans-serif; margin: 24px; color: #122; background: #f7f5f0; }
+h1 { font-size: 1.5rem; }
+.note { max-width: 860px; line-height: 1.5; }
+.rec { background: #1f4e79; color: #fff; padding: 12px 16px; border-radius: 8px; display: inline-block; }
+figure { margin: 18px 0; }
+img { max-width: 100%; background: #fff; border: 1px solid #ddd; }
+table { border-collapse: collapse; background: #fff; }
+td, th { border: 1px solid #ccc; padding: 6px 10px; font-variant-numeric: tabular-nums; }
+code { background: #eee; padding: 1px 4px; }
+</style>
+</head>
+<body>
+<h1>该冻结哪一层的 training</h1>
+<p class="note">
+DGP gradual concept (β flips after batch 2). n_ref=10000, n_new=2000, hidden=[64, 32].
+看板的输出就是：<b>该冻结哪一层的 training</b>（仅当 PO 和 MSE 都崩）。
+PO-risk 用 RF，不该突然崩；<b>更可能先崩的是 serving MSE</b>。
+MSE 崩了但 PO 正常 → 不是 concept drift。MMD 口径是 <b>MMD²(X_new, X_ref)</b>，
+跟 reference batch 比，不是跟历史所有 batch 的 pairwise 均值，也不是上个 batch 的层 representation。
+闭环：<b>OnlineRFPerm</b> 冻参考窗 RF，T=MSE−E_ref，last-two hop 标 <b>shift-onset</b>（onset_hat=None，labeled=2）。
+看板说这是哪种 shift。PO 崩了模型没崩 → 再观察，先不冻。
+两都崩 → 开 freeze-depth，<code>model_i</code> 只训 top i。
+不做 online-bootstrap。
+</p>
+<p class="rec">再观察 — 先不冻任何一层的 training</p>
+<figure><img src="po_mse_trend.png" alt="po_mse_trend.png"><figcaption>po_mse_trend.png</figcaption></figure><figure><img src="po_risk_gate.png" alt="po_risk_gate.png"><figcaption>po_risk_gate.png</figcaption></figure><figure><img src="freeze_from.png" alt="freeze_from.png"><figcaption>freeze_from.png</figcaption></figure>
+<h2>每一段 — PO × MSE</h2>
+<table><thead><tr><th>t</th><th>PO-risk</th><th>PO MA</th><th>MSE</th><th>MSE MA</th><th>MMD vs ref</th><th>MMD MA</th><th>RFPerm T</th><th>hop</th><th>action</th><th>冻结哪一层的 training</th></tr></thead><tbody><tr><td>0</td><td>1.916e-05</td><td>1.916e-05</td><td>0.1355</td><td>0.1355</td><td>-0.0003176</td><td>-0.0003176</td><td>0.003811</td><td></td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>1</td><td>1.111e-05</td><td>1.514e-05</td><td>0.1363</td><td>0.1359</td><td>0.000667</td><td>0.0001747</td><td>0.00985</td><td></td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>2</td><td>1.654e-05</td><td>1.56e-05</td><td>0.1401</td><td>0.1373</td><td>0.0003276</td><td>0.0002257</td><td>0.01221</td><td></td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>3</td><td>4.035e-05</td><td>2.179e-05</td><td>0.1689</td><td>0.1452</td><td>-0.0006254</td><td>1.289e-05</td><td>0.03249</td><td></td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>4</td><td>0.0001551</td><td>4.846e-05</td><td>0.1979</td><td>0.1557</td><td>0.0005755</td><td>0.0001254</td><td>0.05545</td><td></td><td>keep training</td><td>不冻任何一层的 training</td></tr><tr><td>5</td><td>0.0005509</td><td>0.0001548</td><td>0.2359</td><td>0.1758</td><td>1.518e-05</td><td>0.000192</td><td>0.09664</td><td></td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr><tr><td>6</td><td>0.001136</td><td>0.0003798</td><td>0.2561</td><td>0.1998</td><td>0.0004526</td><td>0.0001491</td><td>0.1363</td><td></td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr><tr><td>7</td><td>0.002645</td><td>0.0009055</td><td>0.2773</td><td>0.2272</td><td>0.001949</td><td>0.0004734</td><td>0.1984</td><td></td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr><tr><td>8</td><td>0.003849</td><td>0.001667</td><td>0.2634</td><td>0.2461</td><td>-0.0007784</td><td>0.0004428</td><td>0.2321</td><td></td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr><tr><td>9</td><td>0.004899</td><td>0.002616</td><td>0.2476</td><td>0.2561</td><td>-0.0007936</td><td>0.000169</td><td>0.2617</td><td></td><td>watch (concept?)</td><td>不冻任何一层的 training</td></tr></tbody></table>
+
+</body>
+</html>
