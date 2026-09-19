@@ -1,0 +1,369 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{enumitem}
+\geometry{margin=1in}
+
+\title{\textbf{Feature--Entity Joint Localization}\\
+\large via Conditional Mean Differences\\
+\large (Non-causal; Not Subgroup Analysis)}
+\author{TencentGR / multimodal attribution prototype}
+\date{2026-09-19}
+
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\norm}[1]{\left\|#1\right\|_2}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We localize period-to-period distribution shift by shrinking the
+\emph{support} of edges with an entity key, using only
+\textbf{conditional mean} contrasts between windows \(W_1\) and \(W_2\).
+The primitive object is an entity--feature matrix of mean differences
+\(D\in\R^{U\times d}\). Columns of \(D\) (and the parent mean gap
+\(\delta\)) guide which features matter; rows of \(D\) decide whether
+to drill to a finer entity support. Feature--entity joint rules are
+declared as ordered compositions \(\mathrm{F}\!\to\!\mathrm{E}\) or
+\(\mathrm{E}\!\to\!\mathrm{F}\) on the same \(D\). The protocol is
+modality-agnostic and \emph{non-causal}: \(W\) is a period indicator,
+not a treatment. It is \emph{not} subgroup analysis: we retrieve a
+stable localization kernel, we do not estimate heterogeneous effects.
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+%----------------------------------------------------------------------
+\section{Claim and justification (read first)}
+\label{sec:justify}
+
+\paragraph{What we optimize.}
+Given edges observed in two periods, find a smaller support
+\(S_{t+1}\subset S_t\) on which the period mean-shift is concentrated,
+at a favorable capture-to-shrinkage rate (Sec.~\ref{sec:rate}).
+
+\paragraph{What we do \emph{not} claim.}
+No ATE/CATE; no ``these merchants have larger treatment effects'';
+no confirmatory hypothesis test on drill gates. Window label \(W\) is
+\emph{period}, not treatment.
+
+\paragraph{Why this looks like subgroup analysis---and why it is not.}
+Procedurally we shrink support in a data-dependent way, which is
+\emph{isomorphic in control flow} to post-hoc subgrouping. The
+\emph{target functional} differs:
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+ & Subgroup analysis & This protocol \\
+\midrule
+Object & \(\tau(S)=\E[Y(1)-Y(0)\mid S]\) &
+  \(\delta(S)=\mu_{S}^{(1)}-\mu_{S}^{(0)}\) on features \\
+Role of \(S\) & Inferential subgroup & Retrieval / delivery kernel \\
+``Better'' & Larger / significant effect &
+  Sharper row spectrum / lower residual \(R\) \\
+Justification & Identification + selective inference &
+  Stable retrieval + business cap + descriptive gates \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Required write-time justification (J1--J8).}
+Reports and code docs must state: (J1)~task $=$ period shift
+localization; (J2)~entity key atoms; (J3)~column vs row split;
+(J4)~stop $=$ flat rows / business cap / rejected \(R\), not
+``nonsignificant effect''; (J5)~deliver \(\pi\)-stable kernels;
+(J6)~any Lift is enrichment \(\bar s_S/\bar s_C\); (J7)~optional
+holdout evaluation; (J8)~business granularity cap. Omitting these
+causes the reader to parse the pipeline as subgroup fishing.
+
+\begin{remark}[Conditional mean is enough for the gate]
+Drill / stop uses only conditional means (and aggregates of an optional
+once-fit edge score). Full MMD leave-one-entity recomputation is
+unnecessary for the decision; MMD may audit top candidates.
+\end{remark}
+
+%----------------------------------------------------------------------
+\section{Setup: periods, edges, entity keys}
+\label{sec:setup}
+
+Let each row \(i=1,\ldots,n\) be an edge (or interaction) with
+standardized features \(X_i\in\R^d\) (scaler fit on \(W_1\) only),
+period label \(W_i\in\{0,1\}\) (\(0=W_1\), \(1=W_2\)), and one or more
+entity keys. A \emph{key} \(k\) is a column (e.g.\ merchant, user,
+category); a \emph{value} \(v\) is a level of that key. Write
+\(e_i^{(k)}\) for the value of key \(k\) on edge \(i\).
+
+Fix a parent support \(S\subseteq\{1,\ldots,n\}\) (all edges, or a
+previous kernel). Mass gate for key \(k\):
+\begin{equation}
+  U_{\mathrm{ok}}^{(k)}
+  =\Bigl\{
+    v:\ 
+    \#\{i\in S: e_i^{(k)}=v,\,W_i=0\}\ge n_{\min},\;
+    \#\{i\in S: e_i^{(k)}=v,\,W_i=1\}\ge n_{\min}
+  \Bigr\}.
+\end{equation}
+
+%----------------------------------------------------------------------
+\section{Primitive: conditional means and the joint matrix \(D\)}
+\label{sec:cmean}
+
+\begin{definition}[Window conditional means]
+For support \(S\) and entity value \(v\) under key \(k\),
+\begin{align}
+  \mu_S^{(w)}
+  &=\E\bigl[X \mid i\in S,\, W=w\bigr]
+  \in\R^d, \\
+  \mu_{v}^{(w)}
+  &=\E\bigl[X \mid e^{(k)}=v,\, i\in S,\, W=w\bigr]
+  \in\R^d.
+\end{align}
+Empirical means replace \(\E\) in code (one group-by pass).
+\end{definition}
+
+\begin{definition}[Parent gap and entity--feature joint matrix]
+\begin{align}
+  \delta(S)
+  &=\mu_S^{(1)}-\mu_S^{(0)}
+  \in\R^d,
+  \label{eq:delta} \\
+  D^{(k)}_{v,:}
+  &=\mu_v^{(1)}-\mu_v^{(0)}
+  \in\R^d,
+  \qquad v\in U_{\mathrm{ok}}^{(k)}.
+  \label{eq:D}
+\end{align}
+Stacking rows yields \(D^{(k)}\in\R^{|U_{\mathrm{ok}}|\times d}\):
+\textbf{rows $=$ entity values, columns $=$ features}. All feature and
+entity decisions in this note are projections of the same \(D^{(k)}\)
+and \(\delta(S)\).
+\end{definition}
+
+\paragraph{Why conditional mean.}
+It is \(O(nd)\) after standardization, aligns with a mean embedding
+view of shift, and makes leave-one-\emph{entity} updates additive in
+the embedding (no \(|U|\) full MMD refits). Higher-order discrepancies
+(full MMD) remain optional audits.
+
+%----------------------------------------------------------------------
+\section{Column view: feature guidance}
+\label{sec:cols}
+
+\begin{definition}[Feature energy shares]
+\[
+  \mathrm{share}_j(S)
+  =\frac{\delta_j(S)^2}{\norm{\delta(S)}^2+\varepsilon}.
+\]
+Let \(J^\star(S)=\mathrm{TopShare}\bigl(\mathrm{share}(S)\bigr)\).
+\end{definition}
+
+\begin{definition}[Feature gates (not drill)]
+\begin{description}[leftmargin=2.2em]
+  \item[G0] \(\norm{\delta(S)}<\varepsilon_\delta\):
+    negligible mean shift; skip FSDS at this support.
+  \item[G1] large \(\norm{\delta}\) and concentrated share:
+    if we \emph{stop} here, run FSDS once on \(S\) and report \(J^\star\).
+  \item[G2] large \(\norm{\delta}\) but flat share:
+    weak feature tip; FSDS optional.
+\end{description}
+\end{definition}
+
+\noindent
+Allowed conclusions: ``shifted / not'', ``watch features \(J^\star\)'',
+``FSDS if stop''. Forbidden: inferring drill from G0--G2 alone.
+
+%----------------------------------------------------------------------
+\section{Row view: drill / stop on an entity key}
+\label{sec:rows}
+
+\begin{definition}[Row spectrum]
+\[
+  r_v^{(k)}
+  =\norm{D^{(k)}_{v,:}},
+  \qquad
+  a_v^{(k)}
+  =\frac{\langle D^{(k)}_{v,:},\,\delta(S)\rangle}
+        {\norm{D^{(k)}_{v,:}}\,\norm{\delta(S)}+\varepsilon}.
+\]
+Tail and CV of \(\{r_v\}\) (over \(U_{\mathrm{ok}}\)) measure whether
+shift mass is entity-heterogeneous under key \(k\).
+\end{definition}
+
+\begin{definition}[Drill gates]
+\begin{description}[leftmargin=2.8em]
+  \item[D-stop] low Tail/CV (and \(a_v\approx 1\) for most \(v\)):
+    homogeneous entities \(\Rightarrow\) do not refine key \(k\).
+  \item[D-drill] high Tail or CV:
+    \(K=\mathrm{Top}(r^{(k)})\cap\{\pi_v\ge\pi^\star\}\)
+    (stability \(\pi\) from probes/bootstrap).
+  \item[D-check]
+    residual ratio on means
+    \[
+      R(K)
+      =\frac{\norm{\delta(S\setminus K)}^2}{\norm{\delta(S)}^2+\varepsilon}.
+    \]
+    Accept \(K\) iff \(R(K)\le R^\star\); else reject false tip.
+\end{description}
+\end{definition}
+
+\begin{definition}[Capture and shrinkage rates]
+\[
+  \alpha(K)=\frac{|S_K|}{|S|},
+  \qquad
+  \gamma(K)=1-R(K),
+  \qquad
+  \mathrm{eff}(K)=\frac{\gamma(K)}{\alpha(K)+\varepsilon}.
+\]
+Localization prefers high \(\gamma\) at moderate \(\alpha\), with stable
+\(\pi\). Early stop iff further refinement yields \(\gamma\approx 0\).
+\end{definition}
+
+%----------------------------------------------------------------------
+\section{Feature--entity joint prototypes}
+\label{sec:joint}
+
+The joint logic is an \emph{ordered} use of columns then rows (or the
+reverse) on the same conditional-mean matrix. Order must be declared;
+silent unions of two orders are forbidden.
+
+\subsection{Path \(\mathrm{F}\to\mathrm{E}\) (default)}
+\label{sec:FE}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Compute \(\delta(S)\) and \(J^\star(S)\) (Sec.~\ref{sec:cols}).
+  \item Restrict columns:
+    \(\widetilde D_{v,:}=D^{(k)}_{v,\,J^\star}\).
+  \item Set \(r_v=\norm{\widetilde D_{v,:}}\) and apply D-stop / D-drill /
+    D-check (Sec.~\ref{sec:rows}).
+\end{enumerate}
+\paragraph{Role.} Denoise the row spectrum when irrelevant coordinates
+dilute \(\norm{D_{v,:}}\). \(J^\star\) comes from parent \(\delta\), not
+from a fresh FSDS fit.
+
+\subsection{Path \(\mathrm{E}\to\mathrm{F}\)}
+\label{sec:EF}
+
+\begin{enumerate}[leftmargin=1.6em]
+  \item Full-dimension \(r_v=\norm{D^{(k)}_{v,:}}\) \(\to\) kernel \(K\).
+  \item Recompute \(\delta(K)\) and \(J^\star(K)\) on edges in \(K\).
+  \item Explain / FSDS only if stopping at \(K\).
+\end{enumerate}
+\paragraph{Role.} When parent \(\delta(S)\) is washed out but a few
+entities carry large \(D_{v,:}\).
+
+\subsection{Cell heatmap (explanation only by default)}
+\[
+  C_{vj}=\bigl|D^{(k)}_{vj}\bigr|.
+\]
+Large cells suggest ``value \(v\) drifts on feature \(j\)''. Do not use
+\(U\times d\) cells as the default drill gate; if used, restrict to
+\(J^\star\times\mathrm{Top}(r)\) and label exploratory.
+
+\begin{proposition}[Same object, two projections]
+Feature guidance and entity drill are not two estimators: they are the
+column energy of \(\delta\) (or of \(D\)) and the row energy of \(D\)
+(optionally column-restricted). Joint paths only choose
+\emph{which projection is applied first}.
+\end{proposition}
+
+%----------------------------------------------------------------------
+\section{Multiple entity keys}
+\label{sec:keys}
+
+Nested keys (tree): \(\mathrm{merchant}\to\mathrm{user}\to\mathrm{order}\).
+Sibling keys (same \(S\)): e.g.\ category vs geo vs merchant. For each
+key \(k\) compute \((\alpha^{(k)},\gamma^{(k)},\pi^{(k)})\) and select
+by efficiency and stability; report \(\texttt{drill\_key}\) explicitly.
+Intersecting kernels across keys is optional and must be labeled.
+
+%----------------------------------------------------------------------
+\section{Optional side score (same partition)}
+\label{sec:po}
+
+Let \(s\in\R^n\) be an edge-level period score from a \emph{single} fit
+(PO-risk style). Align to the same key:
+\[
+  g_v=\mathrm{mean}(s\mid e^{(k)}=v),\qquad
+  \eta^2=\frac{\mathrm{Var}_v(g_v)}{\mathrm{Var}_i(s)}.
+\]
+Concordant sharpness with \(r_v\) increases confidence; discordance is
+reported, and by default does not overturn D-stop. Forbidden:
+\(\mathrm{Var}_x(\hat\tau(x))\) as subset heterogeneity; refitting PO
+per entity.
+
+%----------------------------------------------------------------------
+\section{Decision table}
+\label{sec:table}
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\(\norm{\delta}\) & row spectrum \(r\) & action & FSDS \\
+\midrule
+small & flat & stop & no \\
+small & sharp & rare; check mass & cautious \\
+large & flat & stop drill; feature story & once on \(S\) if G1 \\
+large & sharp & drill along key to \(K\) & once on final \(K^\star\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Business cap truncates delivery depth independently of \(\gamma\).
+
+%----------------------------------------------------------------------
+\section{What else sits on the same backbone}
+\label{sec:else}
+
+Default: nested path + early stop, sibling-key comparison,
+\(\mathrm{F}\to\mathrm{E}\), optional \(\mathrm{E}\to\mathrm{F}\),
+optional holdout \(\gamma\)/overlap, optional peel curve.
+Not in the drill product: Causal Forest \(\hat\tau\) variance.
+No third methodology---only support shrinkage, multiple keys, and
+feature restriction on one conditional-mean matrix \(D\).
+
+%----------------------------------------------------------------------
+\section{Minimal algorithm (pseudocode)}
+\label{sec:algo}
+
+\begin{verbatim}
+# Parent support S, entity key k, features X (W1-scaled), window W
+mu_S[w]  = mean(X | S, W=w)
+delta    = mu_S[1] - mu_S[0]
+share    = delta**2 / (||delta||**2 + eps)
+J_star   = top_share(share)                 # feature guidance
+
+for v in values(k) with mass_ok:
+    D[v] = mean(X|v,W=1) - mean(X|v,W=0)
+
+# declare joint order:
+# F->E:  r[v] = ||D[v, J_star]||
+# E->F:  r[v] = ||D[v, :]||  then recompute delta on K
+
+if flat(r): STOP; maybe FSDS(S) if ||delta|| large
+else:
+    K = top(r) intersect stable_pi
+    R = ||delta(S\K)||**2 / ||delta(S)||**2
+    if R <= R_star: parent <- edges in K; recurse or deliver
+    else: reject tip; STOP at S
+# FSDS once on final K_star only
+\end{verbatim}
+
+\vspace{1em}
+\noindent\textbf{Companion markdown:}
+\texttt{docs/tencent\_gr/ATTRIBUTION\_DRILL\_STOP.md}.
+
+\end{document}
