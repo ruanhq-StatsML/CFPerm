@@ -19,7 +19,8 @@
 
 ## Findings
 
-- Best **W2** HGB AUC: `H_soft_corr|W1hold` = 0.7735 (baseline A=0.7679)
-- Best **W1-hold** HGB AUC: `A_baseline_F|W1hold` = 0.6621
-- cmean-|δ| prefilter aligns FS with period-shift guidance (same δ story as drill doc)
-- Scope locked: graph features only; selection steps only; no graph algorithms.
+- Soft corr@0.98 + official FSDS: best W2 HGB (**0.7735**) / AP (**0.0115**) tying cmean+π
+- Hard J* cumshare≥0.8 then FSDS **hurts** W2 (0.40) — δ-energy alone is guidance, not a replacement for F/label-aware SelectKBest
+- 3-fold π under n_pos=3 is unstable (W2 0.49) — rare-positive kills aggressive stability folds
+- AP ≪ AUC everywhere (pos≈3.6e-4): report both; don't crown on AUC only
+- Official FSDS fusion on: Scaler→Var→SelectKBest→model; W2 never selects

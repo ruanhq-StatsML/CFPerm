@@ -182,9 +182,9 @@ def run_variant(
     else:
         selected, ranking, notes = builder(g_tr, g_w2_ref, cols, k=k, seed=seed)
         if use_official_fsds:
-            # Fuse: builder only proposes a column universe / ranking;
-            # re-run official FSDS restricted to selected∪top pool for fair gate.
-            pool = list(dict.fromkeys(selected + list(ranking["feature"].head(max(k, len(selected))))))
+            # Fuse: builder proposes final column set (or a shortlist).
+            # Official FSDS runs on exactly that set — W2 labels never select.
+            pool = list(selected) if selected else list(cols)
             res = run_fsds(g_tr, g_te, pool, select_k=min(k, len(pool)), seed=seed)
             if res.get("ok"):
                 selected = list(res.get("selected") or selected)
@@ -194,7 +194,7 @@ def run_variant(
                     "hgb": res.get("models", {}).get("hgb", {}),
                     "logreg": res.get("models", {}).get("logreg", {}),
                 }
-                notes = notes + " | fused→official_FSDS_on_pool"
+                notes = notes + " | fused→official_FSDS"
             else:
                 sc = StandardScaler()
                 Xtr = sc.fit_transform(_matrix(g_tr, selected))
