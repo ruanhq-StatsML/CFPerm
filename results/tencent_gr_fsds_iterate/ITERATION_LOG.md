@@ -40,7 +40,8 @@ Or in Python: `po_help_select(...)` → hand `pool` to official FSDS.
 
 图谱特征 only. No community / ego / GNN / ATE claims.
 
-Cookbook: `docs/tencent_gr/PO_RISK_FOR_DS.md` · CLI: `scripts/tencent_gr/po_help_fsds.py`
+Cookbook: `docs/tencent_gr/PO_RISK_FOR_DS.md` · CLI: `scripts/tencent_gr/po_help_fsds.py`  
+**整理报告：** `docs/tencent_gr/FSDS_PO_OVERNIGHT_REPORT.md`
 
 ---
 

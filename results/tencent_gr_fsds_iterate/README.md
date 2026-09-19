@@ -3,24 +3,27 @@
 Locked scope: **图谱特征** → multi-step selection + **official FSDS** fuse.  
 No community / ego / graph-local backends.
 
-Official FSDS (stats method): `StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg`  
+Official FSDS: `StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg`  
 (fit W1 only; W2 = temporal holdout).
 
-PO-risk (讲武德): `docs/tencent_gr/PO_RISK_FOR_DS.md` — period W; ranking prior only.
+**整理报告：** [`docs/tencent_gr/FSDS_PO_OVERNIGHT_REPORT.md`](../../docs/tencent_gr/FSDS_PO_OVERNIGHT_REPORT.md)  
+**PO cookbook：** [`docs/tencent_gr/PO_RISK_FOR_DS.md`](../../docs/tencent_gr/PO_RISK_FOR_DS.md)  
+**Summary：** `ITERATION_LOG.md` → OVERNIGHT_SUMMARY
 
 ```bash
+# DS default
+PYTHONPATH=. python3 scripts/tencent_gr/po_help_fsds.py --select-k 15 --seed 0
+
+# Overnight harness
 PYTHONPATH=. python3 scripts/tencent_gr/run_fsds_multistep_iterate.py --iter-tag iterNN
 ```
 
-Results: `results/tencent_gr_fsds_iterate/` (`ITERATION_LOG.md` + per-iter `FINDINGS.md`).
-
 ## Headlines
-- **iter01**: π-stable / cmean+π slightly beat baseline on W2; hard corr@0.92 hurts
-- **iter02**: fused official FSDS; soft-corr@0.98 best W2; J*-only prefilter hurts; rare-pos AP tiny; 3-fold π unstable
-- **iter05**: PO-VIMP → FSDS mean W2 **0.722** > Z **0.720** > A **0.716** (seeds 0/1/2)
-- **iter06**: `po_help_select` + rare-pos π; **P_po** still best mean; **Z_PO_rare** lowest σ (0.137); boot-π not free lunch
-- **iter07**: α∈{0.3,0.5,0.7} **identical** on d=21; tight pool k hurts; P_po still best mean, rare-π best σ
-
-Timer: overnight wrap complete (iter10). See **OVERNIGHT_SUMMARY** in `ITERATION_LOG.md`.
-- **iter08**: k&lt;15 hurts; P_po best at **k=18** (0.724); τ̂²-rows ≈ P_po (no clear win)
-- **iter09**: seed-maj2 hurts mean; **LOO-pos maj** lowest σ (**0.114**); avg-VIMP topk alone fails — still hand pool to FSDS
+- **iter01**: π-stable / cmean+π 略好；硬 corr@0.92 伤
+- **iter02–03**: 官方 FSDS fuse；收敛 cmean+π→FSDS
+- **iter05**: PO-VIMP → FSDS mean W2 **0.722** > Z **0.720** > A **0.716**
+- **iter06**: rare-π 最低 σ（0.137）；boot-π 非免费午餐
+- **iter07**: α 无关；tight pool=k 伤
+- **iter08**: k&lt;15 伤；P_po @k=18 → **0.724**；τ̂²-rows ≈ P_po
+- **iter09**: seed-maj2 伤均值；LOO-pos maj σ **0.114**
+- **iter10**: CLI + overnight wrap；定时器已停
