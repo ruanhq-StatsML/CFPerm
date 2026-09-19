@@ -12,21 +12,94 @@
       → 早停得 K* → 核上一次 FSDS
 ```
 
-PO 边级分数作同口径旁证；全量 MMD leave-one-entity 重跑禁止；不谈因果 justification。
+PO 边级分数作同口径旁证；全量 MMD leave-one-entity 重跑禁止。  
+**不需要因果 justification，但必须写清 localization / 检索口径的 justification**（见 §1）——外形像 subgroup，最容易写歪。
 
 ---
 
-## 1. 这不是 subgroup analysis
+## 1. 为什么像 subgroup、为什么不是、写的时候怎么 justify
 
-| | Subgroup analysis | 本协议 |
+这一节是整份协议里最 tricky、也最需要写进代码注释 / 报告前言的部分。
+
+### 1.1 外形为什么像
+
+程序长这样：
+
+```text
+先在父集上打分 → 取出高分实体核 → 只在核内再往下切一层再打分
+```
+
+和 post-hoc subgroup 的「先看主分析，再切子群看效应」**流程同构**。  
+若报告再出现 Lift、Δ、CV、「更显著」之类词，读者会默认你在做子群效应——**长得像不是巧合，写的时候必须主动划界**。
+
+### 1.2 目标函数不同（划界的硬核）
+
+| | Subgroup analysis | 本协议（distribution-shift localization） |
 |---|---|---|
-| 问题 | 效应在子群是否不同 | 哪块 mass 的特征分布在窗间漂了 |
-| 量 | ATE / 交互 | cmean 差、\(r_u\)、enrichment Lift、可选 MMD |
-| 名单 | 推断对象 | 检索 / 交付核 |
-| 下钻 | 再切子群估效应 | 换实体颗粒，看行谱是否还尖 |
+| 科学问题 | 处理效应 \(\tau\) 是否随子群变 | 两窗特征分布 \(P^{W_1},P^{W_2}\) 的差异质量落在哪块 mass |
+| 主对象 | \(\hat\tau(S)\)、交互项、CI | \(\delta\)、\(D\)、\(r_u\)、可选 \(\widehat{\mathrm{MMD}}^2\)、enrichment |
+| 名单角色 | **推断对象**（常需多重比较 / 预登记） | **检索 / 交付候选**（要稳定 \(\pi\) + 业务顶） |
+| 「更好」的含义 | 子群效应更大 / 更显著 | 子支撑上均值漂移更尖（\(r\) 谱）或残余 \(R\) 下降 |
+| 下钻 | 再切子群继续估效应 → fishing | 换实体颗粒，问行谱是否还异质 → 可早停 |
+| 需要的 justification | 因果识别 + 选择性推断 | **非因果声明** + 检索稳定性 + 交付口径 + 描述性闸门 |
 
-Justification 换轨：要的是 **名单稳定性 + 业务交付口径 + enrichment/残余可操作性**，不是子群效应的多重校正。  
-话术一旦滑成「这些商户效应更大」，就掉回 subgroup——协议禁止。
+所以：不是「免责所以不用 justify」，而是 **justify 换轨**。  
+因果轨上的 pre-specification / FWER 不是本协议的主担保；本协议要担保的是——你交出去的核是可重复的漂移载体名单，不是 ATE 子群。
+
+### 1.3 我们明确不声称什么（写进每份报告）
+
+必须可逐条否定：
+
+1. **不是 ATE / CATE**：\(W\) 是 period（W1/W2），不是 treatment。  
+2. **不是「这些商户转化效应更大」**：\(r_u\) / Lift 只描述窗间特征（或分数）尖度。  
+3. **Drill 门不是假设检验**：Tail/CV/\(R\) 阈值是工程闸门，不是 \(\alpha\)。  
+4. **稳定 \(\pi_e\) 不是多重校正**：管的是 TopK 可重复，不管 Type I under no-effect null。  
+5. **FSDS 特征重要性 ≠ 因果机制**。
+
+少写一句「非因果、非 subgroup effect」，读者就会按 subgroup 读。
+
+### 1.4 我们仍必须写清的 justification（具体条目）
+
+写代码、写 PR、写结果报告时，按条勾：
+
+| # | 要写明的 | 不写会怎样 |
+|---|---|---|
+| J1 | **任务**：W1/W2 特征分布漂移的多颗粒定位（retrieval） | 被读成效应估计 |
+| J2 | **原子**：下一层 `entity` 的边集；\(D,\delta,r\) 同 scaler | 颗粒不清，和 subgroup 切片混谈 |
+| J3 | **列 vs 行**：\(\delta\)=feature guidance；\(r_u\)=唯一下钻信号 | 「特征漂了所以下钻」——假 subgroup 话术 |
+| J4 | **停止规则**：行平或业务顶或 \(R\)-reject；非「效应不显著故停」 | 停钻被读成「无异质效应」 |
+| J5 | **名单**：交付认 \(\pi\) 核，不认单次 TopK；标 fragile | 事后钓鱼名单 |
+| J6 | **Lift / enrichment**：若出现，定义 \(=\bar s_S/\bar s_C\)，禁止效应比 | 直接变 subgroup |
+| J7 | **选择评估（可选加分）**：probe 定核、holdout 窗只评估 overlap/\(R\) | 完全 post-hoc 无诚实评估 |
+| J8 | **业务顶**：统计建议与交付粒度分开写 | 「钻到 order」被当成必须对外口径 |
+
+**一句话可放进模块 docstring：**
+
+> This layer decides whether to refine a *localization support* by entity-level cmean row spectrum. It does **not** estimate subgroup treatment effects; \(W\) is period, gates are descriptive, and delivered kernels are stable retrieval sets under a business granularity cap.
+
+### 1.5 最容易写歪的三句（禁止 → 替换）
+
+| 禁止 | 替换 |
+|---|---|
+| 「下钻后效应更显著」 | 「下钻后 \(r\) 谱更尖 / \(R\) 下降，父集漂移由子核解释」 |
+| 「这些用户是异质处理效应人群」 | 「这些用户是父核内 mean-shift 的主要载体（高 \(r_u\)）」 |
+| 「CF/PO 证明应停止下钻」 | 「行谱齐次（+可选 \(g_u\) 同向）→ 描述性早停；CF 不进 Drill 乘积」 |
+
+### 1.6 和 subgroup 的边界测试（自检）
+
+写完一段结论，做三个替换测试：
+
+1. 把文中所有「效应 / 显著 / uplift」删掉——若段落塌了，说明在靠 subgroup 语言撑着。  
+2. 把「核」改成「检索名单 / 交付支撑」——若读不通，对象没立住。  
+3. 问：若永远不下钻、只交本层 \(S\)+FSDS，协议是否仍自洽？——应自洽（行平即停是一等公民，不是失败）。
+
+过不了这三条，就还在写假 subgroup，而不是 localization。
+
+### 1.7 小结
+
+外形像切子群，是因为 **都在数据依赖地缩小支撑**；  
+不是 subgroup，是因为 **优化与声称的是漂移质量的局部化，不是 \(\tau\) 的切片推断**。  
+因此：**不用 causality justification，但要用 §1.4 的 J1–J8 写满**——代码好写，话术和报告前言不能省。
 
 ---
 
@@ -39,8 +112,9 @@ Justification 换轨：要的是 **名单稳定性 + 业务交付口径 + enrich
 | 由谁定 | 接结果的人（商户运营 / 人群 / case） | 父核内 cmean **行谱** |
 | 含义 | **对外交付粒度 ≤ 顶** | 要不要建议再细一层 |
 | 计算 | 顶以下仍可算 probe | `Drill=0` 则该支路 localization 终点 |
+| Justify 时 | 写清谁接结果、为何截在此粒 | 写清行谱门 + 非效应语言（§1.5） |
 
-统计可以建议下钻；交付物仍截在业务顶。
+统计可以建议下钻；交付物仍截在业务顶。二者分栏写，避免「统计钻到哪交付到哪」被读成无约束的 subgroup fishing。
 
 ---
 
@@ -236,7 +310,8 @@ g_u=\mathrm{mean}(s\mid e=u)
 4. 报 \(r\) / Tail / CV / \(a_u\) → **D_stop / D_drill**  
 5. 钻则出 \(K\) + \(R\)；可选对一下 \(g_u\)  
 6. FSDS 只在最终支撑上跑一次  
-7. 报告分栏：**Feature guidance** | **Drill decision** | **Kernel \(K^\star\)** —— 禁止混写成一句
+7. 报告分栏：**Feature guidance** | **Drill decision** | **Kernel \(K^\star\)** —— 禁止混写成一句  
+8. 报告 / 模块 docstring 勾完 **§1.4 J1–J8**；过一遍 **§1.6** 三句自检（效应词删除测试）
 
 ---
 
