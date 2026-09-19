@@ -55,6 +55,7 @@ class StyleTransferFsdsTests(unittest.TestCase):
             self.assertIn(g, plan["towers"])
         noise_pi = route["logo"]["pi_mmd"]["noise"]
         self.assertGreaterEqual(noise_pi, route["logo"]["pi_mmd"]["content"])
+        self.assertNotEqual(plan["towers"]["noise"]["tower"], "freeze_tower")
 
 
 if __name__ == "__main__":

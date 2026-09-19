@@ -48,8 +48,13 @@ from logo_modality import (
     TOWER_STEM,
     TOWER_TOP,
     logo_batch,
+    plan_next_batch,
 )
-from streaming_po_risk import large_deviation
+from streaming_po_risk import ACTION_KEEP, ACTION_XSHIFT, large_deviation
+
+QUIET_FLOOR_MMD = 0.015
+QUIET_FLOOR_PO = 0.01
+QUIET_FLOOR_CMEAN_Y = 0.10
 
 N_TOPIC_TOKS = 4
 
@@ -118,7 +123,19 @@ def _as_np(t) -> np.ndarray:
 # 1. Synthetic data
 # ============================================================
 
-def make_data(n, cfg: Config, seed=0, drift=False, concept=False):
+def make_lexicon(cfg: Config, seed: int = 0):
+    """Frozen token codebook. Shared across D_ref / new so only drift flags move X."""
+    rng = np.random.RandomState(seed)
+    topic_words = rng.randint(10, 400, size=(cfg.n_topics, N_TOPIC_TOKS))
+    style_tokens = (
+        500
+        + np.arange(cfg.num_styles)[:, None] * 30
+        + rng.randint(0, 30, size=(cfg.num_styles, cfg.n_style_markers))
+    )
+    return topic_words, style_tokens
+
+
+def make_data(n, cfg: Config, seed=0, drift=False, concept=False, lexicon=None):
     """Synthetic style-transfer rows.
 
     content : topic id (0..n_topics-1)
@@ -130,6 +147,7 @@ def make_data(n, cfg: Config, seed=0, drift=False, concept=False):
     concept=True : s_tgt independent of src                     (P(Y|X) hop)
 
     Y for FSDS is s_tgt. It is not written into src.
+    Lexicon is frozen (seed 0) unless the caller passes one.
     """
     rng = np.random.RandomState(seed)
     topics = rng.randint(0, cfg.n_topics, size=n)
@@ -139,12 +157,7 @@ def make_data(n, cfg: Config, seed=0, drift=False, concept=False):
     if concept:
         s_tgt = rng.randint(0, cfg.num_styles, size=n)
 
-    topic_words = rng.randint(10, 400, size=(cfg.n_topics, N_TOPIC_TOKS))
-    style_tokens = (
-        500
-        + np.arange(cfg.num_styles)[:, None] * 30
-        + rng.randint(0, 30, size=(cfg.num_styles, cfg.n_style_markers))
-    )
+    topic_words, style_tokens = lexicon if lexicon is not None else make_lexicon(cfg, seed=0)
 
     src = np.zeros((n, cfg.max_len), dtype=np.int64)
     tgt = np.zeros((n, cfg.n_style_markers), dtype=np.int64)
@@ -331,7 +344,7 @@ class MultiLoss(nn.Module):
             + self.cfg.w_align * l_a
             + self.cfg.w_contrast * l_c
             + self.cfg.w_fluency * l_f
-            + self.cfg.w_mi * l_mi
+            + self.cfg.w_mi * torch.clamp(l_mi, min=-2.0, max=5.0)
         )
         parts = {
             "style": l_s.item(),
@@ -395,11 +408,28 @@ def _quiet_split(X, Y, seed: int):
     return X[idx[:h]], Y[idx[:h]], X[idx[h:]], Y[idx[h:]]
 
 
-def _excess(stream: Optional[float], quiet: Optional[float]) -> float:
+def _excess(stream: Optional[float], quiet: Optional[float], floor: float) -> float:
     if stream is None:
         return 0.0
-    q = 0.0 if quiet is None else float(quiet)
-    return max(float(stream) / max(q, 1e-8) - 1.0, 0.0)
+    q = max(0.0 if quiet is None else float(quiet), float(floor))
+    return max(float(stream) / q - 1.0, 0.0)
+
+
+def overlay_fsds_plan(logo: Mapping, mmd_broken: bool, po_broken: bool) -> dict:
+    """If the PO×MSE gate stays keep but FSDS MMD is loud, stem-adapt.
+
+    Same rule as the LOGO note: a quiet global gate is not 'no drift'.
+    """
+    plan = dict(logo["plan"])
+    if (
+        str(plan.get("global_action")) == ACTION_KEEP
+        and mmd_broken
+        and not po_broken
+    ):
+        plan = plan_next_batch(ACTION_XSHIFT, logo["ratios"])
+        plan["overlay"] = "fsds_mmd_keep"
+        plan["global_action_raw"] = ACTION_KEEP
+    return plan
 
 
 def _action_scale(action: str, cfg: Config) -> float:
@@ -494,12 +524,18 @@ def fsds_route(
             mmd_base=quiet.get("mmd"),
         )
 
-    cov = _excess(metrics["mmd"], quiet["mmd"])
-    con = _excess(metrics["po"], quiet["po"])
+    cov = _excess(metrics["mmd"], quiet["mmd"], QUIET_FLOOR_MMD)
+    con = _excess(metrics["po"], quiet["po"], QUIET_FLOOR_PO)
     if metrics["po"] is None:
-        con = _excess(abs(metrics["cmean_y"]), abs(quiet["cmean_y"]) + 1e-8)
+        con = _excess(abs(metrics["cmean_y"]), abs(quiet["cmean_y"]), QUIET_FLOOR_CMEAN_Y)
     alpha = attribution_to_alpha(cov, con, cfg)
-    plan = None if logo is None else logo["plan"]
+    mmd_broken = bool(large_deviation(metrics["mmd"], max(quiet["mmd"] or 0.0, QUIET_FLOOR_MMD)))
+    po_broken = bool(
+        metrics["po"] is not None
+        and quiet["po"] is not None
+        and large_deviation(metrics["po"], max(quiet["po"], QUIET_FLOOR_PO))
+    )
+    plan = None if logo is None else overlay_fsds_plan(logo, mmd_broken, po_broken)
     return {
         "metrics": metrics,
         "quiet": quiet,
@@ -514,12 +550,8 @@ def fsds_route(
         "logo": logo,
         "plan": plan,
         "y_in_x": False,
-        "mmd_broken": bool(large_deviation(metrics["mmd"], quiet["mmd"])),
-        "po_broken": bool(
-            metrics["po"] is not None
-            and quiet["po"] is not None
-            and large_deviation(metrics["po"], quiet["po"])
-        ),
+        "mmd_broken": mmd_broken,
+        "po_broken": po_broken,
     }
 
 
@@ -593,9 +625,12 @@ def _print_route(route: Mapping) -> None:
     if not plan:
         return
     towers = {g: v["tower"] for g, v in plan.get("towers", {}).items()}
+    extra = ""
+    if plan.get("overlay"):
+        extra = f"  overlay={plan.get('overlay')}  raw={plan.get('global_action_raw')}"
     print(
         f"[LOGO] action={plan.get('global_action')}  update={plan.get('update')}  "
-        f"dominant={plan.get('dominant')}  fusion={plan.get('fusion')}"
+        f"dominant={plan.get('dominant')}  fusion={plan.get('fusion')}{extra}"
     )
     print(f"[LOGO] towers = {towers}")
 
@@ -618,6 +653,9 @@ def train(cfg: Config):
     print("[FSDS] covariate walk vs D_ref (noise support) ...")
     route = fsds_route(exist_data, new_data, cfg, seed=cfg.seed, with_logo=True)
     _print_route(route)
+    concept_data = make_data(cfg.n_attr, cfg, seed=5, concept=True)
+    print("[FSDS] concept redraw of s_tgt vs D_ref ...")
+    _print_route(fsds_route(exist_data, concept_data, cfg, seed=cfg.seed, with_logo=True))
 
     optimizer = build_optimizer_with_routing(model, cfg, route["alpha"], plan=route.get("plan"))
 
@@ -663,12 +701,16 @@ def train(cfg: Config):
         mi_final = out["mi"].item()
         leak = float("nan")
         try:
+            import warnings
+
             from sklearn.linear_model import LogisticRegression
 
             h_c_np = out["h_c"].cpu().numpy()
             s_np = batch["s_tgt"].cpu().numpy()
             if len(set(s_np.tolist())) > 1:
-                clf = LogisticRegression(max_iter=200).fit(h_c_np, s_np)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    clf = LogisticRegression(max_iter=400).fit(h_c_np, s_np)
                 leak = clf.score(h_c_np, s_np)
         except Exception:
             pass
