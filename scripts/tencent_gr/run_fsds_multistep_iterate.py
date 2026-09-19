@@ -429,20 +429,33 @@ def build_combined_po(g_tr, g_w2, cols, *, k, seed):
     PO fit once (W=period). Helps rank shift-relevant graph feats without
     claiming ATE. α=0.5 blend; tight guided pool so PO is not a no-op.
     """
+    return _build_combined_po_alpha(g_tr, g_w2, cols, k=k, seed=seed, alpha=0.5)
+
+
+def _build_combined_po_alpha(g_tr, g_w2, cols, *, k, seed, alpha: float):
     X1 = _matrix(g_tr, cols)
     X2 = _matrix(g_w2, cols)
     dlt = _cmean_abs_delta(X1, X2)
     po = fit_po_on_windows(g_tr, g_w2, cols, seed=seed, max_n=6000)
-    blend = blend_cmean_po_scores(cols, dlt, po["vimp"], alpha=0.5)
+    blend = blend_cmean_po_scores(cols, dlt, po["vimp"], alpha=alpha)
     pre_n = min(len(cols), max(k, k + 3))
     guided = list(blend["feature"].head(pre_n))
     selected, ranking, note_pi = build_stable_pi_f(g_tr, g_w2, guided, k=k, seed=seed)
     note = (
-        f"COMBINED-PO: cmean⋈PO-VIMP→{pre_n} | {note_pi} | "
+        f"COMBINED-PO(α={alpha:g}): cmean⋈PO-VIMP→{pre_n} | {note_pi} | "
         f"PO-risk={po['risk']:.6g} | →FSDS"
     )
-    ranking = ranking.copy()
-    return selected, ranking, note
+    return selected, ranking.copy(), note
+
+
+def build_combined_po_a03(g_tr, g_w2, cols, *, k, seed):
+    """More |δ|, less PO-VIMP (α=0.3)."""
+    return _build_combined_po_alpha(g_tr, g_w2, cols, k=k, seed=seed, alpha=0.3)
+
+
+def build_combined_po_a07(g_tr, g_w2, cols, *, k, seed):
+    """More PO-VIMP, less |δ| (α=0.7)."""
+    return _build_combined_po_alpha(g_tr, g_w2, cols, k=k, seed=seed, alpha=0.7)
 
 
 def build_po_boot_pi(g_tr, g_w2, cols, *, k, seed):
@@ -462,6 +475,29 @@ def build_po_boot_pi(g_tr, g_w2, cols, *, k, seed):
     note = (
         f"PO-boot-π: PO-help pool→{len(guided)} | bootπ×{n_ok}→{k} | "
         f"PO-risk={help_['risk']:.6g} | →FSDS"
+    )
+    return selected, ranking, note
+
+
+def build_po_vimp_rare_pi(g_tr, g_w2, cols, *, k, seed):
+    """Hybrid: PO-VIMP pool → rare-pos-capped π → FSDS (no bootstrap, no |δ|)."""
+    po = fit_po_on_windows(g_tr, g_w2, cols, seed=seed, max_n=6000)
+    tab = po["feature_table"]
+    pre_n = min(len(cols), max(k, k + 3))
+    guided = list(tab["feature"].head(pre_n))
+    X = StandardScaler().fit_transform(_matrix(g_tr, guided))
+    y = g_tr["y_convert"].to_numpy(int)
+    vt = VarianceThreshold(1e-8)
+    Xv = vt.fit_transform(X)
+    cols_v = [c for c, m in zip(guided, vt.get_support()) if m]
+    n_splits = rare_pos_n_splits(y, prefer=3)
+    selected, pi_tab = _stability_select(
+        Xv, y, cols_v, k=k, n_splits=n_splits, seed=seed, score_fn=f_classif
+    )
+    ranking = pi_tab.rename(columns={"mean_score": "score"})
+    note = (
+        f"PO-VIMP+rare-π: pre→{pre_n} | {n_splits}-fold π "
+        f"(n_pos={int(y.sum())})→{k} | PO-risk={po['risk']:.6g} | →FSDS"
     )
     return selected, ranking, note
 
@@ -554,7 +590,10 @@ VARIANTS: Dict[str, Callable] = {
     "Z_combined_MI": build_combined_mi,
     "P_po_vimp_FSDS": build_po_vimp_fsds,
     "Z_combined_PO": build_combined_po,
+    "Z_combined_PO_a03": build_combined_po_a03,
+    "Z_combined_PO_a07": build_combined_po_a07,
     "P_po_boot_pi": build_po_boot_pi,
+    "P_po_vimp_rare_pi": build_po_vimp_rare_pi,
     "Z_combined_PO_rare": build_combined_po_rare,
 }
 
@@ -607,8 +646,9 @@ def main() -> None:
         "--variants",
         type=str,
         default=(
-            "A_baseline_F,Z_combined,P_po_vimp_FSDS,Z_combined_PO,"
-            "P_po_boot_pi,Z_combined_PO_rare"
+            "A_baseline_F,P_po_vimp_FSDS,Z_combined_PO,"
+            "Z_combined_PO_a03,Z_combined_PO_a07,"
+            "P_po_vimp_rare_pi,Z_combined_PO_rare"
         ),
     )
     ap.add_argument(
