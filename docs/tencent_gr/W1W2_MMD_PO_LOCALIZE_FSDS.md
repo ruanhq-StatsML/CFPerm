@@ -17,6 +17,10 @@
 [`ATTRIBUTION_DRILL_STOP.md`](./ATTRIBUTION_DRILL_STOP.md)
 （父集同一套 cmean：列 \(\delta\) = feature guidance / 是否本层 FSDS；行 \(r_u\) = drill；早停得 \(K^\star\) 再 FSDS）。
 
+**特征×实体联合（LaTeX prototype）：**
+[`Feature_Entity_Joint_CMean.tex`](./Feature_Entity_Joint_CMean.tex)
+— conditional mean 原语、\(D\) 矩阵、F→E / E→F、非 subgroup justification。
+
 ## 三步下钻（可选）：merchant → user → order
 
 在漂移 subset 上再做定位（**每层应过停止表，勿强制钻穿**）：

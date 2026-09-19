@@ -639,6 +639,9 @@ cell 热力     → 解释用；进门需降范围并标注
 
 没有第三套并列大方法论；就是 **缩支撑 + 多钥匙 + 特征维约束** 三件事织在同一张 \(D\) 上。
 
+**LaTeX prototype（公式 + justification）：**
+[`Feature_Entity_Joint_CMean.tex`](./Feature_Entity_Joint_CMean.tex)。
+
 ---
 
 **收束：**  
