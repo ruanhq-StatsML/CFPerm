@@ -461,3 +461,76 @@ See `iter04/_tmp_k18_s2_Z_combined_MI/FINDINGS.md`.
 - Seed variance dwarfs method gap; Z≈A at k=15 mean; MI hurts; k≈15–18 sweet.
 - See iter04/FINDINGS.md
 
+
+## iter05/s0 (2026-09-19 08:22 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4278 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.4272 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+| P_po_vimp_FSDS|W1hold | PO-VIMP pre→21 (risk=1.1919e-06) then FSDS-F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7664 | 0.0107 | 0.4669 | 2.7163 | ui_pop_mismatch,i_log1p_n_users,i_log1p_n_covisit,u_n_exp,u_n_uniq_items |
+| Z_combined_PO|W1hold | COMBINED-PO: cmean⋈PO-VIMP→21 | 5-fold π-stable SelectKBest(F) | PO-risk=1.1919e-06 | →FSDS | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 2.7288 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+
+See `iter05/s0/FINDINGS.md`.
+
+## iter05/s1 (2026-09-19 08:22 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.7544 | 0.0010 | 0.1497 | 0.5426 | 0.0012 | 0.5088 | 0.4525 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.7544 | 0.0010 | 0.1497 | 0.5426 | 0.0012 | 0.5088 | 0.4938 | u_span_sec,i_n_users,i_n_covisit_neighbors,i_credit_last,i_share_last |
+| P_po_vimp_FSDS|W1hold | PO-VIMP pre→21 (risk=1.25052e-06) then FSDS-F→15 | fused→official_FSDS | 15 | 1.0000 | 0.7544 | 0.0010 | 0.1497 | 0.5451 | 0.0012 | 0.5088 | 2.6935 | i_n_users,i_log1p_n_users,i_n_covisit_neighbors,i_log1p_n_covisit,i_n_exp |
+| Z_combined_PO|W1hold | COMBINED-PO: cmean⋈PO-VIMP→21 | 5-fold π-stable SelectKBest(F) | PO-risk=1.25052e-06 | →FSDS | fused→official_FSDS | 15 | 1.0000 | 0.7544 | 0.0010 | 0.1497 | 0.5426 | 0.0012 | 0.5088 | 2.7631 | u_span_sec,i_n_users,i_n_covisit_neighbors,i_credit_last,i_share_last |
+
+See `iter05/s1/FINDINGS.md`.
+
+## iter05/s2 (2026-09-19 08:22 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.5459 | 0.0007 | 0.4846 | 0.8363 | 0.0171 | 0.6457 | 0.3329 | e_n_exp,u_n_exp,u_n_uniq_items,u_log1p_n_events,u_log1p_n_uniq |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 0.6667 | 0.6221 | 0.0005 | 0.5429 | 0.8429 | 0.0090 | 0.7445 | 0.4256 | i_share_first,i_credit_first,i_n_exp,e_log1p_exp,e_n_exp |
+| P_po_vimp_FSDS|W1hold | PO-VIMP pre→21 (risk=1.15413e-06) then FSDS-F→15 | fused→official_FSDS | 15 | 1.0000 | 0.5464 | 0.0007 | 0.4846 | 0.8412 | 0.0171 | 0.6457 | 2.5782 | ui_pop_mismatch,i_log1p_n_exp,u_n_exp,i_n_exp,u_n_uniq_items |
+| Z_combined_PO|W1hold | COMBINED-PO: cmean⋈PO-VIMP→21 | 5-fold π-stable SelectKBest(F) | PO-risk=1.15413e-06 | →FSDS | fused→official_FSDS | 15 | 0.6667 | 0.6221 | 0.0005 | 0.5429 | 0.8429 | 0.0090 | 0.7445 | 2.7340 | i_share_first,i_credit_first,i_n_exp,e_log1p_exp,e_n_exp |
+
+See `iter05/s2/FINDINGS.md`.
+
+## iter05/tight_s0 (2026-09-19 08:23 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7679 | 0.0114 | 0.4669 | 0.4209 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.6621 | 0.0010 | 0.9154 | 0.7735 | 0.0115 | 0.4669 | 0.4184 | u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp |
+| P_po_vimp_FSDS|W1hold | PO-VIMP pre→18 (risk=1.1919e-06) then FSDS-F→15 | fused→official_FSDS | 15 | 0.6667 | 0.5819 | 0.0008 | 0.9274 | 0.7593 | 0.0061 | 0.4460 | 2.7891 | ui_pop_mismatch,i_log1p_n_users,i_log1p_n_covisit,i_n_covisit_neighbors,u_n_exp |
+| Z_combined_PO|W1hold | COMBINED-PO: cmean⋈PO-VIMP→18 | 5-fold π-stable SelectKBest(F) | PO-risk=1.1919e-06 | →FSDS | fused→official_FSDS | 15 | 0.6667 | 0.5819 | 0.0008 | 0.9274 | 0.7388 | 0.0057 | 0.4460 | 2.8002 | u_n_uniq_items,i_n_exp,i_log1p_n_users,i_n_covisit_neighbors,ui_pop_mismatch |
+
+See `iter05/tight_s0/FINDINGS.md`.
+
+## iter05/tight_s1 (2026-09-19 08:23 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.7544 | 0.0010 | 0.1497 | 0.5426 | 0.0012 | 0.5088 | 0.4516 | e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 1.0000 | 0.7544 | 0.0010 | 0.1497 | 0.5426 | 0.0012 | 0.5088 | 0.4437 | u_span_sec,i_n_users,i_n_covisit_neighbors,i_credit_last,i_share_last |
+| P_po_vimp_FSDS|W1hold | PO-VIMP pre→18 (risk=1.25052e-06) then FSDS-F→15 | fused→official_FSDS | 15 | 0.6667 | 0.7666 | 0.0011 | 0.2027 | 0.5362 | 0.0012 | 0.3296 | 2.7806 | ui_pop_mismatch,i_n_users,i_log1p_n_users,i_log1p_n_exp,i_n_covisit_neighbors |
+| Z_combined_PO|W1hold | COMBINED-PO: cmean⋈PO-VIMP→18 | 5-fold π-stable SelectKBest(F) | PO-risk=1.25052e-06 | →FSDS | fused→official_FSDS | 15 | 0.6667 | 0.7666 | 0.0011 | 0.2027 | 0.5286 | 0.0012 | 0.3296 | 2.8004 | u_span_sec,i_n_users,i_n_covisit_neighbors,u_n_exp,u_n_uniq_items |
+
+See `iter05/tight_s1/FINDINGS.md`.
+
+## iter05/tight_s2 (2026-09-19 08:23 UTC)
+
+| variant | notes | n_selected | jaccard_vs_baseline | W1_hgb_auc | W1_hgb_ap | W1_logreg_auc | W2_hgb_auc | W2_hgb_ap | W2_logreg_auc | sec | top5 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A_baseline_F|W1hold | Scaler→Var→SelectKBest(F) | metrics=official_run_fsds | 15 | 1.0000 | 0.5459 | 0.0007 | 0.4846 | 0.8363 | 0.0171 | 0.6457 | 0.3182 | e_n_exp,u_n_exp,u_n_uniq_items,u_log1p_n_events,u_log1p_n_uniq |
+| Z_combined|W1hold | COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS | 15 | 0.6667 | 0.6221 | 0.0005 | 0.5429 | 0.8429 | 0.0090 | 0.7445 | 0.4236 | i_share_first,i_credit_first,i_n_exp,e_log1p_exp,e_n_exp |
+| P_po_vimp_FSDS|W1hold | PO-VIMP pre→18 (risk=1.15413e-06) then FSDS-F→15 | fused→official_FSDS | 15 | 0.6667 | 0.6922 | 0.0010 | 0.5831 | 0.8710 | 0.0136 | 0.5153 | 2.7186 | ui_pop_mismatch,i_n_users,i_log1p_n_exp,u_n_exp,i_n_exp |
+| Z_combined_PO|W1hold | COMBINED-PO: cmean⋈PO-VIMP→18 | 5-fold π-stable SelectKBest(F) | PO-risk=1.15413e-06 | →FSDS | fused→official_FSDS | 15 | 0.5789 | 0.6929 | 0.0010 | 0.6322 | 0.8671 | 0.0131 | 0.6211 | 2.6992 | i_share_first,i_credit_first,i_n_exp,u_span_sec,i_log1p_n_covisit |
+
+See `iter05/tight_s2/FINDINGS.md`.
+
+## iter05 (2026-09-19 08:23 UTC)
+
+- PO-risk helper + P_po_vimp_FSDS / Z_combined_PO
+- PO-VIMP→FSDS mean W2 0.722 (best); ui_pop_mismatch dominates VIMP
+- See iter05/FINDINGS.md
+

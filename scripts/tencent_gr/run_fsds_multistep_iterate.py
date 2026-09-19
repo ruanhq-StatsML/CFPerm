@@ -36,6 +36,10 @@ if str(_HERE) not in sys.path:
 
 from time_window_feats import fsds_feature_columns  # noqa: E402
 from run_standardize_mmd_fsds import run_fsds, w1w2_candidate_columns  # noqa: E402
+from po_risk_fsds import (  # noqa: E402
+    blend_cmean_po_scores,
+    fit_po_on_windows,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -396,6 +400,43 @@ def build_combined_mi(g_tr, g_w2, cols, *, k, seed):
     return selected, ranking, f"COMBINED-MI(=cmean+π-MI→FSDS): {note_f}"
 
 
+def build_po_vimp_fsds(g_tr, g_w2, cols, *, k, seed):
+    """PO-VIMP ranks features (period W); then official FSDS on top pool."""
+    po = fit_po_on_windows(g_tr, g_w2, cols, seed=seed, max_n=6000)
+    tab = po["feature_table"].rename(columns={"po_vimp": "score"})
+    # tight pool so PO actually shapes the set (not a no-op on 21 feats)
+    pre_n = min(len(cols), max(k, k + 3))
+    pre_cols = list(tab["feature"].head(pre_n))
+    selected, ranking, _ = build_baseline_f(g_tr, g_w2, pre_cols, k=k, seed=seed)
+    return (
+        selected,
+        ranking,
+        f"PO-VIMP pre→{pre_n} (risk={po['risk']:.6g}) then FSDS-F→{k}",
+    )
+
+
+def build_combined_po(g_tr, g_w2, cols, *, k, seed):
+    """Data-science combo: cmean |δ| ⋈ PO-VIMP → π-stable F → FSDS.
+
+    PO fit once (W=period). Helps rank shift-relevant graph feats without
+    claiming ATE. α=0.5 blend; tight guided pool so PO is not a no-op.
+    """
+    X1 = _matrix(g_tr, cols)
+    X2 = _matrix(g_w2, cols)
+    dlt = _cmean_abs_delta(X1, X2)
+    po = fit_po_on_windows(g_tr, g_w2, cols, seed=seed, max_n=6000)
+    blend = blend_cmean_po_scores(cols, dlt, po["vimp"], alpha=0.5)
+    pre_n = min(len(cols), max(k, k + 3))
+    guided = list(blend["feature"].head(pre_n))
+    selected, ranking, note_pi = build_stable_pi_f(g_tr, g_w2, guided, k=k, seed=seed)
+    note = (
+        f"COMBINED-PO: cmean⋈PO-VIMP→{pre_n} | {note_pi} | "
+        f"PO-risk={po['risk']:.6g} | →FSDS"
+    )
+    ranking = ranking.copy()
+    return selected, ranking, note
+
+
 def build_soft_corr_prune(g_tr, g_w2, cols, *, k, seed):
     """FSDS-wide then soft corr prune @0.98 (less aggressive than 0.92)."""
     wide = min(len(cols), max(k * 2, k + 8))
@@ -460,6 +501,8 @@ VARIANTS: Dict[str, Callable] = {
     "J_delta_share_FSDS": build_delta_share_then_fsds_cols,
     "Z_combined": build_combined,
     "Z_combined_MI": build_combined_mi,
+    "P_po_vimp_FSDS": build_po_vimp_fsds,
+    "Z_combined_PO": build_combined_po,
 }
 
 
@@ -511,7 +554,7 @@ def main() -> None:
         "--variants",
         type=str,
         default=(
-            "A_baseline_F,H_soft_corr,F_cmean_stable,G_F_then_HGB_perm,Z_combined"
+            "A_baseline_F,Z_combined,P_po_vimp_FSDS,Z_combined_PO"
         ),
     )
     ap.add_argument(

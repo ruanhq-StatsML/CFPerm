@@ -1,0 +1,65 @@
+{
+  "iter_tag": "iter05/s0",
+  "n_train": 8310,
+  "n_va": 2839,
+  "n_w2": 11963,
+  "n_feats": 21,
+  "compare": [
+    {
+      "variant": "A_baseline_F|W1hold",
+      "notes": "Scaler\u2192Var\u2192SelectKBest(F) | metrics=official_run_fsds",
+      "n_selected": 15,
+      "jaccard_vs_baseline": 1.0,
+      "W1_hgb_auc": 0.6620859760394644,
+      "W1_hgb_ap": 0.0010131712259371835,
+      "W1_logreg_auc": 0.9154334038054969,
+      "W2_hgb_auc": 0.7679169107187682,
+      "W2_hgb_ap": 0.011375750248680611,
+      "W2_logreg_auc": 0.4668507516804731,
+      "sec": 0.42783212661743164,
+      "top5": "e_n_exp,u_n_events,u_n_exp,u_n_uniq_items,u_span_sec"
+    },
+    {
+      "variant": "Z_combined|W1hold",
+      "notes": "COMBINED(=cmean+\u03c0\u2192FSDS): cmean pre\u219221 + \u03c0-stable F\u219215 | fused\u2192official_FSDS",
+      "n_selected": 15,
+      "jaccard_vs_baseline": 1.0,
+      "W1_hgb_auc": 0.6620859760394644,
+      "W1_hgb_ap": 0.0010131712259371835,
+      "W1_logreg_auc": 0.9154334038054969,
+      "W2_hgb_auc": 0.7735126767634507,
+      "W2_hgb_ap": 0.011500471326159218,
+      "W2_logreg_auc": 0.4668507516804731,
+      "sec": 0.4272177219390869,
+      "top5": "u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp"
+    },
+    {
+      "variant": "P_po_vimp_FSDS|W1hold",
+      "notes": "PO-VIMP pre\u219221 (risk=1.1919e-06) then FSDS-F\u219215 | fused\u2192official_FSDS",
+      "n_selected": 15,
+      "jaccard_vs_baseline": 1.0,
+      "W1_hgb_auc": 0.6620859760394644,
+      "W1_hgb_ap": 0.0010131712259371835,
+      "W1_logreg_auc": 0.9154334038054969,
+      "W2_hgb_auc": 0.76644911165035,
+      "W2_hgb_ap": 0.010724895150523427,
+      "W2_logreg_auc": 0.4668507516804731,
+      "sec": 2.7163078784942627,
+      "top5": "ui_pop_mismatch,i_log1p_n_users,i_log1p_n_covisit,u_n_exp,u_n_uniq_items"
+    },
+    {
+      "variant": "Z_combined_PO|W1hold",
+      "notes": "COMBINED-PO: cmean\u22c8PO-VIMP\u219221 | 5-fold \u03c0-stable SelectKBest(F) | PO-risk=1.1919e-06 | \u2192FSDS | fused\u2192official_FSDS",
+      "n_selected": 15,
+      "jaccard_vs_baseline": 1.0,
+      "W1_hgb_auc": 0.6620859760394644,
+      "W1_hgb_ap": 0.0010131712259371835,
+      "W1_logreg_auc": 0.9154334038054969,
+      "W2_hgb_auc": 0.7735126767634507,
+      "W2_hgb_ap": 0.011500471326159218,
+      "W2_logreg_auc": 0.4668507516804731,
+      "sec": 2.7288260459899902,
+      "top5": "u_n_uniq_items,ui_pop_mismatch,e_log1p_exp,e_n_exp,i_log1p_n_exp"
+    }
+  ]
+}
