@@ -45,6 +45,11 @@ print(report["note"])
 | `P_po_boot_pi` | PO-help pool → bootstrap π → FSDS |
 | `Z_combined_PO_rare` | cmean⋈PO → rare-pos-capped π → FSDS |
 
+## Blend α
+
+Default **α=0.5** (`|δ| ⋈ PO-VIMP`). On the current graph-feat width (d≈21, pool=k+3),
+α∈{0.3,0.5,0.7} is a no-op — keep 0.5; do not over-tune. Prefer pool slack (k+3) over tight k.
+
 ## Do / Don't
 
 - Do use PO-VIMP as a **ranking prior** into FSDS  
