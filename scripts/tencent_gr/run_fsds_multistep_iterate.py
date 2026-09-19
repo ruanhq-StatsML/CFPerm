@@ -351,6 +351,18 @@ def build_hgb_importance_refine(g_tr, g_w2, cols, *, k, seed):
     return selected, tab, f"F screen={wide} → HGB perm-imp →{k}"
 
 
+def build_combined(g_tr, g_w2, cols, *, k, seed):
+    """ empirically combined recipe (iter01–03):
+
+        soft cmean guidance → π-stable F (same as F_cmean_stable) → official FSDS
+
+    Explicitly **omits** hard/soft corr prune and J*-only replace (hurt W2).
+    """
+    selected, ranking, note_f = build_cmean_stable(g_tr, g_w2, cols, k=k, seed=seed)
+    note = f"COMBINED(=cmean+π→FSDS): {note_f}"
+    return selected, ranking, note
+
+
 def build_soft_corr_prune(g_tr, g_w2, cols, *, k, seed):
     """FSDS-wide then soft corr prune @0.98 (less aggressive than 0.92)."""
     wide = min(len(cols), max(k * 2, k + 8))
@@ -413,6 +425,7 @@ VARIANTS: Dict[str, Callable] = {
     "H_soft_corr": build_soft_corr_prune,
     "I_stable_pi_F3": build_stable_pi_f3,
     "J_delta_share_FSDS": build_delta_share_then_fsds_cols,
+    "Z_combined": build_combined,
 }
 
 
@@ -464,8 +477,7 @@ def main() -> None:
         "--variants",
         type=str,
         default=(
-            "A_baseline_F,C_cmean_then_F,H_soft_corr,I_stable_pi_F3,"
-            "J_delta_share_FSDS,F_cmean_stable,G_F_then_HGB_perm"
+            "A_baseline_F,H_soft_corr,F_cmean_stable,G_F_then_HGB_perm,Z_combined"
         ),
     )
     ap.add_argument(
