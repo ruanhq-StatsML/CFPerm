@@ -232,6 +232,56 @@ Early stop when further shrink yields $\gamma\approx 0$.
 Business cap truncates delivery depth independently of $\gamma$.
 
 %======================================================================
+\section{When to drill further (argument)}
+\label{sec:when-drill}
+
+Drill is not the default. It is justified only when the
+\emph{same} conditional-mean object says the parent support is still
+heterogeneous under the next entity key.
+
+\paragraph{Necessary condition (parent still shifted).}
+If $\norm{\delta(S)}$ is negligible (G0), there is nothing to
+localize: stop. Column concentration alone (large $\delta$, sharp
+$J^\star$) only licenses a feature story / FSDS \emph{at $S$}; it does
+not license a finer entity cut.
+
+\paragraph{Sufficient condition (rows are not homogeneous).}
+Compute $\{r_v\}$ on the next key inside $S$. Further drill is
+warranted only if the row spectrum is sharp---high $\mathrm{Tail}(r)$
+or $\mathrm{CV}(r)$---so that a few values carry most of the
+mean-shift. If $r$ is flat and $a_v\approx 1$, every entity looks like
+the parent $\delta$: shrinking support cannot raise capture rate
+$\gamma$, so stop and (if G1) run FSDS on $S$.
+
+\paragraph{Acceptance, not nomination.}
+A sharp $r$ only proposes $K=\mathrm{Top}(r)\cap\{\pi\ge\pi^\star\}$.
+Accept the drill iff residual mean-shift drops,
+$R(K)\le R^\star$ (equivalently $\gamma$ large enough at tolerable
+$\alpha$). If $R\not\downarrow$, the tip is false---revert and stop.
+Mass / $\pi$ failures likewise block delivery even when $r$ looks
+sharp.
+
+\paragraph{What does not justify drill.}
+Feature-only $\delta$ tips; $\mathrm{Var}(\hat\tau)$; community /
+ego / graph-local backends; ``effects look stronger downstairs.''
+Those are out of scope or the wrong functional.
+
+\paragraph{Rule.}
+\[
+  \mathrm{Drill}
+  \;=\;
+  \mathbf{1}\{\norm{\delta(S)}\ge\varepsilon_\delta\}
+  \cdot
+  \mathbf{1}\{\mathrm{Tail}(r)\ge\tau\ \lor\ \mathrm{CV}(r)\ge c^\star\}
+  \cdot
+  \mathbf{1}\{R(K)\le R^\star\}
+  \cdot
+  \mathbf{1}\{\mathrm{mass}/\pi\ \mathrm{ok}\}.
+\]
+Else $K^\star\leftarrow S$ (or last accepted support). Business cap may
+forbid delivery even when $\mathrm{Drill}=1$.
+
+%======================================================================
 \section{Feature--entity joint (optional order on same $D$)}
 \label{sec:joint}
 
