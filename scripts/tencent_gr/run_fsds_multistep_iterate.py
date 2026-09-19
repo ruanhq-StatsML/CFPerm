@@ -39,6 +39,7 @@ from run_standardize_mmd_fsds import run_fsds, w1w2_candidate_columns  # noqa: E
 from po_risk_fsds import (  # noqa: E402
     blend_cmean_po_scores,
     bootstrap_pi_select,
+    filter_by_tau2_quantile,
     fit_po_on_windows,
     po_help_select,
     rare_pos_n_splits,
@@ -524,6 +525,31 @@ def build_combined_po_rare(g_tr, g_w2, cols, *, k, seed):
     return selected, ranking, note
 
 
+def build_po_tau2_rows(g_tr, g_w2, cols, *, k, seed):
+    """τ̂²-quantile row filter (keep shift mass + all pos) → PO-VIMP → FSDS.
+
+    Selection fit on filtered W1 rows; official FSDS still scores on full eval.
+    """
+    po = fit_po_on_windows(g_tr, g_w2, cols, seed=seed, max_n=6000)
+    g_f = filter_by_tau2_quantile(g_tr, cols, po, q=0.5)
+    n_pos = int(g_f["y_convert"].sum()) if "y_convert" in g_f.columns else 0
+    if len(g_f) < 50 or n_pos < 1:
+        # fallback: no filter
+        g_f = g_tr
+        note_f = "tau2-filter skipped (too few rows/pos)"
+    else:
+        note_f = (
+            f"tau2-q0.5 keep={len(g_f)}/{len(g_tr)} "
+            f"(thr={g_f.attrs.get('tau2_thr', float('nan')):.3g}, n_pos={n_pos})"
+        )
+    tab = po["feature_table"].rename(columns={"po_vimp": "score"})
+    pre_n = min(len(cols), max(k, k + 3))
+    pre_cols = list(tab["feature"].head(pre_n))
+    selected, ranking, _ = build_baseline_f(g_f, g_w2, pre_cols, k=k, seed=seed)
+    note = f"PO-τ̂²-rows: {note_f} | PO-VIMP pre→{pre_n} →FSDS-F→{k} | risk={po['risk']:.6g}"
+    return selected, ranking, note
+
+
 def build_soft_corr_prune(g_tr, g_w2, cols, *, k, seed):
     """FSDS-wide then soft corr prune @0.98 (less aggressive than 0.92)."""
     wide = min(len(cols), max(k * 2, k + 8))
@@ -595,6 +621,7 @@ VARIANTS: Dict[str, Callable] = {
     "P_po_boot_pi": build_po_boot_pi,
     "P_po_vimp_rare_pi": build_po_vimp_rare_pi,
     "Z_combined_PO_rare": build_combined_po_rare,
+    "P_po_tau2_rows": build_po_tau2_rows,
 }
 
 

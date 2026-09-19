@@ -75,3 +75,22 @@ def test_po_help_select_pool():
         alpha=0.5,
     )
     assert list(blend.columns)[:3] == ["feature", "cmean_abs_norm", "po_vimp_norm"]
+
+
+def test_tau2_row_filter_keeps_positives():
+    from po_risk_fsds import filter_by_tau2_quantile, fit_po_on_windows
+
+    rng = np.random.default_rng(3)
+    cols = [f"h{i}" for i in range(6)]
+    n1, n2 = 100, 100
+    g1 = pd.DataFrame({c: rng.normal(size=n1) for c in cols})
+    g2 = pd.DataFrame({c: rng.normal(size=n2) for c in cols})
+    g2["h0"] = g2["h0"] + 2.0
+    g1["y_convert"] = 0
+    g1.loc[:2, "y_convert"] = 1
+    po = fit_po_on_windows(g1, g2, cols, seed=3, max_n=200)
+    assert "tau_model" in po
+    kept = filter_by_tau2_quantile(g1, cols, po, q=0.7)
+    assert kept["y_convert"].sum() == 3
+    assert len(kept) < len(g1)
+    assert len(kept) >= 3

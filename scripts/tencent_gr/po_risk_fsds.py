@@ -102,6 +102,7 @@ def fit_period_po(
         "tau2": tau2.astype(float),
         "po": po.astype(float),
         "vimp": tau.feature_importances_.astype(float),
+        "tau_model": tau,
         "n": int(n),
         "note": "W=period; PO-risk is a shift proxy, not an ATE",
     }
@@ -145,6 +146,46 @@ def fit_po_on_windows(
     fit["n_w1"] = int(n1)
     fit["n_w2"] = int(n2)
     return fit
+
+
+def tau2_on_frame(
+    g: pd.DataFrame,
+    cols: Sequence[str],
+    po_fit: Dict,
+) -> np.ndarray:
+    """Score rows with τ̂² using a fitted period-PO (scaler + τ forest)."""
+    X = g.loc[:, list(cols)].to_numpy(float)
+    Xs = po_fit["scaler"].transform(X)
+    model = po_fit.get("tau_model")
+    if model is not None:
+        return (model.predict(Xs) ** 2).astype(float)
+    # fallback: VIMP-weighted squared standardized features
+    v = np.asarray(po_fit["vimp"], float)
+    v = v / (v.sum() + 1e-12)
+    return (Xs ** 2 @ v).astype(float)
+
+
+def filter_by_tau2_quantile(
+    g: pd.DataFrame,
+    cols: Sequence[str],
+    po_fit: Dict,
+    *,
+    q: float = 0.5,
+    y_col: str = "y_convert",
+) -> pd.DataFrame:
+    """Keep rows with τ̂²-proxy ≥ quantile q; always keep all positives.
+
+    Period-shift mass filter for FSDS selection (讲武德: not an ATE weight).
+    """
+    scores = tau2_on_frame(g, cols, po_fit)
+    thr = float(np.quantile(scores, q))
+    y = g[y_col].to_numpy(int) if y_col in g.columns else np.zeros(len(g), int)
+    keep = (scores >= thr) | (y > 0)
+    out = g.loc[keep].copy()
+    out.attrs["tau2_q"] = q
+    out.attrs["tau2_thr"] = thr
+    out.attrs["tau2_kept"] = int(keep.sum())
+    return out
 
 
 def blend_cmean_po_scores(
