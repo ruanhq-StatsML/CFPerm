@@ -11,7 +11,9 @@
 **定位：** 更快找到下钻归因的那部分客群 / subset 的方法论。
 
 - **没有因果性** — 比较的是时段分布差异与排序，不声称 treatment effect
-- **modality-agnostic** — 不绑图、不绑文本/图像；同一套 procedure 可在多层级、多颗粒度下钻（如 merchant → user → order，或任意实体粒度）
+- **modality-agnostic** — 不绑图算法；输入是 **图谱特征** \(X\)，同一套 cmean 可换颗粒度下钻
+- **\(K^\star\)** — 只是图谱特征上 cmean 收完的最终支撑（跑一次 FSDS 的子集），不是图算法核
+- **超纲不做** — community / ego / ULS·PPR·GraphScan / GNN；就这样
 
 **停止 / 是否下钻：** 见
 [`ATTRIBUTION_DRILL_STOP.md`](./ATTRIBUTION_DRILL_STOP.md)

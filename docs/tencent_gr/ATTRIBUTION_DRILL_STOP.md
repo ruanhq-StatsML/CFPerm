@@ -7,10 +7,22 @@
 **闭环一句话：**
 
 ```
-标准化 → 实体核（mass + 稳定 π）
-      → 父集同一套 cmean：列看 δ（feature / 是否本层 FSDS），行看 r_u（是否下钻）
-      → 早停得 K* → 核上一次 FSDS
+图谱特征 → X → 标准化
+      → cmean：列 δ / 行 r_u（早停）
+      → K* → 一次 FSDS
 ```
+
+### \(K^\star\) 是什么（别神化）
+
+**就是：在图谱特征 \(X\) 上，用 cmean 行谱收完之后剩下的那份边/实体支撑**——最终拿去跑一次 FSDS 的子集。
+
+| \(K^\star\) 是 | \(K^\star\) 不是 |
+|---|---|
+| 图谱特征上的检索子集 | 图算法产物 |
+| cmean（+\(\pi\)/mass）收支撑的结果 | community / ego / ULS / PPR / GraphScan |
+| 交付用的边集或实体 id 集 | 因果核、效应子群 |
+
+**其他都超纲：就这样。** 不做 community、ego、图上收核、GNN；输入侧就是图谱特征。
 
 PO 边级分数作同口径旁证；全量 MMD leave-one-entity 重跑禁止。  
 **不需要因果 justification，但必须写清 localization / 检索口径的 justification**（见 §1）——外形像 subgroup，最容易写歪。
