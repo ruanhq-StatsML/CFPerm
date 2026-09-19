@@ -1,0 +1,5 @@
+risk=1.1919e-06
+note=W=period; PO-risk/VIMP is a shift ranking prior for FSDS — not an ATE. Hand `pool` to official Scaler→Var→SelectKBest.
+k=15
+pool_n=18
+alpha=0.5

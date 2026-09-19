@@ -21,6 +21,6 @@ Results: `results/tencent_gr_fsds_iterate/` (`ITERATION_LOG.md` + per-iter `FIND
 - **iter06**: `po_help_select` + rare-pos π; **P_po** still best mean; **Z_PO_rare** lowest σ (0.137); boot-π not free lunch
 - **iter07**: α∈{0.3,0.5,0.7} **identical** on d=21; tight pool k hurts; P_po still best mean, rare-π best σ
 
-Timer: every **20 minutes** until morning.
+Timer: overnight wrap complete (iter10). See **OVERNIGHT_SUMMARY** in `ITERATION_LOG.md`.
 - **iter08**: k&lt;15 hurts; P_po best at **k=18** (0.724); τ̂²-rows ≈ P_po (no clear win)
 - **iter09**: seed-maj2 hurts mean; **LOO-pos maj** lowest σ (**0.114**); avg-VIMP topk alone fails — still hand pool to FSDS

@@ -3,7 +3,17 @@
 讲武德 framing: **`W` = period (W1/W2), not treatment.**  
 PO-risk = period-shift proxy `mean(τ̂²)`. Fit **once**. Feeds FSDS ranking — **not** an ATE claim.
 
-## One-liner
+## CLI (recommended)
+
+```bash
+PYTHONPATH=. python3 scripts/tencent_gr/po_help_fsds.py \
+  --w1-grid results/tencent_gr_localize_fsds_time/W1_localized_grid.parquet \
+  --w2-grid results/tencent_gr_localize_fsds_time/W2_localized_grid_sample.parquet \
+  --select-k 15 --seed 0 \
+  --out-dir results/tencent_gr_fsds_iterate/po_help_cli
+```
+
+## One-liner (Python)
 
 ```python
 from po_risk_fsds import po_help_select
@@ -21,10 +31,12 @@ print(report["note"])
 ```
 1. Fit period-PO once on localized support (W1-scaled X; W=period)
 2. Rank by PO-VIMP and/or blend with cmean |δ|
-3. Optional: rare-pos bootstrap π (or n_pos-capped folds) on the guided pool
+3. Optional: rare-pos-capped π on the guided pool (lower σ)
 4. Official FSDS on that pool (W1 fit only; W2 = temporal holdout)
 5. Average over seeds — rare convert makes split noise ≫ method gap
 ```
+
+Overnight evidence: `results/tencent_gr_fsds_iterate/ITERATION_LOG.md` (OVERNIGHT_SUMMARY).
 
 ## Helpers
 

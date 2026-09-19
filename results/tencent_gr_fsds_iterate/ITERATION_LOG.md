@@ -1,5 +1,48 @@
 # FSDS multi-step overnight log
 
+## OVERNIGHT_SUMMARY (iter01–10, wrap)
+
+讲武德: **`W` = period**, PO-risk = `mean(τ̂²)` shift proxy — **not** an ATE.
+
+### Locked DS recipe
+
+```bash
+PYTHONPATH=. python3 scripts/tencent_gr/po_help_fsds.py \
+  --w1-grid results/tencent_gr_localize_fsds_time/W1_localized_grid.parquet \
+  --w2-grid results/tencent_gr_localize_fsds_time/W2_localized_grid_sample.parquet \
+  --select-k 15 --seed 0 --out-dir results/tencent_gr_fsds_iterate/po_help_cli
+```
+
+Or in Python: `po_help_select(...)` → hand `pool` to official FSDS.
+
+### What worked
+
+| recommendation | evidence |
+|---|---|
+| **PO-VIMP → FSDS** (`P_po_vimp` / CLI) | best mean W2 **~0.72** (@k=15); **0.724** @k=18 |
+| **k=15** (try **18** for plain PO-VIMP) | k∈{10,12} hurts |
+| **pool slack k+3** | tight pool=k collapses W2 |
+| **rare-pos-capped π** for lower σ | σ **0.137** vs ~0.15–0.17 |
+| **LOO-pos majority** to freeze one list | σ **0.114** @ mean 0.708 |
+| always **seed mean±std** | seed gap ≫ method gap |
+
+### What did not
+
+| idea | result |
+|---|---|
+| hard corr@0.92 / J*-only | hurts W2 |
+| α∈{0.3,0.5,0.7} tune | **identical** on d≈21 — keep 0.5 |
+| bootstrap π alone | not free lunch |
+| τ̂² row filter | ≈ plain P_po |
+| seed-maj2 / avg-VIMP topk alone | hurts mean |
+
+### Scope
+
+图谱特征 only. No community / ego / GNN / ATE claims.
+
+Cookbook: `docs/tencent_gr/PO_RISK_FOR_DS.md` · CLI: `scripts/tencent_gr/po_help_fsds.py`
+
+---
 
 ## iter01 (2026-09-19 07:45 UTC)
 
@@ -692,3 +735,7 @@ P_po_avgVIMP_topk,0.5508395392296321,0.18712717364432277,0.001665226715585677,15
 P_po_vimp__seed_avg_topk,0.5508395392296321,0.18712717364432277,0.001665226715585677,15
 P_po_avgVIMP_pool__maj2,0.42064355377048873,0.15709624189125035,0.0015291868994964056,15
 ```
+
+## iter10 (DS handoff wrap)
+
+CLI smoke mean W2≈0.720 @k=15. See `iter10/FINDINGS.md` + OVERNIGHT_SUMMARY above.
