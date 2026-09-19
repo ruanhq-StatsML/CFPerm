@@ -433,13 +433,13 @@ delivered support.
   \item \textbf{Default DS path freeze.} Keep
         \texttt{po\_help\_fsds} @ $k{=}15$ (try $18$); rare-$\pi$ when
         variance matters; LOO-pos majority only to freeze one list.
-  \item \textbf{LOCO PO-risk tip timing (v2).}
-        After $J^\star$ is fixed, stream tip-group LOCO; default score mode
-        \texttt{confirm} (tip-collapse $\wedge$ PO hard gates) pins
-        $t^\star_{\mathrm{tip}}$ with delay $0$ on synth and does not fire
-        on wrong tips
-        (\texttt{agod/loco\_po\_monitor.py},
-        \texttt{LOCO\_PO\_Risk\_Timing\_Monitor.tex}).
+  \item \textbf{Confirm + tip-cmean formulation (prototype).}
+        Joint fire
+        $\mathbf{1}\{\Delta_{\mathrm{tip}}\ge\varepsilon_\Delta\}
+        \cdot\mathbf{1}\{\mathrm{confirm}\}$
+        with burn $\mathrm{mean}+k\cdot\mathrm{sd}$ magnitude gates
+        (\texttt{agod/cmean\_confirm.py},
+        \texttt{Cmean\_Confirm\_Formulation.tex}).
 \end{enumerate}
 
 \subsection{Medium (structural keys)}
