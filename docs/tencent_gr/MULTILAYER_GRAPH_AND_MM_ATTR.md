@@ -44,12 +44,11 @@
 
 **Scope 更新（更硬）：**  
 - 默认 **不用** community detection，**不用** ego-centric network 分析（超 scope）。  
-- 图谱特征进 \(X\) 已足够闭环。  
-- 若要「图上的 localization」，只用轻量插件：ULS / seeded PPR-Nibble / GraphScan / conductance——见
-  [`GRAPH_LOCALIZATION_NO_COMMUNITY.md`](./GRAPH_LOCALIZATION_NO_COMMUNITY.md)。  
-- 社区/GNN 若出现，只允许离线造 key 或特征，且非默认路径。
+- **不用** ULS / PPR-Nibble / GraphScan 等图上收核（已标超纲 / deferred）。  
+- 图谱特征进 \(X\) + cmean 门 **已足够闭环**。  
+- 社区/GNN/图 localization 若以后单开，不进默认路径。
 
-**不要**用 Louvain / GNN 直接当「要不要下钻」的判决器——那是另一套目标函数（社区质量 / 重构），不是 \(\delta,R\)。
+**不要**用 Louvain / GNN / 图收核直接当「要不要下钻」的判决器——归因门只认 \(\delta,R\)。
 
 ### A.3 和「图谱特征 only、不做图算法」的关系
 
@@ -145,7 +144,7 @@ MSR-VTT 脚本是 **M1 + 模态 LOGO 份额**（PO/RF/MMD），尚未接行谱�
 | F→E 联合 | 建议 | 降噪 |
 | 真多层 GNN / GenLouvain 归因门 | **否** | 目标函数不对 |
 | CF τ 方差当异质 | **否** | 已否决 |
-| Seeded PPR / ULS / GraphScan / conductance | **可选插件** | 见 [`GRAPH_LOCALIZATION_NO_COMMUNITY.md`](./GRAPH_LOCALIZATION_NO_COMMUNITY.md)；非 community/ego |
+| Seeded PPR / ULS / GraphScan / conductance | **否（本阶段超纲）** | deferred；见 [`GRAPH_LOCALIZATION_NO_COMMUNITY.md`](./GRAPH_LOCALIZATION_NO_COMMUNITY.md) |
 | Ego-centric / 全局社区发现 | **否** | 超 scope |
 
 ---
