@@ -91,9 +91,9 @@ def fit_serving(X, Y, seed: int = 2026):
         m = LogisticRegression(max_iter=400, random_state=int(seed))
         m.fit(X, Y.astype(int))
         return m, True
-        m = Ridge(alpha=1.0)
-        m.fit(X, Y)
-        return m, False
+    m = Ridge(alpha=1.0)
+    m.fit(X, Y)
+    return m, False
 
 
 def brier_or_mse(Y, mu, binary: bool) -> float:
