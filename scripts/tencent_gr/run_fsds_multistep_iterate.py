@@ -35,7 +35,7 @@ if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
 from time_window_feats import fsds_feature_columns  # noqa: E402
-from run_standardize_mmd_fsds import w1w2_candidate_columns  # noqa: E402
+from run_standardize_mmd_fsds import run_fsds, w1w2_candidate_columns  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -161,19 +161,67 @@ def run_variant(
     k: int,
     seed: int,
     builder: Callable,
+    use_official_fsds: bool = True,
 ) -> VariantResult:
+    """Select via builder; score via official FSDS pipeline when possible.
+
+    Official FSDS (locked stats method): Scaler → Var → SelectKBest → HGB/LogReg,
+    fit on W1-train only; holdout / W2 never enter selection.
+    """
     t0 = time.time()
-    selected, ranking, notes = builder(g_tr, g_w2_ref, cols, k=k, seed=seed)
-    sc = StandardScaler()
-    Xtr = sc.fit_transform(_matrix(g_tr, selected))
-    Xte = sc.transform(_matrix(g_te, selected))
-    ytr = g_tr["y_convert"].to_numpy(int)
-    yte = g_te["y_convert"].to_numpy(int)
-    metrics = eval_models(Xtr, ytr, Xte, yte, seed=seed)
+    # If builder is pure FSDS on full cols, call official run_fsds end-to-end.
+    if use_official_fsds and name.split("|")[0] in ("A_baseline_F", "B_baseline_MI"):
+        # still use builder for ranking table consistency; metrics from run_fsds
+        selected, ranking, notes = builder(g_tr, g_w2_ref, cols, k=k, seed=seed)
+        res = run_fsds(g_tr, g_te, cols, select_k=k, seed=seed)
+        metrics = {"hgb": res.get("models", {}).get("hgb", {}), "logreg": res.get("models", {}).get("logreg", {})}
+        if res.get("ok") and isinstance(res.get("ranking"), pd.DataFrame):
+            ranking = res["ranking"].rename(columns={"f_score": "score"})
+            selected = list(res.get("selected") or selected)
+        notes = notes + " | metrics=official_run_fsds"
+    else:
+        selected, ranking, notes = builder(g_tr, g_w2_ref, cols, k=k, seed=seed)
+        if use_official_fsds:
+            # Fuse: builder only proposes a column universe / ranking;
+            # re-run official FSDS restricted to selected∪top pool for fair gate.
+            pool = list(dict.fromkeys(selected + list(ranking["feature"].head(max(k, len(selected))))))
+            res = run_fsds(g_tr, g_te, pool, select_k=min(k, len(pool)), seed=seed)
+            if res.get("ok"):
+                selected = list(res.get("selected") or selected)
+                if isinstance(res.get("ranking"), pd.DataFrame):
+                    ranking = res["ranking"].rename(columns={"f_score": "score"})
+                metrics = {
+                    "hgb": res.get("models", {}).get("hgb", {}),
+                    "logreg": res.get("models", {}).get("logreg", {}),
+                }
+                notes = notes + " | fused→official_FSDS_on_pool"
+            else:
+                sc = StandardScaler()
+                Xtr = sc.fit_transform(_matrix(g_tr, selected))
+                Xte = sc.transform(_matrix(g_te, selected))
+                metrics = eval_models(
+                    Xtr,
+                    g_tr["y_convert"].to_numpy(int),
+                    Xte,
+                    g_te["y_convert"].to_numpy(int),
+                    seed=seed,
+                )
+                notes = notes + " | fallback_eval_models"
+        else:
+            sc = StandardScaler()
+            Xtr = sc.fit_transform(_matrix(g_tr, selected))
+            Xte = sc.transform(_matrix(g_te, selected))
+            metrics = eval_models(
+                Xtr,
+                g_tr["y_convert"].to_numpy(int),
+                Xte,
+                g_te["y_convert"].to_numpy(int),
+                seed=seed,
+            )
     return VariantResult(
         name=name,
         selected=selected,
-        ranking=ranking,
+        ranking=ranking if isinstance(ranking, pd.DataFrame) else pd.DataFrame(),
         metrics=metrics,
         sec=float(time.time() - t0),
         notes=notes,
@@ -230,8 +278,7 @@ def build_cmean_then_f(g_tr, g_w2, cols, *, k, seed):
     X1 = _matrix(g_tr, cols)
     X2 = _matrix(g_w2, cols)
     dlt = _cmean_abs_delta(X1, X2)
-    pre_n = max(k * 2, min(len(cols), max(k + 5, int(0.6 * len(cols)))))
-    pre_n = min(pre_n, len(cols))
+    pre_n = min(len(cols), max(k * 2, k + 5, int(0.6 * len(cols))))
     pre_idx = np.argsort(-dlt)[:pre_n]
     pre_cols = [cols[i] for i in pre_idx]
     return build_baseline_f(g_tr, g_w2, pre_cols, k=k, seed=seed)[:2] + (
@@ -271,7 +318,7 @@ def build_cmean_stable(g_tr, g_w2, cols, *, k, seed):
     X1 = _matrix(g_tr, cols)
     X2 = _matrix(g_w2, cols)
     dlt = _cmean_abs_delta(X1, X2)
-    pre_n = max(k * 2, min(len(cols), max(k + 5, int(0.6 * len(cols)))))
+    pre_n = min(len(cols), max(k * 2, k + 5, int(0.6 * len(cols))))
     pre_cols = [cols[i] for i in np.argsort(-dlt)[:pre_n]]
     selected, tab, _ = build_stable_pi_f(g_tr, g_w2, pre_cols, k=k, seed=seed)
     return selected, tab, f"cmean pre→{pre_n} + π-stable F→{k}"
@@ -304,6 +351,57 @@ def build_hgb_importance_refine(g_tr, g_w2, cols, *, k, seed):
     return selected, tab, f"F screen={wide} → HGB perm-imp →{k}"
 
 
+def build_soft_corr_prune(g_tr, g_w2, cols, *, k, seed):
+    """FSDS-wide then soft corr prune @0.98 (less aggressive than 0.92)."""
+    wide = min(len(cols), max(k * 2, k + 8))
+    sel_cols, ranking, _ = build_baseline_f(g_tr, g_w2, cols, k=wide, seed=seed)
+    X = StandardScaler().fit_transform(_matrix(g_tr, sel_cols))
+    pruned = _corr_prune(X, sel_cols, thr=0.98)
+    if len(pruned) > k:
+        score_map = dict(zip(ranking["feature"], ranking["score"]))
+        pruned = sorted(pruned, key=lambda c: -float(score_map.get(c, 0.0)))[:k]
+    ranking = ranking.copy()
+    ranking["selected"] = ranking["feature"].isin(pruned).astype(int)
+    return pruned, ranking, f"F wide={wide} → soft-corr@0.98 →{len(pruned)}"
+
+
+def build_stable_pi_f3(g_tr, g_w2, cols, *, k, seed):
+    """π-stable with 3 folds (rare-positive friendly vs 5-fold)."""
+    X = StandardScaler().fit_transform(_matrix(g_tr, cols))
+    y = g_tr["y_convert"].to_numpy(int)
+    vt = VarianceThreshold(1e-8)
+    Xv = vt.fit_transform(X)
+    cols_v = [c for c, m in zip(cols, vt.get_support()) if m]
+    n_pos = int(y.sum())
+    n_splits = max(2, min(3, n_pos))
+    selected, tab = _stability_select(
+        Xv, y, cols_v, k=k, n_splits=n_splits, seed=seed, score_fn=f_classif
+    )
+    return (
+        selected,
+        tab.rename(columns={"mean_score": "score"}),
+        f"{n_splits}-fold π-stable SelectKBest(F) (n_pos={n_pos})",
+    )
+
+
+def build_delta_share_then_fsds_cols(g_tr, g_w2, cols, *, k, seed):
+    """Method fusion: J*=TopShare(|δ|) then keep those cols for official FSDS."""
+    X1 = _matrix(g_tr, cols)
+    X2 = _matrix(g_w2, cols)
+    dlt = _cmean_abs_delta(X1, X2)
+    energy = dlt ** 2
+    share = energy / (energy.sum() + 1e-12)
+    # keep until cumulative share >= 0.8 or at least k feats
+    order = np.argsort(-share)
+    cum = np.cumsum(share[order])
+    n_keep = int(np.searchsorted(cum, 0.80) + 1)
+    n_keep = max(k, min(len(cols), n_keep))
+    pre_cols = [cols[i] for i in order[:n_keep]]
+    # second step still FSDS select to k
+    selected, ranking, _ = build_baseline_f(g_tr, g_w2, pre_cols, k=k, seed=seed)
+    return selected, ranking, f"J* cumshare≥0.8 →{n_keep} cols then FSDS-F→{k}"
+
+
 VARIANTS: Dict[str, Callable] = {
     "A_baseline_F": build_baseline_f,
     "B_baseline_MI": build_baseline_mi,
@@ -312,6 +410,9 @@ VARIANTS: Dict[str, Callable] = {
     "E_stable_pi_F": build_stable_pi_f,
     "F_cmean_stable": build_cmean_stable,
     "G_F_then_HGB_perm": build_hgb_importance_refine,
+    "H_soft_corr": build_soft_corr_prune,
+    "I_stable_pi_F3": build_stable_pi_f3,
+    "J_delta_share_FSDS": build_delta_share_then_fsds_cols,
 }
 
 
@@ -362,8 +463,18 @@ def main() -> None:
     ap.add_argument(
         "--variants",
         type=str,
-        default="A_baseline_F,C_cmean_then_F,D_F_corr_prune,E_stable_pi_F,F_cmean_stable,G_F_then_HGB_perm",
+        default=(
+            "A_baseline_F,C_cmean_then_F,H_soft_corr,I_stable_pi_F3,"
+            "J_delta_share_FSDS,F_cmean_stable,G_F_then_HGB_perm"
+        ),
     )
+    ap.add_argument(
+        "--fuse-official-fsds",
+        action="store_true",
+        default=True,
+        help="Score via official run_fsds (Scaler→Var→SelectKBest→model)",
+    )
+    ap.add_argument("--no-fuse-official-fsds", action="store_false", dest="fuse_official_fsds")
     ap.add_argument(
         "--out-dir",
         type=Path,
@@ -401,26 +512,46 @@ def main() -> None:
             k=args.select_k,
             seed=args.seed,
             builder=VARIANTS[name],
+            use_official_fsds=args.fuse_official_fsds,
         )
-        # W2 temporal eval (same selection from train)
+        # W2 temporal: official FSDS transform path — select on train only
         selected = r_va.selected
-        sc = StandardScaler()
-        Xtr = sc.fit_transform(_matrix(g_tr, selected))
-        Xw2 = sc.transform(_matrix(g2, selected))
-        m_w2 = eval_models(
-            Xtr,
-            g_tr["y_convert"].to_numpy(int),
-            Xw2,
-            g2["y_convert"].to_numpy(int),
-            seed=args.seed,
-        )
+        if args.fuse_official_fsds:
+            res_w2 = run_fsds(g_tr, g2, selected, select_k=min(args.select_k, len(selected)), seed=args.seed)
+            m_w2 = {
+                "hgb": res_w2.get("models", {}).get("hgb", {}),
+                "logreg": res_w2.get("models", {}).get("logreg", {}),
+            }
+            if not res_w2.get("ok"):
+                sc = StandardScaler()
+                Xtr = sc.fit_transform(_matrix(g_tr, selected))
+                Xw2 = sc.transform(_matrix(g2, selected))
+                m_w2 = eval_models(
+                    Xtr,
+                    g_tr["y_convert"].to_numpy(int),
+                    Xw2,
+                    g2["y_convert"].to_numpy(int),
+                    seed=args.seed,
+                )
+        else:
+            sc = StandardScaler()
+            Xtr = sc.fit_transform(_matrix(g_tr, selected))
+            Xw2 = sc.transform(_matrix(g2, selected))
+            m_w2 = eval_models(
+                Xtr,
+                g_tr["y_convert"].to_numpy(int),
+                Xw2,
+                g2["y_convert"].to_numpy(int),
+                seed=args.seed,
+            )
         r_va.metrics["W2_temporal"] = m_w2
         results.append(r_va)
         r_va.ranking.to_csv(out / f"ranking_{name}.csv", index=False)
         print(
             f"  selected={selected[:5]}... "
             f"W1 hgb={r_va.metrics.get('hgb', {}).get('auc')} "
-            f"W2 hgb={m_w2.get('hgb', {}).get('auc')}  [{r_va.notes}]",
+            f"W2 hgb={m_w2.get('hgb', {}).get('auc')} "
+            f"W2 ap={m_w2.get('hgb', {}).get('ap')}  [{r_va.notes}]",
             flush=True,
         )
 
@@ -440,8 +571,10 @@ def main() -> None:
                 "n_selected": len(r.selected),
                 "jaccard_vs_baseline": jac,
                 "W1_hgb_auc": h1.get("auc"),
+                "W1_hgb_ap": h1.get("ap"),
                 "W1_logreg_auc": l1.get("auc"),
                 "W2_hgb_auc": w2.get("auc"),
+                "W2_hgb_ap": w2.get("ap"),
                 "W2_logreg_auc": w2l.get("auc"),
                 "sec": r.sec,
                 "top5": ",".join(r.selected[:5]),
@@ -456,6 +589,8 @@ def main() -> None:
         "",
         f"- grids: `{args.w1_grid.name}` / `{args.w2_grid.name}`",
         f"- n_train={len(g_tr)} n_va={len(g_va)} n_w2={len(g2)} feats={len(cols)} k={args.select_k}",
+        f"- fuse_official_fsds={args.fuse_official_fsds} (Scaler→Var→SelectKBest→model; W2 never selects)",
+        f"- pos_train={float(g_tr['y_convert'].mean()):.6f} (rare-positive regime)",
         "",
         "## Variant table",
         "",
