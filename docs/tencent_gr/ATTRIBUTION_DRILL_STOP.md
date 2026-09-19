@@ -474,6 +474,11 @@ feature-level conditional-mean difference = 好 guidance；
 ```text
 ## Layer L  (parent=S, next_entity=user_id, business_cap=user)
 
+### Justification (non-causal; not subgroup effect)
+- Task: period W1/W2 distribution-shift localization (retrieval)
+- W = period, not treatment; r/Lift/R are descriptive gates
+- Delivered kernel = stable π set under business cap (J1–J8)
+
 ### Feature guidance
 - ||δ||_2 = …
 - Top share features J* = […]
@@ -492,11 +497,150 @@ feature-level conditional-mean difference = 好 guidance；
 - FSDS: run_once_on(K*) | skipped(G0)
 ```
 
-三栏不能合成一句「因为特征漂了所以下钻」。
+三栏不能合成一句「因为特征漂了所以下钻」。  
+Justification 栏不能省略——代码好写，这段是防读成 subgroup 的主担保。
+
+---
+
+## 15. 不同 entity key / value，与特征×实体联合
+
+缩支撑的「刀」由 **划分键** 决定。同一父集 \(S\)、同一 \(X\)，换一把键就换一条 localization 路径。
+
+### 15.1 Key–value 口径
+
+| 词 | 含义 | 例 |
+|---|---|---|
+| **entity key** | 边表上的一列划分字段 | `merchant_id` / `user_id` / `category_id` / `item_id` / `geo` … |
+| **entity value** | 该键下的一个水平 | 某个商户 id、某个用户 id |
+| **划分** | \(S\to\{S_v:v\in\mathrm{values(key)}\}\) | 边按 value 分桶 |
+| **行谱** | 对该 key 算的 \(D^{(key)},\ r^{(key)}\) | 只有指定 key 后才有 drill 问题 |
+
+钉死：
+
+- 没有 key，就没有「下一层」——`(n,)` 分数不能单独谈下钻。  
+- 一次 Drill 决策 **只对一个 key**；多 key 是 **多条并列路径**，不是一个糊成的 \(r\)。  
+- value 进核 \(K\) 的是 id 集合；交付写清 `(key=…, values=…)`。
+
+### 15.2 两类 key 关系
+
+**（A）嵌套键（树）** — 默认主路径  
+
+```text
+merchant → user → order
+```
+
+每层父集是上一层 \(K\) 的边；key 预先有包含关系。  
+业务顶 = 树上允许的最深 key。  
+早停 = 某一层 \(r\) 平，不再往子 key 走。
+
+**（B）并列键（兄弟）** — 同一 \(S\) 上换刀  
+
+```text
+S 上分别用 key=category | key=geo | key=merchant
+→ 三条 r 谱、三套 (α, γ)
+```
+
+用来回答：漂移更容易沿哪条业务语义收支撑。  
+**不是**因果谁真；是哪把 key 的 \(\gamma/\alpha\)（捕获/收缩）更优、\(\pi\) 更稳、更好交。
+
+### 15.3 多 key 怎么比（仍非因果）
+
+对每个 key \(k\)，在同一 \(S\) 上：
+
+\[
+\alpha^{(k)}=\frac{|S_{K}|}{|S|},\quad
+\gamma^{(k)}=1-R^{(k)},\quad
+\mathrm{eff}^{(k)}=\frac{\gamma^{(k)}}{\alpha^{(k)}+\varepsilon}
+\]
+
+再加 \(\mathrm{Tail}(r^{(k)})\)、\(\bar\pi^{(k)}\)、业务可解释性。
+
+| 结果 | 动作 |
+|---|---|
+| 只有一把 key 行尖且 \(\gamma\) 过关 | 沿该 key 下钻 |
+| 多把都尖 | 取 \(\mathrm{eff}\) 高且 \(\pi\) 稳的主路径；其余写「并列路径」 |
+| 嵌套路径与并列路径都出核 | 可交 **交集**（更稳、更小）或分栏交，禁止 silently 并成一个糊名单 |
+| 全部行平 | 本层停；走 feature guidance / FSDS |
+
+报告必须写 `drill_key=...`，禁止只写 Top ids 不写键名。
+
+### 15.4 特征×实体联合（在同一张 \(D\) 上）
+
+\(D\in\mathbb{R}^{U\times d}\) 本身就是联合对象：行=实体 value，列=feature。
+
+三种用法，**顺序要写进口径**（换序会换核）：
+
+**路径 F→E（先列后行，常用）**
+
+```text
+1) 父集上用 δ 得 J* = TopShare(δ)     # feature guidance
+2) 限制列：D̃ = D[:, J*]
+3) r_u = ||D̃_u||_2                   # 只在漂移维上比实体
+4) 按 r 做 Drill / R-check
+```
+
+作用：噪声维稀释 \(r_u\) 时，先收特征再排实体，行谱更干净。  
+注意：\(J^\star\) 来自父 \(\delta\)，不是 FSDS 重训；FSDS 仍只在最终 \(K^\star\)。
+
+**路径 E→F（先行后列）**
+
+```text
+1) 全维 r_u 定 K
+2) 只在 K 的边上重算 δ_K / share → J*_K
+3) 解释与（停在 K 时的）FSDS
+```
+
+作用：先定位载体，再在核内看维——适合「实体很尖、父 \(\delta\) 被稀释」时。  
+与 F→E 核不同要并列报告，不取silent并集冒充唯一真相。
+
+**路径 Joint cell（读相互作用，一般不单决定 Drill）**
+
+\[
+\mathrm{cell}_{uj}=|D_{uj}|
+\quad\text{或}\quad
+\frac{|D_{uj}|}{\|D\|_*+\varepsilon}
+\]
+
+看热力：是否「少数 (entity, feature) 格子」撑起漂移。  
+
+- 可出解释：`value=u* 在 feature=j* 上独漂`  
+- **默认不单独当 Drill 门**（格子数 \(U\times d\)，更像事后读图）  
+- 若要用：先 mass 闸门 + 只在 \(J^\star\times\mathrm{Top}(r)\) 子块上读，并写明 exploratory
+
+### 15.5 联合逻辑的决策口诀
+
+```text
+δ / share     → 列：漂在哪维、本层 FSDS？
+r (全维或 J*) → 行：沿当前 key 下不下钻？
+多 key        → 哪把钥匙的 (γ, α, π) 更好？
+E↔F 顺序      → 必须声明 F→E 或 E→F；两序不一致则分栏
+cell 热力     → 解释用；进门需降范围并标注
+```
+
+和 subgroup 的关系：多 key / 联合只是 **多把检索刀**；每把刀仍读 \(\delta,r,\gamma\)，不读 \(\tau\)。Justify 时写清 key、顺序、是否联合，避免「又切又筛」被读成多重 subgroup fishing。
+
+---
+
+## 16. 还有其他的吗（同级短表）
+
+| 块 | 要不要进默认协议 | 一句 |
+|---|---|---|
+| 嵌套 key 主路径 + 早停 | **要** | 主故事 |
+| 并列 key 比 \(\mathrm{eff}\) | 建议有 | 同 \(S\) 换刀 |
+| F→E 联合（\(J^\star\) 上再 \(r\)） | 建议有 | 降噪行谱 |
+| E→F 联合 | 可选 | 父 \(\delta\) 被稀释时 |
+| Cell 热力 | 解释可选 | 不默认当门 |
+| 多 key 核交集 | 可选 | 更稳更小 |
+| Holdout 上评 \(\gamma\)/overlap | 建议有 | 防定核窗虚 rate |
+| 连续剥离曲线 | 可选增强 | TopK 的细版 |
+| CF \(\hat\tau\) 进 Drill | **不要** | 轴不对 |
+
+没有第三套并列大方法论；就是 **缩支撑 + 多钥匙 + 特征维约束** 三件事织在同一张 \(D\) 上。
 
 ---
 
 **收束：**  
 列 \(\delta\) = 本层漂不漂、看哪维、要不要 FSDS；  
-行 \(r_u\) = 要不要下钻、钻到谁；  
+行 \(r_u\) = 沿**当前 entity key** 要不要下钻、钻到哪些 value；  
+多 key = 多条路径比 \(\gamma/\alpha/\pi\)；特征×实体 = 声明 F→E 或 E→F 后再出核；  
 停在行平或业务顶；FSDS 只打最终核。口径按决策表走，多模态归因的停止逻辑即闭环。
