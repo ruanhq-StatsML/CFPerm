@@ -314,10 +314,15 @@ def build_stable_pi_f(g_tr, g_w2, cols, *, k, seed):
     vt = VarianceThreshold(1e-8)
     Xv = vt.fit_transform(X)
     cols_v = [c for c, m in zip(cols, vt.get_support()) if m]
+    n_splits = rare_pos_n_splits(y, prefer=5)
     selected, tab = _stability_select(
-        Xv, y, cols_v, k=k, n_splits=5, seed=seed, score_fn=f_classif
+        Xv, y, cols_v, k=k, n_splits=n_splits, seed=seed, score_fn=f_classif
     )
-    return selected, tab.rename(columns={"mean_score": "score"}), "5-fold π-stable SelectKBest(F)"
+    return (
+        selected,
+        tab.rename(columns={"mean_score": "score"}),
+        f"{n_splits}-fold π-stable SelectKBest(F) (n_pos={int(y.sum())})",
+    )
 
 
 def build_cmean_stable(g_tr, g_w2, cols, *, k, seed):

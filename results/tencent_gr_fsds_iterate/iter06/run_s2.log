@@ -1,0 +1,19 @@
+grids W1=11149 W2=11963 feats=21
+split train=8315 va=2834 pos_tr=0.0004
+run A_baseline_F ...
+  selected=['e_n_exp', 'u_n_exp', 'u_n_uniq_items', 'u_log1p_n_events', 'u_log1p_n_uniq']... W1 hgb=0.5458877515001765 W2 hgb=0.8362898502217387 W2 ap=0.017055797184651396  [Scaler→Var→SelectKBest(F) | metrics=official_run_fsds]
+run Z_combined ...
+/home/ubuntu/.local/lib/python3.12/site-packages/sklearn/model_selection/_split.py:812: UserWarning: The least populated class in y has only 3 members, which is less than n_splits=5.
+  warnings.warn(
+  selected=['i_share_first', 'i_credit_first', 'i_n_exp', 'e_log1p_exp', 'e_n_exp']... W1 hgb=0.622132015531239 W2 hgb=0.8428897163417287 W2 ap=0.00901259805414031  [COMBINED(=cmean+π→FSDS): cmean pre→21 + π-stable F→15 | fused→official_FSDS]
+run P_po_vimp_FSDS ...
+  selected=['ui_pop_mismatch', 'i_n_users', 'i_log1p_n_exp', 'u_n_exp', 'i_n_exp']... W1 hgb=0.69219908224497 W2 hgb=0.8709835996987698 W2 ap=0.01359683589075088  [PO-VIMP pre→18 (risk=1.15413e-06) then FSDS-F→15 | fused→official_FSDS]
+run Z_combined_PO ...
+/home/ubuntu/.local/lib/python3.12/site-packages/sklearn/model_selection/_split.py:812: UserWarning: The least populated class in y has only 3 members, which is less than n_splits=5.
+  warnings.warn(
+  selected=['i_share_first', 'i_credit_first', 'i_n_exp', 'u_span_sec', 'i_log1p_n_covisit']... W1 hgb=0.692905047652665 W2 hgb=0.867120603575712 W2 ap=0.013131144620907866  [COMBINED-PO: cmean⋈PO-VIMP→18 | 5-fold π-stable SelectKBest(F) | PO-risk=1.15413e-06 | →FSDS | fused→official_FSDS]
+run P_po_boot_pi ...
+  selected=['i_share_first', 'i_credit_first', 'i_credit_last', 'ui_pop_mismatch', 'u_log1p_n_events']... W1 hgb=0.69219908224497 W2 hgb=0.8706907371768051 W2 ap=0.013153431439486947  [PO-boot-π: PO-help pool→18 | bootπ×40→15 | PO-risk=1.15413e-06 | →FSDS | fused→official_FSDS]
+run Z_combined_PO_rare ...
+  selected=['i_share_first', 'i_credit_first', 'i_log1p_n_exp', 'i_n_exp', 'u_span_sec']... W1 hgb=0.622132015531239 W2 hgb=0.8428897163417287 W2 ap=0.00901259805414031  [COMBINED-PO-rare: cmean⋈PO→18 | 3-fold π (n_pos=3)→15 | PO-risk=1.15413e-06 | →FSDS | fused→official_FSDS]
+wrote /workspace/results/tencent_gr_fsds_iterate/iter06_s2
