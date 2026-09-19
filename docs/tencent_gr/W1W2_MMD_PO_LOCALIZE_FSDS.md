@@ -21,6 +21,10 @@
 [`Feature_Entity_Joint_CMean.tex`](./Feature_Entity_Joint_CMean.tex)
 — conditional mean 原语、\(D\) 矩阵、F→E / E→F、非 subgroup justification。
 
+**多层图调研 × 多模态归因逻辑：**
+[`MULTILAYER_GRAPH_AND_MM_ATTR.md`](./MULTILAYER_GRAPH_AND_MM_ATTR.md)
+— 多层图算法族取舍；模态=列块 / key；接到同一套 cmean 缩支撑闭环。
+
 ## 三步下钻（可选）：merchant → user → order
 
 在漂移 subset 上再做定位（**每层应过停止表，勿强制钻穿**）：
