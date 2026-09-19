@@ -41,13 +41,13 @@
 **关键结论（对我们）：**  
 多层图算法擅长 **结构划分 / 嵌入**。  
 我们的归因门擅长 **两窗分布差的支撑收缩**。  
-正确接法是：
 
-```text
-多层图算法  →  (可选) 社区 id / 嵌入 / 层边统计
-            →  写进 X 的某一 feature 块，或变成 entity key
-本协议 cmean →  对 (X, W, entity_key) 做 δ / D / r / R  localization
-```
+**Scope 更新（更硬）：**  
+- 默认 **不用** community detection，**不用** ego-centric network 分析（超 scope）。  
+- 图谱特征进 \(X\) 已足够闭环。  
+- 若要「图上的 localization」，只用轻量插件：seeded PPR / conductance 验收 / 奖赏剥皮——见
+  [`GRAPH_LOCALIZATION_LIGHT.md`](./GRAPH_LOCALIZATION_LIGHT.md)。  
+- 社区/GNN 若出现，只允许离线造 key 或特征，且非默认路径。
 
 **不要**用 Louvain / GNN 直接当「要不要下钻」的判决器——那是另一套目标函数（社区质量 / 重构），不是 \(\delta,R\)。
 
@@ -145,6 +145,8 @@ MSR-VTT 脚本是 **M1 + 模态 LOGO 份额**（PO/RF/MMD），尚未接行谱�
 | F→E 联合 | 建议 | 降噪 |
 | 真多层 GNN / GenLouvain 归因门 | **否** | 目标函数不对 |
 | CF τ 方差当异质 | **否** | 已否决 |
+| Seeded PPR / conductance / prize peel | **可选插件** | 见 [`GRAPH_LOCALIZATION_LIGHT.md`](./GRAPH_LOCALIZATION_LIGHT.md)；非 community/ego |
+| Ego-centric / 全局社区发现 | **否** | 超 scope |
 
 ---
 

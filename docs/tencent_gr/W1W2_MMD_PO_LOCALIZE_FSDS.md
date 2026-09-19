@@ -25,6 +25,10 @@
 [`MULTILAYER_GRAPH_AND_MM_ATTR.md`](./MULTILAYER_GRAPH_AND_MM_ATTR.md)
 — 多层图算法族取舍；模态=列块 / key；接到同一套 cmean 缩支撑闭环。
 
+**Graph localization（非 community / 非 ego）：**
+[`GRAPH_LOCALIZATION_NO_COMMUNITY.md`](./GRAPH_LOCALIZATION_NO_COMMUNITY.md)
+— ULS / PPR-Nibble / GraphScan 等分数驱动收核；叠在 cmean 行谱之后。
+
 ## 三步下钻（可选）：merchant → user → order
 
 在漂移 subset 上再做定位（**每层应过停止表，勿强制钻穿**）：
