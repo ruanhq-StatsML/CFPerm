@@ -25,6 +25,9 @@ Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
 > [`../summaries/Graph_Localize_Algorithm_Elaboration.md`](../summaries/Graph_Localize_Algorithm_Elaboration.md)  
 > / [`../summaries/Graph_Localize_Algorithm_Elaboration.tex`](../summaries/Graph_Localize_Algorithm_Elaboration.tex)
 >
+> **Tip / 正负向与反欺诈排查布控动作：**  
+> [`../summaries/AntiFraud_Tip_Sign_Actions.md`](../summaries/AntiFraud_Tip_Sign_Actions.md)
+>
 > **基于 Graph Shift 的方法（不谈社区发现；cmean+MMD+PO）：**  
 > [`../summaries/Graph_Shift_Method_Elaboration.md`](../summaries/Graph_Shift_Method_Elaboration.md)
 >
