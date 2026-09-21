@@ -1,0 +1,221 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,hyperref}
+\geometry{margin=1in}
+\newcommand{\Lead}{\mathrm{Lead}}
+\newcommand{\AR}{\mathrm{AR}}
+\newcommand{\gradU}{\nabla_{\theta_U}}
+\title{\textbf{OnlineRFPerm + Information Fusion}\\
+\large Latest Results: Alarm Rate \& Detection / Lead Distributions\\
+\large (Grad gate; LLM backend status)}
+\author{Summary note --- CFPerm / AGOD}
+\date{2026-09-19}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We summarize the \textbf{latest} OnlineRFPerm (OnlinePermOOB) monitoring
+results after adding an extra scalar information stream into the same
+online rank/EWMA + FDR shell.
+Naming: the repo implements \textbf{Grad-OnlineRFPerm}
+($g_t=\|\gradU L_t\|_2$), not a separate ``OnlineFRPerm'' binary.
+\textbf{LLM / TabPFN backends are designed but not yet landed}; the
+landed fusion is the \emph{gradient-energy} gate.
+Primary real-data timing metric is
+$\Lead=t_{\mathrm{grad}}-t_{\mathrm{MSE}}$ (negative $=$ Grad earlier).
+Baseline alarm rate $\AR=n_{\mathrm{alarm}}/n_{\mathrm{batch}}$ is a
+\emph{reference}, \textbf{not} Type-I FAR (ongoing updates break any
+stationary-null claim).
+\end{abstract}
+
+\section{How information enters OnlineRFPerm}
+\label{sec:fuse}
+
+\paragraph{Locked shell (unchanged).}
+Burn-in reference $\to$ per-batch scalar $T_t$ $\to$ online $p_t$
+(rank / EWMA) $\to$ online FDR $\Rightarrow$ reject $R_t$.
+Parallel streams: MSE / MMD / PO OnlineRFPerm for comparison.
+
+\paragraph{Landed fusion: Grad.}
+\[
+  g_t=\|\gradU L_t\|_2,\qquad
+  T_t^{\mathrm{grad}}=g_t-e_{\mathrm{ref}},
+\]
+with $e_{\mathrm{ref}}$ updated on burn-in only (frozen reference
+energy). Single FDR stream (no per-layer multiplicity).
+
+\paragraph{Planned fusion: LLM / TabPFN (not coded).}
+Same shell; pluggable backend
+$\{\mathrm{RF},\,\mathrm{TabPFN},\,\mathrm{LLM\text{-}embed+head}\}$.
+LLM path: frozen embedding $\to$ light head $\to$ Grad or MSE scalar
+into OnlineRFPerm
+(\texttt{docs/method/Sep17\_daily\_three\_items.md}:
+``\emph{尚无} TabPFN / LLM backend'').
+\textbf{No with-LLM vs without-LLM table exists yet.}
+Numbers below are Grad vs MSE (and peers), i.e.\ the current
+``extra information'' ablation.
+
+\paragraph{Protocol (all tables unless noted).}
+$b{=}8$, batch $128$, $48$ batches, $\alpha{=}0.05$,
+seeds $\{0,\ldots,4\}$ (extras often $\{0,1,2\}$).
+
+\section{Baseline alarm rate (FAR-proxy)}
+\label{sec:ar}
+
+\begin{equation}
+\label{eq:AR}
+  \AR
+  \;=\;
+  \frac{\#\{\text{reject batches}\}}{\#\{\text{post-burn observation batches}\}}.
+\end{equation}
+Near-stationary \emph{reference} synthetic stream (serving still
+updates). \textbf{Do not} read as Type-I FAR.
+
+\begin{table}[h]
+\centering
+\caption{Reference-stream baseline alarm rate (Grad vs MSE).
+Grace $g$ skips the first $g$ post-burn batches in the AR window.}
+\label{tab:ar}
+\begin{tabular}{crrrr}
+\toprule
+grace $g$ & Grad $\AR$ & MSE $\AR$ & mean $n_{\mathrm{alarm}}/n_{\mathrm{batch}}$ & mean $t_{\mathrm{grad}}$ \\
+\midrule
+$0$ & $0.233$ & $0.225$ & $9.3/40$ & $8.0$ \\
+$2$ & $0.211$ & $0.228$ & $8.0/38$ & $10.7$ \\
+$4$ & $0.204$ & $0.222$ & $7.3/36$ & $15.3$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textit{Takeaway.} Grad $\AR\approx$ MSE $\AR$
+($\sim 0.20$--$0.23$). Grace mildly delays first reject
+($8\to 15$). Higher AR is acceptable as a baseline under updates.
+
+\section{Detection timing on real data}
+\label{sec:delay}
+
+\subsection{Definitions}
+\begin{itemize}[leftmargin=*,itemsep=0.25em]
+  \item \textbf{First-reject time} $t_{\bullet}$: first FDR reject batch
+        index (post stream start; burn $b{=}8$).
+  \item $\displaystyle\Lead=t_{\mathrm{grad}}-t_{\mathrm{MSE}}$.
+        $\Lead<0$ $\Leftrightarrow$ Grad earlier than MSE-OnlineRFPerm.
+  \item \textbf{Detection delay} after a \emph{known} shift is available
+        only on \textbf{synthetic} (shift@20): all methods report
+        $\mathrm{delay}=0$ (first post-shift reject at the shift batch).
+        Real OpenML packs have \texttt{detection\_delay=null}; we report
+        first-reject / Lead distributions instead.
+\end{itemize}
+
+\subsection{Lead distribution (MVP + Sep18)}
+\begin{table}[h]
+\centering
+\caption{Lead vs MSE-OnlineRFPerm (5 seeds). Negative $=$ Grad earlier.}
+\label{tab:lead-mvp}
+\begin{tabular}{lrrrrr}
+\toprule
+dataset & mean & median & std & $P(\Lead<0)$ & $P(\Lead\le 0)$ \\
+\midrule
+synthetic   & $-3.0$ & $-2$ & $2.10$ & $100\%$ & $100\%$ \\
+covertype   & $-1.2$ & $-1$ & $2.32$ & $60\%$  & $80\%$ \\
+bank        & $-1.2$ & $0$  & $1.60$ & $40\%$  & $100\%$ \\
+electricity & $-6.2$ & $-4$ & $5.84$ & $80\%$  & $100\%$ \\
+eeg         & $-4.6$ & $-6$ & $3.07$ & $80\%$  & $100\%$ \\
+\midrule
+\textbf{MVP (25)} & $\mathbf{-3.24}$ & --- & --- & $\mathbf{72\%}$ & $\mathbf{96\%}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Sep18 add-on + pooled (same protocol).}
+\label{tab:lead-sep18}
+\begin{tabular}{lrrrr}
+\toprule
+dataset / pool & $n$ & mean Lead & median & $P(\Lead<0)$ \\
+\midrule
+adult & $5$ & $-3.20$ & $-3$ & $80\%$ \\
+nomao & $5$ & $-4.00$ & $-4$ & $80\%$ \\
+add-on & $10$ & $-3.60$ & --- & $80\%$ \\
+\textbf{pooled MVP+add-on} & $\mathbf{35}$ & $\mathbf{-3.34}$ & --- & $\mathbf{74\%}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Raw Lead vectors (real packs; for distributional reading).}
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+dataset & $\{\Lead$ (seeds $0..4$) \\
+\midrule
+covertype & $-2,-1,0,-5,+2$ \\
+bank & $0,0,0,-4,-2$ \\
+electricity & $-4,-17,0,-3,-7$ \\
+eeg & $0,-2,-6,-7,-8$ \\
+adult & $-3,-3,-7,0,-3$ \\
+nomao & $-1,-4,-5,-10,0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Real-data Lead summary (30 runs; exclude synthetic).}
+mean $-3.40$, median $-3$, std $3.90$,
+$P_{10}{=}-7.1$, $P_{25}{=}-5$, $P_{75}{=}0$, $P_{90}{=}0$,
+range $[-17,+2]$.
+
+\subsection{First-reject time distribution (real packs)}
+\begin{table}[h]
+\centering
+\caption{First FDR reject batch index on real OpenML packs
+(30 runs $=$ 6 packs $\times$ 5 seeds).}
+\label{tab:treject}
+\begin{tabular}{lrrrrrrr}
+\toprule
+method & mean & median & std & $P_{10}$ & $P_{25}$ & $P_{75}$ & $P_{90}$ \\
+\midrule
+Grad $t_{\mathrm{grad}}$ & $8.13$ & $8$ & $0.43$ & $8$ & $8$ & $8$ & $8.1$ \\
+MSE  $t_{\mathrm{MSE}}$  & $11.53$ & $11$ & $3.86$ & $8$ & $8$ & $13$ & $15.2$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textit{Takeaway.} Grad typically fires at the first eligible
+batch after burn ($t{\approx}8$); MSE is later and more variable
+(median $11$, tail to $25$). That is the real-data ``detection-delay''
+proxy under no labeled shift time.
+
+\subsection{Synthetic known-shift delay}
+Shift at batch $20$: $\mathrm{detection\_delay}\in\{0\}$ for Grad / MSE /
+MMD / PO across 5 seeds (all reject at the shift batch). Relative
+earliness still shows in Lead (mean $-3.0$).
+
+\section{Status vs LLM}
+\label{sec:llm}
+
+\begin{table}[h]
+\centering
+\caption{Information-fusion status into OnlineRFPerm.}
+\label{tab:status}
+\begin{tabular}{lll}
+\toprule
+backend / scalar & status & evidence \\
+\midrule
+Serving MSE & landed (baseline stream) & MVP / Sep18 \\
+Grad $\|\gradU L\|_2$ & \textbf{landed} & Tables~\ref{tab:lead-mvp}--\ref{tab:treject} \\
+MMD / PO OnlineRFPerm & landed (peers) & first-reject peers \\
+TabPFN tabular head & planned, not coded & Sep17 daily note \\
+LLM embed + light head & planned, not coded & same \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Sources}
+\texttt{results/agod\_grad\_rfperm/},
+\texttt{results/agod\_grad\_rfperm\_sep18/},
+\texttt{results/grad\_rfperm\_extras/},
+\texttt{docs/method/Grad\_OnlineRFPerm.tex}.
+
+\end{document}

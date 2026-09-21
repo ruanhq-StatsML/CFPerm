@@ -1,0 +1,486 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,hyperref,algorithmic}
+\geometry{margin=1in}
+
+\newcommand{\norm}[1]{\left\|#1\right\|_2}
+\newcommand{\Drill}{\mathrm{Drill}}
+\newcommand{\Tail}{\mathrm{Tail}}
+\newcommand{\CV}{\mathrm{CV}}
+
+\title{\textbf{FSDS Iteration Opportunities \& Drill Decision Logic}\\
+\large Graph features $\to$ cmean $\to K^\star\to$ FSDS (+ PO-risk prior)\\
+\large (Non-causal; $W=$ period)}
+\author{Summary writeup --- TencentGR}
+\date{2026-09-19}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We summarize (i)~overnight FSDS + period-PO iteration results and
+locked DS recipe; (ii)~the \textbf{decision logic for further drill}
+(when to refine entity support vs stop and run one FSDS);
+(iii)~why the attributed subgroup's \textbf{signed direction}
+(正向 / 负向 on convert and on tip features) must be reported
+alongside magnitude; (iv)~concrete opportunities for the next
+FSDS iteration cycle.
+Scope remains graph-derived features only; no ATE claim;
+community / Leiden only as optional \emph{upstream keys}, never as
+the drill gate.
+\end{abstract}
+
+\tableofcontents
+\vspace{0.8em}
+
+%----------------------------------------------------------------------
+\section{Locked FSDS + PO recipe (after overnight)}
+\label{sec:locked}
+
+\paragraph{Pipeline.}
+\[
+  X_{\text{graph}}
+  \xrightarrow{\mathrm{Scaler}(W_1)}
+  (\delta,D,r)
+  \xrightarrow{\text{early stop}}
+  K^\star
+  \xrightarrow{\text{one FSDS}}
+  \text{ranking},
+\]
+with optional period-PO prior:
+\[
+  \texttt{po\_help\_select}
+  \;\to\;
+  \text{pool (top-$k{+}3$ by VIMP / $|\delta|$ blend)}
+  \;\to\;
+  \text{official FSDS}.
+\]
+Official FSDS $=$
+$\mathrm{Scaler}\to\mathrm{Var}\to\mathrm{SelectKBest}(F)
+\to\mathrm{HGB}/\mathrm{LogReg}$;
+\textbf{W1-train only} selects; W2 is temporal holdout.
+
+\paragraph{Headline numbers} (seeds $0/1/2$, $d\approx 21$, rare convert).
+
+\begin{table}[h]
+\centering
+\caption{W2 HGB AUC (mean$\pm$std over seeds).}
+\label{tab:fsds-head}
+\begin{tabular}{lrrl}
+\toprule
+method & mean W2 & $\sigma$ & role \\
+\midrule
+PO-VIMP $\to$ FSDS ($k{=}15$) & $\mathbf{0.722}$ & $0.170$ & \textbf{default} \\
+same ($k{=}18$) & $0.724$ & $0.171$ & optional bump \\
+rare-$\pi$ family & $0.717$ & $\mathbf{0.137}$ & lower variance \\
+baseline FSDS & $0.716$ & $0.154$ & control \\
+LOO-pos majority freeze & $0.708$ & $0.114$ & one frozen list \\
+CLI \texttt{po\_help\_fsds} smoke & $0.720$ & --- & DS entry \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{CLI.}
+\begin{verbatim}
+PYTHONPATH=. python3 scripts/tencent_gr/po_help_fsds.py --select-k 15 --seed 0
+\end{verbatim}
+
+\paragraph{What failed (do not re-sweep).}
+$\alpha\in\{0.3,0.5,0.7\}$ identical on $d\approx 21$;
+bootstrap-$\pi$ alone; hard corr@$0.92$; J*-only; seed-maj2;
+avg-VIMP top-$k$ without FSDS; tight pool $=k$ (W2 collapses).
+
+%----------------------------------------------------------------------
+\section{Objects for drill / stop}
+\label{sec:objects}
+
+Fix parent support $S$ (edges or entities) and next entity key
+$v$ (merchant / user / order / optional community id).
+
+\begin{align}
+  \delta(S)
+  &= \mu_S^{(W_2)}-\mu_S^{(W_1)},
+  \label{eq:delta}\\
+  D_{v:}
+  &= \mu_v^{(W_2)}-\mu_v^{(W_1)},
+  \qquad
+  r_v=\norm{D_{v:}},
+  \label{eq:r}\\
+  a_v
+  &= \frac{\langle D_{v:},\delta(S)\rangle}
+          {\norm{D_{v:}}\,\norm{\delta(S)}+\varepsilon}.
+  \label{eq:align}
+\end{align}
+Mass set $U_{ok}=\{v:n_1(v)\ge n_{\min},\,n_2(v)\ge n_{\min}\}$.
+
+\paragraph{Spectrum sharpness.}
+\[
+  \Tail(r)
+  =\frac{\sum_{v\in\mathrm{Top}K} r_v}{\sum_v r_v},\qquad
+  \CV(r)=\frac{\mathrm{sd}(r)}{\mathrm{mean}(r)+\varepsilon}.
+\]
+
+\paragraph{Residual after a proposed kernel $K\subset S$.}
+\[
+  R(K)
+  =\frac{\norm{\delta(S\setminus K)}^2}{\norm{\delta(S)}^2+\varepsilon},\qquad
+  \gamma=1-R,\quad
+  \alpha=\frac{|K|}{|S|},\quad
+  \mathrm{eff}=\frac{\gamma}{\alpha+\varepsilon}.
+\]
+
+\paragraph{Stability.}
+Bootstrap / multi-seed hit rate
+$\pi_v=\frac{1}{B}\sum_b \mathbf{1}\{v\in\mathrm{Top}K^{(b)}\}$;
+require $\pi_v\ge\pi^\star$ for delivery.
+
+%----------------------------------------------------------------------
+\section{Signed direction of the attributed subgroup (required)}
+\label{sec:sign}
+
+Magnitude alone is incomplete attribution.
+Once $K^\star$ (or stop-layer $S$) is fixed, the report
+\textbf{must} state whether the localized support moved
+\textbf{up} or \textbf{down} between periods---both on the
+outcome and on the tipping features.
+This is still descriptive ($P^{W_1}$ vs $P^{W_2}$), not a
+causal $\mathrm{sign}(\tau)$.
+
+\subsection{Outcome direction on the delivered support}
+Let $\bar y_W(K)=\mathrm{mean}(y_{\mathrm{convert}}\mid K,W)$.
+\[
+  \Delta\bar y(K^\star)
+  \;=\;
+  \bar y_{W_2}(K^\star)-\bar y_{W_1}(K^\star).
+\]
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+$\Delta\bar y(K^\star)$ & label & reading \\
+\midrule
+$>0$ & \textbf{positive / 正向} & convert rate \emph{rose} on the attributed support \\
+$<0$ & \textbf{negative / 负向} & convert rate \emph{fell} on the attributed support \\
+$\approx 0$ & flat & localization may still hold on $X$; outcome did not move \\
+\bottomrule
+\end{tabular}
+\end{center}
+Always report $(\bar y_{W_1},\bar y_{W_2},\Delta\bar y)$ next to
+$K^\star$---not only $\|\delta\|$ or FSDS AUC.
+
+\subsection{Feature-tip direction (signed $\delta$)}
+For each tip $j\in J^\star$:
+\[
+  \mathrm{sign}(\delta_j)
+  =\mathrm{sign}\!\big(\mu_{W_2,j}-\mu_{W_1,j}\big).
+\]
+Positive tip $=$ that graph feature \emph{increased} on $K^\star$;
+negative tip $=$ it \emph{decreased}.
+Rank by $\delta_j^2$ (energy) but \textbf{print the sign} in the
+feature card. Mixing unsigned TopShare with a signed business
+story is a reporting bug.
+
+\subsection{Entity contribution direction (when drilling)}
+For candidate $v$, keep both $r_v=\|D_{v:}\|$ and the
+signed projection onto parent $\delta$:
+\[
+  s_v
+  =\langle D_{v:},\delta(S)\rangle
+  \quad\text{(or }a_v\cdot r_v\text{)}.
+\]
+$s_v>0$: entity shift co-directional with parent;
+$s_v<0$: opposing / compensatory.
+Drill nomination still uses $r$ / Tail / CV;
+direction enters the \textbf{attribution narrative} and the
+optional side-check against $\Delta\bar y$.
+
+\subsection{Report bar (do not omit)}
+\texttt{[Direction] Dy=... (pos|neg|flat); tip\_signs=\{j: +/- \};}
+\texttt{entity\_co\_dir=...}.
+Forbidden: delivering $K^\star$ with only ``Top merchants / users''
+and no 正向/负向 on convert or on $J^\star$.
+
+%----------------------------------------------------------------------
+\section{Further-drill decision logic (elaborated)}
+\label{sec:drill}
+
+\subsection{Separation of concerns}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+signal & answers & does \textbf{not} answer \\
+\midrule
+column $\delta$ / $J^\star$ & which features tip? FSDS now? & whether to cut entities \\
+row $r$ / Tail / CV & is $S$ still heterogeneous downstairs? & causal effects \\
+$R(K)$ & did the tip actually capture shift? & business audience size \\
+business cap & may we \emph{deliver} at this grain? & statistical Drill \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Feature gates never license drill.} Large $\|\delta\|$ with sharp
+column share only licenses FSDS \emph{on $S$}.
+
+\subsection{Feature gates (G0--G2)}
+\begin{description}[leftmargin=1.6em,itemsep=0.35em]
+  \item[G0] $\norm{\delta(S)}<\varepsilon_\delta$: no FSDS; do not drill.
+  \item[G1] large $\|\delta\|$ + concentrated Top-share: one FSDS if we stop here.
+  \item[G2] large $\|\delta\|$ but flat share: drift present, weak tip; FSDS optional.
+\end{description}
+
+\subsection{Row gates (only drill signal)}
+\begin{description}[leftmargin=1.6em,itemsep=0.35em]
+  \item[D-stop] Tail/CV low (and typically $a_v\approx 1$):
+        homogeneous downstairs $\Rightarrow$ \textbf{no drill};
+        if G1, FSDS on $S$.
+  \item[D-drill] Tail or CV high: nominate
+        $K=\mathrm{Top}(r)\cap U_{ok}\cap\{\pi\ge\pi^\star\}$.
+  \item[D-check] accept iff $R(K)\le R^\star$; else \textbf{reject false tip},
+        revert to $S$.
+\end{description}
+
+\subsection{Product rule (descriptive, not $\alpha$-test)}
+\begin{equation}
+\label{eq:drill}
+  \Drill
+  \;=\;
+  \mathbf{1}\{\norm{\delta(S)}\ge\varepsilon_\delta\}
+  \;\cdot\;
+  \mathbf{1}\{\Tail(r)\ge\tau\ \lor\ \CV(r)\ge c^\star\}
+  \;\cdot\;
+  \mathbf{1}\{R(K)\le R^\star\}
+  \;\cdot\;
+  \mathbf{1}\{\mathrm{mass}/\pi\ \mathrm{ok}\}.
+\end{equation}
+Else $K^\star\leftarrow S$ (or last accepted).
+\textbf{Business cap may forbid delivery even when $\Drill=1$.}
+
+\subsection{Decision table}
+\begin{table}[h]
+\centering
+\caption{Parent $\|\delta\|$ vs row spectrum $r$ (next key).}
+\label{tab:decision}
+\begin{tabular}{lll}
+\toprule
+$\|\delta(S)\|$ & $r$ spectrum & action \\
+\midrule
+small & flat & \textbf{Stop}: no FSDS, no drill \\
+small & sharp & rare; check mass/scaler; cautious \\
+large & flat & \textbf{Stop drill}; FSDS / $J^\star$ on this layer \\
+large & sharp & \textbf{Drill} to $K$; FSDS \textbf{only after} $K^\star$ fixed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Why this is not subgroup fishing}
+\begin{itemize}[leftmargin=*,itemsep=0.3em]
+  \item Scientific target $=$ period distribution shift localization
+        ($P^{W_1}$ vs $P^{W_2}$), not $\tau(S)$.
+  \item $K^\star$ is a \textbf{retrieval support}, not an effect subgroup.
+  \item Thresholds are engineering gates, not Type-I $\alpha$.
+  \item Stable $\pi$ controls repeatability of TopK, not FWER under a
+        no-effect null.
+  \item PO $g_v=\mathrm{mean}(s\mid v)$ may \emph{concord} with sharp $r$;
+        by default it does \textbf{not} overturn D-stop.
+  \item $\mathrm{Var}(\hat\tau)$ / community modularity $Q$ are
+        \textbf{out} of~\eqref{eq:drill}.
+\end{itemize}
+
+\subsection{Nested keys and early stop}
+Typical nest: merchant $\to$ user $\to$ order (optional: Leiden
+community id as a \emph{parallel} key).
+At each layer evaluate~\eqref{eq:drill}; if $\Drill=0$, set
+$K^\star$ and run \textbf{one} FSDS.
+Compare sibling keys by $(\alpha,\gamma,\mathrm{eff},\Tail,\bar\pi)$
+plus interpretability---pick the key that captures shift with
+tolerable mass, not ``stronger effect downstairs.''
+
+\subsection{Engineering defaults (starting values)}
+\begin{table}[h]
+\centering
+\caption{Suggested starting thresholds (tune on W1 history; not formal $\alpha$).}
+\label{tab:thresh}
+\begin{tabular}{lll}
+\toprule
+symbol & start & role \\
+\midrule
+$n_{\min}$ & $5$--$20$ & mass \\
+$\varepsilon_\delta$ & hist.\ quantile of $\|\delta\|$ & G0 \\
+Top-share & Top-$10\%$ cumshare $\ge 0.5$ & G1 \\
+$\tau$, $c^\star$ & Tail@10\% / CV quantile & D-stop / D-drill \\
+$\pi^\star$ & $0.5$--$0.7$ & stable kernel \\
+$R^\star$ & $0.4$--$0.5$ & D-check \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Pseudocode}
+\begin{verbatim}
+Input: support S, next_key, business_cap
+delta <- mean_shift(S)
+if ||delta|| < eps_delta: return Stop(no FSDS)
+r, pi <- row_spectrum(S, next_key)   # mass-filtered
+if Tail(r)<tau and CV(r)<c_star:
+    return Stop(FSDS on S)            # D-stop
+K <- Top(r) intersect {pi >= pi*} intersect U_ok
+if R(K) > R_star: return Stop(FSDS on S)   # false tip
+if violates business_cap: deliver at S (or capped grain)
+else: recurse on K with finer key (or FSDS if no finer key)
+\end{verbatim}
+
+\subsection{Operator walkthrough (one layer)}
+Assume business cap at \texttt{user}; current parent is a merchant
+kernel \(S\); next key \(=\texttt{user\_id}\).
+
+\paragraph{Step A --- compute once.}
+Restrict edges to \(S\); \(X\) standardized with W1-only scaler.
+Group means \(\mu_v^{(W_1)},\mu_v^{(W_2)}\) for \(v\in U_{ok}\);
+form \(D\), \(\delta\), \(r_v=\|D_{v:}\|_2\),
+\(\mathrm{share}_j=\delta_j^2/\|\delta\|^2\).
+\emph{No} FSDS and no per-entity MMD yet.
+
+\paragraph{Step B --- read columns (Feature guidance).}
+Ask only feature questions:
+(i)~Is \(\|\delta\|\) large? Else \textbf{G0}.
+(ii)~If large, is Top-share concentrated? Else \textbf{G2}.
+(iii)~If concentrated, record \(J^\star\) and mark
+``FSDS \emph{if we stop here}''---\textbf{do not run FSDS yet}.
+Report bar:
+\texttt{[Feature] ||d||=...; J*=\{...\}; FSDS\_if\_stop=yes/no}.
+
+\paragraph{Step C --- read rows (Drill).}
+Ask only entity questions:
+(i)~Is \(\mathrm{Tail}(r)/\mathrm{CV}(r)\) high?
+(ii)~Are most \(a_v\approx 1\)?
+Flat + aligned \(\Rightarrow\) \textbf{D-stop}.
+Sharp \(\Rightarrow\) \textbf{D-drill},
+\(K=\mathrm{Top}(r)\cap\{\pi\ge\pi^\star\}\cap U_{ok}\).
+Report bar:
+\texttt{[Drill] Tail=...; CV=...; decision=STOP|DRILL; K=...}.
+
+\paragraph{Step D --- if DRILL, D-check.}
+\[
+  R
+  =\frac{\|\delta(S\setminus K)\|^2}{\|\delta(S)\|^2+\varepsilon}.
+\]
+\(R\le R^\star\) \(\Rightarrow\) accept \(K\), recurse with finer key.
+\(R\approx 1\) \(\Rightarrow\) false tip; treat as D-stop.
+
+\paragraph{Step E --- FSDS only at stop.}
+When \(\Drill=0\) or business cap binds:
+\(K^\star\leftarrow\) current \(S\) (or last accepted \(K\));
+run \textbf{one} FSDS on edges of \(K^\star\).
+If G0, skip FSDS. If still sharp at the business cap, deliver at
+the cap and note ``statistics still suggest finer grain, not
+delivered.''
+
+\subsection{Four toy cells (intuition)}
+\begin{description}[leftmargin=1.4em,itemsep=0.4em]
+  \item[Small \(\|\delta\|\), flat \(r\)]
+        G0 + D-stop: no FSDS, no drill.
+  \item[Large \(\|\delta\|\), flat \(r\), \(a_v\approx 1\)]
+        G1 + D-stop: whole layer drifts together; \textbf{stop
+        drill}; FSDS on \(S\) staring at \(J^\star\).
+        Canonical win for column guidance.
+  \item[Large \(\|\delta\|\), sharp \(r\)]
+        Drill first to \(K\); \textbf{defer} FSDS until \(K^\star\).
+        Looking only at \(\delta\) would wrongly stop at \(S\).
+  \item[Sharp \(r\) but \(R\approx 1\)]
+        Reject tip; revert to D-stop / FSDS on \(S\).
+\end{description}
+
+\paragraph{Mnemonic.}
+Column-sharp + row-flat $=$ feature story (no entity drill).
+Row-sharp $=$ entity story (drill).
+FSDS hangs on the \emph{final} support, never on every probe layer.
+
+\subsection{PO-risk as side lens (not in Drill)}
+Fit period-PO once on parent \(S\); entity scores
+\(g_v=\mathrm{mean}(s\mid v)\),
+\(\eta^2=\mathrm{Var}_v(g)/\mathrm{Var}(s)\).
+Low \(\eta^2\) + flat \(\mathrm{Tail}(g)\) \emph{concords} with
+D-stop; co-sharp with \(r\) adds confidence to drill;
+\textbf{anti-alignment does not overturn} D-stop by default.
+\(\mathrm{Var}(\hat\tau)\) and modularity \(Q\) stay
+\textbf{out} of~\eqref{eq:drill}.
+
+\subsection{Report discipline}
+Four separate bars---never one fused sentence:
+\textbf{Feature guidance} $|$ \textbf{Drill decision} $|$
+\textbf{Kernel \(K^\star\)} $|$ \textbf{Direction (pos/neg)}.
+Forbidden: concluding ``drill to user'' from G1 alone;
+calling \(K^\star\) an ATE subgroup; using Lift/``more
+significant'' language that invites causal reading;
+omitting $\mathrm{sign}(\Delta\bar y)$ / tip signs on the
+delivered support.
+
+%----------------------------------------------------------------------
+\section{Further FSDS iteration opportunities}
+\label{sec:next}
+
+\subsection{High priority (can move the needle)}
+\begin{enumerate}[leftmargin=*,itemsep=0.4em]
+  \item \textbf{Larger / denser support.} Rare positives dominate seed
+        $\sigma$; re-run seed scans after widening localize $K^\star$ or
+        adding positives---not after more $\alpha$ sweeps.
+  \item \textbf{Wire drill stop into the iterate harness.} Today FSDS
+        iterate assumes a fixed localized grid; next: log
+        $(\|\delta\|,\Tail,\CV,R,\pi)$ per layer and only call FSDS when
+        $\Drill=0$ (or business-capped).
+  \item \textbf{PO prior $\times$ drill.} Fit period-PO once on $S$;
+        use VIMP for column pool; optionally side-score entities by
+        mean $\hat\tau^2$ \emph{without} entering~\eqref{eq:drill}.
+  \item \textbf{Default DS path freeze.} Keep
+        \texttt{po\_help\_fsds} @ $k{=}15$ (try $18$); rare-$\pi$ when
+        variance matters; LOO-pos majority only to freeze one list.
+  \item \textbf{Confirm + tip-cmean formulation (prototype).}
+        Joint fire
+        $\mathbf{1}\{\Delta_{\mathrm{tip}}\ge\varepsilon_\Delta\}
+        \cdot\mathbf{1}\{\mathrm{confirm}\}$
+        with burn $\mathrm{mean}+k\cdot\mathrm{sd}$ magnitude gates
+        (\texttt{agod/cmean\_confirm.py},
+        \texttt{Cmean\_Confirm\_Formulation.tex}).
+\end{enumerate}
+
+\subsection{Medium (structural keys)}
+\begin{enumerate}[leftmargin=*,itemsep=0.4em]
+  \item \textbf{Leiden as upstream key (optional).}
+        Multi-resolution communities as parallel \texttt{drill\_key};
+        compare $\mathrm{eff}/\pi$ vs merchant
+        (\texttt{LEIDEN\_FOR\_DRILL\_ELABORATION.md}).
+        Fail MVE $\Rightarrow$ stay out of default.
+  \item \textbf{Business-readable feature cards.}
+        Map PO-VIMP tops (e.g.\ \texttt{ui\_pop\_mismatch}) to ops
+        language; does not change the gate.
+\end{enumerate}
+
+\subsection{Low / closed}
+Re-tuning blend $\alpha$; bootstrap-$\pi$ alone; seed-maj2;
+avg-VIMP top-$k$ without FSDS; hard corr / J*-only; using modularity
+$Q$ or $\mathrm{Var}(\hat\tau)$ as Drill factors.
+
+%----------------------------------------------------------------------
+\section{One-page takeaway}
+\label{sec:takeaway}
+\begin{enumerate}[leftmargin=*,itemsep=0.35em]
+  \item Default supervised path: \textbf{PO-VIMP $\to$ FSDS @ $k{=}15$}.
+  \item Drill further \textbf{iff}~\eqref{eq:drill} holds; otherwise
+        stop and run one FSDS on current $S$.
+  \item Columns tip features; rows tip entities; $R$ accepts tips;
+        business cap truncates delivery.
+  \item Attribution without \textbf{正向/负向} is incomplete:
+        always report $\mathrm{sign}(\Delta\bar y(K^\star))$ and
+        $\mathrm{sign}(\delta_j)$ for $J^\star$ (descriptive, not
+        $\mathrm{sign}(\tau)$).
+  \item Next iteration value is in \textbf{support quality + stop
+        instrumentation}, not more selector micro-ablations.
+\end{enumerate}
+
+\section{Sources}
+\texttt{docs/tencent\_gr/ATTRIBUTION\_DRILL\_STOP.md},
+\texttt{Graph\_Feature\_CMean\_Localization.tex},
+\texttt{FSDS\_PO\_OVERNIGHT\_REPORT.md},
+\texttt{results/tencent\_gr\_fsds\_iterate/ITERATION\_LOG.md},
+\texttt{LEIDEN\_FOR\_DRILL\_ELABORATION.md}.
+
+\end{document}

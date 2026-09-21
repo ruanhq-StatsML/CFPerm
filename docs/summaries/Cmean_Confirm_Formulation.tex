@@ -1,0 +1,112 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,hyperref}
+\geometry{margin=1in}
+
+\newcommand{\Dtip}{\Delta_{\mathrm{tip}}}
+\newcommand{\Jstar}{J^\star}
+\newcommand{\Fire}{\mathrm{Fire}}
+
+\title{\textbf{Confirm + Tip-CMean Formulation}\\
+\large Prototype: joint magnitude gate for attributed tip timing\\
+\large (threshold calibration explicit)}
+\author{Method note --- CFPerm}
+\date{2026-09-19}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We close the loop into one formulation: period cmean attribution
+delivers $\Jstar$ and signed direction; online, each batch combines
+\textbf{tip-cmean magnitude} $\Dtip(t)$ with \textbf{confirm} LOCO
+(tip-collapse $\wedge$ PO). Joint fire is the tip change-point.
+Magnitude thresholds are burn-calibrated
+$\mathrm{mean}+k\cdot\mathrm{sd}$ gates---engineering, not Type-I
+$\alpha$. No extra $\delta$-mode beyond this.
+\end{abstract}
+
+\section{Two phases (nothing else)}
+\paragraph{A --- Attribution (period / offline).}
+Scaler(W1) $\to$ $(\delta,D,r)$ $\to$ Drill product $\to K^\star$,
+$\Jstar$, $\mathrm{sign}(\Delta\bar y)$, $\mathrm{sign}(\delta_j)$.
+
+\paragraph{B --- Timing (batch stream).}
+Freeze $\Jstar$. Control $=t{-}1$, probe $=t$:
+\begin{align}
+  \Dtip(t)
+  &= \bigl\|\mu_t^{\Jstar}-\mu_{t-1}^{\Jstar}\bigr\|_2,
+  \label{eq:dtip}\\
+  L_{\mathrm{tip}}(t)
+  &= \mathrm{MAE}(\mu^{-\Jstar})-\mathrm{MAE}(\mu),
+  \qquad
+  C(t)=\max(0,\bar L-L_{\mathrm{tip}}),
+  \label{eq:col}\\
+  \mathrm{PO}(t)
+  &= \max\bigl(\mathrm{MAE}_t(\mu_{t-1})-\mathrm{MAE}_{t-1},0\bigr).
+\end{align}
+\[
+  \Fire_t
+  \;=\;
+  \mathbf{1}\{\Dtip(t)\ge\varepsilon_\Delta\}
+  \;\cdot\;
+  \mathbf{1}\{C(t)\ge\tau_C\}
+  \;\cdot\;
+  \mathbf{1}\{\mathrm{PO}(t)\ge\tau_{\mathrm{PO}}\}.
+\]
+$t^\star=\min\{t>\mathrm{burn}:\Fire_t=1\}$.
+正向/负向 from $\mathrm{sign}$ of tip-cmean coordinates at $t^\star$.
+
+\section{How magnitude thresholds are set}
+\label{sec:thr}
+
+All three cutoffs use the \textbf{same recipe} on the burn window
+only ($t=1,\ldots,b$):
+\begin{equation}
+\label{eq:ksigma}
+  \mathrm{thr}(Z)
+  \;=\;
+  \overline{Z}_{\mathrm{burn}}
+  \;+\;
+  k\,\mathrm{sd}(Z_{\mathrm{burn}}),
+  \qquad k{=}5\ \text{(default)}.
+\end{equation}
+Applied to $Z\in\{\Dtip,\,C,\,\mathrm{PO}\}$:
+\[
+  \varepsilon_\Delta=\mathrm{thr}(\Dtip),\quad
+  \tau_C=\mathrm{thr}(C),\quad
+  \tau_{\mathrm{PO}}=\mathrm{thr}(\mathrm{PO}).
+\]
+$\bar L$ $=$ mean tip-group LOCO on burn (frozen).
+
+\paragraph{Justification.}
+Burn consecutive batches are treated as a near-stationary reference
+\emph{scale} for tip means / tip-LOCO / PO. A tip change-point is an
+excursion beyond that scale. This is an \textbf{engineering gate}:
+\begin{itemize}[leftmargin=*,itemsep=0.25em]
+  \item Not a Type-I $\alpha$-test (serving updates; no stationary null).
+  \item Not a second ``$\delta$ mode'' family---only tip-restricted
+        $\|\cdot\|_2$ magnitude plus confirm.
+  \item $k$ is a robustness knob (start at $5$; report if changed).
+  \item Period Drill thresholds ($\varepsilon_\delta$, Tail, CV, $R^\star$)
+        stay on the attribution side; they are calibrated the same way
+        on W1 history quantiles when available, else the Table defaults.
+\end{itemize}
+
+\paragraph{What we do \emph{not} do.}
+No mixture-mode / clustering mode on $\delta$; no modularity; no
+$\mathrm{Var}(\hat\tau)$ as a magnitude gate.
+
+\section{Prototype API}
+\texttt{agod/cmean\_confirm.py}:
+\texttt{calibrate\_cmean\_confirm\_thresholds},
+\texttt{run\_cmean\_confirm\_prototype}.
+Smoke:
+\texttt{scripts/run\_cmean\_confirm\_prototype.py}.
+
+\section{Synthetic check}
+Tip mean+coef shift at known batch: true $\Jstar$ fires at the shift
+(delay $\approx 0$); wrong tips do not joint-fire at that batch.
+
+\end{document}

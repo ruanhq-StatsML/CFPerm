@@ -1,0 +1,9 @@
+# DiffusionDB local dump
+data/diffusiondb/metadata.parquet
+data/diffusiondb/**/*.parquet
+data/diffusiondb/.cache/
+
+# local caches / subsets
+**/__pycache__/
+data/tencent_subset/
+results/tencent_gr_localize_fsds_time/*.parquet
