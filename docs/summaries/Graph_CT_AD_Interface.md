@@ -68,6 +68,8 @@
 3. **Leiden 旁路对比**：同一 reject 时刻，merchant-key vs community-key 的 \(\mathrm{eff}\)。  
 4. **mm_emb 模态**：把 `emb_81_32` 等拼进 \(X\)，看 tip 是否从行为特征迁到视觉/文本。  
 5. **Confirm timing（可选）**：tip-cmean 幅度 × LOCO confirm，挂在 reject 之后。
+6. **连续时间团伙发现**：Leiden/`community_id` 作 Drill 键；详见
+   [`Graph_CT_Gang_Discovery.md`](Graph_CT_Gang_Discovery.md)。
 
 ---
 

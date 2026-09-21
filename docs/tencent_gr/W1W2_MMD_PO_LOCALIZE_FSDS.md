@@ -27,6 +27,9 @@ Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
 >
 > **连续监测可做事项 + 数据接口（MMD+PO+cmean drill；图算法 upstream）：**  
 > [`../summaries/Graph_CT_AD_Interface.md`](../summaries/Graph_CT_AD_Interface.md)
+>
+> **连续时间团伙发现（Leiden 换钥匙 / Drill 不换锁）：**  
+> [`../summaries/Graph_CT_Gang_Discovery.md`](../summaries/Graph_CT_Gang_Discovery.md)
 
 ```bash
 PYTHONPATH=. python3 scripts/tencent_gr/run_three_step_subset_localize.py \
