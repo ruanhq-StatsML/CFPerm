@@ -53,6 +53,7 @@ from time_window_feats import (  # noqa: E402
     scan_time_range,
 )
 from gt_subset_evaluator import evaluate_gt  # noqa: E402
+from direction_report import build_direction_dict  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -606,6 +607,20 @@ def main() -> None:
             out["top_features"] = res["ranking"].head(args.select_k)["feature"].tolist()
         return out
 
+    tip_feats = (
+        ranking.head(args.select_k)["feature"].astype(str).tolist()
+        if isinstance(ranking, pd.DataFrame) and len(ranking)
+        else []
+    )
+    direction = build_direction_dict(
+        g1_tr if len(g1_tr) else g1,
+        g2_loc if len(g2_loc) else g2,
+        tip_feats,
+        feat_diag=feat_diag,
+        y_col="y_convert",
+        extra={"localize_k": len(loc_items), "support": "item"},
+    )
+
     blob = {
         "protocol": [
             "Standardization: StandardScaler fit on W1 (top of pipeline)",
@@ -613,6 +628,7 @@ def main() -> None:
             "subset localization = rank-average(cmean, MMD, PO-risk) over items (standardized X)",
             "visualize localized subset (行为/购买欲变动归因)",
             "FSDS: StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg → feature ranking",
+            "direction JSON: sign(Δȳ) + tip sign(δ_j) on K*",
             "optional GT evaluator on orders/items → hit/precision/recall@k",
         ],
         "timeline": {
@@ -635,9 +651,11 @@ def main() -> None:
         },
         "fsds_W1_holdout": _strip(res_w1),
         "fsds_W2_temporal": _strip(res_w2),
+        "direction": direction,
         "gt_eval": gt_eval,
     }
     (args.out_dir / "summary.json").write_text(json.dumps(blob, indent=2, default=str))
+    print("direction:", direction.get("report"), flush=True)
 
     plot_results(
         scor,

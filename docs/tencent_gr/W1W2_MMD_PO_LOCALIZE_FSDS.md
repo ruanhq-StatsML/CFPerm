@@ -31,6 +31,9 @@ Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
 > **Tip / 正负向与反欺诈排查布控动作：**  
 > [`../summaries/AntiFraud_Tip_Sign_Actions.md`](../summaries/AntiFraud_Tip_Sign_Actions.md)
 >
+> **监测波次 → Drill 团伙支撑 → 连续图谱变动线索：**  
+> [`../summaries/Wave_Drill_Clue_Pipeline.md`](../summaries/Wave_Drill_Clue_Pipeline.md)
+>
 > **基于 Graph Shift 的方法（不谈社区发现；cmean+MMD+PO）：**  
 > [`../summaries/Graph_Shift_Method_Elaboration.md`](../summaries/Graph_Shift_Method_Elaboration.md)
 >
