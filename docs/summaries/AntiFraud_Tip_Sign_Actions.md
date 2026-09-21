@@ -5,7 +5,8 @@
 > **(B) 排查/布控线索** = 线上交付 \(K^\star\) + tip + 正负向，驱动 **人/系统动作**。  
 > 本文谈 (B)：actions 有哪些、tip 与符号怎么读、反欺诈场景怎么用。
 
-相关：[`Graph_Shift_Method_Elaboration.md`](Graph_Shift_Method_Elaboration.md)
+相关：[`Graph_Shift_Method_Elaboration.md`](Graph_Shift_Method_Elaboration.md) ·
+算法层（无行动项）：[`Tip_Sign_Algorithm_Elaboration.md`](Tip_Sign_Algorithm_Elaboration.md)
 
 ---
 
