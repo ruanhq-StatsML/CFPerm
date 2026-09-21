@@ -75,12 +75,15 @@
 
 ### 3.1 磁盘布局（TencentGR subset）
 
+**GitHub（本分支，Git LFS）：**  
+https://github.com/ruanhq-StatsML/CFPerm/tree/cursor/graph-localize-elab-abce/data/tencent_subset
+
 ```
 data/tencent_subset/
-  seq/*.parquet          # 行为流（建图边）
-  item_feat/*.parquet    # 物品侧（含 merchant≈col 122）
-  user_feat/*.parquet    # 用户侧
-  README.md
+  seq/*.parquet          # ~297k users, ~26.7M events, ~231d span
+  item_feat/*.parquet    # merchant proxy = col 122
+  user_feat/*.parquet
+  README.md              # subset card + clone/LFS notes
 ```
 
 可选全量：`candidate/`、`mm_emb/emb_*/**/*.parquet`、`indexer.pkl`。

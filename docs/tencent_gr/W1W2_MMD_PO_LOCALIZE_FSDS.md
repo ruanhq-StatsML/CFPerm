@@ -43,3 +43,8 @@ bash scripts/tencent_gr/run_behavior_shift_attribution.sh
 ## Outputs
 - 扁平：`results/tencent_gr_standardize_mmd_fsds/`
 - 三层：`results/tencent_gr_three_step_localize/`
+
+## Data subset (Git LFS)
+
+https://github.com/ruanhq-StatsML/CFPerm/tree/cursor/graph-localize-elab-abce/data/tencent_subset  
+详见 [`data/tencent_subset/README.md`](../../data/tencent_subset/README.md)。
