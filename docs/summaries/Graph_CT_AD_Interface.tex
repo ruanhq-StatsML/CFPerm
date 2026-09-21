@@ -1,0 +1,120 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,hyperref}
+\geometry{margin=1in}
+
+\title{\textbf{Continuous-time Graph AD}\\
+\large What we can run + data interface\\
+\large (Drill $=$ MMD+PO+cmean; graph algos $=$ upstream only)}
+\author{TencentGR summary}
+\date{2026-09-21}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Locked drill remains \textbf{rank-average(MMD, PO, cmean)}.
+Continuous monitoring answers \emph{when} via OnlineRFPerm on three
+scalar streams; large-scale graph algorithms supply optional
+structure keys / features only.
+We list actionable work items and the concrete data interface on
+TencentGR $(u,i,t)$ edges.
+\end{abstract}
+
+\section{Division of labor}
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+layer & question & method \\
+\midrule
+When & is $G_t$ anomalous? & OnlineRFPerm on $T_t^{\mathrm{MMD/PO/cmean}}$ \\
+Where & which entities? & Drill rank-average(MMD,PO,cmean) \\
+Tips & which features? & one FSDS on $K^\star$ \\
+Graph algos & structure keys? & Leiden / hops / emb --- upstream only \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{What we can do (our recipe + graph algos)}
+
+\paragraph{A --- Long-running monitor (main line).}
+Slice $\Delta t$ (1d/6h/1h) $\to G_t=(V_t,E_t)$ from edges in
+$[t,t+\Delta t)$. Parallel
+\begin{align*}
+  T_t^{\mathrm{MMD}}&=\widehat{\mathrm{MMD}}^2(X_{t-1},X_t)-e_{\mathrm{MMD}},\\
+  T_t^{\mathrm{PO}}&=\mathrm{PO\text{-}gap}(t-1\to t)-e_{\mathrm{PO}},\\
+  T_t^{\mathrm{cmean}}&=\|\mu_t-\mu_{\mathrm{ref}}\|_2-e_{\mathrm{cm}}.
+\end{align*}
+EWMA-$p$ + alpha-investing $\to R_t$.
+\textbf{Only on reject:} Drill merchant$\to$user$\to$order, then one FSDS.
+Report signed $\Delta\bar y$ / tip signs; log Lead and AR (not Type-I FAR).
+
+\paragraph{B --- Large-scale graph algorithms (optional upstream).}
+\begin{itemize}[leftmargin=*,itemsep=0.25em]
+  \item Leiden/Louvain $c(v)$: parallel \texttt{drill\_key}; compare
+        $\mathrm{eff}/\pi$ vs merchant. \textbf{Not} a Drill gate via $Q$.
+  \item Multi-hop / covisit: enrich FE ($X$) or edge weights.
+  \item Graph / multimodal emb: concatenate into $x_e$; run cmean/MMD
+        in that space.
+  \item Centrality: volume prior / optional rank blend column --- out of
+        the Drill product.
+  \item Sketches/reservoirs: approximate $X_t$ at scale.
+\end{itemize}
+Combo: graph algos $\to$ keys/features
+$\oplus$ MMD+PO+cmean Drill
+$\oplus$ OnlineRFPerm continuous monitor.
+
+\paragraph{C --- Next engineering cuts.}
+(1)~$\Delta t$ harness + three $T_t$ logs + reject$\to$localize;
+(2)~per-layer $(\|\delta\|,\mathrm{Tail},\mathrm{CV},R,\pi)$ stop wiring;
+(3)~Leiden vs merchant at same reject;
+(4)~mm\_emb into $X$;
+(5)~optional tip-cmean$\times$confirm timing after reject.
+
+\section{Data interface}
+
+\paragraph{On-disk.}
+\texttt{data/tencent\_subset/\{seq,item\_feat,user\_feat\}/*.parquet}.
+
+\paragraph{Raw.}
+\texttt{seq}: \texttt{user\_id}, \texttt{seq}=List[\{item\_id, action\_type, timestamp\}]
+(action $0$=exposure, $1$=click).
+\texttt{item\_feat}: \texttt{item\_id}+cols \texttt{100}..\texttt{122}
+(merchant proxy $=\texttt{122}$).
+\texttt{user\_feat}: \texttt{user\_id}+cols \texttt{103}..\texttt{110}.
+
+\paragraph{Code API (existing).}
+\begin{verbatim}
+scan_time_range(root) -> (t_min, t_max, n)
+feature_engineer(root, t_start, t_end, ...) ->
+  {grid, edge_df, user_df, item_df, convert_df, covisit_df, meta}
+load_item_merchant_map(root, merchant_col="122")
+attach_merchant(grid, imap)
+fsds_feature_columns(grid)
+\end{verbatim}
+One continuous frame $=$ one \texttt{feature\_engineer} call on
+$[t,t+\Delta t)$.
+
+\paragraph{Edge contract for graph libraries.}
+\texttt{(src=user\_id, dst=item\_id, ts, action, y=1\{click\})}
+$+$ optional \texttt{merchant\_id}/\texttt{community\_id} node attrs.
+
+\paragraph{CLI (prototype, two-window).}
+\begin{verbatim}
+PYTHONPATH=. python3 scripts/tencent_gr/run_w1w2_mmd_po_localize_fsds.py \
+  --root data/tencent_subset
+PYTHONPATH=. python3 scripts/tencent_gr/run_three_step_subset_localize.py \
+  --root data/tencent_subset --max-users 20000 --gap-days 30
+\end{verbatim}
+
+\section{vs W1/W2 prototype}
+W1/W2 proves \emph{where}; continuous $\Delta t$ + $R_t$ proves
+\emph{when} for long-running AD. Drill recipe unchanged.
+
+\section{Takeaway}
+Monitor with MMD/PO/cmean OnlineRFPerm; drill with the same three;
+graph algorithms only as keys/features; data path is
+\texttt{seq}$\to(u,i,a,t)\to$\texttt{feature\_engineer}$\to$grid.
+
+\end{document}
