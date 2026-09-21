@@ -46,3 +46,7 @@ PYTHONPATH=. python3 scripts/run_diffusiondb_temporal_fsds.py \
 - Top blend tokens include style/quality phrases (`sharp focus`, `greg rutkowski`, `art by`, …)
 
 Artifacts: `results/diffusiondb_temporal_fsds/`.
+
+## Related
+
+See [`StableDiffusion_Eval_Logic.md`](./StableDiffusion_Eval_Logic.md) for why SD-side evaluation (CFG / sampler / which Y head) is tricky relative to this prototype.
