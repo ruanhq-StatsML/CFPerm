@@ -5,7 +5,8 @@
 
 相关：[`Graph_Shift_Method_Elaboration.md`](Graph_Shift_Method_Elaboration.md) ·  
 [`Tip_Sign_Algorithm_Elaboration.md`](Tip_Sign_Algorithm_Elaboration.md) ·  
-[`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md)
+[`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) ·  
+[`AntiFraud_Eval_Char_Model.md`](AntiFraud_Eval_Char_Model.md)
 
 ---
 
