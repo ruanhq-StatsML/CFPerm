@@ -1,0 +1,59 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,hyperref}
+\geometry{margin=1in}
+
+\title{\textbf{Graph-Shift Method}\\
+\large cmean + MMD + PO on windowed interaction graphs\\
+\large (no community-discovery algorithms)}
+\author{TencentGR summary}
+\date{2026-09-21}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We elaborate the method \emph{as graph shift}: compare edge-feature
+laws on two windows of the $(u,i,t)$ interaction graph; measure with
+conditional mean, RBF-MMD$^2$, and period PO-risk; localize by
+rank-average scores on business entity keys; attribute with one FSDS
+on $K^\star$. Continuous time only changes the sliding windows.
+Community discovery is out of scope here.
+\end{abstract}
+
+\section{Definition}
+$G_W=(V_W,E_W)$ from edges with $t\in W$; features $x_e$ from
+in-window FE only.
+Graph shift $= P^{W_{\mathrm{ref}}}(X)$ vs $P^{W_{\mathrm{cur}}}(X)$
+(and optional $Y=\mathrm{click}$).
+
+\section{Three rulers}
+After W1-only StandardScaler:
+\begin{align*}
+  \delta&=\mu_{\mathrm{cur}}-\mu_{\mathrm{ref}},\\
+  \widehat{\mathrm{MMD}}^2&(X_{\mathrm{ref}},X_{\mathrm{cur}}),\\
+  \mathrm{PO}&:\ \mathrm{mean}(\hat\tau^2\mid v),\ \mathrm{VIMP}.
+\end{align*}
+Entity score $=$ rank-average of (cmean $\ell_2$, MMD$^2$, PO).
+
+\section{Skeleton}
+Monitor global $T_t^{\mathrm{MMD/PO/cmean}}$ $\to R_t$ (when).
+On reject / offline two-window: score entities, Tail/CV/$R$ stop
+$\to K^\star$ (where). One FSDS + signs on $K^\star$ (what).
+Nest \texttt{merchant}$\to$\texttt{user}$\to\texttt{order}.
+
+\section{Why graph shift (not point anomalies)}
+Target is a distributional support block explaining $\delta$, not
+isolated IDs; evidence is shape (MMD) + direction (cmean) + risk (PO).
+
+\section{Prototype map}
+\texttt{feature\_engineer} $\to$ grids;
+\texttt{run\_w1w2\_mmd\_po\_localize\_fsds.py} for two-window;
+continuous $=$ same scores on sliding $(t-h,t)$ vs $(t,t+\Delta t)$.
+
+\section{Takeaway}
+Graph shift measured by cmean+MMD+PO; localize by entity decomposition;
+FSDS only at $K^\star$; no community objective required.
+
+\end{document}

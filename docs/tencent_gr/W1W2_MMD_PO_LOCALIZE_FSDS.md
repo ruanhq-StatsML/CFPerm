@@ -25,7 +25,10 @@ Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
 > [`../summaries/Graph_Localize_Algorithm_Elaboration.md`](../summaries/Graph_Localize_Algorithm_Elaboration.md)  
 > / [`../summaries/Graph_Localize_Algorithm_Elaboration.tex`](../summaries/Graph_Localize_Algorithm_Elaboration.tex)
 >
-> **连续监测可做事项 + 数据接口（MMD+PO+cmean drill；图算法 upstream）：**  
+> **基于 Graph Shift 的方法（不谈社区发现；cmean+MMD+PO）：**  
+> [`../summaries/Graph_Shift_Method_Elaboration.md`](../summaries/Graph_Shift_Method_Elaboration.md)
+>
+> **连续监测可做事项 + 数据接口：**  
 > [`../summaries/Graph_CT_AD_Interface.md`](../summaries/Graph_CT_AD_Interface.md)
 >
 > **连续时间团伙发现（Leiden 换钥匙 / Drill 不换锁）：**  
