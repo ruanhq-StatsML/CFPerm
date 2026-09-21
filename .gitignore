@@ -1,0 +1,5 @@
+# Local dumps
+data/diffusiondb/**/*.parquet
+data/diffusiondb/.cache/
+*.pyc
+__pycache__/
