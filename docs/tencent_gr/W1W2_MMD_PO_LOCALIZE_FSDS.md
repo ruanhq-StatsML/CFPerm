@@ -21,6 +21,10 @@
 Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
 ```
 
+> **算法 elaborate（四联图逐步读法 + Drill 停钻规则）：**  
+> [`../summaries/Graph_Localize_Algorithm_Elaboration.md`](../summaries/Graph_Localize_Algorithm_Elaboration.md)  
+> / [`../summaries/Graph_Localize_Algorithm_Elaboration.tex`](../summaries/Graph_Localize_Algorithm_Elaboration.tex)
+
 ```bash
 PYTHONPATH=. python3 scripts/tencent_gr/run_three_step_subset_localize.py \
   --root data/tencent_subset --max-users 20000 --gap-days 30
