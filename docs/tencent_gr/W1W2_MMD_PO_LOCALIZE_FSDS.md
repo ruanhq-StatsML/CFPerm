@@ -31,6 +31,9 @@ Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
 > **Tip / 正负向与反欺诈排查布控动作：**  
 > [`../summaries/AntiFraud_Tip_Sign_Actions.md`](../summaries/AntiFraud_Tip_Sign_Actions.md)
 >
+> **20-Agent 商业落地 procedure（均分发力，非 math-Eval）：**  
+> [`../summaries/Twenty_Agent_Commercial_Landing.md`](../summaries/Twenty_Agent_Commercial_Landing.md)
+>
 > **反欺诈评估–刻画模型（CT特征+图谱变动+监测波次）：**  
 > [`../summaries/AntiFraud_Eval_Char_Model.md`](../summaries/AntiFraud_Eval_Char_Model.md)
 >
