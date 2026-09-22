@@ -1,0 +1,43 @@
+{
+  "always-student": {
+    "name": "always-student",
+    "accuracy": 0.9444444444444444,
+    "ood_accuracy": 1.0,
+    "id_accuracy": 0.8333333333333334,
+    "teacher_frac": 0.0,
+    "latency": 1.0,
+    "p95_latency": 1.0
+  },
+  "always-teacher": {
+    "name": "always-teacher",
+    "accuracy": 1.0,
+    "ood_accuracy": 1.0,
+    "id_accuracy": 1.0,
+    "teacher_frac": 1.0,
+    "latency": 4.0,
+    "p95_latency": 4.0
+  },
+  "confidence-cascade": {
+    "name": "confidence-cascade",
+    "accuracy": 0.9861111111111112,
+    "ood_accuracy": 1.0,
+    "id_accuracy": 0.9583333333333334,
+    "teacher_frac": 0.4305555555555556,
+    "latency": 2.2916666666666665,
+    "p95_latency": 4.0
+  },
+  "agod-boost": {
+    "name": "agod-boost",
+    "accuracy": 0.9861111111111112,
+    "ood_accuracy": 1.0,
+    "id_accuracy": 0.9583333333333334,
+    "teacher_frac": 0.6944444444444444,
+    "latency": 3.0833333333333335,
+    "p95_latency": 4.0
+  },
+  "diagnostics": {
+    "batch_auc": 0.8118248456790124,
+    "po_risk": 0.2989723358144146,
+    "novelty_thr": 0.32328377675900255
+  }
+}

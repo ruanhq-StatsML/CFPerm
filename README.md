@@ -32,6 +32,23 @@ import cfperm
 
 ```
 
+## Attribution-Guided Online Distillation (AGOD)
+
+`Python/agod` turns CFPerm / RF-Domain **modality-specific gap** estimates into a
+clever covariate that routes online distillation toward the drifting modality.
+
+```bash
+pip install -r requirements-agod.txt
+python -m pytest tests/test_agod.py
+PYTHONPATH=Python python -m agod --quick --out paper/results
+```
+
+The synthetic ChronoBerg stream uses the 1750–1950 calendar: text has covariate
+shift (semantic evolution), audio has concept drift, image is stationary. B1 is
+static uniform distillation, B2 is AUC-only routing, B3 is AGOD.
+
+## R version:
+
 ## R version:
 #### Installation (local)
 
