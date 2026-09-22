@@ -118,10 +118,8 @@ https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 - It gives people concise proxy for efficiently dealing with the model performance degradation in the deployed ML model - distribution shift driver localization is what you will need.
 
 ***The Impossibility Issue for the Disentanglement has deep implications in areas including Econometrics and Quantitative Finance***
-- ****Econometrics****
-For econometrics, the impossibility issue means that observed changes in policy outcomes cannot be uniquely decomposed into covariate shift versus concept drift, nor into individual feature contributions—infinitely many mixtures reproduce the same shift. Rather than pursuing an unidentifiable decomposition, the practical priority is post-hoc subset localization: identifying the subgroups or covariates driving the change. This yields robust, assumption-light diagnostics for policy adjustment.
-- ****Quantitative Finance****
-In quantitative finance, a decline in factor performance or IC likewise cannot be uniquely attributed to exposure drift versus alpha decay, since infinite combinations of universe changes, style rotations, and regime shifts produce identical degradation. Factor diagnostics should therefore focus on subset localization—pinpointing the specific factors, sectors, or regimes responsible—rather than attempting a non-identifiable decomposition. Subset localization is all you need.
+- ****Econometrics**** ~~ For econometrics, the impossibility issue means that observed changes in policy outcomes cannot be uniquely decomposed into covariate shift versus concept drift, nor into individual feature contributions—infinitely many mixtures reproduce the same shift. Rather than pursuing an unidentifiable decomposition, the practical priority is post-hoc subset localization: identifying the subgroups or covariates driving the change. This yields robust, assumption-light diagnostics for policy adjustment.
+- ****Quantitative Finance**** ~~ In quantitative finance, a decline in factor performance or IC likewise cannot be uniquely attributed to exposure drift versus alpha decay, since infinite combinations of universe changes, style rotations, and regime shifts produce identical degradation. Factor diagnostics should therefore focus on subset localization—pinpointing the specific factors, sectors, or regimes responsible—rather than attempting a non-identifiable decomposition. Subset localization is all you need.
 
 
 
