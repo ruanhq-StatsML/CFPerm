@@ -1,0 +1,4 @@
+
+# local amazon shards
+data/amazon_reviews/shards/
+*.tar.gz
