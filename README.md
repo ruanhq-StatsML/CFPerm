@@ -117,8 +117,8 @@ https://colab.research.google.com/drive/1t12mtdzDb9pouSae2bvrSjFcm19miFK2
 - **Consequently, upon observing a notable drop in model performance, we prioritize post-hoc feature selection or localization of distribution-shift drivers over disentangling the shift into concept drift versus covariate shift, as such decomposition is not identifiable, Subset Localization is all you need!**
 - It gives people concise proxy for efficiently dealing with the model performance degradation in the deployed ML model - distribution shift driver localization is what you will need.
 
-
-- ***The Impossibility Issue for the Disentanglement has deep implications in areas including Econometrics and Quantitative Finance***
+\\
+ ***The Impossibility Issue for the Disentanglement has deep implications in areas including Econometrics and Quantitative Finance***
 - ****Econometrics****
 For econometrics, the impossibility issue means that observed changes in policy outcomes cannot be uniquely decomposed into covariate shift versus concept drift, nor into individual feature contributions—infinitely many mixtures reproduce the same shift. Rather than pursuing an unidentifiable decomposition, the practical priority is post-hoc subset localization: identifying the subgroups or covariates driving the change. This yields robust, assumption-light diagnostics for policy adjustment.
 - ****Quantitative Finance****
