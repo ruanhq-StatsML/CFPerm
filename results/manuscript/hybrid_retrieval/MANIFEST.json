@@ -1,0 +1,86 @@
+{
+  "note": "Hybrid retrieval / Graph-RAG prediction tables. Y is fused (or channel) gold-title coverage. Questions are not stored. Gold hit indicators are not X.",
+  "source": "hotpotqa/hotpot_qa distractor validation",
+  "k_sparse": 5,
+  "k_dense": 5,
+  "k_fuse": 5,
+  "dense_channel": "char-ngram HashingVectorizer cosine (not a GPU embedding)",
+  "sparse_channel": "BM25 on the Hotpot distractor candidate pool",
+  "y_fused": "1 iff all supporting titles are in RRF fused top-k",
+  "hop": "dense scores flipped after batch>=4 (embedding-pack swap)",
+  "hybrid_x": [
+    "q_toks",
+    "q_chars",
+    "qmark",
+    "q_ents",
+    "n_cand",
+    "js_overlap",
+    "rank_corr",
+    "sparse_margin",
+    "dense_margin",
+    "rrf_top1_mass",
+    "fuse_uniq",
+    "mean_q_overlap",
+    "ks",
+    "kd"
+  ],
+  "graph_x": [
+    "n_nodes",
+    "n_edges",
+    "mean_deg",
+    "n_cc",
+    "n_q_seeds",
+    "seed_frac",
+    "lcc_frac"
+  ],
+  "n_cand": 10,
+  "pair_x": [
+    "bm25",
+    "dense",
+    "rrf",
+    "rank_sp",
+    "rank_de",
+    "q_overlap",
+    "title_seed",
+    "title_deg",
+    "slot"
+  ],
+  "y_pair": "1 iff this of the 10 wiki titles is a supporting fact",
+  "files": {
+    "xy_hotpot_hybrid.csv": {
+      "name": "fused hybrid native",
+      "n": 1200,
+      "y_pass_rate": 0.5558333333333333,
+      "n_batches": 15
+    },
+    "xy_hotpot_hybrid_hop.csv": {
+      "name": "fused hybrid dense-fracture",
+      "n": 1200,
+      "y_pass_rate": 0.4825,
+      "n_batches": 15
+    },
+    "xy_hotpot_graph.csv": {
+      "name": "fused Y + title-graph X",
+      "n": 1200,
+      "y_pass_rate": 0.5558333333333333,
+      "n_batches": 15
+    },
+    "xy_hotpot_pairs.csv": {
+      "name": "query\u00d710 para pairs",
+      "n": 12000,
+      "y_pass_rate": 0.2,
+      "n_batches": 1200
+    },
+    "xy_hotpot_pairs_hop.csv": {
+      "name": "pairs, dense flipped after cut queries",
+      "n": 12000,
+      "y_pass_rate": 0.2,
+      "n_batches": 1200
+    },
+    "xy_hotpot_two_stream.csv": {
+      "n": 2400,
+      "T": "0=sparse-only usable, 1=dense-only usable",
+      "X": "same hybrid geometry"
+    }
+  }
+}

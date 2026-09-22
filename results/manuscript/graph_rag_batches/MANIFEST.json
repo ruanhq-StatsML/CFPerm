@@ -1,0 +1,60 @@
+{
+  "note": "Graph-RAG serving table: one batch is the aggregate of subgraph features. Native Y: supporting titles in seed \u222a 1-hop. Hop: rewire edges and serve the largest CC after CUT_BATCH (graph-pack / community refresh). Hotpot order is not wall-clock time.",
+  "cut_batch": 4,
+  "n_per": 80,
+  "graph_x": [
+    "n_nodes",
+    "n_edges",
+    "mean_deg",
+    "n_cc",
+    "n_q_seeds",
+    "seed_frac",
+    "lcc_frac"
+  ],
+  "y": "1 iff supporting titles sit in the served pack (local 1-hop vs LCC)",
+  "files": {
+    "xy_graph_query.csv": {
+      "n": 1200,
+      "shape": "one query, graph X"
+    },
+    "xy_graph_query_hop.csv": {
+      "n": 1200,
+      "hop": "rewire edges + serve largest CC after cut"
+    },
+    "xy_graph_batch.csv": {
+      "n": 15,
+      "shape": "one window, aggregated X"
+    },
+    "xy_graph_batch_hop.csv": {
+      "n": 15
+    }
+  },
+  "native": {
+    "name": "native",
+    "n_query": 1200,
+    "n_batch": 15,
+    "y_rate": 0.5341666666666667,
+    "y_pre": 0.515625,
+    "y_post": 0.5409090909090909,
+    "mean_edges_pre": 9.215625,
+    "mean_edges_post": 8.381818181818181,
+    "mu_ref": 0.21435463962552487,
+    "mean_delta": 0.0032938274344796055,
+    "hop_fire_at_cut": false,
+    "n_hop_fires": 0
+  },
+  "community_rewire": {
+    "name": "community_rewire",
+    "n_query": 1200,
+    "n_batch": 15,
+    "y_rate": 0.425,
+    "y_pre": 0.515625,
+    "y_post": 0.39204545454545453,
+    "mean_edges_pre": 9.215625,
+    "mean_edges_post": 8.381818181818181,
+    "mu_ref": 0.21435463962552487,
+    "mean_delta": -0.03279625676317882,
+    "hop_fire_at_cut": false,
+    "n_hop_fires": 2
+  }
+}

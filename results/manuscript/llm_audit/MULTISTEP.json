@@ -1,0 +1,71 @@
+{
+  "note": "Multi-step audit: one row per assistant hop. HH chosen is not Y. Raw text is not stored.",
+  "auditor": "frozen pack score = n_toks + n_chars - 1.5*upper - 0.3*bang; pass iff score > 0.3",
+  "cite": "bai2022hh-rlhf",
+  "files": {
+    "xy_hh_multistep_consistent.csv": {
+      "n": 1200,
+      "n_episodes": 380,
+      "n_batches": 15,
+      "y_pass_rate": 0.3925,
+      "mean_step": 1.3841666666666668,
+      "frac_step_ge_1": 0.6833333333333333,
+      "schema": [
+        "y",
+        "batch",
+        "episode",
+        "step",
+        "x_n_toks",
+        "x_n_chars",
+        "x_avg_word",
+        "x_qmark",
+        "x_bang",
+        "x_hedge",
+        "x_formal",
+        "x_i_count",
+        "x_newlines",
+        "x_upper",
+        "x_refuse",
+        "x_please",
+        "x_thank",
+        "x_step"
+      ],
+      "y_meaning": "1=pass on this hop, 0=fail. Not HH chosen.",
+      "y_is_chosen": false,
+      "path": "results/manuscript/llm_audit/xy_hh_multistep_consistent.csv",
+      "regime": "quiet"
+    },
+    "xy_hh_multistep_hop.csv": {
+      "n": 1200,
+      "n_episodes": 380,
+      "n_batches": 15,
+      "y_pass_rate": 0.5275,
+      "mean_step": 1.3841666666666668,
+      "frac_step_ge_1": 0.6833333333333333,
+      "schema": [
+        "y",
+        "batch",
+        "episode",
+        "step",
+        "x_n_toks",
+        "x_n_chars",
+        "x_avg_word",
+        "x_qmark",
+        "x_bang",
+        "x_hedge",
+        "x_formal",
+        "x_i_count",
+        "x_newlines",
+        "x_upper",
+        "x_refuse",
+        "x_please",
+        "x_thank",
+        "x_step"
+      ],
+      "y_meaning": "1=pass on this hop, 0=fail. Not HH chosen.",
+      "y_is_chosen": false,
+      "path": "results/manuscript/llm_audit/xy_hh_multistep_hop.csv",
+      "regime": "hop"
+    }
+  }
+}

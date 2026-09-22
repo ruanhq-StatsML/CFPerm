@@ -1,0 +1,44 @@
+% Use-case 4: LLM moderation. Paste into the manuscript use-cases section.
+\subsection{LLM moderation}
+\label{sec:usecase-llm-audit}
+A reviewer (human pool, policy model, or external LLM judge) writes a binary decision as traffic arrives.
+The estimand is whether \(P(Y\mid X)\) is still the same auditor map, not the refusal rate and not a preference pair.
+The same two gates cover continuous-time audit and agent reasoning.
+Graph-RAG packs and hybrid retrieval are ordinary serving maps under the same gates.
+
+\paragraph{Prediction table.}
+\(Y\in\{0,1\}\) is pass/fail.
+\(X=(x_{\texttt{n\_toks}},\ldots,x_{\texttt{refuse}},\ldots,x_{\texttt{thank}})\) are reply-level features.
+Arrival windows are stored as \texttt{batch}.
+For \texttt{CFPerm}, two reviewer queues become \(T\in\{0,1\}\).
+Anthropic HH-RLHF \texttt{chosen}/\texttt{rejected} is \emph{not} \(Y\); those fields only mark the helpful versus harmless traffic stream.
+
+\paragraph{Data.}
+Prototype tables (HH helpful/harmless, \(n=1200\) per file) live at
+\texttt{results/manuscript/llm\_audit/xy\_hh\_*.csv}.
+The two-stream CFPerm file is \texttt{xy\_hh\_two\_stream.csv} (\(T=0\) helpful, \(T=1\) harmless).
+More realistic auditor labels, still the same schema, are
+BeaverTails \(\texttt{is\_safe}\) (\texttt{xy\_beavertails.csv}),
+WildGuard \(\texttt{response\_harm\_label}\) (\texttt{xy\_wildguard.csv}),
+and ToxicChat human toxicity (\texttt{xy\_toxicchat.csv});
+\texttt{xy\_real\_two\_stream.csv} stacks BeaverTails against ToxicChat as two queues.
+Multi-step tables (\texttt{xy\_hh\_multistep\_*.csv}) keep the same \(Y\): one row per assistant hop, plus \texttt{x\_step}.
+Episode success is not \(Y\). Rebuild with \texttt{python3 scripts/build\_llm\_audit\_xy.py}
+or \texttt{python3 scripts/build\_llm\_audit\_multistep\_xy.py}.
+Raw prompts are not stored.
+
+\paragraph{Read-out.}
+A hop of \(P(Y\mid X)\) is a policy-pack or judge swap.
+On fire: Top-\(k\) re-review; do not treat the current judge as gold.
+The coordinates of \(X\) are predictors, not an attribution of the fail.
+
+\paragraph{Two gates.}
+Frozen-ref Palm--Nagler online AR-bootstrap: lstsq once on \(D_{\mathrm{ref}}\)
+(same probe as the concept-drift board), \(s_t=\) MSE on batch \(t\),
+\(\Delta_t=s_t-\mu_{\mathrm{ref}}\), fire iff \(\mathrm{CI}_{\mathrm{lo}}>0\).
+Last-two \texttt{hop\_fires} (OnlineRFPerm): refit on \(B_{t-1}\), fire iff
+\(e_{\mathrm{now}}/e_{\mathrm{prev}}\ge\gamma\) with an error floor.
+They answer different questions and are not interchangeable.
+See \texttt{scripts/llm\_audit\_online\_bootstrap\_prototype.py}.
+Continuous serving streams (Graph-RAG, hybrid retrieval, agent next-step) are
+\texttt{docs/manuscript/use\_case\_05\_rag\_agent\_stream.tex}.

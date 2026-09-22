@@ -1,0 +1,127 @@
+[
+  {
+    "id": "judge",
+    "facet": "\u5ba1\u6838 / judge",
+    "table": "results/manuscript/llm_audit/xy_hh_helpful_consistent.csv",
+    "n_x": 13,
+    "x": [
+      "x_n_toks",
+      "x_n_chars",
+      "x_avg_word",
+      "x_qmark",
+      "x_bang",
+      "x_hedge",
+      "x_formal",
+      "x_i_count",
+      "x_newlines",
+      "x_upper",
+      "x_refuse",
+      "x_please",
+      "x_thank"
+    ],
+    "gate": true
+  },
+  {
+    "id": "judge_multistep",
+    "facet": "\u5ba1\u6838 / judge\uff08\u591a\u6b65\uff09",
+    "table": "results/manuscript/llm_audit/xy_hh_multistep_consistent.csv",
+    "n_x": 14,
+    "x": [
+      "x_n_toks",
+      "x_n_chars",
+      "x_avg_word",
+      "x_qmark",
+      "x_bang",
+      "x_hedge",
+      "x_formal",
+      "x_i_count",
+      "x_newlines",
+      "x_upper",
+      "x_refuse",
+      "x_please",
+      "x_thank",
+      "x_step"
+    ],
+    "gate": true
+  },
+  {
+    "id": "graph_query",
+    "facet": "Graph-RAG \u5b50\u56fe\uff08\u4e00\u95ee\u4e00\u884c\uff09",
+    "table": "results/manuscript/graph_rag_batches/xy_graph_query.csv",
+    "n_x": 7,
+    "x": [
+      "x_n_nodes",
+      "x_n_edges",
+      "x_mean_deg",
+      "x_n_cc",
+      "x_n_q_seeds",
+      "x_seed_frac",
+      "x_lcc_frac"
+    ],
+    "gate": true
+  },
+  {
+    "id": "graph_batch",
+    "facet": "Graph-RAG \u5b50\u56fe\uff08\u4e00\u7a97\u4e00\u884c\uff09",
+    "table": "results/manuscript/graph_rag_batches/xy_graph_batch.csv",
+    "n_x": 14,
+    "x": [
+      "x_n_nodes",
+      "x_n_edges",
+      "x_mean_deg",
+      "x_n_cc",
+      "x_n_q_seeds",
+      "x_seed_frac",
+      "x_lcc_frac",
+      "x_n_nodes_std",
+      "x_n_edges_std",
+      "x_mean_deg_std",
+      "x_n_cc_std",
+      "x_n_q_seeds_std",
+      "x_seed_frac_std",
+      "x_lcc_frac_std"
+    ],
+    "gate": false
+  },
+  {
+    "id": "hybrid",
+    "facet": "\u6df7\u5408\u68c0\u7d22",
+    "table": "results/manuscript/hybrid_retrieval/xy_hotpot_hybrid.csv",
+    "n_x": 14,
+    "x": [
+      "x_q_toks",
+      "x_q_chars",
+      "x_qmark",
+      "x_q_ents",
+      "x_n_cand",
+      "x_js_overlap",
+      "x_rank_corr",
+      "x_sparse_margin",
+      "x_dense_margin",
+      "x_rrf_top1_mass",
+      "x_fuse_uniq",
+      "x_mean_q_overlap",
+      "x_ks",
+      "x_kd"
+    ],
+    "gate": true
+  },
+  {
+    "id": "pair",
+    "facet": "Graph-RAG \u5feb\u7167\uff08\u4e00\u95ee \u00d7 10 \u6807\u9898\uff09",
+    "table": "results/manuscript/hybrid_retrieval/xy_hotpot_pairs.csv",
+    "n_x": 9,
+    "x": [
+      "x_bm25",
+      "x_dense",
+      "x_rrf",
+      "x_rank_sp",
+      "x_rank_de",
+      "x_q_overlap",
+      "x_title_seed",
+      "x_title_deg",
+      "x_slot"
+    ],
+    "gate": false
+  }
+]

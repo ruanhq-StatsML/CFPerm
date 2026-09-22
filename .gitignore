@@ -1,0 +1,7 @@
+data/hf_cache/
+*.parquet
+.DS_Store
+__pycache__/
+.Rhistory
+.RData
+experiments/meta.db

@@ -1,0 +1,90 @@
+% Architecture exhibit. Paste before the numbered use-cases.
+% Needs \usepackage{booktabs,array}.
+\subsection{One map, two continuous-time jobs}
+\label{sec:online-serving-gates}
+The object is whether a frozen serving map \(P(Y\mid X)\) is still the same object
+on arrival windows \(\mathrm{batch}\).
+Two gates, not interchangeable: frozen-ref (MSE versus \(D_{\mathrm{ref}}\), online FDR)
+and last-two \texttt{hop\_fires}.
+What we actually run in continuous time is \textbf{moderation} and \textbf{agent reasoning}.
+Graph-RAG packs and hybrid retrieval are ordinary serving maps under the same gates---swap \(Y\), nothing extra.
+Hallucination rate, refusal rate, single-channel Recall, and eventual task success are never \(Y\).
+
+\paragraph{LLM reasoning loop.}
+The four product use-cases share one arrival hop. Nothing else.
+\begin{enumerate}\itemsep=2pt
+\item Observe the current serving pack
+      (audit: policy/judge; agent: tool schema; Graph-RAG: graph pack; hybrid: fused index).
+\item The model takes the next step: write a reply / pick a tool / cite the subgraph / fuse two channels into an answer.
+\item Write \(Y\) for that hop (table below). \(X\) is serving geometry, not raw text.
+\item The frozen \(f_{\mathrm{ref}}\) only predicts \(P(Y\mid X)\).
+\item \(T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}\), rank \(p\), online FDR.
+\end{enumerate}
+Quiet: this trajectory is gold.
+Fire: the current reasoning pack is not gold; swap the cheapest pack; reset.
+Audit can be multi-step: one row per assistant hop; \(Y\) is still pass/fail for that hop, not episode success.
+
+\begin{table}[t]
+\centering
+\caption{Same gates. Top two rows are the continuous-time jobs; bottom two are ordinary serving.
+Fire is a hop of \(P(Y\mid X)\), not a quality score.}
+\label{tab:serving-facets}
+\setlength{\tabcolsep}{4pt}
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.17\linewidth}
+                >{\raggedright\arraybackslash}p{0.27\linewidth}
+                >{\raggedright\arraybackslash}p{0.26\linewidth}
+                >{\raggedright\arraybackslash}p{0.22\linewidth}@{}}
+\toprule
+Facet & \(Y\) & Fire means & Does not mean \\
+\midrule
+Continuous-time audit
+  & pass / fail
+  & policy-pack or judge refresh
+  & refusal rate; HH chosen \\
+Agent reasoning
+  & this hop / path is legal
+    (schema, tool, no loop)
+  & the chain broke, or the agent is spinning
+  & hallucination rate; eventual task success \\
+\midrule
+Graph-RAG pack
+  & citation lands on an edge;
+    supporting nodes sit in the pack
+  & graph-pack or community refresh
+  & single-node relevance \\
+Hybrid retrieval
+  & the fused answer is valid
+  & one channel, or the fusion, broke
+  & single-channel Recall \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Shared loop.}
+Burn-in on \(D_{\mathrm{ref}}\).
+For each batch: score \(T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}\), rank \(p\)-value, online FDR
+(ADDIS/SAFFRON; asynchronous if windows overlap).
+Quiet: keep gold, append \(T\).
+Fire: stop treating the current pack as gold; cheapest refresh that can recover;
+reset the error pool, burn-in, and testing wealth.
+Promote a shadow pack only if the next window is back near \(E_{\mathrm{ref}}\)
+\emph{and} last-two is quiet.
+
+\paragraph{Ordinary serving \(X\).}
+Audit uses reply features; the agent uses observation / tool-schema geometry.
+Graph-RAG needs no extra coordinates: one batch aggregates subgraph features
+(nodes, edges, degree, CCs, query seeds, LCC; if the log is user-id \(\to\) graph list, aggregate the list first).
+\(Y=\) supporting nodes sit in the served pack.
+Hotpot on disk is a pool snapshot: \texttt{batch} is query index, not wall-clock time.
+
+\paragraph{Live tables.}
+The continuous-time audit tables are on disk.
+\texttt{python3 scripts/run\_serving\_gates.py}.
+Two CFPerm objects, not the time gates: group attribution permutes \(T\) and reports \(X_j\);
+multimodal attribution uses the same loop and reports modality blocks.
+
+\paragraph{Read-out.}
+Smooth stream: no fire.
+Fracture at a known cut: fire near onset.
+After a real refresh: reset, then quiet.

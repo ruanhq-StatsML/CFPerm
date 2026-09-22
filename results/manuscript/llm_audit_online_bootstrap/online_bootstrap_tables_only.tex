@@ -1,0 +1,22 @@
+\begin{table}[ht]
+\centering
+\caption{LLM-audit streams. Frozen-ref Palm--Nagler AR-bootstrap on $\Delta_t=s_t-\mu_{\mathrm{ref}}$ (lstsq MSE fitted on $D_{\mathrm{ref}}$, concept-board probe). Fire $=$ $\mathrm{CI}_{\mathrm{lo}}>0$. Delay $=$ batches from the labeled cut to the first fire. Last-two hop@cut is the OnlineRFPerm consecutive-OOS gate, not the bootstrap.}
+\label{tab:llm-audit-online-bootstrap}
+\small
+\begin{tabular}{@{}l l r r r r r@{}}
+\toprule
+Stream & regime & $\mu_{\mathrm{ref}}$ & mean $\Delta$ & boot fires & delay & hop@cut \\
+\midrule
+HH helpful & consistent & 0.171 & 0.037 & 1 & 4.000 & no \\
+HH helpful & hop & 0.171 & 0.279 & 10 & 1.000 & yes \\
+HH harmless & consistent & 0.170 & 0.045 & 9 & 1.000 & no \\
+HH harmless & hop & 0.170 & 0.300 & 9 & 2.000 & yes \\
+BeaverTails & native & 0.228 & 0.023 & 7 & — & --- \\
+BeaverTails & hop & 0.228 & 0.078 & 10 & 1.000 & no \\
+WildGuard & native & 0.084 & -0.027 & 0 & — & --- \\
+WildGuard & hop & 0.084 & 0.747 & 9 & 1.000 & yes \\
+ToxicChat & native & 0.208 & 0.012 & 4 & — & --- \\
+ToxicChat & hop & 0.208 & 0.119 & 10 & 1.000 & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
