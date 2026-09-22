@@ -1,0 +1,90 @@
+{
+  "datasets": [
+    "adult",
+    "yelp_amazon",
+    "mnli"
+  ],
+  "dashboard_png": "/workspace/results/hf_block_aware/dashboard.png",
+  "dashboard_tex": "/workspace/docs/method/BlockAware_HF_dashboard.tex",
+  "summaries": {
+    "adult": {
+      "title": "Adult census \u00b7 income label \u00b7 sex as batch",
+      "pi": {
+        "demography": 0.4797,
+        "work": 0.2903,
+        "hours": 0.181,
+        "capital": 0.0491
+      },
+      "obs_raw": 0.8547,
+      "obs_pi_rf": 0.8489,
+      "comparisons": [
+        {
+          "name": "inject hours (\u03b1=0.40)",
+          "raw": 0.95,
+          "pi_rf": 0.9871,
+          "stack": 0.9873,
+          "pi_rf_on_gt": 0.9473
+        },
+        {
+          "name": "demography\u22a5 + inject hours",
+          "raw": 0.9449,
+          "pi_rf": 0.9869,
+          "stack": 0.9827,
+          "pi_rf_on_gt": 0.9843
+        }
+      ]
+    },
+    "yelp_amazon": {
+      "title": "Yelp vs Amazon \u00b7 sentiment label \u00b7 marketplace as batch",
+      "pi": {
+        "text": 0.5745,
+        "style": 0.3143,
+        "polarity": 0.1112
+      },
+      "obs_raw": 0.7276,
+      "obs_pi_rf": 0.7245,
+      "comparisons": [
+        {
+          "name": "inject polarity (\u03b1=0.70)",
+          "raw": 0.8209,
+          "pi_rf": 0.8169,
+          "stack": 0.8337,
+          "pi_rf_on_gt": 0.6015
+        },
+        {
+          "name": "text\u22a5 + inject polarity",
+          "raw": 0.7936,
+          "pi_rf": 0.8098,
+          "stack": 0.8156,
+          "pi_rf_on_gt": 0.6905
+        }
+      ]
+    },
+    "mnli": {
+      "title": "MultiNLI \u00b7 entailment label \u00b7 fiction vs telephone",
+      "pi": {
+        "premise": 0.5489,
+        "hypothesis": 0.1195,
+        "overlap": 0.3315
+      },
+      "obs_raw": 0.8364,
+      "obs_pi_rf": 0.8181,
+      "comparisons": [
+        {
+          "name": "inject overlap (\u03b1=0.80)",
+          "raw": 0.9239,
+          "pi_rf": 0.9685,
+          "stack": 0.9765,
+          "pi_rf_on_gt": 0.8355
+        },
+        {
+          "name": "premise\u22a5 + inject overlap",
+          "raw": 0.9024,
+          "pi_rf": 0.9772,
+          "stack": 0.9671,
+          "pi_rf_on_gt": 0.9256
+        }
+      ]
+    }
+  }
+}

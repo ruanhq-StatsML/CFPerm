@@ -1,0 +1,32 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Yelp vs Amazon  --  sentiment label  --  marketplace as batch: Stage-1 block shares. $Y$=binary sentiment; W = marketplace (Yelp vs Amazon); reviews truncated to 50 tokens.}
+\begin{tabular}{lccc}
+\toprule
+Decomposition & text & style & polarity \\
+\midrule
+RF VIMP & 0.767 & 0.151 & 0.082 \\
+block AUC & 0.519 & 0.389 & 0.092 \\
+block MMD & 0.435 & 0.429 & 0.136 \\
+LOMO drop & 0.681 & 0.319 & 0.000 \\
+consensus $\pi$ & 0.575 & 0.314 & 0.111 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\caption{Yelp vs Amazon  --  sentiment label  --  marketplace as batch: Stage-2 $\pi$-guided training (5-fold CV AUC).}
+\begin{tabular}{lcccccc}
+\toprule
+Setting & raw RF & $\pi$-RF & pool & $X{+}Z$ & $\Delta_{\pi\mathrm{-RF}}$ & $\pi$-RF on GT \\
+\midrule
+observational & 0.728 & 0.725 & 0.729 & 0.727 & -0.003 & --- \\
+inject polarity ($\alpha$=0.70) & 0.821 & 0.817 & 0.827 & 0.834 & -0.004 & 0.602 \\
+text$\perp$ + inject polarity & 0.794 & 0.810 & 0.823 & 0.816 & +0.016 & 0.691 \\
+\bottomrule
+\end{tabular}
+\end{table}
+

@@ -1,0 +1,29 @@
+You are answering under a measured distribution shift between two batches.
+A frozen domain model decomposed the shift into human channels B_m.
+Use the packet below as a *hard routing prior*, not as a hint you may ignore.
+
+Population gap shares π (prior over which channel drifted):
+  {"arousal": 0.0425, "dominance": 0.034, "text": 0.0934, "valence": 0.8301}
+This-example instance LOMO shares s_m(x) = |ê(x)−ê(x_{-m})| / Σ|·|:
+  {"arousal": 0.0055, "dominance": 0.0268, "text": 0.0336, "valence": 0.9342}
+Blend r = λπ + (1−λ)s used for routing:
+  {"arousal": 0.0203, "dominance": 0.0297, "text": 0.0575, "valence": 0.8925}
+
+Read order (inspect in this order): ['valence', 'text', 'dominance', 'arousal']
+Tools you MAY call: ['vad_valence']
+Tools you must NOT call: ['read_tokens', 'vad_arousal', 'vad_dominance']
+Pack mode: same_expert
+User context concatenates ONLY these blocks, in this order: ['valence']
+Omitted blocks are not in the window (no empty headers).
+Abstain / pack-all: false
+If abstain, ask the user for: []
+critic_must_cite: valence
+
+Rules:
+1. Read packed_blocks in order. Do not retrieve omitted channels.
+2. First reasoning sentence names the packed expert and cites π (prior) and s.
+3. If critic_must_cite is set, evidence must come from that channel.
+4. If abstain is true, do not pack a subset; request ask_missing and stop.
+5. After the answer, emit one JSON line: {"cited": ["<channel>"], "confidence": 0-1}.
+
+Router rationale: Same expert 'valence' (r=0.89 ≥ τ_hi). Pack only that block; CoT must cite valence.
