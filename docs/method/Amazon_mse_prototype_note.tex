@@ -1,0 +1,23 @@
+% Amazon MSE prototype. Shapes and the only score: online rating MSE.
+
+\paragraph{Amazon MSE prototype.}
+The score is online rating MSE: predict the arriving category, then update.
+Live shape on the McAuley heads, $n_{\mathrm{per}}=240$:
+$X\in\mathbb{R}^{2160\times 128}$ (TF-IDF, vocab frozen on batch~0),
+$y\in[1,5]^{2160}$, $\mathrm{batch}\in\{0,\ldots,8\}^{2160}$.
+MSR-VTT $s\in\mathbb{R}^{n\times 2049}$ is not scored here.
+
+\emph{bank.}
+A Wu memory of stored $(x,y)$. The arriving review is a cosine-weighted
+average of stored ratings (Nadaraya--Watson), then the new rows are
+enqueued (cap $800$).
+\emph{sdc.}
+Five star-means, Yu-compensated by the location field
+$\bar x_t-\bar x_{t-1}$. Ablation: it does not cut MSE on this TF-IDF stream.
+\emph{gpm$_{\mathrm{typed}}$.}
+Plateau RidgeSGD with $\Delta w\leftarrow(I-MM^\top)\Delta w$ iff heatmap
+$\hat c$ is loud and $\hat\delta$ is quiet.
+
+On four seeds the instance bank is $1.566$ $(0.063)$ against plateau
+$1.590$ $(0.068)$. Typed GPM is a wash ($1.593$). Star SDC is $2.289$.
+Do not oversell the bank against plateau.

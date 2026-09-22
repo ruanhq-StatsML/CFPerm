@@ -1,0 +1,72 @@
+% Multimodal / batch attribution as the next-stage training adapter.
+% Numbers: Table~\ref{tab:attr-adapter-amazon}.
+
+\paragraph{Attribution as a next-batch training adapter.}
+FSDS / TSS already return a typed hop $(\hat c,\hat\delta)$ on the batch
+relationship board.
+The adapter does not invent a loss: it turns that hop into
+\emph{training weights} for batch $t{+}1$.
+
+\emph{Heatmap $\to$ sample weights.}
+Let $\bar x_s$ be the mean TF-IDF of category $s$.
+The causal proxy for the arriving domain is the last observed mean
+$\bar x_{t-1}$. Closed-form ridge on all past rows uses
+\begin{equation}
+  w_s
+  =
+  \exp\bigl(\gamma(\cos(\bar x_s,\bar x_{t-1})-1)\bigr),
+\end{equation}
+i.e.\ the same $\mathrm{cosine}(B_i,B_j)$ board that FSDS already plots,
+as importance weights (Shimodaira / covariate-shift IW, with the heatmap as
+the density-ratio surrogate on category means).
+On Amazon Reviews 2023 this hop-weighted ridge is the strongest online MSE
+cut we measure against plateau RidgeSGD and the Wu instance bank.
+
+\emph{Typed mix.}
+The Wu bank (cosine Nadaraya--Watson on stored $(x,y)$) is the right
+predictor when $P(Y\mid X)$ is stable and $P(X)$ moved.
+Hop ridge is the right predictor when $P(Y\mid X)$ must be re-fit.
+The locked TSS signs set the mixture
+\begin{equation}
+  w_{\mathrm{bank}}
+  =
+  \frac{1+2\hat c}{1+2\hat c+4\hat\delta},
+\end{equation}
+optionally blended with an EWMA stack of the two predictors' recent MSE.
+Large $\hat c$, quiet $\hat\delta$ $\Rightarrow$ bank up / step down.
+Large $\hat\delta$ $\Rightarrow$ bank down / ridge up.
+Both quiet $\Rightarrow$ hold.
+
+\emph{Rolling observations.}
+Per hop we log $(\hat c,\hat\delta)$, mean/max hop weight, and each
+predictor's online MSE.
+Those are the online rolling-window statistics that drive the gate; they
+are not a second product loop.
+
+\emph{Package baseline.}
+\texttt{river}'s PARegressor is the off-the-shelf online linear baseline on
+the same stream; on sparse TF-IDF it does not beat closed-form ridge.
+The gain is from \emph{attribution-weighted} batch reuse, not from a new
+optimizer.
+
+\emph{Multimodal extension --- modality-$\pi$ hop.}
+On MSR-VTT the heatmap hop is modality-aware. Let $\bar x_s^{(m)}$ be the
+mean of modality block $m\in\{\mathrm{video},\mathrm{audio},\mathrm{text}\}$
+in batch $s$, and let $\pi_m$ be that modality's share on the causal hop
+(PO-risk VIMP mass blended with RF-Domain share). Sample weights become
+\begin{equation}
+  w_s
+  =
+  \exp\Bigl(
+    \gamma\sum_m \pi_m\bigl(\cos(\bar x_s^{(m)},\bar x_{t-1}^{(m)})-1\bigr)
+  \Bigr).
+\end{equation}
+With a single text modality this collapses to the Amazon hop ridge.
+$\pi_m$ is the \emph{contribution} of modality $m$ to the hop: it tells the
+adapter which past batches to trust when the hop is video-driven vs
+text-driven. PO-risk VIMP is \emph{not} used to reweight coordinates for
+prediction (that raises Amazon MSE); it is used to form $\pi_m$ and to
+choose tokens/patches for zero/noise/missing mask attribution
+(Table~\ref{tab:po-hop-ridge}).
+Amazon remains the scalar-text MSE board for the weight logic;
+Table~\ref{tab:attr-adapter-amazon} is the Amazon score.
