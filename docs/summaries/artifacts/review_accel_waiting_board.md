@@ -4,6 +4,8 @@
 
 OOD 节奏：paused_10min→gate_check_every_6h
 
+真人反馈：0 · smoke：1
+
 下一步：把 review_agent_card.md 贴给 1 位真人审核，打 useful/not_useful（--reviewer 真名）
 
 ## 现在做

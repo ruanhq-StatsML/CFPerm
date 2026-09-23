@@ -1,12 +1,14 @@
 {
   "board_type": "review_accel_waiting",
-  "ts": "2026-09-23T10:31:33Z",
+  "ts": "2026-09-23T12:01:34Z",
   "status": "NOT_READY",
   "ready": false,
   "feature_freeze": true,
   "blocker": "need_1_human_useful_or_not_useful",
   "next_action": "把 review_agent_card.md 贴给 1 位真人审核，打 useful/not_useful（--reviewer 真名）",
   "ood_timer": "paused_10min→gate_check_every_6h",
+  "n_human_feedback": 0,
+  "n_smoke_feedback": 1,
   "do_now": [
     "发 handoff §0 IM 一句话给审核同学",
     "填 handoff 责任人 OWNER / 审核同学",
