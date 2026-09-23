@@ -225,12 +225,14 @@ Wired into \texttt{run\_agod\_po\_risk\_train\_compare.py} cell summary.
 \end{enumerate}
 
 \subsection{Phase R5 --- Productize (only after R1--R3)}
+\textbf{Status: landed --- export path + schedule card wired.}
 \begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
-  \item Export per-window focus decisions into
-        \texttt{po\_roi\_window\_log} (ROI SQL).
-  \item Dashboard: dominant next modality + cumulative FLOPs saved.
-  \item Do \emph{not} claim inference latency; keep Acc constraint in
-        ship gate.
+  \item \texttt{agod/po\_roi\_export.py}: rows$\to$\texttt{po\_roi\_window\_log};
+        compare writes sqlite + jsonl under \texttt{results/agod\_po\_risk\_train/}.
+  \item Default schedule card applied per $|M|$ unless
+        \texttt{--no-schedule-card}.
+  \item Do \emph{not} claim inference latency; ship gate stays Acc+FLOPs
+        in SQL views.
 \end{enumerate}
 
 \subsection{Out of roadmap (explicit)}

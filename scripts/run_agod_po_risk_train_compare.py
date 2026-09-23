@@ -42,12 +42,14 @@ from agod.po_risk_train import (
     next_step_actuators,
     next_step_actuators_fused,
     opportunity_rank,
+    pick_default_schedule_card,
     po_iptw_weights,
     realize_step_alloc,
     row_po_residual,
     step_flops_rel,
     stream_reject_proxy,
 )
+from agod.po_roi_export import export_roi_sqlite, rows_to_roi_records, write_roi_jsonl
 from agod.proto_drift import ModalityPrototypeBank
 from agod.shift import residual_concept
 
@@ -723,11 +725,22 @@ def main() -> None:
         action="store_true",
         help="Disable R3 reject-gated sample weights",
     )
+    ap.add_argument(
+        "--no-schedule-card",
+        action="store_true",
+        help="Disable R4 M>=3/M=2 schedule card defaults",
+    )
+    ap.add_argument(
+        "--no-export-roi",
+        action="store_true",
+        help="Disable R5 ROI sqlite/jsonl export",
+    )
     args = ap.parse_args()
+    apply_card = not args.no_schedule_card
+    do_export = not args.no_export_roi
 
     device = torch.device("cpu")
     metric_cfg = PORiskMetricConfig()
-    # stronger actuators so PO versions diverge on next-window train
     act_cfg = NextStepActuatorConfig(beta_lr=0.20, freeze_theta=0.14, total_steps=40, min_steps=2)
 
     payload: Dict[str, Any] = {
@@ -741,11 +754,10 @@ def main() -> None:
             "step_mode": args.step_mode,
             "row_weight_mode": args.row_weight_mode,
             "enable_row_iptw": not args.no_row_iptw,
-            "metric_cfg": metric_cfg.__dict__,
-            "act_cfg": act_cfg.__dict__,
+            "apply_schedule_card": apply_card,
+            "export_roi": do_export,
         },
     }
-    # gate dataclass not JSON-serializable cleanly
     payload["config"]["metric_cfg"] = {
         "tau": metric_cfg.tau,
         "lam_cov": metric_cfg.lam_cov,
@@ -753,6 +765,16 @@ def main() -> None:
         "ema_po": metric_cfg.ema_po,
         "budget_floor": metric_cfg.budget_floor,
     }
+    payload["config"]["act_cfg"] = {
+        "beta_lr": act_cfg.beta_lr,
+        "freeze_theta": act_cfg.freeze_theta,
+        "total_steps": act_cfg.total_steps,
+        "min_steps": act_cfg.min_steps,
+    }
+
+    schema_sql = args.root / "docs/agod/po_posttrain_roi_map.sql"
+    roi_db = args.out / "po_posttrain_roi.sqlite"
+    all_roi: List[Dict[str, Any]] = []
 
     for ds in args.datasets:
         packed = load_dataset(args.root, ds, args.max_n, args.seed)
@@ -761,6 +783,33 @@ def main() -> None:
             continue
         feats, y, mods, name = packed
         print(f"== {name} mods={mods} n={y.shape[0]} ==")
+        mcfg = PORiskMetricConfig(
+            tau=metric_cfg.tau,
+            lam_cov=metric_cfg.lam_cov,
+            gamma_delta=metric_cfg.gamma_delta,
+            ema_po=metric_cfg.ema_po,
+            budget_floor=metric_cfg.budget_floor,
+            omega_long=metric_cfg.omega_long,
+            omega_short0=metric_cfg.omega_short0,
+            spike_gain=metric_cfg.spike_gain,
+        )
+        acfg = NextStepActuatorConfig(
+            beta_lr=act_cfg.beta_lr,
+            freeze_theta=act_cfg.freeze_theta,
+            total_steps=act_cfg.total_steps,
+            min_steps=act_cfg.min_steps,
+        )
+        card = pick_default_schedule_card(len(mods)) if apply_card else None
+        if card:
+            mcfg.ema_po = float(card["ema_po"])
+            mcfg.omega_long = float(card["omega_long"])
+            mcfg.omega_short0 = float(card["omega_short0"])
+            mcfg.spike_gain = float(card["spike_gain"])
+            mcfg.tau = float(card["tau"])
+            mcfg.budget_floor = float(card["budget_floor"])
+            acfg.freeze_theta = float(card["freeze_theta"])
+            print(f"  schedule_card={card['card_id']} freeze_theta={acfg.freeze_theta}")
+
         cells: Dict[str, Any] = {}
         for ver in args.versions:
             print(f"  [{ver}] ...", flush=True)
@@ -773,8 +822,8 @@ def main() -> None:
                 n_windows=args.n_windows,
                 seed=args.seed + 17,
                 device=device,
-                metric_cfg=metric_cfg,
-                act_cfg=act_cfg,
+                metric_cfg=mcfg,
+                act_cfg=acfg,
                 step_mode=args.step_mode,
                 row_weight_mode=args.row_weight_mode,
                 enable_row_iptw=not args.no_row_iptw,
@@ -784,6 +833,27 @@ def main() -> None:
                 f"mse={cells[ver]['mean_mse_post']:.4f} "
                 f"flops={cells[ver]['mean_flops_rel']:.3f}"
             )
+            if do_export:
+                recs = rows_to_roi_records(
+                    cells[ver].get("rows") or [],
+                    run_id=f"{name}:{ver}",
+                    pack=name,
+                    mods=mods,
+                    acc_equal=None,
+                    schedule_card_id=(card or {}).get("card_id"),
+                )
+                for rec in recs:
+                    rec["version"] = ver
+                    if recs and rec["window_t"] == recs[-1]["window_t"]:
+                        rec["t_to_acc_star"] = cells[ver].get("t_to_acc_star")
+                all_roi.extend(recs)
+
+        if do_export and "equal" in cells:
+            acc_eq = float(cells["equal"]["mean_acc_post"])
+            for rec in all_roi:
+                if rec.get("pack") == name:
+                    rec["acc_equal"] = acc_eq
+
         base = cells["equal"]
         summary = {v: summarize_cell(cells[v], base) for v in cells}
         ranking = opportunity_rank(list(summary.values()), baseline="equal")
@@ -793,11 +863,18 @@ def main() -> None:
             "summary": summary,
             "ranking": ranking,
             "cells": light,
+            "schedule_card": card,
         }
         top = ranking[0]["version"] if ranking else "n/a"
         print(f"  top opportunity: {top}")
 
     args.out.mkdir(parents=True, exist_ok=True)
+    if do_export and all_roi and schema_sql.is_file():
+        info = export_roi_sqlite(roi_db, all_roi, schema_sql=schema_sql)
+        write_roi_jsonl(args.out / "po_roi_window_log.jsonl", all_roi)
+        payload["roi_export"] = info
+        print(f"ROI export: {info}")
+
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     docs = args.root / "docs/agod"
     docs.mkdir(parents=True, exist_ok=True)

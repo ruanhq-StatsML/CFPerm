@@ -78,7 +78,7 @@ INSERT OR REPLACE INTO po_roi_logic VALUES
  'PO_i=|Y-μ| (residual under control fit; not intrinsic hardness)',
  'reject',
  'default w∝√PO; alts prop/cbrt/inv/dre/top-k; calm w=1',
- 'Subset = high-residual rows in rejected batch. High PO ≠ hard label; may be noise/outlier/bad μ.'),
+ 'Subset = high-residual rows in rejected batch. High PO ≠ hard label; may be noise/outlier/bad μ.');
 
 -- ===========================================================================
 -- 3) Window log (fill from train loop)
@@ -107,6 +107,11 @@ CREATE TABLE IF NOT EXISTS po_roi_window_log (
   next_mse         REAL,
   next_mse_uniform REAL,
   hard_p_at_20     REAL,
+  -- R5 export extras (from compare / schedule cards)
+  row_weight_mode  TEXT,
+  mean_row_w_next  REAL,
+  schedule_card_id TEXT,
+  version          TEXT,
   PRIMARY KEY (run_id, window_t)
 );
 

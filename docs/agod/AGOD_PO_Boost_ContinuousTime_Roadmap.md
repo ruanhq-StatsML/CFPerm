@@ -41,7 +41,7 @@ PO_t  →  滤波(L=EMA, S=ΔPO, α)  →  执行器 u_{t+1}  →  θ_{t+1}
 | **R2** 代码落地 | `realize_step_alloc` + block schedule；compare 默认 `step_mode=per_mod`；`--step-mode shared` 作 LR-only 对照 | Affec：per_mod vs shared 的 \(T(\mathrm{Acc}^\star)\) |
 | **R3** 代码落地 | `po_iptw_weights` + `stream_reject_proxy`；compare 因果 \(w_{t+1}\)；calm \(w=1\) | Affec：reject 窗 next-MSE；换真 RFPerm flag |
 | **R4** 骨架+卡 | `schedule_param_grid` / `rank_schedule_pareto`；`configs/agod_po_schedule_cards.json`（M≥3 / M=2） | Affec 填 Pareto 数字 |
-| **R5** | 填 ROI SQL + ship gate | 业务只看 SQL，不报推理延迟 |
+| **R5** 落地 | `po_roi_export`→sqlite/jsonl；compare 默认挂 schedule card + ROI 导出 | Affec 填满后读 `v_roi_ship_gate` |
 
 **不做：** α 反传当主路由；动 Drill；审出 NOT_READY 时堆 feature。
 
