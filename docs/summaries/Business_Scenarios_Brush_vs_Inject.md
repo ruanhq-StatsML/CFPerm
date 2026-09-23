@@ -4,7 +4,7 @@
 > 本包只做 L1 可读分流；场景 = 运营词典，**不是**自动定罪分类器。  
 > 读卡顺序永远是：`sign_Dy`（极性）→ 主 tip 桶（哪条队）→ 人可改队。
 
-相关：[`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) · [`Scope_Review_Agent_Card.md`](Scope_Review_Agent_Card.md)
+相关：[`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) · [`Scope_Review_Agent_Card.md`](Scope_Review_Agent_Card.md) · [`Feature_Brush_LLM_SelfEvolution.md`](Feature_Brush_LLM_SelfEvolution.md)（选特征·刷量·LLM 出点子·评估·self-evolution）
 
 ---
 
