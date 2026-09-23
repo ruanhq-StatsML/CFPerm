@@ -210,12 +210,18 @@ Wired into \texttt{run\_agod\_po\_risk\_train\_compare.py} cell summary.
         always-$\sqrt{}$; swap proxy for real OnlineRFPerm flag.
 \end{enumerate}
 
-\subsection{Phase R4 --- Continuous schedule polish}
+###{Phase R4 --- Continuous schedule polish}
+\textbf{Status: skeleton + default cards locked (Affec sweep pending).}
 \begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
-  \item Sweep $(\rho,\omega_L^{0},g,\theta_{\mathrm{fr}})$ on Acc@FLOPs
-        Pareto.
-  \item Optional: time-varying $\tau(t)$ (sharper when spike\_ratio high).
-  \item Exit: default config card locked for $M\ge3$ vs $M=2$.
+  \item Grid helper \texttt{schedule\_param\_grid} +
+        \texttt{rank\_schedule\_pareto} / \texttt{pareto\_nondominated}
+        (Acc@FLOPs; ship gate first).
+  \item Locked cards in \texttt{configs/agod\_po\_schedule\_cards.json}
+        and \texttt{DEFAULT\_SCHEDULE\_CARDS}:
+        $M\ge3$ ($\theta_{\mathrm{fr}}{=}0.14$) vs $M{=}2$
+        ($\theta_{\mathrm{fr}}{=}0.35$, softer $\tau$).
+  \item Remaining: fill grid metrics from Affec smoke; optional
+        $\tau(t)$ when spike\_ratio high.
 \end{enumerate}
 
 \subsection{Phase R5 --- Productize (only after R1--R3)}

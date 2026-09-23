@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "purpose": "R4 locked default schedule cards for PO-boost post-train (Acc@FLOPs)",
+  "ship_gate": "flops_rel < 1 AND delta_acc >= -0.005",
+  "cards": {
+    "M_ge_3": {
+      "label": "multi-mod (M>=3)",
+      "ema_po": 0.55,
+      "omega_long": 0.55,
+      "omega_short0": 0.45,
+      "spike_gain": 1.25,
+      "freeze_theta": 0.14,
+      "tau": 0.30,
+      "budget_floor": 0.15,
+      "step_mode": "per_mod",
+      "row_weight_mode": "sqrt",
+      "notes": "Allow freeze; primary KPI cumFLOPs@Acc*; Affec-like"
+    },
+    "M_eq_2": {
+      "label": "two-mod (M=2)",
+      "ema_po": 0.55,
+      "omega_long": 0.70,
+      "omega_short0": 0.30,
+      "spike_gain": 1.0,
+      "freeze_theta": 0.35,
+      "tau": 0.40,
+      "budget_floor": 0.20,
+      "step_mode": "per_mod",
+      "row_weight_mode": "sqrt",
+      "notes": "S5 honest noop expected unless freeze fires; soft LR is the lever"
+    }
+  },
+  "sweep_axes": ["ema_po", "omega_long", "spike_gain", "freeze_theta", "tau"],
+  "objectives": {
+    "minimize": ["mean_flops_rel", "t_to_acc_star"],
+    "maximize": ["delta_acc", "mean_freeze_jaccard"]
+  }
+}

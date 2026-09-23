@@ -194,3 +194,35 @@ def test_po_iptw_reject_gated_calm_ones():
         po_mean_thresh=0.05,
     )
     assert loud["rejected"] is True
+
+
+def test_schedule_pareto_and_default_cards():
+    schedule_param_grid = _mod.schedule_param_grid
+    rank_schedule_pareto = _mod.rank_schedule_pareto
+    pick_default_schedule_card = _mod.pick_default_schedule_card
+    schedule_ship_pass = _mod.schedule_ship_pass
+    grid = schedule_param_grid(
+        ema_po=(0.55,),
+        omega_long=(0.55,),
+        spike_gain=(1.25,),
+        freeze_theta=(0.14, 0.35),
+        tau=(0.3,),
+    )
+    assert len(grid) == 2
+    assert schedule_ship_pass(mean_flops_rel=0.7, delta_acc=-0.004)
+    assert not schedule_ship_pass(mean_flops_rel=0.7, delta_acc=-0.01)
+    pts = [
+        {"id": "a", "mean_flops_rel": 0.70, "delta_acc": -0.003, "t_to_acc_star": 5},
+        {"id": "b", "mean_flops_rel": 0.85, "delta_acc": 0.01, "t_to_acc_star": 3},
+        {"id": "c", "mean_flops_rel": 1.0, "delta_acc": 0.02, "t_to_acc_star": 2},
+        {"id": "d", "mean_flops_rel": 0.90, "delta_acc": -0.02, "t_to_acc_star": 4},
+    ]
+    front = rank_schedule_pareto(pts, require_ship_pass=True)
+    ids = {r["id"] for r in front}
+    assert "d" not in ids  # fails Acc gate
+    assert "c" not in ids  # flops_rel=1 fails ship
+    assert front[0]["id"] in ("a", "b")
+    card3 = pick_default_schedule_card(5)
+    card2 = pick_default_schedule_card(2)
+    assert card3["card_id"] == "M_ge_3" and card3["freeze_theta"] == 0.14
+    assert card2["card_id"] == "M_eq_2" and card2["freeze_theta"] == 0.35

@@ -785,3 +785,176 @@ def continuous_gain_metrics(
         "n_windows": len(rows),
         "acc_star": float(acc_star),
     }
+
+
+# ---------------------------------------------------------------------------
+# R4 --- schedule Pareto skeleton + locked default cards
+# ---------------------------------------------------------------------------
+
+
+DEFAULT_SCHEDULE_CARDS: dict[str, dict] = {
+    # Affec-like multi-mod: freeze can fire; fuse long/short meaningful
+    "M_ge_3": {
+        "label": "multi-mod (M>=3)",
+        "ema_po": 0.55,
+        "omega_long": 0.55,
+        "omega_short0": 0.45,
+        "spike_gain": 1.25,
+        "freeze_theta": 0.14,
+        "tau": 0.30,
+        "budget_floor": 0.15,
+        "step_mode": "per_mod",
+        "row_weight_mode": "sqrt",
+        "notes": "Allow freeze; Acc gate ΔAcc>=-0.005; primary KPI cumFLOPs@★",
+    },
+    # Food/Fashion/COCO: freeze rarely bites — soft LR + budget floor only
+    "M_eq_2": {
+        "label": "two-mod (M=2)",
+        "ema_po": 0.55,
+        "omega_long": 0.70,
+        "omega_short0": 0.30,
+        "spike_gain": 1.0,
+        "freeze_theta": 0.35,
+        "tau": 0.40,
+        "budget_floor": 0.20,
+        "step_mode": "per_mod",
+        "row_weight_mode": "sqrt",
+        "notes": "Honest S5: expect flops_rel≈1 unless freeze_theta very high fires",
+    },
+}
+
+
+def schedule_param_grid(
+    *,
+    ema_po: Sequence[float] = (0.40, 0.55, 0.70),
+    omega_long: Sequence[float] = (0.40, 0.55, 0.70),
+    spike_gain: Sequence[float] = (1.0, 1.25),
+    freeze_theta: Sequence[float] = (0.10, 0.14, 0.35),
+    tau: Sequence[float] = (0.30, 0.40),
+) -> list[dict]:
+    """Cartesian skeleton for R4 Acc@FLOPs sweeps (fill metrics externally)."""
+    grid = []
+    for rho in ema_po:
+        for ol in omega_long:
+            for g in spike_gain:
+                for th in freeze_theta:
+                    for t in tau:
+                        grid.append(
+                            {
+                                "ema_po": float(rho),
+                                "omega_long": float(ol),
+                                "omega_short0": float(1.0 - float(ol)),
+                                "spike_gain": float(g),
+                                "freeze_theta": float(th),
+                                "tau": float(t),
+                            }
+                        )
+    return grid
+
+
+def schedule_ship_pass(
+    *,
+    mean_flops_rel: float,
+    delta_acc: float,
+    acc_tol: float = -0.005,
+) -> bool:
+    """ROI_A ship gate: FLOPs cut with Acc held."""
+    return bool(float(mean_flops_rel) < 1.0 and float(delta_acc) >= float(acc_tol))
+
+
+def pareto_nondominated(
+    points: Sequence[Mapping],
+    *,
+    minimize: Sequence[str] = ("mean_flops_rel", "t_to_acc_star"),
+    maximize: Sequence[str] = ("delta_acc", "mean_freeze_jaccard"),
+) -> list[dict]:
+    """Filter to Pareto front (missing objectives skipped per point)."""
+    pts = [dict(p) for p in points]
+    if not pts:
+        return []
+
+    def worse_or_eq(a: Mapping, b: Mapping) -> bool:
+        """True if a is dominated or equal on all comparable axes (b better)."""
+        saw = False
+        for k in minimize:
+            if a.get(k) is None or b.get(k) is None:
+                continue
+            saw = True
+            if float(a[k]) < float(b[k]):
+                return False
+        for k in maximize:
+            if a.get(k) is None or b.get(k) is None:
+                continue
+            saw = True
+            if float(a[k]) > float(b[k]):
+                return False
+        return saw
+
+    front = []
+    for i, p in enumerate(pts):
+        dominated = False
+        for j, q in enumerate(pts):
+            if i == j:
+                continue
+            # q dominates p if p is worse_or_eq than q and strict on ≥1 axis
+            if not worse_or_eq(p, q):
+                continue
+            strict = False
+            for k in minimize:
+                if p.get(k) is None or q.get(k) is None:
+                    continue
+                if float(p[k]) > float(q[k]):
+                    strict = True
+            for k in maximize:
+                if p.get(k) is None or q.get(k) is None:
+                    continue
+                if float(p[k]) < float(q[k]):
+                    strict = True
+            if strict:
+                dominated = True
+                break
+        if not dominated:
+            front.append(p)
+    return front
+
+
+def rank_schedule_pareto(
+    points: Sequence[Mapping],
+    *,
+    require_ship_pass: bool = True,
+) -> list[dict]:
+    """Rank schedule points: ship-pass first, then Pareto, then flops then T★."""
+    scored = []
+    for p in points:
+        q = dict(p)
+        fl = float(q.get("mean_flops_rel", 1.0))
+        da = float(q.get("delta_acc", 0.0))
+        q["ship_pass"] = schedule_ship_pass(mean_flops_rel=fl, delta_acc=da)
+        q["flops_saved"] = 1.0 - fl
+        scored.append(q)
+    pool = [p for p in scored if p["ship_pass"]] if require_ship_pass else scored
+    if not pool:
+        pool = scored
+    front = pareto_nondominated(pool)
+    front.sort(
+        key=lambda r: (
+            0 if r.get("ship_pass") else 1,
+            float(r.get("mean_flops_rel", 1.0)),
+            float(r["t_to_acc_star"])
+            if r.get("t_to_acc_star") is not None
+            else 1e9,
+            -float(r.get("delta_acc", 0.0)),
+        )
+    )
+    for i, r in enumerate(front):
+        r["pareto_rank"] = i
+    return front
+
+
+def pick_default_schedule_card(n_mods: int) -> dict:
+    """Locked R4 defaults by modality count."""
+    key = "M_ge_3" if int(n_mods) >= 3 else "M_eq_2"
+    card = dict(DEFAULT_SCHEDULE_CARDS[key])
+    card["card_id"] = key
+    card["n_mods"] = int(n_mods)
+    return card
