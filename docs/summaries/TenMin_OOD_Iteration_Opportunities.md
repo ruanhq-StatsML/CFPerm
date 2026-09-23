@@ -82,6 +82,7 @@
 | B15 | **对账差异流** | 财务差异 ∧ 波次 → 案件包 | 资损闭环 |
 | B16 | **工单自定义字段映射**（scope内） | summary/direction → ticket_custom_fields POST | 审出接通现网 |
 | B17 | **有用/没用回流 CLI**（scope内） | 审出卡 → review_feedback.jsonl | 人分钟闭环 |
+| B18 | **有用率按队列汇总**（scope内） | feedback.jsonl → summary JSON | 运营周报 |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 
