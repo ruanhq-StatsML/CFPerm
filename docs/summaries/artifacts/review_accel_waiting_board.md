@@ -18,3 +18,5 @@ OOD 节奏：paused_10min→gate_check_every_6h
 - 新 tip 排序模型 / Web UI / 自动覆盖 flags / 新行业 overlay / ETA / 规则包
 
 Handoff：`docs/summaries/artifacts/review_accel_human_handoff.md`
+
+刻画/预测（等人打标逻辑）：[`../Human_Label_Wait_Characterize_Predict.md`](../Human_Label_Wait_Characterize_Predict.md)
