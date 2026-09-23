@@ -91,6 +91,7 @@
 | B24 | **审出卡 SLA 紧迫度**（scope内） | gap_days→urgent/tight + 工单字段 | 清队人分钟 |
 | B25 | **工单字段 webhook dry-run**（scope内） | ticket_custom_fields → POST/收据 | 现网接通 |
 | B26 | **shared_context.eta_soft_hint**（scope内） | 同卡只读提示给审核+ETA | 双 agent |
+| B27 | **审出加速包 e2e smoke**（scope内） | export→反馈→建议→dry-run 一键 | 交接演示 |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 
