@@ -76,3 +76,5 @@ def test_sla_urgency_from_gap_days():
     assert card["review_hint"]["sla_urgency"]["level"] == "urgent"
     assert card["ticket_custom_fields"]["graph_shift_sla_level"] == "urgent"
     assert "SLA: urgent" in card["paste_for_agent"]
+    assert card["shared_context"]["eta_soft_hint"] == "lower_confidence"
+    assert card["ticket_custom_fields"]["graph_shift_eta_soft_hint"] == "lower_confidence"

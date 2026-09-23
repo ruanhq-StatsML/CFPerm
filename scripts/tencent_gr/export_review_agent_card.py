@@ -161,6 +161,31 @@ def sla_from_support(
     return {"level": level, "gap_days": gap_f, "reason": reason, "copy": copy}
 
 
+def shared_context_for_agents(
+    *,
+    sign_dy: str,
+    sla: Dict[str, Any],
+    gate_allow: bool,
+) -> Dict[str, Any]:
+    """One paste block: review agent acts now; ETA can soft-gate later."""
+    if not gate_allow:
+        eta_hint = "noop"
+        review_note = "灰度关闭：仅观察"
+    elif sign_dy in ("pos", "neg") or sla.get("level") in ("urgent", "tight"):
+        eta_hint = "lower_confidence"
+        review_note = "图谱在动：优先本队列；ETA 侧建议降置信（只读提示）"
+    else:
+        eta_hint = "noop"
+        review_note = "分布平：常规审出"
+    return {
+        "sign_Dy": sign_dy,
+        "sla_level": sla.get("level"),
+        "eta_soft_hint": eta_hint,
+        "review_note": review_note,
+        "disclaimer": "shared_context 只读提示，不自动改 ETA/封禁",
+    }
+
+
 def build_card(
     blob: Dict[str, Any],
     *,
@@ -221,6 +246,11 @@ def build_card(
         card["review_hint"]["sla_urgency"] = sla_from_support(
             support, sign_dy=sign_dy, gate_allow=False
         )
+    sla_final = card["review_hint"]["sla_urgency"]
+    shared = shared_context_for_agents(
+        sign_dy=sign_dy, sla=sla_final, gate_allow=gate["allow"]
+    )
+    card["shared_context"] = shared
     lines = [
         "【审核上下文·图谱变动线索】",
         f"灰度: allow={gate['allow']} reason={gate['reason']}",
@@ -229,8 +259,8 @@ def build_card(
         f"支撑: localize_k={card['support'].get('localize_k')} "
         f"edges={card['support'].get('n_localized_edges')}",
         f"建议队列: {card['review_hint']['queue_bucket']}",
-        f"SLA: {card['review_hint']['sla_urgency']['level']} "
-        f"({card['review_hint']['sla_urgency']['copy']})",
+        f"SLA: {sla_final['level']} ({sla_final['copy']})",
+        f"共享: eta_soft_hint={shared['eta_soft_hint']} | {shared['review_note']}",
         f"读法: {card['review_hint']['outcome_read']}",
         "Tips:",
     ]
@@ -253,8 +283,9 @@ def build_card(
         "graph_shift_gray_allow": gate["allow"],
         "graph_shift_gray_reason": gate["reason"],
         "graph_shift_tip_industry": overlay.get("industry", "default"),
-        "graph_shift_sla_level": card["review_hint"]["sla_urgency"]["level"],
-        "graph_shift_sla_gap_days": card["review_hint"]["sla_urgency"]["gap_days"],
+        "graph_shift_sla_level": sla_final["level"],
+        "graph_shift_sla_gap_days": sla_final["gap_days"],
+        "graph_shift_eta_soft_hint": shared["eta_soft_hint"],
     }
     return card
 
