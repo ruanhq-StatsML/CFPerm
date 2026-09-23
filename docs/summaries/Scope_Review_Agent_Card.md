@@ -26,6 +26,7 @@
 2. 卡内固定字段：`K*` 摘要、`direction`、`tips`、推荐审出话术桶  
 3. CLI 一键：`summary.json` → `review_agent_card.json` / `.md` / `ticket_custom_fields.json`  
 4. 任务卡验收句：打开卡文件即能当审单上下文粘贴  
+5. 回流：`log_review_card_feedback.py --label useful|not_useful` 可记一笔  
 
 **Out（明确不做）：**
 - 改 MMD/PO/cmean / Drill 门  
