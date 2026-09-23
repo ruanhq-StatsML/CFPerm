@@ -95,7 +95,11 @@ def main() -> None:
     ap.add_argument(
         "--out",
         type=Path,
-        default=ROOT / "configs" / "review_agent_card_flags.suggested.json",
+        default=ROOT
+        / "docs"
+        / "summaries"
+        / "artifacts"
+        / "review_agent_card_flags.suggested.json",
     )
     ap.add_argument("--min-n", type=int, default=5)
     args = ap.parse_args()
