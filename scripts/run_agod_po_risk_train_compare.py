@@ -334,7 +334,7 @@ def run_version(
                 opt.zero_grad(set_to_none=True)
                 loss.backward()
                 opt.step()
-            flops_this = float(act["flops_rel"])
+            flops_this = freeze_flops_rel(act["freeze_mask"], mods)
         else:
             schedule = expand_step_schedule(realized, mods, mode="block")
             if not schedule:
@@ -373,7 +373,8 @@ def run_version(
                             p.grad = None
                 opt_m.step()
                 steps_done[m_upd] = steps_done.get(m_upd, 0) + 1
-            flops_this = step_flops_rel(realized, total_steps=act_cfg.total_steps)
+            # MVP accounting: BWD-only proj (not steps_used/total — dump ≠ save)
+            flops_this = freeze_flops_rel(act["freeze_mask"], mods)
 
         with torch.no_grad():
             logits, _h, _lm, w = model(xb, return_parts=True)
@@ -574,7 +575,7 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "- `step_alloc` proportional to α (sum ≈ `total_steps`)",
         "- `freeze_mask` when α_m < `freeze_theta` (BWD off; FWD still on)",
         "- `stack_prior = α` for KL(stack_w ‖ α)",
-        "- efficiency proxy: `flops_rel = (#active mods) / M`",
+        "- efficiency proxy: `freeze_flops_rel` / `flops_rel_proj` (BWD-only; FWD on)",
         "",
     ]
     cross_votes: Dict[str, int] = {}
@@ -666,7 +667,7 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "",
         "- `realize_step_alloc`: freeze → 0 steps (FLOPs cut; no redistribute by default).",
         "- `expand_step_schedule(..., mode='block')`: highest budget modality dumped first.",
-        "- `step_flops_rel = steps_used / total_steps`.",
+        "- `freeze_flops_rel` = BWD-only proj amount (MVP default; dump ≠ save).",
         "- CLI: `--step-mode {per_mod,shared}` (default `per_mod`).",
         "",
         "### F. R3 reject-gated row IPTW (same stream)",
@@ -674,6 +675,11 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "- `resolve_stream_reject`: external RFPerm flag → hop OOS (`e_now/e_prev`) → proxy.",
         "- Causal: reject at \(t\) weights Fit at \(t+1\); calm \(w=1\).",
         "- Orthogonal to modality freeze/steps; CLI `--row-weight-mode` / `--no-row-iptw`.",
+        "",
+        "### G. MVP freeze",
+        "",
+        "- Advisor-facing entry: `python3 scripts/po_boost_mvp.py` · `docs/agod/PO_Boost_MVP.md`.",
+        "- Further roadmap items wait on advisor schedule.",
         "",
     ]
     (out / "AGOD_po_risk_train_compare.md").write_text("\n".join(lines), encoding="utf-8")
