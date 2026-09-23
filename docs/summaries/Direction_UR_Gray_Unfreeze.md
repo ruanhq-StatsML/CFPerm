@@ -4,7 +4,7 @@
 > **解冻 ETA / 规则** 的逻辑具体怎么走。  
 > 场景轴仍是 pos刷量 / neg灌入 / flat漂移。
 
-相关：[`Feature_Brush_LLM_SelfEvolution.md`](Feature_Brush_LLM_SelfEvolution.md) · [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md) · [`Review_Accel_Personas_Feedback_Loop.md`](Review_Accel_Personas_Feedback_Loop.md) · [`Coverage_Confidence_Gray_Rollback.md`](Coverage_Confidence_Gray_Rollback.md)（覆盖/置信/回滚可辩护版）
+相关：[`Feature_Brush_LLM_SelfEvolution.md`](Feature_Brush_LLM_SelfEvolution.md) · [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md) · [`Review_Accel_Personas_Feedback_Loop.md`](Review_Accel_Personas_Feedback_Loop.md) · [`Coverage_Confidence_Gray_Rollback.md`](Coverage_Confidence_Gray_Rollback.md)（覆盖/置信/回滚可辩护版：Cover 实测、C0≠C2、期望伤害、L-roll 爆炸半径、升慢降快）
 
 ---
 
