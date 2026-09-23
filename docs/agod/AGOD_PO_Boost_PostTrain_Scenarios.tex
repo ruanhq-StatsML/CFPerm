@@ -181,6 +181,26 @@ step dump$\leftarrow$short $S$, LR$\leftarrow$fused $\alpha$.
 Gain vs single Softmax: less thrash + earlier dump on spikes
 (instrumented via $\omega_S$, \texttt{top\_concept}/\texttt{top\_spike}).
 
+\paragraph{Synthetic continuous stub (no Affec cache).}
+Script \texttt{scripts/smoke\_po\_boost\_synthetic.py}
+($M{=}5$ chronic imbalance + spike; Acc$^\star{=}0.55$):
+\begin{center}
+\small
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Version & $\Flops$ & $T(\Acc^\star)$ & cumFLOPs@$\star$ & Jaccard & Ship \\
+\midrule
+\texttt{equal} & $1.00$ & $8$ & $9.0$ & $1.00$ & no \\
+\texttt{po\_soft} & $1.00$ & $10$ & $11.0$ & $1.00$ & no \\
+\texttt{po\_gated} & $1.00$ & $10$ & $11.0$ & $1.00$ & no \\
+\texttt{po\_fuse} & $0.63$ & $5$ & $4.0$ & $0.73$ & \textbf{yes} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Reject sources: hop\_oos$\times1$ + proxy on other windows
+(\texttt{resolve\_stream\_reject}).
+Replace with Affec numbers when cache is present.
+
 \section{Scenario $\to$ actuator cheat-sheet}
 \label{sec:cheat}
 
