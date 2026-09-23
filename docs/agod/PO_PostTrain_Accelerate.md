@@ -9,4 +9,8 @@ Two algorithms (PO only):
 
 Goal: lower \(\mathrm{FLOPs}\) / \(T(\mathrm{Acc}^\star)\); Acc is a constraint.
 
-**Smoke:** Affec `po_gated` FLOPs 0.70; synthetic `po_fuse` 0.78 & \(T^\star=5\); gated √PO wins 6/6 packs.
+**Smoke (multi-pack, Acc constraint \(\Delta\mathrm{Acc}\ge-0.005\)):**
+- **Held FLOPs↓:** Affec `po_gated` 0.70 / `po_proto` 0.83; synthetic `po_fuse` 0.78 & \(T^\star=5\); Amazon modality B3 0.50; COCO outdoor/indoor B5g 0.81.
+- **Noop (\(\mathrm{FLOPs}=1\)):** Food-101 / Fashion-IQ / COCO in \(M{=}2\) PO-risk compare.
+- **FLOPs↓ but Acc fail (negative controls):** MSR-VTT packed B5g; Fashion/MM/Indiana/Micro B5g; Amazon online-select B3.
+- **Alg B:** gated √PO wins 6/6 packs vs always-√ (next-MSE / \(T^\star\), not FLOPs).

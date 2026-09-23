@@ -120,8 +120,15 @@ run A every window; run B only when \texttt{rejected}.
 Ship: $\Flops<1$ and $\Delta\Acc\ge-\varepsilon$ (A);
 on reject windows, next-MSE vs uniform $w$ improves (B).
 
-\section{Numbers (smoke)}
+\section{Numbers (smoke --- multi-pack)}
 \textit{Indicative only; not a leaderboard claim.}
+Ship rule for Alg~A: $\Flops<1$ and $\Delta\Acc\ge-0.005$
+vs equal / B1. When freeze never fires, report \textbf{noop}
+($\Flops{=}1$) --- that is still a valid negative result.
+
+\paragraph{Direct PO-risk actuators (Alg~A).}
+Same compare loop as \texttt{po\_risk\_train} /
+\texttt{smoke\_po\_boost\_synthetic}.
 \begin{center}
 \small
 \begin{tabular}{@{}llrrr@{}}
@@ -129,25 +136,102 @@ on reject windows, next-MSE vs uniform $w$ improves (B).
 Pack & Method & $\Flops$ & note & ok? \\
 \midrule
 Affec ($M{=}5$)
-  & A: \texttt{po\_gated}
-  & $0.70$ & $\Delta\Acc\approx-0.4\%$ & held \\
+  & \texttt{po\_gated}
+  & $0.70$ & $\Delta\Acc\approx-0.39\%$ & held \\
 Affec
-  & A: \texttt{po\_proto}
-  & $0.83$ & $\Delta\Acc\approx+0.2\%$ & held \\
+  & \texttt{po\_proto}
+  & $0.83$ & $\Delta\Acc\approx+0.20\%$ & held \\
+Affec
+  & \texttt{po\_delta}
+  & $0.78$ & $\Delta\Acc\approx-0.39\%$ & held \\
 Synthetic ($M{=}5$)
-  & A: \texttt{po\_fuse}
+  & \texttt{po\_fuse}
   & $0.78$ & $T^\star{=}5$ vs equal $8$ & held \\
-Food / Fashion / COCO ($M{=}2$)
-  & A: any
+Food-101 ($M{=}2$)
+  & any PO version
   & $1.00$ & no freeze bite & noop \\
-Stream packs
-  & B: gated $\sqrt{\PO}$
-  & --- & vs always-$\sqrt{}$ (prior bench) & better \\
+Fashion-IQ ($M{=}2$)
+  & any PO version
+  & $1.00$ & no freeze bite & noop \\
+COCO img/txt ($M{=}2$)
+  & any PO version
+  & $1.00$ & no freeze bite & noop \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\vspace{0.8em}
+\paragraph{Same freeze idea on other streams (portable $\alpha$-gate).}
+These packs use PO (with MMD) $\to$ $\alpha$, then hard-gate
+BWD when $\alpha_m<\theta$ --- the Alg~A freeze actuator, not a
+new sensor. Labelled \texttt{B5g} / Amazon \texttt{B3} in prior
+smoke JSON; Acc constraint checked vs equal / B1 Acc$_{\mathrm{post}}$.
+\begin{center}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Pack & Gate & $\Flops$ & $\Delta\Acc$ vs equal & ok? \\
+\midrule
+Amazon Reviews (img,txt)
+  & modality B3
+  & $0.50$ & loss $\approx$ flat (slightly $\downarrow$) & held$^\dagger$ \\
+Amazon online-select
+  & MSG B3
+  & $0.88$ & hold $\Delta\Acc$ gap $\approx-5\%$ & fail \\
+MSR-VTT features ($M{=}3$)
+  & B5g
+  & $0.71$ & Acc$\approx1$ (saturated) & held$^\ddagger$ \\
+MSR-VTT packed ($M{=}3$)
+  & B5g
+  & $0.75$ & Acc$_{\mathrm{post}}$ $0.671\!\to\!0.620$ & fail \\
+COCO outdoor/indoor ($M{=}3$)
+  & B5g
+  & $0.81$ & $\Delta\Acc\approx-0.15\%$ & held \\
+COCO time / center ($M{=}3$)
+  & B5g
+  & $0.78$ & $\Delta\Acc\approx-2.8\%$ & fail \\
+Fashion-IQ / MM / Indiana / Micro
+  & B5g
+  & $0.78$--$0.82$ & $\Delta\Acc\approx-3\%$--$-5\%$ & fail \\
+\bottomrule
+\end{tabular}
+\end{center}
+\smallskip
+\noindent\small
+$^\dagger$Amazon modality smoke reports mean loss, not Acc;
+FLOPs cut is BWD-only on the inactive tower every window.\\
+$^\ddagger$features\_window is too easy for Acc-lift smoke;
+use packed for Acc, features only for FLOPs accounting.
+
+\paragraph{Read-out (efficiency for post-training).}
+\begin{itemize}[leftmargin=1.2em,itemsep=0.2em]
+  \item \textbf{Where Alg~A saves update FLOPs under Acc:}
+        Affec ($0.70$--$0.83$), synthetic \texttt{po\_fuse}
+        ($0.78$ and faster $T^\star$), Amazon modality gate
+        ($0.50$), COCO outdoor/indoor B5g ($0.81$).
+  \item \textbf{Where freeze is a noop:} Food / Fashion / COCO
+        in the $M{=}2$ PO-risk compare --- soft LR only; do not
+        claim a FLOPs win.
+  \item \textbf{Where FLOPs$\downarrow$ but Acc constraint fails:}
+        MSR-VTT packed B5g, several img--txt packs, Amazon
+        online-select B3. Useful as \emph{negative} controls:
+        gate alone is not enough; soften $\theta$ / dump steps
+        instead of hard freeze.
+  \item \textbf{Alg~B (sample):} gated $\sqrt{\PO}$ is for
+        next-MSE / $T(\Acc^\star)$ on reject windows, not for
+        $\Flops$; prior gated-vs-always bench wins $6/6$ packs
+        (calm windows stay $w{=}1$).
+\end{itemize}
+
+\vspace{0.6em}
+\noindent\textit{Sources:}
+\texttt{results/agod\_po\_risk\_train/summary.json},
+\texttt{results/agod\_po\_boost\_synthetic/},
+\texttt{results/agod\_amazon/agod\_amazon\_modality\_lr.json},
+\texttt{results/agod\_amazon/agod\_amazon\_online\_select.json},
+\texttt{results/agod\_msrvtt/*.json},
+\texttt{results/agod\_imgtxt/agod\_imgtxt\_multidataset.json}.
+
+\vspace{0.4em}
 \noindent\textit{Code:}
 \texttt{po\_risk\_train.py}, \texttt{po\_iptw\_weights},
 \texttt{reject\_event.py}, \texttt{scripts/po\_boost\_mvp.py}.
