@@ -36,7 +36,9 @@
   "graph_shift_tip_top3": "i_share_linear,i_credit_linear,i_share_first",
   "graph_shift_tip_signs_top3": "i_share_linear:0,i_credit_linear:0,i_share_first:0",
   "graph_shift_localize_k": 200,
-  "graph_shift_disclaimer": "clue_not_conviction"
+  "graph_shift_disclaimer": "clue_not_conviction",
+  "graph_shift_gray_allow": true,
+  "graph_shift_gray_reason": "ok"
 }
 ```
 
@@ -44,6 +46,7 @@
 
 ```
 【审核上下文·图谱变动线索】
+灰度: allow=True reason=ok
 方向: sign_Dy=flat Dy=None
 支撑: localize_k=200 edges={'W1_train': 962, 'W1_holdout': 314, 'W2': 8815}
 建议队列: 路径线性份额变动

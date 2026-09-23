@@ -27,6 +27,7 @@
 3. CLI 一键：`summary.json` → `review_agent_card.json` / `.md` / `ticket_custom_fields.json`  
 4. 任务卡验收句：打开卡文件即能当审单上下文粘贴  
 5. 回流：`log_review_card_feedback.py --label useful|not_useful` 可记一笔  
+6. 工单字段 / 有用率汇总 / 灰度 kill_switch / **波次批处理出卡**  
 
 **Out（明确不做）：**
 - 改 MMD/PO/cmean / Drill 门  
@@ -51,9 +52,9 @@ review_agent_card.json  +  review_agent_card.md
 ```
 
 成功标准：
-- [ ] CLI 对一份真实 `summary.json` 产出卡  
-- [ ] 卡含 `sign_Dy` + `tip_signs` + 支撑摘要  
-- [ ] README/任务卡写明「禁止当定罪结论」  
+- [x] CLI 对一份真实 `summary.json` 产出卡  
+- [x] 卡含 `sign_Dy` + `tip_signs` + 支撑摘要  
+- [x] README/任务卡写明「禁止当定罪结论」  
 
 ---
 

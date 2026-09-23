@@ -11,6 +11,7 @@ Does not change Drill gates; does not claim fraud conviction.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -34,6 +35,36 @@ TIP_BUCKETS = {
     "i_log1p_n_exp": "曝光规模(log)",
     "i_log1p_n_covisit": "共现规模(log)",
 }
+
+
+def load_flags(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {"enabled": True, "sample_rate": 1.0, "kill_switch": False}
+    return json.loads(path.read_text())
+
+
+def flags_allow(flags: Dict[str, Any], *, source: str) -> Dict[str, Any]:
+    """Gray / rollback gate for card injection (no Drill change)."""
+    kill = bool(flags.get("kill_switch"))
+    enabled = bool(flags.get("enabled", True)) and not kill
+    rate = float(flags.get("sample_rate", 1.0))
+    rate = max(0.0, min(1.0, rate))
+    # deterministic sample by source path (stable across processes)
+    h = int(hashlib.md5(source.encode("utf-8")).hexdigest()[:8], 16) % 10_000
+    sampled = (h / 10_000.0) < rate
+    allow = enabled and sampled
+    return {
+        "allow": allow,
+        "enabled": enabled,
+        "kill_switch": kill,
+        "sample_rate": rate,
+        "sampled": sampled,
+        "reason": (
+            "kill_switch"
+            if kill
+            else ("disabled" if not flags.get("enabled", True) else ("not_sampled" if not sampled else "ok"))
+        ),
+    }
 
 
 def _tips_from_summary(blob: Dict[str, Any]) -> List[str]:
@@ -73,7 +104,13 @@ def _bucketize(tips: List[str], tip_signs: Dict[str, str]) -> List[Dict[str, str
     return rows
 
 
-def build_card(blob: Dict[str, Any], *, source: str) -> Dict[str, Any]:
+def build_card(
+    blob: Dict[str, Any],
+    *,
+    source: str,
+    flags: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    gate = flags_allow(flags or {"enabled": True, "sample_rate": 1.0}, source=source)
     direction = dict(blob.get("direction") or {})
     tips = _tips_from_summary(blob)
     tip_signs = dict(direction.get("tip_signs") or {})
@@ -84,6 +121,7 @@ def build_card(blob: Dict[str, Any], *, source: str) -> Dict[str, Any]:
         "card_type": "review_agent_context",
         "disclaimer": "图谱分布变动线索，非定罪结论；供审核分流与上下文，不自动封禁。",
         "source_summary": source,
+        "gray_flags": gate,
         "support": _support_summary(blob),
         "direction": {
             "Dy": direction.get("Dy"),
@@ -103,16 +141,22 @@ def build_card(blob: Dict[str, Any], *, source: str) -> Dict[str, Any]:
                 "neg": "块上成功率下降：优先劣质灌入/劫持残留队列",
                 "flat": "X 漂了但 click 率平：先当供给/分布漂移，慎升强动作",
             }.get(sign_dy, "flat"),
-            "suggested_action_level": "L1_watch",
+            "suggested_action_level": "L1_watch" if gate["allow"] else "L0_observe",
         },
         "paste_for_agent": "",
     }
+    if not gate["allow"]:
+        card["disclaimer"] = (
+            "【灰度关闭/未命中采样】本卡不建议写入工单。" + card["disclaimer"]
+        )
+        card["review_hint"]["queue_bucket"] = "GRAY_DISABLED"
     lines = [
         "【审核上下文·图谱变动线索】",
+        f"灰度: allow={gate['allow']} reason={gate['reason']}",
         f"方向: sign_Dy={sign_dy} Dy={direction.get('Dy')}",
         f"支撑: localize_k={card['support'].get('localize_k')} "
         f"edges={card['support'].get('n_localized_edges')}",
-        f"建议队列: {primary_bucket}",
+        f"建议队列: {card['review_hint']['queue_bucket']}",
         f"读法: {card['review_hint']['outcome_read']}",
         "Tips:",
     ]
@@ -124,14 +168,16 @@ def build_card(blob: Dict[str, Any], *, source: str) -> Dict[str, Any]:
     card["ticket_custom_fields"] = {
         "graph_shift_sign_dy": sign_dy,
         "graph_shift_dy": direction.get("Dy"),
-        "graph_shift_queue_bucket": primary_bucket,
-        "graph_shift_action_level": "L1_watch",
+        "graph_shift_queue_bucket": card["review_hint"]["queue_bucket"],
+        "graph_shift_action_level": card["review_hint"]["suggested_action_level"],
         "graph_shift_tip_top3": ",".join(tips[:3]),
         "graph_shift_tip_signs_top3": ",".join(
             f"{t}:{tip_signs.get(t, '0')}" for t in tips[:3]
         ),
         "graph_shift_localize_k": card["support"].get("localize_k"),
         "graph_shift_disclaimer": "clue_not_conviction",
+        "graph_shift_gray_allow": gate["allow"],
+        "graph_shift_gray_reason": gate["reason"],
     }
     return card
 
@@ -187,9 +233,16 @@ def main() -> None:
         type=Path,
         default=ROOT / "results" / "tencent_gr_review_agent_card",
     )
+    ap.add_argument(
+        "--flags",
+        type=Path,
+        default=DEFAULT_FLAGS,
+        help="gray/rollback flags JSON",
+    )
     args = ap.parse_args()
     blob = json.loads(args.summary.read_text())
-    card = build_card(blob, source=str(args.summary))
+    flags = load_flags(args.flags)
+    card = build_card(blob, source=str(args.summary), flags=flags)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "review_agent_card.json").write_text(
         json.dumps(card, indent=2, ensure_ascii=False) + "\n"
