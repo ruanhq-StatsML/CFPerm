@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_FLAGS = ROOT / "configs" / "review_agent_card_flags.json"
 
 TIP_BUCKETS = {
     "u_span_sec": "活跃跨度异常（短刷/长挂）",

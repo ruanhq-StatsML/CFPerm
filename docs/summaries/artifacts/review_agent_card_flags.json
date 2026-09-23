@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "sample_rate": 1.0,
+  "kill_switch": false,
+  "note": "审出加速灰度：kill_switch=true 时导出卡标记 disabled，不建议写入工单"
+}

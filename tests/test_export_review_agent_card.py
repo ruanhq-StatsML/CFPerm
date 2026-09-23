@@ -31,3 +31,18 @@ def test_build_card_minimal():
     assert "ticket_custom_fields" in card
     assert card["ticket_custom_fields"]["graph_shift_sign_dy"] == "pos"
     assert "u_span_sec" in card["ticket_custom_fields"]["graph_shift_tip_top3"]
+    assert card["gray_flags"]["allow"] is True
+
+
+def test_kill_switch_disables_card():
+    blob = {
+        "localize_k": 1,
+        "fsds_W1_holdout": {"top_features": ["u_span_sec"]},
+        "direction": {"sign_Dy": "pos", "tip_signs": {"u_span_sec": "+"}},
+    }
+    card = build_card(
+        blob, source="x", flags={"enabled": True, "sample_rate": 1.0, "kill_switch": True}
+    )
+    assert card["gray_flags"]["allow"] is False
+    assert card["review_hint"]["suggested_action_level"] == "L0_observe"
+    assert card["ticket_custom_fields"]["graph_shift_gray_allow"] is False
