@@ -63,12 +63,20 @@ review_agent_card.json  +  review_agent_card.md
 - 时效稳健包（ETA）  
 - 规则增敏包  
 - OOD B1–B15（支付失败、退货边、运力图…）  
+- **审出卡新功能（B29+）**：在 human-gate `READY` 前默认不继续加 feature  
 
 解冻条件：审出加速卡 **被真人审至少用过 1 次**（有用/没用打标即可）。
+
+```bash
+PYTHONPATH=. python3 scripts/tencent_gr/check_review_accel_human_gate.py \
+  --feedback docs/summaries/artifacts/review_feedback.jsonl
+# exit 0 = READY；exit 2 = NOT_READY（继续只贴卡给人，不扩 ETA/规则）
+```
 
 ---
 
 ## 5. Takeaway
 
 点子已经够多；scope = **只做审出加速导出卡**。  
-走通这一条再谈 ETA / 规则。
+走通这一条再谈 ETA / 规则。  
+**下一步不是再写 B29，而是找 1 位真人打 useful/not_useful。**

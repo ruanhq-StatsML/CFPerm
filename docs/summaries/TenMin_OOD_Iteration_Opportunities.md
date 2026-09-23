@@ -93,6 +93,7 @@
 | B26 | **shared_context.eta_soft_hint**（scope内） | 同卡只读提示给审核+ETA | 双 agent |
 | B27 | **审出加速包 e2e smoke**（scope内） | export→反馈→建议→dry-run 一键 | 交接演示 |
 | B28 | **按队列 sample_rate 覆盖**（scope内） | flags.queue_sample_rates | 单队列回滚 |
+| B29 | **human-use gate / feature freeze**（scope内） | 真人反馈→READY 才解冻 | 停扩面 |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 
@@ -148,6 +149,7 @@
 
 **只走审出加速包** → [`Scope_Review_Agent_Card.md`](Scope_Review_Agent_Card.md)。  
 ETA / 规则 / B1–B15 冻结至审出卡被真人用过一次。
+B29 起：OOD 轮优先跑 `check_review_accel_human_gate.py`；`NOT_READY` 时 **kill** 新 feature，只推真人打标。
 
 ## 6b. 本轮（启动轮）已串结论
 
