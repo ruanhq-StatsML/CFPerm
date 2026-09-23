@@ -107,6 +107,117 @@ Causal rule: metrics at $t$ never reweight the same-window evaluation
 labels used to report $\Acc_{t+1}$.
 
 %======================================================================
+\section{Two expected logics (modality emphasis $+$ hard up-weight)}
+\label{sec:two-logics}
+
+The acceleration story the design is meant to match is \emph{not}
+``PO replaces the loss.'' It is two complementary budget reallocations
+of the \textbf{same} residual-concept signal $\PO$:
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{2.4cm}p{5.2cm}p{4.2cm}@{}}
+\toprule
+Logic & Question answered & Actuator \\
+\midrule
+\textbf{A. Modality emphasis}
+  (high-residual concept)
+  & \emph{Which tower} carries the residual-concept drift
+    $P(Y\mid X)$ this regime?
+  & Long$\otimes$short $\alpha$:
+    freeze / step dump / LR
+    (Sec.~\ref{sec:fuse}) \\
+\textbf{B. Hard-sample up-weight}
+  (post-reject)
+  & \emph{Which rows} inside a rejected batch
+    are still hard under $\mu$?
+  & $w_i\propto\sqrt{\PO_i}$ only if
+    OnlineRFPerm/CFPerm rejects \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Logic A --- modality emphasis (high-residual concept)}
+\label{sec:logicA}
+
+\paragraph{Meaning of high residual.}
+For modality block $X_m$, batch PO-risk
+$R^{\PO}_m=\E[\hat\tau(X_m)^2]$ (or the observation proxy
+$|Y-\hat\mu(X_m)|$) is large when the current labels are poorly
+explained by a control fit on that view.
+That is a \emph{concept} / residual signal, not pure covariate shape
+(MMD can be subtracted so we do not buy steps for $X$-only mush).
+
+\paragraph{How emphasis lands (accelerate).}
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item Rank / Softmax modalities by fused long$\otimes$short $\PO$
+        $\Rightarrow\alpha_m$.
+  \item \textbf{Spend} on high-$\alpha$: larger $\lambda_m$, larger $s_m$.
+  \item \textbf{Skip} low long-track $L_m$: BWD freeze
+        $\Rightarrow\Flops\downarrow$ while FWD stays on.
+  \item Hold Acc within $-\varepsilon$ of equal; else soften freeze.
+\end{enumerate}
+Intuition: the same wall-clock budget is no longer split $1/M$; it is
+aimed at the high-residual concept tower, so $T(\Acc^\star)$ falls
+when that tower was the bottleneck.
+
+\subsection{Logic B --- reject-gated hard-sample up-weight}
+\label{sec:logicB}
+
+\paragraph{When it fires.}
+Only after a distribution / concept gate rejects batch $t$
+(OnlineRFPerm rank/EWMA+$p$, or CFPerm). Calm batches keep $w_i=1$.
+
+\paragraph{How up-weight lands.}
+\[
+  \PO_i \;=\; |Y_i-\hat\mu(X_i)|
+  \quad(\text{optionally blend batch }R^{\PO}),
+  \qquad
+  w_i \;=\; \frac{\sqrt{\PO_i}}{\mathrm{mean}_j\sqrt{\PO_j}}
+  \;\xrightarrow{\mathrm{clip}}\;
+  \mathrm{Fit}(\cdot;\,\texttt{sample\_weight}=w).
+\]
+Soft $\sqrt{\PO}$ (not raw $\propto\PO$) avoids overfitting the reject
+batch; gated-$\sqrt{}$ beats always-$\sqrt{}$ on stream packs.
+
+\paragraph{Why this accelerates.}
+Gradient steps that would have been spent on easy in-support rows are
+redirected to high-residual rows \emph{when} the batch is already
+flagged OOD---so the next fit corrects the hard region sooner
+(next-MSE / hard-rank), without paying up-weight cost on calm windows.
+
+\subsection{How A and B fit together}
+\label{sec:logicAB}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item Same sensor family ($\PO$), two resolutions:
+        \textbf{column} (modality) vs \textbf{row} (observation).
+  \item Same goal: accelerate post-train under Acc constraint.
+  \item Orthogonal knobs: A changes \emph{which head} gets BWD;
+        B changes \emph{which rows} get weight inside an update.
+  \item Typical schedule: run A every window (cheap $\alpha$);
+        run B only on reject (Path~A IPTW).
+  \item Do not conflate: high $\PO_m$ does not by itself up-weight rows
+        if the gate did not reject; reject does not by itself freeze
+        a modality.
+\end{itemize}
+
+\[
+\boxed{
+\begin{aligned}
+&\text{every }t:\;
+  \PO_m \xrightarrow{\mathrm{fuse}} \alpha
+  \xrightarrow{} \{\mathrm{freeze},\,s,\,\lambda\}
+  &&\text{(modality emphasis)}\\
+&\text{if reject}_t:\;
+  \PO_i \xrightarrow{\sqrt{\,\cdot\,}} w_i
+  \xrightarrow{} \mathrm{Fit}_{t+1}
+  &&\text{(hard up-weight)}
+\end{aligned}
+}
+\]
+
+%======================================================================
 \section{Landing KPIs (report these, in this order)}
 \label{sec:kpi}
 

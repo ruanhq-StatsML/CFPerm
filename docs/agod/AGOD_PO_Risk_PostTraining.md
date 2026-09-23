@@ -1,41 +1,45 @@
-# PO-risk Metrics → 加速后训练（长短期融合 · 概念模态侧重）
+# PO-risk → 加速后训练：模态侧重 + 难样本 up-weight
 
-> 主文（LaTeX）：[`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) §\ref{sec:fuse}  
-> 代码：`fuse_long_short` · `po_fuse` · `next_step_actuators_fused`（`agod/po_risk_train.py`）
+> 主文：[`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) §two-logics · §fuse  
+> 代码：`fuse_long_short` / `po_fuse` · `po_iptw_weights`（√PO）
 
-**目标：** 加速后训练（FLOPs / step / wall-clock / T(Acc★)）；Acc 为约束。
+**目标：** 加速后训练；Acc 为约束。PO 不替换 loss，只重分预算。
 
 ---
 
-## 关键发现：概念模态侧重要拆长/短
+## 符合预期的两条逻辑
 
-| 轨道 | 定义 | 管什么执行器 |
+| | **A. 模态侧重**（high-residual 概念） | **B. 难样本 up-weight**（reject 后） |
 |---|---|---|
-| **Long** \(L_m\) | \(\mathrm{EMA}(\mathrm{PO})\cdot(1+\mathrm{proto})+\eta\alpha_{t-1}\) | **freeze**（慢集合，防抖） |
-| **Short** \(S_m\) | \(\Delta\mathrm{PO}\)（或 PO−EMA） | **step dump**（尖峰立刻给预算） |
-| **Fused** \(\alpha\) | \(\omega_L z(L)+\omega_S z(S)-\lambda\mathrm{MMD}\) | **LR / stack prior** |
-
-纯短期 → freeze 乱抖；纯长期 → 尖峰模态来不及倾倒 step → \(T(\mathrm{Acc}^\star)\) 下不来。
-
-自适应：\(\mathrm{spike\_ratio}=\|S\|_\infty/\mathrm{MAD}(L)\)；平静偏 long，尖峰抬 \(\omega_S\)。
-
----
-
-## Elaboration strategy（怎么迭代）
-
-1. **先打点** — 每窗记 \((L,S,\omega,\mathrm{top\_concept},\mathrm{top\_spike},\mathrm{freeze},s,\lambda,\mathrm{FLOPs},\mathrm{Acc})\)  
-2. **四路消融** — long-only / short-only / 单 Softmax 驱动全部旋钮 / **分层**（推荐）  
-3. **调参顺序** — 先 freeze 分位（定 FLOPs）→ \(\omega,g\) → EMA \(\rho\) → \(\tau\) → 最后 \(\varepsilon\)  
-4. **工况剧本** — 平静保 long；尖峰倾倒 short；概念交接跟 \(L\) 不追 \(S\)；\(M{=}2\) 饱和不冻  
-5. **过线** — 分层在同 Acc 约束下 FLOPs 或 \(T(\mathrm{Acc}^\star)\) 优于单 α；freeze Jaccard 别因 \(S\) 乱抖  
-
-默认：\(M\ge3\) 用不对称包上 `po_fuse`；只砍 FLOPs 用 `po_gated`；不能冻用 `po_budget`。
-
----
-
-## 落地 P0（加速）
+| 问什么 | 哪座塔在扛 \(P(Y\mid X)\) 残差概念漂？ | reject 批里哪些行仍然难？ |
+| 分辨率 | 列 / 模态 \(m\) | 行 / 观测 \(i\) |
+| 信号 | \(\mathrm{PO}_m\) → 长短期融合 \(\alpha\) | \(\mathrm{PO}_i=\|Y-\mu\|\)（可混 batch PO） |
+| 执行器 | freeze←\(L\)；step dump←\(S\)；LR←\(\alpha\) | 仅 gate reject 后 \(w\propto\sqrt{\mathrm{PO}}\) |
+| 加速方式 | 预算砸高残差塔，冻低残差 BWD → FLOPs↓ / \(T(\mathrm{Acc}^\star)\)↓ | 难行多吃梯度；平静窗 \(w=1\) 不白抬 |
 
 ```text
-Sense PO(/proto/MMD) → fuse_long_short → freeze←L, steps←S, LR←α
-→ 报 FLOPs↓ 且 ΔAcc≥−ε
+每个窗口 t:   PO_m  --fuse--> α --> {freeze, steps, LR}     ← 模态侧重
+若 reject_t:  PO_i  --√----> w --> Fit_{t+1}                ← 难样本 up-weight
 ```
+
+---
+
+## A. 模态侧重（具体）
+
+- **High-residual** = 该模态上控制拟合解释不了当前 \(Y\)（概念/残差，不是纯 MMD）。  
+- 长期 \(L\)：慢性高残差 → 谁进概念集合（freeze 防抖）。  
+- 短期 \(S\)：\(\Delta\mathrm{PO}\) 尖峰 → 本窗 step 倾倒给谁。  
+- 同一 wall-clock 不再 \(1/M\) 均分，瞄准瓶颈塔。
+
+## B. Reject 后难样本 up-weight（具体）
+
+- **先 gate，后抬权**：OnlineRFPerm/CFPerm reject 才 \(w_i\propto\sqrt{\mathrm{PO}_i}\)；calm 保持 uniform。  
+- 用 **√PO（soft）** 而非 raw \(\propto\mathrm{PO}\)（后者易过拟合当前 reject 批）。  
+- 加速点：有限 step 少浪费在极易行上，难区域更快被下一 fit 纠正。
+
+## 两者关系
+
+- 同源（PO），正交旋钮：A 改 **哪颗头** 反传；B 改 **哪些行** 加权。  
+- 不要混：\(\mathrm{PO}_m\) 高 ≠ 自动抬行权（没 reject 不抬）；reject ≠ 自动冻模态。
+
+长短期融合细节见原文 §fuse；落地 KPI 仍是 FLOPs / \(T(\mathrm{Acc}^\star)\)，Acc 过线才算。
