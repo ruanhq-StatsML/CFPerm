@@ -137,11 +137,15 @@ $T(\Acc^\star)$) with Acc as constraint; PO as primary sensor.
 Wired into \texttt{run\_agod\_po\_risk\_train\_compare.py} cell summary.
 
 \subsection{Phase R2 --- Wire real step budget}
+\textbf{Status: landed in code (Affec ablate pending cache).}
 \begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
-  \item Map $s_m$ to optimizer max\_steps / grad-accum (not LR-only).
-  \item Ablate: LR-only vs LR+steps vs fused freeze+steps.
+  \item Map $s_m$ to optimizer steps via
+        \texttt{realize\_step\_alloc} + \texttt{expand\_step\_schedule}
+        (\texttt{step\_mode=per\_mod}, block dump).
+  \item Ablate: LR-only (\texttt{--step-mode shared}) vs LR+steps
+        (\texttt{per\_mod}) vs fused freeze+steps.
   \item Exit: show steps wiring lifts $T(\Acc^\star)$ beyond LR-only
-        on Affec.
+        on Affec (needs cache).
 \end{enumerate}
 
 \subsection{Phase R3 --- Event-time sample weights in the same loop}

@@ -13,7 +13,10 @@ Actuators applied next window:
   - optional freeze of low-α modalities
   - stack prior = α (KL on stacking weights)
 
-Efficiency signal: relative online-update FLOPs proxy (#active mods / M).
+Efficiency signal: relative online-update FLOPs proxy.
+Default ``step_mode=per_mod`` (R2): ``step_alloc[m]`` is real optimizer
+steps on modality ``m`` (block schedule, highest dump first).
+Legacy ``step_mode=shared`` only scales a shared loop length.
 """
 
 from __future__ import annotations
@@ -34,10 +37,13 @@ from agod.po_risk_train import (
     NextStepActuatorConfig,
     PORiskMetricConfig,
     continuous_gain_metrics,
+    expand_step_schedule,
     metric_to_alpha,
     next_step_actuators,
     next_step_actuators_fused,
     opportunity_rank,
+    realize_step_alloc,
+    step_flops_rel,
 )
 from agod.proto_drift import ModalityPrototypeBank
 from agod.shift import residual_concept
@@ -218,6 +224,7 @@ def run_version(
     device: torch.device,
     metric_cfg: PORiskMetricConfig,
     act_cfg: NextStepActuatorConfig,
+    step_mode: str = "per_mod",
 ) -> Dict[str, Any]:
     xs, ys = _pack_windows(feats, y, window=window, n_windows=n_windows, seed=seed)
     torch.manual_seed(seed + 101)
@@ -243,47 +250,98 @@ def run_version(
 
         # --- train THIS window with actuators decided at end of previous window ---
         base_lr = 1e-2
-        param_groups = []
         for m in mods:
             frozen = bool(act["freeze_mask"].get(m, False))
             for p in list(model.projs[m].parameters()) + list(model.heads[m].parameters()):
                 p.requires_grad_(not frozen)
-            if frozen:
-                continue
-            lr_m = base_lr * float(act["lr_mult"][m]) * float(act["lr_shared"])
-            param_groups.append(
-                {
-                    "params": list(model.projs[m].parameters()) + list(model.heads[m].parameters()),
-                    "lr": max(lr_m, 1e-5),
-                }
-            )
-        param_groups.append(
-            {"params": [model.stack_logits], "lr": base_lr * float(act["lr_shared"])}
+
+        realized = realize_step_alloc(
+            act["step_alloc"], act["freeze_mask"], mods, redistribute=False
         )
-        if not any(not act["freeze_mask"].get(m, False) for m in mods):
-            top = act["top_mod"]
-            for p in list(model.projs[top].parameters()) + list(model.heads[top].parameters()):
-                p.requires_grad_(True)
-            param_groups.insert(
-                0,
-                {
-                    "params": list(model.projs[top].parameters()) + list(model.heads[top].parameters()),
-                    "lr": base_lr * float(act["lr_shared"]),
-                },
+        steps_done = {m: 0 for m in mods}
+
+        if step_mode == "shared":
+            # Legacy: step_alloc only scales a shared loop length (LR+freeze bite).
+            param_groups = []
+            for m in mods:
+                if act["freeze_mask"].get(m, False):
+                    continue
+                lr_m = base_lr * float(act["lr_mult"][m]) * float(act["lr_shared"])
+                param_groups.append(
+                    {
+                        "params": list(model.projs[m].parameters())
+                        + list(model.heads[m].parameters()),
+                        "lr": max(lr_m, 1e-5),
+                    }
+                )
+            param_groups.append(
+                {"params": [model.stack_logits], "lr": base_lr * float(act["lr_shared"])}
             )
-
-        opt = torch.optim.SGD(param_groups, momentum=0.0)
-        # more steps so LR / freeze allocation can bite
-        n_steps = max(2, min(12, int(sum(act["step_alloc"].values()) // max(len(mods), 1))))
-
-        for _ in range(n_steps):
-            logits, _h, _lm, w = model(xb, return_parts=True)
-            ce = F.cross_entropy(logits, yb)
-            kl_pack = alpha_stack_kl(w, act["stack_prior"], mods, lambda_kl=0.10)
-            loss = ce + kl_pack["loss"]
-            opt.zero_grad(set_to_none=True)
-            loss.backward()
-            opt.step()
+            if not any(not act["freeze_mask"].get(m, False) for m in mods):
+                top = act["top_mod"]
+                for p in list(model.projs[top].parameters()) + list(model.heads[top].parameters()):
+                    p.requires_grad_(True)
+                param_groups.insert(
+                    0,
+                    {
+                        "params": list(model.projs[top].parameters())
+                        + list(model.heads[top].parameters()),
+                        "lr": base_lr * float(act["lr_shared"]),
+                    },
+                )
+            opt = torch.optim.SGD(param_groups, momentum=0.0)
+            n_steps = max(
+                2, min(12, int(sum(act["step_alloc"].values()) // max(len(mods), 1)))
+            )
+            for _ in range(n_steps):
+                logits, _h, _lm, w = model(xb, return_parts=True)
+                ce = F.cross_entropy(logits, yb)
+                kl_pack = alpha_stack_kl(w, act["stack_prior"], mods, lambda_kl=0.10)
+                loss = ce + kl_pack["loss"]
+                opt.zero_grad(set_to_none=True)
+                loss.backward()
+                opt.step()
+            flops_this = float(act["flops_rel"])
+        else:
+            # R2 default: each schedule slot updates one modality's params (+ stack).
+            schedule = expand_step_schedule(realized, mods, mode="block")
+            if not schedule:
+                top = act["top_mod"]
+                for p in list(model.projs[top].parameters()) + list(model.heads[top].parameters()):
+                    p.requires_grad_(True)
+                schedule = [top]
+                realized = {m: int(m == top) for m in mods}
+            for m_upd in schedule:
+                lr_m = base_lr * float(act["lr_mult"][m_upd]) * float(act["lr_shared"])
+                groups = [
+                    {
+                        "params": list(model.projs[m_upd].parameters())
+                        + list(model.heads[m_upd].parameters()),
+                        "lr": max(lr_m, 1e-5),
+                    },
+                    {
+                        "params": [model.stack_logits],
+                        "lr": base_lr * float(act["lr_shared"]),
+                    },
+                ]
+                opt_m = torch.optim.SGD(groups, momentum=0.0)
+                logits, _h, _lm, w = model(xb, return_parts=True)
+                ce = F.cross_entropy(logits, yb)
+                kl_pack = alpha_stack_kl(w, act["stack_prior"], mods, lambda_kl=0.10)
+                loss = ce + kl_pack["loss"]
+                opt_m.zero_grad(set_to_none=True)
+                loss.backward()
+                for m_o in mods:
+                    if m_o == m_upd:
+                        continue
+                    for p in list(model.projs[m_o].parameters()) + list(
+                        model.heads[m_o].parameters()
+                    ):
+                        if p.grad is not None:
+                            p.grad = None
+                opt_m.step()
+                steps_done[m_upd] = steps_done.get(m_upd, 0) + 1
+            flops_this = step_flops_rel(realized, total_steps=act_cfg.total_steps)
 
         with torch.no_grad():
             logits, _h, _lm, w = model(xb, return_parts=True)
@@ -330,7 +388,7 @@ def run_version(
 
         accs.append(acc)
         mses.append(mse)
-        flops.append(float(act["flops_rel"]))
+        flops.append(flops_this)
         ents.append(float(act["alpha_entropy"]))
         row = {
             "t": t,
@@ -339,8 +397,11 @@ def run_version(
             "alpha": {m: float(alpha[m]) for m in mods},
             "lr_mult": {m: float(act["lr_mult"][m]) for m in mods},
             "step_alloc": {m: int(act["step_alloc"][m]) for m in mods},
+            "step_realized": {m: int(realized.get(m, 0)) for m in mods},
+            "steps_done": {m: int(steps_done.get(m, 0)) for m in mods},
+            "step_mode": step_mode,
             "freeze": {m: bool(act["freeze_mask"][m]) for m in mods},
-            "flops_rel": float(act["flops_rel"]),
+            "flops_rel": flops_this,
             "top_mod": act["top_mod"],
             "po": {m: float(sens["po"][m]) for m in mods},
         }
@@ -377,6 +438,7 @@ def run_version(
         "t_to_acc_star": cg["t_to_acc_star"],
         "cum_flops_to_acc_star": cg["cum_flops_to_acc_star"],
         "mean_freeze_jaccard": cg["mean_freeze_jaccard"],
+        "step_mode": step_mode,
     }
 
 
@@ -444,7 +506,7 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
             "",
             f"mods = `{block.get('mods')}`",
             "",
-            "| version | Acc↑ | MSE↓ | Acc lift vs equal | MSE drop vs equal | FLOPs_rel | H(α) | Jaccard | \(T(\\mathrm{Acc}^\\star)\) | cumFLOPs@★ |",
+            "| version | Acc↑ | MSE↓ | Acc lift vs equal | MSE drop vs equal | FLOPs_rel | H(α) | Jaccard | T(Acc*) | cumFLOPs@★ |",
             "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
         for v, c in block["summary"].items():
@@ -517,10 +579,17 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "### D. Suggested next training adjustments (priority)",
         "",
         "1. Affec online loop: switch default metric `equal` → `po_gated` (or `po_proto` if Acc-first).",
-        "2. Wire `step_alloc` into real optimizer step counts (not just LR scale) — biggest unused lever.",
+        "2. ~~Wire `step_alloc` into real optimizer step counts~~ **done (R2, `step_mode=per_mod`)**; ablate vs `--step-mode shared`.",
         "3. Add holdout Acc@FLOPs Pareto (freeze_theta sweep) before claiming efficiency wins.",
         "4. For Food-101 / Fashion-IQ: keep stacking KL prior = α, but keep freeze off; try `po_budget`.",
-        "5. Log per-window (PO, α, lr_mult, freeze, Acc) — use to tune τ / λ_cov / freeze_theta.",
+        "5. Log per-window (PO, α, lr_mult, step_realized, freeze, Acc) — use to tune τ / λ_cov / freeze_theta.",
+        "",
+        "### E. R2 step wiring",
+        "",
+        "- `realize_step_alloc`: freeze → 0 steps (FLOPs cut; no redistribute by default).",
+        "- `expand_step_schedule(..., mode='block')`: highest budget modality dumped first.",
+        "- `step_flops_rel = steps_used / total_steps`.",
+        "- CLI: `--step-mode {per_mod,shared}` (default `per_mod`).",
         "",
     ]
     (out / "AGOD_po_risk_train_compare.md").write_text("\n".join(lines), encoding="utf-8")
@@ -571,6 +640,12 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--versions", nargs="+", default=list(METRIC_VERSIONS))
     ap.add_argument("--out", type=Path, default=Path("results/agod_po_risk_train"))
+    ap.add_argument(
+        "--step-mode",
+        choices=("per_mod", "shared"),
+        default="per_mod",
+        help="R2: per_mod = real step_alloc budgets; shared = legacy loop-length scale",
+    )
     args = ap.parse_args()
 
     device = torch.device("cpu")
@@ -586,6 +661,7 @@ def main() -> None:
             "window": args.window,
             "n_windows": args.n_windows,
             "seed": args.seed,
+            "step_mode": args.step_mode,
             "metric_cfg": metric_cfg.__dict__,
             "act_cfg": act_cfg.__dict__,
         },
@@ -620,6 +696,7 @@ def main() -> None:
                 device=device,
                 metric_cfg=metric_cfg,
                 act_cfg=act_cfg,
+                step_mode=args.step_mode,
             )
             print(
                 f"    acc={cells[ver]['mean_acc_post']:.4f} "

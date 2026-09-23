@@ -31,7 +31,7 @@ PO_t  →  滤波(L=EMA, S=ΔPO, α)  →  执行器 u_{t+1}  →  θ_{t+1}
 |---|---|---|
 | **R0** 已锁 | S1–S6、`po_fuse` 接线、ROI SQL 骨架 | — |
 | **R1** 进行中 | `continuous_gain_metrics`：Jaccard / \(T(\mathrm{Acc}^\star)\) / cumFLOPs@★；已接 compare | Affec 跑满 fuse vs soft vs gated 填表 |
-| **R2** | `step_alloc` 接到真 optimizer step | Affec 上胜过只调 LR |
+| **R2** 代码落地 | `realize_step_alloc` + block schedule；compare 默认 `step_mode=per_mod`；`--step-mode shared` 作 LR-only 对照 | Affec：per_mod vs shared 的 \(T(\mathrm{Acc}^\star)\) |
 | **R3** | 同流接 reject √PO（S1+S4） | 联合 FLOPs+next-MSE；calm 未动 |
 | **R4** | 扫 \(\rho,\omega,\theta_{\mathrm{fr}}\) Acc@FLOPs Pareto | \(M\ge3\) / \(M=2\) 默认配置卡 |
 | **R5** | 填 ROI SQL + ship gate | 业务只看 SQL，不报推理延迟 |

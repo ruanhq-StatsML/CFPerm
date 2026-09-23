@@ -122,3 +122,26 @@ def test_continuous_gain_metrics_jaccard_and_t_star():
     assert abs(cg["cum_flops_to_acc_star"] - 2.4) < 1e-6
     assert cg["mean_freeze_jaccard"] > 0.5
     assert abs(cg["cum_flops"] - 2.4) < 1e-6
+
+
+def test_realize_and_expand_step_schedule_r2():
+    realize_step_alloc = _mod.realize_step_alloc
+    expand_step_schedule = _mod.expand_step_schedule
+    step_flops_rel = _mod.step_flops_rel
+    mods = ["img", "txt", "aud"]
+    alloc = {"img": 10, "txt": 25, "aud": 5}
+    freeze = {"img": False, "txt": False, "aud": True}
+    realized = realize_step_alloc(alloc, freeze, mods, redistribute=False)
+    assert realized["aud"] == 0
+    assert realized["txt"] == 25
+    assert abs(step_flops_rel(realized, total_steps=40) - 35 / 40) < 1e-9
+    sched = expand_step_schedule(realized, mods, mode="block")
+    assert len(sched) == 35
+    assert sched[0] == "txt"  # highest dump first
+    assert sched.count("txt") == 25
+    assert "aud" not in sched
+    redis = realize_step_alloc(alloc, freeze, mods, redistribute=True)
+    assert redis["aud"] == 0
+    assert sum(redis.values()) == 40
+    rr = expand_step_schedule({"img": 2, "txt": 2}, ["img", "txt"], mode="round_robin")
+    assert rr == ["img", "txt", "img", "txt"] or rr[0] in ("img", "txt")

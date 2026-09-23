@@ -412,6 +412,87 @@ def next_step_actuators_fused(
     return base
 
 
+def realize_step_alloc(
+    step_alloc: Mapping[str, int],
+    freeze_mask: Mapping[str, bool],
+    mods: Sequence[str],
+    *,
+    redistribute: bool = False,
+) -> dict[str, int]:
+    """Apply freeze to step budgets (R2).
+
+    Frozen mods get 0 steps (FLOPs save). If ``redistribute``, remaining
+    budget is re-pumped onto active mods (same total compute, sharper dump).
+    Default ``False``: freeze actually cuts update FLOPs.
+    """
+    mods = list(mods)
+    out = {
+        m: 0 if freeze_mask.get(m, False) else int(step_alloc.get(m, 0))
+        for m in mods
+    }
+    if not redistribute:
+        return out
+    active = [m for m in mods if not freeze_mask.get(m, False)]
+    if not active:
+        return out
+    budget = int(sum(int(step_alloc.get(m, 0)) for m in mods))
+    raw = np.array([max(float(step_alloc.get(m, 0)), 0.0) for m in active], float)
+    if raw.sum() <= 1e-12:
+        raw = np.ones(len(active))
+    raw = raw / raw.sum()
+    steps = np.maximum(np.round(raw * budget), 0).astype(int)
+    while int(steps.sum()) > budget and steps.sum() > 0:
+        j = int(np.argmax(steps))
+        if steps[j] > 0:
+            steps[j] -= 1
+        else:
+            break
+    while int(steps.sum()) < budget:
+        j = int(np.argmax(raw))
+        steps[j] += 1
+    return {m: 0 for m in mods} | {m: int(steps[i]) for i, m in enumerate(active)}
+
+
+def expand_step_schedule(
+    step_alloc: Mapping[str, int],
+    mods: Sequence[str],
+    *,
+    mode: str = "block",
+) -> list[str]:
+    """Expand per-mod budgets into an ordered optimizer-step schedule (R2).
+
+    ``block`` (default): dump highest-budget modality first — matches
+    short-track spike dump before Acc collapses.
+    ``round_robin``: interleave remaining slots (smoother, less dump-like).
+    """
+    mods = list(mods)
+    rem = {m: max(0, int(step_alloc.get(m, 0))) for m in mods}
+    schedule: list[str] = []
+    if mode == "round_robin":
+        while any(rem[m] > 0 for m in mods):
+            for m in sorted(mods, key=lambda x: -rem[x]):
+                if rem[m] > 0:
+                    schedule.append(m)
+                    rem[m] -= 1
+        return schedule
+    # block: highest remaining budget first, all its steps contiguous
+    order = sorted(mods, key=lambda m: (-rem[m], m))
+    for m in order:
+        schedule.extend([m] * rem[m])
+    return schedule
+
+
+def step_flops_rel(
+    realized: Mapping[str, int],
+    *,
+    total_steps: int,
+) -> float:
+    """Update-FLOPs proxy under real step_alloc: steps_used / budget."""
+    tot = max(int(total_steps), 1)
+    used = int(sum(max(0, int(v)) for v in realized.values()))
+    return float(min(1.0, used / tot))
+
+
 def next_step_actuators(
     alpha: Mapping[str, float],
     mods: Sequence[str],
