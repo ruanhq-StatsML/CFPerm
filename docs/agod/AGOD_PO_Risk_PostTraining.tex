@@ -1,0 +1,394 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\geometry{margin=1in}
+
+\title{\textbf{PO-risk Empowering Post-Training}\\[0.35em]
+\large Brief logic, formal loop, metric versions, and actuators\\[0.15em]
+\large (AGOD writeup --- external attributor $\to$ next-window train knobs)}
+\author{CFPerm / AGOD \quad code: \texttt{agod/po\_risk\_train.py}, \texttt{agod/po\_iptw.py}}
+\date{2026-09-23}
+
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{proposition}{Proposition}
+
+\newcommand{\PO}{\mathrm{PO}}
+\newcommand{\MMD}{\mathrm{MMD}}
+\newcommand{\E}{\mathbb{E}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\textbf{One-line.}
+PO-risk is an \emph{external}, label-aware residual-concept sensor;
+it does not replace the training objective, but \emph{steers}
+post-training / online adaptation by mapping shift evidence into
+next-window training actuators (sample weights, modality LR,
+step budget, BWD freeze, stacking prior).
+
+We elaborate two compatible empowerment paths:
+(i)~observation-level soft IPTW $w_i\propto\sqrt{\PO_i}$ after an
+OnlineRFPerm reject;
+(ii)~modality-level sensors $\to$ simplex $\alpha\to$
+$\{\lambda_m,\,s_m,\,\mathrm{freeze}_m,\,\pi^{\mathrm{stack}}\}$
+applied only on window $t{+}1$ (no same-window leakage).
+Eight metric versions (\texttt{equal}$\ldots$\texttt{po\_next})
+instantiate the $\alpha$-map; Affec-like asymmetric multi-mod packs
+show FLOPs headroom, while saturated 2-mod packs are near-noops for
+freeze and should keep soft LR / stack prior only.
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+%======================================================================
+\section{Brief logic (one screen)}
+\label{sec:brief}
+
+\paragraph{Problem.}
+After a reference model is trained / distilled, production streams
+are non-stationary.
+Uniform post-training (equal LR, equal steps, uniform sample weights)
+wastes update FLOPs on stable modalities / easy rows and under-corrects
+drifting residual concept $P(Y\mid X)$.
+
+\paragraph{Idea.}
+Treat PO-risk as a \textbf{clever covariate for the training plan},
+not as another loss term:
+\[
+\underbrace{\text{sensors at }t}_{\PO,\,\MMD,\,\mathrm{proto},\,\Delta\PO}
+\;\longrightarrow\;
+\underbrace{\alpha^{(t)}\text{ or }w^{(t)}}_{\text{simplex / weights}}
+\;\longrightarrow\;
+\underbrace{\text{actuators for }t{+}1}_{\text{LR / steps / freeze / IPTW / stack prior}}.
+\]
+Forward towers stay on; only \emph{who gets gradient budget} changes.
+
+\paragraph{Why ``empower'' post-training.}
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item \textbf{Where to spend:} high-$\PO$ modalities get larger
+        $\lambda_m$ and step counts.
+  \item \textbf{What to skip:} low-$\alpha$ towers get BWD freeze
+        $\Rightarrow$ update FLOPs $\downarrow$ (not inference latency).
+  \item \textbf{Which rows:} on RFPerm reject, $w_i\propto\sqrt{\PO_i}$
+        soft-upweights hard OOD observations.
+  \item \textbf{What not to learn:} $\alpha$ is \emph{not}
+        backpropagated; the attributor stays external (PO / FSDS / VIMP).
+\end{enumerate}
+
+\paragraph{Causal hygiene.}
+Sensors / $\alpha$ computed on window $t$ set actuators for window
+$t{+}1$ only. Same-window reweight that sees the evaluation labels
+is excluded from the claim.
+
+%======================================================================
+\section{PO-risk as the external sensor}
+\label{sec:sensor}
+
+\begin{definition}[Period / residual-concept PO-risk]
+Given reference control $(X_0,Y_0)$ and current batch $(X_1,Y_1)$,
+fit nuisance models for potential outcomes / period contrast and
+obtain a scalar risk
+\[
+  R^{\PO}
+  \;=\;
+  \E\bigl[\hat\tau(X)^2\bigr]
+  \quad\text{(batch)}
+\]
+and/or an observation proxy
+\[
+  \PO_i
+  \;=\;
+  \bigl|Y_i - \hat\mu(X_i)\bigr|
+  \quad\text{(optionally blended with }R^{\PO}\text{)}.
+\]
+\end{definition}
+
+\begin{remark}[What PO is / is not]
+$\PO$ is \emph{label-aware OOD / residual difficulty}, not a pure
+covariate detector.
+It answers: ``under the current $X$, how hard is $Y$ relative to a
+control fit?''
+MMD / RF-Domain AUC answer a different question (shape of $X$).
+Subtracting $\lambda\cdot\MMD$ (metric \texttt{po\_minus\_cov})
+discounts covariate mush before spending training steps.
+\end{remark}
+
+\paragraph{Relation to MSG in AGOD.}
+In the multi-mod skeleton, modality-specific gap can mix
+$\mathrm{AUC}\cdot\mathrm{VIMP}+\gamma\cdot\PO$;
+the present writeup isolates the \textbf{PO $\to$ train-actuator}
+path so post-training empowerment is auditable on its own.
+
+%======================================================================
+\section{Two empowerment paths}
+\label{sec:paths}
+
+\subsection{Path A --- Sample-level soft IPTW (online / stream post-fit)}
+\label{sec:pathA}
+
+After OnlineRFPerm (or CFPerm) rejects batch $t$:
+\begin{align}
+  w_i
+  &=
+  \frac{\sqrt{\PO_i}}{\mathrm{mean}_j\sqrt{\PO_j}},
+  \qquad
+  w_i \leftarrow \mathrm{clip}(w_i;\,w_{\min},w_{\max}),
+  \\
+  \hat f_{t+1}
+  &\leftarrow
+  \mathrm{Fit}\bigl(X_t,Y_t;\, \texttt{sample\_weight}=w\bigr).
+\end{align}
+Modes \texttt{prop} / \texttt{sqrt} / \texttt{cbrt} / \texttt{inv}
+are ablations; default soft map is $\sqrt{\PO}$
+(\texttt{agod.po\_iptw.po\_iptw\_weights}).
+
+\paragraph{Why soft, not raw $\propto\PO$.}
+Raw proportional weights overfit the current reject batch
+(Affec: next-MSE worse than uniform);
+$\sqrt{\PO}$ improves next-MSE and tail stability
+(\texttt{docs/agod/AGOD\_po\_iptw\_mse.md}).
+Always-on $\sqrt{\PO}$ without a gate can hurt calm packs;
+\textbf{RFPerm-gated} $\sqrt{\PO}$ beats always-$\sqrt{}$ on $6/6$
+stream packs in the gated benchmark.
+
+\paragraph{Hard-rank reading.}
+When the claim is ``find难样本'', report Spearman / Precision@$k$
+of $\PO$ vs residual truth on reject batches---not pack MSE alone
+(\texttt{AGOD\_hard\_rank\_eval.md}).
+Re-fitting $\mu$ after reject is justified when it lifts ranking
+even if IPTW does not always win next-MSE.
+
+\subsection{Path B --- Modality-level next-step actuators (post-train plan)}
+\label{sec:pathB}
+
+For modalities $m\in\mathcal{M}$, map sensors to a simplex
+$\alpha^{(t)}\in\Delta^{|\mathcal{M}|-1}$, then:
+\begin{align}
+  \lambda_m^{(t+1)}
+  &=
+  \alpha\!\to\!\mathrm{LR}(\alpha^{(t)};\,\beta),
+  \\
+  s_m^{(t+1)}
+  &\propto
+  \alpha_m^{(t)},
+  \quad
+  \sum_m s_m \approx S_{\mathrm{tot}},
+  \\
+  \mathrm{freeze}_m^{(t+1)}
+  &=
+  \mathbf{1}\{\alpha_m^{(t)} < \theta_{\mathrm{fr}}\},
+  \\
+  \pi^{\mathrm{stack},(t+1)}
+  &=
+  \alpha^{(t)}
+  \quad\text{(KL prior on stacking weights)}.
+\end{align}
+Freeze is \textbf{backward-only}: forward remains on so serving
+latency is unchanged; efficiency claim is
+$\mathrm{FLOPs}_{\mathrm{rel}}=\#\{\text{active mods}\}/|\mathcal{M}|$.
+
+\begin{proposition}[No same-window leakage]
+If actuators for window $t{+}1$ are a measurable function of
+sensors available at the end of window $t$ only, then holdout
+metrics on $t{+}1$ are not tautologically optimized by
+reweighting that sees $Y_{t+1}$.
+\end{proposition}
+
+%======================================================================
+\section{Metric versions: sensors $\to\alpha$}
+\label{sec:metrics}
+
+Let $\tau>0$ be temperature and $\mathrm{Softmax}_\tau$ the
+temperature softmax over modalities.
+Code: \texttt{metric\_to\_alpha} in \texttt{agod/po\_risk\_train.py}.
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Version & Score / map & Post-train role \\
+\midrule
+\texttt{equal}
+  & $\alpha_m=1/|\mathcal{M}|$
+  & dense baseline \\
+\texttt{po\_soft}
+  & $\mathrm{Softmax}_\tau(\PO)$
+  & steer LR/steps to high residual-concept mods \\
+\texttt{po\_minus\_cov}
+  & $\mathrm{Softmax}_\tau(\PO-\lambda\MMD)$
+  & discount covariate mush before spending steps \\
+\texttt{po\_gated}
+  & drift-vs-noise gate $\to$ Softmax
+  & freeze/skip noisy windows; FLOPs saver \\
+\texttt{po\_proto}
+  & $\mathrm{Softmax}_\tau\bigl(\PO(1+\mathrm{proto})-\lambda\MMD\bigr)$
+  & amplify true centroid moves \\
+\texttt{po\_delta}
+  & $\mathrm{Softmax}_\tau\bigl(\mathrm{EMA}(\PO)+\gamma\Delta\PO\bigr)$
+  & anticipatory reallocation before Acc drops \\
+\texttt{po\_budget}
+  & floor $+$ Softmax$(\PO)$
+  & keep all towers warm; soft reweight only \\
+\texttt{po\_next}
+  & $\alpha$-hist $\oplus$ $\Delta\PO$ forecast
+  & next-$\alpha$ for stack prior $+$ LR \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Design principles behind the menu.}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \textbf{Subtract cov before spend}
+        (\texttt{po\_minus\_cov}): do not buy steps for pure $X$-shift.
+  \item \textbf{Gate noise}
+        (\texttt{po\_gated}): when uni-acc is flat noise, freeze.
+  \item \textbf{Anticipate}
+        (\texttt{po\_delta}/\texttt{po\_next}): move budget
+        \emph{before} accuracy collapses.
+  \item \textbf{Floor}
+        (\texttt{po\_budget}): never starve a tower on 2-mod packs
+        where freeze rarely fires.
+\end{itemize}
+
+%======================================================================
+\section{Actuator map (next window)}
+\label{sec:actuators}
+
+Code: \texttt{next\_step\_actuators}.
+
+\begin{algorithm}[H]
+\caption{PO-risk $\to$ next-window post-training plan}
+\begin{algorithmic}[1]
+\Require sensors at end of window $t$; metric version $v$; configs
+\State $\alpha^{(t)} \gets \texttt{metric\_to\_alpha}(v,\mathrm{sensors}_t)$
+\State $\lambda^{(t+1)} \gets \texttt{alpha\_to\_lr}(\alpha^{(t)};\beta)$
+\State $s^{(t+1)} \gets$ integer allocation $\propto\alpha^{(t)}$, sum $\approx S_{\mathrm{tot}}$
+\State $\mathrm{freeze}_m^{(t+1)} \gets [\alpha_m^{(t)}<\theta_{\mathrm{fr}}]$;
+      ensure at least one tower unfrozen
+\State $\pi^{\mathrm{stack},(t+1)} \gets \alpha^{(t)}$
+\State Run post-train / distill on window $t{+}1$ with
+      $(\lambda,s,\mathrm{freeze},\pi)$; FWD always on
+\State Evaluate holdout Acc / MSE on $t{+}1$; log
+      $(\PO,\alpha,\lambda,\mathrm{freeze},\mathrm{FLOPs}_{\mathrm{rel}})$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Stacking note.}
+$\mathrm{KL}(w^{\mathrm{stack}}\|\alpha)$ is an \emph{external prior},
+not a MoE auxiliary that trains $\alpha$.
+Only $w^{\mathrm{stack}}$ is learned; $\alpha$ stays PO-driven.
+
+%======================================================================
+\section{Empirical reading (smoke compare)}
+\label{sec:emp}
+
+Source: \texttt{docs/agod/AGOD\_po\_risk\_train\_compare.md}
+(Affec / Food-101 / Fashion-IQ / COCO).
+
+\paragraph{Asymmetric multi-mod (Affec, $M{=}5$).}
+\texttt{po\_gated} cuts $\mathrm{FLOPs}_{\mathrm{rel}}$ to $\approx 0.70$
+with Acc roughly flat (best opportunity score as FLOPs saver);
+\texttt{po\_proto} gives a small Acc lift at $\mathrm{FLOPs}_{\mathrm{rel}}\approx 0.825$.
+Cross-dataset vote mass favors \texttt{po\_proto} / \texttt{po\_delta}
+when ranking opportunities.
+
+\paragraph{Easy / balanced 2-mod packs (COCO Acc$\approx 0.90$).}
+All metric versions $\approx$ \texttt{equal} on Acc/MSE;
+freeze never fires at default $\theta_{\mathrm{fr}}$.
+\textbf{Do not claim efficiency wins here.}
+Keep \texttt{equal} or \texttt{po\_budget}; inventiveness goes to
+stack prior only.
+
+\paragraph{Actionable recipe.}
+\begin{center}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+Situation & Metric & Freeze & Primary lever \\
+\midrule
+Concept spike, $M\ge 3$
+  & \texttt{po\_soft}/\texttt{po\_proto}
+  & $\alpha<\theta$
+  & LR $+$ step dump to top-$\alpha$ \\
+High MMD, flat uni-acc
+  & \texttt{po\_minus\_cov}/\texttt{po\_gated}
+  & yes
+  & cut steps / FLOPs \\
+Always-on towers needed
+  & \texttt{po\_budget}
+  & never
+  & soft LR only \\
+Forecast next risk
+  & \texttt{po\_next}
+  & optional
+  & KL$\to$forecast $\alpha$ \\
+Acc already saturated
+  & \texttt{equal}
+  & off
+  & optional stack prior \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%======================================================================
+\section{What this is not}
+\label{sec:not}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \textbf{Not} a claim that PO-risk alone drops serving MSE on
+        every pack (gated IPTW and next-step Acc are pack-dependent).
+  \item \textbf{Not} inference-latency reduction: freeze is update-side.
+  \item \textbf{Not} end-to-end learned routing: no BP into $\alpha$.
+  \item \textbf{Not} replacement of RFPerm / CFPerm: the gate still
+        decides \emph{when} Path~A fires; Path~B decides \emph{how}
+        next-window budget is split.
+  \item \textbf{Not} ``PO $=$ brush / inject polarity'' from the
+        review-agent card lane; that is a different commercial scope.
+\end{itemize}
+
+%======================================================================
+\section{Takeaway}
+\label{sec:take}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=3pt]
+  \item \textbf{Brief logic:}
+        $\PO$ sensors $\to\alpha/w\to$ next-window post-train actuators;
+        train on the \emph{shift}, not uniform data.
+  \item \textbf{Two paths:}
+        (A)~$\sqrt{\PO}$ IPTW on reject;
+        (B)~modality $\alpha\to\{\lambda,s,\mathrm{freeze},\pi\}$.
+  \item \textbf{Justifiable defaults:}
+        soft $\sqrt{\PO}$; RFPerm-gated; causal $t\to t{+}1$;
+        BWD-only freeze; external $\alpha$.
+  \item \textbf{Where it pays:}
+        asymmetric multi-mod packs (FLOPs / small Acc);
+        not on saturated 2-mod Acc floors.
+  \item \textbf{Next inventiveness:}
+        wire \texttt{step\_alloc} into real optimizer step counts;
+        Acc@FLOPs Pareto on $\theta_{\mathrm{fr}}$;
+        log per-window $(\PO,\alpha,\lambda,\mathrm{freeze})$.
+\end{enumerate}
+
+\vspace{0.5em}
+\noindent\textit{Companion artifacts:}
+\texttt{AGOD\_po\_risk\_train\_compare.md},
+\texttt{AGOD\_po\_risk\_train\_tables\_only.tex},
+\texttt{AGOD\_po\_iptw\_mse.md},
+\texttt{AGOD\_rfperm\_gated\_po.md},
+\texttt{AGOD\_hard\_rank\_eval.md},
+\texttt{AGOD\_skeleton.tex}.
+
+\end{document}

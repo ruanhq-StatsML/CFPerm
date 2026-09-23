@@ -1,5 +1,7 @@
 # AGOD PO-risk → next-step training metric compare
 
+> **Writeup (LaTeX):** [`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) · brief MD: [`AGOD_PO_Risk_PostTraining.md`](AGOD_PO_Risk_PostTraining.md)
+
 Iterate metric versions that map **PO-risk sensors → α → next-window training actuators**
 (LR multipliers, step budget, freeze mask, stack prior).
 
