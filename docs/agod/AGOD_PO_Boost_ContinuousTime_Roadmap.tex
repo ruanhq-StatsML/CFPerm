@@ -1,0 +1,186 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,hyperref,geometry,enumitem}
+\geometry{margin=1in}
+
+\title{\textbf{PO-Boost Continuous-Time Logic}\\[0.3em]
+\large Why the stream view helps post-training\\[0.1em]
+\large + elaboration roadmap}
+\author{AGOD \quad \texttt{po\_risk\_train} / \texttt{po\_fuse} / gated $\sqrt{\mathrm{PO}}$}
+\date{2026-09-23}
+
+\newcommand{\PO}{\mathrm{PO}}
+\newcommand{\Flops}{\mathrm{FLOPs}_{\mathrm{rel}}}
+\newcommand{\Acc}{\mathrm{Acc}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+PO-boost is most useful when read as a \emph{continuous-time}
+post-training controller on a non-stationary stream---not a one-shot
+reweight.
+Windows $t=0,1,2,\ldots$ are samples of an underlying continuous
+shift; EMA is a low-pass on residual concept; $\Delta\PO$ is a
+short-horizon derivative; actuators apply only to $t{+}1$ (causal).
+We spell that logic, then give a concrete \textbf{roadmap} to elaborate
+post-training further.
+\end{abstract}
+
+%----------------------------------------------------------------------
+\section{Continuous-time reading (why it feels significant)}
+\label{sec:ct}
+
+\subsection{Stream, not batch-once}
+Post-training in production is a stream of mini-windows
+$(X_t,Y_t)$.
+Uniform fine-tune treats each window as i.i.d.\ dense update.
+PO-boost treats the same stream as a \textbf{controlled dynamical
+system}:
+\[
+\underbrace{\PO_t}_{\text{sensor}}
+\;\xrightarrow{\;\text{filter}\;}
+\underbrace{(L_t,S_t,\alpha_t)}_{\text{state}}
+\;\xrightarrow{\;\text{actuate}\;}
+\underbrace{u_{t+1}}_{\text{LR / steps / freeze / }w}
+\;\xrightarrow{\;\text{train}\;}
+\theta_{t+1}.
+\]
+Significance: gains compound over time ($T(\Acc^\star)$, cumulative
+$\Flops$), which a single static reweight cannot express.
+
+\subsection{Three continuous-time primitives}
+\begin{center}
+\small
+\begin{tabular}{@{}llp{5.2cm}@{}}
+\toprule
+Primitive & Discrete form & Continuous reading \\
+\midrule
+Low-pass
+  & $L_t=\mathrm{EMA}_\rho(\PO_t)$
+  & Chronic residual-concept mass; sets stable modality set \\
+Derivative
+  & $S_t=\PO_t-\PO_{t-1}$
+  & Instant spike; dumps steps \emph{before} Acc collapses \\
+Causal hold
+  & $u_{t+1}=g(\mathrm{sensors}_t)$
+  & No same-window leakage; like a zero-order hold on actuators \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\texttt{po\_fuse} implements the split explicitly:
+freeze$\leftarrow L$ (slow), step dump$\leftarrow S$ (fast),
+LR$\leftarrow$fused $\alpha$.
+That is why concept-mod emphasis stays intuitive on a live stream.
+
+\subsection{Gate as event time}
+OnlineRFPerm / CFPerm reject is an \textbf{event} on the same clock:
+only then sample-level $w_i\propto\sqrt{\PO_i}$ fires.
+Calm time keeps $w=1$---continuous analogue of ``act only on alarm.''
+Gated soft IPTW beats always-on precisely because it respects event
+time vs clock time.
+
+\subsection{What the continuous view buys (gain story)}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \textbf{Anticipation:} $\Delta\PO$ / \texttt{po\_next} moves
+        budget before holdout Acc drops $\Rightarrow$ smaller
+        $T(\Acc^\star)$.
+  \item \textbf{Stability:} EMA freeze set does not thrash every window
+        $\Rightarrow$ less wasted BWD restart.
+  \item \textbf{Selective spend:} reject-gated row weights only on
+        event times $\Rightarrow$ no calm-pack regression.
+  \item \textbf{Honest noop:} on already-saturated streams (COCO),
+        continuous controller has nothing to reallocate---report
+        $\Flops=1$.
+\end{itemize}
+
+%----------------------------------------------------------------------
+\section{Post-training elaboration roadmap}
+\label{sec:road}
+
+Goal lock stays: \textbf{accelerate post-train} (update $\Flops$,
+$T(\Acc^\star)$) with Acc as constraint; PO as primary sensor.
+
+\subsection{Phase R0 --- Locked now (do not reopen)}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item Sensors $\to\alpha\to$ next-window actuators; causal $t\to t{+}1$.
+  \item Scenarios S1--S6 + Affec FLOPs$\approx0.7$ headline; COCO noop.
+  \item \texttt{po\_fuse} hierarchical path wired in compare runner.
+  \item ROI SQL map for next-modality / high-residual rows.
+\end{itemize}
+
+\subsection{Phase R1 --- Make continuous gains measurable (next)}
+\textbf{Deliverables}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item Log per window:
+        $(\PO,L,S,\omega,\alpha,\mathrm{freeze},s,\lambda,\Flops,\Acc)$.
+  \item Report \textbf{cumulative} update FLOPs to $\Acc^\star$
+        (not only mean $\Flops$).
+  \item Freeze Jaccard$(t,t{+}1)$ as stability KPI (S2 claim).
+  \item Affec run: \texttt{po\_fuse} vs \texttt{po\_soft} vs
+        \texttt{po\_gated} on $T(\Acc^\star)$ + Jaccard.
+\end{enumerate}
+\textbf{Exit:} one table ``continuous gains'' in the scenarios tex.
+
+\subsection{Phase R2 --- Wire real step budget}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item Map $s_m$ to optimizer max\_steps / grad-accum (not LR-only).
+  \item Ablate: LR-only vs LR+steps vs fused freeze+steps.
+  \item Exit: show steps wiring lifts $T(\Acc^\star)$ beyond LR-only
+        on Affec.
+\end{enumerate}
+
+\subsection{Phase R3 --- Event-time sample weights in the same loop}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item Plug OnlineRFPerm reject into the modality compare stream
+        (S1+S4 joint).
+  \item Modes: gated $\sqrt{\PO}$ vs cbrt vs uniform on reject only.
+  \item Exit: joint FLOPs + next-MSE table; prove calm windows untouched.
+\end{enumerate}
+
+\subsection{Phase R4 --- Continuous schedule polish}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item Sweep $(\rho,\omega_L^{0},g,\theta_{\mathrm{fr}})$ on Acc@FLOPs
+        Pareto.
+  \item Optional: time-varying $\tau(t)$ (sharper when spike\_ratio high).
+  \item Exit: default config card locked for $M\ge3$ vs $M=2$.
+\end{enumerate}
+
+\subsection{Phase R5 --- Productize (only after R1--R3)}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item Export per-window focus decisions into
+        \texttt{po\_roi\_window\_log} (ROI SQL).
+  \item Dashboard: dominant next modality + cumulative FLOPs saved.
+  \item Do \emph{not} claim inference latency; keep Acc constraint in
+        ship gate.
+\end{enumerate}
+
+\subsection{Out of roadmap (explicit)}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item Backprop into $\alpha$ / learned routers as primary.
+  \item Replacing Drill / math-Eval lanes.
+  \item Review-accel human-gate features while NOT\_READY.
+\end{itemize}
+
+%----------------------------------------------------------------------
+\section{Suggested sequence (one screen)}
+\begin{verbatim}
+R1  measure continuous gains (T(Acc*), Jaccard, logs)
+R2  real step_alloc wiring
+R3  joint modality + reject √PO on same stream
+R4  schedule Pareto (rho, omega, freeze_theta)
+R5  ROI SQL fill + ship gate
+\end{verbatim}
+Each phase must keep: PO-only sensor family; causal $t\to t{+}1$;
+Acc constraint; honest S5 noop.
+
+\vspace{0.6em}
+\noindent\textit{Companions:}
+\texttt{AGOD\_PO\_Boost\_PostTrain\_Scenarios.tex},
+\texttt{AGOD\_PO\_Risk\_PostTraining.tex},
+\texttt{po\_posttrain\_roi\_map.sql}.
+
+\end{document}

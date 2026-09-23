@@ -1,6 +1,7 @@
 # PO-Boosted Post-Training — scenarios & gains (summary)
 
 > LaTeX：[`AGOD_PO_Boost_PostTrain_Scenarios.tex`](AGOD_PO_Boost_PostTrain_Scenarios.tex)  
+> 连续时间 + roadmap：[`AGOD_PO_Boost_ContinuousTime_Roadmap.tex`](AGOD_PO_Boost_ContinuousTime_Roadmap.tex)  
 > PO 足够；增益 = 更新 FLOPs↓ / \(T(\mathrm{Acc}^\star)\)↓（Acc 约束）+ reject 后 √PO 行权。
 
 ## 场景 → 增益
