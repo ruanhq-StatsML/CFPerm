@@ -6,6 +6,8 @@ import sys
 import types
 from pathlib import Path
 
+import numpy as np
+
 _ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -162,3 +164,33 @@ def test_structured_epsilon_alpha_floor_like_budget():
     )
     assert "structured_epsilon" in pack["diag"]
     assert min(pack["alpha"].values()) >= pack["diag"]["floor"] - 1e-9
+
+
+def test_po_iptw_reject_gated_calm_ones():
+    po_iptw_weights = _mod.po_iptw_weights
+    row_po_residual = _mod.row_po_residual
+    stream_reject_proxy = _mod.stream_reject_proxy
+    y = np.array([0.0, 1.0, 1.0, 0.0])
+    mu = np.array([0.1, 0.9, 0.2, 0.8])
+    po_i = row_po_residual(y, mu)
+    assert po_i.shape == (4,)
+    calm = po_iptw_weights(po_i, mode="sqrt", rejected=False)
+    assert np.allclose(calm, 1.0)
+    w = po_iptw_weights(po_i, mode="sqrt", rejected=True)
+    assert abs(w.mean() - 1.0) < 1e-6
+    assert w.max() >= w.min()
+    # higher residual gets higher weight
+    assert w[2] > w[1]  # |1-0.2|=0.8 > |1-0.9|=0.1
+    quiet = stream_reject_proxy(
+        po_mods={"a": 0.01, "b": 0.01},
+        mmd_mods={"a": 0.0, "b": 0.0},
+        mods=["a", "b"],
+        po_mean_thresh=0.05,
+    )
+    assert quiet["rejected"] is False
+    loud = stream_reject_proxy(
+        po_mods={"a": 0.2, "b": 0.15},
+        mods=["a", "b"],
+        po_mean_thresh=0.05,
+    )
+    assert loud["rejected"] is True

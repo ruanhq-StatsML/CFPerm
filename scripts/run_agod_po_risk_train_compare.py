@@ -42,8 +42,11 @@ from agod.po_risk_train import (
     next_step_actuators,
     next_step_actuators_fused,
     opportunity_rank,
+    po_iptw_weights,
     realize_step_alloc,
+    row_po_residual,
     step_flops_rel,
+    stream_reject_proxy,
 )
 from agod.proto_drift import ModalityPrototypeBank
 from agod.shift import residual_concept
@@ -212,6 +215,14 @@ def window_sensors(
 # ---------------------------------------------------------------------------
 
 
+def _weighted_ce(logits: "torch.Tensor", yb: "torch.Tensor", w_row: "torch.Tensor | None"):
+    """CE with optional per-row IPTW (R3)."""
+    if w_row is None:
+        return F.cross_entropy(logits, yb)
+    per = F.cross_entropy(logits, yb, reduction="none")
+    return (per * w_row).mean()
+
+
 def run_version(
     feats: Dict[str, np.ndarray],
     y: np.ndarray,
@@ -225,6 +236,8 @@ def run_version(
     metric_cfg: PORiskMetricConfig,
     act_cfg: NextStepActuatorConfig,
     step_mode: str = "per_mod",
+    row_weight_mode: str = "sqrt",
+    enable_row_iptw: bool = True,
 ) -> Dict[str, Any]:
     xs, ys = _pack_windows(feats, y, window=window, n_windows=n_windows, seed=seed)
     torch.manual_seed(seed + 101)
@@ -240,13 +253,28 @@ def run_version(
     alpha_hist: List[Dict[str, float]] = []
     prev_x = None
     prev_y = None
+    # R3: reject at t → weights for t+1 (causal, same as modality actuators)
+    next_w_np: Optional[np.ndarray] = None
+    next_rejected = False
 
     accs, mses, flops, ents = [], [], [], []
     rows = []
+    reject_mses = []
+    calm_ws = []
 
     for t, (xw, yw) in enumerate(zip(xs, ys)):
         xb = {m: torch.from_numpy(np.asarray(xw[m], dtype=np.float32)).to(device) for m in mods}
         yb = torch.from_numpy(np.asarray(yw, dtype=np.int64)).to(device)
+
+        # row weights decided at end of previous window
+        if enable_row_iptw and next_w_np is not None and next_rejected:
+            w_row = torch.from_numpy(np.asarray(next_w_np, dtype=np.float32)).to(device)
+            used_reject_w = True
+        else:
+            w_row = None
+            used_reject_w = False
+            if enable_row_iptw:
+                calm_ws.append(1.0)
 
         # --- train THIS window with actuators decided at end of previous window ---
         base_lr = 1e-2
@@ -261,7 +289,6 @@ def run_version(
         steps_done = {m: 0 for m in mods}
 
         if step_mode == "shared":
-            # Legacy: step_alloc only scales a shared loop length (LR+freeze bite).
             param_groups = []
             for m in mods:
                 if act["freeze_mask"].get(m, False):
@@ -295,7 +322,7 @@ def run_version(
             )
             for _ in range(n_steps):
                 logits, _h, _lm, w = model(xb, return_parts=True)
-                ce = F.cross_entropy(logits, yb)
+                ce = _weighted_ce(logits, yb, w_row)
                 kl_pack = alpha_stack_kl(w, act["stack_prior"], mods, lambda_kl=0.10)
                 loss = ce + kl_pack["loss"]
                 opt.zero_grad(set_to_none=True)
@@ -303,7 +330,6 @@ def run_version(
                 opt.step()
             flops_this = float(act["flops_rel"])
         else:
-            # R2 default: each schedule slot updates one modality's params (+ stack).
             schedule = expand_step_schedule(realized, mods, mode="block")
             if not schedule:
                 top = act["top_mod"]
@@ -326,7 +352,7 @@ def run_version(
                 ]
                 opt_m = torch.optim.SGD(groups, momentum=0.0)
                 logits, _h, _lm, w = model(xb, return_parts=True)
-                ce = F.cross_entropy(logits, yb)
+                ce = _weighted_ce(logits, yb, w_row)
                 kl_pack = alpha_stack_kl(w, act["stack_prior"], mods, lambda_kl=0.10)
                 loss = ce + kl_pack["loss"]
                 opt_m.zero_grad(set_to_none=True)
@@ -348,8 +374,12 @@ def run_version(
             pred = logits.argmax(-1)
             acc = float((pred == yb).float().mean().item())
             mse = float(((pred.float() - yb.float()) ** 2).mean().item())
+            proba = torch.softmax(logits, dim=-1)[:, 1].detach().cpu().numpy()
 
-        # --- sensors AFTER train → α / actuators for NEXT window ---
+        if used_reject_w:
+            reject_mses.append(mse)
+
+        # --- sensors AFTER train → α / actuators + reject→weights for NEXT window ---
         sens = window_sensors(
             xw,
             yw,
@@ -373,18 +403,35 @@ def run_version(
             cfg=metric_cfg,
         )
         alpha = pack["alpha"]
-        # Hierarchical long⊗short actuators only for po_fuse (S2 gain path)
         if version == "po_fuse":
             next_act = next_step_actuators_fused(pack, mods, cfg=act_cfg)
         else:
             next_act = next_step_actuators(alpha, mods, cfg=act_cfg)
         alpha_hist.append(dict(alpha))
+        prev_po_for_reject = prev_po
         prev_po = dict(sens["po"])
         if po_ema is None:
             po_ema = dict(sens["po"])
         else:
             for m in mods:
                 po_ema[m] = 0.8 * float(po_ema[m]) + 0.2 * float(sens["po"][m])
+
+        # R3 event-time row weights (orthogonal to modality freeze/steps)
+        rej = stream_reject_proxy(
+            po_mods=sens["po"],
+            mmd_mods=sens.get("mmd"),
+            po_prev=prev_po_for_reject,
+            mods=mods,
+        )
+        po_i = row_po_residual(np.asarray(yw), proba)
+        if enable_row_iptw and rej["rejected"]:
+            next_w_np = po_iptw_weights(
+                po_i, mode=row_weight_mode, rejected=True
+            )
+            next_rejected = True
+        else:
+            next_w_np = np.ones(len(yw), dtype=float)
+            next_rejected = False
 
         accs.append(acc)
         mses.append(mse)
@@ -404,6 +451,11 @@ def run_version(
             "flops_rel": flops_this,
             "top_mod": act["top_mod"],
             "po": {m: float(sens["po"][m]) for m in mods},
+            "rejected_for_next": bool(next_rejected),
+            "reject_proxy": rej,
+            "row_weight_mode": row_weight_mode if next_rejected else "uniform",
+            "used_reject_w": used_reject_w,
+            "mean_row_w_next": float(np.mean(next_w_np)) if next_w_np is not None else 1.0,
         }
         diag = dict(pack.get("diag") or {})
         if version == "po_fuse":
@@ -424,6 +476,7 @@ def run_version(
         prev_y = np.asarray(yw)
 
     cg = continuous_gain_metrics(rows, mods=mods, acc_star=0.55)
+    n_reject = sum(1 for r in rows if r.get("rejected_for_next"))
     return {
         "version": version,
         "n_windows": len(accs),
@@ -439,6 +492,13 @@ def run_version(
         "cum_flops_to_acc_star": cg["cum_flops_to_acc_star"],
         "mean_freeze_jaccard": cg["mean_freeze_jaccard"],
         "step_mode": step_mode,
+        "row_iptw": {
+            "enabled": enable_row_iptw,
+            "mode": row_weight_mode,
+            "n_reject_events": n_reject,
+            "mean_mse_on_reject_fit": float(np.mean(reject_mses)) if reject_mses else None,
+            "calm_w_ones": bool(calm_ws) and all(c == 1.0 for c in calm_ws),
+        },
     }
 
 
@@ -591,6 +651,12 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "- `step_flops_rel = steps_used / total_steps`.",
         "- CLI: `--step-mode {per_mod,shared}` (default `per_mod`).",
         "",
+        "### F. R3 reject-gated row IPTW (same stream)",
+        "",
+        "- `stream_reject_proxy` → event; `po_iptw_weights` → \(w\\propto\\sqrt{\\mathrm{PO}}\) (default).",
+        "- Causal: reject at \(t\) weights Fit at \(t+1\); calm \(w=1\).",
+        "- Orthogonal to modality freeze/steps; CLI `--row-weight-mode` / `--no-row-iptw`.",
+        "",
     ]
     (out / "AGOD_po_risk_train_compare.md").write_text("\n".join(lines), encoding="utf-8")
 
@@ -646,6 +712,17 @@ def main() -> None:
         default="per_mod",
         help="R2: per_mod = real step_alloc budgets; shared = legacy loop-length scale",
     )
+    ap.add_argument(
+        "--row-weight-mode",
+        choices=("sqrt", "cbrt", "prop", "uniform"),
+        default="sqrt",
+        help="R3: IPTW on reject windows only (calm stays w=1)",
+    )
+    ap.add_argument(
+        "--no-row-iptw",
+        action="store_true",
+        help="Disable R3 reject-gated sample weights",
+    )
     args = ap.parse_args()
 
     device = torch.device("cpu")
@@ -662,6 +739,8 @@ def main() -> None:
             "n_windows": args.n_windows,
             "seed": args.seed,
             "step_mode": args.step_mode,
+            "row_weight_mode": args.row_weight_mode,
+            "enable_row_iptw": not args.no_row_iptw,
             "metric_cfg": metric_cfg.__dict__,
             "act_cfg": act_cfg.__dict__,
         },
@@ -697,6 +776,8 @@ def main() -> None:
                 metric_cfg=metric_cfg,
                 act_cfg=act_cfg,
                 step_mode=args.step_mode,
+                row_weight_mode=args.row_weight_mode,
+                enable_row_iptw=not args.no_row_iptw,
             )
             print(
                 f"    acc={cells[ver]['mean_acc_post']:.4f} "

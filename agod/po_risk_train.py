@@ -521,6 +521,101 @@ def step_flops_rel(
     return float(min(1.0, used / tot))
 
 
+ROW_WEIGHT_MODES = ("sqrt", "cbrt", "prop", "uniform")
+
+
+def row_po_residual(
+    y: np.ndarray,
+    mu: np.ndarray,
+) -> np.ndarray:
+    """Observation-level PO proxy: |Y − μ| (residual under control fit)."""
+    y = np.asarray(y, dtype=float).reshape(-1)
+    mu = np.asarray(mu, dtype=float).reshape(-1)
+    if mu.shape[0] != y.shape[0]:
+        raise ValueError("y and mu length mismatch")
+    return np.abs(y - mu)
+
+
+def po_iptw_weights(
+    po_i: np.ndarray,
+    *,
+    mode: str = "sqrt",
+    rejected: bool = True,
+    clip: tuple[float, float] = (0.25, 4.0),
+) -> np.ndarray:
+    """Reject-gated row weights (Logic B / R3).
+
+    Calm (``rejected=False``) or ``mode='uniform'`` → ones.
+    Default soft ``sqrt``; alts ``cbrt`` / ``prop``. Mean-normalized then clipped.
+    High PO_i = residual under fit — not intrinsic label difficulty.
+    """
+    po = np.asarray(po_i, dtype=float).reshape(-1)
+    if po.size == 0:
+        return po
+    if (not rejected) or mode == "uniform":
+        return np.ones_like(po, dtype=float)
+    if mode == "sqrt":
+        raw = np.sqrt(np.maximum(po, 0.0) + 1e-12)
+    elif mode == "cbrt":
+        raw = np.cbrt(np.maximum(po, 0.0) + 1e-12)
+    elif mode == "prop":
+        raw = np.maximum(po, 0.0) + 1e-12
+    else:
+        raise ValueError(f"unknown row weight mode: {mode}")
+    w = raw / max(float(raw.mean()), 1e-12)
+    lo, hi = float(clip[0]), float(clip[1])
+    return np.clip(w, lo, hi).astype(float)
+
+
+def stream_reject_proxy(
+    *,
+    po_mods: Mapping[str, float],
+    mmd_mods: Mapping[str, float] | None = None,
+    po_prev: Mapping[str, float] | None = None,
+    mods: Sequence[str] | None = None,
+    po_mean_thresh: float = 0.05,
+    delta_thresh: float = 0.04,
+    mmd_mean_thresh: float = 0.08,
+) -> dict:
+    """Lightweight reject event when OnlineRFPerm is not in the loop.
+
+    Fires if mean PO, mean |ΔPO|, or mean MMD clears a threshold.
+    Replace with real RFPerm/CFPerm reject flag in production; same
+    ``po_iptw_weights(..., rejected=)`` hook either way.
+    """
+    mods = list(mods or po_mods.keys())
+    po_vals = np.array([float(po_mods.get(m, 0.0)) for m in mods], float)
+    mean_po = float(po_vals.mean()) if len(po_vals) else 0.0
+    if po_prev is not None:
+        d = np.array(
+            [abs(float(po_mods.get(m, 0.0)) - float(po_prev.get(m, 0.0))) for m in mods],
+            float,
+        )
+        mean_d = float(d.mean()) if len(d) else 0.0
+    else:
+        mean_d = 0.0
+    if mmd_mods:
+        mmd_vals = np.array([float(mmd_mods.get(m, 0.0)) for m in mods], float)
+        mean_mmd = float(mmd_vals.mean()) if len(mmd_vals) else 0.0
+    else:
+        mean_mmd = 0.0
+    reasons = []
+    if mean_po >= po_mean_thresh:
+        reasons.append("mean_po")
+    if mean_d >= delta_thresh:
+        reasons.append("mean_delta_po")
+    if mean_mmd >= mmd_mean_thresh:
+        reasons.append("mean_mmd")
+    return {
+        "rejected": bool(reasons),
+        "reasons": reasons,
+        "mean_po": mean_po,
+        "mean_delta_po": mean_d,
+        "mean_mmd": mean_mmd,
+        "proxy": True,
+    }
+
+
 def next_step_actuators(
     alpha: Mapping[str, float],
     mods: Sequence[str],

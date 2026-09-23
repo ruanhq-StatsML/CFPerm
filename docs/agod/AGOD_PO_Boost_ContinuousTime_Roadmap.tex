@@ -199,11 +199,15 @@ Wired into \texttt{run\_agod\_po\_risk\_train\_compare.py} cell summary.
 \end{enumerate}
 
 \subsection{Phase R3 --- Event-time sample weights in the same loop}
+\textbf{Status: landed (proxy reject; RFPerm hook ready).}
 \begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
-  \item Plug OnlineRFPerm reject into the modality compare stream
-        (S1+S4 joint).
-  \item Modes: gated $\sqrt{\PO}$ vs cbrt vs uniform on reject only.
-  \item Exit: joint FLOPs + next-MSE table; prove calm windows untouched.
+  \item \texttt{stream\_reject\_proxy} + \texttt{po\_iptw\_weights} in
+        \texttt{po\_risk\_train}; compare applies $w$ on window $t{+}1$
+        (causal, orthogonal to freeze/steps).
+  \item Modes: gated $\sqrt{\PO}$ (default) vs cbrt vs prop vs uniform;
+        calm $\Rightarrow w=1$.
+  \item Exit remaining: Affec joint FLOPs + reject-window next-MSE vs
+        always-$\sqrt{}$; swap proxy for real OnlineRFPerm flag.
 \end{enumerate}
 
 \subsection{Phase R4 --- Continuous schedule polish}
