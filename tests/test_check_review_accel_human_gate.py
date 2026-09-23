@@ -10,7 +10,11 @@ from check_review_accel_human_gate import evaluate  # noqa: E402
 
 def test_not_ready_with_only_smoke():
     rep = evaluate(
-        [{"label": "useful", "reviewer": "smoke"}, {"label": "useful", "reviewer": "ci"}],
+        [
+            {"label": "useful", "reviewer": "smoke"},
+            {"label": "useful", "reviewer": "ci"},
+            {"label": "useful", "reviewer": "ood_timer"},
+        ],
         min_human=1,
     )
     assert rep["ready"] is False

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 ROOT = Path(__file__).resolve().parents[2]
-SMOKE_REVIEWERS = {"smoke", "bot", "ci", "test"}
+SMOKE_REVIEWERS = {"smoke", "bot", "ci", "test", "ood_timer", "agent", "cursor"}
 
 
 def load_rows(path: Path) -> List[Dict[str, Any]]:
