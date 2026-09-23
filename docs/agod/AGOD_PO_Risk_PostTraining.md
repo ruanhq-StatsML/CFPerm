@@ -1,60 +1,81 @@
-# PO-risk → 加速后训练：模态侧重 + 难样本 up-weight
+# PO-risk → ROI：下一步侧重哪一模态 / 哪一部分
 
-> 主文：[`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) §two-logics · §fuse  
-> 代码：`fuse_long_short` / `po_fuse` · `po_iptw_weights`（√PO）
-
-**目标：** 加速后训练；Acc 为约束。PO 不替换 loss，只重分预算。
+> SQL（唯一要维护的 mapping）：[`po_posttrain_roi_map.sql`](po_posttrain_roi_map.sql)  
+> 代码：`fuse_long_short` / `po_fuse` · `po_iptw_weights`
 
 ---
 
-## 符合预期的两条逻辑
+## 可以这样理解吗？—— **可以，但是「subset」有两层**
 
-| | **A. 模态侧重**（high-residual 概念） | **B. 难样本 up-weight**（reject 后） |
+| 理解 | 对不对 | 具体是什么 subset |
 |---|---|---|
-| 问什么 | 哪座塔在扛 \(P(Y\mid X)\) 残差概念漂？ | reject 批里哪些行仍然难？ |
-| 分辨率 | 列 / 模态 \(m\) | 行 / 观测 \(i\) |
-| 信号 | \(\mathrm{PO}_m\) → 长短期融合 \(\alpha\) | \(\mathrm{PO}_i=\|Y-\mu\|\)（可混 batch PO） |
-| 执行器 | freeze←\(L\)；step dump←\(S\)；LR←\(\alpha\) | 仅 gate reject 后 \(w\propto\sqrt{\mathrm{PO}}\) |
-| 加速方式 | 预算砸高残差塔，冻低残差 BWD → FLOPs↓ / \(T(\mathrm{Acc}^\star)\)↓ | 难行多吃梯度；平静窗 \(w=1\) 不白抬 |
+| 限制 algorithm **update focus** 到某一块 | **对** | A：模态/塔子集；B：reject 批内难行子集 |
+| 把整个 dataset **永久丢掉**只留一个 partition 再训 | **不对** | 其它模态 FWD 仍在；calm 行仍进 batch，只是 \(w=1\) |
+
+一句话：**是「更新时侧重某个 subset」，不是「数据集切片后扔掉剩下的」。**
+
+---
+
+## 下一步应侧重什么（直接 map 到 ROI）
+
+### A. 下一步侧重哪一个**模态**（`focus_id=next_modality`）
 
 ```text
-每个窗口 t:   PO_m  --fuse--> α --> {freeze, steps, LR}     ← 模态侧重
-若 reject_t:  PO_i  --√----> w --> Fit_{t+1}                ← 难样本 up-weight
+L_m = EMA(PO_m)·(1+proto)     → 慢性高残差概念塔
+S_m = ΔPO_m                   → 本窗尖峰
+active = {m: L_m ≥ q30(L)}    → 模态 subset（谁还配拿 BWD）
+next_chronic = argmax L       → 概念上该强调谁
+next_spike   = argmax S       → 本窗 step 该砸给谁
+ROI_A = flops_saved / acc_risk   (ΔAcc≥−0.5% 才算过线)
+```
+
+| 决策输出 | ROI 维 |
+|---|---|
+| `top_concept_mod` / `top_spike_mod` | 侧重对象（可审计） |
+| `modality_subset_frac` = n_active/M | **成本**变小 → FLOPs↓ |
+| `delta_acc` | **约束** |
+| `t_to_acc_star` | **收益**（更快够到 Acc★） |
+
+### B. 下一步强调数据的哪一**部分**（`focus_id=next_hard_rows`）
+
+```text
+仅当 rejected=1:
+  PO_i = |Y−μ|
+  hard subset ≈ top-20% by PO_i
+  w_i ∝ √PO_i                 → 难行多吃梯度
+ROI_B = next_mse_drop / fit_wall_clock
+```
+
+| 决策输出 | ROI 维 |
+|---|---|
+| `hard_row_subset_frac` | 强调了多大一块行 |
+| `next_mse_drop` vs uniform | **收益** |
+| `fit_wall_clock` | **成本** |
+
+### 合在一起（`joint_focus`）
+
+```text
+每个 t:     先定模态 subset（A）→ 写进 ROI_A
+若 reject:  再定难行 subset（B）→ 写进 ROI_B
+正交：A 改哪颗头；B 改哪些行。过线看 v_roi_ship_gate。
 ```
 
 ---
 
-## A. 模态侧重（具体）
+## SQL 怎么读（efficient）
 
-- **High-residual** = 该模态上控制拟合解释不了当前 \(Y\)（概念/残差，不是纯 MMD）。  
-- 长期 \(L\)：慢性高残差 → 谁进概念集合（freeze 防抖）。  
-- 短期 \(S\)：\(\Delta\mathrm{PO}\) 尖峰 → 本窗 step 倾倒给谁。  
-- 同一 wall-clock 不再 \(1/M\) 均分，瞄准瓶颈塔。
+```sql
+-- 本窗：下一步侧重谁？
+SELECT window_t, next_modality_chronic, next_modality_spike,
+       modality_subset, hard_row_subset_frac,
+       roi_pass_modality, roi_pass_hard_rows
+FROM v_roi_next_focus;
 
-## B. Reject 后难样本 up-weight（具体）
+-- 跑级 ROI + 主导模态
+SELECT * FROM v_roi_ship_gate;
 
-- **先 gate，后抬权**：OnlineRFPerm/CFPerm reject 才 \(w_i\propto\sqrt{\mathrm{PO}_i}\)；calm 保持 uniform。  
-- 用 **√PO（soft）** 而非 raw \(\propto\mathrm{PO}\)（后者易过拟合当前 reject 批）。  
-- 加速点：有限 step 少浪费在极易行上，难区域更快被下一 fit 纠正。
+-- subset 语义（防误解）
+SELECT * FROM v_roi_subset_meaning;
+```
 
-## 两者关系
-
-- 同源（PO），正交旋钮：A 改 **哪颗头** 反传；B 改 **哪些行** 加权。  
-- 不要混：\(\mathrm{PO}_m\) 高 ≠ 自动抬行权（没 reject 不抬）；reject ≠ 自动冻模态。
-
-长短期融合细节见原文 §fuse；落地 KPI 仍是 FLOPs / \(T(\mathrm{Acc}^\star)\)，Acc 过线才算。
-
----
-
-## ROI mapping（只维护 SQL）
-
-与业务 ROI 的对接：**一张 mapping SQL 即可**，其它看板可有可无。
-
-文件：[`po_posttrain_roi_map.sql`](po_posttrain_roi_map.sql)
-
-| logic_id | cost_proxy | benefit_proxy | view |
-|---|---|---|---|
-| `modality_emphasis` | `flops_rel`, wall_clock | \(T(\mathrm{Acc}^\star)\), ΔAcc 约束 | `v_roi_modality_emphasis` |
-| `hard_upweight` | reject 后 fit 耗时 | next-MSE drop vs uniform, P@20% | `v_roi_hard_upweight` |
-
-过线看 `v_roi_ship_gate`：A 要求 FLOPs&lt;1 且 ΔAcc≥−0.5%；B 要求 reject 窗 next-MSE 相对 uniform 下降。
+其它看板可有可无；**focus → ROI 只维护这份 SQL。**
