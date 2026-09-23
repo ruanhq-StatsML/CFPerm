@@ -85,6 +85,7 @@
 | B18 | **有用率按队列汇总**（scope内） | feedback.jsonl → summary JSON | 运营周报 |
 | B19 | **审出卡灰度 kill_switch**（scope内） | flags JSON → allow/L0 | 可回滚 |
 | B20 | **波次批处理出卡**（scope内） | results/**/summary.json → cards+index | 运营批量 |
+| B21 | **审出卡波次差分**（scope内） | 两卡 tip/sign_Dy/队列差分 → paste | 差分人分钟↓ |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 
