@@ -88,6 +88,7 @@
 | B21 | **审出卡波次差分**（scope内） | 两卡 tip/sign_Dy/队列差分 → paste | 差分人分钟↓ |
 | B22 | **内容农场 tip 词典 overlay**（scope内） | --tip-overlay 换桶话术，卡 UI 不变 | 审出复用 |
 | B23 | **useful_rate→sample_rate 建议**（scope内） | feedback summary → flags.suggested.json | 灰度闭环 |
+| B24 | **审出卡 SLA 紧迫度**（scope内） | gap_days→urgent/tight + 工单字段 | 清队人分钟 |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 

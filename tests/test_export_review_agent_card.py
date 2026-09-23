@@ -63,3 +63,16 @@ def test_content_farm_tip_overlay():
     assert "互粉同发" in card["review_hint"]["queue_bucket"]
     assert card["ticket_custom_fields"]["graph_shift_tip_industry"] == "content_farm"
     assert "industry=content_farm" in card["paste_for_agent"]
+
+
+def test_sla_urgency_from_gap_days():
+    blob = {
+        "localize_k": 2,
+        "gap_days": 30,
+        "fsds_W1_holdout": {"top_features": ["u_span_sec"]},
+        "direction": {"sign_Dy": "flat", "tip_signs": {"u_span_sec": "0"}},
+    }
+    card = build_card(blob, source="sla")
+    assert card["review_hint"]["sla_urgency"]["level"] == "urgent"
+    assert card["ticket_custom_fields"]["graph_shift_sla_level"] == "urgent"
+    assert "SLA: urgent" in card["paste_for_agent"]

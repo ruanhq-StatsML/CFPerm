@@ -123,6 +123,44 @@ def load_tip_overlay(path: Optional[Path]) -> Dict[str, Any]:
     }
 
 
+def sla_from_support(
+    support: Dict[str, Any],
+    *,
+    sign_dy: str,
+    gate_allow: bool,
+) -> Dict[str, Any]:
+    """Display-only SLA urgency from wave age (gap_days). No Drill change."""
+    gap = support.get("gap_days")
+    try:
+        gap_f = float(gap) if gap is not None else None
+    except (TypeError, ValueError):
+        gap_f = None
+    if not gate_allow:
+        return {
+            "level": "deferred",
+            "gap_days": gap_f,
+            "reason": "gray_disabled",
+            "copy": "灰度关闭：不催审",
+        }
+    if gap_f is None:
+        level, reason = "normal", "no_gap_days"
+    elif gap_f >= 21:
+        level, reason = "urgent", "gap_days>=21"
+    elif gap_f >= 7:
+        level, reason = "tight", "gap_days>=7"
+    else:
+        level, reason = "normal", "gap_days_fresh"
+    if sign_dy in ("pos", "neg") and level == "normal":
+        level, reason = "tight", reason + "+direction_moved"
+    copy = {
+        "urgent": "波次偏老：优先清本队列",
+        "tight": "SLA 收紧：今日内处理",
+        "normal": "常规时效",
+        "deferred": "灰度关闭：不催审",
+    }[level]
+    return {"level": level, "gap_days": gap_f, "reason": reason, "copy": copy}
+
+
 def build_card(
     blob: Dict[str, Any],
     *,
@@ -140,6 +178,8 @@ def build_card(
     )
     sign_dy = direction.get("sign_Dy", "flat")
     primary_bucket = buckets[0]["bucket"] if buckets else "未选 tip"
+    support = _support_summary(blob)
+    sla = sla_from_support(support, sign_dy=sign_dy, gate_allow=gate["allow"])
     card = {
         "card_type": "review_agent_context",
         "disclaimer": "图谱分布变动线索，非定罪结论；供审核分流与上下文，不自动封禁。",
@@ -149,7 +189,7 @@ def build_card(
             "industry": overlay.get("industry", "default"),
             "note": overlay.get("note"),
         },
-        "support": _support_summary(blob),
+        "support": support,
         "direction": {
             "Dy": direction.get("Dy"),
             "sign_Dy": sign_dy,
@@ -169,6 +209,7 @@ def build_card(
                 "flat": "X 漂了但 click 率平：先当供给/分布漂移，慎升强动作",
             }.get(sign_dy, "flat"),
             "suggested_action_level": "L1_watch" if gate["allow"] else "L0_observe",
+            "sla_urgency": sla,
         },
         "paste_for_agent": "",
     }
@@ -177,6 +218,9 @@ def build_card(
             "【灰度关闭/未命中采样】本卡不建议写入工单。" + card["disclaimer"]
         )
         card["review_hint"]["queue_bucket"] = "GRAY_DISABLED"
+        card["review_hint"]["sla_urgency"] = sla_from_support(
+            support, sign_dy=sign_dy, gate_allow=False
+        )
     lines = [
         "【审核上下文·图谱变动线索】",
         f"灰度: allow={gate['allow']} reason={gate['reason']}",
@@ -185,6 +229,8 @@ def build_card(
         f"支撑: localize_k={card['support'].get('localize_k')} "
         f"edges={card['support'].get('n_localized_edges')}",
         f"建议队列: {card['review_hint']['queue_bucket']}",
+        f"SLA: {card['review_hint']['sla_urgency']['level']} "
+        f"({card['review_hint']['sla_urgency']['copy']})",
         f"读法: {card['review_hint']['outcome_read']}",
         "Tips:",
     ]
@@ -207,6 +253,8 @@ def build_card(
         "graph_shift_gray_allow": gate["allow"],
         "graph_shift_gray_reason": gate["reason"],
         "graph_shift_tip_industry": overlay.get("industry", "default"),
+        "graph_shift_sla_level": card["review_hint"]["sla_urgency"]["level"],
+        "graph_shift_sla_gap_days": card["review_hint"]["sla_urgency"]["gap_days"],
     }
     return card
 
