@@ -19,6 +19,7 @@ Metric versions (sensor → α)
   po_delta      Softmax((EMA(PO) + γ·ΔPO) / τ)     anticipatory
   po_budget     floor + (1−floor)·Softmax(PO)      risk budget w/ floor
   po_next       EMA(α) ⊕ Softmax(ΔPO)              next-step forecast
+  po_fuse       long⊗short concept emphasis         (see fuse_long_short)
 """
 from __future__ import annotations
 
@@ -40,6 +41,7 @@ METRIC_VERSIONS = (
     "po_delta",
     "po_budget",
     "po_next",
+    "po_fuse",
 )
 
 ACTUATORS = ("lr_mult", "step_alloc", "freeze_mask", "stack_prior")
@@ -52,6 +54,11 @@ class PORiskMetricConfig:
     gamma_delta: float = 0.75
     ema_po: float = 0.55
     budget_floor: float = 0.15
+    # long⊗short fusion (po_fuse): concept-modality emphasis at step t
+    omega_long: float = 0.55
+    omega_short0: float = 0.45
+    spike_gain: float = 1.25
+    freeze_from_long: bool = True
     gate: DriftNoiseGateConfig = field(default_factory=DriftNoiseGateConfig)
 
 
@@ -81,6 +88,117 @@ def _ema_dict(
     return {
         m: float(ema) * float(prev[m]) + (1.0 - float(ema)) * float(cur[m])
         for m in mods
+    }
+
+
+def _zscore_dict(d: Mapping[str, float], mods: Sequence[str]) -> dict[str, float]:
+    vals = np.array([float(d[m]) for m in mods], float)
+    mu = float(vals.mean())
+    sd = float(vals.std())
+    if sd < 1e-12:
+        return {m: 0.0 for m in mods}
+    return {m: (float(d[m]) - mu) / sd for m in mods}
+
+
+def fuse_long_short(
+    mods: Sequence[str],
+    *,
+    po: Mapping[str, float],
+    po_prev: Mapping[str, float] | None = None,
+    po_ema: Mapping[str, float] | None = None,
+    mmd: Mapping[str, float] | None = None,
+    proto: Mapping[str, float] | None = None,
+    alpha_hist: Sequence[Mapping[str, float]] | None = None,
+    cfg: PORiskMetricConfig | None = None,
+) -> dict:
+    """Fuse long-term + short-term sensors for concept-modality emphasis.
+
+    Long track L_m (chronic residual-concept / institutional focus)
+      L_m = EMA_ρ(PO_m) · (1 + proto_m)  [+ mild pull from last α]
+    Short track S_m (this-step spike / anticipatory tilt)
+      S_m = ΔPO_m = PO_m − PO_{m,t−1}   (fallback: PO − EMA)
+
+    Adaptive mix (more short when the spike is large vs long MAD)::
+
+        ω_S = clip( ω_S0 · (1 + spike_gain · ‖S‖_∞ / (MAD(L)+ε)) , 0, 1 )
+        ω_L = 1 − ω_S   (or fixed omega_long if spike tiny)
+
+    Score → Softmax::
+
+        score_m = ω_L z(L_m) + ω_S z(S_m) − λ MMD_m
+
+    Hierarchical actuators (returned in diag for next_step_actuators callers)::
+
+        freeze_hint_m = 1{L_m < quantile_θ}   # slow — don't thrash on S
+        step_tilt_m   ∝ Softmax(S)_active     # dump steps on short spike
+    """
+    cfg = cfg or PORiskMetricConfig()
+    mods = list(mods)
+    po_a = _as(mods, po)
+    mmd_a = _as(mods, mmd)
+    proto_a = _as(mods, proto)
+    L_po = _ema_dict(po_ema, po_a, mods, cfg.ema_po)
+    L = {m: L_po[m] * (1.0 + proto_a[m]) for m in mods}
+    if alpha_hist:
+        last_a = _as(mods, alpha_hist[-1])
+        L = {m: 0.85 * L[m] + 0.15 * last_a[m] for m in mods}
+
+    if po_prev is not None:
+        S = {m: po_a[m] - float(po_prev[m]) for m in mods}
+    else:
+        S = {m: po_a[m] - L_po[m] for m in mods}
+
+    L_vals = np.array([L[m] for m in mods], float)
+    med = float(np.median(L_vals))
+    mad = float(np.median(np.abs(L_vals - med))) + 1e-8
+    spike = float(np.max(np.abs([S[m] for m in mods])))
+    # cap so a single frame cannot force ω_S=1 from numerical MAD collapse
+    spike_ratio = float(np.clip(spike / mad, 0.0, 4.0))
+    w_s = float(cfg.omega_short0) * (1.0 + float(cfg.spike_gain) * spike_ratio)
+    w_s = float(np.clip(w_s, 0.0, 1.0))
+    # if spike is tiny, prefer configured long weight
+    if spike_ratio < 0.25:
+        w_l = float(cfg.omega_long)
+        w_s = 1.0 - w_l
+    else:
+        w_l = 1.0 - w_s
+
+    zL = _zscore_dict(L, mods)
+    zS = _zscore_dict(S, mods)
+    score = {
+        m: w_l * zL[m] + w_s * zS[m] - float(cfg.lam_cov) * mmd_a[m] for m in mods
+    }
+    alpha = softmax_scores(score, mods, cfg.tau)
+
+    # slow freeze from long track; keep at least one active
+    thr = float(np.quantile(L_vals, 0.30)) if len(mods) > 1 else -1e9
+    freeze_hint = {m: bool(cfg.freeze_from_long and L[m] < thr) for m in mods}
+    if all(freeze_hint.values()):
+        freeze_hint[max(mods, key=lambda m: L[m])] = False
+
+    step_tilt = softmax_scores(S, mods, cfg.tau)
+    # zero tilt mass on frozen (hierarchical)
+    for m in mods:
+        if freeze_hint[m]:
+            step_tilt[m] = 0.0
+    z = sum(step_tilt.values())
+    if z <= 1e-12:
+        step_tilt = {m: 1.0 / len(mods) for m in mods}
+    else:
+        step_tilt = {m: step_tilt[m] / z for m in mods}
+
+    return {
+        "alpha": alpha,
+        "score": score,
+        "long": L,
+        "short": S,
+        "omega_long": w_l,
+        "omega_short": w_s,
+        "spike_ratio": spike_ratio,
+        "freeze_hint": freeze_hint,
+        "step_tilt": step_tilt,
+        "top_concept_mod": max(mods, key=lambda m: L[m]),
+        "top_spike_mod": max(mods, key=lambda m: S[m]),
     }
 
 
@@ -185,9 +303,113 @@ def metric_to_alpha(
         score = dict(po_a)
         return {"alpha": alpha, "score": score, "diag": diag}
 
+    if version == "po_fuse":
+        fused = fuse_long_short(
+            mods,
+            po=po_a,
+            po_prev=po_prev,
+            po_ema=po_ema,
+            mmd=mmd_a,
+            proto=proto_a,
+            alpha_hist=alpha_hist,
+            cfg=cfg,
+        )
+        diag.update(
+            {
+                "omega_long": fused["omega_long"],
+                "omega_short": fused["omega_short"],
+                "spike_ratio": fused["spike_ratio"],
+                "long": fused["long"],
+                "short": fused["short"],
+                "freeze_hint": fused["freeze_hint"],
+                "step_tilt": fused["step_tilt"],
+                "top_concept_mod": fused["top_concept_mod"],
+                "top_spike_mod": fused["top_spike_mod"],
+            }
+        )
+        return {"alpha": fused["alpha"], "score": fused["score"], "diag": diag}
+
     raise ValueError(
         f"unknown PO-risk metric version {version!r}; expected {METRIC_VERSIONS}"
     )
+
+
+def next_step_actuators_fused(
+    fuse_out: Mapping,
+    mods: Sequence[str],
+    *,
+    cfg: NextStepActuatorConfig | None = None,
+) -> dict:
+    """Actuators with hierarchical long→freeze, short→step tilt.
+
+    Use after ``fuse_long_short`` / ``metric_to_alpha(..., version='po_fuse')``.
+    LR still follows fused α; freeze prefers long-track hint; step_alloc
+    follows short-track tilt on the active set (acceleration focus).
+    """
+    cfg = cfg or NextStepActuatorConfig()
+    mods = list(mods)
+    alpha = fuse_out.get("alpha") or fuse_out
+    # accept either fuse_long_short dict or metric_to_alpha return
+    if "diag" in fuse_out and "freeze_hint" in dict(fuse_out.get("diag") or {}):
+        diag = dict(fuse_out["diag"])
+        alpha = fuse_out["alpha"]
+        freeze_hint = diag.get("freeze_hint")
+        step_tilt = diag.get("step_tilt")
+    else:
+        freeze_hint = fuse_out.get("freeze_hint")
+        step_tilt = fuse_out.get("step_tilt")
+
+    base = next_step_actuators(alpha, mods, cfg=cfg)
+    if freeze_hint:
+        freeze = {m: bool(freeze_hint.get(m, False)) for m in mods}
+        if all(freeze.values()):
+            freeze[max(mods, key=lambda m: float(alpha[m]))] = False
+        base["freeze_mask"] = freeze
+        base["active_mods"] = [m for m in mods if not freeze[m]]
+        base["flops_rel"] = float(len(base["active_mods"]) / max(len(mods), 1))
+
+    if step_tilt:
+        active = base["active_mods"]
+        raw = np.array(
+            [float(step_tilt.get(m, 0.0)) if m in active else 0.0 for m in mods],
+            float,
+        )
+        if raw.sum() <= 1e-12:
+            raw = np.array(
+                [1.0 if m in active else 0.0 for m in mods], float
+            )
+        raw = raw / raw.sum()
+        steps = np.maximum(np.round(raw * cfg.total_steps), 0).astype(int)
+        # ensure each active mod gets ≥ min_steps when possible
+        for i, m in enumerate(mods):
+            if m in active and steps[i] < cfg.min_steps:
+                steps[i] = cfg.min_steps
+        # repair sum
+        while int(steps.sum()) > cfg.total_steps and (steps > cfg.min_steps).any():
+            j = int(np.argmax(steps))
+            if steps[j] > cfg.min_steps:
+                steps[j] -= 1
+            else:
+                break
+        while int(steps.sum()) < cfg.total_steps:
+            j = int(np.argmax(raw))
+            steps[j] += 1
+        base["step_alloc"] = {m: int(steps[i]) for i, m in enumerate(mods)}
+        base["step_tilt"] = {m: float(step_tilt.get(m, 0.0)) for m in mods}
+
+    base["fuse"] = {
+        "omega_long": fuse_out.get("omega_long")
+        or (fuse_out.get("diag") or {}).get("omega_long"),
+        "omega_short": fuse_out.get("omega_short")
+        or (fuse_out.get("diag") or {}).get("omega_short"),
+        "spike_ratio": fuse_out.get("spike_ratio")
+        or (fuse_out.get("diag") or {}).get("spike_ratio"),
+        "top_concept_mod": fuse_out.get("top_concept_mod")
+        or (fuse_out.get("diag") or {}).get("top_concept_mod"),
+        "top_spike_mod": fuse_out.get("top_spike_mod")
+        or (fuse_out.get("diag") or {}).get("top_spike_mod"),
+    }
+    return base
 
 
 def next_step_actuators(

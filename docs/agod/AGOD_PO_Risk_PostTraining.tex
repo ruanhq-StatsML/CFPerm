@@ -11,9 +11,9 @@
 \geometry{margin=1in}
 
 \title{\textbf{PO-risk Metrics $\to$ Accelerate Post-Training}\\[0.35em]
-\large Goal, landing KPIs, and metric$\to$actuator procedures\\[0.15em]
+\large Goal, landing KPIs, long$\otimes$short fusion for concept-mod emphasis\\[0.15em]
 \large (focus: faster next-window updates, quality as constraint)}
-\author{CFPerm / AGOD \quad \texttt{agod/po\_risk\_train.py}, \texttt{agod/po\_iptw.py}}
+\author{CFPerm / AGOD \quad \texttt{agod/po\_risk\_train.py}, \texttt{fuse\_long\_short}}
 \date{2026-09-23}
 
 \newtheorem{definition}{Definition}
@@ -47,8 +47,10 @@ scores; they are \emph{sensors} whose landing procedure is
 Primary report: $\Flops$, step budget used, wall-clock to
 $\Acc\ge\Acc^\star$.
 Secondary (constraint): $\Acc$ / MSE must not collapse vs equal.
-This note writes the landing procedure for each metric version with
-that focus.
+A core elaboration is \textbf{fusing long-term and short-term metrics}
+so that, at each step, concept-modality emphasis is stable enough to
+freeze safely and sharp enough to dump steps on the spike
+(\texttt{po\_fuse} / \texttt{fuse\_long\_short}).
 \end{abstract}
 
 \tableofcontents
@@ -243,6 +245,13 @@ Version & Fire when & Map (brief) & Speed landing \\
   & Forecast next $\alpha$
   & Same actuators from forecast;
     earlier freeze/realloc \\
+\texttt{po\_fuse}
+  & Need concept emphasis
+    with both chronic + spike
+  & Long$\otimes$short
+    (Sec.~\ref{sec:fuse})
+  & Freeze from long; step dump from short;
+    LR from fused $\alpha$ \\
 \bottomrule
 \end{tabular}
 \label{tab:land}
@@ -260,6 +269,185 @@ Version & Fire when & Map (brief) & Speed landing \\
         or FLOPs flat $\to$ raise $\theta_{\mathrm{fr}}$ / use
         \texttt{po\_gated} (only if $M\ge3$).
 \end{enumerate}
+
+%======================================================================
+\section{Elaboration strategy: long$\otimes$short for concept-mod emphasis}
+\label{sec:fuse}
+
+\paragraph{Why fuse (the key observation).}
+At a given post-train step the interesting object is
+\emph{which concept modality deserves emphasis}.
+A pure short-term map (instant $\PO_t$ or $\Delta\PO$) thrashs
+freeze masks and wastes wall-clock on flicker.
+A pure long-term map (EMA / $\alpha$-hist only) is too slow: the
+spike modality does not get the step dump in time, so
+$T(\Acc^\star)$ does not fall.
+Acceleration needs \textbf{both}:
+long track decides \emph{who stays in the concept set};
+short track decides \emph{who gets the budget spike this window}.
+
+\subsection{Two tracks}
+\label{sec:fuse-tracks}
+
+\begin{definition}[Long-term concept track $L_m$]
+Chronic residual-concept mass for modality $m$:
+\[
+  L_m^{(t)}
+  \;=\;
+  \underbrace{\mathrm{EMA}_{\rho}(\PO_m^{(t)})}_{\text{slow PO}}
+  \cdot
+  \bigl(1+\mathrm{proto}_m^{(t)}\bigr)
+  \;+\;
+  \eta\,\alpha_m^{(t-1)},
+\]
+with $\rho\!\approx\!0.55$, $\eta\!\approx\!0.15$ (mild institutional pull
+from last emphasis).
+Optional: subtract $\lambda\MMD$ only later in the fused score.
+\end{definition}
+
+\begin{definition}[Short-term spike track $S_m$]
+This-step anticipatory tilt:
+\[
+  S_m^{(t)}
+  \;=\;
+  \PO_m^{(t)}-\PO_m^{(t-1)}
+  \quad\text{(fallback: }\PO_m^{(t)}-\mathrm{EMA}_{\rho}(\PO_m)\text{)}.
+\]
+\end{definition}
+
+\paragraph{Diagnostics to log every window.}
+\texttt{top\_concept\_mod}$=\arg\max_m L_m$ (chronic focus);
+\texttt{top\_spike\_mod}$=\arg\max_m S_m$ (this-step dump);
+\texttt{spike\_ratio}$=\|S\|_\infty / (\mathrm{MAD}(L)+\varepsilon)$
+(clipped).
+
+\subsection{Adaptive mix}
+\label{sec:fuse-mix}
+
+\[
+\begin{aligned}
+  r_t &= \mathrm{clip}\bigl(\mathrm{spike\_ratio},\,0,4\bigr),\\
+  \omega_S &=
+  \begin{cases}
+    1-\omega_L^{0} & r_t < 0.25 \quad\text{(calm: prefer long)}\\
+    \mathrm{clip}\bigl(\omega_S^{0}(1+g\,r_t),\,0,1\bigr) & \text{else},
+  \end{cases}\\
+  \omega_L &= 1-\omega_S,
+\end{aligned}
+\]
+defaults $\omega_L^{0}{=}0.55$, $\omega_S^{0}{=}0.45$, $g{=}1.25$.
+
+Fused score and emphasis simplex:
+\[
+  \mathrm{score}_m
+  \;=\;
+  \omega_L\,z(L_m)+\omega_S\,z(S_m)-\lambda\,\MMD_m,
+  \qquad
+  \alpha^{(t)}=\mathrm{Softmax}_{\tau}(\mathrm{score}).
+\]
+Code: \texttt{fuse\_long\_short} / metric version \texttt{po\_fuse}.
+
+\subsection{Hierarchical actuators (do not use one $\alpha$ for everything)}
+\label{sec:fuse-hier}
+
+This is the elaboration that turns fusion into \emph{acceleration}:
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Knob & Driven by & Why \\
+\midrule
+$\mathrm{freeze}_m$
+  & \textbf{Long} $L_m < q_{0.3}(L)$
+  & Slow set membership --- no flicker FLOPs thrash \\
+$s_m$ step dump
+  & \textbf{Short} Softmax$(S)$ on active set
+  & Instant concept spike gets the budget now \\
+$\lambda_m$ LR
+  & Fused $\alpha$
+  & Smooth correction across chronic+spike \\
+$\pi^{\mathrm{stack}}$
+  & Fused $\alpha$
+  & Mixer prior matches emphasis \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Code path: \texttt{next\_step\_actuators\_fused}.
+
+\paragraph{Worked intuition.}
+Suppose $\texttt{txt}$ has been the chronic residual-concept
+($L_{\mathrm{txt}}$ high for many windows) and this window
+$\Delta\PO_{\mathrm{aud}}$ spikes.
+Then: keep $\texttt{txt}$ unfrozen (long), dump most of $S_{\mathrm{tot}}$
+onto $\texttt{aud}$ among actives (short), LR follows fused $\alpha$
+(both get lift, aud more).
+Pure \texttt{po\_soft} might freeze $\texttt{txt}$ wrongly on one calm
+frame; pure EMA would under-allocate to $\texttt{aud}$ this window.
+
+\subsection{Elaboration strategy (how to iterate the fusion)}
+\label{sec:fuse-strategy}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=3pt]
+  \item \textbf{Instrument first.}
+        Per window log
+        $(L,S,\omega_L,\omega_S,\texttt{top\_concept},\texttt{top\_spike},
+        \mathrm{freeze},s,\lambda,\Flops,\Acc)$.
+        Without this, fusion knobs are not justifiable.
+
+  \item \textbf{Separate ablations.}
+        Compare four policies on the same stream:
+        (i) long-only freeze+equal steps;
+        (ii) short-only steps+no freeze;
+        (iii) single Softmax$(\omega_L L+\omega_S S)$ for all knobs;
+        (iv) \textbf{hierarchical} long-freeze / short-steps (ours).
+        Primary score: $\Flops$ and $T(\Acc^\star)$ under $\Delta\Acc\ge-\varepsilon$.
+
+  \item \textbf{Tune in this order} (acceleration-first).
+        \begin{enumerate}[label=\alph*.,leftmargin=1.2em]
+          \item $\theta$ / quantile for long freeze --- set FLOPs level.
+          \item $\omega_L^{0},\omega_S^{0},g$ --- calm vs spike sensitivity.
+          \item $\rho$ (EMA) --- longer $\rho$ = stickier concept set.
+          \item $\tau$ --- sharpness of $\alpha$ / step tilt.
+          \item Only then touch Acc constraint $\varepsilon$.
+        \end{enumerate}
+
+  \item \textbf{Regime playbook.}
+        \begin{itemize}[leftmargin=1em,itemsep=1pt]
+          \item Calm ($r_t{<}0.25$): $\omega_L$ high; freeze from $L$;
+                steps nearly equal on active --- save thrash.
+          \item Spike ($r_t$ large): raise $\omega_S$; dump $s_m$ to
+                \texttt{top\_spike\_mod}; keep long freeze stable.
+          \item Concept handover (top\_concept changes for $K$ windows):
+                allow freeze set to follow $L$; do not chase $S$.
+          \item $M{=}2$ saturated Acc: skip freeze; use fused $\alpha$
+                only as soft LR / stack prior (\texttt{po\_budget}-like).
+        \end{itemize}
+
+  \item \textbf{Pass/fail for fusion landing.}
+        Pass if hierarchical (iv) beats (iii) on
+        $\Flops$ or $T(\Acc^\star)$ at same Acc constraint,
+        \emph{or} beats long-only on $T(\Acc^\star)$ at similar FLOPs.
+        Fail if freeze flickers (Jaccard of freeze masks across $t,t{+}1$
+        low while $L$ stable) --- lengthen $\rho$ / freeze from $L$ only.
+
+  \item \textbf{Default ship recipe.}
+        Use \texttt{po\_fuse} + \texttt{next\_step\_actuators\_fused}
+        on $M\ge3$ asymmetric packs; fall back to \texttt{po\_gated}
+        if only FLOPs matter and spikes are rare; fall back to
+        \texttt{po\_budget} when freeze must stay off.
+\end{enumerate}
+
+\begin{remark}[Relation to \texttt{po\_delta} / \texttt{po\_next}]
+\texttt{po\_delta} already adds $\mathrm{EMA}+\gamma\Delta$ in one score
+but drives \emph{all} actuators from that single Softmax.
+\texttt{po\_next} mixes EMA$(\alpha)$ with Softmax$(\Delta\PO)$ for
+forecast $\alpha$, still one vector for everything.
+\texttt{po\_fuse} keeps the mix \textbf{and} splits tracks onto
+different knobs---that split is the elaboration for concept-mod
+emphasis under an acceleration goal.
+\end{remark}
 
 %======================================================================
 \section{Actuator $\leftrightarrow$ acceleration (why each knob)}
@@ -342,18 +530,21 @@ tradeoff ($6/6$ vs always); use gate so calm windows stay uniform
         Acc is a constraint.
   \item \textbf{Metrics land only via actuators:}
         sense $\to$ map $\to$ freeze/LR/steps/IPTW $\to$ speed KPIs.
-  \item \textbf{Procedure P0} is the shared landing;
-        Table~\ref{tab:land} chooses which map to fire.
+  \item \textbf{Concept-mod emphasis:} fuse long $L$ (chronic PO/proto)
+        with short $S$ ($\Delta\PO$); freeze$\leftarrow L$,
+        step dump$\leftarrow S$, LR$\leftarrow$fused $\alpha$
+        (\texttt{po\_fuse}).
+  \item \textbf{Elaboration:} instrument $\to$ ablate hierarchical vs
+        single-$\alpha$ $\to$ tune freeze quantile before mix weights
+        $\to$ regime playbook (calm/spike/handover).
   \item \textbf{Ship rule:} FLOPs or $T(\Acc^\star)$ down
         \emph{and} $\Delta\Acc\ge-\varepsilon$; else retune, don't claim.
-  \item \textbf{Next:} wire real \texttt{step\_alloc};
-        Pareto sweep $\theta_{\mathrm{fr}}$ on Acc@FLOPs.
 \end{enumerate}
 
 \vspace{0.5em}
-\noindent\textit{Code:} \texttt{agod/po\_risk\_train.py},
+\noindent\textit{Code:} \texttt{agod/po\_risk\_train.py}
+(\texttt{fuse\_long\_short}, \texttt{next\_step\_actuators\_fused}),
 \texttt{agod/po\_iptw.py}.
-\textit{Tables:} \texttt{AGOD\_po\_risk\_train\_compare.md},
-\texttt{AGOD\_po\_risk\_train\_tables\_only.tex}.
+\textit{Tables:} \texttt{AGOD\_po\_risk\_train\_compare.md}.
 
 \end{document}

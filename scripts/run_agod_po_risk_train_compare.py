@@ -2,7 +2,10 @@
 """Iterate PO-risk metric versions → next-window training actuators.
 
 Compares metric versions on Affec / Food-101 / Fashion-IQ / COCO (when present):
-  equal | po_soft | po_minus_cov | po_gated | po_proto | po_delta | po_budget | po_next
+  equal | po_soft | po_minus_cov | po_gated | po_proto | po_delta | po_budget | po_next | po_fuse
+
+Long⊗short concept emphasis: see docs/agod/AGOD_PO_Risk_PostTraining.tex §fuse
+(freeze←long, step dump←short, LR←fused α).
 
 Actuators applied next window:
   - modality LR multipliers from α
