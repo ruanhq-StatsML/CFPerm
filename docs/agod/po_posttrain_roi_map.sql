@@ -37,12 +37,13 @@ INSERT OR REPLACE INTO po_roi_focus_dim VALUES
 ),
 (
   'next_hard_rows',
-  'reject 后应强调数据集/batch 的哪一部分（难行）？',
+  'reject 后应强调 batch 的哪一部分（高残差行；未见得=内在难）？',
   'row',
-  'only if rejected=1; rank by PO_i=|Y-mu|; w_i∝sqrt(PO_i) (soft); calm => w=1',
+  'only if rejected=1; score PO_i=|Y-mu| (residual under mu, NOT intrinsic hardness); '
+  || 'default w_i∝sqrt(PO_i); alts: prop/cbrt/inv/dre/uniform/top-k; calm => w=1',
   'cost=fit_wall_clock; benefit=next_mse_drop_vs_uniform, hard_p_at_20',
   'ROI_B = next_mse_drop / fit_wall_clock_s',
-  'pass if rejected windows have next_mse_drop>0'
+  'pass if rejected windows have next_mse_drop>0; do NOT equate high PO with label difficulty'
 ),
 (
   'joint_focus',
@@ -74,10 +75,10 @@ INSERT OR REPLACE INTO po_roi_logic VALUES
  'freeze<-L; step_dump<-S; LR<-α',
  'Subset focus = active modality towers only for BWD/steps.'),
 ('hard_upweight', 'next_hard_rows', 'observation',
- 'PO_i=|Y-μ|',
+ 'PO_i=|Y-μ| (residual under control fit; not intrinsic hardness)',
  'reject',
- 'w_i∝√PO_i on Fit_{t+1}',
- 'Subset focus = high-residual rows inside rejected batch (soft weights).');
+ 'default w∝√PO; alts prop/cbrt/inv/dre/top-k; calm w=1',
+ 'Subset = high-residual rows in rejected batch. High PO ≠ hard label; may be noise/outlier/bad μ.'),
 
 -- ===========================================================================
 -- 3) Window log (fill from train loop)
