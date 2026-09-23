@@ -197,8 +197,8 @@ C_{\mathrm{bwd}}=|A|c_{pb}+c_{sb}.
 \]
 With $c_{pb}\approx 2c_{pf}$: $\Flops\approx(|M|+2|A|)/(3|M|)$.
 Empirical anchors: Affec \texttt{po\_gated}$\approx0.70$;
-synthetic \texttt{po\_fuse}$\approx0.63$; $M{=}2$ packs often $\Flops{=}1$
-(honest noop).
+synthetic \texttt{po\_fuse}$\approx0.78$ (\texttt{flops\_rel\_proj});
+$M{=}2$ packs often $\Flops{=}1$ (honest noop).
 
 %----------------------------------------------------------------------
 \section{Post-training elaboration roadmap}
@@ -206,6 +206,8 @@ synthetic \texttt{po\_fuse}$\approx0.63$; $M{=}2$ packs often $\Flops{=}1$
 
 Goal lock stays: \textbf{accelerate post-train} (update $\Flops$,
 $T(\Acc^\star)$) with Acc as constraint; PO as primary sensor.
+\textbf{MVP frozen} --- see \texttt{docs/agod/PO\_Boost\_MVP.md};
+further elaboration follows advisor schedule.
 
 \subsection{Phase R0 --- Locked now (do not reopen)}
 \begin{itemize}[leftmargin=1.2em,itemsep=1pt]

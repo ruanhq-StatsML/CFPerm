@@ -34,7 +34,7 @@ PO_t  →  滤波(L=EMA, S=ΔPO, α)  →  执行器 u_{t+1}  →  θ_{t+1}
 
 - **刻画**：窗级事件日志 `(PO,L,S,ω,α,freeze,source,FLOPs,Acc)`；reject 源 external→hop_oos→proxy。
 - **方差**：freeze 令噪声塔 \(\lambda_m=0\) ⇒ \(\mathrm{Var}(\Delta\theta_m)\to0\) 且不付 BWD；step dump 只重分配、不自称省算力。
-- **Amount**：`flops_rel_proj`，\(c_{pb}\!\approx\!2c_{pf}\) 时 \(\approx(|M|+2|A|)/(3|M|)\)；Affec gated≈0.70，合成 fuse≈0.63，\(M{=}2\) 常为 1。
+- **Amount**：`flops_rel_proj`，\(c_{pb}\!\approx\!2c_{pf}\) 时 \(\approx(|M|+2|A|)/(3|M|)\)；Affec gated≈0.70，合成 fuse≈0.78，\(M{=}2\) 常为 1。
 
 ---
 

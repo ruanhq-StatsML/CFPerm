@@ -38,6 +38,7 @@ from agod.po_risk_train import (
     PORiskMetricConfig,
     continuous_gain_metrics,
     expand_step_schedule,
+    freeze_flops_rel,
     metric_to_alpha,
     next_step_actuators,
     next_step_actuators_fused,
