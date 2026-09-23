@@ -94,6 +94,7 @@
 | B27 | **审出加速包 e2e smoke**（scope内） | export→反馈→建议→dry-run 一键 | 交接演示 |
 | B28 | **按队列 sample_rate 覆盖**（scope内） | flags.queue_sample_rates | 单队列回滚 |
 | B29 | **human-use gate / feature freeze**（scope内） | 真人反馈→READY 才解冻 | 停扩面 |
+| B30 | **真人打标交接纸**（scope内） | handoff.md 贴卡+打标CLI | 逼 READY |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 
