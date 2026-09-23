@@ -206,8 +206,9 @@ Wired into \texttt{run\_agod\_po\_risk\_train\_compare.py} cell summary.
         (causal, orthogonal to freeze/steps).
   \item Modes: gated $\sqrt{\PO}$ (default) vs cbrt vs prop vs uniform;
         calm $\Rightarrow w=1$.
-  \item Exit remaining: Affec joint FLOPs + reject-window next-MSE vs
-        always-$\sqrt{}$; swap proxy for real OnlineRFPerm flag.
+  \item Exit remaining: Affec joint FLOPs + reject-window next-MSE;
+        \texttt{resolve\_stream\_reject} priority
+        external RFPerm $\to$ hop OOS $\to$ proxy (landed).
 \end{enumerate}
 
 ###{Phase R4 --- Continuous schedule polish}

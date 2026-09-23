@@ -51,6 +51,7 @@ from agod.po_risk_train import (
 )
 from agod.po_roi_export import export_roi_sqlite, rows_to_roi_records, write_roi_jsonl
 from agod.proto_drift import ModalityPrototypeBank
+from agod.reject_event import resolve_stream_reject
 from agod.shift import residual_concept
 
 
@@ -258,11 +259,13 @@ def run_version(
     # R3: reject at t → weights for t+1 (causal, same as modality actuators)
     next_w_np: Optional[np.ndarray] = None
     next_rejected = False
+    prev_probe_err: Optional[float] = None
 
     accs, mses, flops, ents = [], [], [], []
     rows = []
     reject_mses = []
     calm_ws = []
+    reject_sources: Dict[str, int] = {}
 
     for t, (xw, yw) in enumerate(zip(xs, ys)):
         xb = {m: torch.from_numpy(np.asarray(xw[m], dtype=np.float32)).to(device) for m in mods}
@@ -418,13 +421,22 @@ def run_version(
             for m in mods:
                 po_ema[m] = 0.8 * float(po_ema[m]) + 0.2 * float(sens["po"][m])
 
-        # R3 event-time row weights (orthogonal to modality freeze/steps)
-        rej = stream_reject_proxy(
+        # R3 event-time row weights: RFPerm flag > hop OOS > proxy
+        probe_err = float(1.0 - acc)  # shallow OOS proxy without sklearn RF
+        rej = resolve_stream_reject(
+            external_rejected=None,  # wire OnlineRFPerm flag here when available
+            e_now=probe_err,
+            e_prev=prev_probe_err,
+            oos_gate=1.5,
             po_mods=sens["po"],
             mmd_mods=sens.get("mmd"),
             po_prev=prev_po_for_reject,
             mods=mods,
+            use_proxy_fallback=True,
         )
+        prev_probe_err = probe_err
+        src = str(rej.get("source") or "none")
+        reject_sources[src] = reject_sources.get(src, 0) + 1
         po_i = row_po_residual(np.asarray(yw), proba)
         if enable_row_iptw and rej["rejected"]:
             next_w_np = po_iptw_weights(
@@ -454,10 +466,12 @@ def run_version(
             "top_mod": act["top_mod"],
             "po": {m: float(sens["po"][m]) for m in mods},
             "rejected_for_next": bool(next_rejected),
-            "reject_proxy": rej,
+            "reject_event": rej,
+            "reject_proxy": rej,  # back-compat alias
             "row_weight_mode": row_weight_mode if next_rejected else "uniform",
             "used_reject_w": used_reject_w,
             "mean_row_w_next": float(np.mean(next_w_np)) if next_w_np is not None else 1.0,
+            "probe_err": probe_err,
         }
         diag = dict(pack.get("diag") or {})
         if version == "po_fuse":
@@ -500,6 +514,7 @@ def run_version(
             "n_reject_events": n_reject,
             "mean_mse_on_reject_fit": float(np.mean(reject_mses)) if reject_mses else None,
             "calm_w_ones": bool(calm_ws) and all(c == 1.0 for c in calm_ws),
+            "reject_sources": reject_sources,
         },
     }
 
@@ -655,7 +670,7 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "",
         "### F. R3 reject-gated row IPTW (same stream)",
         "",
-        "- `stream_reject_proxy` → event; `po_iptw_weights` → \(w\\propto\\sqrt{\\mathrm{PO}}\) (default).",
+        "- `resolve_stream_reject`: external RFPerm flag → hop OOS (`e_now/e_prev`) → proxy.",
         "- Causal: reject at \(t\) weights Fit at \(t+1\); calm \(w=1\).",
         "- Orthogonal to modality freeze/steps; CLI `--row-weight-mode` / `--no-row-iptw`.",
         "",
