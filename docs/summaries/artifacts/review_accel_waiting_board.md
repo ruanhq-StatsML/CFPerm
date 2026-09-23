@@ -1,6 +1,6 @@
 # 审出加速 · 等待看板
 
-**NOT_READY** · feature_freeze=True
+**NOT_READY** · feature_freeze=True · 巡检 2026-09-23T18:14:06Z
 
 OOD 节奏：paused_10min→gate_check_every_6h
 
@@ -16,3 +16,5 @@ OOD 节奏：paused_10min→gate_check_every_6h
 ## 先别做
 - 继续 10min 堆 feature（已停）
 - 新 tip 排序模型 / Web UI / 自动覆盖 flags / 新行业 overlay / ETA / 规则包
+
+Handoff：`docs/summaries/artifacts/review_accel_human_handoff.md`
