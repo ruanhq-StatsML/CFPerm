@@ -120,7 +120,32 @@ Acc$\uparrow$ alone without cost cut is not a post-train boost.
 \section{Measured gains (smoke summarize)}
 \label{sec:emp}
 
-\paragraph{S1 Affec ($M{=}5$).}
+\begin{center}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Pack & Best boost & $\Flops$ & $\Delta\Acc$ & Claim \\
+\midrule
+Affec ($M{=}5$)
+  & \texttt{po\_gated}
+  & $0.70$
+  & $-0.4\%$
+  & \textbf{yes} --- FLOPs cut, Acc held \\
+Affec
+  & \texttt{po\_proto}
+  & $0.83$
+  & $+0.2\%$
+  & yes --- mild Acc+cost \\
+Food / Fashion / COCO
+  & any
+  & $1.00$
+  & $0$
+  & \textbf{no} --- S5 noop \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{S1 Affec ($M{=}5$) detail.}
 Relative to \texttt{equal} ($\Flops{=}1$, Acc$\approx0.508$):
 \begin{itemize}[leftmargin=1.2em,itemsep=1pt]
   \item \texttt{po\_gated}: $\Flops\approx0.70$, $\Delta\Acc\approx-0.4\%$

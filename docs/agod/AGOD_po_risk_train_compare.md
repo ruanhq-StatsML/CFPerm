@@ -1,6 +1,6 @@
 # AGOD PO-risk → next-step training metric compare
 
-> **Writeup (LaTeX):** [`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) · brief MD: [`AGOD_PO_Risk_PostTraining.md`](AGOD_PO_Risk_PostTraining.md)  
+> **Writeup (LaTeX):** [`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) · scenarios+gains: [`AGOD_PO_Boost_PostTrain_Scenarios.tex`](AGOD_PO_Boost_PostTrain_Scenarios.tex) · brief MD: [`AGOD_PO_Risk_PostTraining.md`](AGOD_PO_Risk_PostTraining.md)  
 > **Goal lock:** accelerate post-training (FLOPs / steps / wall-clock / \(T(\mathrm{Acc}^\star)\)); Acc is a **constraint**, not the primary win.
 
 Iterate metric versions that map **PO-risk sensors → α → next-window training actuators**
@@ -23,6 +23,7 @@ Causal loop: sensors/α at window `t` only set actuators for window `t+1`
 | `po_delta` | Softmax(EMA(PO) + γ·ΔPO) | anticipatory reallocation before Acc drops |
 | `po_budget` | floor + Softmax(PO) | keep all mods warm; soft reweight only |
 | `po_next` | α-hist ⊕ ΔPO forecast | next-α forecast for stack prior + LR |
+| `po_fuse` | long⊗short: freeze←L, steps←S, LR←α | concept-mod emphasis; spike-adaptive mix |
 
 ## Actuators (next window)
 
