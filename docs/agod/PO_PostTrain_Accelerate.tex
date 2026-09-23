@@ -120,27 +120,28 @@ Ship: $\Flops<1$ and $\Delta\Acc\ge-\varepsilon$ (A);
 on reject windows, next-MSE vs uniform $w$ improves (B).
 
 \section{Numbers (smoke)}
+\textit{Indicative only; not a leaderboard claim.}
 \begin{center}
 \small
 \begin{tabular}{@{}llrrr@{}}
 \toprule
-Pack & Method & $\Flops$ & $\Delta\Acc$ / $T^\star$ & Claim \\
+Pack & Method & $\Flops$ & note & ok? \\
 \midrule
 Affec ($M{=}5$)
   & A: \texttt{po\_gated}
-  & $0.70$ & $\Delta\Acc\approx-0.4\%$ & yes \\
+  & $0.70$ & $\Delta\Acc\approx-0.4\%$ & held \\
 Affec
   & A: \texttt{po\_proto}
-  & $0.83$ & $+0.2\%$ & yes \\
+  & $0.83$ & $\Delta\Acc\approx+0.2\%$ & held \\
 Synthetic ($M{=}5$)
   & A: \texttt{po\_fuse}
-  & $0.78$ & $T^\star{=}5$ (vs $8$) & yes \\
+  & $0.78$ & $T^\star{=}5$ vs equal $8$ & held \\
 Food / Fashion / COCO ($M{=}2$)
   & A: any
-  & $1.00$ & $0$ & noop \\
+  & $1.00$ & no freeze bite & noop \\
 Stream packs
   & B: gated $\sqrt{\PO}$
-  & --- & next-MSE$\downarrow$ vs always-$\sqrt{}$ ($6/6$) & yes \\
+  & --- & vs always-$\sqrt{}$ (prior bench) & better \\
 \bottomrule
 \end{tabular}
 \end{center}
