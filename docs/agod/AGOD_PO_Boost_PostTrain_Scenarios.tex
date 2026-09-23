@@ -193,10 +193,13 @@ Version & $\Flops$ & $T(\Acc^\star)$ & cumFLOPs@$\star$ & Jaccard & Ship \\
 \texttt{equal} & $1.00$ & $8$ & $9.0$ & $1.00$ & no \\
 \texttt{po\_soft} & $1.00$ & $10$ & $11.0$ & $1.00$ & no \\
 \texttt{po\_gated} & $1.00$ & $10$ & $11.0$ & $1.00$ & no \\
-\texttt{po\_fuse} & $0.63$ & $5$ & $4.0$ & $0.73$ & \textbf{yes} \\
+\texttt{po\_fuse} & $0.78$ & $5$ & --- & --- & \textbf{yes} \\
 \bottomrule
 \end{tabular}
 \end{center}
+Amounts use \texttt{freeze\_flops\_rel}/\texttt{flops\_rel\_proj}
+($c_{pb}{\approx}2c_{pf}$), not bare $|A|/|M|$
+(which overstates savings).
 Reject sources: hop\_oos$\times1$ + proxy on other windows
 (\texttt{resolve\_stream\_reject}).
 Replace with Affec numbers when cache is present.

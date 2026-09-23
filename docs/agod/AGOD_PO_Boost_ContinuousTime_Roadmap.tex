@@ -147,6 +147,59 @@ Only the \texttt{po\_budget} floor / \texttt{beta\_lr} floor---keeps cold
 towers barely warm so sensors can still fire. Do \emph{not} add
 ``with probability $\varepsilon$ randomize $\alpha$''.
 
+\subsection{Spontaneous OOD characterization + FLOPs vs variance}
+\label{sec:ood-flops}
+\paragraph{How OOD is written down.}
+Unit $=$ window event, not a static ``OOD dataset'' label.
+\begin{center}
+\small
+\begin{tabular}{@{}llp{4.8cm}@{}}
+\toprule
+Layer & Object & Role \\
+\midrule
+Sensors
+  & $\PO_m,\,\mathrm{MMD}_m,\,L_m,\,S_m,\,\mathrm{spike\_ratio}$
+  & Continuous state of concept / covariate / chronic / spike \\
+Noise gate
+  & \texttt{drift\_vs\_noise}
+  & High $\PO$ alone $\neq$ OOD if uni-Acc/VIMP fail \\
+Reject event
+  & external RFPerm $\to$ hop OOS $\to$ proxy
+  & Discrete alarm; only then $w_i\propto\sqrt{\PO_i}$ \\
+Log
+  & $(\PO,L,S,\omega,\alpha,\mathrm{freeze},\mathrm{source},\Flops,\Acc)$
+  & Reproducible characterization \\
+\bottomrule
+\end{tabular}
+\end{center}
+Two legs: modality actuators every window; row IPTW only on reject.
+
+\paragraph{Why cutting FLOPs lowers update variance.}
+For tower $m$:
+$\Delta\theta_m\approx-\lambda_m g_m$,
+$\mathrm{Var}(\Delta\theta_m)\propto\lambda_m^2\sigma_m^2$.
+Low-$L$ / noise-gated towers have large $\sigma_m^2$ and weak Acc signal.
+Freeze sets $\lambda_m{=}0$ (BWD off, FWD on) $\Rightarrow$ that arm's
+gradient variance contribution vanishes \emph{and} $C_{\mathrm{bwd}}$ is unpaid.
+Step dump does \emph{not} claim FLOPs save---it reallocates a fixed step
+budget to high-$S$ (acceleration KPI).
+Ship gate: $\Flops{<}1$ and $\Delta\Acc\ge-\varepsilon$.
+
+\paragraph{Amount (honest accounting).}
+Use \texttt{flops\_rel\_proj} (not bare $|A|/|M|$):
+\[
+\Flops
+=
+\frac{C_{\mathrm{fwd}}+C_{\mathrm{bwd}}(A)}{C_{\mathrm{fwd}}+C_{\mathrm{bwd}}(M)},
+\quad
+C_{\mathrm{fwd}}=|M|c_{pf}+c_{sf},\;
+C_{\mathrm{bwd}}=|A|c_{pb}+c_{sb}.
+\]
+With $c_{pb}\approx 2c_{pf}$: $\Flops\approx(|M|+2|A|)/(3|M|)$.
+Empirical anchors: Affec \texttt{po\_gated}$\approx0.70$;
+synthetic \texttt{po\_fuse}$\approx0.63$; $M{=}2$ packs often $\Flops{=}1$
+(honest noop).
+
 %----------------------------------------------------------------------
 \section{Post-training elaboration roadmap}
 \label{sec:road}

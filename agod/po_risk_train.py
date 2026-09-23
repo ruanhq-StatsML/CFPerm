@@ -394,7 +394,7 @@ def next_step_actuators_fused(
             freeze[max(mods, key=lambda m: float(alpha[m]))] = False
         base["freeze_mask"] = freeze
         base["active_mods"] = [m for m in mods if not freeze[m]]
-        base["flops_rel"] = float(len(base["active_mods"]) / max(len(mods), 1))
+        base["flops_rel"] = freeze_flops_rel(freeze, mods)
 
     if step_tilt:
         active = base["active_mods"]
@@ -519,6 +519,32 @@ def step_flops_rel(
     tot = max(int(total_steps), 1)
     used = int(sum(max(0, int(v)) for v in realized.values()))
     return float(min(1.0, used / tot))
+
+
+def freeze_flops_rel(
+    freeze_mask: Mapping[str, bool],
+    mods: Sequence[str],
+    *,
+    c_pf: float = 1.0,
+    c_pb: float = 2.0,
+    c_sf: float = 0.5,
+    c_sb: float = 1.0,
+) -> float:
+    """BWD-only relative FLOPs (FWD always on) — amount for freeze claims.
+
+    Matches ``adapter.flops_rel_proj``; prefer this over bare |A|/|M|
+    when justifying variance↓ ⇒ FLOPs↓.
+    """
+    mods = list(mods)
+    active = {m: (not bool(freeze_mask.get(m, False))) for m in mods}
+    if not any(active.values()) and mods:
+        # safety: at least one tower (mirrors actuator repair)
+        top = mods[0]
+        active[top] = True
+    fwd = len(mods) * float(c_pf) + float(c_sf)
+    bwd = sum(float(c_pb) for m in mods if active[m]) + float(c_sb)
+    full = len(mods) * float(c_pf) + float(c_sf) + len(mods) * float(c_pb) + float(c_sb)
+    return float((fwd + bwd) / max(full, 1e-12))
 
 
 ROW_WEIGHT_MODES = ("sqrt", "cbrt", "prop", "uniform")
@@ -663,7 +689,7 @@ def next_step_actuators(
         "freeze_mask": freeze,
         "stack_prior": dict(a),
         "active_mods": [m for m in mods if not freeze[m]],
-        "flops_rel": float(sum(1.0 for m in mods if not freeze[m]) / len(mods)),
+        "flops_rel": freeze_flops_rel(freeze, mods),
         "alpha_entropy": ent_norm,
         "top_mod": max(mods, key=lambda m: a[m]),
     }

@@ -111,8 +111,8 @@ def run_synthetic_compare(
                 act["step_alloc"], act["freeze_mask"], mods, redistribute=False
             )
             active_n = sum(1 for m in mods if not act["freeze_mask"].get(m, False))
-            # FLOPs = BWD-active fraction (honest freeze accounting)
-            flops = float(active_n / max(len(mods), 1))
+            # Honest BWD-only amount (c_pb≈2 c_pf), not bare |A|/|M|
+            flops = float(_pr.freeze_flops_rel(act["freeze_mask"], mods))
             top = max(mods, key=lambda m: po[m])
             focus = float(realized.get(top, 0)) / max(act_cfg.total_steps, 1)
             # Acc climbs with focus; equal is slow uniform climb

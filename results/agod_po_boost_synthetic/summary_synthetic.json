@@ -93,25 +93,25 @@
     },
     "po_fuse": {
       "continuous": {
-        "mean_flops_rel": 0.6333333333333332,
-        "cum_flops": 7.599999999999998,
+        "mean_flops_rel": 0.7777777777777778,
+        "cum_flops": 9.333333333333334,
         "t_to_acc_star": 5,
-        "cum_flops_to_acc_star": 4.0,
+        "cum_flops_to_acc_star": 4.787878787878788,
         "mean_freeze_jaccard": 0.7272727272727272,
         "n_windows": 12,
         "acc_star": 0.55
       },
-      "mean_flops_rel": 0.6333333333333332,
+      "mean_flops_rel": 0.7777777777777778,
       "t_to_acc_star": 5,
-      "cum_flops_to_acc_star": 4.0,
+      "cum_flops_to_acc_star": 4.787878787878788,
       "mean_freeze_jaccard": 0.7272727272727272,
-      "final_acc": 0.74925,
+      "final_acc": 0.6972500000000004,
       "n_reject": 12,
       "reject_sources": {
         "proxy": 11,
         "hop_oos": 1
       },
-      "delta_acc": 0.13124999999999998,
+      "delta_acc": 0.07925000000000038,
       "ship_pass": true
     }
   }

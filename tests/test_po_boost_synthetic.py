@@ -27,3 +27,17 @@ def test_synthetic_po_fuse_can_ship():
     assert fuse["reject_sources"].get("hop_oos", 0) >= 1
     equal = payload["versions"]["equal"]
     assert equal["mean_flops_rel"] == 1.0
+
+
+def test_freeze_flops_rel_amount_vs_bare_active_frac():
+    # bootstrap via smoke loader
+    smoke = _load_smoke()
+    fr = smoke._pr.freeze_flops_rel
+    mods = ["a", "b", "c", "d", "e"]
+    freeze = {m: False for m in mods}
+    freeze["d"] = True
+    freeze["e"] = True  # |A|=3, M=5
+    bare = 3 / 5
+    proj = fr(freeze, mods)  # (5*1+0.5 + 3*2+1) / (5+0.5+10+1) = 12.5/16.5
+    assert abs(proj - 12.5 / 16.5) < 1e-9
+    assert proj > bare  # FWD fixed cost → less dramatic savings than |A|/M
