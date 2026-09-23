@@ -49,3 +49,12 @@ PYTHONPATH=. python3 scripts/tencent_gr/log_review_card_feedback.py \
 PYTHONPATH=. python3 scripts/tencent_gr/check_review_accel_human_gate.py
 # exit 0 = READY
 ```
+
+## 责任人（填空）
+
+- OWNER（催打标）: `________________`
+- 审核同学: `________________`
+- 目标: 本周内拿到 1 条 `--reviewer` 真名的 useful/not_useful
+- 禁止: 自动 `cp` `flags.suggested.json` 覆盖现网；禁止开 ETA/规则包
+
+
