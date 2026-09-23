@@ -4,7 +4,7 @@
 > 不是定罪模型，不是自动封禁；是 **L1 盯梢级** 的可读分流上下文。  
 > 底座算法冻结：Drill = rank-avg(cmean, MMD, PO)；本 scope **不改门**。
 
-相关：[`Wave_Drill_Clue_Pipeline.md`](Wave_Drill_Clue_Pipeline.md) · [`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) · [`TenMin_OOD_Iteration_Opportunities.md`](TenMin_OOD_Iteration_Opportunities.md) · [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md)（**业务场景主文：刷量 vs 灌入 vs 漂移**） · [`Feature_Brush_LLM_SelfEvolution.md`](Feature_Brush_LLM_SelfEvolution.md)（选特征·刷量判定·LLM idea·评估·self-evolution） · [`Review_Accel_Personas_Feedback_Loop.md`](Review_Accel_Personas_Feedback_Loop.md)
+相关：[`Wave_Drill_Clue_Pipeline.md`](Wave_Drill_Clue_Pipeline.md) · [`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) · [`TenMin_OOD_Iteration_Opportunities.md`](TenMin_OOD_Iteration_Opportunities.md) · [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md)（**业务场景主文：刷量 vs 灌入 vs 漂移**） · [`Feature_Brush_LLM_SelfEvolution.md`](Feature_Brush_LLM_SelfEvolution.md) · [`Direction_UR_Gray_Unfreeze.md`](Direction_UR_Gray_Unfreeze.md)（Direction→UR→灰度→解冻ETA/规则） · [`Review_Accel_Personas_Feedback_Loop.md`](Review_Accel_Personas_Feedback_Loop.md)
 
 ---
 

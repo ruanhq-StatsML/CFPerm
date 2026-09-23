@@ -5,7 +5,8 @@
 > 2）LLM/agent **怎么自己想出新点子**；  
 > 3）**下一步如何评估与预测**；  
 > 4）系统如何 **self-evolution**（具体闭环，不是口号）。  
-> 场景轴仍以 [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md) 为准。
+> 场景轴仍以 [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md) 为准。  
+> 主链评估/解冻见 [`Direction_UR_Gray_Unfreeze.md`](Direction_UR_Gray_Unfreeze.md)。
 
 ---
 
