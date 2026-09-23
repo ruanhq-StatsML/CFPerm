@@ -31,6 +31,9 @@ Standardize → L1 merchant MMD → L2 user MMD → L3 order shift → FSDS
 > **Tip / 正负向与反欺诈排查布控动作：**  
 > [`../summaries/AntiFraud_Tip_Sign_Actions.md`](../summaries/AntiFraud_Tip_Sign_Actions.md)
 >
+> **10分钟 OOD 迭代 + 机会串：**  
+> [`../summaries/TenMin_OOD_Iteration_Opportunities.md`](../summaries/TenMin_OOD_Iteration_Opportunities.md)
+>
 > **如何 Motivate Agent 做商业价值：**  
 > [`../summaries/Motivate_Agents_Commercial_Value.md`](../summaries/Motivate_Agents_Commercial_Value.md)
 >

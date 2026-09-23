@@ -4,7 +4,8 @@
 > **主动交付可计 ROI 的接通物**，而不是 AUC 表或公式。  
 > 原则：**计分只认现网可用；均分发力；做完就停加码。**
 
-相关：[`Twenty_Agent_Commercial_Landing.md`](Twenty_Agent_Commercial_Landing.md)
+相关：[`Twenty_Agent_Commercial_Landing.md`](Twenty_Agent_Commercial_Landing.md) ·  
+[`TenMin_OOD_Iteration_Opportunities.md`](TenMin_OOD_Iteration_Opportunities.md)
 
 ---
 
