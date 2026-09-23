@@ -4,7 +4,7 @@
 > 不是定罪模型，不是自动封禁；是 **L1 盯梢级** 的可读分流上下文。  
 > 底座算法冻结：Drill = rank-avg(cmean, MMD, PO)；本 scope **不改门**。
 
-相关：[`Wave_Drill_Clue_Pipeline.md`](Wave_Drill_Clue_Pipeline.md) · [`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) · [`TenMin_OOD_Iteration_Opportunities.md`](TenMin_OOD_Iteration_Opportunities.md) · [`Review_Accel_Personas_Feedback_Loop.md`](Review_Accel_Personas_Feedback_Loop.md)（角色痛点 elaborations + 真人反馈闭环）
+相关：[`Wave_Drill_Clue_Pipeline.md`](Wave_Drill_Clue_Pipeline.md) · [`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) · [`TenMin_OOD_Iteration_Opportunities.md`](TenMin_OOD_Iteration_Opportunities.md) · [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md)（**业务场景主文：刷量 vs 灌入 vs 漂移**） · [`Review_Accel_Personas_Feedback_Loop.md`](Review_Accel_Personas_Feedback_Loop.md)
 
 ---
 
@@ -56,75 +56,35 @@
 
 ---
 
-## 2. 具体业务场景（审核怎么用这张卡）
+## 2. 业务场景（先捋清；详文另册）
 
-每张卡固定三件套：**`sign_Dy` 读法** + **主 tip 队列桶** + **建议动作级（默认 L1）**。  
-下列场景是运营词典，不是自动分类器；人审可改队。
+> **主文**：[`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md)  
+> 读卡顺序：`sign_Dy`（极性）→ 主 tip 桶 → 人可改队。其它（角色/闭环）都挂这张图下。
 
-### S1 · 刷量 / 互点 / 末跳操控（偏 pos）
-| | |
+### 2.1 三族（案由轴）
+| 族 | `sign_Dy` | 一句话 | 人审先看 |
+|---|---|---|---|
+| **S1 刷量族** | **pos** | 块上成功变多：互点/养号/末跳，或真爆款 | 成功是否压在末跳；别当爆款误伤 |
+| **S2 灌入族** | **neg** | 块上成功变少：劣质短会话 / 劫持残留 | 差流是否灌进 \(K^\star\)；别甩锅商户 |
+| **S3 漂移族** | **flat** | 结构漂了、成功没动（**当前样例**） | 活动/推荐/库存；**慎升强动作** |
+
+刷量 ≠ 灌入：极性相反，查法相反；**不能「有 tip 就叫刷量」**。
+
+### 2.2 修饰（不单开案由）
+| ID | 作用 |
 |---|---|
-| 触发读法 | `sign_Dy=pos` + tip 含 `i_share_last` / `i_credit_last`（+）或短跨度刷 |
-| 建议队列 | 末次份额/归因偏高（末跳嫌疑）；或活跃跨度异常（短刷） |
-| 审核动作 | 优先看成功路径是否压在末跳商品；抽检互点/养号；**不**直接封 |
-| 禁区 | 无 tip 符号、仅 Top ID 名单 → 不得升 L2 |
+| S4 共点 | covisit 顶 → 抽检↑，不对外认定团伙 |
+| S5 错配 | 帮刷量族拆真爆款 vs 刷热 |
+| S6 内容复用 | 换词典，三族轴不变 |
+| S7 SLA | 同队先清老波次 |
 
-### S2 · 劣质灌入 / 劫持残留（偏 neg）
-| | |
-|---|---|
-| 触发读法 | `sign_Dy=neg` + tip 活跃跨度变短或共现/触达异常 |
-| 建议队列 | 劣质灌入 / 劫持残留优先 |
-| 审核动作 | 看失败/低转化会话是否灌进 \(K^\star\)；对照供给是否被打压后残留 |
-| 禁区 | 把「成功率掉」直接当商户作恶 |
-
-### S3 · 供给 / 分布漂移（flat，当前样例）
-| | |
-|---|---|
-| 触发读法 | `sign_Dy=flat`（或 Dy 缺失）且 tip 多为路径份额/规模类 |
-| 建议队列 | 路径线性份额/归因变动；触达/曝光规模；共现邻域 |
-| 审核动作 | **先当供给或流量结构漂了**：核对活动、库存、推荐策略；慎升强动作 |
-| 卡点 | 当前样例即此状——产品上要能「读得懂的平」，而不是空白 |
-
-### S4 · 团伙共点（结构）
-| | |
-|---|---|
-| 触发读法 | tip 顶 `i_n_covisit_neighbors` / `i_log1p_n_covisit` |
-| 建议队列 | 共现邻域变动（团伙共点） |
-| 审核动作 | 看 \(K^\star\) 内共现是否突然变密；与 S1/S2 叠加时提高抽检，仍停 L1 |
-| 禁区 | 把 \(K^\star\) 对外通报为「已认定欺诈团伙」 |
-
-### S5 · 热度-活跃错配
-| | |
-|---|---|
-| 触发读法 | tip `ui_pop_mismatch` |
-| 建议队列 | 热度-活跃错配 |
-| 审核动作 | 区分「真爆款」vs「刷热度」；需结合 `sign_Dy` |
-
-### S6 · 内容审核复用（同一 UI，换词典）
-| | |
-|---|---|
-| 触发 | `--tip-overlay configs/review_tip_bucket_overlay_content.json` |
-| 建议队列 | 互粉同发 / 种草入口 / 导流末跳 等话术 |
-| 审核动作 | 内容安审队列复用同一卡组件；**不**新开算法门 |
-| 边界 | 解冻前不扩金融/运力等新 overlay 包 |
-
-### S7 · 老波次清队（SLA）
-| | |
-|---|---|
-| 触发 | `gap_days` 大 → `sla_urgency=urgent|tight` |
-| 审核动作 | 同队列内优先清老波次；灰度关闭则 SLA=`deferred` 不催审 |
-
-**场景 × 字段速查**
-
+### 2.3 字段速查
 | 场景 | 关键字段 | 默认级 |
 |---|---|---|
-| S1 刷量末跳 | `sign_Dy=pos`, tip last/share | L1 |
-| S2 劣质灌入 | `sign_Dy=neg`, tip span/灌入 | L1 |
-| S3 供给漂移 | `sign_Dy=flat`, 路径/规模 tip | L1（慎升） |
-| S4 共点 | covisit tip | L1 |
-| S5 错配 | `ui_pop_mismatch` | L1 |
-| S6 内容复用 | tip overlay industry | L1 |
-| S7 清队 | `graph_shift_sla_level` | 调度 |
+| S1 | `sign_Dy=pos` + last/share 或短刷 | L1 |
+| S2 | `sign_Dy=neg` + 短 span / 差流 tip | L1 |
+| S3 | `sign_Dy=flat` + linear/规模 | L1 慎升 |
+| S4–S7 | covisit / mismatch / overlay / gap_days | 修饰或调度 |
 
 ---
 

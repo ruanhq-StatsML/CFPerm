@@ -157,17 +157,14 @@ ETA / 规则 / B1–B15 冻结至审出卡被真人用过一次。
 B29 起：OOD 轮优先跑 `check_review_accel_human_gate.py`；`NOT_READY` 时 **kill** 新 feature，只推真人打标。
 B34：`ood-10min-iterate` 已停；改 `ood-gate-check-6h`。READY 后再恢复 10min OOD。
 
-业务场景速览（详表见 Scope §2）：
+业务场景速览（**主文** [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md)；Scope §2 摘要）：
 
-| ID | 场景 | 默认读法 |
+| ID | 族 | 默认读法 |
 |---|---|---|
-| S1 | 刷量/末跳 | pos + last/share tip → L1 |
-| S2 | 劣质灌入 | neg + span/灌入 → L1 |
-| S3 | 供给漂移 | flat + 路径/规模 tip → 慎升 |
-| S4 | 团伙共点 | covisit tip → L1 |
-| S5 | 热度错配 | ui_pop_mismatch → L1 |
-| S6 | 内容复用 | tip overlay → 同 UI |
-| S7 | 老波次清队 | SLA urgent/tight |
+| S1 | **刷量族** | pos → 成功变多：末跳/互点（辨爆款） |
+| S2 | **灌入族** | neg → 成功变少：劣质短会话/劫持残留 |
+| S3 | **漂移族** | flat → 结构漂、成功平（当前样例） |
+| S4–S7 | 修饰/调度 | 共点·错配·内容词典·SLA |
 ## 6b. 本轮（启动轮）已串结论
 
 最值得先打的三条支路（全面里的尖刀）：
