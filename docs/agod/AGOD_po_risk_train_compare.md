@@ -1,6 +1,6 @@
 # AGOD PO-risk → next-step training metric compare
 
-> **Writeup (LaTeX):** [`AGOD_PO_PostTrain_Consolidated.tex`](AGOD_PO_PostTrain_Consolidated.tex) (all data) · [`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) · scenarios: [`AGOD_PO_Boost_PostTrain_Scenarios.tex`](AGOD_PO_Boost_PostTrain_Scenarios.tex) · MVP: [`PO_Boost_MVP.md`](PO_Boost_MVP.md)  
+> **Writeup (LaTeX):** [`PO_PostTrain_Accelerate.tex`](PO_PostTrain_Accelerate.tex) (Alg.~A modality + Alg.~B sample) · MVP: [`PO_Boost_MVP.md`](PO_Boost_MVP.md)  
 > **Goal lock:** accelerate post-training (FLOPs / steps / wall-clock / \(T(\mathrm{Acc}^\star)\)); Acc is a **constraint**, not the primary win.
 
 Iterate metric versions that map **PO-risk sensors → α → next-window training actuators**

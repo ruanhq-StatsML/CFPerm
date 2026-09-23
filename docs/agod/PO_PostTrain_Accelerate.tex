@@ -1,0 +1,153 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,algorithm,algpseudocode}
+\geometry{margin=1in}
+
+\title{\textbf{Accelerating Post-Training with PO-Risk}\\[0.35em]
+\large Two algorithms: modality reallocation \& sample reweighting}
+\author{}
+\date{2026-09-23}
+
+\newcommand{\PO}{\mathrm{PO}}
+\newcommand{\Acc}{\mathrm{Acc}}
+\newcommand{\Flops}{\mathrm{FLOPs}_{\mathrm{rel}}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Post-training on a shifting stream is slow when every update treats
+all towers and all rows equally.
+We use one sensor---\textbf{PO-risk} (residual under the control fit)---
+at two resolutions to \emph{accelerate} post-training under an accuracy
+constraint:
+\textbf{(A)} modality reallocation (freeze / step dump);
+\textbf{(B)} sample reweighting on OOD-large rows after a batch reject.
+Primary KPIs: update $\Flops$ and $T(\Acc^\star)$; Acc is a constraint.
+\end{abstract}
+
+\section{Goal}
+Fix a stream of windows $(X_t,Y_t)$ and a control fit $\hat\mu$.
+Accelerate post-training $=$ reach $\Acc\ge\Acc^\star$ with less update
+cost than dense equal fine-tuning, subject to
+$\Delta\Acc\ge-\varepsilon$ (e.g.\ $-0.5\%$).
+
+Sensor (both algorithms):
+\[
+  \PO_m
+  \;\;\text{(per modality)},
+  \qquad
+  \PO_i=|Y_i-\hat\mu(X_i)|
+  \;\;\text{(per sample)}.
+\]
+High $\PO$ means large residual under $\mu$, not ``intrinsic hardness.''
+
+\section{Algorithm A --- Modality reallocation}
+\emph{Which tower gets the next update budget.}
+
+\begin{algorithm}[H]
+\caption{PO-modality post-train step (window $t\to t{+}1$)}
+\label{alg:mod}
+\begin{algorithmic}[1]
+\Require features $\{X^{(m)}\}_{m\in\mathcal{M}}$, labels $Y$, previous $\PO^{\mathrm{prev}}$, EMA state
+\Ensure freeze mask, step alloc $\{s_m\}$, LR multipliers for Fit$_{t+1}$
+\State Compute $\PO_m$ on window $t$ for each modality $m$
+\State $L_m \gets \mathrm{EMA}_\rho(\PO_m)\cdot(1+\mathrm{proto}_m)$
+      \Comment{chronic}
+\State $S_m \gets \PO_m - \PO^{\mathrm{prev}}_m$
+      \Comment{spike}
+\State $\mathrm{freeze}_m \gets \mathbf{1}\{L_m < q_{0.3}(L)\}$
+      \Comment{BWD off; FWD on}
+\State $s \gets \mathrm{Softmax}(S)$ on active (non-frozen) mods;
+      allocate $\sum_m s_m = S_{\mathrm{tot}}$
+      \Comment{step dump}
+\State Optional: $\alpha\gets\mathrm{Softmax}(\omega_L z(L)+\omega_S z(S))$;
+      $\mathrm{LR}_m \propto \alpha_m$
+\State \textbf{return} $(\mathrm{freeze},\,s,\,\mathrm{LR})$ for window $t{+}1$
+\end{algorithmic}
+\end{algorithm}
+
+\noindent\textbf{Justify.}
+Low-$L$ towers mostly inject gradient noise: freezing them cuts update
+$\Flops$ and useless variance.
+High-$S$ towers are where Acc is about to drop: dumping steps there
+shrinks $T(\Acc^\star)$ without claiming a FLOPs save.
+Accounting: $\Flops=(C_{\mathrm{fwd}}+C_{\mathrm{bwd}}(A))/(C_{\mathrm{fwd}}+C_{\mathrm{bwd}}(M))$
+(FWD always on).
+
+\section{Algorithm B --- Sample reweighting}
+\emph{On OOD-large rows, up-weight the post-train loss---only after reject.}
+
+\begin{algorithm}[H]
+\caption{PO-sample post-train step (window $t\to t{+}1$)}
+\label{alg:samp}
+\begin{algorithmic}[1]
+\Require batch $(X,Y)$, control fit $\hat\mu$, probe errors $(e_t,e_{t-1})$ or RFPerm flag
+\Ensure sample weights $w\in\mathbb{R}^n$ for Fit$_{t+1}$
+\State $\texttt{rejected} \gets$
+      RFPerm/CFPerm
+      $\lor\; (e_t/e_{t-1}\ge\gamma)$
+      $\lor\;$ proxy on $(\overline{\PO},|\Delta\PO|,\overline{\mathrm{MMD}})$
+\If{$\neg\,\texttt{rejected}$}
+  \State \textbf{return} $w_i\gets 1$ for all $i$
+        \Comment{calm: no reweight}
+\EndIf
+\State $\PO_i \gets |Y_i-\hat\mu(X_i)|$ for each row $i$
+\State $w_i \gets
+      \mathrm{clip}\!\big(
+        \sqrt{\PO_i}/\mathrm{mean}_j\sqrt{\PO_j},\;[0.25,4]
+      \big)$
+\State Fit$_{t+1}$ with
+      $\mathcal{L}=\frac1n\sum_i w_i\,\ell(f_\theta(X_i),Y_i)$
+\State \textbf{return} $w$
+\end{algorithmic}
+\end{algorithm}
+
+\noindent\textbf{Justify.}
+Uniform CE wastes steps on easy in-support rows.
+After a batch is gated as OOD, $w_i\propto\sqrt{\PO_i}$ moves the
+\emph{same} step budget onto high-residual rows, so next-window MSE /
+Acc recovers sooner---without taxing calm windows (always-on $\sqrt{\PO}$
+does). Soft $\sqrt{\,\cdot\,}$ keeps $\mathrm{mean}\,w=1$ and limits
+reject-batch overfit vs raw $\propto\PO$.
+
+\section{Joint use}
+A and B are orthogonal and causal ($t$ decides $t{+}1$ only):
+run A every window; run B only when \texttt{rejected}.
+Ship: $\Flops<1$ and $\Delta\Acc\ge-\varepsilon$ (A);
+on reject windows, next-MSE vs uniform $w$ improves (B).
+
+\section{Numbers (smoke)}
+\begin{center}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Pack & Method & $\Flops$ & $\Delta\Acc$ / $T^\star$ & Claim \\
+\midrule
+Affec ($M{=}5$)
+  & A: \texttt{po\_gated}
+  & $0.70$ & $\Delta\Acc\approx-0.4\%$ & yes \\
+Affec
+  & A: \texttt{po\_proto}
+  & $0.83$ & $+0.2\%$ & yes \\
+Synthetic ($M{=}5$)
+  & A: \texttt{po\_fuse}
+  & $0.78$ & $T^\star{=}5$ (vs $8$) & yes \\
+Food / Fashion / COCO ($M{=}2$)
+  & A: any
+  & $1.00$ & $0$ & noop \\
+Stream packs
+  & B: gated $\sqrt{\PO}$
+  & --- & next-MSE$\downarrow$ vs always-$\sqrt{}$ ($6/6$) & yes \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.8em}
+\noindent\textit{Code:}
+\texttt{po\_risk\_train.py}, \texttt{po\_iptw\_weights},
+\texttt{reject\_event.py}, \texttt{scripts/po\_boost\_mvp.py}.
+
+\end{document}
