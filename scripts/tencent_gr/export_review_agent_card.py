@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Export a review-agent context card from localize summary.json.
+
+Commercial MVP for「审出加速包」: pasteable JSON/MD for audit agents.
+Does not change Drill gates; does not claim fraud conviction.
+
+  PYTHONPATH=. python3 scripts/tencent_gr/export_review_agent_card.py \\
+    --summary results/tencent_gr_w1w2_mmd_po_fsds/summary.json \\
+    --out-dir results/tencent_gr_review_agent_card
+"""
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+ROOT = Path(__file__).resolve().parents[2]
+
+TIP_BUCKETS = {
+    "u_span_sec": "活跃跨度异常（短刷/长挂）",
+    "i_credit_last": "末次归因偏高（末跳嫌疑）",
+    "i_share_last": "末次份额偏高（末跳嫌疑）",
+    "i_credit_linear": "路径线性归因变动",
+    "i_share_linear": "路径线性份额变动",
+    "i_credit_first": "首次归因偏高",
+    "i_share_first": "首次份额偏高",
+    "i_n_covisit_neighbors": "共现邻域变动（团伙共点）",
+    "ui_pop_mismatch": "热度-活跃错配",
+    "i_n_users": "触达用户数变动",
+    "i_n_exp": "曝光规模变动",
+    "i_log1p_n_users": "触达用户规模(log)",
+    "i_log1p_n_exp": "曝光规模(log)",
+    "i_log1p_n_covisit": "共现规模(log)",
+}
+
+
+def _tips_from_summary(blob: Dict[str, Any]) -> List[str]:
+    for key in ("fsds_W1_holdout", "fsds_W1", "fsds_W2_temporal", "fsds_W2"):
+        block = blob.get(key) or {}
+        tops = block.get("top_features")
+        if isinstance(tops, list) and tops:
+            return [str(x) for x in tops]
+    direction = blob.get("direction") or {}
+    tip_signs = direction.get("tip_signs") or {}
+    if tip_signs:
+        return list(tip_signs.keys())
+    return []
+
+
+def _support_summary(blob: Dict[str, Any]) -> Dict[str, Any]:
+    out: Dict[str, Any] = {
+        "localize_k": blob.get("localize_k") or (blob.get("k") or {}).get("order"),
+        "localized_items_head": (blob.get("localized_items_head") or [])[:15],
+        "n_localized_edges": blob.get("n_localized_edges") or blob.get("n_edges"),
+        "gap_days": (blob.get("timeline") or {}).get("gap_days", blob.get("gap_days")),
+        "k": blob.get("k"),
+    }
+    return out
+
+
+def _bucketize(tips: List[str], tip_signs: Dict[str, str]) -> List[Dict[str, str]]:
+    rows = []
+    for t in tips:
+        rows.append(
+            {
+                "feature": t,
+                "sign": tip_signs.get(t, "0"),
+                "bucket": TIP_BUCKETS.get(t, "其它图特征 tip"),
+            }
+        )
+    return rows
+
+
+def build_card(blob: Dict[str, Any], *, source: str) -> Dict[str, Any]:
+    direction = dict(blob.get("direction") or {})
+    tips = _tips_from_summary(blob)
+    tip_signs = dict(direction.get("tip_signs") or {})
+    buckets = _bucketize(tips[:12], tip_signs)
+    sign_dy = direction.get("sign_Dy", "flat")
+    primary_bucket = buckets[0]["bucket"] if buckets else "未选 tip"
+    card = {
+        "card_type": "review_agent_context",
+        "disclaimer": "图谱分布变动线索，非定罪结论；供审核分流与上下文，不自动封禁。",
+        "source_summary": source,
+        "support": _support_summary(blob),
+        "direction": {
+            "Dy": direction.get("Dy"),
+            "sign_Dy": sign_dy,
+            "y_ref": direction.get("y_ref"),
+            "y_cur": direction.get("y_cur"),
+            "tip_signs": tip_signs,
+            "report": direction.get("report")
+            or f"[Direction] sign_Dy={sign_dy}; tips={tips[:5]}",
+        },
+        "tips": tips[:12],
+        "tip_buckets": buckets,
+        "review_hint": {
+            "queue_bucket": primary_bucket,
+            "outcome_read": {
+                "pos": "块上成功率上升：优先刷量/互点/末跳队列",
+                "neg": "块上成功率下降：优先劣质灌入/劫持残留队列",
+                "flat": "X 漂了但 click 率平：先当供给/分布漂移，慎升强动作",
+            }.get(sign_dy, "flat"),
+            "suggested_action_level": "L1_watch",
+        },
+        "paste_for_agent": "",
+    }
+    lines = [
+        "【审核上下文·图谱变动线索】",
+        f"方向: sign_Dy={sign_dy} Dy={direction.get('Dy')}",
+        f"支撑: localize_k={card['support'].get('localize_k')} "
+        f"edges={card['support'].get('n_localized_edges')}",
+        f"建议队列: {primary_bucket}",
+        f"读法: {card['review_hint']['outcome_read']}",
+        "Tips:",
+    ]
+    for b in buckets[:8]:
+        lines.append(f"  - {b['feature']} ({b['sign']}): {b['bucket']}")
+    lines.append(f"声明: {card['disclaimer']}")
+    card["paste_for_agent"] = "\n".join(lines)
+    return card
+
+
+def card_to_md(card: Dict[str, Any]) -> str:
+    d = card["direction"]
+    lines = [
+        "# 审核 Agent 上下文卡",
+        "",
+        f"> {card['disclaimer']}",
+        "",
+        f"- source: `{card['source_summary']}`",
+        f"- sign_Dy: **{d.get('sign_Dy')}** (Dy={d.get('Dy')})",
+        f"- 建议队列: **{card['review_hint']['queue_bucket']}**",
+        f"- 读法: {card['review_hint']['outcome_read']}",
+        f"- 建议动作级: `{card['review_hint']['suggested_action_level']}`",
+        "",
+        "## Tips",
+        "",
+        "| feature | sign | bucket |",
+        "|---|:---:|---|",
+    ]
+    for b in card["tip_buckets"]:
+        lines.append(f"| `{b['feature']}` | {b['sign']} | {b['bucket']} |")
+    lines += ["", "## 粘贴给审核 Agent", "", "```", card["paste_for_agent"], "```", ""]
+    return "\n".join(lines)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Export review-agent card from summary.json")
+    ap.add_argument(
+        "--summary",
+        type=Path,
+        default=ROOT / "results" / "tencent_gr_w1w2_mmd_po_fsds" / "summary.json",
+    )
+    ap.add_argument(
+        "--out-dir",
+        type=Path,
+        default=ROOT / "results" / "tencent_gr_review_agent_card",
+    )
+    args = ap.parse_args()
+    blob = json.loads(args.summary.read_text())
+    card = build_card(blob, source=str(args.summary))
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    (args.out_dir / "review_agent_card.json").write_text(
+        json.dumps(card, indent=2, ensure_ascii=False) + "\n"
+    )
+    (args.out_dir / "review_agent_card.md").write_text(card_to_md(card))
+    print(card["paste_for_agent"])
+    print("wrote", args.out_dir)
+
+
+if __name__ == "__main__":
+    main()
