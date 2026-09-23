@@ -4,7 +4,7 @@
 > 不是定罪模型，不是自动封禁；是 **L1 盯梢级** 的可读分流上下文。  
 > 底座算法冻结：Drill = rank-avg(cmean, MMD, PO)；本 scope **不改门**。
 
-相关：[`Wave_Drill_Clue_Pipeline.md`](Wave_Drill_Clue_Pipeline.md) · [`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) · [`TenMin_OOD_Iteration_Opportunities.md`](TenMin_OOD_Iteration_Opportunities.md)
+相关：[`Wave_Drill_Clue_Pipeline.md`](Wave_Drill_Clue_Pipeline.md) · [`AntiFraud_Tip_Sign_Actions.md`](AntiFraud_Tip_Sign_Actions.md) · [`TenMin_OOD_Iteration_Opportunities.md`](TenMin_OOD_Iteration_Opportunities.md) · [`Review_Accel_Personas_Feedback_Loop.md`](Review_Accel_Personas_Feedback_Loop.md)（角色痛点 elaborations + 真人反馈闭环）
 
 ---
 
@@ -29,6 +29,8 @@
 | 审核 Agent | 吃工单上下文 | 缺结构化图谱线索 | `paste_for_agent` + `ticket_custom_fields` |
 | 运营/风控 | 定 L1/L2 灰度 | 怕误伤、难回滚 | kill_switch / 按队列 sample_rate |
 | 调查（L3） | 开案 | 本包 **不直接开案** | 只提供时间线与特征卡（Out） |
+
+角色扩表、痛点→下一步、真人反馈闭环详见 [`Review_Accel_Personas_Feedback_Loop.md`](Review_Accel_Personas_Feedback_Loop.md)（R1–R11 + §3 闭环状态机）。
 
 ### 0.3 动作级（与全站一致，本包默认停在 L1）
 | 级 | 含义 | 本 scope |
