@@ -25,6 +25,21 @@
 | `ui_pop_mismatch` | 0 | 热度-活跃错配 |
 | `u_log1p_n_events` | 0 | 其它图特征 tip |
 
+## 工单自定义字段（可直接 POST）
+
+```json
+{
+  "graph_shift_sign_dy": "flat",
+  "graph_shift_dy": null,
+  "graph_shift_queue_bucket": "路径线性份额变动",
+  "graph_shift_action_level": "L1_watch",
+  "graph_shift_tip_top3": "i_share_linear,i_credit_linear,i_share_first",
+  "graph_shift_tip_signs_top3": "i_share_linear:0,i_credit_linear:0,i_share_first:0",
+  "graph_shift_localize_k": 200,
+  "graph_shift_disclaimer": "clue_not_conviction"
+}
+```
+
 ## 粘贴给审核 Agent
 
 ```

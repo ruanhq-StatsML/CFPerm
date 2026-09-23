@@ -119,11 +119,25 @@ def build_card(blob: Dict[str, Any], *, source: str) -> Dict[str, Any]:
         lines.append(f"  - {b['feature']} ({b['sign']}): {b['bucket']}")
     lines.append(f"声明: {card['disclaimer']}")
     card["paste_for_agent"] = "\n".join(lines)
+    # SOAR / 工单自定义字段：审出加速接通现网的最小映射
+    card["ticket_custom_fields"] = {
+        "graph_shift_sign_dy": sign_dy,
+        "graph_shift_dy": direction.get("Dy"),
+        "graph_shift_queue_bucket": primary_bucket,
+        "graph_shift_action_level": "L1_watch",
+        "graph_shift_tip_top3": ",".join(tips[:3]),
+        "graph_shift_tip_signs_top3": ",".join(
+            f"{t}:{tip_signs.get(t, '0')}" for t in tips[:3]
+        ),
+        "graph_shift_localize_k": card["support"].get("localize_k"),
+        "graph_shift_disclaimer": "clue_not_conviction",
+    }
     return card
 
 
 def card_to_md(card: Dict[str, Any]) -> str:
     d = card["direction"]
+    tf = card.get("ticket_custom_fields") or {}
     lines = [
         "# 审核 Agent 上下文卡",
         "",
@@ -142,7 +156,21 @@ def card_to_md(card: Dict[str, Any]) -> str:
     ]
     for b in card["tip_buckets"]:
         lines.append(f"| `{b['feature']}` | {b['sign']} | {b['bucket']} |")
-    lines += ["", "## 粘贴给审核 Agent", "", "```", card["paste_for_agent"], "```", ""]
+    lines += [
+        "",
+        "## 工单自定义字段（可直接 POST）",
+        "",
+        "```json",
+        json.dumps(tf, ensure_ascii=False, indent=2),
+        "```",
+        "",
+        "## 粘贴给审核 Agent",
+        "",
+        "```",
+        card["paste_for_agent"],
+        "```",
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -166,6 +194,9 @@ def main() -> None:
         json.dumps(card, indent=2, ensure_ascii=False) + "\n"
     )
     (args.out_dir / "review_agent_card.md").write_text(card_to_md(card))
+    (args.out_dir / "ticket_custom_fields.json").write_text(
+        json.dumps(card["ticket_custom_fields"], indent=2, ensure_ascii=False) + "\n"
+    )
     print(card["paste_for_agent"])
     print("wrote", args.out_dir)
 

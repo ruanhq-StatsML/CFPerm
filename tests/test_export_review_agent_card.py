@@ -28,3 +28,6 @@ def test_build_card_minimal():
     assert "u_span_sec" in card["tips"]
     assert "paste_for_agent" in card and "sign_Dy=pos" in card["paste_for_agent"]
     assert "非定罪" in card["disclaimer"]
+    assert "ticket_custom_fields" in card
+    assert card["ticket_custom_fields"]["graph_shift_sign_dy"] == "pos"
+    assert "u_span_sec" in card["ticket_custom_fields"]["graph_shift_tip_top3"]
