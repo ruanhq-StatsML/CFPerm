@@ -101,3 +101,24 @@ def test_compare_path_uses_fused_for_po_fuse_only():
     soft = metric_to_alpha("po_soft", mods, po=po)
     act_soft = next_step_actuators(soft["alpha"], mods)
     assert sum(act_soft["step_alloc"].values()) >= 1
+
+
+def test_continuous_gain_metrics_jaccard_and_t_star():
+    continuous_gain_metrics = _mod.continuous_gain_metrics
+    freeze_jaccard = _mod.freeze_jaccard
+    mods = ["a", "b", "c"]
+    assert freeze_jaccard(
+        {"a": True, "b": False, "c": True},
+        {"a": True, "b": False, "c": False},
+        mods,
+    ) == 0.5  # {a,c} ∩ {a} / {a,b,c wait} {a,c}∪{a}={a,c} → 1/2
+    rows = [
+        {"acc": 0.40, "flops_rel": 1.0, "freeze": {"a": False, "b": True, "c": True}},
+        {"acc": 0.50, "flops_rel": 0.7, "freeze": {"a": False, "b": True, "c": True}},
+        {"acc": 0.60, "flops_rel": 0.7, "freeze": {"a": False, "b": True, "c": False}},
+    ]
+    cg = continuous_gain_metrics(rows, mods=mods, acc_star=0.55)
+    assert cg["t_to_acc_star"] == 2
+    assert abs(cg["cum_flops_to_acc_star"] - 2.4) < 1e-6
+    assert cg["mean_freeze_jaccard"] > 0.5
+    assert abs(cg["cum_flops"] - 2.4) < 1e-6

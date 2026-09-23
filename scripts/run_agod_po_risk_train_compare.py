@@ -33,6 +33,7 @@ from agod.po_risk_train import (
     METRIC_VERSIONS,
     NextStepActuatorConfig,
     PORiskMetricConfig,
+    continuous_gain_metrics,
     metric_to_alpha,
     next_step_actuators,
     next_step_actuators_fused,
@@ -361,6 +362,7 @@ def run_version(
         prev_x = {m: np.asarray(xw[m]) for m in mods}
         prev_y = np.asarray(yw)
 
+    cg = continuous_gain_metrics(rows, mods=mods, acc_star=0.55)
     return {
         "version": version,
         "n_windows": len(accs),
@@ -370,6 +372,11 @@ def run_version(
         "mean_alpha_entropy": float(np.mean(ents)) if ents else 0.0,
         "final_alpha": rows[-1]["alpha"] if rows else {},
         "rows": rows,
+        "continuous": cg,
+        "cum_flops": cg["cum_flops"],
+        "t_to_acc_star": cg["t_to_acc_star"],
+        "cum_flops_to_acc_star": cg["cum_flops_to_acc_star"],
+        "mean_freeze_jaccard": cg["mean_freeze_jaccard"],
     }
 
 
@@ -383,6 +390,10 @@ def summarize_cell(cell: Dict[str, Any], baseline: Dict[str, Any]) -> Dict[str, 
         "mean_acc_lift": float(cell["mean_acc_post"] - baseline["mean_acc_post"]),
         "mean_mse_drop": float(baseline["mean_mse_post"] - cell["mean_mse_post"]),
         "final_alpha": cell["final_alpha"],
+        "cum_flops": cell.get("cum_flops"),
+        "t_to_acc_star": cell.get("t_to_acc_star"),
+        "cum_flops_to_acc_star": cell.get("cum_flops_to_acc_star"),
+        "mean_freeze_jaccard": cell.get("mean_freeze_jaccard"),
     }
 
 
@@ -433,14 +444,21 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
             "",
             f"mods = `{block.get('mods')}`",
             "",
-            "| version | Acc↑ | MSE↓ | Acc lift vs equal | MSE drop vs equal | FLOPs_rel | H(α) |",
-            "|---|---:|---:|---:|---:|---:|---:|",
+            "| version | Acc↑ | MSE↓ | Acc lift vs equal | MSE drop vs equal | FLOPs_rel | H(α) | Jaccard | \(T(\\mathrm{Acc}^\\star)\) | cumFLOPs@★ |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
         for v, c in block["summary"].items():
+            t_star = c.get("t_to_acc_star")
+            t_s = "—" if t_star is None else str(t_star)
+            cum_star = c.get("cum_flops_to_acc_star")
+            cum_s = "—" if cum_star is None else f"{float(cum_star):.2f}"
+            jac = c.get("mean_freeze_jaccard")
+            jac_s = "—" if jac is None else f"{float(jac):.3f}"
             lines.append(
                 f"| `{v}` | {c['mean_acc_post']:.4f} | {c['mean_mse_post']:.4f} | "
                 f"{c['mean_acc_lift']:+.4f} | {c['mean_mse_drop']:+.4f} | "
-                f"{c['mean_flops_rel']:.3f} | {c['mean_alpha_entropy']:.3f} |"
+                f"{c['mean_flops_rel']:.3f} | {c['mean_alpha_entropy']:.3f} | "
+                f"{jac_s} | {t_s} | {cum_s} |"
             )
         lines.append("")
         if block.get("ranking"):

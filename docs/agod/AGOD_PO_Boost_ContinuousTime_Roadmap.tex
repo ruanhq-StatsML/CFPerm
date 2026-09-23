@@ -113,17 +113,28 @@ $T(\Acc^\star)$) with Acc as constraint; PO as primary sensor.
 \end{itemize}
 
 \subsection{Phase R1 --- Make continuous gains measurable (next)}
+\textbf{Status: in progress --- metrics landed in code.}
 \textbf{Deliverables}
 \begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
   \item Log per window:
         $(\PO,L,S,\omega,\alpha,\mathrm{freeze},s,\lambda,\Flops,\Acc)$.
   \item Report \textbf{cumulative} update FLOPs to $\Acc^\star$
-        (not only mean $\Flops$).
+        (not only mean $\Flops$) --- \texttt{continuous\_gain\_metrics}.
   \item Freeze Jaccard$(t,t{+}1)$ as stability KPI (S2 claim).
   \item Affec run: \texttt{po\_fuse} vs \texttt{po\_soft} vs
-        \texttt{po\_gated} on $T(\Acc^\star)$ + Jaccard.
+        \texttt{po\_gated} on $T(\Acc^\star)$ + Jaccard
+        (needs Affec cache).
 \end{enumerate}
-\textbf{Exit:} one table ``continuous gains'' in the scenarios tex.
+\textbf{Exit:} one table ``continuous gains'' filled from Affec smoke.
+
+\paragraph{R1 metric definitions (code).}
+\texttt{agod.po\_risk\_train.continuous\_gain\_metrics}:
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item \texttt{mean\_freeze\_jaccard}: adjacent freeze-set Jaccard (↑=stable).
+  \item \texttt{t\_to\_acc\_star}: first window with $\Acc\ge\Acc^\star$.
+  \item \texttt{cum\_flops\_to\_acc\_star}: $\sum_{u\le t^\star}\Flops_u$.
+\end{itemize}
+Wired into \texttt{run\_agod\_po\_risk\_train\_compare.py} cell summary.
 
 \subsection{Phase R2 --- Wire real step budget}
 \begin{enumerate}[leftmargin=1.2em,itemsep=1pt]

@@ -511,3 +511,73 @@ def opportunity_rank(
         )
     rows.sort(key=lambda r: r["opp_score"], reverse=True)
     return rows
+
+
+def freeze_jaccard(
+    freeze_a: Mapping[str, bool],
+    freeze_b: Mapping[str, bool],
+    mods: Sequence[str],
+) -> float:
+    """Jaccard similarity of frozen sets (stability of long-track freeze)."""
+    a = {m for m in mods if freeze_a.get(m)}
+    b = {m for m in mods if freeze_b.get(m)}
+    if not a and not b:
+        return 1.0
+    inter = len(a & b)
+    union = len(a | b)
+    return float(inter / union) if union else 1.0
+
+
+def continuous_gain_metrics(
+    rows: Sequence[Mapping],
+    *,
+    mods: Sequence[str] | None = None,
+    acc_star: float = 0.55,
+) -> dict:
+    """R1 continuous-time gains from a compare trajectory.
+
+    Returns
+    -------
+    mean_flops_rel, cum_flops (sum of flops_rel),
+    t_to_acc_star (first t with acc>=acc_star, else None),
+    cum_flops_to_acc_star,
+    mean_freeze_jaccard (adjacent windows),
+    n_windows
+    """
+    rows = list(rows)
+    if not rows:
+        return {
+            "mean_flops_rel": 1.0,
+            "cum_flops": 0.0,
+            "t_to_acc_star": None,
+            "cum_flops_to_acc_star": None,
+            "mean_freeze_jaccard": 1.0,
+            "n_windows": 0,
+        }
+    if mods is None:
+        mods = list((rows[0].get("freeze") or rows[0].get("alpha") or {}).keys())
+    flops = [float(r.get("flops_rel", 1.0)) for r in rows]
+    accs = [float(r.get("acc", 0.0)) for r in rows]
+    cum = float(np.cumsum(flops)[-1]) if flops else 0.0
+    t_hit = None
+    cum_hit = None
+    running = 0.0
+    for t, (a, f) in enumerate(zip(accs, flops)):
+        running += f
+        if t_hit is None and a >= float(acc_star):
+            t_hit = t
+            cum_hit = running
+    jacs = []
+    for i in range(1, len(rows)):
+        fa = rows[i - 1].get("freeze") or {}
+        fb = rows[i].get("freeze") or {}
+        jacs.append(freeze_jaccard(fa, fb, mods))
+    return {
+        "mean_flops_rel": float(np.mean(flops)),
+        "cum_flops": cum,
+        "t_to_acc_star": t_hit,
+        "cum_flops_to_acc_star": cum_hit,
+        "mean_freeze_jaccard": float(np.mean(jacs)) if jacs else 1.0,
+        "n_windows": len(rows),
+        "acc_star": float(acc_star),
+    }
