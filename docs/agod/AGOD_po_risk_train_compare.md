@@ -1,12 +1,15 @@
 # AGOD PO-risk → next-step training metric compare
 
-> **Writeup (LaTeX):** [`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) · brief MD: [`AGOD_PO_Risk_PostTraining.md`](AGOD_PO_Risk_PostTraining.md)
+> **Writeup (LaTeX):** [`AGOD_PO_Risk_PostTraining.tex`](AGOD_PO_Risk_PostTraining.tex) · brief MD: [`AGOD_PO_Risk_PostTraining.md`](AGOD_PO_Risk_PostTraining.md)  
+> **Goal lock:** accelerate post-training (FLOPs / steps / wall-clock / \(T(\mathrm{Acc}^\star)\)); Acc is a **constraint**, not the primary win.
 
 Iterate metric versions that map **PO-risk sensors → α → next-window training actuators**
 (LR multipliers, step budget, freeze mask, stack prior).
 
 Causal loop: sensors/α at window `t` only set actuators for window `t+1`
 (no same-window leakage).
+
+**Landing pass:** \(\mathrm{FLOPs_{rel}}\downarrow\) (or fewer windows to Acc bar) **and** \(\Delta\mathrm{Acc}\ge-\varepsilon\) vs `equal`. Acc↑ alone without cost cut is not an acceleration win.
 
 ## Metric versions
 
