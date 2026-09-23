@@ -79,4 +79,5 @@ PYTHONPATH=. python3 scripts/tencent_gr/check_review_accel_human_gate.py \
 
 点子已经够多；scope = **只做审出加速导出卡**。  
 走通这一条再谈 ETA / 规则。  
-**下一步不是再写 B29，而是找 1 位真人打 useful/not_useful。**
+**下一步不是再写 feature，而是找 1 位真人打 useful/not_useful。**  
+OOD：10min 已停 → 每 6h 只巡检 human-gate；READY 后再恢复 10min。

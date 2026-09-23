@@ -98,6 +98,7 @@
 | B31 | **IM 催打标一句话**（scope内） | handoff §0 发给审核 | 到达率 |
 | B32 | **handoff 责任人填空**（scope内） | OWNER+禁止自动覆盖 flags | 问责 |
 | B33 | **NOT_READY 等待看板**（scope内） | waiting_board 做/不做清单 | 停扩面 |
+| B34 | **停 10min→6h gate 巡检**（scope内） | NOT_READY 不堆 feature | 省人分钟 |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 
@@ -154,6 +155,7 @@
 **只走审出加速包** → [`Scope_Review_Agent_Card.md`](Scope_Review_Agent_Card.md)。  
 ETA / 规则 / B1–B15 冻结至审出卡被真人用过一次。
 B29 起：OOD 轮优先跑 `check_review_accel_human_gate.py`；`NOT_READY` 时 **kill** 新 feature，只推真人打标。
+B34：`ood-10min-iterate` 已停；改 `ood-gate-check-6h`。READY 后再恢复 10min OOD。
 
 ## 6b. 本轮（启动轮）已串结论
 
