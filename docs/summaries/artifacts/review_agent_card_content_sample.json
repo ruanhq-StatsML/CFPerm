@@ -1,0 +1,24 @@
+{
+  "tip_overlay": {
+    "industry": "content_farm",
+    "note": "电商刷单 tip → 内容农场互粉/同发话术；同一审出卡 UI，只换词典"
+  },
+  "queue": "传播路径线性份额变动",
+  "tips": [
+    {
+      "feature": "i_share_linear",
+      "sign": "0",
+      "bucket": "传播路径线性份额变动"
+    },
+    {
+      "feature": "i_credit_linear",
+      "sign": "0",
+      "bucket": "传播路径线性归因变动"
+    },
+    {
+      "feature": "i_share_first",
+      "sign": "0",
+      "bucket": "首次份额偏高（种草入口）"
+    }
+  ]
+}

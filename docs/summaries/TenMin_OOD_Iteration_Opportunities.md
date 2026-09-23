@@ -86,6 +86,7 @@
 | B19 | **审出卡灰度 kill_switch**（scope内） | flags JSON → allow/L0 | 可回滚 |
 | B20 | **波次批处理出卡**（scope内） | results/**/summary.json → cards+index | 运营批量 |
 | B21 | **审出卡波次差分**（scope内） | 两卡 tip/sign_Dy/队列差分 → paste | 差分人分钟↓ |
+| B22 | **内容农场 tip 词典 overlay**（scope内） | --tip-overlay 换桶话术，卡 UI 不变 | 审出复用 |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 

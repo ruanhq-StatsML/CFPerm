@@ -91,17 +91,36 @@ def _support_summary(blob: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def _bucketize(tips: List[str], tip_signs: Dict[str, str]) -> List[Dict[str, str]]:
+def _bucketize(
+    tips: List[str],
+    tip_signs: Dict[str, str],
+    *,
+    buckets_map: Optional[Dict[str, str]] = None,
+) -> List[Dict[str, str]]:
+    mapping = dict(TIP_BUCKETS)
+    if buckets_map:
+        mapping.update({str(k): str(v) for k, v in buckets_map.items()})
     rows = []
     for t in tips:
         rows.append(
             {
                 "feature": t,
                 "sign": tip_signs.get(t, "0"),
-                "bucket": TIP_BUCKETS.get(t, "其它图特征 tip"),
+                "bucket": mapping.get(t, "其它图特征 tip"),
             }
         )
     return rows
+
+
+def load_tip_overlay(path: Optional[Path]) -> Dict[str, Any]:
+    if path is None or not path.exists():
+        return {"industry": "default", "buckets": {}}
+    blob = json.loads(path.read_text())
+    return {
+        "industry": str(blob.get("industry") or path.stem),
+        "buckets": dict(blob.get("buckets") or {}),
+        "note": blob.get("note"),
+    }
 
 
 def build_card(
@@ -109,12 +128,16 @@ def build_card(
     *,
     source: str,
     flags: Optional[Dict[str, Any]] = None,
+    tip_overlay: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     gate = flags_allow(flags or {"enabled": True, "sample_rate": 1.0}, source=source)
+    overlay = tip_overlay or {"industry": "default", "buckets": {}}
     direction = dict(blob.get("direction") or {})
     tips = _tips_from_summary(blob)
     tip_signs = dict(direction.get("tip_signs") or {})
-    buckets = _bucketize(tips[:12], tip_signs)
+    buckets = _bucketize(
+        tips[:12], tip_signs, buckets_map=overlay.get("buckets") or None
+    )
     sign_dy = direction.get("sign_Dy", "flat")
     primary_bucket = buckets[0]["bucket"] if buckets else "未选 tip"
     card = {
@@ -122,6 +145,10 @@ def build_card(
         "disclaimer": "图谱分布变动线索，非定罪结论；供审核分流与上下文，不自动封禁。",
         "source_summary": source,
         "gray_flags": gate,
+        "tip_overlay": {
+            "industry": overlay.get("industry", "default"),
+            "note": overlay.get("note"),
+        },
         "support": _support_summary(blob),
         "direction": {
             "Dy": direction.get("Dy"),
@@ -153,6 +180,7 @@ def build_card(
     lines = [
         "【审核上下文·图谱变动线索】",
         f"灰度: allow={gate['allow']} reason={gate['reason']}",
+        f"词典: industry={overlay.get('industry', 'default')}",
         f"方向: sign_Dy={sign_dy} Dy={direction.get('Dy')}",
         f"支撑: localize_k={card['support'].get('localize_k')} "
         f"edges={card['support'].get('n_localized_edges')}",
@@ -178,6 +206,7 @@ def build_card(
         "graph_shift_disclaimer": "clue_not_conviction",
         "graph_shift_gray_allow": gate["allow"],
         "graph_shift_gray_reason": gate["reason"],
+        "graph_shift_tip_industry": overlay.get("industry", "default"),
     }
     return card
 
@@ -239,10 +268,19 @@ def main() -> None:
         default=DEFAULT_FLAGS,
         help="gray/rollback flags JSON",
     )
+    ap.add_argument(
+        "--tip-overlay",
+        type=Path,
+        default=None,
+        help="optional tip bucket overlay JSON (e.g. content_farm dictionary)",
+    )
     args = ap.parse_args()
     blob = json.loads(args.summary.read_text())
     flags = load_flags(args.flags)
-    card = build_card(blob, source=str(args.summary), flags=flags)
+    overlay = load_tip_overlay(args.tip_overlay)
+    card = build_card(
+        blob, source=str(args.summary), flags=flags, tip_overlay=overlay
+    )
     args.out_dir.mkdir(parents=True, exist_ok=True)
     (args.out_dir / "review_agent_card.json").write_text(
         json.dumps(card, indent=2, ensure_ascii=False) + "\n"
