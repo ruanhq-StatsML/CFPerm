@@ -82,3 +82,22 @@ def test_po_fuse_metric_and_hierarchical_actuators():
     assert sum(act["step_alloc"].values()) >= 1
     assert act["flops_rel"] <= 1.0
     assert act["step_alloc"]["txt"] >= max(act["step_alloc"].values()) * 0.4
+
+
+def test_compare_path_uses_fused_for_po_fuse_only():
+    """Mirror compare runner: po_fuse → fused actuators; others → plain."""
+    mods = ["a", "b", "c"]
+    po = {"a": 1.0, "b": 2.5, "c": 0.4}
+    pack = metric_to_alpha(
+        "po_fuse",
+        mods,
+        po=po,
+        po_prev={"a": 1.0, "b": 1.0, "c": 0.4},
+        po_ema={"a": 1.0, "b": 1.2, "c": 0.5},
+    )
+    fused = next_step_actuators_fused(pack, mods)
+    assert "step_alloc" in fused and "freeze_mask" in fused
+    assert pack["diag"].get("top_spike_mod") == "b"
+    soft = metric_to_alpha("po_soft", mods, po=po)
+    act_soft = next_step_actuators(soft["alpha"], mods)
+    assert sum(act_soft["step_alloc"].values()) >= 1
