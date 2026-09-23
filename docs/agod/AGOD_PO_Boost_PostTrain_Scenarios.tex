@@ -191,9 +191,15 @@ S4 & (any) + IPTW
   & --- & $\sqrt{\PO}$ on reject only \\
 S5 & \texttt{equal}/\texttt{po\_budget}
   & never & optional soft only \\
+S6 & \texttt{po\_gated}
+  & yes & uniform unless reject \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+\noindent\texttt{po\_fuse} in the compare runner uses
+\texttt{next\_step\_actuators\_fused} (freeze$\leftarrow L$,
+step dump$\leftarrow S$), not a single Softmax for all knobs.
 
 \section{Takeaway}
 \begin{enumerate}[leftmargin=1.2em,itemsep=2pt]

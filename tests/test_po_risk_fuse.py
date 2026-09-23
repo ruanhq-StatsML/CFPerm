@@ -36,6 +36,7 @@ def _bootstrap():
 _mod = _bootstrap()
 fuse_long_short = _mod.fuse_long_short
 metric_to_alpha = _mod.metric_to_alpha
+next_step_actuators = _mod.next_step_actuators
 next_step_actuators_fused = _mod.next_step_actuators_fused
 
 

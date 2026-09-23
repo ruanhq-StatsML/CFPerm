@@ -35,6 +35,7 @@ from agod.po_risk_train import (
     PORiskMetricConfig,
     metric_to_alpha,
     next_step_actuators,
+    next_step_actuators_fused,
     opportunity_rank,
 )
 from agod.proto_drift import ModalityPrototypeBank
@@ -313,7 +314,11 @@ def run_version(
             cfg=metric_cfg,
         )
         alpha = pack["alpha"]
-        next_act = next_step_actuators(alpha, mods, cfg=act_cfg)
+        # Hierarchical long⊗short actuators only for po_fuse (S2 gain path)
+        if version == "po_fuse":
+            next_act = next_step_actuators_fused(pack, mods, cfg=act_cfg)
+        else:
+            next_act = next_step_actuators(alpha, mods, cfg=act_cfg)
         alpha_hist.append(dict(alpha))
         prev_po = dict(sens["po"])
         if po_ema is None:
@@ -326,20 +331,32 @@ def run_version(
         mses.append(mse)
         flops.append(float(act["flops_rel"]))
         ents.append(float(act["alpha_entropy"]))
-        rows.append(
-            {
-                "t": t,
-                "acc": acc,
-                "mse": mse,
-                "alpha": {m: float(alpha[m]) for m in mods},
-                "lr_mult": {m: float(act["lr_mult"][m]) for m in mods},
-                "step_alloc": {m: int(act["step_alloc"][m]) for m in mods},
-                "freeze": {m: bool(act["freeze_mask"][m]) for m in mods},
-                "flops_rel": float(act["flops_rel"]),
-                "top_mod": act["top_mod"],
-                "po": {m: float(sens["po"][m]) for m in mods},
+        row = {
+            "t": t,
+            "acc": acc,
+            "mse": mse,
+            "alpha": {m: float(alpha[m]) for m in mods},
+            "lr_mult": {m: float(act["lr_mult"][m]) for m in mods},
+            "step_alloc": {m: int(act["step_alloc"][m]) for m in mods},
+            "freeze": {m: bool(act["freeze_mask"][m]) for m in mods},
+            "flops_rel": float(act["flops_rel"]),
+            "top_mod": act["top_mod"],
+            "po": {m: float(sens["po"][m]) for m in mods},
+        }
+        diag = dict(pack.get("diag") or {})
+        if version == "po_fuse":
+            row["fuse"] = {
+                "omega_long": diag.get("omega_long"),
+                "omega_short": diag.get("omega_short"),
+                "spike_ratio": diag.get("spike_ratio"),
+                "top_concept_mod": diag.get("top_concept_mod"),
+                "top_spike_mod": diag.get("top_spike_mod"),
             }
-        )
+            if "step_tilt" in next_act:
+                row["step_tilt"] = {
+                    m: float(next_act["step_tilt"].get(m, 0.0)) for m in mods
+                }
+        rows.append(row)
         act = next_act
         prev_x = {m: np.asarray(xw[m]) for m in mods}
         prev_y = np.asarray(yw)

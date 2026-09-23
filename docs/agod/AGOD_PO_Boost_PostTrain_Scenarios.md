@@ -17,3 +17,5 @@
 ## 一句话
 
 PO 不换 loss，只重分后训练预算；真增益在 S1/S2/S4/S6，S5 诚实报 noop。
+
+**Compare 接线：** `po_fuse` → `next_step_actuators_fused`（freeze←L，step←S）；其它 version 仍走普通 `next_step_actuators`。
