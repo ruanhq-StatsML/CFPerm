@@ -97,6 +97,7 @@
 | B30 | **真人打标交接纸**（scope内） | handoff.md 贴卡+打标CLI | 逼 READY |
 | B31 | **IM 催打标一句话**（scope内） | handoff §0 发给审核 | 到达率 |
 | B32 | **handoff 责任人填空**（scope内） | OWNER+禁止自动覆盖 flags | 问责 |
+| B33 | **NOT_READY 等待看板**（scope内） | waiting_board 做/不做清单 | 停扩面 |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 

@@ -1,0 +1,25 @@
+{
+  "board_type": "review_accel_waiting",
+  "ts": "2026-09-23T10:20:30Z",
+  "status": "NOT_READY",
+  "ready": false,
+  "feature_freeze": true,
+  "blocker": "need_1_human_useful_or_not_useful",
+  "next_action": "把 review_agent_card.md 贴给 1 位真人审核，打 useful/not_useful（--reviewer 真名）",
+  "do_now": [
+    "发 handoff §0 IM 一句话给审核同学",
+    "填 handoff 责任人 OWNER / 审核同学",
+    "等人打标后跑 check_review_accel_human_gate.py"
+  ],
+  "do_not": [
+    "新 tip 排序模型",
+    "审出卡 Web UI",
+    "自动覆盖 flags.suggested.json",
+    "新行业 tip overlay / ETA / 规则包"
+  ],
+  "links": {
+    "handoff": "docs/summaries/artifacts/review_accel_human_handoff.md",
+    "gate": "docs/summaries/artifacts/review_accel_human_gate.json",
+    "smoke": "scripts/tencent_gr/smoke_review_accel_pack.py"
+  }
+}
