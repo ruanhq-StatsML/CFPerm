@@ -2,6 +2,11 @@
 
 > Gate: **NOT_READY** — 需要 1 位真人审核打标后才解冻 ETA/规则 / 新 feature。
 
+
+## 0. IM 一句话（发给审核同学）
+
+> 帮看一眼图谱变动审出卡（非定罪），有没有帮你少翻页？有空回 useful / not_useful。卡：`docs/summaries/artifacts/review_accel_human_handoff.md` §1；打标命令在 §2，`--reviewer` 用你真名。
+
 ## 1. 把下面整段贴进工单 / 发给审核同学
 
 ```
