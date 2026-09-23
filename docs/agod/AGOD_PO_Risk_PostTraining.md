@@ -43,3 +43,18 @@
 - 不要混：\(\mathrm{PO}_m\) 高 ≠ 自动抬行权（没 reject 不抬）；reject ≠ 自动冻模态。
 
 长短期融合细节见原文 §fuse；落地 KPI 仍是 FLOPs / \(T(\mathrm{Acc}^\star)\)，Acc 过线才算。
+
+---
+
+## ROI mapping（只维护 SQL）
+
+与业务 ROI 的对接：**一张 mapping SQL 即可**，其它看板可有可无。
+
+文件：[`po_posttrain_roi_map.sql`](po_posttrain_roi_map.sql)
+
+| logic_id | cost_proxy | benefit_proxy | view |
+|---|---|---|---|
+| `modality_emphasis` | `flops_rel`, wall_clock | \(T(\mathrm{Acc}^\star)\), ΔAcc 约束 | `v_roi_modality_emphasis` |
+| `hard_upweight` | reject 后 fit 耗时 | next-MSE drop vs uniform, P@20% | `v_roi_hard_upweight` |
+
+过线看 `v_roi_ship_gate`：A 要求 FLOPs&lt;1 且 ΔAcc≥−0.5%；B 要求 reject 窗 next-MSE 相对 uniform 下降。
