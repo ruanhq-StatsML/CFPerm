@@ -145,3 +145,20 @@ def test_realize_and_expand_step_schedule_r2():
     assert sum(redis.values()) == 40
     rr = expand_step_schedule({"img": 2, "txt": 2}, ["img", "txt"], mode="round_robin")
     assert rr == ["img", "txt", "img", "txt"] or rr[0] in ("img", "txt")
+
+
+def test_structured_epsilon_alpha_floor_like_budget():
+    structured_epsilon_alpha = _mod.structured_epsilon_alpha
+    metric_to_alpha = _mod.metric_to_alpha
+    mods = ["a", "b", "c"]
+    soft = {"a": 0.8, "b": 0.15, "c": 0.05}
+    # ε=0.3 → f=0.1 each
+    a = structured_epsilon_alpha(soft, mods, epsilon=0.3)
+    assert abs(a["a"] + a["b"] + a["c"] - 1.0) < 1e-9
+    assert a["c"] >= 0.1 - 1e-9  # floor
+    assert a["a"] > a["b"] > a["c"]
+    pack = metric_to_alpha(
+        "po_budget", mods, po={"a": 3.0, "b": 1.0, "c": 0.2}
+    )
+    assert "structured_epsilon" in pack["diag"]
+    assert min(pack["alpha"].values()) >= pack["diag"]["floor"] - 1e-9

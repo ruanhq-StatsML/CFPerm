@@ -100,6 +100,35 @@ def _zscore_dict(d: Mapping[str, float], mods: Sequence[str]) -> dict[str, float
     return {m: (float(d[m]) - mu) / sd for m in mods}
 
 
+def structured_epsilon_alpha(
+    soft: Mapping[str, float],
+    mods: Sequence[str],
+    *,
+    epsilon: float,
+) -> dict[str, float]:
+    """Structured ε-mix (ε-greedy *analogue*, not coin-flip).
+
+    ``alpha_m = f + (1 - |M| f) * soft_m`` with ``f = ε/|M|``.
+    Matches ``po_budget`` floor semantics: guaranteed warm mass on every
+    tower so sensors can still fire, without randomizing α.
+    """
+    mods = list(mods)
+    m = max(len(mods), 1)
+    eps = float(np.clip(epsilon, 0.0, 1.0))
+    floor = eps / m
+    # keep floor feasible
+    floor = min(floor, 0.9 / m)
+    rem = 1.0 - floor * m
+    s = np.array([max(float(soft.get(k, 0.0)), 0.0) for k in mods], float)
+    if s.sum() <= 1e-12:
+        s = np.ones(m) / m
+    else:
+        s = s / s.sum()
+    out = {k: float(floor + rem * s[i]) for i, k in enumerate(mods)}
+    z = sum(out.values())
+    return {k: out[k] / z for k in mods}
+
+
 def fuse_long_short(
     mods: Sequence[str],
     *,
@@ -276,13 +305,12 @@ def metric_to_alpha(
 
     if version == "po_budget":
         soft = softmax_scores(po_a, mods, cfg.tau)
-        floor = min(float(cfg.budget_floor), 0.9 / len(mods))
-        rem = 1.0 - floor * len(mods)
-        alpha = {m: floor + rem * soft[m] for m in mods}
-        s = sum(alpha.values())
-        alpha = {m: alpha[m] / s for m in mods}
+        # structured-ε mix: f=ε/|M|, ε := budget_floor * |M| (legacy knobs)
+        eps = min(float(cfg.budget_floor) * len(mods), 0.9)
+        alpha = structured_epsilon_alpha(soft, mods, epsilon=eps)
         score = dict(po_a)
-        diag["floor"] = floor
+        diag["floor"] = float(eps / max(len(mods), 1))
+        diag["structured_epsilon"] = float(eps)
         return {"alpha": alpha, "score": score, "diag": diag}
 
     if version == "po_next":

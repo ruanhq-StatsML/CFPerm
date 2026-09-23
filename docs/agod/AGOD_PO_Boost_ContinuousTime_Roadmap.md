@@ -23,6 +23,13 @@ PO_t  →  滤波(L=EMA, S=ΔPO, α)  →  执行器 u_{t+1}  →  θ_{t+1}
 
 **增益故事：** 预期（更小 \(T(\mathrm{Acc}^\star)\)）+ 稳定（少 thrash）+ 选择性花费（calm 不抬权）。饱和流（COCO）连续控制器无可重分 → 诚实 noop。
 
+### 不是 ε-greedy：传感器触发的 OOD
+
+- 默认 \(\alpha=\mathrm{Softmax}(\mathrm{score}/\tau)\)（Boltzmann），**不是**以 ε 掷硬币换臂。
+- 唯一 ε 味：`po_budget` / `structured_epsilon_alpha` —— \(f=\varepsilon/|M|\) 地板保冷塔温感，**禁止**随机改 α。
+- OOD 响应链：Sense(PO,MMD,ΔPO,…) → Judge(drift-vs-noise) → Filter(L/S) → Actuate(freeze/dump/LR；reject 才 √PO) → 只作用 \(t{+}1\)。
+- Justify：平静窗随机探会打穿 FLOPs+Acc 门；真漂移才该偏斜。
+
 ---
 
 ## Post-training elaboration roadmap

@@ -46,6 +46,15 @@ PO is sufficient here; other attributors are optional subtractors
 \]
 Train on the \emph{shift}, with Acc as constraint---not Acc chase alone.
 
+\paragraph{Allocation vs $\varepsilon$-greedy.}
+Budgeting is Softmax / fused long$\otimes$short (state-dependent), not a
+coin-flip explore schedule.
+The only $\varepsilon$-flavored knob is the \texttt{po\_budget} floor
+($f\approx\varepsilon/|M|$).
+Sensor-triggered OOD: gate high-$\PO$ only when uni-Acc/VIMP clear;
+then freeze$\leftarrow L$, dump$\leftarrow S$ on window $t{+}1$.
+See ContinuousTime roadmap \S\texttt{eps}.
+
 \section{Scenarios (where PO boosts)}
 \label{sec:scen}
 

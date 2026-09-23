@@ -97,6 +97,56 @@ time vs clock time.
         $\Flops=1$.
 \end{itemize}
 
+\subsection{Not $\varepsilon$-greedy: Softmax allocation + sensor-triggered OOD}
+\label{sec:eps}
+Next-step ``exploration'' is often asked whether it equals
+$\varepsilon$-greedy.
+\textbf{Partial analogy only.}
+
+\paragraph{Classic $\varepsilon$-greedy.}
+With probability $\varepsilon$ pick uniformly; else pick
+$\arg\max_m Q_m$.
+Exploration is a \emph{coin flip schedule}, largely independent of
+whether the stream is drifting.
+
+\paragraph{What we actually do.}
+\[
+\alpha=\mathrm{Softmax}\big(\mathrm{score}(\PO,L,S,\mathrm{MMD},\mathrm{gate})/\tau\big),
+\]
+optionally with a \textbf{structured floor} (\texttt{po\_budget}):
+\[
+\alpha_m=f+(1-|M|f)\,\mathrm{Softmax}(\PO)_m,
+\quad f\approx\varepsilon/|M|.
+\]
+So: Boltzmann / soft-max bandit + optional $\varepsilon$-\emph{mix},
+\textbf{not} random arm draws.
+$\tau\!\uparrow$ flattens (more explore-like); freeze is the opposite of
+explore (BWD off to cut update FLOPs).
+
+\paragraph{Sensor-triggered OOD response (justified).}
+On window $t$ (actuators apply only to $t{+}1$):
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item \textbf{Sense:} $\PO$ (concept residual), $\mathrm{MMD}$ (covariate),
+        $\mathrm{proto}$, $\Delta\PO$; auxiliaries $\mathrm{uni\_acc}$, VIMP.
+  \item \textbf{Judge:} \texttt{drift\_vs\_noise\_gate} --- boost only if
+        high $\PO$ \emph{and} uni-Acc not broken \emph{and} VIMP not bottom;
+        else damp $\PO$ (refuse noise-as-OOD).
+  \item \textbf{Filter:} $L=\mathrm{EMA}(\PO)\cdot(1+\mathrm{proto})$ chronic;
+        $S=\Delta\PO$ spike; $\omega_S$ rises with
+        $\|S\|_\infty/\mathrm{MAD}(L)$.
+  \item \textbf{Actuate:} freeze$\leftarrow L$; step dump$\leftarrow S$;
+        LR/stack$\leftarrow\alpha$; reject event$\Rightarrow w_i\propto\sqrt{\PO_i}$.
+\end{enumerate}
+\textbf{Why not schedule-$\varepsilon$:} calm windows must not burn FLOPs on
+random probes (Acc+FLOPs ship gate); OOD mass should move only when sensors
+clear the gate. Spontaneous OOD $=$ state-dependent control, not LLM nor
+coin flip.
+
+\paragraph{Allowed $\varepsilon$-flavored knob.}
+Only the \texttt{po\_budget} floor / \texttt{beta\_lr} floor---keeps cold
+towers barely warm so sensors can still fire. Do \emph{not} add
+``with probability $\varepsilon$ randomize $\alpha$''.
+
 %----------------------------------------------------------------------
 \section{Post-training elaboration roadmap}
 \label{sec:road}
