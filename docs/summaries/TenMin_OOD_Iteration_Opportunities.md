@@ -92,6 +92,7 @@
 | B25 | **工单字段 webhook dry-run**（scope内） | ticket_custom_fields → POST/收据 | 现网接通 |
 | B26 | **shared_context.eta_soft_hint**（scope内） | 同卡只读提示给审核+ETA | 双 agent |
 | B27 | **审出加速包 e2e smoke**（scope内） | export→反馈→建议→dry-run 一键 | 交接演示 |
+| B28 | **按队列 sample_rate 覆盖**（scope内） | flags.queue_sample_rates | 单队列回滚 |
 
 ### C. 「串成产品」组合拳（P0 打包卖）
 

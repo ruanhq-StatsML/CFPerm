@@ -43,27 +43,50 @@ def load_flags(path: Path) -> Dict[str, Any]:
     return json.loads(path.read_text())
 
 
-def flags_allow(flags: Dict[str, Any], *, source: str) -> Dict[str, Any]:
-    """Gray / rollback gate for card injection (no Drill change)."""
+def flags_allow(
+    flags: Dict[str, Any],
+    *,
+    source: str,
+    queue_bucket: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Gray / rollback gate for card injection (no Drill change).
+
+    Optional per-queue sample_rate override via flags['queue_sample_rates'].
+    """
     kill = bool(flags.get("kill_switch"))
     enabled = bool(flags.get("enabled", True)) and not kill
     rate = float(flags.get("sample_rate", 1.0))
     rate = max(0.0, min(1.0, rate))
-    # deterministic sample by source path (stable across processes)
-    h = int(hashlib.md5(source.encode("utf-8")).hexdigest()[:8], 16) % 10_000
+    queue_rates = dict(flags.get("queue_sample_rates") or {})
+    queue_override = False
+    if queue_bucket and queue_bucket in queue_rates:
+        try:
+            rate = max(0.0, min(1.0, float(queue_rates[queue_bucket])))
+            queue_override = True
+        except (TypeError, ValueError):
+            queue_override = False
+    # deterministic sample by source (+ queue when overridden)
+    seed = source if not queue_override else f"{source}::{queue_bucket}"
+    h = int(hashlib.md5(seed.encode("utf-8")).hexdigest()[:8], 16) % 10_000
     sampled = (h / 10_000.0) < rate
     allow = enabled and sampled
+    if kill:
+        reason = "kill_switch"
+    elif not flags.get("enabled", True):
+        reason = "disabled"
+    elif not sampled:
+        reason = "queue_not_sampled" if queue_override else "not_sampled"
+    else:
+        reason = "ok_queue" if queue_override else "ok"
     return {
         "allow": allow,
         "enabled": enabled,
         "kill_switch": kill,
         "sample_rate": rate,
         "sampled": sampled,
-        "reason": (
-            "kill_switch"
-            if kill
-            else ("disabled" if not flags.get("enabled", True) else ("not_sampled" if not sampled else "ok"))
-        ),
+        "queue_bucket": queue_bucket,
+        "queue_override": queue_override,
+        "reason": reason,
     }
 
 
@@ -193,7 +216,8 @@ def build_card(
     flags: Optional[Dict[str, Any]] = None,
     tip_overlay: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    gate = flags_allow(flags or {"enabled": True, "sample_rate": 1.0}, source=source)
+    flags_eff = flags or {"enabled": True, "sample_rate": 1.0}
+    gate = flags_allow(flags_eff, source=source)
     overlay = tip_overlay or {"industry": "default", "buckets": {}}
     direction = dict(blob.get("direction") or {})
     tips = _tips_from_summary(blob)
@@ -203,6 +227,8 @@ def build_card(
     )
     sign_dy = direction.get("sign_Dy", "flat")
     primary_bucket = buckets[0]["bucket"] if buckets else "未选 tip"
+    # re-apply gray with per-queue sample_rate if configured
+    gate = flags_allow(flags_eff, source=source, queue_bucket=primary_bucket)
     support = _support_summary(blob)
     sla = sla_from_support(support, sign_dy=sign_dy, gate_allow=gate["allow"])
     card = {

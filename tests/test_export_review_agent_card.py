@@ -78,3 +78,25 @@ def test_sla_urgency_from_gap_days():
     assert "SLA: urgent" in card["paste_for_agent"]
     assert card["shared_context"]["eta_soft_hint"] == "lower_confidence"
     assert card["ticket_custom_fields"]["graph_shift_eta_soft_hint"] == "lower_confidence"
+
+
+def test_queue_sample_rate_override_blocks():
+    blob = {
+        "localize_k": 1,
+        "fsds_W1_holdout": {"top_features": ["u_span_sec"]},
+        "direction": {"sign_Dy": "pos", "tip_signs": {"u_span_sec": "+"}},
+    }
+    # bucket for u_span_sec is 活跃跨度异常（短刷/长挂）
+    card = build_card(
+        blob,
+        source="qrate",
+        flags={
+            "enabled": True,
+            "sample_rate": 1.0,
+            "kill_switch": False,
+            "queue_sample_rates": {"活跃跨度异常（短刷/长挂）": 0.0},
+        },
+    )
+    assert card["gray_flags"]["allow"] is False
+    assert card["gray_flags"]["queue_override"] is True
+    assert card["review_hint"]["queue_bucket"] == "GRAY_DISABLED"
