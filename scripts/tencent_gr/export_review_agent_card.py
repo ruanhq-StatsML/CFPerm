@@ -13,8 +13,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from direction_report import ensure_direction, scenario_from_direction  # noqa: E402
+from feature_methods_panel import panel_from_dir  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FLAGS = ROOT / "configs" / "review_agent_card_flags.json"
@@ -219,9 +227,36 @@ def build_card(
     flags_eff = flags or {"enabled": True, "sample_rate": 1.0}
     gate = flags_allow(flags_eff, source=source)
     overlay = tip_overlay or {"industry": "default", "buckets": {}}
-    direction = dict(blob.get("direction") or {})
-    tips = _tips_from_summary(blob)
+    # Closed loop: stale summaries without tip_signs always looked flat/0;
+    # ensure direction from sibling feature_shift_diagnostics when possible.
+    summary_path = Path(source) if source else None
+    feat_diag = None
+    if summary_path is not None and summary_path.parent.exists():
+        cand = summary_path.parent / "feature_shift_diagnostics.csv"
+        if cand.exists():
+            feat_diag = cand
+    direction = ensure_direction(blob, feat_diag_path=feat_diag)
+    scenario = scenario_from_direction(direction)
+    tips = _tips_from_summary({**blob, "direction": direction})
     tip_signs = dict(direction.get("tip_signs") or {})
+    panel = blob.get("feature_methods")
+    if not isinstance(panel, dict) or not panel.get("tip_method_table"):
+        if summary_path is not None and summary_path.parent.exists():
+            panel = panel_from_dir(
+                summary_path.parent,
+                tip_features=tips,
+                tip_signs=tip_signs,
+            )
+        else:
+            panel = {
+                "read": "无 feature_methods",
+                "consensus_top": [],
+                "agree_ge3": [],
+                "fsds_only": [],
+                "shift_only": [],
+                "po_only": [],
+                "tops": {},
+            }
     buckets = _bucketize(
         tips[:12], tip_signs, buckets_map=overlay.get("buckets") or None
     )
@@ -247,18 +282,37 @@ def build_card(
             "y_ref": direction.get("y_ref"),
             "y_cur": direction.get("y_cur"),
             "tip_signs": tip_signs,
+            "dy_missing": bool(direction.get("dy_missing")),
             "report": direction.get("report")
             or f"[Direction] sign_Dy={sign_dy}; tips={tips[:5]}",
+        },
+        "scenario": scenario,
+        "feature_methods": {
+            "read": panel.get("read"),
+            "consensus_top": (panel.get("consensus_top") or [])[:8],
+            "agree_ge3": (panel.get("agree_ge3") or [])[:8],
+            "fsds_only": (panel.get("fsds_only") or [])[:6],
+            "shift_only": (panel.get("shift_only") or [])[:6],
+            "po_only": (panel.get("po_only") or [])[:6],
+            "tops": {
+                k: (panel.get("tops") or {}).get(k, [])[:5]
+                for k in ("cmean", "mmd_loco", "po_vimp", "fsds")
+            },
+            "note": panel.get("note"),
         },
         "tips": tips[:12],
         "tip_buckets": buckets,
         "review_hint": {
             "queue_bucket": primary_bucket,
-            "outcome_read": {
+            "scenario_family": scenario.get("family_code"),
+            "scenario_sub": scenario.get("sub_code"),
+            "outcome_read": scenario.get("read")
+            or {
                 "pos": "块上成功率上升：优先刷量/互点/末跳队列",
                 "neg": "块上成功率下降：优先劣质灌入/劫持残留队列",
                 "flat": "X 漂了但 click 率平：先当供给/分布漂移，慎升强动作",
             }.get(sign_dy, "flat"),
+            "feature_methods_read": panel.get("read"),
             "suggested_action_level": "L1_watch" if gate["allow"] else "L0_observe",
             "sla_urgency": sla,
         },
@@ -281,29 +335,52 @@ def build_card(
         "【审核上下文·图谱变动线索】",
         f"灰度: allow={gate['allow']} reason={gate['reason']}",
         f"词典: industry={overlay.get('industry', 'default')}",
-        f"方向: sign_Dy={sign_dy} Dy={direction.get('Dy')}",
+        f"方向: sign_Dy={sign_dy} Dy={direction.get('Dy')}"
+        + (" (dy_missing)" if direction.get("dy_missing") else ""),
+        f"场景: {scenario.get('family')} / {scenario.get('sub')}",
         f"支撑: localize_k={card['support'].get('localize_k')} "
         f"edges={card['support'].get('n_localized_edges')}",
         f"建议队列: {card['review_hint']['queue_bucket']}",
         f"SLA: {sla_final['level']} ({sla_final['copy']})",
         f"共享: eta_soft_hint={shared['eta_soft_hint']} | {shared['review_note']}",
         f"读法: {card['review_hint']['outcome_read']}",
+        f"特征多法: {panel.get('read')}",
         "Tips:",
     ]
     for b in buckets[:8]:
         lines.append(f"  - {b['feature']} ({b['sign']}): {b['bucket']}")
+    tops = (panel.get("tops") or {})
+    if any(tops.get(k) for k in ("cmean", "mmd_loco", "po_vimp", "fsds")):
+        lines.append("方法Top:")
+        for name, label in (
+            ("cmean", "cmean"),
+            ("mmd_loco", "MMD-LOCO"),
+            ("po_vimp", "PO-VIMP"),
+            ("fsds", "FSDS-F"),
+        ):
+            xs = tops.get(name) or []
+            if xs:
+                lines.append(f"  - {label}: {', '.join(xs[:5])}")
     lines.append(f"声明: {card['disclaimer']}")
     card["paste_for_agent"] = "\n".join(lines)
     # SOAR / 工单自定义字段：审出加速接通现网的最小映射
     card["ticket_custom_fields"] = {
         "graph_shift_sign_dy": sign_dy,
         "graph_shift_dy": direction.get("Dy"),
+        "graph_shift_dy_missing": bool(direction.get("dy_missing")),
+        "graph_shift_scenario_family": scenario.get("family_code"),
+        "graph_shift_scenario_sub": scenario.get("sub_code"),
         "graph_shift_queue_bucket": card["review_hint"]["queue_bucket"],
         "graph_shift_action_level": card["review_hint"]["suggested_action_level"],
         "graph_shift_tip_top3": ",".join(tips[:3]),
         "graph_shift_tip_signs_top3": ",".join(
             f"{t}:{tip_signs.get(t, '0')}" for t in tips[:3]
         ),
+        "graph_shift_feat_consensus_top3": ",".join(
+            (panel.get("consensus_top") or [])[:3]
+        ),
+        "graph_shift_feat_agree_ge3": ",".join((panel.get("agree_ge3") or [])[:5]),
+        "graph_shift_feat_fsds_only": ",".join((panel.get("fsds_only") or [])[:3]),
         "graph_shift_localize_k": card["support"].get("localize_k"),
         "graph_shift_disclaimer": "clue_not_conviction",
         "graph_shift_gray_allow": gate["allow"],
@@ -318,6 +395,8 @@ def build_card(
 
 def card_to_md(card: Dict[str, Any]) -> str:
     d = card["direction"]
+    sc = card.get("scenario") or {}
+    fm = card.get("feature_methods") or {}
     tf = card.get("ticket_custom_fields") or {}
     lines = [
         "# 审核 Agent 上下文卡",
@@ -325,9 +404,13 @@ def card_to_md(card: Dict[str, Any]) -> str:
         f"> {card['disclaimer']}",
         "",
         f"- source: `{card['source_summary']}`",
-        f"- sign_Dy: **{d.get('sign_Dy')}** (Dy={d.get('Dy')})",
+        f"- sign_Dy: **{d.get('sign_Dy')}** (Dy={d.get('Dy')}"
+        + (", dy_missing" if d.get("dy_missing") else "")
+        + ")",
+        f"- 场景: **{sc.get('family', '—')}** / {sc.get('sub', '—')}",
         f"- 建议队列: **{card['review_hint']['queue_bucket']}**",
         f"- 读法: {card['review_hint']['outcome_read']}",
+        f"- 特征多法: {fm.get('read', '—')}",
         f"- 建议动作级: `{card['review_hint']['suggested_action_level']}`",
         "",
         "## Tips",
@@ -337,6 +420,26 @@ def card_to_md(card: Dict[str, Any]) -> str:
     ]
     for b in card["tip_buckets"]:
         lines.append(f"| `{b['feature']}` | {b['sign']} | {b['bucket']} |")
+    tops = fm.get("tops") or {}
+    if any(tops.get(k) for k in ("cmean", "mmd_loco", "po_vimp", "fsds")):
+        lines.extend(
+            [
+                "",
+                "## 特征多法 Top",
+                "",
+                "| method | role | top |",
+                "|---|---|---|",
+                f"| cmean | shift_mean | {', '.join(f'`{x}`' for x in (tops.get('cmean') or [])[:5])} |",
+                f"| MMD-LOCO | shift_mmd | {', '.join(f'`{x}`' for x in (tops.get('mmd_loco') or [])[:5])} |",
+                f"| PO-VIMP | shift_po | {', '.join(f'`{x}`' for x in (tops.get('po_vimp') or [])[:5])} |",
+                f"| FSDS-F | supervised_y | {', '.join(f'`{x}`' for x in (tops.get('fsds') or [])[:5])} |",
+                "",
+                f"- consensus: {', '.join(f'`{x}`' for x in (fm.get('consensus_top') or [])[:5])}",
+                f"- agree≥3: {', '.join(f'`{x}`' for x in (fm.get('agree_ge3') or [])[:5]) or '—'}",
+                f"- FSDS-only: {', '.join(f'`{x}`' for x in (fm.get('fsds_only') or [])[:4]) or '—'}",
+                f"- shift-only: {', '.join(f'`{x}`' for x in (fm.get('shift_only') or [])[:4]) or '—'}",
+            ]
+        )
     lines += [
         "",
         "## 工单自定义字段（可直接 POST）",

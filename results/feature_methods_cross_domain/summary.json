@@ -1,0 +1,246 @@
+{
+  "protocol": [
+    "1. shift tip: |μ_cur−μ_ref| (cmean)",
+    "2. shift importance: PO-VIMP or X→T cov VIMP",
+    "3. supervised tip: FSDS / SelectKBest F on y|support",
+    "4. optional: MMD-LOCO when pairwise feats exist",
+    "5. deliver consensus + FSDS-only + shift-only tension"
+  ],
+  "n_domains": 3,
+  "domains": [
+    {
+      "domain": "tencent_gr_w1w2",
+      "kind": "ecommerce_graph_edges",
+      "X": "user/item/path graph feats on K*",
+      "Y": "click/convert on localized edges",
+      "T": "W1 early vs W2 late (gap≥30d)",
+      "methods_in": [
+        "cmean_abs",
+        "mmd_loco",
+        "po_vimp",
+        "fsds_f"
+      ],
+      "delta_Y": null,
+      "direction_label": null,
+      "available_methods": {
+        "cmean": true,
+        "mmd_loco": true,
+        "po_vimp": true,
+        "fsds": true
+      },
+      "consensus_top": [
+        "i_credit_linear",
+        "i_share_linear",
+        "i_n_covisit_neighbors",
+        "i_n_exp",
+        "i_log1p_n_exp",
+        "u_n_exp"
+      ],
+      "agree_ge3": [
+        "i_credit_linear",
+        "i_log1p_n_exp",
+        "i_n_covisit_neighbors",
+        "i_share_linear"
+      ],
+      "fsds_only": [
+        "i_share_first"
+      ],
+      "shift_only": [
+        "e_log1p_exp",
+        "i_n_exp",
+        "i_n_users",
+        "i_share_last",
+        "u_log1p_n_events"
+      ],
+      "po_only": [
+        "u_log1p_n_events",
+        "u_span_sec",
+        "ui_pop_mismatch"
+      ],
+      "tops": {
+        "cmean": [
+          "i_n_covisit_neighbors",
+          "i_n_exp",
+          "i_n_users",
+          "i_credit_linear",
+          "u_n_exp"
+        ],
+        "mmd_loco": [
+          "i_share_linear",
+          "e_log1p_exp",
+          "i_n_exp",
+          "i_share_last",
+          "i_log1p_n_exp"
+        ],
+        "po_vimp": [
+          "ui_pop_mismatch",
+          "u_n_exp",
+          "i_credit_linear",
+          "i_share_linear",
+          "i_log1p_n_covisit"
+        ],
+        "fsds": [
+          "i_share_linear",
+          "i_credit_linear",
+          "i_credit_first",
+          "i_share_first",
+          "i_log1p_n_users"
+        ]
+      },
+      "read": "多法共识(≥3): i_credit_linear, i_log1p_n_exp, i_n_covisit_neighbors, i_share_linear；仅FSDS(y判别、未必shift): i_share_first；仅shift描述(cmean/MMD/PO): e_log1p_exp, i_n_exp, i_n_users, i_share_last；仅PO/cov-VIMP: u_log1p_n_events, u_span_sec, ui_pop_mismatch"
+    },
+    {
+      "domain": "diffusiondb_temporal",
+      "kind": "prompt_tokens_to_image_nsfw",
+      "X": "TF-IDF prompt tokens",
+      "Y": "image_nsfw",
+      "T": "early vs late timestamp windows",
+      "methods_in": [
+        "abs_delta(cmean)",
+        "vimp_cov(X→T)",
+        "fsds_f"
+      ],
+      "delta_Y": 0.05070150882820601,
+      "direction_label": "positive/正向",
+      "available_methods": {
+        "cmean": true,
+        "mmd_loco": false,
+        "po_vimp": true,
+        "fsds": true
+      },
+      "consensus_top": [
+        "intricate",
+        "sharp",
+        "focus",
+        "greg",
+        "sharp focus",
+        "greg rutkowski"
+      ],
+      "agree_ge3": [],
+      "fsds_only": [
+        "alphonse",
+        "alphonse mucha",
+        "artgerm",
+        "body",
+        "by artgerm"
+      ],
+      "shift_only": [
+        "3d",
+        "4k",
+        "8k",
+        "by",
+        "greg"
+      ],
+      "po_only": [
+        "intricate",
+        "mm"
+      ],
+      "tops": {
+        "cmean": [
+          "8k",
+          "4k",
+          "the",
+          "by",
+          "3d"
+        ],
+        "mmd_loco": [],
+        "po_vimp": [
+          "8k",
+          "4k",
+          "3d",
+          "mm",
+          "greg rutkowski"
+        ],
+        "fsds": [
+          "mucha",
+          "alphonse",
+          "alphonse mucha",
+          "artgerm",
+          "elegant"
+        ]
+      },
+      "read": "仅FSDS(y判别、未必shift): alphonse, alphonse mucha, artgerm, body；仅shift描述(cmean/MMD/PO): 3d, 4k, 8k, by；仅PO/cov-VIMP: intricate, mm"
+    },
+    {
+      "domain": "waymo_proxy_stream",
+      "kind": "tabular_stream_xy",
+      "X": "proxy features d=9",
+      "Y": "proxy label",
+      "T": "index early/late half",
+      "methods_in": [
+        "cmean_abs",
+        "vimp_cov(|corr X,T|)",
+        "fsds_f"
+      ],
+      "delta_Y": 1.4763132249392688,
+      "direction_label": null,
+      "available_methods": {
+        "cmean": true,
+        "mmd_loco": false,
+        "po_vimp": true,
+        "fsds": true
+      },
+      "consensus_top": [
+        "x8",
+        "x5",
+        "x0",
+        "x4",
+        "x1",
+        "x3"
+      ],
+      "agree_ge3": [
+        "x0",
+        "x1",
+        "x2",
+        "x3",
+        "x4",
+        "x5"
+      ],
+      "fsds_only": [
+        "x7"
+      ],
+      "shift_only": [
+        "x8"
+      ],
+      "po_only": [],
+      "tops": {
+        "cmean": [
+          "x5",
+          "x0",
+          "x8",
+          "x4",
+          "x3"
+        ],
+        "mmd_loco": [],
+        "po_vimp": [
+          "x8",
+          "x0",
+          "x5",
+          "x4",
+          "x1"
+        ],
+        "fsds": [
+          "x0",
+          "x1",
+          "x2",
+          "x3",
+          "x4"
+        ]
+      },
+      "read": "多法共识(≥3): x0, x1, x2, x3, x4；仅FSDS(y判别、未必shift): x7；仅shift描述(cmean/MMD/PO): x8"
+    }
+  ],
+  "justify": {
+    "claim": "同一套特征统计顺序（cmean → cov/PO-VIMP → FSDS → 共识/张力）可从电商图边迁到 prompt→image 与 tabular stream，无需改 Drill。",
+    "evidence": [
+      "TencentGR: 四法齐全，共识落在路径份额/归因/共现",
+      "DiffusionDB: abs_delta + vimp_cov + FSDS 别名归一后同样出面板；ΔY>0 正向",
+      "Waymo proxy: 无图也能跑 cmean + cov-proxy + F；证明骨架不绑 graph schema"
+    ],
+    "not_claimed": [
+      "跨域 AUC/ATE 可比",
+      "自动定罪 / 改 Drill 门",
+      "DiffusionDB CLIP 全量 token 网格（可用轻量 TF-IDF 协议）"
+    ]
+  }
+}

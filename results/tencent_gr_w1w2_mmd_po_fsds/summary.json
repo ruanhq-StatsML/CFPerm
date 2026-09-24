@@ -3,9 +3,9 @@
     "Standardization: StandardScaler fit on W1 (top of pipeline)",
     "FE(time) independently on W1 and W2 (gap >= 30d)",
     "subset localization = rank-average(cmean, MMD, PO-risk) over items (standardized X)",
-    "visualize localized subset (\u884c\u4e3a/\u8d2d\u4e70\u6b32\u53d8\u52a8\u5f52\u56e0)",
-    "FSDS: StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 HGB/LogReg \u2192 feature ranking",
-    "optional GT evaluator on orders/items \u2192 hit/precision/recall@k"
+    "visualize localized subset (行为/购买欲变动归因)",
+    "FSDS: StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg → feature ranking",
+    "optional GT evaluator on orders/items → hit/precision/recall@k"
   ],
   "timeline": {
     "span_days": 231.27605324074074,
@@ -125,9 +125,9 @@
     ],
     "sec_select": 0.004519224166870117,
     "models": {
-      "note": "test missing both classes \u2014 ranking only"
+      "note": "test missing both classes — ranking only"
     },
-    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "pipeline": "StandardScaler → VarianceThreshold → SelectKBest → model",
     "top_features": [
       "i_share_linear",
       "i_credit_linear",
@@ -184,7 +184,7 @@
         "sec": 0.010030746459960938
       }
     },
-    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "pipeline": "StandardScaler → VarianceThreshold → SelectKBest → model",
     "top_features": [
       "i_share_linear",
       "i_credit_linear",
@@ -233,5 +233,371 @@
       "precision@200": 0.2,
       "recall@200": 0.9523809523809523
     }
+  },
+  "direction": {
+    "y_col": "y_convert",
+    "y_ref": null,
+    "y_cur": null,
+    "Dy": null,
+    "sign_Dy": "flat",
+    "dy_missing": true,
+    "dy_source": "unavailable_no_edge_y",
+    "n_ref": null,
+    "n_cur": null,
+    "tip_signs": {
+      "i_share_linear": "-",
+      "i_credit_linear": "+",
+      "i_share_first": "-",
+      "i_credit_first": "+",
+      "i_log1p_n_users": "+",
+      "i_log1p_n_covisit": "+",
+      "i_n_covisit_neighbors": "+",
+      "i_log1p_n_exp": "+",
+      "i_n_users": "+",
+      "i_n_exp": "+",
+      "ui_pop_mismatch": "-",
+      "u_log1p_n_events": "+",
+      "u_n_events": "+",
+      "u_log1p_n_uniq": "+",
+      "i_share_last": "-"
+    },
+    "tip_delta": {
+      "i_share_linear": -1.4842505677341309,
+      "i_credit_linear": 3.997266207490752,
+      "i_share_first": -0.7356724011670251,
+      "i_credit_first": 2.8666280663082064,
+      "i_log1p_n_users": 2.7771563799479386,
+      "i_log1p_n_covisit": 2.2907420107986756,
+      "i_n_covisit_neighbors": 16.851776493592794,
+      "i_log1p_n_exp": 3.011710847715453,
+      "i_n_users": 14.261138563269808,
+      "i_n_exp": 15.252071376173241,
+      "ui_pop_mismatch": -0.5821506249157042,
+      "u_log1p_n_events": 1.888786030653048,
+      "u_n_events": 3.40128181680009,
+      "u_log1p_n_uniq": 1.8842569058454879,
+      "i_share_last": -0.8881928911048721
+    },
+    "report": "[Direction] Dy=None (flat, dy_missing); tip_signs={'i_share_linear': '-', 'i_credit_linear': '+', 'i_share_first': '-', 'i_credit_first': '+', 'i_log1p_n_users': '+', 'i_log1p_n_covisit': '+', 'i_n_covisit_neighbors': '+', 'i_log1p_n_exp': '+', 'i_n_users': '+', 'i_n_exp': '+', 'ui_pop_mismatch': '-', 'u_log1p_n_events': '+', 'u_n_events': '+', 'u_log1p_n_uniq': '+', 'i_share_last': '-'}"
+  },
+  "scenario": {
+    "family": "漂移族",
+    "family_code": "S3_drift",
+    "sub": "结构漂移",
+    "sub_code": "structure_shift",
+    "modifiers": [
+      "S4_covisit",
+      "S5_pop_mismatch"
+    ],
+    "read": "Dy 缺失按 flat：X 结构漂了，成功率未证实联动 → 漂移族，禁自称刷量",
+    "auto_ban": false,
+    "action_level_default": "L1_watch",
+    "dy_missing": true
+  },
+  "feature_methods": {
+    "methods": {
+      "cmean": {
+        "col": "cmean_abs",
+        "role": "shift_mean",
+        "top": [
+          "i_n_covisit_neighbors",
+          "i_n_exp",
+          "i_n_users",
+          "i_credit_linear",
+          "u_n_exp",
+          "u_n_events",
+          "u_n_uniq_items",
+          "i_log1p_n_exp"
+        ],
+        "available": "True"
+      },
+      "mmd_loco": {
+        "col": "mmd_loco",
+        "role": "shift_mmd",
+        "top": [
+          "i_share_linear",
+          "e_log1p_exp",
+          "i_n_exp",
+          "i_share_last",
+          "i_log1p_n_exp",
+          "i_credit_linear",
+          "i_credit_first",
+          "i_log1p_n_users"
+        ],
+        "available": "True"
+      },
+      "po_vimp": {
+        "col": "po_vimp",
+        "role": "shift_po",
+        "top": [
+          "ui_pop_mismatch",
+          "u_n_exp",
+          "i_credit_linear",
+          "i_share_linear",
+          "i_log1p_n_covisit",
+          "i_n_covisit_neighbors",
+          "u_log1p_n_events",
+          "u_span_sec"
+        ],
+        "available": "True"
+      },
+      "fsds": {
+        "col": "f_score",
+        "role": "supervised_y",
+        "top": [
+          "i_share_linear",
+          "i_credit_linear",
+          "i_credit_first",
+          "i_share_first",
+          "i_log1p_n_users",
+          "i_log1p_n_covisit",
+          "i_n_covisit_neighbors",
+          "i_log1p_n_exp"
+        ],
+        "available": "True"
+      }
+    },
+    "tops": {
+      "cmean": [
+        "i_n_covisit_neighbors",
+        "i_n_exp",
+        "i_n_users",
+        "i_credit_linear",
+        "u_n_exp",
+        "u_n_events",
+        "u_n_uniq_items",
+        "i_log1p_n_exp"
+      ],
+      "mmd_loco": [
+        "i_share_linear",
+        "e_log1p_exp",
+        "i_n_exp",
+        "i_share_last",
+        "i_log1p_n_exp",
+        "i_credit_linear",
+        "i_credit_first",
+        "i_log1p_n_users"
+      ],
+      "po_vimp": [
+        "ui_pop_mismatch",
+        "u_n_exp",
+        "i_credit_linear",
+        "i_share_linear",
+        "i_log1p_n_covisit",
+        "i_n_covisit_neighbors",
+        "u_log1p_n_events",
+        "u_span_sec"
+      ],
+      "fsds": [
+        "i_share_linear",
+        "i_credit_linear",
+        "i_credit_first",
+        "i_share_first",
+        "i_log1p_n_users",
+        "i_log1p_n_covisit",
+        "i_n_covisit_neighbors",
+        "i_log1p_n_exp"
+      ]
+    },
+    "consensus_top": [
+      "i_credit_linear",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_n_exp",
+      "u_n_exp",
+      "i_log1p_n_exp",
+      "i_credit_first",
+      "i_log1p_n_covisit"
+    ],
+    "agree_all": [
+      "i_credit_linear"
+    ],
+    "agree_ge3": [
+      "i_credit_linear",
+      "i_log1p_n_exp",
+      "i_n_covisit_neighbors",
+      "i_share_linear"
+    ],
+    "fsds_only": [
+      "i_share_first"
+    ],
+    "shift_only": [
+      "e_log1p_exp",
+      "i_n_exp",
+      "i_n_users",
+      "i_share_last",
+      "u_log1p_n_events",
+      "u_n_events",
+      "u_n_exp",
+      "u_n_uniq_items",
+      "u_span_sec",
+      "ui_pop_mismatch"
+    ],
+    "po_only": [
+      "u_log1p_n_events",
+      "u_span_sec",
+      "ui_pop_mismatch"
+    ],
+    "tip_method_table": [
+      {
+        "feature": "i_share_linear",
+        "sign": "-",
+        "in_cmean_top": false,
+        "in_mmd_top": true,
+        "in_po_top": true,
+        "in_fsds_top": true,
+        "votes": 3,
+        "cmean": 1.4842505677341309,
+        "mmd_loco": -0.1207007755688664,
+        "po_vimp": 0.0966777499924128,
+        "fsds": 1.0608037700794823
+      },
+      {
+        "feature": "i_credit_linear",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": true,
+        "in_po_top": true,
+        "in_fsds_top": true,
+        "votes": 4,
+        "cmean": 3.997266207490752,
+        "mmd_loco": -0.0635401153193422,
+        "po_vimp": 0.1084608900009956,
+        "fsds": 1.0608037700794817
+      },
+      {
+        "feature": "i_share_first",
+        "sign": "-",
+        "in_cmean_top": false,
+        "in_mmd_top": false,
+        "in_po_top": false,
+        "in_fsds_top": true,
+        "votes": 1,
+        "cmean": 0.735672401167025,
+        "mmd_loco": -0.0378599284406317,
+        "po_vimp": 0.0335517233717435,
+        "fsds": 1.057059055464613
+      },
+      {
+        "feature": "i_credit_first",
+        "sign": "+",
+        "in_cmean_top": false,
+        "in_mmd_top": true,
+        "in_po_top": false,
+        "in_fsds_top": true,
+        "votes": 2,
+        "cmean": 2.866628066308206,
+        "mmd_loco": -0.0628085067395872,
+        "po_vimp": 0.0075713938015292,
+        "fsds": 1.057059055464613
+      },
+      {
+        "feature": "i_log1p_n_users",
+        "sign": "+",
+        "in_cmean_top": false,
+        "in_mmd_top": true,
+        "in_po_top": false,
+        "in_fsds_top": true,
+        "votes": 2,
+        "cmean": 2.777156379947938,
+        "mmd_loco": -0.0594843326306484,
+        "po_vimp": 0.0073971669888064,
+        "fsds": 0.8403116379683642
+      },
+      {
+        "feature": "i_log1p_n_covisit",
+        "sign": "+",
+        "in_cmean_top": false,
+        "in_mmd_top": false,
+        "in_po_top": true,
+        "in_fsds_top": true,
+        "votes": 2,
+        "cmean": 2.290742010798675,
+        "mmd_loco": 0.0195881794393664,
+        "po_vimp": 0.0632340376195343,
+        "fsds": 0.7725470364490851
+      },
+      {
+        "feature": "i_n_covisit_neighbors",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": false,
+        "in_po_top": true,
+        "in_fsds_top": true,
+        "votes": 3,
+        "cmean": 16.851776493592794,
+        "mmd_loco": 0.0269127875085797,
+        "po_vimp": 0.0603781165052283,
+        "fsds": 0.69709144342352
+      },
+      {
+        "feature": "i_log1p_n_exp",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": true,
+        "in_po_top": false,
+        "in_fsds_top": true,
+        "votes": 3,
+        "cmean": 3.011710847715453,
+        "mmd_loco": -0.0699870643434898,
+        "po_vimp": 0.0176612875344203,
+        "fsds": 0.6657768327874677
+      },
+      {
+        "feature": "i_n_users",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": false,
+        "in_po_top": false,
+        "in_fsds_top": false,
+        "votes": 1,
+        "cmean": 14.261138563269808,
+        "mmd_loco": -0.0117507039008311,
+        "po_vimp": 0.012830374466724,
+        "fsds": 0.651622232629598
+      },
+      {
+        "feature": "i_n_exp",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": true,
+        "in_po_top": false,
+        "in_fsds_top": false,
+        "votes": 2,
+        "cmean": 15.25207137617324,
+        "mmd_loco": -0.0948585566572426,
+        "po_vimp": 0.0120966325161359,
+        "fsds": 0.5196608065904847
+      },
+      {
+        "feature": "ui_pop_mismatch",
+        "sign": "-",
+        "in_cmean_top": false,
+        "in_mmd_top": false,
+        "in_po_top": true,
+        "in_fsds_top": false,
+        "votes": 1,
+        "cmean": 0.5821506249157042,
+        "mmd_loco": 0.0540395075627679,
+        "po_vimp": 0.2010918285122246,
+        "fsds": 0.291417382295958
+      },
+      {
+        "feature": "u_log1p_n_events",
+        "sign": "+",
+        "in_cmean_top": false,
+        "in_mmd_top": false,
+        "in_po_top": true,
+        "in_fsds_top": false,
+        "votes": 1,
+        "cmean": 1.888786030653048,
+        "mmd_loco": 0.0243318652352048,
+        "po_vimp": 0.0577795406062122,
+        "fsds": 0.220972711807162
+      }
+    ],
+    "read": "多法共识(≥3): i_credit_linear, i_log1p_n_exp, i_n_covisit_neighbors, i_share_linear；仅FSDS(y判别、未必shift): i_share_first；仅shift描述(cmean/MMD/PO): e_log1p_exp, i_n_exp, i_n_users, i_share_last；仅PO-VIMP: u_log1p_n_events, u_span_sec, ui_pop_mismatch",
+    "note": "cmean/MMD/PO = shift 描述；FSDS = y|K* 监督 tip；并列不互相改门",
+    "top_k": 8
   }
 }
