@@ -54,10 +54,14 @@ Jaccard — the AUC is optional corroboration that the ranking was not pure nois
 2. **Tencent split panels**:
    - `tencent_gr` (ops): convert-leak dropped, volume kept → expect ~1.0 AUC
      (“more exposure transfers”).
-   - `tencent_gr_content`: volume also dropped → if AUC collapses, the ops board
-     was intensity, not content tip. That is a *feature*, not a bug.
+   - `tencent_gr_content`: volume also dropped → AUC falls on early pairs
+     (e.g. 0.99 → ~0.65) and tops flip to credit/share ranks. Residual mean
+     AUC can stay mid-high if later chunks recover — still shows intensity
+     was doing most of the ops-board work.
 3. **Cross-pack scatter**: mean AUC vs \(|\Delta\bar Y|\), marker size ∝ Jaccard —
    one glance for “transfer vs level-shift vs driver stability.”
+   Empirical contrast: DiffusionDB weak (~0.60); Metro@1000 high AUC + low
+   Jaccard (shifting drivers); Waymo high AUC + high Jaccard (planted persist).
 
 ## Run
 
