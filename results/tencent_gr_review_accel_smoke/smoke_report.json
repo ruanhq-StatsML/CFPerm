@@ -1,6 +1,6 @@
 {
   "smoke_type": "review_accel_pack",
-  "ts": "2026-09-24T00:34:08Z",
+  "ts": "2026-09-24T00:39:16Z",
   "summary": "results/tencent_gr_w1w2_mmd_po_fsds/summary.json",
   "out_dir": "results/tencent_gr_review_accel_smoke",
   "sign_Dy": "flat",
@@ -10,7 +10,7 @@
   "gray_allow": true,
   "feedback_label": "useful",
   "suggest_action": "hold",
-  "ticket_field_count": 17,
+  "ticket_field_count": 20,
   "steps_ok": [
     "export_card",
     "log_feedback",

@@ -293,5 +293,311 @@
     "auto_ban": false,
     "action_level_default": "L1_watch",
     "dy_missing": true
+  },
+  "feature_methods": {
+    "methods": {
+      "cmean": {
+        "col": "cmean_abs",
+        "role": "shift_mean",
+        "top": [
+          "i_n_covisit_neighbors",
+          "i_n_exp",
+          "i_n_users",
+          "i_credit_linear",
+          "u_n_exp",
+          "u_n_events",
+          "u_n_uniq_items",
+          "i_log1p_n_exp"
+        ],
+        "available": "True"
+      },
+      "mmd_loco": {
+        "col": "mmd_loco",
+        "role": "shift_mmd",
+        "top": [
+          "i_share_linear",
+          "e_log1p_exp",
+          "i_n_exp",
+          "i_share_last",
+          "i_log1p_n_exp",
+          "i_credit_linear",
+          "i_credit_first",
+          "i_log1p_n_users"
+        ],
+        "available": "True"
+      },
+      "po_vimp": {
+        "col": "po_vimp",
+        "role": "shift_po",
+        "top": [
+          "ui_pop_mismatch",
+          "u_n_exp",
+          "i_credit_linear",
+          "i_share_linear",
+          "i_log1p_n_covisit",
+          "i_n_covisit_neighbors",
+          "u_log1p_n_events",
+          "u_span_sec"
+        ],
+        "available": "True"
+      },
+      "fsds": {
+        "col": "f_score",
+        "role": "supervised_y",
+        "top": [
+          "i_share_linear",
+          "i_credit_linear",
+          "i_credit_first",
+          "i_share_first",
+          "i_log1p_n_users",
+          "i_log1p_n_covisit",
+          "i_n_covisit_neighbors",
+          "i_log1p_n_exp"
+        ],
+        "available": "True"
+      }
+    },
+    "tops": {
+      "cmean": [
+        "i_n_covisit_neighbors",
+        "i_n_exp",
+        "i_n_users",
+        "i_credit_linear",
+        "u_n_exp",
+        "u_n_events",
+        "u_n_uniq_items",
+        "i_log1p_n_exp"
+      ],
+      "mmd_loco": [
+        "i_share_linear",
+        "e_log1p_exp",
+        "i_n_exp",
+        "i_share_last",
+        "i_log1p_n_exp",
+        "i_credit_linear",
+        "i_credit_first",
+        "i_log1p_n_users"
+      ],
+      "po_vimp": [
+        "ui_pop_mismatch",
+        "u_n_exp",
+        "i_credit_linear",
+        "i_share_linear",
+        "i_log1p_n_covisit",
+        "i_n_covisit_neighbors",
+        "u_log1p_n_events",
+        "u_span_sec"
+      ],
+      "fsds": [
+        "i_share_linear",
+        "i_credit_linear",
+        "i_credit_first",
+        "i_share_first",
+        "i_log1p_n_users",
+        "i_log1p_n_covisit",
+        "i_n_covisit_neighbors",
+        "i_log1p_n_exp"
+      ]
+    },
+    "consensus_top": [
+      "i_credit_linear",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_n_exp",
+      "u_n_exp",
+      "i_log1p_n_exp",
+      "i_credit_first",
+      "i_log1p_n_covisit"
+    ],
+    "agree_all": [
+      "i_credit_linear"
+    ],
+    "agree_ge3": [
+      "i_credit_linear",
+      "i_log1p_n_exp",
+      "i_n_covisit_neighbors",
+      "i_share_linear"
+    ],
+    "fsds_only": [
+      "i_share_first"
+    ],
+    "shift_only": [
+      "e_log1p_exp",
+      "i_n_exp",
+      "i_n_users",
+      "i_share_last",
+      "u_log1p_n_events",
+      "u_n_events",
+      "u_n_exp",
+      "u_n_uniq_items",
+      "u_span_sec",
+      "ui_pop_mismatch"
+    ],
+    "po_only": [
+      "u_log1p_n_events",
+      "u_span_sec",
+      "ui_pop_mismatch"
+    ],
+    "tip_method_table": [
+      {
+        "feature": "i_share_linear",
+        "sign": "-",
+        "in_cmean_top": false,
+        "in_mmd_top": true,
+        "in_po_top": true,
+        "in_fsds_top": true,
+        "votes": 3,
+        "cmean": 1.4842505677341309,
+        "mmd_loco": -0.1207007755688664,
+        "po_vimp": 0.0966777499924128,
+        "fsds": 1.0608037700794823
+      },
+      {
+        "feature": "i_credit_linear",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": true,
+        "in_po_top": true,
+        "in_fsds_top": true,
+        "votes": 4,
+        "cmean": 3.997266207490752,
+        "mmd_loco": -0.0635401153193422,
+        "po_vimp": 0.1084608900009956,
+        "fsds": 1.0608037700794817
+      },
+      {
+        "feature": "i_share_first",
+        "sign": "-",
+        "in_cmean_top": false,
+        "in_mmd_top": false,
+        "in_po_top": false,
+        "in_fsds_top": true,
+        "votes": 1,
+        "cmean": 0.735672401167025,
+        "mmd_loco": -0.0378599284406317,
+        "po_vimp": 0.0335517233717435,
+        "fsds": 1.057059055464613
+      },
+      {
+        "feature": "i_credit_first",
+        "sign": "+",
+        "in_cmean_top": false,
+        "in_mmd_top": true,
+        "in_po_top": false,
+        "in_fsds_top": true,
+        "votes": 2,
+        "cmean": 2.866628066308206,
+        "mmd_loco": -0.0628085067395872,
+        "po_vimp": 0.0075713938015292,
+        "fsds": 1.057059055464613
+      },
+      {
+        "feature": "i_log1p_n_users",
+        "sign": "+",
+        "in_cmean_top": false,
+        "in_mmd_top": true,
+        "in_po_top": false,
+        "in_fsds_top": true,
+        "votes": 2,
+        "cmean": 2.777156379947938,
+        "mmd_loco": -0.0594843326306484,
+        "po_vimp": 0.0073971669888064,
+        "fsds": 0.8403116379683642
+      },
+      {
+        "feature": "i_log1p_n_covisit",
+        "sign": "+",
+        "in_cmean_top": false,
+        "in_mmd_top": false,
+        "in_po_top": true,
+        "in_fsds_top": true,
+        "votes": 2,
+        "cmean": 2.290742010798675,
+        "mmd_loco": 0.0195881794393664,
+        "po_vimp": 0.0632340376195343,
+        "fsds": 0.7725470364490851
+      },
+      {
+        "feature": "i_n_covisit_neighbors",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": false,
+        "in_po_top": true,
+        "in_fsds_top": true,
+        "votes": 3,
+        "cmean": 16.851776493592794,
+        "mmd_loco": 0.0269127875085797,
+        "po_vimp": 0.0603781165052283,
+        "fsds": 0.69709144342352
+      },
+      {
+        "feature": "i_log1p_n_exp",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": true,
+        "in_po_top": false,
+        "in_fsds_top": true,
+        "votes": 3,
+        "cmean": 3.011710847715453,
+        "mmd_loco": -0.0699870643434898,
+        "po_vimp": 0.0176612875344203,
+        "fsds": 0.6657768327874677
+      },
+      {
+        "feature": "i_n_users",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": false,
+        "in_po_top": false,
+        "in_fsds_top": false,
+        "votes": 1,
+        "cmean": 14.261138563269808,
+        "mmd_loco": -0.0117507039008311,
+        "po_vimp": 0.012830374466724,
+        "fsds": 0.651622232629598
+      },
+      {
+        "feature": "i_n_exp",
+        "sign": "+",
+        "in_cmean_top": true,
+        "in_mmd_top": true,
+        "in_po_top": false,
+        "in_fsds_top": false,
+        "votes": 2,
+        "cmean": 15.25207137617324,
+        "mmd_loco": -0.0948585566572426,
+        "po_vimp": 0.0120966325161359,
+        "fsds": 0.5196608065904847
+      },
+      {
+        "feature": "ui_pop_mismatch",
+        "sign": "-",
+        "in_cmean_top": false,
+        "in_mmd_top": false,
+        "in_po_top": true,
+        "in_fsds_top": false,
+        "votes": 1,
+        "cmean": 0.5821506249157042,
+        "mmd_loco": 0.0540395075627679,
+        "po_vimp": 0.2010918285122246,
+        "fsds": 0.291417382295958
+      },
+      {
+        "feature": "u_log1p_n_events",
+        "sign": "+",
+        "in_cmean_top": false,
+        "in_mmd_top": false,
+        "in_po_top": true,
+        "in_fsds_top": false,
+        "votes": 1,
+        "cmean": 1.888786030653048,
+        "mmd_loco": 0.0243318652352048,
+        "po_vimp": 0.0577795406062122,
+        "fsds": 0.220972711807162
+      }
+    ],
+    "read": "多法共识(≥3): i_credit_linear, i_log1p_n_exp, i_n_covisit_neighbors, i_share_linear；仅FSDS(y判别、未必shift): i_share_first；仅shift描述(cmean/MMD/PO): e_log1p_exp, i_n_exp, i_n_users, i_share_last；仅PO-VIMP: u_log1p_n_events, u_span_sec, ui_pop_mismatch",
+    "note": "cmean/MMD/PO = shift 描述；FSDS = y|K* 监督 tip；并列不互相改门",
+    "top_k": 8
   }
 }

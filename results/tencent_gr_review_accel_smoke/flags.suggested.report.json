@@ -1,16 +1,16 @@
 {
   "suggest_type": "review_card_gray_from_useful_rate",
-  "ts": "2026-09-24T00:34:08Z",
+  "ts": "2026-09-24T00:39:16Z",
   "disclaimer": "建议文件，不自动覆盖现网 flags；人工确认后 cp。",
   "inputs": {
-    "n_labeled": 2,
+    "n_labeled": 3,
     "useful_rate": 1.0,
     "current_sample_rate": 1.0,
     "current_kill_switch": false,
     "min_n": 5
   },
   "action": "hold",
-  "reason": "need_n>=5 (have 2)",
+  "reason": "need_n>=5 (have 3)",
   "suggested_flags": {
     "enabled": true,
     "sample_rate": 1.0,

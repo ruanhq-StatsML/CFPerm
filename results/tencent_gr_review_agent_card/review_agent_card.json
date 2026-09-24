@@ -82,6 +82,72 @@
     "action_level_default": "L1_watch",
     "dy_missing": true
   },
+  "feature_methods": {
+    "read": "多法共识(≥3): i_credit_linear, i_log1p_n_exp, i_n_covisit_neighbors, i_share_linear；仅FSDS(y判别、未必shift): i_share_first；仅shift描述(cmean/MMD/PO): e_log1p_exp, i_n_exp, i_n_users, i_share_last；仅PO-VIMP: u_log1p_n_events, u_span_sec, ui_pop_mismatch",
+    "consensus_top": [
+      "i_credit_linear",
+      "i_share_linear",
+      "i_n_covisit_neighbors",
+      "i_n_exp",
+      "u_n_exp",
+      "i_log1p_n_exp",
+      "i_credit_first",
+      "i_log1p_n_covisit"
+    ],
+    "agree_ge3": [
+      "i_credit_linear",
+      "i_log1p_n_exp",
+      "i_n_covisit_neighbors",
+      "i_share_linear"
+    ],
+    "fsds_only": [
+      "i_share_first"
+    ],
+    "shift_only": [
+      "e_log1p_exp",
+      "i_n_exp",
+      "i_n_users",
+      "i_share_last",
+      "u_log1p_n_events",
+      "u_n_events"
+    ],
+    "po_only": [
+      "u_log1p_n_events",
+      "u_span_sec",
+      "ui_pop_mismatch"
+    ],
+    "tops": {
+      "cmean": [
+        "i_n_covisit_neighbors",
+        "i_n_exp",
+        "i_n_users",
+        "i_credit_linear",
+        "u_n_exp"
+      ],
+      "mmd_loco": [
+        "i_share_linear",
+        "e_log1p_exp",
+        "i_n_exp",
+        "i_share_last",
+        "i_log1p_n_exp"
+      ],
+      "po_vimp": [
+        "ui_pop_mismatch",
+        "u_n_exp",
+        "i_credit_linear",
+        "i_share_linear",
+        "i_log1p_n_covisit"
+      ],
+      "fsds": [
+        "i_share_linear",
+        "i_credit_linear",
+        "i_credit_first",
+        "i_share_first",
+        "i_log1p_n_users"
+      ]
+    },
+    "note": "cmean/MMD/PO = shift 描述；FSDS = y|K* 监督 tip；并列不互相改门"
+  },
   "tips": [
     "i_share_linear",
     "i_credit_linear",
@@ -163,6 +229,7 @@
     "scenario_family": "S3_drift",
     "scenario_sub": "structure_shift",
     "outcome_read": "Dy 缺失按 flat：X 结构漂了，成功率未证实联动 → 漂移族，禁自称刷量",
+    "feature_methods_read": "多法共识(≥3): i_credit_linear, i_log1p_n_exp, i_n_covisit_neighbors, i_share_linear；仅FSDS(y判别、未必shift): i_share_first；仅shift描述(cmean/MMD/PO): e_log1p_exp, i_n_exp, i_n_users, i_share_last；仅PO-VIMP: u_log1p_n_events, u_span_sec, ui_pop_mismatch",
     "suggested_action_level": "L1_watch",
     "sla_urgency": {
       "level": "urgent",
@@ -171,7 +238,7 @@
       "copy": "波次偏老：优先清本队列"
     }
   },
-  "paste_for_agent": "【审核上下文·图谱变动线索】\n灰度: allow=True reason=ok\n词典: industry=default\n方向: sign_Dy=flat Dy=None (dy_missing)\n场景: 漂移族 / 结构漂移\n支撑: localize_k=200 edges={'W1_train': 962, 'W1_holdout': 314, 'W2': 8815}\n建议队列: 路径线性份额变动\nSLA: urgent (波次偏老：优先清本队列)\n共享: eta_soft_hint=lower_confidence | 图谱在动：优先本队列；ETA 侧建议降置信（只读提示）\n读法: Dy 缺失按 flat：X 结构漂了，成功率未证实联动 → 漂移族，禁自称刷量\nTips:\n  - i_share_linear (-): 路径线性份额变动\n  - i_credit_linear (+): 路径线性归因变动\n  - i_share_first (-): 首次份额偏高\n  - i_credit_first (+): 首次归因偏高\n  - i_log1p_n_users (+): 触达用户规模(log)\n  - i_log1p_n_covisit (+): 共现规模(log)\n  - i_n_covisit_neighbors (+): 共现邻域变动（团伙共点）\n  - i_log1p_n_exp (+): 曝光规模(log)\n声明: 图谱分布变动线索，非定罪结论；供审核分流与上下文，不自动封禁。",
+  "paste_for_agent": "【审核上下文·图谱变动线索】\n灰度: allow=True reason=ok\n词典: industry=default\n方向: sign_Dy=flat Dy=None (dy_missing)\n场景: 漂移族 / 结构漂移\n支撑: localize_k=200 edges={'W1_train': 962, 'W1_holdout': 314, 'W2': 8815}\n建议队列: 路径线性份额变动\nSLA: urgent (波次偏老：优先清本队列)\n共享: eta_soft_hint=lower_confidence | 图谱在动：优先本队列；ETA 侧建议降置信（只读提示）\n读法: Dy 缺失按 flat：X 结构漂了，成功率未证实联动 → 漂移族，禁自称刷量\n特征多法: 多法共识(≥3): i_credit_linear, i_log1p_n_exp, i_n_covisit_neighbors, i_share_linear；仅FSDS(y判别、未必shift): i_share_first；仅shift描述(cmean/MMD/PO): e_log1p_exp, i_n_exp, i_n_users, i_share_last；仅PO-VIMP: u_log1p_n_events, u_span_sec, ui_pop_mismatch\nTips:\n  - i_share_linear (-): 路径线性份额变动\n  - i_credit_linear (+): 路径线性归因变动\n  - i_share_first (-): 首次份额偏高\n  - i_credit_first (+): 首次归因偏高\n  - i_log1p_n_users (+): 触达用户规模(log)\n  - i_log1p_n_covisit (+): 共现规模(log)\n  - i_n_covisit_neighbors (+): 共现邻域变动（团伙共点）\n  - i_log1p_n_exp (+): 曝光规模(log)\n方法Top:\n  - cmean: i_n_covisit_neighbors, i_n_exp, i_n_users, i_credit_linear, u_n_exp\n  - MMD-LOCO: i_share_linear, e_log1p_exp, i_n_exp, i_share_last, i_log1p_n_exp\n  - PO-VIMP: ui_pop_mismatch, u_n_exp, i_credit_linear, i_share_linear, i_log1p_n_covisit\n  - FSDS-F: i_share_linear, i_credit_linear, i_credit_first, i_share_first, i_log1p_n_users\n声明: 图谱分布变动线索，非定罪结论；供审核分流与上下文，不自动封禁。",
   "shared_context": {
     "sign_Dy": "flat",
     "sla_level": "urgent",
@@ -189,6 +256,9 @@
     "graph_shift_action_level": "L1_watch",
     "graph_shift_tip_top3": "i_share_linear,i_credit_linear,i_share_first",
     "graph_shift_tip_signs_top3": "i_share_linear:-,i_credit_linear:+,i_share_first:-",
+    "graph_shift_feat_consensus_top3": "i_credit_linear,i_share_linear,i_n_covisit_neighbors",
+    "graph_shift_feat_agree_ge3": "i_credit_linear,i_log1p_n_exp,i_n_covisit_neighbors,i_share_linear",
+    "graph_shift_feat_fsds_only": "i_share_first",
     "graph_shift_localize_k": 200,
     "graph_shift_disclaimer": "clue_not_conviction",
     "graph_shift_gray_allow": true,

@@ -20,6 +20,7 @@ if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
 from direction_report import ensure_direction, scenario_from_direction  # noqa: E402
+from feature_methods_panel import panel_from_dir  # noqa: E402
 
 
 def attach(
@@ -32,8 +33,21 @@ def attach(
     diag = feat_diag_path or (summary_path.parent / "feature_shift_diagnostics.csv")
     direction = ensure_direction(blob, feat_diag_path=diag if diag.exists() else None)
     scenario = scenario_from_direction(direction)
+    tips = list((direction.get("tip_signs") or {}).keys())
+    if not tips:
+        for key in ("fsds_W1_holdout", "fsds_W1", "fsds_W2_temporal", "fsds_W2"):
+            tops = (blob.get(key) or {}).get("top_features")
+            if isinstance(tops, list) and tops:
+                tips = [str(x) for x in tops]
+                break
+    panel = panel_from_dir(
+        summary_path.parent,
+        tip_features=tips,
+        tip_signs=direction.get("tip_signs") or {},
+    )
     blob["direction"] = direction
     blob["scenario"] = scenario
+    blob["feature_methods"] = panel
     if inplace:
         summary_path.write_text(json.dumps(blob, indent=2, ensure_ascii=False, default=str) + "\n")
     return {
@@ -44,6 +58,8 @@ def attach(
             1 for v in (direction.get("tip_signs") or {}).values() if v in ("+", "-")
         ),
         "scenario": scenario,
+        "feature_methods_read": panel.get("read"),
+        "consensus_top": panel.get("consensus_top"),
         "report": direction.get("report"),
     }
 

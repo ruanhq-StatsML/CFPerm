@@ -100,6 +100,10 @@ j &\in J^\star_{\mathrm{PO\text{-}VIMP}}:\ \text{Top by VIMP}.
 可 **rank-average 三列** 得混合 tip 池，再交给官方 FSDS 做最终 \(k\)（`po_help_select` 路径）。  
 默认交付：**FSDS \(J^\star\)** + 对每个 \(j\) 附上 \(\mathrm{sign}(\delta_j)\)。
 
+**工程面板（交付）：** `feature_methods_panel.py` 把 cmean / MMD-LOCO / PO-VIMP / FSDS-F
+四列 Top 与共识 / FSDS-only / shift-only 挂到 `summary.feature_methods` 与审出卡
+（只读，不改 Drill）。FSDS-only = \(y\) 判别强但未必是 shift 坐标；shift-only = 结构漂了但对 \(y\) 未必尖。
+
 ### 4.3 为什么 FSDS 必须在 \(K^\star\) 之后
 
 全图 FSDS：tip 被大众量子淹没，指向「全局可预测性」，不是「这一波 graph shift」。  
