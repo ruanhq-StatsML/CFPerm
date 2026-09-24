@@ -45,9 +45,17 @@ def _assign_width_minutes(df: pd.DataFrame, width_min: float) -> pd.DataFrame:
     return out
 
 
-def _adjacent_pairs(T: np.ndarray) -> List[tuple[int, int]]:
+def _adjacent_pairs(T: np.ndarray, *, require_calendar_adjacent: bool = False) -> List[tuple[int, int]]:
+    """Pairs of consecutive *occupied* bins (business adjacent batches).
+
+    By default we walk sorted occupied T values (t_(i), t_(i+1)), so gaps from
+    subsampling do not empty the board. Set require_calendar_adjacent=True to
+    keep only literal T and T+1.
+    """
     occupied = sorted(int(t) for t in np.unique(T))
-    return [(a, b) for a, b in zip(occupied[:-1], occupied[1:]) if b == a + 1]
+    if require_calendar_adjacent:
+        return [(a, b) for a, b in zip(occupied[:-1], occupied[1:]) if b == a + 1]
+    return list(zip(occupied[:-1], occupied[1:]))
 
 
 def run_width_board(
@@ -73,13 +81,15 @@ def run_width_board(
     T = df_w["T"].to_numpy(int)
     Y = df_w["image_nsfw"].to_numpy(float)
     pairs = _adjacent_pairs(T)
-    if max_pairs > 0:
-        pairs = pairs[:max_pairs]
+    if max_pairs > 0 and len(pairs) > max_pairs:
+        # evenly subsample pairs along the timeline for the board
+        idx = np.linspace(0, len(pairs) - 1, num=max_pairs, dtype=int)
+        pairs = [pairs[i] for i in idx]
 
     rows = []
     for t0, t1 in pairs:
         m0, m1 = T == t0, T == t1
-        if m0.sum() < 40 or m1.sum() < 40:
+        if m0.sum() < 25 or m1.sum() < 25:
             continue
         y0, y1 = Y[m0], Y[m1]
         delta = float(y1.mean() - y0.mean())

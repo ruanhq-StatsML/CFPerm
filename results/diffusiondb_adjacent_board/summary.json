@@ -1,34 +1,97 @@
 {
   "note": "Business time cuts \u2192 adjacent batch FS \u2192 joint board. Not a new estimator; visualization of \u0394\u0232 + late AUC over rolling pairs.",
-  "n_sample": 3000,
+  "n_sample": 4000,
   "concat_hyperparams": false,
   "widths_min": [
-    10.0,
-    20.0,
-    60.0
+    30.0,
+    60.0,
+    180.0
   ],
   "boards": [
     {
-      "width_min": 10.0,
-      "n_bins": 1483,
-      "n_adjacent_pairs": 8,
-      "n_reported": 0,
-      "rows": []
-    },
-    {
-      "width_min": 20.0,
-      "n_bins": 913,
-      "n_adjacent_pairs": 8,
+      "width_min": 30.0,
+      "n_bins": 647,
+      "n_adjacent_pairs": 10,
       "n_reported": 0,
       "rows": []
     },
     {
       "width_min": 60.0,
       "n_bins": 328,
-      "n_adjacent_pairs": 8,
+      "n_adjacent_pairs": 10,
       "n_reported": 0,
       "rows": []
+    },
+    {
+      "width_min": 180.0,
+      "n_bins": 110,
+      "n_adjacent_pairs": 10,
+      "n_reported": 2,
+      "rows": [
+        {
+          "t0": 1,
+          "t1": 2,
+          "n0": 54,
+          "n1": 47,
+          "y_mean_0": 0.13231867744966788,
+          "y_mean_1": 0.16009535426472096,
+          "delta_Y": 0.02777667681505308,
+          "hgb_auc": 0.4980392156862746,
+          "top_cov": [
+            "by",
+            "beautiful",
+            "of",
+            "art",
+            "artstation"
+          ],
+          "top_cmean": [
+            "in",
+            "by",
+            "is",
+            "style",
+            "from"
+          ],
+          "top_fsds": [
+            "with",
+            "by",
+            "face",
+            "studio",
+            "in"
+          ]
+        },
+        {
+          "t0": 6,
+          "t1": 7,
+          "n0": 48,
+          "n1": 43,
+          "y_mean_0": 0.15778543668178222,
+          "y_mean_1": 0.1863446527615536,
+          "delta_Y": 0.028559216079771382,
+          "hgb_auc": 0.5,
+          "top_cov": [
+            "of",
+            "portrait",
+            "oil painting",
+            "in",
+            "by"
+          ],
+          "top_cmean": [
+            "in",
+            "of",
+            "oil painting",
+            "oil",
+            "in the"
+          ],
+          "top_fsds": [
+            "very",
+            "4k",
+            "concept",
+            "character",
+            "woman"
+          ]
+        }
+      ]
     }
   ],
-  "sec": 1.857170820236206
+  "sec": 2.1863579750061035
 }
