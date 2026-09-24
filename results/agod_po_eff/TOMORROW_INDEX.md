@@ -4,8 +4,9 @@ Branch: `cursor/rsi-model-stats-eff-abce` · cadence ~3 min
 
 ## Open this first
 1. **Figure:** [`rsi_tomorrow_demo.png`](./rsi_tomorrow_demo.png) (3 panels)
-2. **Narrative:** [`../../docs/summaries/RSI_Tomorrow_Demo_Board.md`](../../docs/summaries/RSI_Tomorrow_Demo_Board.md)
-3. **Log:** [`../../docs/summaries/RSI_Iteration_Log.md`](../../docs/summaries/RSI_Iteration_Log.md)
+2. **Walkthrough:** [`../../docs/summaries/RSI_Walkthrough.md`](../../docs/summaries/RSI_Walkthrough.md)
+3. **Narrative:** [`../../docs/summaries/RSI_Tomorrow_Demo_Board.md`](../../docs/summaries/RSI_Tomorrow_Demo_Board.md)
+4. **Log:** [`../../docs/summaries/RSI_Iteration_Log.md`](../../docs/summaries/RSI_Iteration_Log.md)
 
 ## Claims (quiz yourself)
 | # | Claim | Where |
