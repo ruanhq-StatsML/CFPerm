@@ -60,6 +60,12 @@
 **P0：** router + metro HGB + waymo ridge。  
 **P1：** pm25 naive 看守（防 regime 变了还当 RW）。
 
+实现：`sandbox/pack_router.py` — bakeoff→路由表，对比 **专科 vs 全局 HGB** MAE。
+
+```bash
+PYTHONPATH=. python3 scripts/run_pack_router.py --out results/sandbox_router
+```
+
 ---
 
 ## 4. 效果怎么谈（诚实）

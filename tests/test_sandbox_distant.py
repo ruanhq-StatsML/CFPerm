@@ -65,3 +65,26 @@ def test_opportunity_map_and_flywheel_smoke():
     assert fw["ok"]
     assert fw["n_steps"] == 80
     assert "surprise_rate" in fw
+
+
+def test_pack_router_table_and_compare():
+    from sandbox.forecast_bakeoff import Pack, run_bakeoff
+    from sandbox.pack_router import build_routing_table, run_routed_vs_global
+
+    rng = np.random.default_rng(1)
+    packs = []
+    for name, phi in (("a", 0.7), ("b", 0.05)):
+        n = 400
+        X = rng.normal(size=(n, 2))
+        y = np.zeros(n)
+        for i in range(1, n):
+            y[i] = phi * y[i - 1] + (0.3 if phi > 0.3 else 0.0) * X[i, 0] + rng.normal(
+                scale=0.4
+            )
+        packs.append(Pack(name=name, X=X, y=y))
+    cards = [run_bakeoff(p, seed=1) for p in packs]
+    table = build_routing_table({"cards": cards})
+    assert set(table.keys()) == {"a", "b"}
+    rep = run_routed_vs_global(packs, bakeoff={"cards": cards}, seed=1, warm=100, max_steps=60)
+    assert rep["n_packs"] == 2
+    assert "headline" in rep
