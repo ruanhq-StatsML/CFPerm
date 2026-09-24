@@ -20,3 +20,4 @@
 | 16 | 2026-09-24 | demo freeze + cadence →10min | package ready for tomorrow; reduce thrash, keep watch | walkthrough median note | — |
 | 17 | 2026-09-24 | watch no-op + fix index cadence label | 12 green; TOMORROW_INDEX said 3min → 10min | index one-liner | 12 passed |
 | 18 | 2026-09-24 | watch cadence →30min | demo stable after many green no-ops; reduce thrash | timer only | 12 passed |
+| 19 | 2026-09-24 | soft-weight burn policy + FLOPs ledger split | α≠compute; burn only if beats uniform; else SOFTEN_ONLY∛ | `agod/soft_burn.py` | `test_soft_burn` |

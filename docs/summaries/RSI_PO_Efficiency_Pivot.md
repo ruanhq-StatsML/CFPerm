@@ -43,6 +43,7 @@ PYTHONPATH=. python3 scripts/run_po_eff_scorecard.py \
 | P3 | image-OOD bench 接入同一 FLOPs 尺 | **关掉**：PO 不适合 image-OOD（负结果）；省 FLOPs |
 | P4 | Grad-RFPerm freeze 闭环 MSE–FLOPs 并表 | **Iter9 落地** |
 | P5 | Tomorrow demo 双栏图 | **Iter8 落地** |
+| P6 | 软权重该不该烧 + 算力账拆分 | **Iter19 落地** |
 
-### P1 读法
-`E[refit]/E[probe] ≈ duty · n_control`。duty≈0.13–0.18 时 refit 预算约是 probe 的 1/5–1/6；`rank_eff_E` 用期望 FLOPs 再比一次。
+### P6 读法
+加权 FLOPs≈0；α 不是省算力旋钮。默认不烧；beat uniform 才 `BURN_*`；被迫 gate → `SOFTEN_ONLY`（∛）。

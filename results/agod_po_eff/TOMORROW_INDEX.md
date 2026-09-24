@@ -18,6 +18,7 @@ Branch: `cursor/rsi-model-stats-eff-abce` · watch cadence ~30 min (demo frozen)
 | 3b | **median** Δmse_eff(∛−√) (mean is metro-skewed) | same file headline |
 | 4 | electricity freeze Pareto (~0.86× MSE @ 0.7× FLOPs) | `../agod_freeze_eff/FREEZE_EFF.md` |
 | 5 | Do not spend PO FLOPs on image-OOD | `docs/agod/AGOD_image_ood_bench.md` |
+| 6 | Soft IPTW: default don't burn; α≠FLOPs; SOFTEN_ONLY→∛ | `../agod_soft_burn/SOFT_BURN.md` · [`Soft_Weight_Burn_Logic.md`](../../docs/summaries/Soft_Weight_Burn_Logic.md) |
 
 ## Rebuild in 30s
 ```bash
