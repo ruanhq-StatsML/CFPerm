@@ -10,6 +10,7 @@ Also in-repo: `results/agod_po_eff/rsi_tomorrow_demo.png`
 1. Open [`TOMORROW_INDEX.md`](../../results/agod_po_eff/TOMORROW_INDEX.md)
 2. Read panel **A**: refit bars taller → rank per FLOP
 3. Panel **B**: uniform dominates IPTW; ∛ softer when you must gate
+   - **median** Δmse_eff(∛−√)≈+2e-4 (mean is metro-skewed — ignore mean)
 4. Panel **C**: green quadrant = freeze beats always_adapt on MSE *and* FLOPs (electricity)
 
 ## Reproducibility
