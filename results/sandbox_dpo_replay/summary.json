@@ -1,0 +1,131 @@
+{
+  "dataset": "metro_interstate",
+  "model": "hgb",
+  "pollution": {
+    "n_polluted": 125,
+    "indices_head": [
+      260,
+      261,
+      262,
+      263,
+      264,
+      265,
+      266,
+      267,
+      268,
+      269,
+      270,
+      271
+    ],
+    "method": "np.random.permutation(indices_subset) label shuffle"
+  },
+  "sampled_periods": {
+    "n_periods": 3,
+    "period_len": 50,
+    "n_indices": 125
+  },
+  "rewards": {
+    "clean": -502.4932228992061,
+    "polluted": -1522.4945040961675,
+    "replay_shuffled_path": -502.5199728992061
+  },
+  "flywheel_clean": {
+    "ok": true,
+    "dataset": "metro_interstate",
+    "model": "hgb",
+    "n_steps": 200,
+    "mae": 502.4694570739237,
+    "n_surprise": 0,
+    "n_retrain": 1,
+    "n_fallback": 1,
+    "surprise_rate": 0.0,
+    "fell_back_to_naive": true
+  },
+  "flywheel_polluted": {
+    "ok": true,
+    "dataset": "metro_interstate_polluted",
+    "model": "hgb",
+    "n_steps": 200,
+    "mae": 1522.4225162068458,
+    "n_surprise": 8,
+    "n_retrain": 1,
+    "n_fallback": 1,
+    "surprise_rate": 0.04,
+    "fell_back_to_naive": true
+  },
+  "dpo": {
+    "n_pairs": 2.0,
+    "mean_loss": 0.3399308116028774,
+    "mean_margin": 510.0140155984807,
+    "frac_chosen_better": 1.0
+  },
+  "n_step_json": 200,
+  "step_json_head": [
+    {
+      "step": 0,
+      "t": 180,
+      "y_true": 4887.0,
+      "y_hat": 4794.880089768144,
+      "residual": 92.11991023185601,
+      "surprise": 0.043658715421939116,
+      "action": "idle",
+      "model": "hgb",
+      "decision_path": [
+        "observe",
+        "forecast:hgb",
+        "decide:idle",
+        "log"
+      ],
+      "polluted": false
+    },
+    {
+      "step": 1,
+      "t": 181,
+      "y_true": 5030.0,
+      "y_hat": 5067.582030950351,
+      "residual": -37.5820309503506,
+      "surprise": 0.01781138507528056,
+      "action": "idle",
+      "model": "hgb",
+      "decision_path": [
+        "observe",
+        "forecast:hgb",
+        "decide:idle",
+        "log"
+      ],
+      "polluted": false
+    },
+    {
+      "step": 2,
+      "t": 182,
+      "y_true": 5067.0,
+      "y_hat": 5242.017618516536,
+      "residual": -175.01761851653555,
+      "surprise": 0.08294672000230169,
+      "action": "idle",
+      "model": "hgb",
+      "decision_path": [
+        "observe",
+        "forecast:hgb",
+        "decide:idle",
+        "log"
+      ],
+      "polluted": false
+    }
+  ],
+  "replay_path_example": {
+    "orig": [
+      "observe",
+      "forecast:hgb",
+      "decide:idle",
+      "log"
+    ],
+    "shuffled": [
+      "observe",
+      "forecast:hgb",
+      "decide:idle",
+      "log"
+    ]
+  },
+  "reading": "DPO prefers clean path over polluted-label path (margin=510, loss=0.3399)"
+}

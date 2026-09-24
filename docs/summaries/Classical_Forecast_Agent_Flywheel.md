@@ -75,7 +75,22 @@
 
 ---
 
-## 5. 10 分钟迭代怎么用
+## 6. DPO + 标签污染 + decision-path 回放
+
+喂飞轮的一条具体方法（已实现 `sandbox/flywheel_dpo_replay.py`）：
+
+1. **每步 JSON**：`{step,t,y_true,y_hat,residual,surprise,action,model,decision_path}`  
+2. **区域污染**：随机抽若干 period → `indices_subset` →  
+   `y[idx] = y[np.random.permutation(idx)]`  
+3. **回放**：对每步 `decision_path` 中段 shuffle（保留 observe/log 端点）  
+4. **DPO**：chosen=干净路径奖励，rejected=污染路径 / 打乱路径；  
+   \(L=-\log\sigma(\beta(r_c-r_r))\)
+
+跑：`PYTHONPATH=. python3 scripts/run_flywheel_dpo_replay.py`
+
+---
+
+## 7. 10 分钟迭代怎么用
 
 每 tick：抽一个 FW-* 机会 → 改 flywheel 决策阈值或加一个 pack → 看 surprise/fallback 变没变 → 记一行。  
 约束：**不许**把 AGOD null/PO 塞进这个飞轮。
