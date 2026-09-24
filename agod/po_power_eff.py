@@ -78,10 +78,14 @@ def power_card_from_dataset(
     by = {r["mode"]: r for r in rows}
     gs, gc = by.get("gated_sqrt", {}), by.get("gated_cbrt", {})
     soft_win = None
+    soft_gap = float("nan")
     if np.isfinite(gs.get("mse_mean_sig", np.nan)) and np.isfinite(
         gc.get("mse_mean_sig", np.nan)
     ):
         soft_win = bool(gc["mse_mean_sig"] <= gs["mse_mean_sig"])
+    if np.isfinite(gs.get("mse_eff", np.nan)) and np.isfinite(gc.get("mse_eff", np.nan)):
+        # positive ⇒ ∛ buys more (or loses less) sig-MSE per FLOP than √
+        soft_gap = float(gc["mse_eff"] - gs["mse_eff"])
     # best among gated + uniform on sig MSE
     cand = {
         m: by[m]["mse_mean_sig"]
@@ -89,20 +93,24 @@ def power_card_from_dataset(
         if np.isfinite(by.get(m, {}).get("mse_mean_sig", np.nan))
     }
     best = min(cand, key=cand.get) if cand else None
-    reading = _power_reading(soft_win, best, duty)
+    reading = _power_reading(soft_win, best, duty, soft_gap)
     return {
         "dataset": name,
         "ok": True,
         "gate_duty": duty,
         "modes": rows,
         "soft_win_cbrt_le_sqrt": soft_win,
+        "soft_mse_eff_gap_cbrt_minus_sqrt": soft_gap,
         "best_sig_mode": best,
         "reading": reading,
     }
 
 
 def _power_reading(
-    soft_win: Optional[bool], best: Optional[str], duty: float
+    soft_win: Optional[bool],
+    best: Optional[str],
+    duty: float,
+    soft_gap: float = float("nan"),
 ) -> str:
     duty_s = f"duty={duty:.2f}" if np.isfinite(duty) else "duty=?"
     if best == "uniform":
@@ -114,9 +122,11 @@ def _power_reading(
     else:
         base = f"{duty_s}: best={best}"
     if soft_win is True:
-        return base + "; ∛≤√ on this pack"
-    if soft_win is False:
-        return base + "; √ beats ∛ here"
+        base += "; ∛≤√ on this pack"
+    elif soft_win is False:
+        base += "; √ beats ∛ here"
+    if np.isfinite(soft_gap):
+        base += f"; Δmse_eff(∛−√)={soft_gap:+.3g}"
     return base
 
 

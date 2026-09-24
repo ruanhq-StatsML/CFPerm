@@ -15,6 +15,7 @@ Branch: `cursor/rsi-model-stats-eff-abce` · cadence ~3 min
 | 2 | duty breakeven = 1/n_control; below ⇒ refit cheaper than probe | scorecard headline |
 | 2b | n_control↑ raises refit cost (at 4×, duty 0.24 ≈ breakeven) | `PO_EFF_SCORECARD.md` §n_control |
 | 3 | ∛≤√ on ~67% packs; uniform still best on 5/6 | `../agod_po_power_eff/PO_POWER_EFF.md` |
+| 3b | mean Δmse_eff(∛−√) — how much softer weights help per FLOP | same file headline |
 | 4 | electricity freeze Pareto (~0.86× MSE @ 0.7× FLOPs) | `../agod_freeze_eff/FREEZE_EFF.md` |
 | 5 | Do not spend PO FLOPs on image-OOD | `docs/agod/AGOD_image_ood_bench.md` |
 

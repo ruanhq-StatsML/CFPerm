@@ -51,8 +51,9 @@
         }
       ],
       "soft_win_cbrt_le_sqrt": false,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": -44091.79944407113,
       "best_sig_mode": "gated_sqrt",
-      "reading": "duty=0.18: gated\u221a best sig MSE; \u221a beats \u221b here"
+      "reading": "duty=0.18: gated\u221a best sig MSE; \u221a beats \u221b here; \u0394mse_eff(\u221b\u2212\u221a)=-4.41e+04"
     },
     {
       "dataset": "beijing_pm25",
@@ -97,8 +98,9 @@
         }
       ],
       "soft_win_cbrt_le_sqrt": false,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": -1429.4744714186081,
       "best_sig_mode": "uniform",
-      "reading": "duty=0.13: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221a beats \u221b here"
+      "reading": "duty=0.13: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221a beats \u221b here; \u0394mse_eff(\u221b\u2212\u221a)=-1.43e+03"
     },
     {
       "dataset": "stocks_AAPL",
@@ -143,8 +145,9 @@
         }
       ],
       "soft_win_cbrt_le_sqrt": true,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": 0.00025417500575443494,
       "best_sig_mode": "uniform",
-      "reading": "duty=0.18: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack"
+      "reading": "duty=0.18: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000254"
     },
     {
       "dataset": "waymo_proxy",
@@ -189,8 +192,9 @@
         }
       ],
       "soft_win_cbrt_le_sqrt": true,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": 0.000828001920246058,
       "best_sig_mode": "uniform",
-      "reading": "duty=0.56: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack"
+      "reading": "duty=0.56: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000828"
     },
     {
       "dataset": "stocks_MSFT",
@@ -235,8 +239,9 @@
         }
       ],
       "soft_win_cbrt_le_sqrt": true,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": 0.0003327552766624311,
       "best_sig_mode": "uniform",
-      "reading": "duty=0.23: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack"
+      "reading": "duty=0.23: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000333"
     },
     {
       "dataset": "stocks_IWM",
@@ -281,8 +286,9 @@
         }
       ],
       "soft_win_cbrt_le_sqrt": true,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": 0.00020064093074766696,
       "best_sig_mode": "uniform",
-      "reading": "duty=0.18: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack"
+      "reading": "duty=0.18: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000201"
     }
   ],
   "headline": "gated\u221b\u2264gated\u221a on 67% of packs; best_sig counts {'gated_sqrt': 1, 'uniform': 5}. Same FLOPs \u2014 softness is the only knob.",

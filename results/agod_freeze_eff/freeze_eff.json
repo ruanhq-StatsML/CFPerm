@@ -34,9 +34,9 @@
         },
         {
           "policy": "no_adapt",
-          "mse_rel": NaN,
+          "mse_rel": null,
           "flops_rel": 0.0,
-          "freeze_eff": NaN,
+          "freeze_eff": null,
           "dominates_always": false
         }
       ],
@@ -74,9 +74,9 @@
         },
         {
           "policy": "no_adapt",
-          "mse_rel": NaN,
+          "mse_rel": null,
           "flops_rel": 0.0,
-          "freeze_eff": NaN,
+          "freeze_eff": null,
           "dominates_always": false
         }
       ],

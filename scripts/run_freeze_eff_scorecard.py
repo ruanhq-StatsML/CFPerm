@@ -69,7 +69,19 @@ def main() -> None:
     else:
         card = scorecard_canonical()
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "freeze_eff.json").write_text(json.dumps(card, indent=2) + "\n")
+
+    def _clean(o):
+        if isinstance(o, float) and (o != o or o in (float("inf"), float("-inf"))):
+            return None
+        if isinstance(o, dict):
+            return {k: _clean(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [_clean(v) for v in o]
+        return o
+
+    (args.out / "freeze_eff.json").write_text(
+        json.dumps(_clean(card), indent=2) + "\n"
+    )
     md = render_md(card)
     (args.out / "FREEZE_EFF.md").write_text(md)
     print(md)

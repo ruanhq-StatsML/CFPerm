@@ -23,6 +23,7 @@ def test_soft_win_and_best_uniform():
     c = power_card_from_dataset("toy", block, n_batches=40, batch_size=100)
     assert c["soft_win_cbrt_le_sqrt"] is True
     assert c["best_sig_mode"] == "uniform"
+    assert c["soft_mse_eff_gap_cbrt_minus_sqrt"] > 0  # ∛ hurts less per FLOP
 
 
 def test_repo_cbrt_summary_smoke():
