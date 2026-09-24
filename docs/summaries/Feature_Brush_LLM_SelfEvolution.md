@@ -18,7 +18,7 @@
 | 列：FSDS 选 tip \(J^\star\) | **算法完成** | 仅在 \(K^\star\) 上 Scaler→Var→SelectKBest→HGB/LR |
 | 刷量/灌入/漂移读法 | **词典完成** | pos/neg/flat → S1/S2/S3 |
 | 审出卡导出 + 灰度 + 回流 CLI | **工程完成** | smoke 五步绿 |
-| `direction` 写入样例 summary | **有缺口** | 当前样例可无 direction → 全按 flat，刷量逻辑**展不开** |
+| `direction` 写入样例 summary | **已闭环** | `ensure_direction` + `attach_direction_to_summary.py`：tip_signs 从 diagnostics 回填；缺边表 Dy 则 `dy_missing`→flat（不拿窗口 pos_rate 冒充 S1）；卡上挂 S1/S2/S3 `scenario` |
 | 真人 useful/not_useful | **未完成** | gate NOT_READY；无人进化信号 |
 | 自动改 tip 词典 / 自动升 L2 | **刻意不做** | 进化只经人工确认 |
 
@@ -94,8 +94,8 @@ StandardScaler → VarianceThreshold → SelectKBest(f_classif, k)
 | 该进哪条 L1 审核抽屉 | 该封号 / 该 L2 |
 
 ### 2.3 未完成项（刷量逻辑要「能用」还差）
-1. 跑 localize 后 **强制 attach direction**（否则永假 flat）  
-2. 至少 1 张 **真 pos + last tip** 样例卡给人审对照 S1  
+1. ~~跑 localize 后 **强制 attach direction**~~ → **已做**：export 自动 `ensure_direction`；CLI `attach_direction_to_summary.py` 可写回 summary  
+2. 至少 1 张 **真 pos + last tip** 样例卡给人审对照 S1（需边表 y 或新跑 localize）  
 3. 真人打标：S1 卡 useful？走错成 S3？→ 回写词典  
 
 ---

@@ -13,8 +13,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from direction_report import ensure_direction, scenario_from_direction  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FLAGS = ROOT / "configs" / "review_agent_card_flags.json"
@@ -219,8 +226,17 @@ def build_card(
     flags_eff = flags or {"enabled": True, "sample_rate": 1.0}
     gate = flags_allow(flags_eff, source=source)
     overlay = tip_overlay or {"industry": "default", "buckets": {}}
-    direction = dict(blob.get("direction") or {})
-    tips = _tips_from_summary(blob)
+    # Closed loop: stale summaries without tip_signs always looked flat/0;
+    # ensure direction from sibling feature_shift_diagnostics when possible.
+    summary_path = Path(source) if source else None
+    feat_diag = None
+    if summary_path is not None and summary_path.parent.exists():
+        cand = summary_path.parent / "feature_shift_diagnostics.csv"
+        if cand.exists():
+            feat_diag = cand
+    direction = ensure_direction(blob, feat_diag_path=feat_diag)
+    scenario = scenario_from_direction(direction)
+    tips = _tips_from_summary({**blob, "direction": direction})
     tip_signs = dict(direction.get("tip_signs") or {})
     buckets = _bucketize(
         tips[:12], tip_signs, buckets_map=overlay.get("buckets") or None
@@ -247,14 +263,19 @@ def build_card(
             "y_ref": direction.get("y_ref"),
             "y_cur": direction.get("y_cur"),
             "tip_signs": tip_signs,
+            "dy_missing": bool(direction.get("dy_missing")),
             "report": direction.get("report")
             or f"[Direction] sign_Dy={sign_dy}; tips={tips[:5]}",
         },
+        "scenario": scenario,
         "tips": tips[:12],
         "tip_buckets": buckets,
         "review_hint": {
             "queue_bucket": primary_bucket,
-            "outcome_read": {
+            "scenario_family": scenario.get("family_code"),
+            "scenario_sub": scenario.get("sub_code"),
+            "outcome_read": scenario.get("read")
+            or {
                 "pos": "块上成功率上升：优先刷量/互点/末跳队列",
                 "neg": "块上成功率下降：优先劣质灌入/劫持残留队列",
                 "flat": "X 漂了但 click 率平：先当供给/分布漂移，慎升强动作",
@@ -281,7 +302,9 @@ def build_card(
         "【审核上下文·图谱变动线索】",
         f"灰度: allow={gate['allow']} reason={gate['reason']}",
         f"词典: industry={overlay.get('industry', 'default')}",
-        f"方向: sign_Dy={sign_dy} Dy={direction.get('Dy')}",
+        f"方向: sign_Dy={sign_dy} Dy={direction.get('Dy')}"
+        + (" (dy_missing)" if direction.get("dy_missing") else ""),
+        f"场景: {scenario.get('family')} / {scenario.get('sub')}",
         f"支撑: localize_k={card['support'].get('localize_k')} "
         f"edges={card['support'].get('n_localized_edges')}",
         f"建议队列: {card['review_hint']['queue_bucket']}",
@@ -298,6 +321,9 @@ def build_card(
     card["ticket_custom_fields"] = {
         "graph_shift_sign_dy": sign_dy,
         "graph_shift_dy": direction.get("Dy"),
+        "graph_shift_dy_missing": bool(direction.get("dy_missing")),
+        "graph_shift_scenario_family": scenario.get("family_code"),
+        "graph_shift_scenario_sub": scenario.get("sub_code"),
         "graph_shift_queue_bucket": card["review_hint"]["queue_bucket"],
         "graph_shift_action_level": card["review_hint"]["suggested_action_level"],
         "graph_shift_tip_top3": ",".join(tips[:3]),
@@ -318,6 +344,7 @@ def build_card(
 
 def card_to_md(card: Dict[str, Any]) -> str:
     d = card["direction"]
+    sc = card.get("scenario") or {}
     tf = card.get("ticket_custom_fields") or {}
     lines = [
         "# 审核 Agent 上下文卡",
@@ -325,7 +352,10 @@ def card_to_md(card: Dict[str, Any]) -> str:
         f"> {card['disclaimer']}",
         "",
         f"- source: `{card['source_summary']}`",
-        f"- sign_Dy: **{d.get('sign_Dy')}** (Dy={d.get('Dy')})",
+        f"- sign_Dy: **{d.get('sign_Dy')}** (Dy={d.get('Dy')}"
+        + (", dy_missing" if d.get("dy_missing") else "")
+        + ")",
+        f"- 场景: **{sc.get('family', '—')}** / {sc.get('sub', '—')}",
         f"- 建议队列: **{card['review_hint']['queue_bucket']}**",
         f"- 读法: {card['review_hint']['outcome_read']}",
         f"- 建议动作级: `{card['review_hint']['suggested_action_level']}`",

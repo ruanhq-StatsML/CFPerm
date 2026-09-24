@@ -3,9 +3,9 @@
     "Standardization: StandardScaler fit on W1 (top of pipeline)",
     "FE(time) independently on W1 and W2 (gap >= 30d)",
     "subset localization = rank-average(cmean, MMD, PO-risk) over items (standardized X)",
-    "visualize localized subset (\u884c\u4e3a/\u8d2d\u4e70\u6b32\u53d8\u52a8\u5f52\u56e0)",
-    "FSDS: StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 HGB/LogReg \u2192 feature ranking",
-    "optional GT evaluator on orders/items \u2192 hit/precision/recall@k"
+    "visualize localized subset (行为/购买欲变动归因)",
+    "FSDS: StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg → feature ranking",
+    "optional GT evaluator on orders/items → hit/precision/recall@k"
   ],
   "timeline": {
     "span_days": 231.27605324074074,
@@ -125,9 +125,9 @@
     ],
     "sec_select": 0.004519224166870117,
     "models": {
-      "note": "test missing both classes \u2014 ranking only"
+      "note": "test missing both classes — ranking only"
     },
-    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "pipeline": "StandardScaler → VarianceThreshold → SelectKBest → model",
     "top_features": [
       "i_share_linear",
       "i_credit_linear",
@@ -184,7 +184,7 @@
         "sec": 0.010030746459960938
       }
     },
-    "pipeline": "StandardScaler \u2192 VarianceThreshold \u2192 SelectKBest \u2192 model",
+    "pipeline": "StandardScaler → VarianceThreshold → SelectKBest → model",
     "top_features": [
       "i_share_linear",
       "i_credit_linear",
@@ -233,5 +233,65 @@
       "precision@200": 0.2,
       "recall@200": 0.9523809523809523
     }
+  },
+  "direction": {
+    "y_col": "y_convert",
+    "y_ref": null,
+    "y_cur": null,
+    "Dy": null,
+    "sign_Dy": "flat",
+    "dy_missing": true,
+    "dy_source": "unavailable_no_edge_y",
+    "n_ref": null,
+    "n_cur": null,
+    "tip_signs": {
+      "i_share_linear": "-",
+      "i_credit_linear": "+",
+      "i_share_first": "-",
+      "i_credit_first": "+",
+      "i_log1p_n_users": "+",
+      "i_log1p_n_covisit": "+",
+      "i_n_covisit_neighbors": "+",
+      "i_log1p_n_exp": "+",
+      "i_n_users": "+",
+      "i_n_exp": "+",
+      "ui_pop_mismatch": "-",
+      "u_log1p_n_events": "+",
+      "u_n_events": "+",
+      "u_log1p_n_uniq": "+",
+      "i_share_last": "-"
+    },
+    "tip_delta": {
+      "i_share_linear": -1.4842505677341309,
+      "i_credit_linear": 3.997266207490752,
+      "i_share_first": -0.7356724011670251,
+      "i_credit_first": 2.8666280663082064,
+      "i_log1p_n_users": 2.7771563799479386,
+      "i_log1p_n_covisit": 2.2907420107986756,
+      "i_n_covisit_neighbors": 16.851776493592794,
+      "i_log1p_n_exp": 3.011710847715453,
+      "i_n_users": 14.261138563269808,
+      "i_n_exp": 15.252071376173241,
+      "ui_pop_mismatch": -0.5821506249157042,
+      "u_log1p_n_events": 1.888786030653048,
+      "u_n_events": 3.40128181680009,
+      "u_log1p_n_uniq": 1.8842569058454879,
+      "i_share_last": -0.8881928911048721
+    },
+    "report": "[Direction] Dy=None (flat, dy_missing); tip_signs={'i_share_linear': '-', 'i_credit_linear': '+', 'i_share_first': '-', 'i_credit_first': '+', 'i_log1p_n_users': '+', 'i_log1p_n_covisit': '+', 'i_n_covisit_neighbors': '+', 'i_log1p_n_exp': '+', 'i_n_users': '+', 'i_n_exp': '+', 'ui_pop_mismatch': '-', 'u_log1p_n_events': '+', 'u_n_events': '+', 'u_log1p_n_uniq': '+', 'i_share_last': '-'}"
+  },
+  "scenario": {
+    "family": "漂移族",
+    "family_code": "S3_drift",
+    "sub": "结构漂移",
+    "sub_code": "structure_shift",
+    "modifiers": [
+      "S4_covisit",
+      "S5_pop_mismatch"
+    ],
+    "read": "Dy 缺失按 flat：X 结构漂了，成功率未证实联动 → 漂移族，禁自称刷量",
+    "auto_ban": false,
+    "action_level_default": "L1_watch",
+    "dy_missing": true
   }
 }

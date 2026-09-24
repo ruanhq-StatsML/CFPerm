@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "sample_rate": 1.0,
+  "kill_switch": false,
+  "note": "审出加速灰度：kill_switch=true 关闭；queue_sample_rates 可按队列覆盖 sample_rate"
+}
