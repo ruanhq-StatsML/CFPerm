@@ -106,8 +106,8 @@ IID bootstrap 会**低估** mean excess 的方差。
 | R3 | ECE bins on LogReg/HGB transfer | 校准 vs 排序；高 excess+高 ECE=能排不能信 | **Iter2 落地** |
 | R4 | DiffusionDB token excess vs Tencent | 弱特征族的 null 对照 | backlog |
 | R5 | Streaming reservoir subsample of pairs | 固定 k 无偏估 pack 均值；vs linspace 非 SSRS | **Iter4 落地** |
-| R6 | AGOD gate FLOPs vs probe_eff 对照表 | 适应 FLOPs 双尺子 | backlog |
-| R7 | PO refit vs ref IPTW MSE / FLOP | 已有脚本串联 scorecard | backlog |
+| R6 | AGOD gate FLOPs vs probe_eff 对照表 | 适应 FLOPs 双尺子 | backlog → see PO pivot |
+| R7 | PO refit vs ref IPTW MSE / FLOP | rank_eff + mse_eff scorecard | **Iter5 转向落地** |
 | R8 | Multimodal image-OOD bench 抽 1 指标进账本 | OOD 效率 | backlog |
 
 ---
