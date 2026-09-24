@@ -8,3 +8,4 @@
 | 4 | 2026-09-24 | reservoir pair subsample under max_pairs | fixed-k unbiased SSRS for pack means; linspace≠simple random | `select_pair_indices` default reservoir | `test_reservoir_sample_*` |
 | 5 | 2026-09-24 | **pivot** PO ref/probe/refit efficiency scorecard | ranking≠MSE; probe always-on FLOPs vs reject-only refit → rank_eff/mse_eff | `agod/po_eff.py` + scorecard script | `test_po_eff` |
 | 6 | 2026-09-24 | gate duty → E[adapt FLOPs] + rank_eff_E | planning needs E[cost]=duty·n·fit; probe duty-invariant; budget_ratio≈duty | `expected_adapt_flops` | `test_expected_flops_*` |
+| 7 | 2026-09-24 | √ vs ∛ IPTW power softness scorecard + **3min cadence** | same FLOPs ⇒ α is bias–variance only; ∛≤√ often but uniform still wins | `agod/po_power_eff.py` + tomorrow demo board | `test_po_power_eff` |
