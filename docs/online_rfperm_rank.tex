@@ -1,0 +1,24 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\begin{document}
+\paragraph{IR probe, not quantile regression.}
+OnlineRFPerm's MSE is a pointwise rent check. Ranking systems pay rent in NDCG.
+Freeze a scorer on $D_{\mathrm{ref}}$. Each batch is slates. Loss $=1-\mathrm{NDCG}@k$
+vs the hold-out slice of $D_{\mathrm{ref}}$. $T$ is the batch label. $Y$ is graded
+relevance, last column, never a feature. Slate ids are not $X$.
+\paragraph{Read.}
+A rank-rule flip should ring NDCG. An unused-column walk should ring MMD and
+leave ranking quiet. Quiet FAR on NDCG is the IR analogue of the hop twitch;
+ADDIS stays the primary mark if you put NDCG-loss on the $p$-stream.
+\vspace{0.8em}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+scene & NDCG hop & MSE hop & MMD hop \\
+\midrule
+quiet & 0.50 & 0.33 & 0.00 \\
+rank_flip & 1.00 & 1.00 & 0.00 \\
+covariate & 0.50 & 0.33 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{document}

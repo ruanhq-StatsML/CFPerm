@@ -1,0 +1,20 @@
+\begin{tabular}{@{}llll@{}}
+\toprule
+scene & FSDS grain & next tower & note \\
+\midrule
+quiet & --- & content:full_train,style_src:full_train,noise:full_train & keep_training \\
+covariate noise & noise/mmd & noise:train_stem & fsds_group_mmd \\
+concept $s_{tgt}$ & style_src/po & style_src:train_top & fsds_group_po \\
+\bottomrule
+\end{tabular}
+\vspace{1.2em}
+\paragraph{Hit rate.}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+scene & want & hit & rate \\
+\midrule
+quiet & quiet & 6/6 & 1.00 \\
+covariate & noise/mmd & 6/6 & 1.00 \\
+concept & style_src/po & 6/6 & 1.00 \\
+\bottomrule
+\end{tabular}

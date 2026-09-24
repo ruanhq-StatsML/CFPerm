@@ -1,0 +1,104 @@
+% Brief decision note for the layer-freeze online CV heuristic board.
+% Compile with: pdflatex docs/layer_freeze_decisions.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\title{Layer-freeze board: decisions}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\paragraph{What we decide.}
+The board does not choose \emph{when} to update---that remains business logic.
+It answers a narrower question: \emph{from which layer to freeze training} on an incoming batch, and only as a heuristic readout.
+
+\paragraph{Three series, one reference window.}
+Let $D_{\mathrm{ref}}$ be a fixed $T{=}0$ window ($n_{\mathrm{ref}}{=}10^4$).
+Each new batch is $T{=}1$.
+We read three numbers against $D_{\mathrm{ref}}$, never against a rolling history:
+\begin{itemize}\setlength{\itemsep}{2pt}
+\item \textbf{PO-risk} (concept / $P(Y\mid X)$).
+Own RF nuisances $\mu(Y\mid X)$ and $e(T\mid X)$; $\varphi=(Y-\mu)(T-e)$; risk $=\mathbb{E}[\hat\tau(X)^2]$.
+Not the serving MLP, not $\ell_2$.
+RF PO-risk is not expected to collapse first.
+\item \textbf{Serving MSE} (does the current model still pay rent?).
+Evaluated \emph{before} the online step.
+This is the series more likely to break first.
+\item \textbf{MMD} (covariate / $P(X)$).
+Fixed口径: $\mathrm{MMD}^2(X_{\mathrm{new}},X_{\mathrm{ref}})$, RBF, median bandwidth pinned on $D_{\mathrm{ref}}$.
+\emph{Not} mean pairwise MMD vs all previous batches, and \emph{not} last-batch layer representations.
+\end{itemize}
+A series is ``broken'' if its causal moving average is $\ge 2\times$ its $D_{\mathrm{ref}}$-split baseline.
+No online-bootstrap.
+
+\paragraph{Heuristic action.}
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+PO-risk & MSE & MMD vs $D_{\mathrm{ref}}$ & action \\
+\midrule
+quiet & quiet & --- & keep training every layer \\
+broken & holds & --- & watch; do not freeze yet \\
+broken & broken & --- & freeze that layer's training \\
+holds & broken & broken & $X$-shift; not concept drift \\
+holds & broken & quiet & tricky; freeze nothing \\
+\bottomrule
+\end{tabular}
+\end{center}
+Freeze-depth clones ($k{+}1$ models, $\mathrm{model}_i$ trains only the top $i$ groups) run \emph{only} on the both-broken cell.
+PO-broken / MSE-holds is watch: RF PO-risk should not snap first; keep observing.
+MSE-broken / PO-holds is \emph{not} concept drift---read MMD vs $D_{\mathrm{ref}}$.
+
+\paragraph{When the stream moved.}
+A frozen $\mathtt{RandomForestRegressor}$ fit once on $D_{\mathrm{ref}}$:
+\[
+\hat y=\mathrm{rf.predict}(X_{\mathrm{new}}),\qquad
+T=\mathrm{MSE}(Y_{\mathrm{new}},\hat y)-E_{\mathrm{ref}}.
+\]
+The first last-two hop on $T$ is the jump onset.
+A slow walk may never fire the $1.5\times$ hop; then read the $T$ and MMD trends.
+Same one-liner as MMD: score the new batch against the frozen reference, nothing else.
+
+\paragraph{What we would actually do.}
+If both PO-risk and MSE are quiet: full backprop, no freeze.
+If only PO-risk moves: watch, do not freeze.
+If MSE moves and MMD vs $D_{\mathrm{ref}}$ is large: treat as $P(X)$ shift, do not freeze layers as if $P(Y\mid X)$ hopped.
+If both PO-risk and MSE break: freeze training of the bottom groups and keep only the top $i^\star$ trainable.
+Do not shrink the batch to invent an update clock; do not bootstrap the MLP.
+
+\paragraph{Freeze depth is nested policy choice, not layer attribution.}
+The object is $i\in\{0,\ldots,k\}$, model $i$ trains only the top $i$ groups.
+One cannot uniquely attribute $\Delta\mathrm{MSE}$ to layer $j$.
+What can be optimal is constrained risk over this finite class:
+smallest $i$ with $R_i\le R_k+\varepsilon$ (parsimony), or $\arg\min_i R_i$ (serving), among clones whose PO-risk is not worse.
+Current $i^\star=\arg\min_i\mathrm{PO}_i$ after a conservative AND gate (PO and MSE both broken).
+If $i^\star_{\mathrm{PO}}\ne i^\star_{\mathrm{MSE}}$, that is serving error vs share error at freeze-depth; do not let PO alone cut the layer.
+
+\paragraph{Next shape: modality LOGO.}
+If $X$ is grouped (video / audio / text), leave-one-group-out shares on serving loss and on PO vs MMD localize \emph{which tower} the five cells apply to.
+They are not a unique decomposition.
+A quiet full-batch cell can still have a hot subset; localize the slice first.
+\texttt{train\_top} on a PO-loud tower, \texttt{train\_stem} on an MMD-loud tower.
+
+\paragraph{Gradual / continuous time.}
+If \(\alpha(\tau)\) walks, last-two hop ratios go to 1 and the 2$\times$ PO gate may never leave keep.
+WHEN is the level of FrozenRF $T(\tau)$ (and serving Brier) against the reference, not $T(\tau)/T(\tau-W)$.
+Evaluable latency is excess serving loss while waiting, plus windowing delay and compute lag---not a single $\hat\tau-\tau_0$.
+Default action is watch; freeze-from-layer waits for serving error to walk, not for a hop.
+
+\paragraph{Serving error vs share error.}
+Hop and continuous time are the same score $S(\tau)$.
+The coupling that needs latency is serving Brier/MSE versus the LOGO pointer.
+Share-only $\to$ watch (do not freeze a tower). Serve-only $\to$ may update, but do not freeze-from-layer by share.
+Both $\to$ \texttt{train\_top} on that tower.
+Evaluate the wait by excess serving loss of delayed-update policies, not by which detector fired first.
+
+\paragraph{Sliding-window feature bank.}
+If compute allows, keep rolling statistics on a window and score them against the same frozen $D_{\mathrm{ref}}$: PCA reconstruction via a sliding $C\leftarrow C\pm X^\top X$ update (global and per-group), score drift, MMD vs ref, FrozenRF $T$, serving Brier.
+These are the clever covariates: concat the bank vector into a shadow / monitoring model. Per-group recon is the cheap $P(X)$ pointer; PO/LOGO stays the $P(Y\mid X)$ pointer.
+
+\end{document}

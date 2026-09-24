@@ -1,0 +1,2692 @@
+{
+  "covariate_south": {
+    "meta": {
+      "kind": "covariate_south",
+      "onset_batch": 2,
+      "planted_subset": "south",
+      "planted_order_feats": [
+        "amount",
+        "channel"
+      ],
+      "planted_merchant_feats": [
+        "merchant_gmv"
+      ],
+      "n_ref": 400,
+      "n_new": 120,
+      "n_batches": 6,
+      "n_merchants": 16,
+      "n_users": 48,
+      "title": "order stream covariate_south (south after batch 2)",
+      "leakage": "Y is outcome only; subset key is region, not Y; GMV is previous-batch amount EMA (no current batch/Y/future); hist_freq is a pre-period snapshot (no current/Y/future/clock)",
+      "gmv_ema_lam": 0.25,
+      "feature_library": [
+        {
+          "feature": "amount",
+          "grain": "order",
+          "role": "\u672c\u5355\u91d1\u989d\uff08\u8fdb logit\uff09"
+        },
+        {
+          "feature": "hour",
+          "grain": "order",
+          "role": "\u4e0b\u5355\u65f6\u523b\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "n_items",
+          "grain": "order",
+          "role": "\u4ef6\u6570\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "channel",
+          "grain": "order",
+          "role": "\u672c\u5355\u6e20\u9053"
+        },
+        {
+          "feature": "merchant_cat",
+          "grain": "merchant",
+          "role": "\u5546\u6237\u7c7b\u76ee\uff08\u8fdb logit\uff0c\u4e0d\u79cd shift\uff09"
+        },
+        {
+          "feature": "merchant_gmv",
+          "grain": "merchant",
+          "role": "\u5546\u6237 GMV\uff1a\u4e0a\u4e00\u7a97\u8ba2\u5355\u91d1\u989d EMA\uff0c\u4e0d\u542b\u672c\u7a97\u3001\u4e0d\u542b Y\u3001\u4e0d\u542b\u672a\u6765"
+        },
+        {
+          "feature": "n_skus",
+          "grain": "merchant",
+          "role": "SKU \u6570\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "user_tenure",
+          "grain": "user",
+          "role": "\u8fdb\u6d41\u524d tenure\uff08\u8fdb logit\uff0c\u4e0d\u79cd shift\uff09"
+        },
+        {
+          "feature": "user_hist_freq",
+          "grain": "user",
+          "role": "\u7528\u6237\u5386\u53f2\u9891\u6b21\uff1a\u8fdb\u6d41\u524d\u5feb\u7167\uff0c\u672c\u7a97\u4e0d\u66f4\u65b0\uff08\u4e0d\u542b\u672c\u5355\u3001\u4e0d\u542b Y\u3001\u4e0d\u542b\u672a\u6765\uff09"
+        }
+      ],
+      "planted_how": {
+        "amount": "x",
+        "channel": "x",
+        "merchant_gmv": "x"
+      }
+    },
+    "dims": {
+      "order": {
+        "dim": "order",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 2,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "hit",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": 0,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "amount",
+          "channel",
+          "n_items",
+          "hour"
+        ],
+        "fsds_loud": [
+          "amount",
+          "channel",
+          "n_items"
+        ],
+        "fsds_recovered": [
+          "amount",
+          "channel"
+        ],
+        "vimp_top": [
+          "n_items",
+          "channel",
+          "amount"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0019398277435618543,
+        "mse_vimp_top": [
+          "amount",
+          "n_items",
+          "channel"
+        ],
+        "tau_fsds": 0.9128709291752769,
+        "tau_cfperm": -0.18257418583505539,
+        "tau_rfperm": 0.5477225575051662,
+        "planted": [
+          "amount",
+          "channel"
+        ],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.3155695801115509,
+        "loc_south_mmd": 0.35003287361272484,
+        "loc_north_mmd": 0.001092285795960768,
+        "loc_south_cmean_x": 2.553446830419167,
+        "loc_north_cmean_x": 0.3023086494214331,
+        "loc_south_cmean_y": 0.34860522598870053,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 7.592214213022734e-05,
+        "loc_north_po": 0.0008983207205586734,
+        "last_T": 0.06697449987856491,
+        "last_mmd": 0.09520000896787628,
+        "last_po": 0.00014591925152274488,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.027352338287369937,
+            "p": 0.05472636815920398,
+            "hop": false,
+            "mse": 0.19077702514843076,
+            "mmd": 0.0024043827637565407,
+            "cmean_x": 0.10343290907376372,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.02330445913711518,
+            "p": 0.07960199004975124,
+            "hop": false,
+            "mse": 0.186729145998176,
+            "mmd": 0.0025159464802908538,
+            "cmean_x": 0.18914104906991913,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.05445860563521923,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.21788329249628005,
+            "mmd": -0.0019775504830180646,
+            "cmean_x": 0.16850413118755417,
+            "cmean_y": 0.07916666666666666,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.07750422813634747,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.2409289149974083,
+            "mmd": 0.030969066605273432,
+            "cmean_x": 0.7535711769520206,
+            "cmean_y": 0.054166666666666696,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.047947247182788616,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.21137193404384944,
+            "mmd": 0.049816719469717996,
+            "cmean_x": 0.9531847592526402,
+            "cmean_y": 0.10416666666666674,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.06697449987856491,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.23039918673962573,
+            "mmd": 0.09520000896787628,
+            "cmean_x": 1.3614751378319379,
+            "cmean_y": 0.14583333333333337,
+            "po": 0.00014591925152274488
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "amount",
+            "score": 8.074582783851929,
+            "mmd": 0.12111874175777892,
+            "cmean_x": 1.0615559726479016,
+            "cmean_y": 0.10545454545454547,
+            "loud": true
+          },
+          {
+            "feature": "channel",
+            "score": 5.739047187793493,
+            "mmd": 0.08608570781690239,
+            "cmean_x": 0.8334503466087061,
+            "cmean_y": 0.019468085106383037,
+            "loud": true
+          },
+          {
+            "feature": "n_items",
+            "score": 2.3930520034100597,
+            "mmd": -0.001845780721296486,
+            "cmean_x": 0.09208071538541743,
+            "cmean_y": 0.239305200341006,
+            "loud": true
+          },
+          {
+            "feature": "hour",
+            "score": 1.3006787330316743,
+            "mmd": 0.002088511479286126,
+            "cmean_x": 0.15360706188844042,
+            "cmean_y": 0.13006787330316744,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "n_items",
+            "vimp": 0.0019398277435618543
+          },
+          {
+            "feature": "channel",
+            "vimp": 0.0017814268747709475
+          },
+          {
+            "feature": "amount",
+            "vimp": 0.0014312341407712124
+          },
+          {
+            "feature": "hour",
+            "vimp": 0.0008524020825496758
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "amount",
+            "vimp": 0.04983645512611157
+          },
+          {
+            "feature": "n_items",
+            "vimp": 0.00552292398518367
+          },
+          {
+            "feature": "channel",
+            "vimp": -0.007286579049955694
+          },
+          {
+            "feature": "hour",
+            "vimp": -0.01184283531437677
+          }
+        ]
+      },
+      "merchant": {
+        "dim": "merchant",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 1,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -1,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "merchant_gmv",
+          "n_skus",
+          "merchant_cat"
+        ],
+        "fsds_loud": [
+          "merchant_gmv"
+        ],
+        "fsds_recovered": [
+          "merchant_gmv"
+        ],
+        "vimp_top": [
+          "merchant_gmv",
+          "n_skus",
+          "merchant_cat"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.003096298309572606,
+        "mse_vimp_top": [
+          "merchant_cat",
+          "n_skus",
+          "merchant_gmv"
+        ],
+        "tau_fsds": 0.816496580927726,
+        "tau_cfperm": 0.816496580927726,
+        "tau_rfperm": -0.816496580927726,
+        "planted": [
+          "merchant_gmv"
+        ],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.4555014314843373,
+        "loc_south_mmd": 0.4645754908531333,
+        "loc_north_mmd": 0.003328406924512972,
+        "loc_south_cmean_x": 1.4500215971571218,
+        "loc_north_cmean_x": 0.21205381397506723,
+        "loc_south_cmean_y": 0.34860522598870053,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.0010720460539368575,
+        "loc_north_po": 0.00014128490975873673,
+        "last_T": 0.13093261768696146,
+        "last_mmd": 0.12070148780689005,
+        "last_po": 0.00040697778861531253,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.01361182697294322,
+            "p": 0.1791044776119403,
+            "hop": false,
+            "mse": 0.21292414151969735,
+            "mmd": -0.0008888542937843802,
+            "cmean_x": 0.05930713546837176,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.029407214783149394,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.22871952932990353,
+            "mmd": 0.005476702229458619,
+            "cmean_x": 0.10450566162893965,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.055904582595786845,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.255216897142541,
+            "mmd": 0.010865703278707839,
+            "cmean_x": 0.19709937614802395,
+            "cmean_y": 0.07916666666666666,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.046605017945526434,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.24591733249228057,
+            "mmd": 0.004418878653031477,
+            "cmean_x": 0.09544107071487848,
+            "cmean_y": 0.054166666666666696,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.08141421296489959,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.2807265275116537,
+            "mmd": 0.09913613697899926,
+            "cmean_x": 0.6410867091831164,
+            "cmean_y": 0.10416666666666674,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.13093261768696146,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.3302449322337156,
+            "mmd": 0.12070148780689005,
+            "cmean_x": 0.756952798204555,
+            "cmean_y": 0.14583333333333337,
+            "po": 0.00040697778861531253
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "merchant_gmv",
+            "score": 11.598396951837827,
+            "mmd": 0.1739759542775674,
+            "cmean_x": 0.752728825734182,
+            "cmean_y": 0.2904248366013072,
+            "loud": true
+          },
+          {
+            "feature": "n_skus",
+            "score": 0.7010771382781886,
+            "mmd": -0.004725847558953444,
+            "cmean_x": 0.04778102202944561,
+            "cmean_y": 0.1690118824265165,
+            "loud": false
+          },
+          {
+            "feature": "merchant_cat",
+            "score": 0.38575430172068825,
+            "mmd": -0.004551941634120871,
+            "cmean_x": 0.06398302550182239,
+            "cmean_y": 0.038575430172068825,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "merchant_gmv",
+            "vimp": 0.003096298309572606
+          },
+          {
+            "feature": "n_skus",
+            "vimp": 0.0018271065768585438
+          },
+          {
+            "feature": "merchant_cat",
+            "vimp": 0.0002483196913889169
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "merchant_cat",
+            "vimp": 0.011564170740215374
+          },
+          {
+            "feature": "n_skus",
+            "vimp": -0.0016017685295245387
+          },
+          {
+            "feature": "merchant_gmv",
+            "vimp": -0.016784496560697748
+          }
+        ]
+      },
+      "user": {
+        "dim": "user",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 0,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -2,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "user_hist_freq",
+          "user_tenure"
+        ],
+        "fsds_loud": [],
+        "fsds_recovered": [],
+        "vimp_top": [
+          "user_hist_freq",
+          "user_tenure"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.003516197686241264,
+        "mse_vimp_top": [
+          "user_tenure",
+          "user_hist_freq"
+        ],
+        "tau_fsds": null,
+        "tau_cfperm": null,
+        "tau_rfperm": null,
+        "planted": [],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": -0.0030379396610843434,
+        "loc_south_mmd": -0.001332821314277699,
+        "loc_north_mmd": -0.0007376384840480643,
+        "loc_south_cmean_x": 0.06589126612008007,
+        "loc_north_cmean_x": 0.18855634672767396,
+        "loc_south_cmean_y": 0.34860522598870053,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.003287884029895133,
+        "loc_north_po": 0.00048609238083973863,
+        "last_T": 0.05694289017778445,
+        "last_mmd": 0.0006270420853428105,
+        "last_po": 0.0005628154549780284,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.030840242143648472,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.2542233390765752,
+            "mmd": 0.007740380939039615,
+            "cmean_x": 0.21547481927723122,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.01661006679611038,
+            "p": 0.10945273631840796,
+            "hop": false,
+            "mse": 0.2399931637290371,
+            "mmd": -0.0011377125237125307,
+            "cmean_x": 0.05905105186200366,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.04801783551032693,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.27140093244325364,
+            "mmd": -0.0029107476740972693,
+            "cmean_x": 0.13453460919050145,
+            "cmean_y": 0.07916666666666666,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.03287698500880795,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.25626008194173466,
+            "mmd": 0.004591153091130007,
+            "cmean_x": 0.05333933664475051,
+            "cmean_y": 0.054166666666666696,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.047114252092375936,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.27049734902530265,
+            "mmd": 0.0006854560745704896,
+            "cmean_x": 0.13453368098211782,
+            "cmean_y": 0.10416666666666674,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.05694289017778445,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.28032598711071116,
+            "mmd": 0.0006270420853428105,
+            "cmean_x": 0.08664616728662632,
+            "cmean_y": 0.14583333333333337,
+            "po": 0.0005628154549780284
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "user_hist_freq",
+            "score": 1.6156567707296132,
+            "mmd": 0.0032869422625848577,
+            "cmean_x": 0.07130307295412426,
+            "cmean_y": 0.16156567707296132,
+            "loud": false
+          },
+          {
+            "feature": "user_tenure",
+            "score": 0.19691338574148243,
+            "mmd": -0.005270946920742037,
+            "cmean_x": 0.04922834643537061,
+            "cmean_y": 0.014999999999999958,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.003516197686241264
+          },
+          {
+            "feature": "user_tenure",
+            "vimp": 0.0009615271516777713
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "user_tenure",
+            "vimp": -0.005434715862970119
+          },
+          {
+            "feature": "user_hist_freq",
+            "vimp": -0.010560084687807003
+          }
+        ]
+      },
+      "all": {
+        "dim": "all",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 0,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -2,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "merchant_gmv",
+          "amount",
+          "channel",
+          "n_items"
+        ],
+        "fsds_loud": [
+          "merchant_gmv",
+          "amount",
+          "channel",
+          "n_items"
+        ],
+        "fsds_recovered": [
+          "merchant_gmv",
+          "amount",
+          "channel"
+        ],
+        "vimp_top": [
+          "n_skus",
+          "n_items",
+          "user_hist_freq"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0007764522496492999,
+        "mse_vimp_top": [
+          "amount",
+          "merchant_cat",
+          "n_items"
+        ],
+        "tau_fsds": 0.6910233190806425,
+        "tau_cfperm": -0.1091089451179962,
+        "tau_rfperm": 0.036369648372665396,
+        "planted": [
+          "amount",
+          "channel",
+          "merchant_gmv"
+        ],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.2910898392669007,
+        "loc_south_mmd": 0.3226905124660856,
+        "loc_north_mmd": 0.0015527941513665544,
+        "loc_south_cmean_x": 2.937174664018245,
+        "loc_north_cmean_x": 0.41462131569381494,
+        "loc_south_cmean_y": 0.34860522598870053,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.00026290483026278637,
+        "loc_north_po": 0.0008284464310089049,
+        "last_T": 0.06021858934826013,
+        "last_mmd": 0.08654527965438708,
+        "last_po": 0.00018391300084083552,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.0437012251444254,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.1920623780262426,
+            "mmd": -0.0006611449344978704,
+            "cmean_x": 0.24626226007953536,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.020444043871193057,
+            "p": 0.11940298507462686,
+            "hop": false,
+            "mse": 0.16880519675301026,
+            "mmd": -0.001228649352501554,
+            "cmean_x": 0.2240151702045668,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.05893022271345266,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.20729137559526986,
+            "mmd": 0.00022163378990758265,
+            "cmean_x": 0.2921324483436471,
+            "cmean_y": 0.07916666666666666,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.06830102120334194,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.21666217408515914,
+            "mmd": 0.019630834945928544,
+            "cmean_x": 0.7614614905205371,
+            "cmean_y": 0.054166666666666696,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.05201803781321318,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.20037919069503038,
+            "mmd": 0.04815167318214997,
+            "cmean_x": 1.1565693516955002,
+            "cmean_y": 0.10416666666666674,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.06021858934826013,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.20857974223007733,
+            "mmd": 0.08654527965438708,
+            "cmean_x": 1.5601601353545929,
+            "cmean_y": 0.14583333333333337,
+            "po": 0.00018391300084083552
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "merchant_gmv",
+            "score": 11.598396951837827,
+            "mmd": 0.1739759542775674,
+            "cmean_x": 0.752728825734182,
+            "cmean_y": 0.2904248366013072,
+            "loud": true
+          },
+          {
+            "feature": "amount",
+            "score": 8.074582783851929,
+            "mmd": 0.12111874175777892,
+            "cmean_x": 1.0615559726479016,
+            "cmean_y": 0.10545454545454547,
+            "loud": true
+          },
+          {
+            "feature": "channel",
+            "score": 5.739047187793493,
+            "mmd": 0.08608570781690239,
+            "cmean_x": 0.8334503466087061,
+            "cmean_y": 0.019468085106383037,
+            "loud": true
+          },
+          {
+            "feature": "n_items",
+            "score": 2.3930520034100597,
+            "mmd": -0.001845780721296486,
+            "cmean_x": 0.09208071538541743,
+            "cmean_y": 0.239305200341006,
+            "loud": true
+          },
+          {
+            "feature": "user_hist_freq",
+            "score": 1.6156567707296132,
+            "mmd": 0.0032869422625848577,
+            "cmean_x": 0.07130307295412426,
+            "cmean_y": 0.16156567707296132,
+            "loud": false
+          },
+          {
+            "feature": "hour",
+            "score": 1.3006787330316743,
+            "mmd": 0.002088511479286126,
+            "cmean_x": 0.15360706188844042,
+            "cmean_y": 0.13006787330316744,
+            "loud": false
+          },
+          {
+            "feature": "n_skus",
+            "score": 0.7010771382781886,
+            "mmd": -0.004725847558953444,
+            "cmean_x": 0.04778102202944561,
+            "cmean_y": 0.1690118824265165,
+            "loud": false
+          },
+          {
+            "feature": "merchant_cat",
+            "score": 0.38575430172068825,
+            "mmd": -0.004551941634120871,
+            "cmean_x": 0.06398302550182239,
+            "cmean_y": 0.038575430172068825,
+            "loud": false
+          },
+          {
+            "feature": "user_tenure",
+            "score": 0.19691338574148243,
+            "mmd": -0.005270946920742037,
+            "cmean_x": 0.04922834643537061,
+            "cmean_y": 0.014999999999999958,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "n_skus",
+            "vimp": 0.0007764522496492999
+          },
+          {
+            "feature": "n_items",
+            "vimp": 0.0007602665133884835
+          },
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.0007143067419166562
+          },
+          {
+            "feature": "amount",
+            "vimp": 0.0004585569950964121
+          },
+          {
+            "feature": "hour",
+            "vimp": 0.00039672809892328173
+          },
+          {
+            "feature": "channel",
+            "vimp": 0.00034241434370215276
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "amount",
+            "vimp": 0.061385684110568245
+          },
+          {
+            "feature": "merchant_cat",
+            "vimp": 0.02652773063294625
+          },
+          {
+            "feature": "n_items",
+            "vimp": 0.004571983994231643
+          },
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.0033799876873762402
+          },
+          {
+            "feature": "channel",
+            "vimp": 0.0007624178632939516
+          },
+          {
+            "feature": "hour",
+            "vimp": -0.000579953400690919
+          }
+        ]
+      }
+    }
+  },
+  "concept_south": {
+    "meta": {
+      "kind": "concept_south",
+      "onset_batch": 2,
+      "planted_subset": "south",
+      "planted_order_feats": [
+        "amount"
+      ],
+      "planted_merchant_feats": [],
+      "n_ref": 400,
+      "n_new": 120,
+      "n_batches": 6,
+      "n_merchants": 16,
+      "n_users": 48,
+      "title": "order stream concept_south (south after batch 2)",
+      "leakage": "Y is outcome only; subset key is region, not Y; GMV is previous-batch amount EMA (no current batch/Y/future); hist_freq is a pre-period snapshot (no current/Y/future/clock)",
+      "gmv_ema_lam": 0.25,
+      "feature_library": [
+        {
+          "feature": "amount",
+          "grain": "order",
+          "role": "\u672c\u5355\u91d1\u989d\uff08\u8fdb logit\uff09"
+        },
+        {
+          "feature": "hour",
+          "grain": "order",
+          "role": "\u4e0b\u5355\u65f6\u523b\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "n_items",
+          "grain": "order",
+          "role": "\u4ef6\u6570\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "channel",
+          "grain": "order",
+          "role": "\u672c\u5355\u6e20\u9053"
+        },
+        {
+          "feature": "merchant_cat",
+          "grain": "merchant",
+          "role": "\u5546\u6237\u7c7b\u76ee\uff08\u8fdb logit\uff0c\u4e0d\u79cd shift\uff09"
+        },
+        {
+          "feature": "merchant_gmv",
+          "grain": "merchant",
+          "role": "\u5546\u6237 GMV\uff1a\u4e0a\u4e00\u7a97\u8ba2\u5355\u91d1\u989d EMA\uff0c\u4e0d\u542b\u672c\u7a97\u3001\u4e0d\u542b Y\u3001\u4e0d\u542b\u672a\u6765"
+        },
+        {
+          "feature": "n_skus",
+          "grain": "merchant",
+          "role": "SKU \u6570\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "user_tenure",
+          "grain": "user",
+          "role": "\u8fdb\u6d41\u524d tenure\uff08\u8fdb logit\uff0c\u4e0d\u79cd shift\uff09"
+        },
+        {
+          "feature": "user_hist_freq",
+          "grain": "user",
+          "role": "\u7528\u6237\u5386\u53f2\u9891\u6b21\uff1a\u8fdb\u6d41\u524d\u5feb\u7167\uff0c\u672c\u7a97\u4e0d\u66f4\u65b0\uff08\u4e0d\u542b\u672c\u5355\u3001\u4e0d\u542b Y\u3001\u4e0d\u542b\u672a\u6765\uff09"
+        }
+      ],
+      "planted_how": {
+        "amount": "y|x"
+      }
+    },
+    "dims": {
+      "order": {
+        "dim": "order",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 2,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "hit",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": 0,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "hour",
+          "amount",
+          "channel",
+          "n_items"
+        ],
+        "fsds_loud": [
+          "hour",
+          "amount"
+        ],
+        "fsds_recovered": [
+          "amount"
+        ],
+        "vimp_top": [
+          "amount",
+          "hour",
+          "channel"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0028444243280402216,
+        "mse_vimp_top": [
+          "channel",
+          "amount",
+          "hour"
+        ],
+        "tau_fsds": 0.2357022603955159,
+        "tau_cfperm": 0.7071067811865477,
+        "tau_rfperm": 0.2357022603955159,
+        "planted": [
+          "amount"
+        ],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.0015945339246922208,
+        "loc_south_mmd": -0.0013692633733803916,
+        "loc_north_mmd": 0.001092285795960768,
+        "loc_south_cmean_x": 0.27485098411631903,
+        "loc_north_cmean_x": 0.3023086494214331,
+        "loc_south_cmean_y": -0.0412252824858757,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.0030650398089395554,
+        "loc_north_po": 0.0008983207205586734,
+        "last_T": 0.11311913847893318,
+        "last_mmd": -0.0005323764373824647,
+        "last_po": 0.0007850894937353,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.027352338287369937,
+            "p": 0.05472636815920398,
+            "hop": false,
+            "mse": 0.19077702514843076,
+            "mmd": 0.0024043827637565407,
+            "cmean_x": 0.10343290907376372,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.02330445913711518,
+            "p": 0.07960199004975124,
+            "hop": false,
+            "mse": 0.186729145998176,
+            "mmd": 0.0025159464802908538,
+            "cmean_x": 0.18914104906991913,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.052630991527904514,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.21605567838896533,
+            "mmd": -0.0032149592545134276,
+            "cmean_x": 0.09035173095258928,
+            "cmean_y": 0.03750000000000003,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.06582575664577606,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.22925044350683688,
+            "mmd": 0.002266254709234583,
+            "cmean_x": 0.2836851797651212,
+            "cmean_y": -0.0708333333333333,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.09262429903233804,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.25604898589339886,
+            "mmd": 0.0006207623625514858,
+            "cmean_x": 0.23555549088742458,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.11311913847893318,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.276543825339994,
+            "mmd": -0.0005323764373824647,
+            "cmean_x": 0.21060424351488088,
+            "cmean_y": -0.04583333333333334,
+            "po": 0.0007850894937353
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "hour",
+            "score": 2.669457013574661,
+            "mmd": 0.002088511479286126,
+            "cmean_x": 0.15360706188844042,
+            "cmean_y": 0.2669457013574661,
+            "loud": true
+          },
+          {
+            "feature": "amount",
+            "score": 2.6589285714285706,
+            "mmd": -0.0038656366103468898,
+            "cmean_x": 0.025105033190699177,
+            "cmean_y": 0.2658928571428571,
+            "loud": true
+          },
+          {
+            "feature": "channel",
+            "score": 1.6274410774410775,
+            "mmd": -0.0013725135183944026,
+            "cmean_x": 0.10793468898866448,
+            "cmean_y": 0.16274410774410775,
+            "loud": false
+          },
+          {
+            "feature": "n_items",
+            "score": 0.3683228615416697,
+            "mmd": -0.001845780721296486,
+            "cmean_x": 0.09208071538541743,
+            "cmean_y": 0.02702898550724636,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "amount",
+            "vimp": 0.0028444243280402216
+          },
+          {
+            "feature": "hour",
+            "vimp": 0.002309428034341088
+          },
+          {
+            "feature": "channel",
+            "vimp": 0.0018069359640207026
+          },
+          {
+            "feature": "n_items",
+            "vimp": 0.0017204275145319206
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "channel",
+            "vimp": -0.0025810039503871285
+          },
+          {
+            "feature": "amount",
+            "vimp": -0.005293223946786885
+          },
+          {
+            "feature": "hour",
+            "vimp": -0.007614747064415228
+          },
+          {
+            "feature": "n_items",
+            "vimp": -0.008318171667317131
+          }
+        ]
+      },
+      "merchant": {
+        "dim": "merchant",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 1,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -1,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "merchant_gmv",
+          "merchant_cat",
+          "n_skus"
+        ],
+        "fsds_loud": [],
+        "fsds_recovered": [],
+        "vimp_top": [
+          "merchant_gmv",
+          "merchant_cat",
+          "n_skus"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0008421966686957549,
+        "mse_vimp_top": [
+          "merchant_gmv",
+          "merchant_cat",
+          "n_skus"
+        ],
+        "tau_fsds": null,
+        "tau_cfperm": null,
+        "tau_rfperm": null,
+        "planted": [],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.11531909919618133,
+        "loc_south_mmd": 0.005460125287438,
+        "loc_north_mmd": 0.003328406924512972,
+        "loc_south_cmean_x": 0.06299724438039044,
+        "loc_north_cmean_x": 0.21205381397506723,
+        "loc_south_cmean_y": -0.0412252824858757,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.00029001071459178673,
+        "loc_north_po": 0.00014128490975873673,
+        "last_T": 0.03378190222279928,
+        "last_mmd": 0.0021578151838147486,
+        "last_po": 7.488998031440385e-06,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.01361182697294322,
+            "p": 0.1791044776119403,
+            "hop": false,
+            "mse": 0.21292414151969735,
+            "mmd": -0.0008888542937843802,
+            "cmean_x": 0.05930713546837176,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.029407214783149394,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.22871952932990353,
+            "mmd": 0.005476702229458619,
+            "cmean_x": 0.10450566162893965,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.04964743664503371,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.24895975119178784,
+            "mmd": 0.010865703278707839,
+            "cmean_x": 0.19709937614802395,
+            "cmean_y": 0.03750000000000003,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.02040824284592288,
+            "p": 0.06965174129353234,
+            "hop": false,
+            "mse": 0.219720557392677,
+            "mmd": 0.004815093964056771,
+            "cmean_x": 0.1314683744770983,
+            "cmean_y": -0.0708333333333333,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.06093411153470546,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.2602464260814596,
+            "mmd": 0.014722962813086826,
+            "cmean_x": 0.23070275892200054,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.03378190222279928,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.23309421676955341,
+            "mmd": 0.0021578151838147486,
+            "cmean_x": 0.08487692141357166,
+            "cmean_y": -0.04583333333333334,
+            "po": 7.488998031440385e-06
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "merchant_gmv",
+            "score": 0.4705507603692002,
+            "mmd": 0.007058261405538002,
+            "cmean_x": 0.028761748383928226,
+            "cmean_y": 0.03486013986013986,
+            "loud": false
+          },
+          {
+            "feature": "merchant_cat",
+            "score": 0.25593210200728955,
+            "mmd": -0.004551941634120871,
+            "cmean_x": 0.06398302550182239,
+            "cmean_y": 0.021908763505402107,
+            "loud": false
+          },
+          {
+            "feature": "n_skus",
+            "score": 0.19112408811778245,
+            "mmd": -0.004725847558953444,
+            "cmean_x": 0.04778102202944561,
+            "cmean_y": 0.019011882426516524,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "merchant_gmv",
+            "vimp": 0.0008421966686957549
+          },
+          {
+            "feature": "merchant_cat",
+            "vimp": 0.0006168853033741775
+          },
+          {
+            "feature": "n_skus",
+            "vimp": 0.00030902177735135997
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "merchant_gmv",
+            "vimp": 0.0027199538156282843
+          },
+          {
+            "feature": "merchant_cat",
+            "vimp": -0.0014491016181317207
+          },
+          {
+            "feature": "n_skus",
+            "vimp": -0.0015117639801693061
+          }
+        ]
+      },
+      "user": {
+        "dim": "user",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 0,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -2,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "user_hist_freq",
+          "user_tenure"
+        ],
+        "fsds_loud": [],
+        "fsds_recovered": [],
+        "vimp_top": [
+          "user_hist_freq",
+          "user_tenure"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0028922187868956756,
+        "mse_vimp_top": [
+          "user_hist_freq",
+          "user_tenure"
+        ],
+        "tau_fsds": null,
+        "tau_cfperm": null,
+        "tau_rfperm": null,
+        "planted": [],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": -0.0030379396610843434,
+        "loc_south_mmd": -0.001332821314277699,
+        "loc_north_mmd": -0.0007376384840480643,
+        "loc_south_cmean_x": 0.06589126612008007,
+        "loc_north_cmean_x": 0.18855634672767396,
+        "loc_south_cmean_y": -0.0412252824858757,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.00013181591969189761,
+        "loc_north_po": 0.00048609238083973863,
+        "last_T": 0.009471675301546911,
+        "last_mmd": 0.0006270420853428105,
+        "last_po": 0.00018993145453569444,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.030840242143648472,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.2542233390765752,
+            "mmd": 0.007740380939039615,
+            "cmean_x": 0.21547481927723122,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.01661006679611038,
+            "p": 0.10945273631840796,
+            "hop": false,
+            "mse": 0.2399931637290371,
+            "mmd": -0.0011377125237125307,
+            "cmean_x": 0.05905105186200366,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.03768664920193346,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.26106974613486017,
+            "mmd": -0.0029107476740972693,
+            "cmean_x": 0.13453460919050145,
+            "cmean_y": 0.03750000000000003,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.013351011827546722,
+            "p": 0.13930348258706468,
+            "hop": false,
+            "mse": 0.23673410876047343,
+            "mmd": 0.004591153091130007,
+            "cmean_x": 0.05333933664475051,
+            "cmean_y": -0.0708333333333333,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.030862065203631134,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.25424516213655785,
+            "mmd": 0.0006854560745704896,
+            "cmean_x": 0.13453368098211782,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.009471675301546911,
+            "p": 0.19900497512437812,
+            "hop": false,
+            "mse": 0.23285477223447362,
+            "mmd": 0.0006270420853428105,
+            "cmean_x": 0.08664616728662632,
+            "cmean_y": -0.04583333333333334,
+            "po": 0.00018993145453569444
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "user_hist_freq",
+            "score": 1.3208848018753305,
+            "mmd": 0.0032869422625848577,
+            "cmean_x": 0.07130307295412426,
+            "cmean_y": 0.13208848018753305,
+            "loud": false
+          },
+          {
+            "feature": "user_tenure",
+            "score": 0.3166666666666662,
+            "mmd": -0.005270946920742037,
+            "cmean_x": 0.04922834643537061,
+            "cmean_y": 0.03166666666666662,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.0028922187868956756
+          },
+          {
+            "feature": "user_tenure",
+            "vimp": 0.0012560343192133255
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.017213544849366297
+          },
+          {
+            "feature": "user_tenure",
+            "vimp": 0.003910807998382504
+          }
+        ]
+      },
+      "all": {
+        "dim": "all",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 0,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -2,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "hour",
+          "amount",
+          "channel",
+          "user_hist_freq"
+        ],
+        "fsds_loud": [
+          "hour",
+          "amount"
+        ],
+        "fsds_recovered": [
+          "amount"
+        ],
+        "vimp_top": [
+          "amount",
+          "n_items",
+          "hour"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0019840229308216613,
+        "mse_vimp_top": [
+          "amount",
+          "merchant_cat",
+          "merchant_gmv"
+        ],
+        "tau_fsds": 0.35355339059327373,
+        "tau_cfperm": 0.4714045207910316,
+        "tau_rfperm": 0.4714045207910316,
+        "planted": [
+          "amount"
+        ],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.019784368468266922,
+        "loc_south_mmd": -0.0030155679131458335,
+        "loc_north_mmd": 0.0015527941513665544,
+        "loc_south_cmean_x": 0.289574472666599,
+        "loc_north_cmean_x": 0.41462131569381494,
+        "loc_south_cmean_y": -0.0412252824858757,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.0029515389623696662,
+        "loc_north_po": 0.0008284464310089049,
+        "last_T": 0.11632121553027383,
+        "last_mmd": -0.000467214692582929,
+        "last_po": 0.0006806441850270892,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.0437012251444254,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.1920623780262426,
+            "mmd": -0.0006611449344978704,
+            "cmean_x": 0.24626226007953536,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.020444043871193057,
+            "p": 0.11940298507462686,
+            "hop": false,
+            "mse": 0.16880519675301026,
+            "mmd": -0.001228649352501554,
+            "cmean_x": 0.2240151702045668,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.061957277625241336,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.21031843050705853,
+            "mmd": -0.0007910960300071546,
+            "cmean_x": 0.25516888610116684,
+            "cmean_y": 0.03750000000000003,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.06017889262122347,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.20854004550304067,
+            "mmd": 0.0009268344675944507,
+            "cmean_x": 0.317184961086937,
+            "cmean_y": -0.0708333333333333,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.11656592454604822,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.2649270774278654,
+            "mmd": 0.0015131152179008733,
+            "cmean_x": 0.3561031642376076,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.11632121553027383,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.26468236841209103,
+            "mmd": -0.000467214692582929,
+            "cmean_x": 0.24303456025961187,
+            "cmean_y": -0.04583333333333334,
+            "po": 0.0006806441850270892
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "hour",
+            "score": 2.669457013574661,
+            "mmd": 0.002088511479286126,
+            "cmean_x": 0.15360706188844042,
+            "cmean_y": 0.2669457013574661,
+            "loud": true
+          },
+          {
+            "feature": "amount",
+            "score": 2.6589285714285706,
+            "mmd": -0.0038656366103468898,
+            "cmean_x": 0.025105033190699177,
+            "cmean_y": 0.2658928571428571,
+            "loud": true
+          },
+          {
+            "feature": "channel",
+            "score": 1.6274410774410775,
+            "mmd": -0.0013725135183944026,
+            "cmean_x": 0.10793468898866448,
+            "cmean_y": 0.16274410774410775,
+            "loud": false
+          },
+          {
+            "feature": "user_hist_freq",
+            "score": 1.3208848018753305,
+            "mmd": 0.0032869422625848577,
+            "cmean_x": 0.07130307295412426,
+            "cmean_y": 0.13208848018753305,
+            "loud": false
+          },
+          {
+            "feature": "merchant_gmv",
+            "score": 0.4705507603692002,
+            "mmd": 0.007058261405538002,
+            "cmean_x": 0.028761748383928226,
+            "cmean_y": 0.03486013986013986,
+            "loud": false
+          },
+          {
+            "feature": "n_items",
+            "score": 0.3683228615416697,
+            "mmd": -0.001845780721296486,
+            "cmean_x": 0.09208071538541743,
+            "cmean_y": 0.02702898550724636,
+            "loud": false
+          },
+          {
+            "feature": "user_tenure",
+            "score": 0.3166666666666662,
+            "mmd": -0.005270946920742037,
+            "cmean_x": 0.04922834643537061,
+            "cmean_y": 0.03166666666666662,
+            "loud": false
+          },
+          {
+            "feature": "merchant_cat",
+            "score": 0.25593210200728955,
+            "mmd": -0.004551941634120871,
+            "cmean_x": 0.06398302550182239,
+            "cmean_y": 0.021908763505402107,
+            "loud": false
+          },
+          {
+            "feature": "n_skus",
+            "score": 0.19112408811778245,
+            "mmd": -0.004725847558953444,
+            "cmean_x": 0.04778102202944561,
+            "cmean_y": 0.019011882426516524,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "amount",
+            "vimp": 0.0019840229308216613
+          },
+          {
+            "feature": "n_items",
+            "vimp": 0.0013329507800114437
+          },
+          {
+            "feature": "hour",
+            "vimp": 0.0012649172533575614
+          },
+          {
+            "feature": "channel",
+            "vimp": 0.0007967035104578368
+          },
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.0007904962513759096
+          },
+          {
+            "feature": "n_skus",
+            "vimp": 0.0003543182845520375
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "amount",
+            "vimp": 0.01315194100173428
+          },
+          {
+            "feature": "merchant_cat",
+            "vimp": 0.012260136312011727
+          },
+          {
+            "feature": "merchant_gmv",
+            "vimp": 0.0036889040707170917
+          },
+          {
+            "feature": "n_skus",
+            "vimp": 0.0007743666045597064
+          },
+          {
+            "feature": "user_hist_freq",
+            "vimp": -0.0006516719759722123
+          },
+          {
+            "feature": "n_items",
+            "vimp": -0.0007375088651135897
+          }
+        ]
+      }
+    }
+  },
+  "both": {
+    "meta": {
+      "kind": "both",
+      "onset_batch": 2,
+      "planted_subset": "south",
+      "planted_order_feats": [
+        "amount",
+        "channel"
+      ],
+      "planted_merchant_feats": [
+        "merchant_gmv"
+      ],
+      "n_ref": 400,
+      "n_new": 120,
+      "n_batches": 6,
+      "n_merchants": 16,
+      "n_users": 48,
+      "title": "order stream both (south after batch 2)",
+      "leakage": "Y is outcome only; subset key is region, not Y; GMV is previous-batch amount EMA (no current batch/Y/future); hist_freq is a pre-period snapshot (no current/Y/future/clock)",
+      "gmv_ema_lam": 0.25,
+      "feature_library": [
+        {
+          "feature": "amount",
+          "grain": "order",
+          "role": "\u672c\u5355\u91d1\u989d\uff08\u8fdb logit\uff09"
+        },
+        {
+          "feature": "hour",
+          "grain": "order",
+          "role": "\u4e0b\u5355\u65f6\u523b\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "n_items",
+          "grain": "order",
+          "role": "\u4ef6\u6570\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "channel",
+          "grain": "order",
+          "role": "\u672c\u5355\u6e20\u9053"
+        },
+        {
+          "feature": "merchant_cat",
+          "grain": "merchant",
+          "role": "\u5546\u6237\u7c7b\u76ee\uff08\u8fdb logit\uff0c\u4e0d\u79cd shift\uff09"
+        },
+        {
+          "feature": "merchant_gmv",
+          "grain": "merchant",
+          "role": "\u5546\u6237 GMV\uff1a\u4e0a\u4e00\u7a97\u8ba2\u5355\u91d1\u989d EMA\uff0c\u4e0d\u542b\u672c\u7a97\u3001\u4e0d\u542b Y\u3001\u4e0d\u542b\u672a\u6765"
+        },
+        {
+          "feature": "n_skus",
+          "grain": "merchant",
+          "role": "SKU \u6570\uff08\u566a\u58f0\u5217\uff09"
+        },
+        {
+          "feature": "user_tenure",
+          "grain": "user",
+          "role": "\u8fdb\u6d41\u524d tenure\uff08\u8fdb logit\uff0c\u4e0d\u79cd shift\uff09"
+        },
+        {
+          "feature": "user_hist_freq",
+          "grain": "user",
+          "role": "\u7528\u6237\u5386\u53f2\u9891\u6b21\uff1a\u8fdb\u6d41\u524d\u5feb\u7167\uff0c\u672c\u7a97\u4e0d\u66f4\u65b0\uff08\u4e0d\u542b\u672c\u5355\u3001\u4e0d\u542b Y\u3001\u4e0d\u542b\u672a\u6765\uff09"
+        }
+      ],
+      "planted_how": {
+        "amount": "both",
+        "channel": "x",
+        "merchant_gmv": "x"
+      }
+    },
+    "dims": {
+      "order": {
+        "dim": "order",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 2,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "hit",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": 0,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "amount",
+          "channel",
+          "hour",
+          "n_items"
+        ],
+        "fsds_loud": [
+          "amount",
+          "channel"
+        ],
+        "fsds_recovered": [
+          "amount",
+          "channel"
+        ],
+        "vimp_top": [
+          "amount",
+          "channel",
+          "n_items"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0032956055726363932,
+        "mse_vimp_top": [
+          "channel",
+          "hour",
+          "n_items"
+        ],
+        "tau_fsds": 0.9128709291752769,
+        "tau_cfperm": 0.9128709291752769,
+        "tau_rfperm": -0.18257418583505539,
+        "planted": [
+          "amount",
+          "channel"
+        ],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.3155695801115509,
+        "loc_south_mmd": 0.35003287361272484,
+        "loc_north_mmd": 0.001092285795960768,
+        "loc_south_cmean_x": 2.553446830419167,
+        "loc_north_cmean_x": 0.3023086494214331,
+        "loc_south_cmean_y": -0.26156426553672313,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.0015032999866983457,
+        "loc_north_po": 0.0008983207205586734,
+        "last_T": 0.15661212692243415,
+        "last_mmd": 0.09520000896787628,
+        "last_po": 0.0007823171224070294,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.027352338287369937,
+            "p": 0.05472636815920398,
+            "hop": false,
+            "mse": 0.19077702514843076,
+            "mmd": 0.0024043827637565407,
+            "cmean_x": 0.10343290907376372,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.02330445913711518,
+            "p": 0.07960199004975124,
+            "hop": false,
+            "mse": 0.186729145998176,
+            "mmd": 0.0025159464802908538,
+            "cmean_x": 0.18914104906991913,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.05012255172101404,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.21354723858207486,
+            "mmd": -0.0019775504830180646,
+            "cmean_x": 0.16850413118755417,
+            "cmean_y": 0.07083333333333336,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.0983007475920108,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.2617254344530716,
+            "mmd": 0.030969066605273432,
+            "cmean_x": 0.7535711769520206,
+            "cmean_y": -0.05416666666666664,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.10483416824504554,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.26825885510610636,
+            "mmd": 0.049816719469717996,
+            "cmean_x": 0.9531847592526402,
+            "cmean_y": -0.0708333333333333,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.15661212692243415,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.32003681378349497,
+            "mmd": 0.09520000896787628,
+            "cmean_x": 1.3614751378319379,
+            "cmean_y": -0.15416666666666662,
+            "po": 0.0007823171224070294
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "amount",
+            "score": 8.074582783851929,
+            "mmd": 0.12111874175777892,
+            "cmean_x": 1.0615559726479016,
+            "cmean_y": 0.3036363636363636,
+            "loud": true
+          },
+          {
+            "feature": "channel",
+            "score": 5.739047187793493,
+            "mmd": 0.08608570781690239,
+            "cmean_x": 0.8334503466087061,
+            "cmean_y": 0.2653109656301146,
+            "loud": true
+          },
+          {
+            "feature": "hour",
+            "score": 1.436425339366516,
+            "mmd": 0.002088511479286126,
+            "cmean_x": 0.15360706188844042,
+            "cmean_y": 0.1436425339366516,
+            "loud": false
+          },
+          {
+            "feature": "n_items",
+            "score": 1.1313299232736576,
+            "mmd": -0.001845780721296486,
+            "cmean_x": 0.09208071538541743,
+            "cmean_y": 0.11313299232736576,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "amount",
+            "vimp": 0.0032956055726363932
+          },
+          {
+            "feature": "channel",
+            "vimp": 0.0016766636881530225
+          },
+          {
+            "feature": "n_items",
+            "vimp": 0.0009786554846601247
+          },
+          {
+            "feature": "hour",
+            "vimp": 0.0009020275806781268
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "channel",
+            "vimp": 0.009763809131324741
+          },
+          {
+            "feature": "hour",
+            "vimp": 0.0024398827007221513
+          },
+          {
+            "feature": "n_items",
+            "vimp": -0.002380408966842884
+          },
+          {
+            "feature": "amount",
+            "vimp": -0.018123955099675848
+          }
+        ]
+      },
+      "merchant": {
+        "dim": "merchant",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 1,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -1,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "merchant_gmv",
+          "merchant_cat",
+          "n_skus"
+        ],
+        "fsds_loud": [
+          "merchant_gmv"
+        ],
+        "fsds_recovered": [
+          "merchant_gmv"
+        ],
+        "vimp_top": [
+          "merchant_gmv",
+          "merchant_cat",
+          "n_skus"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.000747295825922669,
+        "mse_vimp_top": [
+          "merchant_gmv",
+          "merchant_cat",
+          "n_skus"
+        ],
+        "tau_fsds": 0.816496580927726,
+        "tau_cfperm": 0.816496580927726,
+        "tau_rfperm": 0.816496580927726,
+        "planted": [
+          "merchant_gmv"
+        ],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.4555014314843373,
+        "loc_south_mmd": 0.4645754908531333,
+        "loc_north_mmd": 0.003328406924512972,
+        "loc_south_cmean_x": 1.4500215971571218,
+        "loc_north_cmean_x": 0.21205381397506723,
+        "loc_south_cmean_y": -0.26156426553672313,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 7.899149674546018e-06,
+        "loc_north_po": 0.00014128490975873673,
+        "last_T": -0.016455528279465115,
+        "last_mmd": 0.12070148780689005,
+        "last_po": 2.2873166809988724e-05,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.01361182697294322,
+            "p": 0.1791044776119403,
+            "hop": false,
+            "mse": 0.21292414151969735,
+            "mmd": -0.0008888542937843802,
+            "cmean_x": 0.05930713546837176,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.029407214783149394,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.22871952932990353,
+            "mmd": 0.005476702229458619,
+            "cmean_x": 0.10450566162893965,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.04853769095598895,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.24785000550274308,
+            "mmd": 0.010865703278707839,
+            "cmean_x": 0.19709937614802395,
+            "cmean_y": 0.07083333333333336,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.0175630192712177,
+            "p": 0.1044776119402985,
+            "hop": false,
+            "mse": 0.21687533381797183,
+            "mmd": 0.004418878653031477,
+            "cmean_x": 0.09544107071487848,
+            "cmean_y": -0.05416666666666664,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.040448024414133504,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.23976033896088764,
+            "mmd": 0.09913613697899926,
+            "cmean_x": 0.6410867091831164,
+            "cmean_y": -0.0708333333333333,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": -0.016455528279465115,
+            "p": 0.8905472636815921,
+            "hop": false,
+            "mse": 0.18285678626728902,
+            "mmd": 0.12070148780689005,
+            "cmean_x": 0.756952798204555,
+            "cmean_y": -0.15416666666666662,
+            "po": 2.2873166809988724e-05
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "merchant_gmv",
+            "score": 11.598396951837827,
+            "mmd": 0.1739759542775674,
+            "cmean_x": 0.752728825734182,
+            "cmean_y": 0.06251633986928107,
+            "loud": true
+          },
+          {
+            "feature": "merchant_cat",
+            "score": 0.25593210200728955,
+            "mmd": -0.004551941634120871,
+            "cmean_x": 0.06398302550182239,
+            "cmean_y": 0.005242096838735472,
+            "loud": false
+          },
+          {
+            "feature": "n_skus",
+            "score": 0.19112408811778245,
+            "mmd": -0.004725847558953444,
+            "cmean_x": 0.04778102202944561,
+            "cmean_y": 0.002345215759849917,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "merchant_gmv",
+            "vimp": 0.000747295825922669
+          },
+          {
+            "feature": "merchant_cat",
+            "vimp": 0.0006810277001981432
+          },
+          {
+            "feature": "n_skus",
+            "vimp": 0.00028645746107173846
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "merchant_gmv",
+            "vimp": 0.015729566856259175
+          },
+          {
+            "feature": "merchant_cat",
+            "vimp": 0.0009224854956664807
+          },
+          {
+            "feature": "n_skus",
+            "vimp": -0.0012764444611109982
+          }
+        ]
+      },
+      "user": {
+        "dim": "user",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 0,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -2,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "user_tenure",
+          "user_hist_freq"
+        ],
+        "fsds_loud": [],
+        "fsds_recovered": [],
+        "vimp_top": [
+          "user_tenure",
+          "user_hist_freq"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0019449918736572647,
+        "mse_vimp_top": [
+          "user_hist_freq",
+          "user_tenure"
+        ],
+        "tau_fsds": null,
+        "tau_cfperm": null,
+        "tau_rfperm": null,
+        "planted": [],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": -0.0030379396610843434,
+        "loc_south_mmd": -0.001332821314277699,
+        "loc_north_mmd": -0.0007376384840480643,
+        "loc_south_cmean_x": 0.06589126612008007,
+        "loc_north_cmean_x": 0.18855634672767396,
+        "loc_south_cmean_y": -0.26156426553672313,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.0018321244115709228,
+        "loc_north_po": 0.00048609238083973863,
+        "last_T": -0.0005410058566514275,
+        "last_mmd": 0.0006270420853428105,
+        "last_po": 0.0007828211032220719,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.030840242143648472,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.2542233390765752,
+            "mmd": 0.007740380939039615,
+            "cmean_x": 0.21547481927723122,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.01661006679611038,
+            "p": 0.10945273631840796,
+            "hop": false,
+            "mse": 0.2399931637290371,
+            "mmd": -0.0011377125237125307,
+            "cmean_x": 0.05905105186200366,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.04318200376535283,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.26656510069827954,
+            "mmd": -0.0029107476740972693,
+            "cmean_x": 0.13453460919050145,
+            "cmean_y": 0.07083333333333336,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.015887789960494197,
+            "p": 0.11940298507462686,
+            "hop": false,
+            "mse": 0.2392708868934209,
+            "mmd": 0.004591153091130007,
+            "cmean_x": 0.05333933664475051,
+            "cmean_y": -0.05416666666666664,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.020866654333261042,
+            "p": 0.04477611940298507,
+            "hop": false,
+            "mse": 0.24424975126618775,
+            "mmd": 0.0006854560745704896,
+            "cmean_x": 0.13453368098211782,
+            "cmean_y": -0.0708333333333333,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": -0.0005410058566514275,
+            "p": 0.5024875621890548,
+            "hop": false,
+            "mse": 0.22284209107627528,
+            "mmd": 0.0006270420853428105,
+            "cmean_x": 0.08664616728662632,
+            "cmean_y": -0.15416666666666662,
+            "po": 0.0007828211032220719
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "user_tenure",
+            "score": 1.15,
+            "mmd": -0.005270946920742037,
+            "cmean_x": 0.04922834643537061,
+            "cmean_y": 0.11499999999999999,
+            "loud": false
+          },
+          {
+            "feature": "user_hist_freq",
+            "score": 1.0817301856350632,
+            "mmd": 0.0032869422625848577,
+            "cmean_x": 0.07130307295412426,
+            "cmean_y": 0.10817301856350633,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "user_tenure",
+            "vimp": 0.0019449918736572647
+          },
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.001846982064813693
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.0058697373676259434
+          },
+          {
+            "feature": "user_tenure",
+            "vimp": 0.0024104205501882248
+          }
+        ]
+      },
+      "all": {
+        "dim": "all",
+        "onset_true": 2,
+        "onset_hat": null,
+        "onset_rank": 0,
+        "addis_t": 2,
+        "saffron_t": 2,
+        "n_hop": 0,
+        "hop_status": "miss",
+        "rank_status": "FAR",
+        "addis_status": "hit",
+        "saffron_status": "hit",
+        "hop_delay": null,
+        "rank_delay": -2,
+        "addis_delay": 0,
+        "saffron_delay": 0,
+        "fsds_top": [
+          "merchant_gmv",
+          "amount",
+          "channel",
+          "hour"
+        ],
+        "fsds_loud": [
+          "merchant_gmv",
+          "amount",
+          "channel"
+        ],
+        "fsds_recovered": [
+          "merchant_gmv",
+          "amount",
+          "channel"
+        ],
+        "vimp_top": [
+          "user_hist_freq",
+          "channel",
+          "n_items"
+        ],
+        "vimp_reject": false,
+        "vimp_max": 0.0007774060241604267,
+        "mse_vimp_top": [
+          "merchant_gmv",
+          "merchant_cat",
+          "hour"
+        ],
+        "tau_fsds": 0.6910233190806425,
+        "tau_cfperm": -0.036369648372665396,
+        "tau_rfperm": -0.1091089451179962,
+        "planted": [
+          "amount",
+          "channel",
+          "merchant_gmv"
+        ],
+        "y_in_X": false,
+        "loc_n_south": 59,
+        "loc_pair_mmd": 0.2910898392669007,
+        "loc_south_mmd": 0.3226905124660856,
+        "loc_north_mmd": 0.0015527941513665544,
+        "loc_south_cmean_x": 2.937174664018245,
+        "loc_north_cmean_x": 0.41462131569381494,
+        "loc_south_cmean_y": -0.26156426553672313,
+        "loc_north_cmean_y": -0.048865069356872626,
+        "loc_south_po": 0.00013872246247098355,
+        "loc_north_po": 0.0008284464310089049,
+        "last_T": 0.1339550480228727,
+        "last_mmd": 0.08654527965438708,
+        "last_po": 0.00017890457262379584,
+        "rows": [
+          {
+            "t": 0,
+            "onset": false,
+            "T": 0.0437012251444254,
+            "p": 0.009950248756218905,
+            "hop": false,
+            "mse": 0.1920623780262426,
+            "mmd": -0.0006611449344978704,
+            "cmean_x": 0.24626226007953536,
+            "cmean_y": -0.03749999999999998,
+            "po": null
+          },
+          {
+            "t": 1,
+            "onset": false,
+            "T": 0.020444043871193057,
+            "p": 0.11940298507462686,
+            "hop": false,
+            "mse": 0.16880519675301026,
+            "mmd": -0.001228649352501554,
+            "cmean_x": 0.2240151702045668,
+            "cmean_y": 0.02083333333333337,
+            "po": null
+          },
+          {
+            "t": 2,
+            "onset": true,
+            "T": 0.055657996774673174,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.20401914965649037,
+            "mmd": 0.00022163378990758265,
+            "cmean_x": 0.2921324483436471,
+            "cmean_y": 0.07083333333333336,
+            "po": null
+          },
+          {
+            "t": 3,
+            "onset": true,
+            "T": 0.07983167565667615,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.22819282853849335,
+            "mmd": 0.019630834945928544,
+            "cmean_x": 0.7614614905205371,
+            "cmean_y": -0.05416666666666664,
+            "po": null
+          },
+          {
+            "t": 4,
+            "onset": true,
+            "T": 0.1199315504798604,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.2682927033616776,
+            "mmd": 0.04815167318214997,
+            "cmean_x": 1.1565693516955002,
+            "cmean_y": -0.0708333333333333,
+            "po": null
+          },
+          {
+            "t": 5,
+            "onset": true,
+            "T": 0.1339550480228727,
+            "p": 0.004975124378109453,
+            "hop": false,
+            "mse": 0.2823162009046899,
+            "mmd": 0.08654527965438708,
+            "cmean_x": 1.5601601353545929,
+            "cmean_y": -0.15416666666666662,
+            "po": 0.00017890457262379584
+          }
+        ],
+        "fsds": [
+          {
+            "feature": "merchant_gmv",
+            "score": 11.598396951837827,
+            "mmd": 0.1739759542775674,
+            "cmean_x": 0.752728825734182,
+            "cmean_y": 0.06251633986928107,
+            "loud": true
+          },
+          {
+            "feature": "amount",
+            "score": 8.074582783851929,
+            "mmd": 0.12111874175777892,
+            "cmean_x": 1.0615559726479016,
+            "cmean_y": 0.3036363636363636,
+            "loud": true
+          },
+          {
+            "feature": "channel",
+            "score": 5.739047187793493,
+            "mmd": 0.08608570781690239,
+            "cmean_x": 0.8334503466087061,
+            "cmean_y": 0.2653109656301146,
+            "loud": true
+          },
+          {
+            "feature": "hour",
+            "score": 1.436425339366516,
+            "mmd": 0.002088511479286126,
+            "cmean_x": 0.15360706188844042,
+            "cmean_y": 0.1436425339366516,
+            "loud": false
+          },
+          {
+            "feature": "user_tenure",
+            "score": 1.15,
+            "mmd": -0.005270946920742037,
+            "cmean_x": 0.04922834643537061,
+            "cmean_y": 0.11499999999999999,
+            "loud": false
+          },
+          {
+            "feature": "n_items",
+            "score": 1.1313299232736576,
+            "mmd": -0.001845780721296486,
+            "cmean_x": 0.09208071538541743,
+            "cmean_y": 0.11313299232736576,
+            "loud": false
+          },
+          {
+            "feature": "user_hist_freq",
+            "score": 1.0817301856350632,
+            "mmd": 0.0032869422625848577,
+            "cmean_x": 0.07130307295412426,
+            "cmean_y": 0.10817301856350633,
+            "loud": false
+          },
+          {
+            "feature": "merchant_cat",
+            "score": 0.25593210200728955,
+            "mmd": -0.004551941634120871,
+            "cmean_x": 0.06398302550182239,
+            "cmean_y": 0.005242096838735472,
+            "loud": false
+          },
+          {
+            "feature": "n_skus",
+            "score": 0.19112408811778245,
+            "mmd": -0.004725847558953444,
+            "cmean_x": 0.04778102202944561,
+            "cmean_y": 0.002345215759849917,
+            "loud": false
+          }
+        ],
+        "vimp_rank": [
+          {
+            "feature": "user_hist_freq",
+            "vimp": 0.0007774060241604267
+          },
+          {
+            "feature": "channel",
+            "vimp": 0.0007001306909354861
+          },
+          {
+            "feature": "n_items",
+            "vimp": 0.0005974375321169297
+          },
+          {
+            "feature": "n_skus",
+            "vimp": 0.0005856015226224608
+          },
+          {
+            "feature": "amount",
+            "vimp": 0.0004106380205210862
+          },
+          {
+            "feature": "hour",
+            "vimp": 0.00028706926864031056
+          }
+        ],
+        "mse_vimp_rank": [
+          {
+            "feature": "merchant_gmv",
+            "vimp": 0.0313033317726229
+          },
+          {
+            "feature": "merchant_cat",
+            "vimp": 0.01731934792373835
+          },
+          {
+            "feature": "hour",
+            "vimp": -0.00024487010336282644
+          },
+          {
+            "feature": "user_hist_freq",
+            "vimp": -0.0012012942630535983
+          },
+          {
+            "feature": "n_skus",
+            "vimp": -0.001318220750763155
+          },
+          {
+            "feature": "channel",
+            "vimp": -0.0013216998504193
+          }
+        ]
+      }
+    }
+  }
+}

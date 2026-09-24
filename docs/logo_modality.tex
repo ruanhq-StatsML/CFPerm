@@ -1,0 +1,44 @@
+% Talk/handover note: LOGO modality shares as localization, not unique decomp.
+% Compile: pdflatex docs/logo_modality.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\title{LOGO modality localization: next-batch plan}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\paragraph{Claim.}
+Shares from leave-one-group-out are localization proxies.
+They are not a unique split of the serving drop into concept vs covariate,
+and $T$ is a batch label, not a treatment.
+
+\paragraph{Two ratio layers.}
+For each modality $g$,
+$\Delta M_g = M(\mathrm{full})-M(-g)$ on serving loss (MSE/Brier),
+PO-risk, and $\mathrm{MMD}^2(X_{\mathrm{new}},X_{\mathrm{ref}})$.
+Layer 1: $\pi^{\mathrm{loss}}_g \propto \mathrm{ReLU}(\Delta L_g)$.
+Layer 2: $\pi^{\mathrm{PO}}_g$ and $\pi^{\mathrm{MMD}}_g$, then
+$\mathrm{mix}^{\mathrm{PO}}_g = \pi^{\mathrm{PO}}_g/(\pi^{\mathrm{PO}}_g+\pi^{\mathrm{MMD}}_g)$.
+Read layer 2 to pick a tower; use layer 1 only as confirmation when serving actually breaks.
+
+\paragraph{Next batch.}
+Global PO$\times$MSE$\times$MMD is unchanged
+(keep / watch / freeze / $X$-shift / tricky).
+Inside a cell: keep $\to$ full train;
+watch/tricky $\to$ infer only;
+$X$-shift $+$ MMD-loud $\to$ \texttt{train\_stem};
+both-broken $+$ PO-loud $\to$ \texttt{train\_top} on that tower, freeze quiet towers.
+A full-batch keep can still hide a hot subset: run subset excess first, then LOGO on that slice.
+
+\paragraph{Towers.}
+ViT / audio encoder / text Transformer each have their own layer groups.
+\texttt{apply\_train\_top\_i} freezes the bottom (concept).
+\texttt{apply\_train\_stem} trains only the bottom group (covariate).
+Fusion head trains only when the global cell is freeze.
+
+\end{document}

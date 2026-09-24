@@ -1,0 +1,57 @@
+% Compile: pdflatex docs/online_rfperm_llm_far.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{microtype}
+\title{onlinePermOOB with LLM routing}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\paragraph{Setup.}
+\texttt{onlinePermOOB\_with\_LLM(df, \ldots)}. Last column of \texttt{df} is $Y$, never a feature.
+high-VIMP columns go to a frozen RF, low-VIMP columns go to a TabPFN-style $k$NN.
+Fit once on the reference window. Trail batches score $T_t=\mathrm{MSE}_t-E_{\mathrm{ref}}$.
+ADDIS is the primary mark.
+
+\begin{table}[ht]
+\centering
+\caption{False-alarm rate, no labeled onset. high-VIMP RF + low-VIMP TabPFN-style $k$NN. Share of 12 replications with at least one rejection over 40 batches. ADDIS is the primary OnlineRFPerm mark.}
+\label{tab:far}
+\begin{tabular}{lcc}
+\toprule
+method & stationary FAR (\%) & random-noise FAR (\%) \\
+\midrule
+OnlineRFPerm + ADDIS & 0.0 & 0.0 \\
+OnlineRFPerm + SAFFRON & 0.0 & 0.0 \\
+OnlineRFPerm + fix-$\alpha$ & 41.7 & 33.3 \\
+last-two hop ($1.5\times$) & 100.0 & 100.0 \\
+Page--Hinkley & 58.3 & 66.7 \\
+EWMA & 0.0 & 8.3 \\
+CUSUM & 75.0 & 41.7 \\
+DDM & 8.3 & 16.7 \\
+ADWIN-lite & 0.0 & 25.0 \\
+betting martingale & 0.0 & 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{onlinePermOOB\_with\_LLM on the tables we have. Last column is $Y$. high-VIMP RF + low-VIMP TabPFN-style $k$NN. Entries are first rejection batch ($-1$ = none).}
+\label{tab:data}
+\begin{tabular}{lrrrrrr}
+\toprule
+table & $n$ & $p$ & ADDIS & SAFFRON & PH & ADWIN \\
+\midrule
+eeg & 4000 & 14 & -1 & -1 & 17 & 17 \\
+electricity & 4000 & 7 & -1 & -1 & 13 & -1 \\
+bankmarketing & 4000 & 16 & -1 & -1 & 17 & -1 \\
+covertype & 4000 & 54 & -1 & -1 & 12 & 18 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
