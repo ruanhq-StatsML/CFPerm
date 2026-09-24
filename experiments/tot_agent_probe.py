@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round6.json"
+OUT = Path(__file__).resolve().parent / "results_round7.json"
 # Weight on the spurious cue after drift. Below 1 so the calibrated score remains
 # in the judge and post-drift success is mixed rather than identically zero.
 # Overwritten per task in main. Weight on the spurious cue after the drift point.
@@ -125,6 +125,16 @@ class Gate:
         self.trial = trial
         self.reverted = False
         self.kept = False
+        self.ref_heur: list[float] = []
+
+    def fallback_wins(self, t: int) -> bool:
+        """Reference heuristic loss versus the judge's recent loss. No post-drift trial."""
+        if len(self.ref_heur) < self.burnin or t < self.burnin:
+            return False
+        recent = self.losses[max(self.burnin, t - 8) : t]
+        if len(recent) < 4:
+            return False
+        return float(np.mean(self.ref_heur)) + 1e-9 < float(np.mean(recent))
 
     def observe(self, t: int, loss: float) -> None:
         self.losses.append(loss)
@@ -137,7 +147,8 @@ class Gate:
             if self.streak >= self.k:
                 self.switch_at = t + 1
         if (
-            self.switch_at is not None
+            self.trial > 0
+            and self.switch_at is not None
             and not self.reverted
             and not self.kept
             and len(self.losses) >= self.switch_at + self.trial
@@ -158,8 +169,11 @@ class Gate:
             return True
         if policy == "gated" and self.switch_at is not None and t >= self.switch_at:
             return True
-        if policy == "confirm" and self.switch_at is not None and t >= self.switch_at and not self.reverted:
-            return True
+        if policy == "confirm":
+            ok = self.fallback_wins(t)
+            if ok and self.switch_at is None:
+                self.switch_at = t
+            return ok
         return False
 
 
@@ -291,8 +305,15 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
         steer = solv if policy == "oracle" else (stable if use_stable else judge)
         return StepView(steer, judge, stable, spurious, solv)
 
-    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
+    gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
     for t, puzzle in enumerate(puzzles):
+        if policy == "confirm" and t < gate.burnin:
+            held, _, _ = beam_search(
+                puzzle, _g24_children,
+                lambda state, t=t: make_score(t, state, True),
+                beam=beam, depth=3, rng=random.Random(10_000 + t),
+            )
+            gate.ref_heur.append(0.0 if held is not None else 1.0)
         use_stable = gate.use_stable(t, policy)
 
         final, chosen, _ = beam_search(
@@ -435,7 +456,7 @@ def bw_spurious(state) -> float:
 
 def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
     successes, losses, feats = [], [], []
-    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
+    gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
 
     def expand(state):
         out = []
@@ -443,20 +464,29 @@ def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
             out.append((nxt, bw_success(nxt)))
         return out
 
+    def score_at(state, t, use_stable):
+        d = dist_map.get(state, 8)
+        progress = 1.0 - d / 8
+        stable = bw_stable(state)
+        spurious = bw_spurious(state)
+        calibrated = 0.8 * progress + 0.2 * stable
+        judge = drifted_judge(calibrated, spurious, t, drift_at)
+        steer = progress if policy == "oracle" else (stable if use_stable else judge)
+        return StepView(steer, judge, stable, spurious, progress)
+
     for t, start in enumerate(starts):
+        if policy == "confirm" and t < gate.burnin:
+            held, _, _ = beam_search(
+                start, expand,
+                lambda state, t=t: score_at(state, t, True),
+                beam=beam, depth=4, rng=random.Random(10_000 + t),
+            )
+            gate.ref_heur.append(0.0 if held is not None else 1.0)
         use_stable = gate.use_stable(t, policy)
-
-        def score_fn(state, t=t, use_stable=use_stable):
-            d = dist_map.get(state, 8)
-            progress = 1.0 - d / 8
-            stable = bw_stable(state)
-            spurious = bw_spurious(state)
-            calibrated = 0.8 * progress + 0.2 * stable
-            judge = drifted_judge(calibrated, spurious, t, drift_at)
-            steer = progress if policy == "oracle" else (stable if use_stable else judge)
-            return StepView(steer, judge, stable, spurious, progress)
-
-        final, chosen, _ = beam_search(start, expand, score_fn, beam=beam, depth=4, rng=rng)
+        final, chosen, _ = beam_search(
+            start, expand, lambda state, t=t, use_stable=use_stable: score_at(state, t, use_stable),
+            beam=beam, depth=4, rng=rng,
+        )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
         successes.append(y)
@@ -588,25 +618,33 @@ def dk_spurious(state) -> float:
 def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
     start = (1, 1, 0, 0, 0)
     successes, losses, feats = [], [], []
-    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
+    gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
 
     def expand(state):
         return dk_neighbors(state)
 
+    def score_at(state, t, use_stable):
+        d = dist_map.get(state, 30)
+        progress = max(0.0, 1.0 - d / 20)
+        stable = dk_stable(state)
+        spurious = dk_spurious(state)
+        calibrated = 0.85 * progress + 0.15 * stable
+        judge = drifted_judge(calibrated, spurious, t, drift_at)
+        steer = progress if policy == "oracle" else (stable if use_stable else judge)
+        return StepView(steer, judge, stable, spurious, progress)
+
     for t in range(n):
+        if policy == "confirm" and t < gate.burnin:
+            held, _, _ = beam_search(
+                start, expand, lambda state, t=t: score_at(state, t, True),
+                beam=beam, depth=12, rng=random.Random(11_000 + t),
+            )
+            gate.ref_heur.append(0.0 if held is not None else 1.0)
         use_stable = gate.use_stable(t, policy)
-
-        def score_fn(state, t=t, use_stable=use_stable):
-            d = dist_map.get(state, 30)
-            progress = max(0.0, 1.0 - d / 20)
-            stable = dk_stable(state)
-            spurious = dk_spurious(state)
-            calibrated = 0.85 * progress + 0.15 * stable
-            judge = drifted_judge(calibrated, spurious, t, drift_at)
-            steer = progress if policy == "oracle" else (stable if use_stable else judge)
-            return StepView(steer, judge, stable, spurious, progress)
-
-        final, chosen, _ = beam_search(start, expand, score_fn, beam=beam, depth=12, rng=rng)
+        final, chosen, _ = beam_search(
+            start, expand, lambda state, t=t, use_stable=use_stable: score_at(state, t, use_stable),
+            beam=beam, depth=12, rng=rng,
+        )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
         successes.append(y)
@@ -687,7 +725,7 @@ def hop_overlap(question: str, pid: int) -> float:
 def run_hotpot(n, drift_at, policy, beam, rng):
     bank = hop_questions()
     successes, losses, feats = [], [], []
-    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
+    gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
 
     for t in range(n):
         question, gold = bank[t % len(bank)]
@@ -709,9 +747,7 @@ def run_hotpot(n, drift_at, policy, beam, rng):
                 out.append((nxt, done_fn(nxt)))
             return out
 
-        use_stable = gate.use_stable(t, policy)
-
-        def score_fn(picked, t=t, use_stable=use_stable):
+        def score_at(picked, t, use_stable):
             if not picked:
                 progress = 0.0
                 stable = 0.0
@@ -725,8 +761,17 @@ def run_hotpot(n, drift_at, policy, beam, rng):
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
+        if policy == "confirm" and t < gate.burnin:
+            held, _, _ = beam_search(
+                frozenset(), expand, lambda picked, t=t: score_at(picked, t, True),
+                beam=beam, depth=2, rng=random.Random(12_000 + t),
+            )
+            gate.ref_heur.append(0.0 if held is not None else 1.0)
+        use_stable = gate.use_stable(t, policy)
         final, chosen, _ = beam_search(
-            frozenset(), expand, score_fn, beam=beam, depth=2, rng=rng
+            frozenset(), expand,
+            lambda picked, t=t, use_stable=use_stable: score_at(picked, t, use_stable),
+            beam=beam, depth=2, rng=rng,
         )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
@@ -775,7 +820,7 @@ def webshop_catalog(rng: random.Random):
 
 def run_webshop(n, drift_at, policy, beam, rng):
     successes, losses, feats = [], [], []
-    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
+    gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
     catalog = webshop_catalog(rng)
 
     for t in range(n):
@@ -798,18 +843,11 @@ def run_webshop(n, drift_at, policy, beam, rng):
                 out.append((i, match_count(item) == 3))
             return out
 
-        use_stable = gate.use_stable(t, policy)
-
-        def score_fn(state, t=t, use_stable=use_stable):
+        def score_at(state, t, use_stable):
             if state is None:
                 return StepView(0.0, 0.0, 0.0, 0.0, 0.0)
             item = catalog[state]
             progress = match_count(item) / 3
-            # stable: lexical overlap of query words with item fields
-            stable = progress  # the attribute overlap IS the stationary heuristic
-            # but we must not hand the gated policy the oracle. Attribute overlap
-            # is what a keyword matcher has; it equals progress here by construction.
-            # Add a weaker stable cue: color match only, which a bag-of-words spotter gets.
             stable = 1.0 if item["color"] == want["color"] else 0.0
             spurious = item["reviews"] / 100
             calibrated = 0.8 * progress + 0.2 * stable
@@ -817,8 +855,17 @@ def run_webshop(n, drift_at, policy, beam, rng):
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
+        if policy == "confirm" and t < gate.burnin:
+            held, _, _ = beam_search(
+                None, expand, lambda state, t=t: score_at(state, t, True),
+                beam=max(beam, 3), depth=1, rng=random.Random(13_000 + t),
+            )
+            gate.ref_heur.append(0.0 if held is not None else 1.0)
+        use_stable = gate.use_stable(t, policy)
         final, chosen, _ = beam_search(
-            None, expand, score_fn, beam=max(beam, 3), depth=1, rng=rng
+            None, expand,
+            lambda state, t=t, use_stable=use_stable: score_at(state, t, use_stable),
+            beam=max(beam, 3), depth=1, rng=rng,
         )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
