@@ -1,0 +1,112 @@
+{
+  "ok": true,
+  "k": 8,
+  "n_prompts_fit": 2500,
+  "n_steps_stuck": 200,
+  "n_paths_with_theme": 200,
+  "cluster_counts": [
+    3,
+    1,
+    190,
+    2,
+    1,
+    1,
+    1,
+    1
+  ],
+  "top_terms": [
+    [
+      "version",
+      "promotional",
+      "steampunk",
+      "studio lighting",
+      "studio",
+      "photo"
+    ],
+    [
+      "body",
+      "perfect body",
+      "implants",
+      "biopunk",
+      "marble",
+      "shapes"
+    ],
+    [
+      "art",
+      "detailed",
+      "painting",
+      "artstation",
+      "portrait",
+      "highly"
+    ],
+    [
+      "anthropomorphic",
+      "james",
+      "humanoid",
+      "feathers",
+      "fate",
+      "fat"
+    ],
+    [
+      "hr giger",
+      "hr",
+      "artstation illustration",
+      "haired",
+      "illustration concept",
+      "sexy"
+    ],
+    [
+      "kirby",
+      "cute",
+      "featured artstation",
+      "featured",
+      "feathers",
+      "fate"
+    ],
+    [
+      "view",
+      "desolate",
+      "mech",
+      "battlefield",
+      "gloomy",
+      "science fiction"
+    ],
+    [
+      "face",
+      "intricate beautiful",
+      "glitter",
+      "raphaelite",
+      "pierre",
+      "8k high"
+    ]
+  ],
+  "silhouette_ref": -0.03466411698221388,
+  "example": {
+    "step": 0,
+    "action": "idle",
+    "model": "hgb",
+    "residual": -0.4889690638420449,
+    "surprise": 1.760667296993123,
+    "decision_path": [
+      "observe",
+      "theme:2",
+      "forecast:hgb",
+      "decide:idle",
+      "log"
+    ],
+    "theme_cluster": 2,
+    "theme_tag": "theme:2",
+    "theme_terms": [
+      "art",
+      "detailed",
+      "painting",
+      "artstation",
+      "portrait",
+      "highly"
+    ],
+    "theme_text_head": "giant flower head, frontal, woman standing on mountain, surreal photography, mis"
+  },
+  "headline": "FW-theme: stuck theme:* on 200/200 decision_paths; k=8, silhouette\u2248-0.03466411698221388",
+  "opportunity": "FW-theme",
+  "note": "context sticker only \u2014 not a forecast claim"
+}

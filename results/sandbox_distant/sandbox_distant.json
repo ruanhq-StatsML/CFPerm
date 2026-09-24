@@ -1,0 +1,542 @@
+{
+  "forecast": {
+    "n_packs": 3,
+    "best_counts": {
+      "hgb": 1,
+      "naive_last": 1,
+      "ridge": 1
+    },
+    "mean_hgb_rmse_lift_vs_naive": 0.16083352137950715,
+    "cards": [
+      {
+        "dataset": "metro_interstate",
+        "ok": true,
+        "n_train": 3496,
+        "n_test": 1499,
+        "n_lags": 5,
+        "d_feat": 24,
+        "models": {
+          "naive_last": {
+            "mae": 576.4176117411607,
+            "rmse": 912.4396747767701,
+            "r2": 0.7942980852940899,
+            "n_test": 1499.0
+          },
+          "ridge": {
+            "mae": 542.4688585029176,
+            "rmse": 791.2099705337466,
+            "r2": 0.8453273540428187,
+            "n_test": 1499.0
+          },
+          "hgb": {
+            "mae": 330.2223227401803,
+            "rmse": 559.4868987317451,
+            "r2": 0.9226589872490145,
+            "n_test": 1499.0
+          }
+        },
+        "rmse_lift_vs_naive": {
+          "naive_last": 0.0,
+          "ridge": 0.13286325397093512,
+          "hgb": 0.38682313560222537
+        },
+        "best_rmse": "hgb",
+        "note": "chronological 70/30; classical regression only \u2014 not PO/excess"
+      },
+      {
+        "dataset": "beijing_pm25",
+        "ok": true,
+        "n_train": 3496,
+        "n_test": 1499,
+        "n_lags": 5,
+        "d_feat": 18,
+        "models": {
+          "naive_last": {
+            "mae": 13.89859906604403,
+            "rmse": 21.210656000038473,
+            "r2": 0.8974599939101007,
+            "n_test": 1499.0
+          },
+          "ridge": {
+            "mae": 14.755913207965818,
+            "rmse": 21.382906326448683,
+            "r2": 0.895787790305091,
+            "n_test": 1499.0
+          },
+          "hgb": {
+            "mae": 16.09936354725449,
+            "rmse": 22.815433306414878,
+            "r2": 0.881356874169161,
+            "n_test": 1499.0
+          }
+        },
+        "rmse_lift_vs_naive": {
+          "naive_last": 0.0,
+          "ridge": -0.008120933478431791,
+          "hgb": -0.07565901339277281
+        },
+        "best_rmse": "naive_last",
+        "note": "chronological 70/30; classical regression only \u2014 not PO/excess"
+      },
+      {
+        "dataset": "waymo_proxy",
+        "ok": true,
+        "n_train": 3496,
+        "n_test": 1499,
+        "n_lags": 5,
+        "d_feat": 14,
+        "models": {
+          "naive_last": {
+            "mae": 0.2013549442828737,
+            "rmse": 0.2513537526274388,
+            "r2": -0.4519460012302938,
+            "n_test": 1499.0
+          },
+          "ridge": {
+            "mae": 0.09988771035761927,
+            "rmse": 0.12507912967384968,
+            "r2": 0.6404581743132604,
+            "n_test": 1499.0
+          },
+          "hgb": {
+            "mae": 0.16806403421852129,
+            "rmse": 0.20828769498673408,
+            "r2": 0.002972939379597639,
+            "n_test": 1499.0
+          }
+        },
+        "rmse_lift_vs_naive": {
+          "naive_last": 0.0,
+          "ridge": 0.5023781090738506,
+          "hgb": 0.17133644192906894
+        },
+        "best_rmse": "ridge",
+        "note": "chronological 70/30; classical regression only \u2014 not PO/excess"
+      }
+    ],
+    "scenario": "next-step stream forecast bakeoff",
+    "method": "naive_last / ridge / HGB \u2014 time split MAE\u00b7RMSE\u00b7R\u00b2",
+    "distance_from_agod": "no excess_auc, no IPTW, no soft_burn, no claim_router, no ToT"
+  },
+  "themes": {
+    "ok": true,
+    "n_prompts": 4000,
+    "runs": [
+      {
+        "ok": true,
+        "n_docs": 4000,
+        "k": 6,
+        "silhouette_cosine": -0.006990779549322563,
+        "cluster_sizes": [
+          1,
+          1,
+          3992,
+          1,
+          1,
+          4
+        ],
+        "top_terms": [
+          [
+            "zombie",
+            "apocalypse",
+            "detailed",
+            "fi",
+            "festival",
+            "fi surreal",
+            "ferri",
+            "fernandez rios"
+          ],
+          [
+            "bus",
+            "detailed symmetrical",
+            "eddie mendoza",
+            "eddie",
+            "mendoza",
+            "coherent",
+            "perfect",
+            "symmetrical"
+          ],
+          [
+            "art",
+            "detailed",
+            "painting",
+            "artstation",
+            "portrait",
+            "highly",
+            "highly detailed",
+            "photo"
+          ],
+          [
+            "winning photograph",
+            "walter white",
+            "pizza",
+            "walter",
+            "figurine",
+            "splash",
+            "photograph",
+            "award winning"
+          ],
+          [
+            "symbols",
+            "acid",
+            "art 8k",
+            "background digital",
+            "delicate",
+            "demon",
+            "details",
+            "8k"
+          ],
+          [
+            "spider man",
+            "spider",
+            "drawing",
+            "man",
+            "hyperdetailed realistic",
+            "garfield",
+            "andrew",
+            "hybrid"
+          ]
+        ],
+        "inertia": 3884.608940373866,
+        "note": "TF-IDF MiniBatchKMeans \u2014 unsupervised themes, not FSDS/PO"
+      },
+      {
+        "ok": true,
+        "n_docs": 4000,
+        "k": 8,
+        "silhouette_cosine": 0.01055068490800719,
+        "cluster_sizes": [
+          433,
+          295,
+          255,
+          447,
+          259,
+          1979,
+          268,
+          64
+        ],
+        "top_terms": [
+          [
+            "lighting",
+            "render",
+            "octane",
+            "octane render",
+            "cinematic",
+            "detailed",
+            "unreal",
+            "engine"
+          ],
+          [
+            "trending artstation",
+            "trending",
+            "artstation",
+            "greg",
+            "greg rutkowski",
+            "rutkowski",
+            "painting",
+            "detailed"
+          ],
+          [
+            "woman",
+            "face",
+            "beautiful",
+            "eyes",
+            "detailed",
+            "hair",
+            "wearing",
+            "black"
+          ],
+          [
+            "art",
+            "concept",
+            "concept art",
+            "digital art",
+            "digital",
+            "detailed",
+            "fantasy",
+            "portrait"
+          ],
+          [
+            "art",
+            "focus",
+            "highly detailed",
+            "sharp",
+            "highly",
+            "sharp focus",
+            "detailed",
+            "digital painting"
+          ],
+          [
+            "painting",
+            "style",
+            "portrait",
+            "detailed",
+            "oil",
+            "man",
+            "black",
+            "film"
+          ],
+          [
+            "photo",
+            "high",
+            "photography",
+            "quality",
+            "award",
+            "high quality",
+            "winning",
+            "award winning"
+          ],
+          [
+            "ilya kuvshinov",
+            "kuvshinov",
+            "ilya",
+            "baarle",
+            "lois",
+            "van baarle",
+            "lois van",
+            "van"
+          ]
+        ],
+        "inertia": 3772.1763274492487,
+        "note": "TF-IDF MiniBatchKMeans \u2014 unsupervised themes, not FSDS/PO"
+      },
+      {
+        "ok": true,
+        "n_docs": 4000,
+        "k": 10,
+        "silhouette_cosine": 0.011175084822925056,
+        "cluster_sizes": [
+          528,
+          151,
+          443,
+          62,
+          83,
+          190,
+          146,
+          221,
+          244,
+          1932
+        ],
+        "top_terms": [
+          [
+            "art",
+            "concept",
+            "concept art",
+            "digital",
+            "artstation",
+            "detailed",
+            "illustration",
+            "painting"
+          ],
+          [
+            "film",
+            "movie",
+            "life",
+            "cinematic",
+            "retro",
+            "poster",
+            "mm",
+            "real life"
+          ],
+          [
+            "detailed",
+            "highly",
+            "highly detailed",
+            "lighting",
+            "cinematic",
+            "artstation",
+            "intricate",
+            "render"
+          ],
+          [
+            "rockwell",
+            "norman rockwell",
+            "norman",
+            "craig mullins",
+            "craig",
+            "mullins",
+            "greg",
+            "bussiere craig"
+          ],
+          [
+            "man",
+            "model",
+            "spider man",
+            "spider",
+            "painting man",
+            "old",
+            "eyes",
+            "painting"
+          ],
+          [
+            "hyper",
+            "realistic",
+            "hyper realistic",
+            "render",
+            "octane",
+            "octane render",
+            "detailed",
+            "unreal engine"
+          ],
+          [
+            "style",
+            "portrait",
+            "painting",
+            "art style",
+            "art",
+            "cyberpunk",
+            "cover",
+            "background"
+          ],
+          [
+            "oil",
+            "painting",
+            "oil painting",
+            "beautiful",
+            "canvas",
+            "oil canvas",
+            "portrait",
+            "city"
+          ],
+          [
+            "black",
+            "red",
+            "shinkai",
+            "makoto shinkai",
+            "makoto",
+            "kuvshinov",
+            "ilya",
+            "ilya kuvshinov"
+          ],
+          [
+            "photo",
+            "portrait",
+            "photography",
+            "high",
+            "art",
+            "render",
+            "photograph",
+            "dark"
+          ]
+        ],
+        "inertia": 3783.4888741578284,
+        "note": "TF-IDF MiniBatchKMeans \u2014 unsupervised themes, not FSDS/PO"
+      }
+    ],
+    "best_k": 10,
+    "best_silhouette": 0.011175084822925056,
+    "best_top_terms_head": [
+      [
+        "art",
+        "concept",
+        "concept art",
+        "digital",
+        "artstation",
+        "detailed",
+        "illustration",
+        "painting"
+      ],
+      [
+        "film",
+        "movie",
+        "life",
+        "cinematic",
+        "retro",
+        "poster",
+        "mm",
+        "real life"
+      ],
+      [
+        "detailed",
+        "highly",
+        "highly detailed",
+        "lighting",
+        "cinematic",
+        "artstation",
+        "intricate",
+        "render"
+      ]
+    ],
+    "scenario": "DiffusionDB prompt theme clusters",
+    "method": "TF-IDF + MiniBatchKMeans + silhouette",
+    "distance_from_agod": "no temporal FSDS, no transfer AUC, no PO"
+  },
+  "flywheel": {
+    "opportunities": [
+      {
+        "id": "FW-metro_interstate-hgb",
+        "pack": "metro_interstate",
+        "opportunity": "specialize an HGB forecast agent",
+        "why": "HGB RMSE lift vs naive=0.387; classical signal is real",
+        "flywheel": "surprise\u2192retrain HGB on recent window; idle when calm",
+        "priority": "P0"
+      },
+      {
+        "id": "FW-beijing_pm25-naive",
+        "pack": "beijing_pm25",
+        "opportunity": "do NOT spend an HGB agent here",
+        "why": "near random-walk \u2014 last-value is enough; HGB adds noise/cost",
+        "flywheel": "naive agent only; surprise still logged for regime change",
+        "priority": "P1"
+      },
+      {
+        "id": "FW-waymo_proxy-ridge",
+        "pack": "waymo_proxy",
+        "opportunity": "cheap linear forecast agent",
+        "why": "ridge beats both naive and HGB on holdout RMSE",
+        "flywheel": "ridge online update / periodic refit; HGB as shadow only",
+        "priority": "P0"
+      },
+      {
+        "id": "FW-router",
+        "pack": "*",
+        "opportunity": "pack\u2192model router agent",
+        "why": "best model differs by pack (hgb/naive/ridge) \u2014 one global HGB is wrong",
+        "flywheel": "router reads last bakeoff card \u2192 dispatches specialist",
+        "priority": "P0"
+      }
+    ],
+    "runs": [
+      {
+        "ok": true,
+        "dataset": "metro_interstate",
+        "model": "hgb",
+        "n_steps": 300,
+        "mae": 460.41220623431707,
+        "n_surprise": 0,
+        "n_retrain": 1,
+        "n_fallback": 1,
+        "surprise_rate": 0.0,
+        "fell_back_to_naive": true,
+        "note": "classical forecast flywheel \u2014 observe\u2192predict\u2192surprise\u2192retrain/fallback"
+      },
+      {
+        "ok": true,
+        "dataset": "beijing_pm25",
+        "model": "naive_last",
+        "n_steps": 300,
+        "mae": 16.28,
+        "n_surprise": 3,
+        "n_retrain": 6,
+        "n_fallback": 0,
+        "surprise_rate": 0.01,
+        "fell_back_to_naive": false,
+        "note": "classical forecast flywheel \u2014 observe\u2192predict\u2192surprise\u2192retrain/fallback"
+      },
+      {
+        "ok": true,
+        "dataset": "waymo_proxy",
+        "model": "ridge",
+        "n_steps": 300,
+        "mae": 0.09833467713243067,
+        "n_surprise": 0,
+        "n_retrain": 6,
+        "n_fallback": 0,
+        "surprise_rate": 0.0,
+        "fell_back_to_naive": false,
+        "note": "classical forecast flywheel \u2014 observe\u2192predict\u2192surprise\u2192retrain/fallback"
+      }
+    ],
+    "headline": "3 P0 flywheel opportunities; mean surprise_rate=0.003; 1 packs fell back to naive online"
+  }
+}

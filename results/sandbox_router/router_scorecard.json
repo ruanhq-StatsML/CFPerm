@@ -1,0 +1,48 @@
+{
+  "routing_table": {
+    "metro_interstate": "hgb",
+    "beijing_pm25": "naive_last",
+    "waymo_proxy": "ridge"
+  },
+  "rows": [
+    {
+      "pack": "metro_interstate",
+      "routed_model": "hgb",
+      "mae_routed": 447.8945200686115,
+      "mae_global_hgb": 447.8945200686115,
+      "mae_gain_vs_global_hgb": 0.0,
+      "surprise_routed": 0.0,
+      "surprise_global_hgb": 0.0,
+      "fallback_routed": true,
+      "fallback_global_hgb": true
+    },
+    {
+      "pack": "beijing_pm25",
+      "routed_model": "naive_last",
+      "mae_routed": 11.4,
+      "mae_global_hgb": 12.949732843553146,
+      "mae_gain_vs_global_hgb": 1.5497328435531461,
+      "surprise_routed": 0.005555555555555556,
+      "surprise_global_hgb": 0.005555555555555556,
+      "fallback_routed": false,
+      "fallback_global_hgb": true
+    },
+    {
+      "pack": "waymo_proxy",
+      "routed_model": "ridge",
+      "mae_routed": 0.10246934797153173,
+      "mae_global_hgb": 0.11423788848513519,
+      "mae_gain_vs_global_hgb": 0.01176854051360346,
+      "surprise_routed": 0.0,
+      "surprise_global_hgb": 0.005555555555555556,
+      "fallback_routed": false,
+      "fallback_global_hgb": false
+    }
+  ],
+  "n_packs": 3,
+  "n_router_mae_win": 2,
+  "mean_mae_gain_vs_global_hgb": 0.5205004613555831,
+  "headline": "FW-router table={'metro_interstate': 'hgb', 'beijing_pm25': 'naive_last', 'waymo_proxy': 'ridge'}; MAE better than global-HGB on 2/3 packs (mean gain=0.5205)",
+  "opportunity": "FW-router",
+  "note": "specialist dispatch from bakeoff vs forced global HGB"
+}
