@@ -74,16 +74,15 @@ Just a rolling visualization board for business time grains.
 
 ### Sample-chunk adjacent board (每 N 条切窗)
 
-Same board, no calendar weirdness: sort → cut every **1000 / 2000** rows →
-adjacent chunks \(t\to t{+}1\) as train→test. Ported across DiffusionDB,
-Tencent-GR edges, Waymo proxy, Metro Interstate, Beijing PM2.5.
+Same protocol, different grain: sort → cut every **1000 / 2000** rows →
+adjacent \(t\to t{+}1\). **HGB AUC = next-chunk transfer probe** (not a model
+claim); read with \(\Delta\bar Y\) + top-5 Jaccard. See
+[`Sample_Chunk_Adjacent_Board.md`](./Sample_Chunk_Adjacent_Board.md).
 
 ```bash
 PYTHONPATH=. python3 scripts/run_sample_chunk_adjacent_board.py \
   --chunk-sizes 1000,2000 --out results/sample_chunk_adjacent_board
 ```
-
-Artifact: `results/sample_chunk_adjacent_board/` — per-dataset PNG + `SAMPLE_CHUNK_BOARD.md`.
 
 ## Smoke notes
 

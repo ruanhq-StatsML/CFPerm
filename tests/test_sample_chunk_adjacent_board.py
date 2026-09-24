@@ -5,8 +5,11 @@ import numpy as np
 
 from scripts.run_sample_chunk_adjacent_board import (
     adjacent_chunk_pairs,
+    annotate_stability,
     chunk_by_n,
     fs_adjacent,
+    interpret_pack,
+    jaccard,
 )
 
 
@@ -20,11 +23,28 @@ def test_chunk_by_n_1000_2000():
     assert (T2 == 0).sum() == 2000
 
 
+def test_jaccard_and_stability_annotation():
+    assert jaccard(["a", "b"], ["b", "c"]) == 1 / 3
+    rows = annotate_stability(
+        [
+            {"top_fsds": ["a", "b", "c"], "hgb_auc": 0.7},
+            {"top_fsds": ["b", "c", "d"], "hgb_auc": 0.6},
+        ]
+    )
+    assert rows[0]["jaccard_top"] is None
+    assert abs(rows[1]["jaccard_top"] - 0.5) < 1e-9
+
+
+def test_interpret_pack_buckets():
+    assert "weak" in interpret_pack(0.55, 0.8)
+    assert "stable" in interpret_pack(0.95, 0.7)
+    assert "shifting" in interpret_pack(0.95, 0.2)
+
+
 def test_adjacent_pairs_and_fs_smoke():
     rng = np.random.default_rng(0)
     n, d = 4000, 8
     X = rng.normal(size=(n, d))
-    # mild drift in y and one feature across chunks
     y = rng.normal(size=n)
     y[2000:] += 0.4
     X[2000:, 0] += 0.8
@@ -36,6 +56,8 @@ def test_adjacent_pairs_and_fs_smoke():
     )
     assert len(rows) >= 2
     assert all("hgb_auc" in r and "delta_Y" in r for r in rows)
+    assert rows[0]["jaccard_top"] is None
+    assert rows[1]["jaccard_top"] is not None
 
 
 def test_binary_y_rare_positive():
@@ -48,9 +70,15 @@ def test_binary_y_rare_positive():
     X[y == 1, 0] += 1.5
     T = chunk_by_n(n, 1000)
     rows = fs_adjacent(
-        X, y, T, [f"f{j}" for j in range(d)],
-        select_k=3, y_quantile=0.7, seed=0, max_pairs=10, min_n=50,
+        X,
+        y,
+        T,
+        [f"f{j}" for j in range(d)],
+        select_k=3,
+        y_quantile=0.7,
+        seed=0,
+        max_pairs=10,
+        min_n=50,
     )
     assert len(rows) >= 2
     assert all(r["y_threshold"] == 0.5 for r in rows)
-

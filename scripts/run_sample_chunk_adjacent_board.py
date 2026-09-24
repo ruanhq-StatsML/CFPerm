@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
-"""Sample-chunk adjacent boards across datasets (business FS dashboard).
+"""Sample-chunk adjacent boards — transfer probe, not a production model.
 
-Nothing weird: sort by time (or index), cut every N rows (1000 / 2000),
-adjacent chunks t→t+1 as train→test, same SelectKBest→HGB smoke, joint board.
+Judgment (not just "cut every N"):
+  The HGB number is a *next-chunk transfer probe* after SelectKBest on chunk t.
+  It answers: "features that scored for Y on this batch — do they still rank Y
+  on the next batch?"  It does **not** claim causal tip, OOD detection, or
+  that HGB is the right production scorer.
 
-Datasets:
-  - diffusiondb       : prompt TF-IDF → image_nsfw
-  - tencent_gr        : edge feature_grid → y_convert (by e_last_ts)
-  - waymo_proxy       : tabular X → y (by row order)
-  - metro_interstate  : traffic volume (hourly, sorted)
-  - beijing_pm25      : PM2.5 (hourly, sorted)
+  Read three numbers together:
+    ΔȲ          — did the outcome level move?
+    hgb_auc     — did the selected association transfer?
+    jaccard_top — did the *which features* stay the same?
+
+  High AUC + high Jaccard  → persistent association (often operational intensity)
+  High AUC + low Jaccard   → transferable predictivity but shifting drivers
+  Low AUC                  → association does not travel (DiffusionDB tokens ≈ this)
+
+Datasets / panels:
+  diffusiondb, tencent_gr (ops), tencent_gr_content (no volume), waymo_proxy,
+  metro_interstate, beijing_pm25
 
   PYTHONPATH=. python3 scripts/run_sample_chunk_adjacent_board.py \\
     --chunk-sizes 1000,2000 --out results/sample_chunk_adjacent_board
@@ -20,7 +29,7 @@ import argparse
 import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import matplotlib
 
@@ -42,6 +51,46 @@ from scripts.run_diffusiondb_temporal_fsds import (
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Tencent: convert leakage vs volume intensity (judgment: volume drives ~1.0 AUC)
+TENCENT_CONVERT_LEAK = {
+    "e_n_cnv",
+    "u_n_cnv",
+    "u_has_convert",
+    "u_log1p_n_cnv",
+    "u_cvr",
+    "u_ctcvr",
+    "u_user_ctcvr_rank",
+    "i_n_cnv",
+    "i_n_as_convert_terminal",
+    "i_log1p_n_cnv",
+    "i_item_cnv_rank",
+    "i_cvr",
+    "i_ctcvr",
+}
+TENCENT_VOLUME = {
+    "e_n_exp",
+    "e_n_clk",
+    "e_log1p_exp",
+    "e_log1p_clk",
+    "e_ctr",
+    "u_n_events",
+    "u_n_exp",
+    "u_n_clk",
+    "u_log1p_n_events",
+    "u_log1p_n_exp",
+    "u_log1p_n_clk",
+    "u_ctr",
+    "u_user_activity_rank",
+    "i_n_exp",
+    "i_n_clk",
+    "i_n_users",
+    "i_ctr",
+    "i_log1p_n_exp",
+    "i_log1p_n_clk",
+    "i_log1p_n_users",
+    "i_item_pop_rank",
+}
+
 
 def chunk_by_n(n_rows: int, chunk_size: int) -> np.ndarray:
     """Integer chunk id for each row after sort (every ``chunk_size`` samples)."""
@@ -53,6 +102,34 @@ def chunk_by_n(n_rows: int, chunk_size: int) -> np.ndarray:
 def adjacent_chunk_pairs(T: np.ndarray) -> List[Tuple[int, int]]:
     occ = sorted(int(t) for t in np.unique(T))
     return list(zip(occ[:-1], occ[1:]))
+
+
+def jaccard(a: Sequence[str], b: Sequence[str]) -> float:
+    sa, sb = set(a), set(b)
+    if not sa and not sb:
+        return 1.0
+    if not sa or not sb:
+        return 0.0
+    return float(len(sa & sb) / len(sa | sb))
+
+
+def annotate_stability(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Attach jaccard_top vs previous adjacent pair (None on first)."""
+    out = []
+    prev_top: Optional[List[str]] = None
+    for r in rows:
+        rr = dict(r)
+        rr["jaccard_top"] = (
+            None if prev_top is None else jaccard(prev_top, r.get("top_fsds") or [])
+        )
+        out.append(rr)
+        prev_top = list(r.get("top_fsds") or [])
+    return out
+
+
+def mean_jaccard(rows: List[Dict[str, Any]]) -> Optional[float]:
+    vals = [r["jaccard_top"] for r in rows if r.get("jaccard_top") is not None]
+    return float(np.mean(vals)) if vals else None
 
 
 def fs_adjacent(
@@ -113,7 +190,6 @@ def fs_adjacent(
             .sort_values("f_score", ascending=False)
             .head(5)
         )
-        # cmean top on continuous / binary X
         dmu = X[m1].mean(0) - X[m0].mean(0)
         top_cmean = [feat_names[i] for i in np.argsort(-np.abs(dmu))[:5]]
         rows.append(
@@ -131,7 +207,53 @@ def fs_adjacent(
                 "top_cmean": top_cmean,
             }
         )
-    return rows
+    return annotate_stability(rows)
+
+
+def _tencent_frame(n_sample: int) -> Tuple[pd.DataFrame, str, Optional[str]]:
+    path = ROOT / "results/tencent_gr_tabular_ui/feature_grid.parquet"
+    df = pd.read_parquet(path)
+    y_col = "y_convert" if "y_convert" in df.columns else "e_ctr"
+    ts_col = "e_last_ts" if "e_last_ts" in df.columns else None
+    if ts_col:
+        df = df.sort_values(ts_col).reset_index(drop=True)
+    if n_sample < len(df):
+        idx = np.linspace(0, len(df) - 1, num=n_sample, dtype=int)
+        df = df.iloc[idx].reset_index(drop=True)
+    return df, y_col, ts_col
+
+
+def _tencent_xy(
+    df: pd.DataFrame,
+    y_col: str,
+    ts_col: Optional[str],
+    extra_drop: set,
+    panel: str,
+) -> Tuple[np.ndarray, np.ndarray, List[str], Dict]:
+    drop = {
+        "user_id",
+        "item_id",
+        y_col,
+        "e_last_ts",
+        "last_ts",
+        *TENCENT_CONVERT_LEAK,
+        *extra_drop,
+    }
+    feat_cols = [
+        c
+        for c in df.columns
+        if c not in drop and pd.api.types.is_numeric_dtype(df[c])
+    ]
+    X = np.nan_to_num(df[feat_cols].to_numpy(dtype=float), nan=0.0, posinf=0.0, neginf=0.0)
+    y = df[y_col].to_numpy(float)
+    return X, y, feat_cols, {
+        "dataset": panel,
+        "y": y_col,
+        "sort": ts_col or "row",
+        "n": len(df),
+        "d": len(feat_cols),
+        "dropped_volume": sorted(extra_drop & set(df.columns)),
+    }
 
 
 def load_diffusion(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, List[str], Dict]:
@@ -142,60 +264,42 @@ def load_diffusion(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, Li
         df["prompt_clean"].tolist(), method="tfidf", max_features=256, seed=seed
     )
     y = df["image_nsfw"].to_numpy(float)
-    return X, y, names, {"dataset": "diffusiondb", "y": "image_nsfw", "sort": "timestamp", "n": len(df)}
+    return X, y, names, {
+        "dataset": "diffusiondb",
+        "y": "image_nsfw",
+        "sort": "timestamp",
+        "n": len(df),
+        "read_as": "low AUC expected: prompt tokens weakly transfer for NSFW",
+    }
 
 
 def load_tencent(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, List[str], Dict]:
-    path = ROOT / "results/tencent_gr_tabular_ui/feature_grid.parquet"
-    df = pd.read_parquet(path)
-    # drop ids; keep numeric feats
-    y_col = "y_convert" if "y_convert" in df.columns else "e_ctr"
-    ts_col = "e_last_ts" if "e_last_ts" in df.columns else None
-    if ts_col:
-        df = df.sort_values(ts_col).reset_index(drop=True)
-    if n_sample < len(df):
-        # evenly subsample along time then re-sort
-        idx = np.linspace(0, len(df) - 1, num=n_sample, dtype=int)
-        df = df.iloc[idx].reset_index(drop=True)
-    drop = {
-        "user_id",
-        "item_id",
-        y_col,
-        "e_last_ts",
-        "last_ts",
-        # direct convert leakage for adjacent FS board
-        "e_n_cnv",
-        "u_n_cnv",
-        "u_has_convert",
-        "u_log1p_n_cnv",
-        "u_cvr",
-        "u_ctcvr",
-        "u_user_ctcvr_rank",
-        "i_n_cnv",
-        "i_n_as_convert_terminal",
-        "i_log1p_n_cnv",
-        "i_item_cnv_rank",
-        "i_cvr",
-        "i_ctcvr",
-    }
-    feat_cols = [
-        c
-        for c in df.columns
-        if c not in drop and pd.api.types.is_numeric_dtype(df[c])
-    ]
-    X = df[feat_cols].to_numpy(dtype=float)
-    X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
-    y = df[y_col].to_numpy(float)
-    return X, y, feat_cols, {
-        "dataset": "tencent_gr_edges",
-        "y": y_col,
-        "sort": ts_col or "row",
-        "n": len(df),
-        "d": len(feat_cols),
-    }
+    del seed
+    df, y_col, ts_col = _tencent_frame(n_sample)
+    X, y, names, meta = _tencent_xy(df, y_col, ts_col, set(), "tencent_gr_ops")
+    meta["read_as"] = (
+        "high AUC usually = exposure/click intensity transfers; not a content tip"
+    )
+    return X, y, names, meta
+
+
+def load_tencent_content(
+    n_sample: int, seed: int
+) -> Tuple[np.ndarray, np.ndarray, List[str], Dict]:
+    """Judgment panel: drop volume so board is not just 'more exp → convert'."""
+    del seed
+    df, y_col, ts_col = _tencent_frame(n_sample)
+    X, y, names, meta = _tencent_xy(
+        df, y_col, ts_col, set(TENCENT_VOLUME), "tencent_gr_content"
+    )
+    meta["read_as"] = (
+        "volume dropped; AUC should fall if intensity was the only transferable signal"
+    )
+    return X, y, names, meta
 
 
 def load_waymo(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, List[str], Dict]:
+    del seed
     blob = np.load(ROOT / "data/stream_packs/waymo_proxy/waymo_proxy_xy.npz")
     X = np.asarray(blob["X"], dtype=float)
     y = np.asarray(blob["y"], dtype=float).ravel()
@@ -208,11 +312,12 @@ def load_waymo(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, List[s
         "sort": "row_index",
         "n": len(y),
         "d": X.shape[1],
+        "read_as": "synthetic gradual drift; high AUC+Jaccard = planted kinematics persist",
     }
 
 
 def load_metro(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, List[str], Dict]:
-    del seed  # time-ordered pack; seed unused
+    del seed
     X, y, meta = load_metro_interstate(ROOT, max_n=n_sample)
     names = [f"m{j}" for j in range(X.shape[1])]
     return X.astype(float), y.astype(float), names, {
@@ -221,6 +326,7 @@ def load_metro(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, List[s
         "sort": "date_time",
         "n": int(meta["n"]),
         "d": int(meta["d"]),
+        "read_as": "hourly traffic; calendar/weather feats should transfer across adjacent hours",
     }
 
 
@@ -234,21 +340,35 @@ def load_beijing(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, List
         "sort": "stamp",
         "n": int(meta["n"]),
         "d": int(meta["d"]),
+        "read_as": "meteo+lag; high transfer expected under smooth pollution regimes",
     }
 
 
 LOADERS = {
     "diffusiondb": load_diffusion,
     "tencent_gr": load_tencent,
+    "tencent_gr_content": load_tencent_content,
     "waymo_proxy": load_waymo,
     "metro_interstate": load_metro,
     "beijing_pm25": load_beijing,
 }
 
 
+def interpret_pack(mean_auc: Optional[float], mean_j: Optional[float]) -> str:
+    if mean_auc is None:
+        return "no pairs"
+    if mean_auc < 0.65:
+        return "weak transfer (association does not travel)"
+    if mean_j is not None and mean_j >= 0.5:
+        return "strong transfer + stable top feats (persistent drivers)"
+    if mean_j is not None and mean_j < 0.35:
+        return "strong transfer but shifting drivers (regime / composition change)"
+    return "transfer holds; feature set partially stable"
+
+
 def plot_dataset_board(name: str, by_chunk: Dict[int, List[Dict]], out_png: Path) -> None:
     sizes = sorted(by_chunk.keys())
-    fig, axes = plt.subplots(1, len(sizes), figsize=(4.0 * len(sizes), 3.4), squeeze=False)
+    fig, axes = plt.subplots(1, len(sizes), figsize=(4.2 * len(sizes), 3.6), squeeze=False)
     for ax, cs in zip(axes[0], sizes):
         rows = by_chunk[cs]
         if not rows:
@@ -258,15 +378,45 @@ def plot_dataset_board(name: str, by_chunk: Dict[int, List[Dict]], out_png: Path
         xs = np.arange(len(rows))
         dys = [r["delta_Y"] for r in rows]
         aucs = [r["hgb_auc"] for r in rows]
-        ax.bar(xs - 0.15, dys, width=0.3, color="#4C78A8", label="ΔȲ")
+        jacs = [r["jaccard_top"] if r["jaccard_top"] is not None else np.nan for r in rows]
+        ax.bar(xs - 0.2, dys, width=0.25, color="#4C78A8", label="ΔȲ")
         ax2 = ax.twinx()
-        ax2.plot(xs + 0.15, aucs, "o-", color="#F58518", ms=4, label="HGB AUC")
+        ax2.plot(xs, aucs, "o-", color="#F58518", ms=4, label="HGB AUC")
+        ax2.plot(xs, jacs, "s--", color="#54A24B", ms=4, label="Jaccard top5")
         ax.axhline(0, color="gray", lw=0.7)
         ax.set_title(f"every {cs} samples")
         ax.set_xlabel("adjacent chunk idx")
         ax.set_ylabel("ΔȲ")
-        ax2.set_ylabel("AUC")
-    fig.suptitle(f"{name}: sample-chunk adjacent board", y=1.02)
+        ax2.set_ylabel("AUC / Jaccard")
+        ax2.set_ylim(0, 1.05)
+    fig.suptitle(f"{name}: transfer probe (AUC) + driver stability (Jaccard)", y=1.02)
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_cross_pack(summary_rows: List[Dict[str, Any]], out_png: Path) -> None:
+    if not summary_rows:
+        return
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+    for r in summary_rows:
+        ax.scatter(
+            r["mean_auc"],
+            abs(r["mean_delta_Y"]) if r["mean_delta_Y"] is not None else 0.0,
+            s=40 + 80 * (r["mean_jaccard"] or 0.0),
+            label=f"{r['dataset']}@N={r['chunk']}",
+        )
+        ax.annotate(
+            f"{r['dataset'][:6]}@{r['chunk']}",
+            (r["mean_auc"], abs(r["mean_delta_Y"] or 0.0)),
+            fontsize=7,
+            alpha=0.85,
+        )
+    ax.axvline(0.65, color="gray", ls=":", lw=0.8)
+    ax.set_xlabel("mean next-chunk HGB AUC (transfer probe)")
+    ax.set_ylabel("|mean ΔȲ|")
+    ax.set_title("Cross-pack: transfer vs level-shift (marker size ∝ Jaccard)")
+    ax.set_xlim(0.45, 1.02)
     fig.tight_layout()
     fig.savefig(out_png, dpi=120, bbox_inches="tight")
     plt.close(fig)
@@ -277,7 +427,10 @@ def main() -> None:
     ap.add_argument(
         "--datasets",
         type=str,
-        default="diffusiondb,tencent_gr,waymo_proxy,metro_interstate,beijing_pm25",
+        default=(
+            "diffusiondb,tencent_gr,tencent_gr_content,"
+            "waymo_proxy,metro_interstate,beijing_pm25"
+        ),
     )
     ap.add_argument("--chunk-sizes", type=str, default="1000,2000")
     ap.add_argument("--n-sample", type=int, default=8000, help="cap rows per dataset")
@@ -296,8 +449,8 @@ def main() -> None:
     t0 = time.time()
     report: Dict[str, Any] = {
         "note": (
-            "Sort → every N samples as a window → adjacent chunk FS board. "
-            "Business grain = sample count (1000/2000); joint viz only."
+            "HGB AUC = next-chunk transfer probe after SelectKBest on chunk t; "
+            "not a causal tip / not a production model. Read with ΔȲ and Jaccard."
         ),
         "chunk_sizes": chunk_sizes,
         "datasets": {},
@@ -308,7 +461,10 @@ def main() -> None:
         "",
         report["note"],
         "",
+        "See `docs/summaries/Sample_Chunk_Adjacent_Board.md` for the full justify.",
+        "",
     ]
+    cross_rows: List[Dict[str, Any]] = []
 
     for ds in datasets:
         if ds not in LOADERS:
@@ -341,42 +497,93 @@ def main() -> None:
 
         png = args.out / f"{ds}_board.png"
         plot_dataset_board(ds, by_chunk, png)
+        pack_blk: Dict[str, Any] = {}
+        for cs, rows in by_chunk.items():
+            m_auc = float(np.mean([r["hgb_auc"] for r in rows])) if rows else None
+            m_dy = float(np.mean([r["delta_Y"] for r in rows])) if rows else None
+            m_j = mean_jaccard(rows)
+            reading = interpret_pack(m_auc, m_j)
+            pack_blk[str(cs)] = {
+                "n_pairs": len(rows),
+                "mean_delta_Y": m_dy,
+                "mean_auc": m_auc,
+                "mean_jaccard_top": m_j,
+                "reading": reading,
+                "rows": rows,
+            }
+            if rows:
+                cross_rows.append(
+                    {
+                        "dataset": ds,
+                        "chunk": cs,
+                        "mean_auc": m_auc,
+                        "mean_delta_Y": m_dy,
+                        "mean_jaccard": m_j,
+                        "reading": reading,
+                    }
+                )
         report["datasets"][ds] = {
             "ok": True,
             "meta": meta,
-            "by_chunk": {
-                str(cs): {
-                    "n_pairs": len(rows),
-                    "mean_delta_Y": float(np.mean([r["delta_Y"] for r in rows]))
-                    if rows
-                    else None,
-                    "mean_auc": float(np.mean([r["hgb_auc"] for r in rows]))
-                    if rows
-                    else None,
-                    "rows": rows,
-                }
-                for cs, rows in by_chunk.items()
-            },
+            "by_chunk": pack_blk,
             "board_png": str(png.name),
         }
-        md += [f"## {ds}", f"- meta: `{meta}`", f"- ![{ds}]({png.name})", ""]
+        md += [
+            f"## {ds}",
+            f"- meta: `{meta}`",
+            f"- ![{ds}]({png.name})",
+            "",
+        ]
         for cs, rows in by_chunk.items():
+            blk = pack_blk[str(cs)]
             md += [
                 f"### every {cs} samples",
-                f"- pairs={len(rows)}",
+                (
+                    f"- pairs={len(rows)} · mean AUC={blk['mean_auc']} · "
+                    f"mean Jaccard={blk['mean_jaccard_top']} · **{blk['reading']}**"
+                ),
                 "",
-                "| t0→t1 | n0/n1 | ΔȲ | AUC | top_fsds |",
-                "|---|---|---:|---:|---|",
+                "| t0→t1 | n0/n1 | ΔȲ | AUC | Jaccard | top_fsds |",
+                "|---|---|---:|---:|---:|---|",
             ]
             for r in rows[:8]:
+                jac = (
+                    f"{r['jaccard_top']:.2f}"
+                    if r.get("jaccard_top") is not None
+                    else "—"
+                )
                 md.append(
                     f"| {r['t0']}→{r['t1']} | {r['n0']}/{r['n1']} | "
-                    f"{r['delta_Y']:.4f} | {r['hgb_auc']:.3f} | "
+                    f"{r['delta_Y']:.4f} | {r['hgb_auc']:.3f} | {jac} | "
                     f"{', '.join(r['top_fsds'][:3])} |"
                 )
             md.append("")
 
+    cross_png = args.out / "cross_pack_transfer.png"
+    plot_cross_pack(cross_rows, cross_png)
+    report["cross_pack"] = cross_rows
+    report["cross_pack_png"] = cross_png.name
     report["sec"] = float(time.time() - t0)
+
+    md = [
+        "# Sample-chunk adjacent boards (multi-dataset)",
+        "",
+        report["note"],
+        "",
+        f"![cross]({cross_png.name})",
+        "",
+        "| pack@N | mean AUC | |ΔȲ| | Jaccard | reading |",
+        "|---|---:|---:|---:|---|",
+    ] + [
+        (
+            f"| {r['dataset']}@{r['chunk']} | {r['mean_auc']:.3f} | "
+            f"{abs(r['mean_delta_Y'] or 0):.4g} | "
+            f"{(r['mean_jaccard'] if r['mean_jaccard'] is not None else float('nan')):.2f} | "
+            f"{r['reading']} |"
+        )
+        for r in cross_rows
+    ] + ["", "---", ""] + md[5:]
+
     (args.out / "summary.json").write_text(
         json.dumps(report, indent=2, default=str) + "\n"
     )
@@ -386,6 +593,16 @@ def main() -> None:
             {
                 "datasets": list(report["datasets"].keys()),
                 "chunk_sizes": chunk_sizes,
+                "cross_pack": [
+                    {
+                        "dataset": r["dataset"],
+                        "chunk": r["chunk"],
+                        "mean_auc": r["mean_auc"],
+                        "mean_jaccard": r["mean_jaccard"],
+                        "reading": r["reading"],
+                    }
+                    for r in cross_rows
+                ],
                 "out": str(args.out),
                 "sec": report["sec"],
             },
