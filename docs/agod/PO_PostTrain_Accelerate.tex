@@ -120,11 +120,22 @@ run A every window; run B only when \texttt{rejected}.
 Ship: $\Flops<1$ and $\Delta\Acc\ge-\varepsilon$ (A);
 on reject windows, next-MSE vs uniform $w$ improves (B).
 
+\noindent\textbf{Optional by design.}
+Freeze / gated $\sqrt{\PO}$ are \emph{actuators}, not a mandatory
+retrain recipe: if the gate never bites, weights stay uniform and
+$\Flops{=}1$ (harmless noop --- Food / Fashion / COCO $M{=}2$).
+When residual mass is asymmetric enough for the gate to fire under
+the Acc constraint, the same loop \emph{does} cut update cost
+(Affec, synthetic \texttt{po\_fuse}, Amazon modality, COCO outdoor).
+So ``optional'' does not mean ``never accelerates'': it means
+acceleration is conditional and measurable, not always-on.
+
 \section{Numbers (smoke --- multi-pack)}
 \textit{Indicative only; not a leaderboard claim.}
 Ship rule for Alg~A: $\Flops<1$ and $\Delta\Acc\ge-0.005$
 vs equal / B1. When freeze never fires, report \textbf{noop}
-($\Flops{=}1$) --- that is still a valid negative result.
+($\Flops{=}1$) --- valid, not a counterexample to acceleration
+on packs where the optional gate \emph{does} bite.
 
 \paragraph{Direct PO-risk actuators (Alg~A).}
 Same compare loop as \texttt{po\_risk\_train} /
