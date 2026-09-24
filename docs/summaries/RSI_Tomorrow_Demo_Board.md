@@ -15,8 +15,12 @@
 
 产物：
 - [`../agod_po_eff/PO_EFF_SCORECARD.md`](../../results/agod_po_eff/PO_EFF_SCORECARD.md)
-- [`../agod_po_power_eff/PO_POWER_EFF.md`](../../results/agod_po_power_eff/PO_POWER_EFF.md)（本轮）
-- 账本：[`RSI_Iteration_Log.md`](./RSI_Iteration_Log.md)
+- [`../agod_po_power_eff/PO_POWER_EFF.md`](../../results/agod_po_power_eff/PO_POWER_EFF.md)
+- **Demo 图：** [`../agod_po_eff/rsi_tomorrow_demo.png`](../../results/agod_po_eff/rsi_tomorrow_demo.png)
+
+### P3 注记（image-OOD）
+PO 不适合作 image-OOD 检测（见 `docs/agod/AGOD_image_ood_bench.md`）——obs AUROC 弱于 kNN/centroid；  
+**不要**再往 image-OOD 上堆 PO FLOPs。PO 预算留给 stream reject → hard-rank / IPTW。
 
 ---
 
