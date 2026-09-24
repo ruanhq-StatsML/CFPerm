@@ -27,25 +27,43 @@ hf download poloclub/diffusiondb --type dataset \
 
 ```bash
 PYTHONPATH=. python3 scripts/run_diffusiondb_temporal_fsds.py \
-  --n-sample 8000 --max-features 512 --select-k 40 \
-  --out results/diffusiondb_temporal_fsds
+  --n-sample 4000 --max-features 512 --select-k 40 \
+  --concat-hyperparams --window-scheme equal_count \
+  --out results/diffusiondb_temporal_fsds_hp
+
+PYTHONPATH=. python3 scripts/run_diffusiondb_window_sweep.py \
+  --n-sample 2000 --out results/diffusiondb_window_sweep
 ```
 
-## Methods
+## Methods (feature selection — not graph tip)
 
 1. **Covariate drift**: RF Domain VIMP (`X → T`)
-2. **Tip-cmean**: signed \(\mu_{\mathrm{late}}-\mu_{\mathrm{early}}\) per token feature
+2. **cmean**: signed \(\mu_{\mathrm{late}}-\mu_{\mathrm{early}}\) per feature
 3. **FSDS**: `StandardScaler → VarianceThreshold → SelectKBest → HGB/LogReg`  
    predicting high-`Y` (threshold = early-window quantile); train early / test late
 4. **Blend rank**: mean of percentile ranks (`f_score`, `vimp_cov`, `|Δ|`)
 
-## Smoke result (n=8000)
+### X = prompt ⊕ hyperparams
 
-- \(\bar Y\): early 0.167 → late 0.218, \(\Delta\bar Y=+0.051\) → **正向**
-- FSDS HGB AUC(late) ≈ 0.63
-- Top blend tokens include style/quality phrases (`sharp focus`, `greg rutkowski`, `art by`, …)
+Default \(X\) = TF-IDF/hash of prompt. Optional `--concat-hyperparams` stacks
+`cfg`, `step`, sampler one-hot onto \(X\) so generation knobs are not absorbed
+into token VIMP. (Qwen/CLIP embedding can concat the same way later.)
 
-Artifacts: `results/diffusiondb_temporal_fsds/`.
+### T window schemes (not interchangeable)
+
+| scheme | balances | side effect |
+|---|---|---|
+| `equal_count` | \(n\) per window | calendar width differs |
+| `equal_time` | calendar span | \(n\) imbalances |
+| `width` | fixed hours/bin | early/late = first/last occupied bin |
+
+Sweep artifact: `results/diffusiondb_window_sweep/` — \(\Delta\bar Y\), HGB AUC,
+`n_by_T`, `span_hours_by_T`, top features all move with the cut.
+
+## Smoke notes
+
+- \(Y\) = continuous `image_nsfw` (not JSON aggregate); FSDS uses early-quantile binary
+- With `--concat-hyperparams`, `hp_cfg` / `hp_step` appear in blend/VIMP (`hp_vimp_share>0`)
 
 ## Related
 

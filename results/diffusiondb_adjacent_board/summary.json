@@ -1,0 +1,34 @@
+{
+  "note": "Business time cuts \u2192 adjacent batch FS \u2192 joint board. Not a new estimator; visualization of \u0394\u0232 + late AUC over rolling pairs.",
+  "n_sample": 3000,
+  "concat_hyperparams": false,
+  "widths_min": [
+    10.0,
+    20.0,
+    60.0
+  ],
+  "boards": [
+    {
+      "width_min": 10.0,
+      "n_bins": 1483,
+      "n_adjacent_pairs": 8,
+      "n_reported": 0,
+      "rows": []
+    },
+    {
+      "width_min": 20.0,
+      "n_bins": 913,
+      "n_adjacent_pairs": 8,
+      "n_reported": 0,
+      "rows": []
+    },
+    {
+      "width_min": 60.0,
+      "n_bins": 328,
+      "n_adjacent_pairs": 8,
+      "n_reported": 0,
+      "rows": []
+    }
+  ],
+  "sec": 1.857170820236206
+}
