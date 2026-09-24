@@ -30,10 +30,23 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round3.json"
+OUT = Path(__file__).resolve().parent / "results_round4.json"
 # Weight on the spurious cue after drift. Below 1 so the calibrated score remains
 # in the judge and post-drift success is mixed rather than identically zero.
-DRIFT_MIX = 0.55
+# Overwritten per task in main. Weight on the spurious cue after the drift point.
+CURRENT_MIX = 0.55
+# Per-episode spread around CURRENT_MIX. DoorKey is the same start every episode,
+# so a single mix is all-or-nothing; a small spread puts some episodes on each side.
+MIX_JITTER = 0.0
+
+
+def drifted_judge(calibrated: float, spurious: float, t: int, drift_at: int) -> float:
+    if t < drift_at:
+        return calibrated
+    w = CURRENT_MIX
+    if MIX_JITTER:
+        w = min(1.0, max(0.0, CURRENT_MIX + ((t % 5) - 2) * MIX_JITTER))
+    return (1.0 - w) * calibrated + w * spurious
 SEED = 2026
 
 
@@ -257,7 +270,7 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
         stable = close if len(state) == 1 else 0.45 * close + 0.15
         spurious = sum(state) / (13 * len(state))
         calibrated = 0.85 * solv + 0.15 * stable
-        judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
+        judge = drifted_judge(calibrated, spurious, t, drift_at)
         steer = solv if policy == "oracle" else (stable if use_stable else judge)
         return StepView(steer, judge, stable, spurious, solv)
 
@@ -394,11 +407,12 @@ def bw_stable(state) -> float:
 
 
 def bw_spurious(state) -> float:
-    # prefers D sitting on the table, which is anti-correlated with the goal
+    # Graded anti-tower cue: more stacks, and D not buried. Not the goal prefix.
+    buried = 0.0
     for st in state:
-        if st[0] == "D":
-            return 1.0
-    return 0.0
+        if "D" in st:
+            buried = st.index("D") / 3
+    return 0.6 * (len(state) / 4) + 0.4 * (1.0 - buried)
 
 
 def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
@@ -420,7 +434,7 @@ def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
             stable = bw_stable(state)
             spurious = bw_spurious(state)
             calibrated = 0.8 * progress + 0.2 * stable
-            judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
+            judge = drifted_judge(calibrated, spurious, t, drift_at)
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
@@ -547,9 +561,9 @@ def dk_stable(state) -> float:
 
 
 def dk_spurious(state) -> float:
-    # prefers facing west and standing on the left column — a distractor pose
-    x, y, d, has_key, door_open = state
-    return 1.0 if d == 2 and x == 1 else 0.0
+    # Dense distractor: left column, facing west, higher row. Independent of key and door.
+    x, y, d, _has_key, _door_open = state
+    return (0.45 if x == 1 else 0.0) + (0.35 if d == 2 else 0.0) + 0.05 * y
 
 
 def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
@@ -569,7 +583,7 @@ def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
             stable = dk_stable(state)
             spurious = dk_spurious(state)
             calibrated = 0.85 * progress + 0.15 * stable
-            judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
+            judge = drifted_judge(calibrated, spurious, t, drift_at)
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
@@ -687,7 +701,7 @@ def run_hotpot(n, drift_at, policy, beam, rng):
                 stable = float(np.mean([hop_overlap(question, pid) for pid in picked]))
                 spurious = float(np.mean([len(PASSAGES[pid].split()) / 12 for pid in picked]))
             calibrated = 0.75 * progress + 0.25 * stable
-            judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
+            judge = drifted_judge(calibrated, spurious, t, drift_at)
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
@@ -778,7 +792,7 @@ def run_webshop(n, drift_at, policy, beam, rng):
             stable = 1.0 if item["color"] == want["color"] else 0.0
             spurious = item["reviews"] / 100
             calibrated = 0.8 * progress + 0.2 * stable
-            judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
+            judge = drifted_judge(calibrated, spurious, t, drift_at)
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
@@ -936,7 +950,26 @@ def main():
     n = 40
     drift_at = 16
     policies = ["noisy", "stable", "gated", "oracle"]
-    report = {"null_monitor": null_fdr(), "drift_mix": DRIFT_MIX, "tasks": {}}
+    task_mix = {
+        "game24": 0.28,
+        "blocksworld": 0.30,
+        "minigrid_doorkey": 0.169,
+        "hotpot_twohop": 0.80,
+        "webshop_attr": 0.65,
+    }
+    task_jitter = {
+        "game24": 0.0,
+        "blocksworld": 0.0,
+        "minigrid_doorkey": 0.003,
+        "hotpot_twohop": 0.0,
+        "webshop_attr": 0.0,
+    }
+    report = {
+        "null_monitor": null_fdr(),
+        "drift_mix": task_mix,
+        "mix_jitter": task_jitter,
+        "tasks": {},
+    }
 
     print("precomputing blocksworld distances...")
     dist_bw = bw_distances()
@@ -965,8 +998,11 @@ def main():
         ),
     }
 
+    global CURRENT_MIX, MIX_JITTER
     for task, fn in runners.items():
-        report["tasks"][task] = {}
+        CURRENT_MIX = task_mix[task]
+        MIX_JITTER = task_jitter[task]
+        report["tasks"][task] = {"mix": CURRENT_MIX, "jitter": MIX_JITTER}
         for policy in policies:
             print(f"running {task} / {policy}")
             out = fn(policy)
