@@ -1,0 +1,1369 @@
+{
+  "note": "Sort \u2192 every N samples as a window \u2192 adjacent chunk FS board. Business grain = sample count (1000/2000); joint viz only.",
+  "chunk_sizes": [
+    1000,
+    2000
+  ],
+  "datasets": {
+    "diffusiondb": {
+      "ok": true,
+      "meta": {
+        "dataset": "diffusiondb",
+        "y": "image_nsfw",
+        "sort": "timestamp",
+        "n": 8000
+      },
+      "by_chunk": {
+        "1000": {
+          "n_pairs": 7,
+          "mean_delta_Y": 0.014843780122963442,
+          "mean_auc": 0.6048427572700964,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.15887980938889087,
+              "y_mean_1": 0.16428610571473837,
+              "delta_Y": 0.005406296325847493,
+              "y_threshold": 0.13298637717962264,
+              "hgb_auc": 0.602190048063072,
+              "top_fsds": [
+                "mucha",
+                "alphonse mucha",
+                "alphonse",
+                "character",
+                "focus illustration"
+              ],
+              "top_cmean": [
+                "and",
+                "in",
+                "for",
+                "on",
+                "4k"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.16428610571473837,
+              "y_mean_1": 0.16026855311356486,
+              "delta_Y": -0.004017552601173507,
+              "y_threshold": 0.13811234831809993,
+              "hgb_auc": 0.6364309415484457,
+              "top_fsds": [
+                "alphonse",
+                "alphonse mucha",
+                "mucha",
+                "by artgerm",
+                "dress"
+              ],
+              "top_cmean": [
+                "8k",
+                "as",
+                "4k",
+                "painting by",
+                "high"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.16026855311356486,
+              "y_mean_1": 0.18483952736482023,
+              "delta_Y": 0.024570974251255373,
+              "y_threshold": 0.13392269164323806,
+              "hgb_auc": 0.609579395246901,
+              "top_fsds": [
+                "alphonse",
+                "alphonse mucha",
+                "mucha",
+                "and alphonse",
+                "elegant"
+              ],
+              "top_cmean": [
+                "4k",
+                "8k",
+                "detailed",
+                "of",
+                "highly detailed"
+              ]
+            },
+            {
+              "t0": 3,
+              "t1": 4,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.18483952736482023,
+              "y_mean_1": 0.17605726196803154,
+              "delta_Y": -0.008782265396788697,
+              "y_threshold": 0.1614324152469635,
+              "hgb_auc": 0.6035583629424923,
+              "top_fsds": [
+                "artgerm",
+                "mucha",
+                "by artgerm",
+                "skin",
+                "young"
+              ],
+              "top_cmean": [
+                "art",
+                "style",
+                "at",
+                "on",
+                "big"
+              ]
+            },
+            {
+              "t0": 4,
+              "t1": 5,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.17605726196803154,
+              "y_mean_1": 0.1974074043603614,
+              "delta_Y": 0.02135014239232985,
+              "y_threshold": 0.147136677801609,
+              "hgb_auc": 0.5941404761904763,
+              "top_fsds": [
+                "mucha",
+                "girl",
+                "female",
+                "dress",
+                "woman"
+              ],
+              "top_cmean": [
+                "of",
+                "john",
+                "with",
+                "art",
+                "sharp"
+              ]
+            },
+            {
+              "t0": 5,
+              "t1": 6,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.1974074043603614,
+              "y_mean_1": 0.23482909431681037,
+              "delta_Y": 0.037421689956448984,
+              "y_threshold": 0.14709812998771662,
+              "hgb_auc": 0.578838624964398,
+              "top_fsds": [
+                "dress",
+                "white",
+                "woman",
+                "painting artstation",
+                "character"
+              ],
+              "top_cmean": [
+                "as",
+                "and",
+                "the",
+                "john",
+                "octane render"
+              ]
+            },
+            {
+              "t0": 6,
+              "t1": 7,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.23482909431681037,
+              "y_mean_1": 0.26278627024963497,
+              "delta_Y": 0.027957175932824596,
+              "y_threshold": 0.14432926625013348,
+              "hgb_auc": 0.6091614519348896,
+              "top_fsds": [
+                "fashion",
+                "body",
+                "young",
+                "skin",
+                "woman"
+              ],
+              "top_cmean": [
+                "wearing",
+                "on artstation",
+                "an",
+                "style",
+                "at"
+              ]
+            }
+          ]
+        },
+        "2000": {
+          "n_pairs": 3,
+          "mean_delta_Y": 0.029074908243802683,
+          "mean_auc": 0.6091376939024363,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 0.16158295755181462,
+              "y_mean_1": 0.17255404023919255,
+              "delta_Y": 0.010971082687377925,
+              "y_threshold": 0.13620897084474562,
+              "hgb_auc": 0.6110781320669381,
+              "top_fsds": [
+                "alphonse mucha",
+                "alphonse",
+                "mucha",
+                "woman",
+                "and alphonse"
+              ],
+              "top_cmean": [
+                "8k",
+                "4k",
+                "and",
+                "as",
+                "by"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 0.17255404023919255,
+              "y_mean_1": 0.18673233316419646,
+              "delta_Y": 0.014178292925003916,
+              "y_threshold": 0.1475889816880226,
+              "hgb_auc": 0.6033863095238094,
+              "top_fsds": [
+                "mucha",
+                "alphonse",
+                "alphonse mucha",
+                "artgerm",
+                "body"
+              ],
+              "top_cmean": [
+                "4k",
+                "8k",
+                "studio",
+                "art",
+                "on"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 0.18673233316419646,
+              "y_mean_1": 0.24880768228322267,
+              "delta_Y": 0.06207534911902621,
+              "y_threshold": 0.147136677801609,
+              "hgb_auc": 0.6129486401165615,
+              "top_fsds": [
+                "dress",
+                "woman",
+                "mucha",
+                "smooth sharp",
+                "body"
+              ],
+              "top_cmean": [
+                "as",
+                "on",
+                "and",
+                "illustration",
+                "octane"
+              ]
+            }
+          ]
+        }
+      },
+      "board_png": "diffusiondb_board.png"
+    },
+    "tencent_gr": {
+      "ok": true,
+      "meta": {
+        "dataset": "tencent_gr_edges",
+        "y": "y_convert",
+        "sort": "e_last_ts",
+        "n": 8000,
+        "d": 35
+      },
+      "by_chunk": {
+        "1000": {
+          "n_pairs": 6,
+          "mean_delta_Y": -0.007833333333333333,
+          "mean_auc": 0.9957951724897706,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.048,
+              "y_mean_1": 0.057,
+              "delta_Y": 0.009000000000000001,
+              "y_threshold": 0.5,
+              "hgb_auc": 0.9900094881955684,
+              "top_fsds": [
+                "e_log1p_exp",
+                "e_n_exp",
+                "i_log1p_n_exp",
+                "i_credit_last",
+                "i_share_last"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_pop_rank",
+                "i_item_credit_rank",
+                "u_user_activity_rank",
+                "i_n_covisit_neighbors"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.057,
+              "y_mean_1": 0.03,
+              "delta_Y": -0.027000000000000003,
+              "y_threshold": 0.5,
+              "hgb_auc": 1.0,
+              "top_fsds": [
+                "e_log1p_exp",
+                "e_n_exp",
+                "i_log1p_n_exp",
+                "u_n_exp",
+                "u_log1p_n_exp"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_pop_rank",
+                "i_item_credit_rank",
+                "i_n_covisit_neighbors",
+                "u_user_activity_rank"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.03,
+              "y_mean_1": 0.015,
+              "delta_Y": -0.015,
+              "y_threshold": 0.5,
+              "hgb_auc": 0.9985786802030456,
+              "top_fsds": [
+                "e_n_exp",
+                "e_log1p_exp",
+                "u_n_exp",
+                "u_log1p_n_exp",
+                "i_log1p_n_exp"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_credit_rank",
+                "i_item_pop_rank",
+                "i_n_covisit_neighbors",
+                "i_n_users"
+              ]
+            },
+            {
+              "t0": 3,
+              "t1": 4,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.015,
+              "y_mean_1": 0.019,
+              "delta_Y": 0.004,
+              "y_threshold": 0.5,
+              "hgb_auc": 1.0,
+              "top_fsds": [
+                "e_log1p_exp",
+                "e_n_exp",
+                "u_n_exp",
+                "i_credit_last",
+                "i_share_last"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_credit_rank",
+                "i_item_pop_rank",
+                "u_user_activity_rank",
+                "i_n_covisit_neighbors"
+              ]
+            },
+            {
+              "t0": 4,
+              "t1": 5,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.019,
+              "y_mean_1": 0.02,
+              "delta_Y": 0.0010000000000000009,
+              "y_threshold": 0.5,
+              "hgb_auc": 0.9971938775510204,
+              "top_fsds": [
+                "e_log1p_exp",
+                "e_n_exp",
+                "i_credit_last",
+                "i_share_last",
+                "i_item_credit_rank"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_credit_rank",
+                "i_item_pop_rank",
+                "u_user_activity_rank",
+                "i_n_covisit_neighbors"
+              ]
+            },
+            {
+              "t0": 5,
+              "t1": 6,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.02,
+              "y_mean_1": 0.001,
+              "delta_Y": -0.019,
+              "y_threshold": 0.5,
+              "hgb_auc": 0.9889889889889889,
+              "top_fsds": [
+                "e_log1p_exp",
+                "e_n_exp",
+                "i_share_last",
+                "i_credit_last",
+                "i_item_credit_rank"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_credit_rank",
+                "i_item_pop_rank",
+                "u_user_activity_rank",
+                "i_n_covisit_neighbors"
+              ]
+            }
+          ]
+        },
+        "2000": {
+          "n_pairs": 3,
+          "mean_delta_Y": -0.017333333333333336,
+          "mean_auc": 0.9987730084570958,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 0.0525,
+              "y_mean_1": 0.0225,
+              "delta_Y": -0.03,
+              "y_threshold": 0.5,
+              "hgb_auc": 1.0,
+              "top_fsds": [
+                "e_log1p_exp",
+                "e_n_exp",
+                "i_log1p_n_exp",
+                "u_n_exp",
+                "i_share_last"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_pop_rank",
+                "i_item_credit_rank",
+                "u_user_activity_rank",
+                "i_n_covisit_neighbors"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 0.0225,
+              "y_mean_1": 0.0195,
+              "delta_Y": -0.002999999999999999,
+              "y_threshold": 0.5,
+              "hgb_auc": 0.9973195256214125,
+              "top_fsds": [
+                "e_n_exp",
+                "e_log1p_exp",
+                "u_n_exp",
+                "u_log1p_n_exp",
+                "i_log1p_n_exp"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_credit_rank",
+                "i_item_pop_rank",
+                "u_user_activity_rank",
+                "i_n_covisit_neighbors"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 0.0195,
+              "y_mean_1": 0.0005,
+              "delta_Y": -0.019,
+              "y_threshold": 0.5,
+              "hgb_auc": 0.998999499749875,
+              "top_fsds": [
+                "e_log1p_exp",
+                "e_n_exp",
+                "i_share_last",
+                "i_credit_last",
+                "i_item_credit_rank"
+              ],
+              "top_cmean": [
+                "u_span_sec",
+                "i_item_credit_rank",
+                "i_item_pop_rank",
+                "i_n_covisit_neighbors",
+                "u_user_activity_rank"
+              ]
+            }
+          ]
+        }
+      },
+      "board_png": "tencent_gr_board.png"
+    },
+    "waymo_proxy": {
+      "ok": true,
+      "meta": {
+        "dataset": "waymo_proxy",
+        "y": "proxy_y",
+        "sort": "row_index",
+        "n": 8000,
+        "d": 9
+      },
+      "by_chunk": {
+        "1000": {
+          "n_pairs": 7,
+          "mean_delta_Y": 0.2307242796562466,
+          "mean_auc": 0.9399096272322387,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 0.8978118329546211,
+              "y_mean_1": 1.110888510694236,
+              "delta_Y": 0.21307667773961503,
+              "y_threshold": 0.9987810501789236,
+              "hgb_auc": 0.9434952758427416,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x3",
+                "x1",
+                "x5"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x8",
+                "x3",
+                "x4"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 1.110888510694236,
+              "y_mean_1": 1.3145237819273534,
+              "delta_Y": 0.2036352712331173,
+              "y_threshold": 1.2154519866521336,
+              "hgb_auc": 0.9283616074933837,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x3",
+                "x1",
+                "x5"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x3",
+                "x8",
+                "x4"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 1.3145237819273534,
+              "y_mean_1": 1.550384100998826,
+              "delta_Y": 0.23586031907147254,
+              "y_threshold": 1.4166978508559815,
+              "hgb_auc": 0.937458606083943,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x3",
+                "x1",
+                "x6"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x3",
+                "x8",
+                "x2"
+              ]
+            },
+            {
+              "t0": 3,
+              "t1": 4,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 1.550384100998826,
+              "y_mean_1": 1.7826051617156493,
+              "delta_Y": 0.23222106071682336,
+              "y_threshold": 1.6504953171460046,
+              "hgb_auc": 0.9407109128925824,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x3",
+                "x1",
+                "x5"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x3",
+                "x8",
+                "x4"
+              ]
+            },
+            {
+              "t0": 4,
+              "t1": 5,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 1.7826051617156493,
+              "y_mean_1": 2.0199165407620443,
+              "delta_Y": 0.237311379046395,
+              "y_threshold": 1.8923511218421185,
+              "hgb_auc": 0.9379230894706795,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x5",
+                "x4",
+                "x3"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x3",
+                "x8",
+                "x4"
+              ]
+            },
+            {
+              "t0": 5,
+              "t1": 6,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 2.0199165407620443,
+              "y_mean_1": 2.266382726100046,
+              "delta_Y": 0.2464661853380017,
+              "y_threshold": 2.1255906019023154,
+              "hgb_auc": 0.9443604172087778,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x3",
+                "x1",
+                "x5"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x8",
+                "x3",
+                "x4"
+              ]
+            },
+            {
+              "t0": 6,
+              "t1": 7,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 2.266382726100046,
+              "y_mean_1": 2.5128817905483474,
+              "delta_Y": 0.24649906444830139,
+              "y_threshold": 2.3703655520091256,
+              "hgb_auc": 0.9470574816335631,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x3",
+                "x1",
+                "x4"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x3",
+                "x8",
+                "x4"
+              ]
+            }
+          ]
+        },
+        "2000": {
+          "n_pairs": 3,
+          "mean_delta_Y": 0.46176069549992277,
+          "mean_auc": 0.9692848500223602,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 1.0043501718244285,
+              "y_mean_1": 1.4324539414630897,
+              "delta_Y": 0.42810376963866115,
+              "y_threshold": 1.116354225784982,
+              "hgb_auc": 0.9627565615933587,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x5",
+                "x4",
+                "x3"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x8",
+                "x3",
+                "x4"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 1.4324539414630897,
+              "y_mean_1": 1.9012608512388467,
+              "delta_Y": 0.468806909775757,
+              "y_threshold": 1.552994606434652,
+              "hgb_auc": 0.9723179166714355,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x5",
+                "x4",
+                "x3"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x8",
+                "x3",
+                "x4"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 1.9012608512388467,
+              "y_mean_1": 2.389632258324197,
+              "delta_Y": 0.4883714070853502,
+              "y_threshold": 2.0188487286702554,
+              "hgb_auc": 0.9727800718022864,
+              "top_fsds": [
+                "x0",
+                "x8",
+                "x5",
+                "x4",
+                "x3"
+              ],
+              "top_cmean": [
+                "x5",
+                "x0",
+                "x8",
+                "x3",
+                "x4"
+              ]
+            }
+          ]
+        }
+      },
+      "board_png": "waymo_proxy_board.png"
+    },
+    "metro_interstate": {
+      "ok": true,
+      "meta": {
+        "dataset": "metro_interstate",
+        "y": "traffic_volume",
+        "sort": "date_time",
+        "n": 8000,
+        "d": 19
+      },
+      "by_chunk": {
+        "1000": {
+          "n_pairs": 7,
+          "mean_delta_Y": -20.366857142857175,
+          "mean_auc": 0.9718807034328297,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 3443.521,
+              "y_mean_1": 3176.371,
+              "delta_Y": -267.1500000000001,
+              "y_threshold": 5032.0,
+              "hgb_auc": 0.9543415679185914,
+              "top_fsds": [
+                "m5",
+                "m0",
+                "m14",
+                "m16",
+                "m18"
+              ],
+              "top_cmean": [
+                "m0",
+                "m3",
+                "m6",
+                "m16",
+                "m4"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 3176.371,
+              "y_mean_1": 2957.708,
+              "delta_Y": -218.663,
+              "y_threshold": 4685.0,
+              "hgb_auc": 0.9644818038902837,
+              "top_fsds": [
+                "m5",
+                "m9",
+                "m3",
+                "m16",
+                "m13"
+              ],
+              "top_cmean": [
+                "m0",
+                "m6",
+                "m3",
+                "m4",
+                "m5"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 2957.708,
+              "y_mean_1": 3201.05,
+              "delta_Y": 243.3420000000001,
+              "y_threshold": 4279.3,
+              "hgb_auc": 0.9695040688381422,
+              "top_fsds": [
+                "m5",
+                "m6",
+                "m12",
+                "m14",
+                "m3"
+              ],
+              "top_cmean": [
+                "m3",
+                "m6",
+                "m0",
+                "m4",
+                "m5"
+              ]
+            },
+            {
+              "t0": 3,
+              "t1": 4,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 3201.05,
+              "y_mean_1": 3197.312,
+              "delta_Y": -3.7380000000002838,
+              "y_threshold": 4665.9,
+              "hgb_auc": 0.9739295588412069,
+              "top_fsds": [
+                "m5",
+                "m0",
+                "m16",
+                "m4",
+                "m9"
+              ],
+              "top_cmean": [
+                "m3",
+                "m0",
+                "m6",
+                "m8",
+                "m9"
+              ]
+            },
+            {
+              "t0": 4,
+              "t1": 5,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 3197.312,
+              "y_mean_1": 3369.135,
+              "delta_Y": 171.82300000000032,
+              "y_threshold": 4611.199999999999,
+              "hgb_auc": 0.9825836916891582,
+              "top_fsds": [
+                "m5",
+                "m14",
+                "m10",
+                "m16",
+                "m6"
+              ],
+              "top_cmean": [
+                "m3",
+                "m0",
+                "m6",
+                "m4",
+                "m8"
+              ]
+            },
+            {
+              "t0": 5,
+              "t1": 6,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 3369.135,
+              "y_mean_1": 3411.611,
+              "delta_Y": 42.47599999999966,
+              "y_threshold": 4877.2,
+              "hgb_auc": 0.984241165952504,
+              "top_fsds": [
+                "m5",
+                "m0",
+                "m9",
+                "m12",
+                "m8"
+              ],
+              "top_cmean": [
+                "m0",
+                "m6",
+                "m4",
+                "m5",
+                "m16"
+              ]
+            },
+            {
+              "t0": 6,
+              "t1": 7,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 3411.611,
+              "y_mean_1": 3300.953,
+              "delta_Y": -110.6579999999999,
+              "y_threshold": 4962.0,
+              "hgb_auc": 0.9740830668999216,
+              "top_fsds": [
+                "m5",
+                "m1",
+                "m9",
+                "m0",
+                "m10"
+              ],
+              "top_cmean": [
+                "m3",
+                "m0",
+                "m6",
+                "m1",
+                "m4"
+              ]
+            }
+          ]
+        },
+        "2000": {
+          "n_pairs": 3,
+          "mean_delta_Y": 15.445333333333414,
+          "mean_auc": 0.9753765691624277,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 3309.946,
+              "y_mean_1": 3079.379,
+              "delta_Y": -230.567,
+              "y_threshold": 4845.4,
+              "hgb_auc": 0.9678572215489699,
+              "top_fsds": [
+                "m5",
+                "m0",
+                "m6",
+                "m16",
+                "m9"
+              ],
+              "top_cmean": [
+                "m0",
+                "m6",
+                "m3",
+                "m4",
+                "m5"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 3079.379,
+              "y_mean_1": 3283.2235,
+              "delta_Y": 203.84450000000015,
+              "y_threshold": 4461.3,
+              "hgb_auc": 0.9796887958739373,
+              "top_fsds": [
+                "m5",
+                "m6",
+                "m0",
+                "m12",
+                "m4"
+              ],
+              "top_cmean": [
+                "m0",
+                "m3",
+                "m6",
+                "m8",
+                "m9"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 3283.2235,
+              "y_mean_1": 3356.282,
+              "delta_Y": 73.0585000000001,
+              "y_threshold": 4762.6,
+              "hgb_auc": 0.9785836900643757,
+              "top_fsds": [
+                "m5",
+                "m0",
+                "m6",
+                "m12",
+                "m9"
+              ],
+              "top_cmean": [
+                "m0",
+                "m3",
+                "m6",
+                "m1",
+                "m4"
+              ]
+            }
+          ]
+        }
+      },
+      "board_png": "metro_interstate_board.png"
+    },
+    "beijing_pm25": {
+      "ok": true,
+      "meta": {
+        "dataset": "beijing_pm25",
+        "y": "pm2.5",
+        "sort": "stamp",
+        "n": 8000,
+        "d": 13
+      },
+      "by_chunk": {
+        "1000": {
+          "n_pairs": 7,
+          "mean_delta_Y": 7.190857142857142,
+          "mean_auc": 0.9780904023588342,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 85.55,
+              "y_mean_1": 98.302,
+              "delta_Y": 12.75200000000001,
+              "y_threshold": 91.29999999999995,
+              "hgb_auc": 0.9712967164725915,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p2",
+                "p3",
+                "p12"
+              ],
+              "top_cmean": [
+                "p8",
+                "p3",
+                "p2",
+                "p1",
+                "p0"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 98.302,
+              "y_mean_1": 86.074,
+              "delta_Y": -12.228000000000009,
+              "y_threshold": 115.0,
+              "hgb_auc": 0.9859901414799412,
+              "top_fsds": [
+                "p8",
+                "p2",
+                "p0",
+                "p3",
+                "p7"
+              ],
+              "top_cmean": [
+                "p3",
+                "p8",
+                "p1",
+                "p0",
+                "p2"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 86.074,
+              "y_mean_1": 94.436,
+              "delta_Y": 8.362000000000009,
+              "y_threshold": 111.0,
+              "hgb_auc": 0.9569629599614606,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p10",
+                "p11",
+                "p3"
+              ],
+              "top_cmean": [
+                "p3",
+                "p0",
+                "p1",
+                "p8",
+                "p2"
+              ]
+            },
+            {
+              "t0": 3,
+              "t1": 4,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 94.436,
+              "y_mean_1": 118.474,
+              "delta_Y": 24.037999999999997,
+              "y_threshold": 117.0,
+              "hgb_auc": 0.982019613507961,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p7",
+                "p10",
+                "p2"
+              ],
+              "top_cmean": [
+                "p8",
+                "p0",
+                "p3",
+                "p1",
+                "p2"
+              ]
+            },
+            {
+              "t0": 4,
+              "t1": 5,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 118.474,
+              "y_mean_1": 112.924,
+              "delta_Y": -5.549999999999997,
+              "y_threshold": 168.29999999999995,
+              "hgb_auc": 0.9684508740204943,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p10",
+                "p7",
+                "p2"
+              ],
+              "top_cmean": [
+                "p2",
+                "p8",
+                "p1",
+                "p0",
+                "p7"
+              ]
+            },
+            {
+              "t0": 5,
+              "t1": 6,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 112.924,
+              "y_mean_1": 107.846,
+              "delta_Y": -5.078000000000003,
+              "y_threshold": 140.0,
+              "hgb_auc": 0.993287573915042,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p10",
+                "p11",
+                "p5"
+              ],
+              "top_cmean": [
+                "p3",
+                "p0",
+                "p1",
+                "p2",
+                "p8"
+              ]
+            },
+            {
+              "t0": 6,
+              "t1": 7,
+              "n0": 1000,
+              "n1": 1000,
+              "y_mean_0": 107.846,
+              "y_mean_1": 135.886,
+              "delta_Y": 28.039999999999992,
+              "y_threshold": 115.0,
+              "hgb_auc": 0.988624937154349,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p2",
+                "p3",
+                "p10"
+              ],
+              "top_cmean": [
+                "p8",
+                "p0",
+                "p1",
+                "p3",
+                "p2"
+              ]
+            }
+          ]
+        },
+        "2000": {
+          "n_pairs": 3,
+          "mean_delta_Y": 9.979999999999999,
+          "mean_auc": 0.9797058426155137,
+          "rows": [
+            {
+              "t0": 0,
+              "t1": 1,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 91.926,
+              "y_mean_1": 90.255,
+              "delta_Y": -1.6710000000000065,
+              "y_threshold": 105.0,
+              "hgb_auc": 0.9707047867626206,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p2",
+                "p3",
+                "p12"
+              ],
+              "top_cmean": [
+                "p1",
+                "p0",
+                "p2",
+                "p3",
+                "p7"
+              ]
+            },
+            {
+              "t0": 1,
+              "t1": 2,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 90.255,
+              "y_mean_1": 115.699,
+              "delta_Y": 25.444000000000003,
+              "y_threshold": 115.0,
+              "hgb_auc": 0.9771239644295812,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p10",
+                "p3",
+                "p11"
+              ],
+              "top_cmean": [
+                "p8",
+                "p3",
+                "p0",
+                "p1",
+                "p2"
+              ]
+            },
+            {
+              "t0": 2,
+              "t1": 3,
+              "n0": 2000,
+              "n1": 2000,
+              "y_mean_0": 115.699,
+              "y_mean_1": 121.866,
+              "delta_Y": 6.167000000000002,
+              "y_threshold": 155.0,
+              "hgb_auc": 0.9912887766543395,
+              "top_fsds": [
+                "p8",
+                "p0",
+                "p10",
+                "p2",
+                "p11"
+              ],
+              "top_cmean": [
+                "p0",
+                "p1",
+                "p3",
+                "p2",
+                "p8"
+              ]
+            }
+          ]
+        }
+      },
+      "board_png": "beijing_pm25_board.png"
+    }
+  },
+  "sec": 4.8687732219696045
+}

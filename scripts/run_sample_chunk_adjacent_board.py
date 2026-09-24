@@ -77,8 +77,9 @@ def fs_adjacent(
         if int(m0.sum()) < min_n or int(m1.sum()) < min_n:
             continue
         y0, y1 = y[m0], y[m1]
-        # continuous → early-quantile binary (same FS trick as DiffusionDB)
-        if np.nanstd(y0) < 1e-12 and set(np.unique(y0).tolist()) <= {0.0, 1.0}:
+        # binary labels stay binary; continuous → early-quantile binary
+        uniq0 = set(np.unique(y0[~np.isnan(y0)]).tolist()) if len(y0) else set()
+        if uniq0 and uniq0 <= {0.0, 1.0}:
             yb0, yb1 = y0.astype(int), y1.astype(int)
             thr = 0.5
         else:
@@ -88,16 +89,15 @@ def fs_adjacent(
         if len(np.unique(yb0)) < 2 or len(np.unique(yb1)) < 2:
             continue
         k = min(select_k, X.shape[1], max(1, int(m0.sum()) - 1))
-        pipe = Pipeline(
-            [
-                ("sc", StandardScaler()),
-                ("var", VarianceThreshold(1e-10)),
-                ("sel", SelectKBest(f_classif, k=k)),
-            ]
-        )
         try:
-            Xt = pipe.fit_transform(X[m0], yb0)
-            Xte = pipe.transform(X[m1])
+            pre = Pipeline(
+                [("sc", StandardScaler()), ("var", VarianceThreshold(1e-10))]
+            )
+            Xv = pre.fit_transform(X[m0], yb0)
+            k_eff = min(k, Xv.shape[1])
+            sel = SelectKBest(f_classif, k=k_eff)
+            Xt = sel.fit_transform(Xv, yb0)
+            Xte = sel.transform(pre.transform(X[m1]))
         except Exception:
             continue
         hgb = HistGradientBoostingClassifier(
@@ -106,8 +106,7 @@ def fs_adjacent(
         hgb.fit(Xt, yb0)
         proba = hgb.predict_proba(Xte)[:, 1]
         auc = float(roc_auc_score(yb1, proba))
-        sel = pipe.named_steps["sel"]
-        var_mask = pipe.named_steps["var"].get_support()
+        var_mask = pre.named_steps["var"].get_support()
         cols_var = [c for c, m in zip(feat_names, var_mask) if m]
         ranking = (
             pd.DataFrame({"feature": cols_var, "f_score": sel.scores_})
@@ -158,7 +157,27 @@ def load_tencent(n_sample: int, seed: int) -> Tuple[np.ndarray, np.ndarray, List
         # evenly subsample along time then re-sort
         idx = np.linspace(0, len(df) - 1, num=n_sample, dtype=int)
         df = df.iloc[idx].reset_index(drop=True)
-    drop = {"user_id", "item_id", y_col, "e_last_ts", "last_ts"}
+    drop = {
+        "user_id",
+        "item_id",
+        y_col,
+        "e_last_ts",
+        "last_ts",
+        # direct convert leakage for adjacent FS board
+        "e_n_cnv",
+        "u_n_cnv",
+        "u_has_convert",
+        "u_log1p_n_cnv",
+        "u_cvr",
+        "u_ctcvr",
+        "u_user_ctcvr_rank",
+        "i_n_cnv",
+        "i_n_as_convert_terminal",
+        "i_log1p_n_cnv",
+        "i_item_cnv_rank",
+        "i_cvr",
+        "i_ctcvr",
+    }
     feat_cols = [
         c
         for c in df.columns
