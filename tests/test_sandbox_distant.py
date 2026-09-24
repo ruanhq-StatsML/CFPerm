@@ -88,3 +88,20 @@ def test_pack_router_table_and_compare():
     rep = run_routed_vs_global(packs, bakeoff={"cards": cards}, seed=1, warm=100, max_steps=60)
     assert rep["n_packs"] == 2
     assert "headline" in rep
+
+
+def test_theme_sticker_annotates_decision_path():
+    from sandbox.theme_sticker import ThemeSticker
+
+    prompts = [
+        f"red sports car on wet road cinematic {i}" for i in range(30)
+    ] + [f"oil painting of mountains at dawn {i}" for i in range(30)]
+    st = ThemeSticker(k=2, max_features=500, seed=0).fit(prompts)
+    steps = [
+        {"step": 0, "decision_path": ["observe", "forecast:hgb", "decide:idle", "log"]},
+        {"step": 1, "decision_path": ["observe", "forecast:ridge", "decide:retrain", "log"]},
+    ]
+    out = st.annotate_steps(steps, [prompts[0], prompts[40]])
+    assert out[0]["decision_path"][1].startswith("theme:")
+    assert "theme_cluster" in out[0]
+    assert len(out[0]["theme_terms"]) >= 1

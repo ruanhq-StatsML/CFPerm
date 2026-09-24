@@ -64,7 +64,10 @@
 
 ```bash
 PYTHONPATH=. python3 scripts/run_pack_router.py --out results/sandbox_router
+PYTHONPATH=. python3 scripts/run_theme_sticker.py --out results/sandbox_theme
 ```
+
+`ThemeSticker.annotate_steps` 把 `theme:<id>` 插入每步 `decision_path`（observe 之后）。
 
 ---
 
