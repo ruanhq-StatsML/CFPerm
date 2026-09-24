@@ -81,10 +81,12 @@ def _synth(seed: int = 0) -> dict:
             "real_delta_excess": partial_real.get("delta_excess"),
             "curve_reading": curve.get("reading"),
             "ph_reading": ph.get("reading"),
+            "claims": suite.get("claims"),
             "headline": (
-                "volume case: large Δexcess (skill collapses after partialling); "
-                "real case: Δexcess small; PH alarms on injected skill drop; "
-                "cores untouched."
+                (suite.get("claims") or {}).get("headline", {}) or {}
+            ).get(
+                "text",
+                "descriptive suite only — see claim_router",
             ),
         },
     }
@@ -133,9 +135,10 @@ def render_md(rep: dict) -> str:
         "",
         "## Effect (what improved)",
         "",
-        "1. False skill from volume is **quantified** (Δexcess), not hand-waved.",
+        "1. Volume-driven association shrink is **quantified** (Δexcess) — not hand-waved as proven skill.",
         "2. Sample hunger of excess estimate is visible (curve).",
-        "3. Skill-drop is detectable online (PH) — dual to data-drift gates.",
+        "3. PH marks a skill-drop *candidate* only — confirm before acting.",
+        "4. All readings pass ``claim_router`` (overclaim check + fallback).",
         "",
     ]
     return "\n".join(lines) + "\n"
