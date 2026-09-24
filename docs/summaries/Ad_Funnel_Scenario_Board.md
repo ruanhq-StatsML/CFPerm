@@ -27,6 +27,9 @@
    sign_Dy(board) = sign(mean Δȳ) ──► S1 刷量 / S2 灌入 / S3 漂移
 ```
 
+**边颗粒度（必读）**：一行 = `(user_id, item_id)` 边，不是原子曝光 PV。  
+列族 / ops·content 丢列清单见 [`Tencent_Edge_Grain_Columns.md`](./Tencent_Edge_Grain_Columns.md)。
+
 **Justify**
 
 | 层 | 取什么 | 为什么 |
