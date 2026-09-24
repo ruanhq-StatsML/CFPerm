@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round5.json"
+OUT = Path(__file__).resolve().parent / "results_round6.json"
 # Weight on the spurious cue after drift. Below 1 so the calibrated score remains
 # in the judge and post-drift success is mixed rather than identically zero.
 # Overwritten per task in main. Weight on the spurious cue after the drift point.
@@ -114,7 +114,7 @@ class Gate:
     above the reference quantile.
     """
 
-    def __init__(self, burnin: int = 12, k: int = 2, quantile: float = 0.95):
+    def __init__(self, burnin: int = 12, k: int = 2, quantile: float = 0.95, trial: int = 4):
         self.burnin = burnin
         self.k = k
         self.quantile = quantile
@@ -122,7 +122,7 @@ class Gate:
         self.switch_at: int | None = None
         self.lord_at: int | None = None
         self.streak = 0
-        self.trial = 4
+        self.trial = trial
         self.reverted = False
         self.kept = False
 
@@ -291,7 +291,7 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
         steer = solv if policy == "oracle" else (stable if use_stable else judge)
         return StepView(steer, judge, stable, spurious, solv)
 
-    gate = Gate()
+    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
     for t, puzzle in enumerate(puzzles):
         use_stable = gate.use_stable(t, policy)
 
@@ -435,7 +435,7 @@ def bw_spurious(state) -> float:
 
 def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
     successes, losses, feats = [], [], []
-    gate = Gate()
+    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
 
     def expand(state):
         out = []
@@ -588,7 +588,7 @@ def dk_spurious(state) -> float:
 def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
     start = (1, 1, 0, 0, 0)
     successes, losses, feats = [], [], []
-    gate = Gate()
+    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
 
     def expand(state):
         return dk_neighbors(state)
@@ -687,7 +687,7 @@ def hop_overlap(question: str, pid: int) -> float:
 def run_hotpot(n, drift_at, policy, beam, rng):
     bank = hop_questions()
     successes, losses, feats = [], [], []
-    gate = Gate()
+    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
 
     for t in range(n):
         question, gold = bank[t % len(bank)]
@@ -775,7 +775,7 @@ def webshop_catalog(rng: random.Random):
 
 def run_webshop(n, drift_at, policy, beam, rng):
     successes, losses, feats = [], [], []
-    gate = Gate()
+    gate = Gate(k=1 if policy == "confirm" else 2, trial=2 if policy == "confirm" else 4)
     catalog = webshop_catalog(rng)
 
     for t in range(n):

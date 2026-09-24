@@ -1,0 +1,779 @@
+{
+  "null_monitor": {
+    "mean_reject_rate": 0.0,
+    "alpha": 0.05,
+    "reps": 20,
+    "n": 300
+  },
+  "drift_mix": {
+    "game24": 0.28,
+    "blocksworld": 0.3,
+    "minigrid_doorkey": 0.169,
+    "hotpot_twohop": 0.8,
+    "webshop_attr": 0.65
+  },
+  "mix_jitter": {
+    "game24": 0.0,
+    "blocksworld": 0.0,
+    "minigrid_doorkey": 0.003,
+    "hotpot_twohop": 0.0,
+    "webshop_attr": 0.0
+  },
+  "tasks": {
+    "game24": {
+      "mix": 0.28,
+      "jitter": 0.0,
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "fsds_top_feature": "judge",
+        "fsds_localization": [
+          {
+            "feature": "judge",
+            "sse_drop": 1.4740918647057195,
+            "p": 0.0033222591362126247
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 1.359596875134879,
+            "p": 0.006644518272425249
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.3173487246806195,
+            "p": 0.1893687707641196
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 1.7763568394002505e-15,
+            "p": 1.0
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 0.3125,
+        "post_success": 0.2916666666666667
+      },
+      "gated": {
+        "task": "game24",
+        "pre_success": 1.0,
+        "post_success": 0.3333333333333333,
+        "switch_at": 20,
+        "false_alarm_before_drift": false,
+        "detection_delay": 4,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.3627020208357199,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.5833333333333333,
+            "p": 0.004987531172069825
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.18322649572649563,
+            "p": 0.059850374064837904
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.052805326273976216,
+            "p": 0.1970074812967581
+          }
+        ],
+        "fsds_top_feature": "spurious",
+        "fsds_localization": [
+          {
+            "feature": "spurious",
+            "sse_drop": 0.5249894906665755,
+            "p": 0.12956810631229235
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.43352679137851613,
+            "p": 0.14285714285714285
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.07619047619047414,
+            "p": 0.6511627906976745
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 2.8167292409619904e-07,
+            "p": 1.0
+          }
+        ],
+        "reverted": false
+      },
+      "confirm": {
+        "task": "game24",
+        "pre_success": 1.0,
+        "post_success": 0.20833333333333334,
+        "switch_at": 17,
+        "false_alarm_before_drift": false,
+        "detection_delay": 1,
+        "lord_at": null,
+        "top_shifted_feature": "stable",
+        "localization": [
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.057090082278780374,
+            "p": 0.11471321695760599
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.1875,
+            "p": 0.16458852867830423
+          },
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.06737414376283646,
+            "p": 0.29925187032418954
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.08333333333333337,
+            "p": 0.5187032418952618
+          }
+        ],
+        "fsds_top_feature": "spurious",
+        "fsds_localization": [
+          {
+            "feature": "spurious",
+            "sse_drop": 0.9285909850711853,
+            "p": 0.009966777408637873
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.25771664918281,
+            "p": 0.2425249169435216
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.13538436558013478,
+            "p": 0.3787375415282392
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.09469696969696884,
+            "p": 0.43521594684385384
+          }
+        ],
+        "reverted": true
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "blocksworld": {
+      "mix": 0.3,
+      "jitter": 0.0,
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.7916666666666666,
+        "fsds_top_feature": "judge",
+        "fsds_localization": [
+          {
+            "feature": "judge",
+            "sse_drop": 0.8489031770045368,
+            "p": 0.03322259136212625
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.46106557377048984,
+            "p": 0.09966777408637874
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.22612804735934144,
+            "p": 0.2823920265780731
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.14982269503545798,
+            "p": 0.3388704318936877
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 0.9375,
+        "post_success": 1.0
+      },
+      "gated": {
+        "task": "blocksworld",
+        "pre_success": 1.0,
+        "post_success": 0.9166666666666666,
+        "switch_at": 20,
+        "false_alarm_before_drift": false,
+        "detection_delay": 4,
+        "lord_at": null,
+        "top_shifted_feature": "progress",
+        "localization": [
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.03645833333333337,
+            "p": 0.24937655860349128
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.044791666666666674,
+            "p": 0.38154613466334164
+          },
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.013958333333333295,
+            "p": 0.6583541147132169
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.015625,
+            "p": 0.800498753117207
+          }
+        ],
+        "fsds_top_feature": "spurious",
+        "fsds_localization": [
+          {
+            "feature": "spurious",
+            "sse_drop": 0.1662895927601804,
+            "p": 0.15946843853820597
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.125,
+            "p": 0.18272425249169436
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.02181500872600317,
+            "p": 0.7840531561461794
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.01267513435325629,
+            "p": 0.707641196013289
+          }
+        ],
+        "reverted": false
+      },
+      "confirm": {
+        "task": "blocksworld",
+        "pre_success": 1.0,
+        "post_success": 0.9583333333333334,
+        "switch_at": 19,
+        "false_alarm_before_drift": false,
+        "detection_delay": 3,
+        "lord_at": null,
+        "top_shifted_feature": "progress",
+        "localization": [
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.04166666666666663,
+            "p": 0.2718204488778055
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.038541666666666696,
+            "p": 0.4463840399002494
+          },
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.012916666666666687,
+            "p": 0.683291770573566
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.015625,
+            "p": 0.800498753117207
+          }
+        ],
+        "fsds_top_feature": "spurious",
+        "fsds_localization": [
+          {
+            "feature": "spurious",
+            "sse_drop": 0.09610362257792848,
+            "p": 0.12292358803986711
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.031250000000000555,
+            "p": 0.29900332225913623
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.009276738995267597,
+            "p": 0.7043189368770764
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.0018115942028987808,
+            "p": 0.9302325581395349
+          }
+        ],
+        "reverted": false
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "minigrid_doorkey": {
+      "mix": 0.169,
+      "jitter": 0.003,
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.375,
+        "fsds_top_feature": "judge",
+        "fsds_localization": [
+          {
+            "feature": "judge",
+            "sse_drop": 4.125,
+            "p": 0.0033222591362126247
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 8.881784197001252e-16,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 8.881784197001252e-16,
+            "p": 1.0
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 8.881784197001252e-16,
+            "p": 1.0
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      },
+      "gated": {
+        "task": "minigrid_doorkey",
+        "pre_success": 1.0,
+        "post_success": 0.9166666666666666,
+        "switch_at": 19,
+        "false_alarm_before_drift": false,
+        "detection_delay": 3,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.05640437500000006,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.05833333333333335,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.0,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.0,
+            "p": 1.0
+          }
+        ],
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 0.2333333333333325,
+            "p": 0.07973421926910298
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.23149078543904955,
+            "p": 0.06312292358803986
+          },
+          {
+            "feature": "stable",
+            "sse_drop": -4.440892098500626e-16,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": -4.440892098500626e-16,
+            "p": 1.0
+          }
+        ],
+        "reverted": false
+      },
+      "confirm": {
+        "task": "minigrid_doorkey",
+        "pre_success": 1.0,
+        "post_success": 0.9583333333333334,
+        "switch_at": 18,
+        "false_alarm_before_drift": false,
+        "detection_delay": 2,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.04464250000000014,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.04166666666666663,
+            "p": 0.00997506234413965
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.0,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.0,
+            "p": 1.0
+          }
+        ],
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 0.029761904761904878,
+            "p": 0.2425249169435216
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.029760259523400223,
+            "p": 0.2823920265780731
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 7.771561172376096e-16,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 7.771561172376096e-16,
+            "p": 1.0
+          }
+        ],
+        "reverted": false
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "hotpot_twohop": {
+      "mix": 0.8,
+      "jitter": 0.0,
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.375,
+        "fsds_top_feature": "stable",
+        "fsds_localization": [
+          {
+            "feature": "stable",
+            "sse_drop": 4.188371380419795,
+            "p": 0.0033222591362126247
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 3.125000000000001,
+            "p": 0.0033222591362126247
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 2.3359988532462355,
+            "p": 0.0033222591362126247
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": -8.881784197001252e-16,
+            "p": 1.0
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 0.0625,
+        "post_success": 0.16666666666666666
+      },
+      "gated": {
+        "task": "hotpot_twohop",
+        "pre_success": 1.0,
+        "post_success": 0.20833333333333334,
+        "switch_at": 20,
+        "false_alarm_before_drift": false,
+        "detection_delay": 4,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.07474950396825403,
+            "p": 0.022443890274314215
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.125,
+            "p": 0.08229426433915212
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.03794642857142849,
+            "p": 0.456359102244389
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.03472222222222221,
+            "p": 0.5461346633416458
+          }
+        ],
+        "fsds_top_feature": "judge",
+        "fsds_localization": [
+          {
+            "feature": "judge",
+            "sse_drop": 1.0117929798098526,
+            "p": 0.013289036544850499
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.8793901281442809,
+            "p": 0.029900332225913623
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.8021262788211923,
+            "p": 0.03986710963455149
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.013888888888889728,
+            "p": 0.7109634551495017
+          }
+        ],
+        "reverted": true
+      },
+      "confirm": {
+        "task": "hotpot_twohop",
+        "pre_success": 1.0,
+        "post_success": 0.375,
+        "switch_at": 19,
+        "false_alarm_before_drift": false,
+        "detection_delay": 3,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.2564707341269841,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.1674107142857143,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.30902777777777757,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.33333333333333337,
+            "p": 0.0024937655860349127
+          }
+        ],
+        "fsds_top_feature": "stable",
+        "fsds_localization": [
+          {
+            "feature": "stable",
+            "sse_drop": 3.978511601952171,
+            "p": 0.0033222591362126247
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 1.6875,
+            "p": 0.009966777408637873
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 1.0737469492461704,
+            "p": 0.04318936877076412
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.3068181818181799,
+            "p": 0.24584717607973422
+          }
+        ],
+        "reverted": true
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "webshop_attr": {
+      "mix": 0.65,
+      "jitter": 0.0,
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.625,
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 1.8884730538922163,
+            "p": 0.0033222591362126247
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.8522727272727275,
+            "p": 0.03322259136212625
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.7098103305851939,
+            "p": 0.11627906976744186
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.3171163889579711,
+            "p": 0.2857142857142857
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 0.3125,
+        "post_success": 0.4583333333333333
+      },
+      "gated": {
+        "task": "webshop_attr",
+        "pre_success": 1.0,
+        "post_success": 0.5833333333333334,
+        "switch_at": 31,
+        "false_alarm_before_drift": false,
+        "detection_delay": 15,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.20854861111111112,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.31944444444444453,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.25125,
+            "p": 0.007481296758104738
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.04166666666666663,
+            "p": 1.0
+          }
+        ],
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 1.7801013941698383,
+            "p": 0.009966777408637873
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.3550724637681171,
+            "p": 0.2724252491694352
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.21348461535129992,
+            "p": 0.34551495016611294
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.02101114236392121,
+            "p": 0.7641196013289037
+          }
+        ],
+        "reverted": true
+      },
+      "confirm": {
+        "task": "webshop_attr",
+        "pre_success": 1.0,
+        "post_success": 0.5416666666666666,
+        "switch_at": 17,
+        "false_alarm_before_drift": false,
+        "detection_delay": 1,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.15176388888888892,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.3191666666666665,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.26388888888888895,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.08333333333333337,
+            "p": 0.5062344139650873
+          }
+        ],
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 2.314354275741711,
+            "p": 0.006644518272425249
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 1.466710211494151,
+            "p": 0.013289036544850499
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.6401515151515174,
+            "p": 0.0664451827242525
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.12320606396575418,
+            "p": 0.4485049833887043
+          }
+        ],
+        "reverted": true
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    }
+  }
+}
