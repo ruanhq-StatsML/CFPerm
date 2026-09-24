@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round1.json"
+OUT = Path(__file__).resolve().parent / "results_round2.json"
 SEED = 2026
 
 
@@ -833,6 +833,51 @@ def localize(feats, drift_at, n_perm=400, seed=0):
     return rows
 
 
+def _sse(design: np.ndarray, y: np.ndarray) -> float:
+    beta, _, _, _ = np.linalg.lstsq(design, y, rcond=None)
+    resid = y - design @ beta
+    return float(resid @ resid)
+
+
+def localize_fsds(feats, drift_at, n_perm=300, seed=0):
+    """Univariate concept-drift LOCO.
+
+    For each step feature x, compare y ~ 1 + batch with y ~ 1 + batch + x + batch:x.
+    The SSE drop is how much that feature's change across batches predicts success.
+    A permutation of x gives a p-value. This is the lightweight FSDS question:
+    which feature carries the success drop, not which feature's mean moved.
+    """
+    keys = ["judge", "stable", "spurious", "progress"]
+    n = len(feats)
+    if drift_at < 5 or n - drift_at < 5:
+        return []
+    y = np.array([f["y"] for f in feats], dtype=float)
+    batch = np.zeros(n)
+    batch[drift_at:] = 1.0
+    base = np.column_stack([np.ones(n), batch])
+    sse_base = _sse(base, y)
+    rng = np.random.default_rng(seed)
+    rows = []
+    for k in keys:
+        x = np.array([f[k] for f in feats], dtype=float)
+        sse = _sse(np.column_stack([base, x, batch * x]), y)
+        drop = sse_base - sse
+        hits = 0
+        for _ in range(n_perm):
+            xp = rng.permutation(x)
+            sse_p = _sse(np.column_stack([base, xp, batch * xp]), y)
+            hits += (sse_base - sse_p) >= drop - 1e-12
+        rows.append(
+            {
+                "feature": k,
+                "sse_drop": float(drop),
+                "p": float((1 + hits) / (n_perm + 1)),
+            }
+        )
+    rows.sort(key=lambda r: (-r["sse_drop"], r["p"]))
+    return rows
+
+
 def rate(xs, a, b):
     sl = xs[a:b]
     if not sl:
@@ -859,8 +904,11 @@ def summarize(name, out, drift_at, n):
     fa = None
     if out["switch_at"] is not None:
         fa = out["switch_at"] <= drift_at
-    loc = localize(out["feats"], drift_at, seed=abs(hash(name)) % 10_000)
+    seed = abs(hash(name)) % 10_000
+    loc = localize(out["feats"], drift_at, seed=seed)
+    fsds = localize_fsds(out["feats"], drift_at, seed=seed)
     top = loc[0]["feature"] if loc else None
+    fsds_top = fsds[0]["feature"] if fsds else None
     return {
         "task": name,
         "pre_success": pre,
@@ -873,6 +921,8 @@ def summarize(name, out, drift_at, n):
         "lord_at": out.get("lord_at"),
         "top_shifted_feature": top,
         "localization": loc,
+        "fsds_top_feature": fsds_top,
+        "fsds_localization": fsds,
     }
 
 
@@ -917,6 +967,15 @@ def main():
             out = fn(policy)
             if policy == "gated":
                 summary = summarize(task, out, drift_at, len(out["success"]))
+            elif policy == "noisy":
+                seed = abs(hash(task + "-noisy")) % 10_000
+                fsds = localize_fsds(out["feats"], drift_at, seed=seed)
+                summary = {
+                    "pre_success": rate(out["success"], 0, drift_at),
+                    "post_success": rate(out["success"], drift_at, len(out["success"])),
+                    "fsds_top_feature": fsds[0]["feature"] if fsds else None,
+                    "fsds_localization": fsds,
+                }
             else:
                 summary = {
                     "pre_success": rate(out["success"], 0, drift_at),
