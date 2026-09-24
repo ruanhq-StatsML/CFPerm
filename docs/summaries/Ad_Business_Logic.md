@@ -1,5 +1,9 @@
 # 广告业务逻辑 elaborate（投放 / 审出视角）
 
+> **先案由，后切片。** S1/S2/S3 怎么刻画与评估、以及 intensity×credit /
+> stride / 子集×ops·content 各处在哪一层 —— 见  
+> [`Ad_S1S2S3_Business_First.md`](./Ad_S1S2S3_Business_First.md)。
+>
 > 不讲模型细节。只回答：**投放同学怎么读这张边 pairwise 看板**。  
 > 数据：TencentGR 用户–创意边；Y=是否转化；商户键≈广告主。
 

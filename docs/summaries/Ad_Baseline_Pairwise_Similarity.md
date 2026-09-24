@@ -1,5 +1,9 @@
 # 买量基线 · Pairwise 相似度 · 交叉切片（投放/审出）
 
+> **业务逻辑先捋清**：案由主轴是 S1/S2/S3（只认 `sign_Dy`）；  
+> intensity×credit / ops·content / stride 是评估切片，不定族。  
+> 见 [`Ad_S1S2S3_Business_First.md`](./Ad_S1S2S3_Business_First.md)。
+>
 > 回答你刚点名的几块：**曝光强度基线为什么 AUC≈0.99≠作弊≠限投**；  
 > pack-pairwise vs 日历宽窗；pairwise **相似度怎么刻画/评估**；  
 > intensity×credit 交叉、stride 重叠、按广告主切 —— 以及还有什么。
@@ -154,6 +158,8 @@ for (t0,t1) in pairwise(chunk_ids):   # 或 stride 重叠版
 | 边 → `item_feat.122` → `merchant_id` | 账户粒度 |
 | 取边数最多的 Top-K 广告主 | 大户值班包 |
 | 每户内自行 sort+pairwise | 「这户自己的买量基线 / 末跳」 |
+
+本机注意：`item_feat` merchant parquet 若不可用，脚本会 **fallback 到边数 Top item_id** 作创意代理，并在 `advertiser.note` 标明「不是真广告主」。单创意边数往往 < 2N，pairwise 会 `too_small`——这正好说明 **账户粒度需要 merchant 映射 + 足够边**，不能拿单创意硬报 AUC。
 
 业务：
 
