@@ -1,0 +1,40 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs,amsmath}
+\begin{document}
+\paragraph{Not rejection inference.}
+OnlineRFPerm asks whether a frozen probe still pays rent on the new batch.
+$T$ is the batch label. Complete-case MSE on shown rows is not reject inference:
+we do not impute $Y$ on $S=0$. Non-finite last-column $Y$ means unshown.
+A policy hop $P(S=1\mid X)$ can move complete-case MSE while $P(Y\mid X)$ holds.
+IPS-weighted MSE on $S=1$ is a reweight under selection on observables,
+not a unique CATE, not Shapley.
+\paragraph{Read.}
+Select rings $P(S\mid X)$ (labeled-slice MMD $+$ shown rate) while full-X MMD stays at the quiet floor.
+Concept rings the $Y$ probes with that same quiet floor on selection and MMD.
+Covariate walks $X_0$, which also feeds $S$, so both MMD and selection hop --- that is the DGP.
+Complete-case MSE FAR on quiet is still twitchy; ADDIS stays the primary mark on the $Y$ stream.
+\paragraph{A second probe.}
+MSE is $L^2$. Pinball at $\tau=0.9$ is a frozen upper-tail rent check.
+A tail hop can ring pinball first.
+\vspace{0.8em}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+scene & complete-case hop & IPS hop & $P(S\mid X)$ hop & MMD hop \\
+\midrule
+quiet & 0.50 & 0.50 & 0.17 & 0.17 \\
+select & 0.67 & 0.83 & 1.00 & 0.17 \\
+concept & 1.00 & 1.00 & 0.17 & 0.17 \\
+covariate & 1.00 & 1.00 & 1.00 & 1.00 \\
+\bottomrule
+\end{tabular}
+\vspace{1.1em}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+scene & MSE hop & pinball $0.9$ hop \\
+\midrule
+quiet tail & 0.33 & 0.00 \\
+upper-tail hop & 1.00 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{document}
