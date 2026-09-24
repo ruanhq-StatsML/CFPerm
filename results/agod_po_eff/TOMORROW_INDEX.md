@@ -1,6 +1,6 @@
 # Tomorrow review index — RSI PO/AGOD efficiency
 
-Branch: `cursor/rsi-model-stats-eff-abce` · watch cadence ~10 min (demo frozen)
+Branch: `cursor/rsi-model-stats-eff-abce` · watch cadence ~30 min (demo frozen)
 
 ## Open this first
 1. **Figure:** [`rsi_tomorrow_demo.png`](./rsi_tomorrow_demo.png) (3 panels)

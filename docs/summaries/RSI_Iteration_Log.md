@@ -19,3 +19,4 @@
 | 15 | 2026-09-24 | median Δmse_eff for soft gap headline | mean dominated by metro; median is the review number | `po_power_eff` headline | power tests |
 | 16 | 2026-09-24 | demo freeze + cadence →10min | package ready for tomorrow; reduce thrash, keep watch | walkthrough median note | — |
 | 17 | 2026-09-24 | watch no-op + fix index cadence label | 12 green; TOMORROW_INDEX said 3min → 10min | index one-liner | 12 passed |
+| 18 | 2026-09-24 | watch cadence →30min | demo stable after many green no-ops; reduce thrash | timer only | 12 passed |
