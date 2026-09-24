@@ -30,7 +30,10 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round2.json"
+OUT = Path(__file__).resolve().parent / "results_round3.json"
+# Weight on the spurious cue after drift. Below 1 so the calibrated score remains
+# in the judge and post-drift success is mixed rather than identically zero.
+DRIFT_MIX = 0.55
 SEED = 2026
 
 
@@ -253,10 +256,8 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
         close = max(math.exp(-abs(x - 24) / 8) for x in state)
         stable = close if len(state) == 1 else 0.45 * close + 0.15
         spurious = sum(state) / (13 * len(state))
-        if t < drift_at:
-            judge = 0.85 * solv + 0.15 * stable
-        else:
-            judge = spurious
+        calibrated = 0.85 * solv + 0.15 * stable
+        judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
         steer = solv if policy == "oracle" else (stable if use_stable else judge)
         return StepView(steer, judge, stable, spurious, solv)
 
@@ -418,7 +419,8 @@ def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
             progress = 1.0 - d / 8
             stable = bw_stable(state)
             spurious = bw_spurious(state)
-            judge = (0.8 * progress + 0.2 * stable) if t < drift_at else spurious
+            calibrated = 0.8 * progress + 0.2 * stable
+            judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
@@ -566,7 +568,8 @@ def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
             progress = max(0.0, 1.0 - d / 20)
             stable = dk_stable(state)
             spurious = dk_spurious(state)
-            judge = (0.85 * progress + 0.15 * stable) if t < drift_at else spurious
+            calibrated = 0.85 * progress + 0.15 * stable
+            judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
@@ -683,7 +686,8 @@ def run_hotpot(n, drift_at, policy, beam, rng):
                 progress = len(set(picked) & gold) / need
                 stable = float(np.mean([hop_overlap(question, pid) for pid in picked]))
                 spurious = float(np.mean([len(PASSAGES[pid].split()) / 12 for pid in picked]))
-            judge = (0.75 * progress + 0.25 * stable) if t < drift_at else spurious
+            calibrated = 0.75 * progress + 0.25 * stable
+            judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
@@ -773,7 +777,8 @@ def run_webshop(n, drift_at, policy, beam, rng):
             # Add a weaker stable cue: color match only, which a bag-of-words spotter gets.
             stable = 1.0 if item["color"] == want["color"] else 0.0
             spurious = item["reviews"] / 100
-            judge = (0.8 * progress + 0.2 * stable) if t < drift_at else spurious
+            calibrated = 0.8 * progress + 0.2 * stable
+            judge = calibrated if t < drift_at else (1 - DRIFT_MIX) * calibrated + DRIFT_MIX * spurious
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
@@ -931,7 +936,7 @@ def main():
     n = 40
     drift_at = 16
     policies = ["noisy", "stable", "gated", "oracle"]
-    report = {"null_monitor": null_fdr(), "tasks": {}}
+    report = {"null_monitor": null_fdr(), "drift_mix": DRIFT_MIX, "tasks": {}}
 
     print("precomputing blocksworld distances...")
     dist_bw = bw_distances()

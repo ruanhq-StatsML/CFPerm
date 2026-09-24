@@ -1,0 +1,471 @@
+{
+  "null_monitor": {
+    "mean_reject_rate": 0.0,
+    "alpha": 0.05,
+    "reps": 20,
+    "n": 300
+  },
+  "drift_mix": 0.55,
+  "tasks": {
+    "game24": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.08333333333333333,
+        "fsds_top_feature": "spurious",
+        "fsds_localization": [
+          {
+            "feature": "spurious",
+            "sse_drop": 0.4433324397581391,
+            "p": 0.006644518272425249
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.3665388903135378,
+            "p": 0.03986710963455149
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.10000000000000009,
+            "p": 0.132890365448505
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.020733036242795322,
+            "p": 0.6910299003322259
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 0.3125,
+        "post_success": 0.2916666666666667
+      },
+      "gated": {
+        "task": "game24",
+        "pre_success": 1.0,
+        "post_success": 0.3333333333333333,
+        "switch_at": 20,
+        "false_alarm_before_drift": false,
+        "detection_delay": 4,
+        "lord_at": null,
+        "top_shifted_feature": "progress",
+        "localization": [
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.6666666666666667,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.26549145299145305,
+            "p": 0.007481296758104738
+          },
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.22864614709400555,
+            "p": 0.00997506234413965
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.052011811385989704,
+            "p": 0.19451371571072318
+          }
+        ],
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 1.020833333333333,
+            "p": 0.053156146179401995
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.21392278236698203,
+            "p": 0.3920265780730897
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.06618319903699188,
+            "p": 0.6112956810631229
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.03931438680301458,
+            "p": 0.6976744186046512
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "blocksworld": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.0,
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 7.395570986446986e-31,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": -1.5777218104420236e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "judge",
+            "sse_drop": -2.748687216629463e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "stable",
+            "sse_drop": -5.445605436353797e-29,
+            "p": 1.0
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 0.9375,
+        "post_success": 1.0
+      },
+      "gated": {
+        "task": "blocksworld",
+        "pre_success": 1.0,
+        "post_success": 0.875,
+        "switch_at": 18,
+        "false_alarm_before_drift": false,
+        "detection_delay": 2,
+        "lord_at": null,
+        "top_shifted_feature": "spurious",
+        "localization": [
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.3125,
+            "p": 0.0773067331670823
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.06770833333333337,
+            "p": 0.08728179551122195
+          },
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.02749999999999997,
+            "p": 0.7481296758104738
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.015625,
+            "p": 0.8104738154613467
+          }
+        ],
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 0.040384615384615685,
+            "p": 0.5448504983388704
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.031249999999999556,
+            "p": 0.627906976744186
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.002777777777777324,
+            "p": 0.946843853820598
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.00016040973337982933,
+            "p": 0.9700996677740864
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "minigrid_doorkey": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 1.0,
+        "fsds_top_feature": "stable",
+        "fsds_localization": [
+          {
+            "feature": "stable",
+            "sse_drop": 5.9164567891575885e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 2.3665827156630354e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.0,
+            "p": 1.0
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.0,
+            "p": 1.0
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      },
+      "gated": {
+        "task": "minigrid_doorkey",
+        "pre_success": 1.0,
+        "post_success": 1.0,
+        "switch_at": null,
+        "false_alarm_before_drift": null,
+        "detection_delay": null,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.3245,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.0,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.0,
+            "p": 1.0
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.0,
+            "p": 1.0
+          }
+        ],
+        "fsds_top_feature": "stable",
+        "fsds_localization": [
+          {
+            "feature": "stable",
+            "sse_drop": 5.9164567891575885e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 2.3665827156630354e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.0,
+            "p": 1.0
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 0.0,
+            "p": 1.0
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "hotpot_twohop": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 1.0,
+        "fsds_top_feature": "judge",
+        "fsds_localization": [
+          {
+            "feature": "judge",
+            "sse_drop": 7.444874793023299e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 7.173703856853576e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 7.099748146989106e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 6.803925307531227e-30,
+            "p": 1.0
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 0.0625,
+        "post_success": 0.16666666666666666
+      },
+      "gated": {
+        "task": "hotpot_twohop",
+        "pre_success": 1.0,
+        "post_success": 1.0,
+        "switch_at": null,
+        "false_alarm_before_drift": null,
+        "detection_delay": null,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.09853422619047619,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.1785714285714286,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.32291666666666663,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.3125,
+            "p": 0.0024937655860349127
+          }
+        ],
+        "fsds_top_feature": "judge",
+        "fsds_localization": [
+          {
+            "feature": "judge",
+            "sse_drop": 7.444874793023299e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 7.173703856853576e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 7.099748146989106e-30,
+            "p": 1.0
+          },
+          {
+            "feature": "progress",
+            "sse_drop": 6.803925307531227e-30,
+            "p": 1.0
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "webshop_attr": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.7083333333333334,
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 0.7424242424242413,
+            "p": 0.059800664451827246
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.4836213911283167,
+            "p": 0.15282392026578073
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.0946969696969715,
+            "p": 0.45182724252491696
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.09419553245149004,
+            "p": 0.5481727574750831
+          }
+        ]
+      },
+      "stable": {
+        "pre_success": 0.3125,
+        "post_success": 0.4583333333333333
+      },
+      "gated": {
+        "task": "webshop_attr",
+        "pre_success": 1.0,
+        "post_success": 0.6666666666666666,
+        "switch_at": 32,
+        "false_alarm_before_drift": false,
+        "detection_delay": 16,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.1921666666666667,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.2783333333333332,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.29166666666666663,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.04166666666666663,
+            "p": 1.0
+          }
+        ],
+        "fsds_top_feature": "progress",
+        "fsds_localization": [
+          {
+            "feature": "progress",
+            "sse_drop": 0.8470588235294123,
+            "p": 0.036544850498338874
+          },
+          {
+            "feature": "spurious",
+            "sse_drop": 0.2633508032747578,
+            "p": 0.3023255813953488
+          },
+          {
+            "feature": "stable",
+            "sse_drop": 0.11594202898550687,
+            "p": 0.6112956810631229
+          },
+          {
+            "feature": "judge",
+            "sse_drop": 0.033533123786658514,
+            "p": 0.7475083056478405
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    }
+  }
+}
