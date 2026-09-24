@@ -57,9 +57,21 @@
 `relative_flops ≈ n_train · k · (HGB_iters + LR_iters)` —— **适应代价代理**，不是 serving 延迟。  
 跨 pack 比的是「每单位探针算力换来多少超出偶然的 transfer」，不是比绝对 AUC。
 
-### 2.3 与业务案由正交
+### 2.3 校准 ≠ 排序（Iter2）
 
-`sign_Dy` 定 S1/S2/S3；excess/probe_eff 定「故事有没有超出偶然的统计含量」。  
+`excess_auc` 说的是排序技能；**ECE**（等宽 bin，transfer 概率）说的是：探针报 \(p\) 时，下一窗频率是否 ≈ \(p\)。
+
+| 读法 | 含义 |
+|---|---|
+| 高 excess · 低 ECE | 能排且概率可信 |
+| 高 excess · 高 ECE | 能排但别当概率用（稀标签/量特征常见） |
+| 低 excess | 先别谈校准 |
+
+与 Brier 并存：Brier 是整体 proper score；ECE 局部化偏差。
+
+### 2.4 与业务案由正交
+
+`sign_Dy` 定 S1/S2/S3；excess/probe_eff/ECE 定「故事有没有超出偶然的统计含量 / 概率能不能信」。  
 高 excess 的买量基线仍 **≠ 限投**（业务门另写）。
 
 ---
@@ -70,7 +82,7 @@
 |---|---|---|---|
 | R1 | Transfer null + excess + probe_eff | §2 | **Iter1 落地** |
 | R2 | Blocked bootstrap CI on mean excess | 窗相关 → 块 bootstrap | backlog |
-| R3 | ECE bins on LogReg transfer | 校准 vs 排序 | backlog |
+| R3 | ECE bins on LogReg/HGB transfer | 校准 vs 排序；高 excess+高 ECE=能排不能信 | **Iter2 落地** |
 | R4 | DiffusionDB token excess vs Tencent | 弱特征族的 null 对照 | backlog |
 | R5 | Streaming reservoir subsample of pairs | 线性扫描 vs 全对；偏差-方差 | backlog |
 | R6 | AGOD gate FLOPs vs probe_eff 对照表 | 适应 FLOPs 双尺子 | backlog |

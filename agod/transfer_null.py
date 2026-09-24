@@ -21,6 +21,16 @@ Definitions
 
 Use across packs (DiffusionDB tokens, metro sensors, ad edges) without
 locking to one business scenario — same null, different story.
+
+Calibration (Iter2)
+-------------------
+AUC / excess measure *ranking* skill.  Brier is a proper scoring rule but
+does not localize mis-calibration.  Equal-width ECE on the *transfer*
+probabilities (fit on chunk t, scored on t+1) answers: when the probe
+says p, does frequency ≈ p on the next chunk?
+
+High excess + high ECE → transferable ranking but untrustworthy probs
+(common under volume features / rare labels).  Cross-pack comparable.
 """
 from __future__ import annotations
 
@@ -104,6 +114,36 @@ def probe_efficiency(
     return float(excess / (flops / scale))
 
 
+def expected_calibration_error(
+    y_true: np.ndarray,
+    proba: np.ndarray,
+    *,
+    n_bins: int = 10,
+) -> float:
+    """Equal-width ECE on [0, 1] for binary labels (transfer calibration)."""
+    y = np.asarray(y_true).astype(float)
+    p = np.asarray(proba, dtype=float)
+    if len(y) < 2 or n_bins < 2:
+        return float("nan")
+    # clip for binning stability
+    p = np.clip(p, 0.0, 1.0)
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+    n = len(y)
+    for i in range(n_bins):
+        lo, hi = edges[i], edges[i + 1]
+        if i == n_bins - 1:
+            m = (p >= lo) & (p <= hi)
+        else:
+            m = (p >= lo) & (p < hi)
+        if not np.any(m):
+            continue
+        conf = float(np.mean(p[m]))
+        acc = float(np.mean(y[m]))
+        ece += (float(np.sum(m)) / n) * abs(acc - conf)
+    return float(ece)
+
+
 def enrich_row_with_null(
     row: Dict[str, Any],
     y_test: np.ndarray,
@@ -113,8 +153,10 @@ def enrich_row_with_null(
     n_perm: int = 5,
     seed: int = 0,
     selected_k: int = 1,
+    proba_lr: Optional[np.ndarray] = None,
+    n_ece_bins: int = 10,
 ) -> Dict[str, Any]:
-    """Attach null / excess / probe_eff fields to one adjacent-pair row."""
+    """Attach null / excess / probe_eff / ECE fields to one adjacent-pair row."""
     out = dict(row)
     null = permute_auc(y_test, proba, n_perm=n_perm, seed=seed)
     out.update(null)
@@ -124,6 +166,13 @@ def enrich_row_with_null(
     out["excess_auc"] = ex
     out["relative_flops"] = flops
     out["probe_eff"] = probe_efficiency(ex, flops)
+    out["hgb_ece"] = expected_calibration_error(y_test, proba, n_bins=n_ece_bins)
+    if proba_lr is not None:
+        out["logreg_ece"] = expected_calibration_error(
+            y_test, proba_lr, n_bins=n_ece_bins
+        )
+    else:
+        out["logreg_ece"] = float("nan")
     return out
 
 
@@ -141,4 +190,6 @@ def summarize_null_pack(rows: Sequence[Dict[str, Any]]) -> Dict[str, Optional[fl
         "mean_excess_auc": _mean("excess_auc"),
         "mean_probe_eff": _mean("probe_eff"),
         "mean_relative_flops": _mean("relative_flops"),
+        "mean_hgb_ece": _mean("hgb_ece"),
+        "mean_logreg_ece": _mean("logreg_ece"),
     }

@@ -64,3 +64,35 @@ def test_enrich_and_fs_adjacent_null_fields():
 def test_interpret_pack_near_null():
     assert "null" in interpret_pack(0.92, 0.8, mean_excess=0.01)
     assert "stable" in interpret_pack(0.92, 0.8, mean_excess=0.3)
+
+
+def test_ece_perfect_and_biased():
+    from agod.transfer_null import expected_calibration_error
+
+    y = np.array([0, 0, 0, 0, 1, 1, 1, 1], dtype=float)
+    p_ok = np.array([0.1, 0.2, 0.2, 0.1, 0.8, 0.9, 0.8, 0.9])
+    p_bad = np.ones(8) * 0.9
+    assert expected_calibration_error(y, p_ok, n_bins=5) < 0.25
+    assert expected_calibration_error(y, p_bad, n_bins=5) > 0.3
+
+
+def test_fs_adjacent_exposes_ece():
+    rng = np.random.default_rng(3)
+    n, d = 2500, 5
+    X = rng.normal(size=(n, d))
+    y = (X[:, 0] > 0).astype(float)
+    T = chunk_by_n(n, 500)
+    rows = fs_adjacent(
+        X,
+        y,
+        T,
+        [f"f{j}" for j in range(d)],
+        select_k=2,
+        y_quantile=0.7,
+        seed=1,
+        max_pairs=4,
+        min_n=40,
+        n_null_perm=3,
+    )
+    assert any(np.isfinite(r.get("hgb_ece", np.nan)) for r in rows)
+    assert any(np.isfinite(r.get("logreg_ece", np.nan)) for r in rows)

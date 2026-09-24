@@ -251,6 +251,7 @@ def fs_adjacent(
         auc_h = float(roc_auc_score(yb1, proba_h))
         # Second probe: same selected X, linear — if both transfer, not an HGB quirk
         lr = LogisticRegression(max_iter=200, random_state=seed)
+        proba_l = None
         try:
             lr.fit(Xt, yb0)
             proba_l = lr.predict_proba(Xte)[:, 1]
@@ -258,6 +259,7 @@ def fs_adjacent(
             brier_l = float(brier_score_loss(yb1, proba_l))
         except Exception:
             auc_l, brier_l = float("nan"), float("nan")
+            proba_l = None
         try:
             brier_h = float(brier_score_loss(yb1, proba_h))
         except Exception:
@@ -289,7 +291,7 @@ def fs_adjacent(
             "top_cmean": top_cmean,
             "fsds_cmean_jaccard": jaccard(top_fsds, top_cmean),
         }
-        # Null on HGB scores: skill beyond chance + FLOPs-normalized efficiency
+        # Null on HGB scores + ECE on both probes (ranking vs calibration)
         if n_null_perm > 0:
             row = enrich_row_with_null(
                 row,
@@ -299,6 +301,7 @@ def fs_adjacent(
                 n_perm=n_null_perm,
                 seed=seed + int(t0) * 17,
                 selected_k=k_eff,
+                proba_lr=proba_l,
             )
         rows.append(row)
     return annotate_stability(rows)
@@ -615,6 +618,8 @@ def main() -> None:
                 "mean_null_auc": null_sum.get("mean_null_auc"),
                 "mean_excess_auc": m_ex,
                 "mean_probe_eff": null_sum.get("mean_probe_eff"),
+                "mean_hgb_ece": null_sum.get("mean_hgb_ece"),
+                "mean_logreg_ece": null_sum.get("mean_logreg_ece"),
                 "reading": reading,
                 "rows": rows,
             }
@@ -630,6 +635,8 @@ def main() -> None:
                         "mean_fsds_cmean_jaccard": m_fc,
                         "mean_excess_auc": m_ex,
                         "mean_probe_eff": null_sum.get("mean_probe_eff"),
+                        "mean_hgb_ece": null_sum.get("mean_hgb_ece"),
+                        "mean_logreg_ece": null_sum.get("mean_logreg_ece"),
                         "reading": reading,
                     }
                 )
@@ -654,13 +661,14 @@ def main() -> None:
                     f"LogReg={blk['mean_logreg_auc']} · "
                     f"excess={blk.get('mean_excess_auc')} · "
                     f"probe_eff={blk.get('mean_probe_eff')} · "
+                    f"ECE(H/L)={blk.get('mean_hgb_ece')}/"
+                    f"{blk.get('mean_logreg_ece')} · "
                     f"Jaccard={blk['mean_jaccard_top']} · "
-                    f"FSDS∩cmean={blk['mean_fsds_cmean_jaccard']} · "
                     f"**{blk['reading']}**"
                 ),
                 "",
-                "| t0→t1 | ΔȲ | HGB | excess | probe_eff | Jac | top_fsds |",
-                "|---|---:|---:|---:|---:|---:|---|",
+                "| t0→t1 | ΔȲ | HGB | excess | ECE_h | ECE_lr | Jac | top |",
+                "|---|---:|---:|---:|---:|---:|---:|---|",
             ]
             for r in rows[:8]:
                 jac = (
@@ -669,12 +677,14 @@ def main() -> None:
                     else "—"
                 )
                 ex = r.get("excess_auc", float("nan"))
-                pe = r.get("probe_eff", float("nan"))
+                eh = r.get("hgb_ece", float("nan"))
+                el = r.get("logreg_ece", float("nan"))
                 ex_s = f"{ex:.3f}" if np.isfinite(ex) else "—"
-                pe_s = f"{pe:.3f}" if np.isfinite(pe) else "—"
+                eh_s = f"{eh:.3f}" if np.isfinite(eh) else "—"
+                el_s = f"{el:.3f}" if np.isfinite(el) else "—"
                 body_md.append(
                     f"| {r['t0']}→{r['t1']} | {r['delta_Y']:.4f} | "
-                    f"{r['hgb_auc']:.3f} | {ex_s} | {pe_s} | {jac} | "
+                    f"{r['hgb_auc']:.3f} | {ex_s} | {eh_s} | {el_s} | {jac} | "
                     f"{', '.join(r['top_fsds'][:3])} |"
                 )
             body_md.append("")
