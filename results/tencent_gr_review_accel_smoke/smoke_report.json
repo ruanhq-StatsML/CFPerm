@@ -1,0 +1,21 @@
+{
+  "smoke_type": "review_accel_pack",
+  "ts": "2026-09-24T00:39:16Z",
+  "summary": "results/tencent_gr_w1w2_mmd_po_fsds/summary.json",
+  "out_dir": "results/tencent_gr_review_accel_smoke",
+  "sign_Dy": "flat",
+  "queue_bucket": "路径线性份额变动",
+  "sla_level": "urgent",
+  "eta_soft_hint": "lower_confidence",
+  "gray_allow": true,
+  "feedback_label": "useful",
+  "suggest_action": "hold",
+  "ticket_field_count": 20,
+  "steps_ok": [
+    "export_card",
+    "log_feedback",
+    "summarize_feedback",
+    "suggest_flags",
+    "dry_run_ticket_post"
+  ]
+}

@@ -1,0 +1,341 @@
+{
+  "n_datasets": 6,
+  "batch_size": 100,
+  "n_batches": 40,
+  "n_control": 1,
+  "mean_gate_duty": 0.2435897435897436,
+  "duty_breakeven": 1.0,
+  "n_prefer_refit_on_budget": 6,
+  "mean_budget_ratio_refit_vs_probe": 0.2435897435897436,
+  "best_rank_eff_counts": {
+    "refit": 6
+  },
+  "best_mse_eff_counts": {
+    "refit": 1,
+    "probe": 5
+  },
+  "best_rank_eff_expected_counts": {
+    "refit": 6
+  },
+  "cards": [
+    {
+      "dataset": "metro_interstate",
+      "ok": true,
+      "n_reject": 7,
+      "n_batches": 40,
+      "batch_size": 100,
+      "gate_duty": 0.1794871794871795,
+      "budget_ratio_refit_vs_probe": 0.1794871794871795,
+      "uniform_mse_sig": 860205.952072517,
+      "ref_spearman": 0.3021250696498221,
+      "modes": [
+        {
+          "mode": "ref",
+          "spearman": 0.3021250696498221,
+          "delta_spearman_vs_ref": 0.0,
+          "mse_mean_sig": 792540.6365625584,
+          "relative_flops": 1.0,
+          "expected_flops": 1.0,
+          "rank_eff": 0.0,
+          "mse_eff": 67665315509.958664,
+          "rank_eff_expected": 0.0,
+          "mse_eff_expected": 67665315509.958664
+        },
+        {
+          "mode": "probe",
+          "spearman": 0.3155681282413955,
+          "delta_spearman_vs_ref": 0.013443058591573409,
+          "mse_mean_sig": 783883.1006945927,
+          "relative_flops": 720000.0,
+          "expected_flops": 720000.0,
+          "rank_eff": 0.018670914710518623,
+          "mse_eff": 106003.96024711712,
+          "rank_eff_expected": 0.018670914710518623,
+          "mse_eff_expected": 106003.96024711712
+        },
+        {
+          "mode": "refit",
+          "spearman": 0.3197085422827997,
+          "delta_spearman_vs_ref": 0.017583472632977604,
+          "mse_mean_sig": 756988.4097522553,
+          "relative_flops": 126000.0,
+          "expected_flops": 129230.76923076923,
+          "rank_eff": 0.13955137010299684,
+          "mse_eff": 819186.8438116008,
+          "rank_eff_expected": 0.13606258585042194,
+          "mse_eff_expected": 798707.1727163108
+        }
+      ],
+      "best_rank_eff_mode": "refit",
+      "best_mse_eff_mode": "refit",
+      "best_rank_eff_expected_mode": "refit",
+      "reading": "duty=0.18: refit wins rank_eff (reject-only vs always-on probe)"
+    },
+    {
+      "dataset": "beijing_pm25",
+      "ok": true,
+      "n_reject": 5,
+      "n_batches": 40,
+      "batch_size": 100,
+      "gate_duty": 0.1282051282051282,
+      "budget_ratio_refit_vs_probe": 0.1282051282051282,
+      "uniform_mse_sig": 2363.608926241626,
+      "ref_spearman": 0.08437323732373236,
+      "modes": [
+        {
+          "mode": "ref",
+          "spearman": 0.08437323732373236,
+          "delta_spearman_vs_ref": 0.0,
+          "mse_mean_sig": 2261.33100145185,
+          "relative_flops": 1.0,
+          "expected_flops": 1.0,
+          "rank_eff": 0.0,
+          "mse_eff": 102277924.78977562,
+          "rank_eff_expected": 0.0,
+          "mse_eff_expected": 102277924.78977562
+        },
+        {
+          "mode": "probe",
+          "spearman": 0.393072907290729,
+          "delta_spearman_vs_ref": 0.30869966996699666,
+          "mse_mean_sig": 2639.0067552637333,
+          "relative_flops": 720000.0,
+          "expected_flops": 720000.0,
+          "rank_eff": 0.42874954162082873,
+          "mse_eff": -382.4969847529272,
+          "rank_eff_expected": 0.42874954162082873,
+          "mse_eff_expected": -382.4969847529272
+        },
+        {
+          "mode": "refit",
+          "spearman": 0.39925112511251115,
+          "delta_spearman_vs_ref": 0.3148778877887788,
+          "mse_mean_sig": 2677.555409268521,
+          "relative_flops": 90000.0,
+          "expected_flops": 92307.6923076923,
+          "rank_eff": 3.498643197653098,
+          "mse_eff": -3488.2942558543923,
+          "rank_eff_expected": 3.4111771177117705,
+          "mse_eff_expected": -3401.086899458033
+        }
+      ],
+      "best_rank_eff_mode": "refit",
+      "best_mse_eff_mode": "probe",
+      "best_rank_eff_expected_mode": "refit",
+      "reading": "duty=0.13: refit wins rank_eff (reject-only vs always-on probe)"
+    },
+    {
+      "dataset": "stocks_AAPL",
+      "ok": true,
+      "n_reject": 7,
+      "n_batches": 40,
+      "batch_size": 100,
+      "gate_duty": 0.1794871794871795,
+      "budget_ratio_refit_vs_probe": 0.1794871794871795,
+      "uniform_mse_sig": 0.0007783584023255707,
+      "ref_spearman": 0.2865475118940465,
+      "modes": [
+        {
+          "mode": "ref",
+          "spearman": 0.2865475118940465,
+          "delta_spearman_vs_ref": 0.0,
+          "mse_mean_sig": 0.0008489297977674945,
+          "relative_flops": 1.0,
+          "expected_flops": 1.0,
+          "rank_eff": 0.0,
+          "mse_eff": -70.57139544192385,
+          "rank_eff_expected": 0.0,
+          "mse_eff_expected": -70.57139544192385
+        },
+        {
+          "mode": "probe",
+          "spearman": 0.6704521880759504,
+          "delta_spearman_vs_ref": 0.38390467618190394,
+          "mse_mean_sig": 0.0008778965663208633,
+          "relative_flops": 720000.0,
+          "expected_flops": 720000.0,
+          "rank_eff": 0.5332009391415332,
+          "mse_eff": -0.00013824744999346201,
+          "rank_eff_expected": 0.5332009391415332,
+          "mse_eff_expected": -0.00013824744999346201
+        },
+        {
+          "mode": "refit",
+          "spearman": 0.6654682611118253,
+          "delta_spearman_vs_ref": 0.37892074921777885,
+          "mse_mean_sig": 0.0009023188855573528,
+          "relative_flops": 126000.0,
+          "expected_flops": 129230.76923076923,
+          "rank_eff": 3.0073075334744352,
+          "mse_eff": -0.0009838133589823972,
+          "rank_eff_expected": 2.9321248451375745,
+          "mse_eff_expected": -0.0009592180250078373
+        }
+      ],
+      "best_rank_eff_mode": "refit",
+      "best_mse_eff_mode": "probe",
+      "best_rank_eff_expected_mode": "refit",
+      "reading": "duty=0.18: refit wins rank_eff (reject-only vs always-on probe)"
+    },
+    {
+      "dataset": "waymo_proxy",
+      "ok": true,
+      "n_reject": 22,
+      "n_batches": 40,
+      "batch_size": 100,
+      "gate_duty": 0.5641025641025641,
+      "budget_ratio_refit_vs_probe": 0.5641025641025641,
+      "uniform_mse_sig": 0.009992141707669138,
+      "ref_spearman": 0.11491967378556037,
+      "modes": [
+        {
+          "mode": "ref",
+          "spearman": 0.11491967378556037,
+          "delta_spearman_vs_ref": 0.0,
+          "mse_mean_sig": 0.010387641972200058,
+          "relative_flops": 1.0,
+          "expected_flops": 1.0,
+          "rank_eff": 0.0,
+          "mse_eff": -395.50026453091976,
+          "rank_eff_expected": 0.0,
+          "mse_eff_expected": -395.50026453091976
+        },
+        {
+          "mode": "probe",
+          "spearman": 0.549404031312222,
+          "delta_spearman_vs_ref": 0.4344843575266617,
+          "mse_mean_sig": 0.011123077802924536,
+          "relative_flops": 720000.0,
+          "expected_flops": 720000.0,
+          "rank_eff": 0.603450496564808,
+          "mse_eff": -0.0015707445767436086,
+          "rank_eff_expected": 0.603450496564808,
+          "mse_eff_expected": -0.0015707445767436086
+        },
+        {
+          "mode": "refit",
+          "spearman": 0.5292343779832528,
+          "delta_spearman_vs_ref": 0.41431470419769245,
+          "mse_mean_sig": 0.010780956872142101,
+          "relative_flops": 396000.0,
+          "expected_flops": 406153.8461538461,
+          "rank_eff": 1.0462492530244758,
+          "mse_eff": -0.0019919574860428357,
+          "rank_eff_expected": 1.020093021698864,
+          "mse_eff_expected": -0.0019421585488917652
+        }
+      ],
+      "best_rank_eff_mode": "refit",
+      "best_mse_eff_mode": "probe",
+      "best_rank_eff_expected_mode": "refit",
+      "reading": "duty=0.56: refit wins rank_eff (reject-only vs always-on probe)"
+    },
+    {
+      "dataset": "stocks_MSFT",
+      "ok": true,
+      "n_reject": 9,
+      "n_batches": 40,
+      "batch_size": 100,
+      "gate_duty": 0.23076923076923078,
+      "budget_ratio_refit_vs_probe": 0.23076923076923078,
+      "uniform_mse_sig": 0.0006164351048759122,
+      "ref_spearman": 0.3778137813781378,
+      "modes": [
+        {
+          "mode": "ref",
+          "spearman": 0.3778137813781378,
+          "delta_spearman_vs_ref": 0.0,
+          "mse_mean_sig": 0.0006494255504881671,
+          "relative_flops": 1.0,
+          "expected_flops": 1.0,
+          "rank_eff": 0.0,
+          "mse_eff": -32.99044561225488,
+          "rank_eff_expected": 0.0,
+          "mse_eff_expected": -32.99044561225488
+        },
+        {
+          "mode": "probe",
+          "spearman": 0.7532833283328332,
+          "delta_spearman_vs_ref": 0.37546954695469537,
+          "mse_mean_sig": 0.0007018866417102012,
+          "relative_flops": 720000.0,
+          "expected_flops": 720000.0,
+          "rank_eff": 0.5214854818815213,
+          "mse_eff": -0.00011868269004762361,
+          "rank_eff_expected": 0.5214854818815213,
+          "mse_eff_expected": -0.00011868269004762361
+        },
+        {
+          "mode": "refit",
+          "spearman": 0.7214014734806814,
+          "delta_spearman_vs_ref": 0.3435876921025436,
+          "mse_mean_sig": 0.000703375627140128,
+          "relative_flops": 162000.0,
+          "expected_flops": 166153.84615384619,
+          "rank_eff": 2.1209116796453307,
+          "mse_eff": -0.0005366698905198506,
+          "rank_eff_expected": 2.067888887654197,
+          "mse_eff_expected": -0.0005232531432568542
+        }
+      ],
+      "best_rank_eff_mode": "refit",
+      "best_mse_eff_mode": "probe",
+      "best_rank_eff_expected_mode": "refit",
+      "reading": "duty=0.23: refit wins rank_eff (reject-only vs always-on probe)"
+    },
+    {
+      "dataset": "stocks_IWM",
+      "ok": true,
+      "n_reject": 7,
+      "n_batches": 40,
+      "batch_size": 100,
+      "gate_duty": 0.1794871794871795,
+      "budget_ratio_refit_vs_probe": 0.1794871794871795,
+      "uniform_mse_sig": 0.0005025231291427358,
+      "ref_spearman": 0.6083528352835283,
+      "modes": [
+        {
+          "mode": "ref",
+          "spearman": 0.6083528352835283,
+          "delta_spearman_vs_ref": 0.0,
+          "mse_mean_sig": 0.0005517747700781418,
+          "relative_flops": 1.0,
+          "expected_flops": 1.0,
+          "rank_eff": 0.0,
+          "mse_eff": -49.25164093540592,
+          "rank_eff_expected": 0.0,
+          "mse_eff_expected": -49.25164093540592
+        },
+        {
+          "mode": "probe",
+          "spearman": 0.7252908147957653,
+          "delta_spearman_vs_ref": 0.11693797951223694,
+          "mse_mean_sig": 0.0005562254177942607,
+          "relative_flops": 720000.0,
+          "expected_flops": 720000.0,
+          "rank_eff": 0.16241386043366243,
+          "mse_eff": -7.458651201600676e-05,
+          "rank_eff_expected": 0.16241386043366243,
+          "mse_eff_expected": -7.458651201600676e-05
+        },
+        {
+          "mode": "refit",
+          "spearman": 0.6886014315717285,
+          "delta_spearman_vs_ref": 0.08024859628820014,
+          "mse_mean_sig": 0.0005361728120846054,
+          "relative_flops": 126000.0,
+          "expected_flops": 129230.76923076923,
+          "rank_eff": 0.6368936213349217,
+          "mse_eff": -0.00026706097572912365,
+          "rank_eff_expected": 0.6209712808015486,
+          "mse_eff_expected": -0.00026038445133589553
+        }
+      ],
+      "best_rank_eff_mode": "refit",
+      "best_mse_eff_mode": "probe",
+      "best_rank_eff_expected_mode": "refit",
+      "reading": "duty=0.18: refit wins rank_eff (reject-only vs always-on probe)"
+    }
+  ],
+  "headline": "mean duty=0.244 (breakeven=1.00) \u21d2 E[refit]/E[probe]\u22480.244; 6/6 packs prefer refit on budget; rank_eff wins {'refit': 6}; mse_eff wins {'refit': 1, 'probe': 5}."
+}

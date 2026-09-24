@@ -1,0 +1,12 @@
+{
+  "graph_shift_sign_dy": "flat",
+  "graph_shift_dy": null,
+  "graph_shift_queue_bucket": "路径线性份额变动",
+  "graph_shift_action_level": "L1_watch",
+  "graph_shift_tip_top3": "i_share_linear,i_credit_linear,i_share_first",
+  "graph_shift_tip_signs_top3": "i_share_linear:0,i_credit_linear:0,i_share_first:0",
+  "graph_shift_localize_k": 200,
+  "graph_shift_disclaimer": "clue_not_conviction",
+  "graph_shift_gray_allow": true,
+  "graph_shift_gray_reason": "ok"
+}

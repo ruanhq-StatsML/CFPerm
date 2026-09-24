@@ -1,0 +1,89 @@
+{
+  "source": "canonical_extras_doc",
+  "n_datasets": 2,
+  "best_freeze_eff_counts": {
+    "freeze_early": 1,
+    "freeze_low_share": 1
+  },
+  "n_pareto_dominances": 2,
+  "cards": [
+    {
+      "dataset": "electricity",
+      "ok": true,
+      "policies": [
+        {
+          "policy": "always_adapt",
+          "mse_rel": 1.0,
+          "flops_rel": 1.0,
+          "freeze_eff": 0.0,
+          "dominates_always": false
+        },
+        {
+          "policy": "freeze_early",
+          "mse_rel": 0.86,
+          "flops_rel": 0.7,
+          "freeze_eff": 0.20000000000000004,
+          "dominates_always": true
+        },
+        {
+          "policy": "freeze_low_share",
+          "mse_rel": 0.86,
+          "flops_rel": 0.7,
+          "freeze_eff": 0.20000000000000004,
+          "dominates_always": true
+        },
+        {
+          "policy": "no_adapt",
+          "mse_rel": null,
+          "flops_rel": 0.0,
+          "freeze_eff": null,
+          "dominates_always": false
+        }
+      ],
+      "best_freeze_eff": "freeze_early",
+      "dominates_always": [
+        "freeze_early",
+        "freeze_low_share"
+      ],
+      "reading": "electricity: freeze_early, freeze_low_share Pareto-beat always_adapt (MSE\u2193 & FLOPs\u2193)"
+    },
+    {
+      "dataset": "synthetic",
+      "ok": true,
+      "policies": [
+        {
+          "policy": "always_adapt",
+          "mse_rel": 1.0,
+          "flops_rel": 1.0,
+          "freeze_eff": 0.0,
+          "dominates_always": false
+        },
+        {
+          "policy": "freeze_early",
+          "mse_rel": 1.25,
+          "flops_rel": 0.7,
+          "freeze_eff": -0.35714285714285715,
+          "dominates_always": false
+        },
+        {
+          "policy": "freeze_low_share",
+          "mse_rel": 1.15,
+          "flops_rel": 0.57,
+          "freeze_eff": -0.263157894736842,
+          "dominates_always": false
+        },
+        {
+          "policy": "no_adapt",
+          "mse_rel": null,
+          "flops_rel": 0.0,
+          "freeze_eff": null,
+          "dominates_always": false
+        }
+      ],
+      "best_freeze_eff": "freeze_low_share",
+      "dominates_always": [],
+      "reading": "synthetic: best freeze_eff=freeze_low_share (may trade MSE for FLOPs)"
+    }
+  ],
+  "headline": "freeze_eff best {'freeze_early': 1, 'freeze_low_share': 1}; 2 Pareto wins vs always_adapt (MSE\u2193&FLOPs\u2193). no_adapt collapses \u2014 freeze \u2260 stop learning."
+}

@@ -1,0 +1,20 @@
+{
+  "industry": "content_farm",
+  "note": "电商刷单 tip → 内容农场互粉/同发话术；同一审出卡 UI，只换词典",
+  "buckets": {
+    "u_span_sec": "账号活跃跨度异常（群控短刷）",
+    "i_credit_last": "末次触达偏高（导流末跳）",
+    "i_share_last": "末次份额偏高（导流末跳）",
+    "i_credit_linear": "传播路径线性归因变动",
+    "i_share_linear": "传播路径线性份额变动",
+    "i_credit_first": "首次触达偏高（种草入口）",
+    "i_share_first": "首次份额偏高（种草入口）",
+    "i_n_covisit_neighbors": "共现邻域变动（互粉同发团）",
+    "ui_pop_mismatch": "热度-活跃错配（刷量农场）",
+    "i_n_users": "触达账号数变动",
+    "i_n_exp": "曝光规模变动",
+    "i_log1p_n_users": "触达账号规模(log)",
+    "i_log1p_n_exp": "曝光规模(log)",
+    "i_log1p_n_covisit": "共现规模(log)"
+  }
+}

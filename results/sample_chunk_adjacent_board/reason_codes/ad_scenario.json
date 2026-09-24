@@ -1,0 +1,63 @@
+{
+  "ok": true,
+  "scenario_id": "tencent_gr_ad_funnel",
+  "pack": "tencent_gr",
+  "chunk": 1000,
+  "funnel": {
+    "layers": [
+      {
+        "name": "曝光 exp",
+        "feats": [
+          "e_n_exp",
+          "e_log1p_exp",
+          "i_n_exp"
+        ]
+      },
+      {
+        "name": "点击 clk",
+        "feats": [
+          "e_n_clk",
+          "e_ctr",
+          "u_ctr"
+        ]
+      },
+      {
+        "name": "转化 convert",
+        "y": "y_convert",
+        "note": "终端成功标签"
+      }
+    ],
+    "grain": "every 1000 edges by e_last_ts",
+    "entity": "user × item(ad/creative) × merchant≈advertiser"
+  },
+  "sign_Dy_board": "neg",
+  "mean_delta_Y": -0.007833333333333333,
+  "family": "灌入族",
+  "family_code": "S2_inject",
+  "sub": "转化下行/差流",
+  "sub_code": "ad_convert_dip",
+  "read": "相邻窗转化掉：先查差流灌入、落地劣化、账户被打压残留——勿直接判商户/创意「变差」",
+  "ops_content_gap": 0.1607264618473112,
+  "has_intensity_baseline": true,
+  "has_last_touch_candidate": true,
+  "tops_ops": [
+    "e_log1p_exp",
+    "e_n_exp",
+    "i_log1p_n_exp",
+    "i_credit_last",
+    "i_share_last"
+  ],
+  "tops_content": [
+    "i_credit_last",
+    "i_share_last",
+    "i_item_credit_rank",
+    "i_log1p_credit_linear",
+    "i_share_linear"
+  ],
+  "action_level_default": "L1_watch",
+  "auto_ban": false,
+  "allows_ship_model": false,
+  "allows_driver_claim": false,
+  "paste_for_agent": "【广告漏斗场景卡 · TencentGR】\n族: 灌入族 (`S2_inject`) / 子类: 转化下行/差流 (`ad_convert_dip`)\n读法: 相邻窗转化掉：先查差流灌入、落地劣化、账户被打压残留——勿直接判商户/创意「变差」\nsign_Dy(board)=neg · mean_Δȳ=-0.007833333333333333 · N=1000\nops−content gap=0.1607264618473112\nops tops: ['e_log1p_exp', 'e_n_exp', 'i_log1p_n_exp']\ncontent tops: ['i_credit_last', 'i_share_last', 'i_item_credit_rank']\n动作默认: L1_watch · auto_ban=false · 禁止 HGB 直接上线\n强度 = 买量基线；credit/share = 末跳候选 shortlist，非真驱动证书\n",
+  "aligned_with": "direction_report.scenario_from_direction (S1/S2/S3)"
+}

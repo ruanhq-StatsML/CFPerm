@@ -1,0 +1,42 @@
+{
+  "diff_type": "review_agent_card_wave_diff",
+  "disclaimer": "展示差分，非定罪；不改 Drill 门。",
+  "prev_source": "results/tencent_gr_w1w2_mmd_po_fsds/summary.json",
+  "cur_source": "results/agod_grad_rfperm_sep18/summary.json",
+  "sign_Dy": {
+    "prev": "flat",
+    "cur": "flat",
+    "flipped": false
+  },
+  "queue_bucket": {
+    "prev": "路径线性份额变动",
+    "cur": "未选 tip",
+    "flipped": true
+  },
+  "tips_added": [],
+  "tips_removed": [
+    "i_credit_first",
+    "i_credit_linear",
+    "i_log1p_n_covisit",
+    "i_log1p_n_exp",
+    "i_log1p_n_users",
+    "i_n_covisit_neighbors",
+    "i_n_exp",
+    "i_n_users",
+    "i_share_first",
+    "i_share_linear",
+    "u_log1p_n_events",
+    "ui_pop_mismatch"
+  ],
+  "tip_sign_flips": [],
+  "paste_for_agent": "【审核上下文·波次差分】\nsign_Dy: flat → flat\n队列: 路径线性份额变动 → 未选 tip (换队)\n消失 tip: i_credit_first, i_credit_linear, i_log1p_n_covisit, i_log1p_n_exp, i_log1p_n_users, i_n_covisit_neighbors, i_n_exp, i_n_users\n声明: 展示差分，非定罪；不改 Drill 门。",
+  "ticket_custom_fields": {
+    "graph_shift_diff_sign_dy_prev": "flat",
+    "graph_shift_diff_sign_dy_cur": "flat",
+    "graph_shift_diff_queue_prev": "路径线性份额变动",
+    "graph_shift_diff_queue_cur": "未选 tip",
+    "graph_shift_diff_tips_added": "",
+    "graph_shift_diff_tips_removed": "i_credit_first,i_credit_linear,i_log1p_n_covisit,i_log1p_n_exp,i_log1p_n_users",
+    "graph_shift_disclaimer": "clue_not_conviction_diff"
+  }
+}

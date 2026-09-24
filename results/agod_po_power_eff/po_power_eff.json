@@ -1,0 +1,298 @@
+{
+  "n_datasets": 6,
+  "n_batches": 40,
+  "batch_size": 100,
+  "soft_win_rate_cbrt_le_sqrt": 0.6666666666666666,
+  "mean_soft_mse_eff_gap_cbrt_minus_sqrt": -7586.878716652768,
+  "median_soft_mse_eff_gap_cbrt_minus_sqrt": 0.00022740796825105095,
+  "best_sig_counts": {
+    "gated_sqrt": 1,
+    "uniform": 5
+  },
+  "cards": [
+    {
+      "dataset": "metro_interstate",
+      "ok": true,
+      "gate_duty": 0.1794871794871795,
+      "modes": [
+        {
+          "mode": "uniform",
+          "mse_mean_sig": 860205.952072517,
+          "rel_vs_uniform": 1.0,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "sqrt",
+          "mse_mean_sig": 845543.7883718456,
+          "rel_vs_uniform": 0.9829550543502454,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "cbrt",
+          "mse_mean_sig": 853655.4360746519,
+          "rel_vs_uniform": 0.9923849445797454,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "gated_sqrt",
+          "mse_mean_sig": 797728.2120113,
+          "rel_vs_uniform": 0.9273688586893781,
+          "mse_eff": 483458.7028546553
+        },
+        {
+          "mode": "gated_cbrt",
+          "mse_mean_sig": 803426.2291702261,
+          "rel_vs_uniform": 0.9339928737234496,
+          "mse_eff": 439366.90341058414
+        },
+        {
+          "mode": "dre",
+          "mse_mean_sig": 1642190.682348755,
+          "rel_vs_uniform": 1.9090668675242033,
+          "mse_eff": NaN
+        }
+      ],
+      "soft_win_cbrt_le_sqrt": false,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": -44091.79944407113,
+      "best_sig_mode": "gated_sqrt",
+      "reading": "duty=0.18: gated\u221a best sig MSE; \u221a beats \u221b here; \u0394mse_eff(\u221b\u2212\u221a)=-4.41e+04"
+    },
+    {
+      "dataset": "beijing_pm25",
+      "ok": true,
+      "gate_duty": 0.1282051282051282,
+      "modes": [
+        {
+          "mode": "uniform",
+          "mse_mean_sig": 2363.608926241626,
+          "rel_vs_uniform": 1.0,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "sqrt",
+          "mse_mean_sig": 2527.576765863104,
+          "rel_vs_uniform": 1.0693718143475635,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "cbrt",
+          "mse_mean_sig": 2681.5636786639016,
+          "rel_vs_uniform": 1.1345208798681665,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "gated_sqrt",
+          "mse_mean_sig": 2391.405286089438,
+          "rel_vs_uniform": 1.0117601349103091,
+          "mse_eff": -301.1272316846328
+        },
+        {
+          "mode": "gated_cbrt",
+          "mse_mean_sig": 2523.356775758848,
+          "rel_vs_uniform": 1.0675864131936739,
+          "mse_eff": -1730.6017031032409
+        },
+        {
+          "mode": "dre",
+          "mse_mean_sig": 3577.092687761303,
+          "rel_vs_uniform": 1.5134029356748273,
+          "mse_eff": NaN
+        }
+      ],
+      "soft_win_cbrt_le_sqrt": false,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": -1429.4744714186081,
+      "best_sig_mode": "uniform",
+      "reading": "duty=0.13: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221a beats \u221b here; \u0394mse_eff(\u221b\u2212\u221a)=-1.43e+03"
+    },
+    {
+      "dataset": "stocks_AAPL",
+      "ok": true,
+      "gate_duty": 0.1794871794871795,
+      "modes": [
+        {
+          "mode": "uniform",
+          "mse_mean_sig": 0.0007783584023255707,
+          "rel_vs_uniform": 1.0,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "sqrt",
+          "mse_mean_sig": 0.0008755153381945026,
+          "rel_vs_uniform": 1.1248228779681024,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "cbrt",
+          "mse_mean_sig": 0.0008205020170626282,
+          "rel_vs_uniform": 1.0541442279175521,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "gated_sqrt",
+          "mse_mean_sig": 0.000891240955966891,
+          "rel_vs_uniform": 1.1450264470763738,
+          "mse_eff": -0.000873495950795931
+        },
+        {
+          "mode": "gated_cbrt",
+          "mse_mean_sig": 0.0008583937244540102,
+          "rel_vs_uniform": 1.1028257957893315,
+          "mse_eff": -0.000619320945041496
+        },
+        {
+          "mode": "dre",
+          "mse_mean_sig": 0.0008401376988030413,
+          "rel_vs_uniform": 1.0793712720167048,
+          "mse_eff": NaN
+        }
+      ],
+      "soft_win_cbrt_le_sqrt": true,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": 0.00025417500575443494,
+      "best_sig_mode": "uniform",
+      "reading": "duty=0.18: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000254"
+    },
+    {
+      "dataset": "waymo_proxy",
+      "ok": true,
+      "gate_duty": 0.5641025641025641,
+      "modes": [
+        {
+          "mode": "uniform",
+          "mse_mean_sig": 0.009992141707669138,
+          "rel_vs_uniform": 1.0,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "sqrt",
+          "mse_mean_sig": 0.011008310002167957,
+          "rel_vs_uniform": 1.1016967457255828,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "cbrt",
+          "mse_mean_sig": 0.010822887760939839,
+          "rel_vs_uniform": 1.083139939121669,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "gated_sqrt",
+          "mse_mean_sig": 0.010823863595056155,
+          "rel_vs_uniform": 1.0832375992775058,
+          "mse_eff": -0.0020478001015210644
+        },
+        {
+          "mode": "gated_cbrt",
+          "mse_mean_sig": 0.010487567430525448,
+          "rel_vs_uniform": 1.0495815349051807,
+          "mse_eff": -0.0012197981812750063
+        },
+        {
+          "mode": "dre",
+          "mse_mean_sig": 0.01154096687239285,
+          "rel_vs_uniform": 1.1550043234009544,
+          "mse_eff": NaN
+        }
+      ],
+      "soft_win_cbrt_le_sqrt": true,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": 0.000828001920246058,
+      "best_sig_mode": "uniform",
+      "reading": "duty=0.56: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000828"
+    },
+    {
+      "dataset": "stocks_MSFT",
+      "ok": true,
+      "gate_duty": 0.23076923076923078,
+      "modes": [
+        {
+          "mode": "uniform",
+          "mse_mean_sig": 0.0006164351048759122,
+          "rel_vs_uniform": 1.0,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "sqrt",
+          "mse_mean_sig": 0.0006962952448964386,
+          "rel_vs_uniform": 1.129551577106567,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "cbrt",
+          "mse_mean_sig": 0.0006803973768946609,
+          "rel_vs_uniform": 1.1037615663235536,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "gated_sqrt",
+          "mse_mean_sig": 0.0006875440160914433,
+          "rel_vs_uniform": 1.115355064390509,
+          "mse_eff": -0.0004279702989823627
+        },
+        {
+          "mode": "gated_cbrt",
+          "mse_mean_sig": 0.0006322554470459932,
+          "rel_vs_uniform": 1.0256642459927157,
+          "mse_eff": -9.52150223199316e-05
+        },
+        {
+          "mode": "dre",
+          "mse_mean_sig": 0.0005892468433126537,
+          "rel_vs_uniform": 0.9558943652815952,
+          "mse_eff": NaN
+        }
+      ],
+      "soft_win_cbrt_le_sqrt": true,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": 0.0003327552766624311,
+      "best_sig_mode": "uniform",
+      "reading": "duty=0.23: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000333"
+    },
+    {
+      "dataset": "stocks_IWM",
+      "ok": true,
+      "gate_duty": 0.1794871794871795,
+      "modes": [
+        {
+          "mode": "uniform",
+          "mse_mean_sig": 0.0005025231291427358,
+          "rel_vs_uniform": 1.0,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "sqrt",
+          "mse_mean_sig": 0.0005516118971205531,
+          "rel_vs_uniform": 1.0976845942624747,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "cbrt",
+          "mse_mean_sig": 0.0005266685042421513,
+          "rel_vs_uniform": 1.0480482861368103,
+          "mse_eff": NaN
+        },
+        {
+          "mode": "gated_sqrt",
+          "mse_mean_sig": 0.0005479271456078402,
+          "rel_vs_uniform": 1.0903520929326376,
+          "mse_eff": -0.0003513406035990215
+        },
+        {
+          "mode": "gated_cbrt",
+          "mse_mean_sig": 0.0005219981637881417,
+          "rel_vs_uniform": 1.0387545040536317,
+          "mse_eff": -0.00015069967285135456
+        },
+        {
+          "mode": "dre",
+          "mse_mean_sig": 0.0005116931947477491,
+          "rel_vs_uniform": 1.0182480468524038,
+          "mse_eff": NaN
+        }
+      ],
+      "soft_win_cbrt_le_sqrt": true,
+      "soft_mse_eff_gap_cbrt_minus_sqrt": 0.00020064093074766696,
+      "best_sig_mode": "uniform",
+      "reading": "duty=0.18: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000201"
+    }
+  ],
+  "headline": "gated\u221b\u2264gated\u221a on 67% of packs; median \u0394mse_eff(\u221b\u2212\u221a)=+0.000227 (mean=-7.59e+03, metro-skewed); best_sig counts {'gated_sqrt': 1, 'uniform': 5}. Same FLOPs \u2014 softness is the only knob.",
+  "note": "sqrt vs cbrt IPTW share adaptation FLOPs; compare rel MSE / soft wins, not compute. Prefer \u221b when PO ranks well but \u221a IPTW hurts. \u0394mse_eff(\u221b\u2212\u221a)>0 \u21d2 \u221b loses less (or gains more) per FLOP. Prefer **median** gap over mean \u2014 one pack (metro) can dominate."
+}

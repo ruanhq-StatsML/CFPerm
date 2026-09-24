@@ -1,0 +1,411 @@
+{
+  "ok": true,
+  "window_meta": {
+    "scheme": "equal_count",
+    "n_windows": 2,
+    "note": "balanced n; calendar width varies by window"
+  },
+  "n": 2000,
+  "d_tokens": 256,
+  "d_total": 266,
+  "concat_hyperparams": true,
+  "embed": "tfidf",
+  "t_early": 0,
+  "t_late": 1,
+  "n_by_T": {
+    "0": 1000,
+    "1": 1000
+  },
+  "span_hours_by_T": {
+    "0": 142.38333333333333,
+    "1": 184.0
+  },
+  "y_by_T": {
+    "0": 0.16413416816852988,
+    "1": 0.1972796193715185
+  },
+  "delta_Y_image_nsfw": 0.03314545120298862,
+  "direction": "positive/\u6b63\u5411",
+  "y_threshold": 0.13944496810436247,
+  "hp_vimp_share": 0.08711908446711632,
+  "fsds": {
+    "ok": true,
+    "n_selected": 20,
+    "models": {
+      "hgb": {
+        "auc": 0.6016464773209796,
+        "ap": 0.3859697516292489
+      },
+      "logreg": {
+        "auc": 0.6079633013516286,
+        "ap": 0.38389922910240043
+      }
+    },
+    "top_fsds": [
+      {
+        "feature": "woman",
+        "f_score": 19.497339942763755
+      },
+      {
+        "feature": "focus illustration",
+        "f_score": 19.27716764680925
+      },
+      {
+        "feature": "hp_cfg",
+        "f_score": 19.09259659618719
+      },
+      {
+        "feature": "artgerm",
+        "f_score": 17.8566575467135
+      },
+      {
+        "feature": "full body",
+        "f_score": 16.52154448397516
+      },
+      {
+        "feature": "intricate elegant",
+        "f_score": 16.155720092609545
+      },
+      {
+        "feature": "hair",
+        "f_score": 15.612563176146255
+      },
+      {
+        "feature": "alphonse mucha",
+        "f_score": 15.596877218129485
+      },
+      {
+        "feature": "alphonse",
+        "f_score": 15.596877218129485
+      },
+      {
+        "feature": "digital",
+        "f_score": 15.446388580655562
+      },
+      {
+        "feature": "and greg",
+        "f_score": 14.243211239817581
+      },
+      {
+        "feature": "sharp",
+        "f_score": 14.104983659844567
+      },
+      {
+        "feature": "volumetric",
+        "f_score": 13.933004252318181
+      },
+      {
+        "feature": "skin",
+        "f_score": 13.287452817591962
+      },
+      {
+        "feature": "full",
+        "f_score": 13.1731975065737
+      }
+    ]
+  },
+  "top_covariate": [
+    {
+      "feature": "8k",
+      "vimp_cov": 0.10497941744830867
+    },
+    {
+      "feature": "hp_cfg",
+      "vimp_cov": 0.07014855334729476
+    },
+    {
+      "feature": "4k",
+      "vimp_cov": 0.06578630380011044
+    },
+    {
+      "feature": "by",
+      "vimp_cov": 0.025559591788202145
+    },
+    {
+      "feature": "octane",
+      "vimp_cov": 0.020682088080365126
+    },
+    {
+      "feature": "the",
+      "vimp_cov": 0.017963941198798877
+    },
+    {
+      "feature": "greg rutkowski",
+      "vimp_cov": 0.016386848871174146
+    },
+    {
+      "feature": "and",
+      "vimp_cov": 0.01627608634705861
+    },
+    {
+      "feature": "render",
+      "vimp_cov": 0.01623818340912898
+    },
+    {
+      "feature": "hp_step",
+      "vimp_cov": 0.015865514021194828
+    },
+    {
+      "feature": "of",
+      "vimp_cov": 0.01584902992608782
+    },
+    {
+      "feature": "cinematic",
+      "vimp_cov": 0.014835184579004087
+    },
+    {
+      "feature": "hyper",
+      "vimp_cov": 0.014654621691285044
+    },
+    {
+      "feature": "rutkowski",
+      "vimp_cov": 0.014317687472223095
+    },
+    {
+      "feature": "greg",
+      "vimp_cov": 0.011421227203143314
+    }
+  ],
+  "top_cmean": [
+    {
+      "feature": "hp_cfg",
+      "delta": 0.2163200605322021,
+      "sign": 1
+    },
+    {
+      "feature": "hp_step",
+      "delta": -0.10453968929403382,
+      "sign": -1
+    },
+    {
+      "feature": "8k",
+      "delta": -0.025496124994524524,
+      "sign": -1
+    },
+    {
+      "feature": "4k",
+      "delta": -0.021796466817508547,
+      "sign": -1
+    },
+    {
+      "feature": "the",
+      "delta": -0.015191929454087177,
+      "sign": -1
+    },
+    {
+      "feature": "by",
+      "delta": 0.01313859378665913,
+      "sign": 1
+    },
+    {
+      "feature": "as",
+      "delta": -0.012234864103333899,
+      "sign": -1
+    },
+    {
+      "feature": "sampler=8",
+      "delta": -0.01100000000000001,
+      "sign": -1
+    },
+    {
+      "feature": "octane",
+      "delta": 0.010698286555142784,
+      "sign": 1
+    },
+    {
+      "feature": "art",
+      "delta": 0.010629587613777691,
+      "sign": 1
+    },
+    {
+      "feature": "render",
+      "delta": 0.010064305430619671,
+      "sign": 1
+    },
+    {
+      "feature": "greg",
+      "delta": 0.009459308600937612,
+      "sign": 1
+    },
+    {
+      "feature": "and",
+      "delta": 0.009411699695519513,
+      "sign": 1
+    },
+    {
+      "feature": "of",
+      "delta": -0.009289010955770408,
+      "sign": -1
+    },
+    {
+      "feature": "portrait",
+      "delta": 0.008933632674729679,
+      "sign": 1
+    }
+  ],
+  "top_blend": [
+    {
+      "feature": "hp_cfg",
+      "f_score": 19.09259659618719,
+      "vimp_cov": 0.07014855334729476,
+      "delta": 0.2163200605322021,
+      "sign": 1,
+      "score_blend": 0.9961977186311787
+    },
+    {
+      "feature": "the",
+      "f_score": 7.190746131010066,
+      "vimp_cov": 0.017963941198798877,
+      "delta": -0.015191929454087177,
+      "sign": -1,
+      "score_blend": 0.9404309252217997
+    },
+    {
+      "feature": "greg",
+      "f_score": 10.772952684468216,
+      "vimp_cov": 0.011421227203143314,
+      "delta": 0.009459308600937612,
+      "sign": 1,
+      "score_blend": 0.9391634980988594
+    },
+    {
+      "feature": "hp_step",
+      "f_score": 7.1310252646295895,
+      "vimp_cov": 0.015865514021194828,
+      "delta": -0.10453968929403382,
+      "sign": -1,
+      "score_blend": 0.9378960709759189
+    },
+    {
+      "feature": "volumetric",
+      "f_score": 13.933004252318181,
+      "vimp_cov": 0.009064129527558685,
+      "delta": 0.005967809478952723,
+      "sign": 1,
+      "score_blend": 0.923954372623574
+    },
+    {
+      "feature": "greg rutkowski",
+      "f_score": 7.242240141476154,
+      "vimp_cov": 0.016386848871174146,
+      "delta": 0.00832182163678717,
+      "sign": 1,
+      "score_blend": 0.9226869455006338
+    },
+    {
+      "feature": "rutkowski",
+      "f_score": 8.314192943227662,
+      "vimp_cov": 0.014317687472223095,
+      "delta": 0.008098127705073645,
+      "sign": 1,
+      "score_blend": 0.917617237008872
+    },
+    {
+      "feature": "art",
+      "f_score": 5.58985940503175,
+      "vimp_cov": 0.009906269171734983,
+      "delta": 0.010629587613777691,
+      "sign": 1,
+      "score_blend": 0.908745247148289
+    },
+    {
+      "feature": "portrait",
+      "f_score": 3.3954889149143708,
+      "vimp_cov": 0.010290185017281865,
+      "delta": 0.008933632674729679,
+      "sign": 1,
+      "score_blend": 0.8745247148288974
+    },
+    {
+      "feature": "background",
+      "f_score": 3.837343734784056,
+      "vimp_cov": 0.006615616238891904,
+      "delta": 0.007061713070529092,
+      "sign": 1,
+      "score_blend": 0.8542458808618504
+    },
+    {
+      "feature": "and greg",
+      "f_score": 14.243211239817581,
+      "vimp_cov": 0.006356650141654208,
+      "delta": 0.004111044505557823,
+      "sign": 1,
+      "score_blend": 0.8529784537389101
+    },
+    {
+      "feature": "and",
+      "f_score": 2.040041085416788,
+      "vimp_cov": 0.01627608634705861,
+      "delta": 0.009411699695519513,
+      "sign": 1,
+      "score_blend": 0.8491761723700888
+    },
+    {
+      "feature": "digital art",
+      "f_score": 5.926955973825218,
+      "vimp_cov": 0.00435976691244775,
+      "delta": -0.008397545874617772,
+      "sign": -1,
+      "score_blend": 0.8466413181242078
+    },
+    {
+      "feature": "focus",
+      "f_score": 10.272051573765655,
+      "vimp_cov": 0.005013200414746291,
+      "delta": 0.005310590728579617,
+      "sign": 1,
+      "score_blend": 0.8466413181242078
+    },
+    {
+      "feature": "masterpiece",
+      "f_score": 3.07564380516745,
+      "vimp_cov": 0.008081865653463697,
+      "delta": 0.008085006396295454,
+      "sign": 1,
+      "score_blend": 0.8466413181242078
+    },
+    {
+      "feature": "by greg",
+      "f_score": 3.9601175484180198,
+      "vimp_cov": 0.006701424461704986,
+      "delta": 0.0050210099985112154,
+      "sign": 1,
+      "score_blend": 0.8250950570342205
+    },
+    {
+      "feature": "intricate",
+      "f_score": 2.4210211549551413,
+      "vimp_cov": 0.010292994799315723,
+      "delta": 0.005401081057118617,
+      "sign": 1,
+      "score_blend": 0.8250950570342205
+    },
+    {
+      "feature": "alphonse",
+      "f_score": 15.596877218129485,
+      "vimp_cov": 0.005475156316262132,
+      "delta": 0.0034181635025510373,
+      "sign": 1,
+      "score_blend": 0.8162230671736376
+    },
+    {
+      "feature": "alphonse mucha",
+      "f_score": 15.596877218129485,
+      "vimp_cov": 0.005411292731356285,
+      "delta": 0.0034181635025510373,
+      "sign": 1,
+      "score_blend": 0.8136882129277567
+    },
+    {
+      "feature": "by",
+      "f_score": 0.7508797371658693,
+      "vimp_cov": 0.025559591788202145,
+      "delta": 0.01313859378665913,
+      "sign": 1,
+      "score_blend": 0.806083650190114
+    }
+  ],
+  "ts_min": "2022-08-06 22:20:00+00:00",
+  "ts_max": "2022-08-20 12:54:00+00:00",
+  "sec": 1.7505311965942383
+}

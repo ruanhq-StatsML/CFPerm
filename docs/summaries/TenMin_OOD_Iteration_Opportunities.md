@@ -1,0 +1,183 @@
+# 10 分钟 OOD 迭代流程 + 机会串
+
+> 节奏：**每 10 分钟一轮** — 逼自己出分布外（OOD）新点子 → **立刻串进现有线索机** → 只留能变现的。  
+> 禁止本流程产出 math-Eval / AUC ablation。  
+> 底座：波次 → Drill \(K^\star\) → tip+direction；审核 agent / ETA agent；20 车商业车道。
+
+---
+
+## 1. 单轮 10 分钟 Protocol（严格掐表）
+
+| 分 | 动作 | 产出 |
+|---:|---|---|
+| 0–1 | 抽一张「约束卡」（下表） | 本轮 OOD 边界 |
+| 1–4 | **强制 OOD**：写 1 个现栈没有的点子（跨域/跨模态/跨系统） | 1 句 idea |
+| 4–7 | **串起来**：接到波次 / Drill / 线索 / 审核 / ETA / 名单 中 ≥2 个节点 | 边：idea→节点 |
+| 7–9 | **商业过滤**：能否 2 周内现网可点？不能 → 丢或降级 | keep / kill |
+| 9–10 | 写入机会账本一行 +（可选）开 1 个任务卡 | `opportunities.jsonl` 一行 |
+
+**约束卡（每轮抽 1，逼 OOD）：**
+1. 不能再提 MMD/PO/cmean 公式，只能提系统接口  
+2. 必须跨一条现网系统（工单 / 名单 / 规则 / ETA / 支付）  
+3. 必须服务「人分钟」或「客诉」之一  
+4. 必须可灰度、可回滚  
+5. 必须复用已有 `summary.json` / `direction` 字段  
+6. 换一个行业类比（电商刷单 → 运力虚跑 / 内容农场 / 金融团办）再映回  
+7. 只许改「展示/门控/名单」，不许改 Drill 门  
+8. 必须让审核 agent 与 ETA agent **同时**受益  
+
+**及格：** keep≥1 且串上≥2 节点。  
+**不及格：** 只有新名词、或纯评估、或与底座断开。
+
+---
+
+## 2. 串法（怎么把新东西接上）
+
+固定骨架（不可拆）：
+
+```text
+[监测波次 R_t] → [Drill K*] → [线索卡 tip+direction]
+        ↓              ↓                ↓
+   工单/告警      名单/图库         审核agent上下文
+        ↓              ↓                ↓
+   ETA门控        规则插队         人审有用回流
+```
+
+新点子必须挂在 **一条边上**（例如「支付失败码流」→ 作为波次侧通道特征 → 仍经 \(R_t\) 才 Drill）。  
+禁止平行另起炉灶的「第二套反欺诈」。
+
+---
+
+## 3. 机会账本（全面、具体）
+
+### A. 已串好、可立刻派车（P0）
+
+| ID | 机会 | 串法 | 商业 KPI | 建议车道 |
+|---|---|---|---|---|
+| A1 | 审单上下文自动贴线索卡 | 波次工单 → 审核 agent | 件均耗时 ↓ | 审核 agent |
+| A2 | ETA 在 \(R_t=1\) 降置信 | 波次 → ETA 门控 | 异常日客诉 ↓ | ETA agent |
+| A3 | 规则 ∩ \(K^\star\) 插队 | Drill → 规则引擎 | 产案率 ↑ | 车道 5 |
+| A4 | \(K^\star\) 日更灰名单+TTL | Drill → 名单 | 漏放 ↓ | 车道 2 |
+| A5 | direction 红绿看板 | 线索 → 运营屏 | 分流准 | 车道 4 |
+| A6 | 人审有用/没用回流 | 审核 → 线索权重 | 有用率 ↑ | 车道 18 |
+
+### B. OOD 新串（P1，10 分钟轮易产）
+
+| ID | OOD 点子 | 怎么串 | 价值 |
+|---|---|---|---|
+| B1 | **支付/结算失败码** 作波次侧通道 | 失败码突增 ∧ \(R_t\) → 提高 Drill 优先 | 资金链路早发现 |
+| B2 | **客服工单主题** embedding 对齐 tip | tip 与客诉主题近 → 升审核队列 | 真痛点对齐 |
+| B3 | **运力/仓网图** 同构波次 | 同一套 \(R_t\to K^\star\) 换边定义=线路 | ETA+反欺诈共用底座 |
+| B4 | **直播间/广告账户** 当 merchant 键 | item_feat.122 换账户 ID | 投放作弊波次 |
+| B5 | **设备指纹团** 作并行 drill_key | 与 user 键比 eff，不进门 | 设备农场 |
+| B6 | **优惠券核销图** shift | cur vs ref 核销分布 | 套利团伙 |
+| B7 | **退货逆向边** 并入 \(G_t\) | 正向 click + 逆向退 联合 MMD | 买退刷 |
+| B8 | **内容审核队列** 复用线索卡 UI | 同一组件换 tip 词典 | 审出复用 |
+| B9 | **SLA 倒计时** 吃波次年龄 | 波次越长审核 SLA 越紧 | 管理动作 |
+| B10 | **商户 App 推送** L2 文案 | direction 决定话术模板 | 可回滚触达 |
+| B11 | **贷后/征信代理** 只读特征 | 不进 Drill；进刻画头 | 金融扩展 |
+| B12 | **跨店铺同控** 边=共享收款 | Drill 键=收款主体 | 团伙扩线 |
+| B13 | **库存突变** 对齐 item 支撑 | \(K^\star\)∩缺货 SKU | 虚库存欺诈 |
+| B14 | **验证码/风控挑战** 触发器 | L1.5：仅 \(R_t\)∧尖 tip | 降误伤 |
+| B15 | **对账差异流** | 财务差异 ∧ 波次 → 案件包 | 资损闭环 |
+| B16 | **工单自定义字段映射**（scope内） | summary/direction → ticket_custom_fields POST | 审出接通现网 |
+| B17 | **有用/没用回流 CLI**（scope内） | 审出卡 → review_feedback.jsonl | 人分钟闭环 |
+| B18 | **有用率按队列汇总**（scope内） | feedback.jsonl → summary JSON | 运营周报 |
+| B19 | **审出卡灰度 kill_switch**（scope内） | flags JSON → allow/L0 | 可回滚 |
+| B20 | **波次批处理出卡**（scope内） | results/**/summary.json → cards+index | 运营批量 |
+| B21 | **审出卡波次差分**（scope内） | 两卡 tip/sign_Dy/队列差分 → paste | 差分人分钟↓ |
+| B22 | **内容农场 tip 词典 overlay**（scope内） | --tip-overlay 换桶话术，卡 UI 不变 | 审出复用 |
+| B23 | **useful_rate→sample_rate 建议**（scope内） | feedback summary → flags.suggested.json | 灰度闭环 |
+| B24 | **审出卡 SLA 紧迫度**（scope内） | gap_days→urgent/tight + 工单字段 | 清队人分钟 |
+| B25 | **工单字段 webhook dry-run**（scope内） | ticket_custom_fields → POST/收据 | 现网接通 |
+| B26 | **shared_context.eta_soft_hint**（scope内） | 同卡只读提示给审核+ETA | 双 agent |
+| B27 | **审出加速包 e2e smoke**（scope内） | export→反馈→建议→dry-run 一键 | 交接演示 |
+| B28 | **按队列 sample_rate 覆盖**（scope内） | flags.queue_sample_rates | 单队列回滚 |
+| B29 | **human-use gate / feature freeze**（scope内） | 真人反馈→READY 才解冻 | 停扩面 |
+| B30 | **真人打标交接纸**（scope内） | handoff.md 贴卡+打标CLI | 逼 READY |
+| B31 | **IM 催打标一句话**（scope内） | handoff §0 发给审核 | 到达率 |
+| B32 | **handoff 责任人填空**（scope内） | OWNER+禁止自动覆盖 flags | 问责 |
+| B33 | **NOT_READY 等待看板**（scope内） | waiting_board 做/不做清单 | 停扩面 |
+| B34 | **停 10min→6h gate 巡检**（scope内） | NOT_READY 不堆 feature | 省人分钟 |
+
+### C. 「串成产品」组合拳（P0 打包卖）
+
+| 包 | 含机会 | 对外一句话 |
+|---|---|---|
+| **审出加速包** | A1+A5+A6+B8+B9 | 审核 agent 带图谱变动卡，人分钟下降 |
+| **时效稳健包** | A2+B3+B13 | ETA 在供给/运力异常波次自动降置信 |
+| **规则增敏包** | A3+A4+B14 | 规则命中且在 \(K^\star\) 才加重，降误伤 |
+| **资损闭环包** | B1+B15+A8案件包 | 支付失败+对账差异+波次→一键案卷 |
+
+### D. 刻意不做（OOD 过滤器杀掉的）
+
+- 再写一篇 FSDS 理论 / 因果 ATE  
+- 无现网验收人的「评估框架」  
+- 换社区算法当 Drill 门  
+- 20 agent 全去调 \(\alpha\)  
+
+---
+
+## 4. 机会怎么「串成一条故事」（给老板 / 自己）
+
+```text
+监测波次发现「图谱分布在动」
+  → Drill 给出「哪块支撑在共变」
+  → 线索卡给审核 agent 省翻页
+  → 同一 R_t 给 ETA 降置信，异常日少挨骂
+  → 规则∩K* 插队，真案更早进队
+  → 有用回流改展示权重，越用越省人
+  → OOD 扩展：支付失败 / 退货边 / 运力图 同一骨架
+```
+
+每一轮 10 分钟只允许在这条故事上 **加一条支路**，不许另起平行叙事。
+
+---
+
+## 5. 自动化：10 分钟 Timer Prompt（可挂 cursor-subscriptions）
+
+```text
+【10min OOD 迭代】
+1) 抽一张约束卡（Motivate/本文件 §1）。
+2) 写 1 个 OOD 新点子（禁 math-Eval）。
+3) 串到波次/Drill/线索/审核/ETA/名单 ≥2 节点。
+4) 商业过滤：2 周能否现网可点？keep/kill。
+5) Append 一行到 docs/summaries/ood_opportunity_log.jsonl
+   {"ts","constraint","idea","links":[],"keep":true,"kpi","owner_lane"}。
+6) 若 keep：更新本文件 §3 表一行或开任务卡；git commit+push。
+7) 禁止改 Drill 门公式；禁止只交评估数字。
+```
+
+---
+
+## 6. Scope 收窄（已定）
+
+**只走审出加速包** → [`Scope_Review_Agent_Card.md`](Scope_Review_Agent_Card.md)（含业务场景 S1–S7、角色、L0–L3、验收）。  
+ETA / 规则 / B1–B15 冻结至审出卡被真人用过一次。
+B29 起：OOD 轮优先跑 `check_review_accel_human_gate.py`；`NOT_READY` 时 **kill** 新 feature，只推真人打标。
+B34：`ood-10min-iterate` 已停；改 `ood-gate-check-6h`。READY 后再恢复 10min OOD。
+
+业务场景速览（**主文** [`Business_Scenarios_Brush_vs_Inject.md`](Business_Scenarios_Brush_vs_Inject.md)；Scope §2 摘要）：
+
+| ID | 族 | 默认读法 |
+|---|---|---|
+| S1 | **刷量族** | pos → 成功变多：末跳/互点（辨爆款） |
+| S2 | **灌入族** | neg → 成功变少：劣质短会话/劫持残留 |
+| S3 | **漂移族** | flat → 结构漂、成功平（当前样例） |
+| S4–S7 | 修饰/调度 | 共点·错配·内容词典·SLA |
+## 6b. 本轮（启动轮）已串结论
+
+最值得先打的三条支路（全面里的尖刀）：
+
+1. **审出加速包**（A1+A5+A6）— 商业价值最硬：人分钟。  
+2. **时效稳健包**（A2+B3）— ETA agent 有感知行为差。  
+3. **规则增敏包**（A3+B14）— 降误伤也能卖钱。  
+
+支付失败（B1）与退货边（B7）作为下一轮 OOD 优先约束卡 #2/#6。
+
+---
+
+## 7. Takeaway
+
+每 10 分钟：OOD 一击 → 挂上骨架边 → 商业过滤 → 账本一行。  
+机会不靠数学变多，靠 **支路接进审出 / ETA / 规则 / 资损** 变现；串起来就是一条可变现的图谱变动线索产品。
