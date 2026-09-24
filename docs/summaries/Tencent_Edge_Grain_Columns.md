@@ -78,6 +78,64 @@ chunk_id = row_index // N     # N ∈ {1000, 2000}
 - ops top 常是 `e_log1p_exp` → **买量强度在传**
 - content top 常是 `i_credit_last` / `i_share_last` → **末跳候选**
 
+### 3.1 Pairwise 切窗（就是你说的这个）
+
+边计数 `e_n_exp` 等是 **特征 X**，不是切窗单位。切窗单位是 **边行**：
+
+```python
+df = df.sort_values("e_last_ts").reset_index(drop=True)
+# chunk ids: 0,0,...,0, 1,1,...,1, ...
+from itertools import pairwise
+N = 1000
+n_chunks = len(df) // N   # (+ maybe a tail)
+for t0, t1 in pairwise(range(n_chunks)):
+    df1 = df.iloc[t0 * N : (t0 + 1) * N]   # train
+    df2 = df.iloc[t1 * N : (t1 + 1) * N]   # test
+    # fit SelectKBest+HGB on (X1, y1); score on (X2, y2)
+```
+
+代码里 `adjacent_chunk_pairs` = `list(pairwise(occupied_chunk_ids))`，语义同上。
+
+### 3.2 ops ≈35 维 vs content ≈14 维 —— 进模逻辑
+
+**共同前提**：两边都先丢掉 convert leak（`e_n_cnv`, `u_cvr`, `i_n_cnv`…），否则 Y 直接漏进 X。
+
+| | ops | content |
+|---|---|---|
+| 问题 | 「量 + 结构」合在一起，下一段还能不能排转化？ | 去掉量之后，**路径/归因结构**还能否传？ |
+| 典型 top | `e_log1p_exp`, `e_n_exp` | `i_credit_last`, `i_share_last` |
+| 业务读 | 买量强度基线 | 末跳/路径候选 shortlist |
+| 误读 | AUC≈1 ⇒ 可上线 | credit tip ⇒ 定罪末跳 |
+
+content 十四维大致三类：
+
+1. **路径归因**（核心）：`i_credit_{first,last,linear}`, `i_share_{first,last,linear}`, `i_log1p_credit_linear`, `i_item_credit_rank`
+2. **共现/结构**：`i_n_covisit_neighbors`, `i_log1p_n_covisit_neighbors`, `ui_pop_mismatch`
+3. **用户非量形状**：`u_span_sec`, `u_n_uniq_items`, `u_log1p_n_uniq_items`（会话跨度/多样性，不是曝光次数）
+
+### 3.3 `i_credit_*` / `i_share_*` 是什么
+
+来自转化路径上的 **触点归因**（first / last / linear），再归一成份额：
+
+- `credit_last`：作为路径**末跳**拿到的归因质量  
+- `share_last`：`credit_last / Σ credit_last`（该 item 在末跳归因池里的份额）  
+- `*_linear`：路径线性分摊；`*_first`：首跳  
+
+广告读法：content 面板里它们进 top = 「去量后，末跳/路径结构仍能帮着排转化」→ **L1 末跳候选**，对齐审出 tip 桶；**不是**自动限投证明。
+
+---
+
+## 4. 还有其他的吗？
+
+| 还有 | 和本边 pairwise 的关系 |
+|---|---|
+| **日历宽窗**（5/10/60 min） | 另一套 grain（`run_diffusiondb_adjacent_board`）；投放突发时不等价于边数窗 |
+| **其它 pack** | DiffDB=prompt 行；Metro/Beijing=小时行；Waymo=proxy 行——同一 pairwise 协议，不同一行含义 |
+| **重叠/stride** | 当前 **不重叠** 相邻块；要更密可 `stride=N/2`（未做） |
+| **原子 PV 切窗** | 需回 `seq` 曝光事件表；本 `feature_grid` 做不到 |
+
+本广告场景默认：**边行 + pairwise + ops/content 双面板**。
+
 ---
 
 ## 4. 和「原子曝光日志」差在哪

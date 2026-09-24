@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -102,8 +103,17 @@ def chunk_by_n(n_rows: int, chunk_size: int) -> np.ndarray:
 
 
 def adjacent_chunk_pairs(T: np.ndarray) -> List[Tuple[int, int]]:
+    """Occupied chunk ids as adjacent pairs — same idea as ``itertools.pairwise``.
+
+    Mentally (after ``df = df.sort_values(e_last_ts)``)::
+
+        cuts = [0, N, 2N, ...]
+        for i0, i1 in pairwise(range(n_chunks)):
+            df1 = df.iloc[i0*N : (i0+1)*N]   # train chunk
+            df2 = df.iloc[i1*N : (i1+1)*N]   # test chunk
+    """
     occ = sorted(int(t) for t in np.unique(T))
-    return list(zip(occ[:-1], occ[1:]))
+    return list(pairwise(occ))
 
 
 def jaccard(a: Sequence[str], b: Sequence[str]) -> float:
