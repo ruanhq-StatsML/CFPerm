@@ -1,0 +1,464 @@
+{
+  "forecast": {
+    "n_packs": 3,
+    "best_counts": {
+      "hgb": 1,
+      "naive_last": 1,
+      "ridge": 1
+    },
+    "mean_hgb_rmse_lift_vs_naive": 0.18726140815649428,
+    "cards": [
+      {
+        "dataset": "metro_interstate",
+        "ok": true,
+        "n_train": 4196,
+        "n_test": 1799,
+        "n_lags": 5,
+        "d_feat": 24,
+        "models": {
+          "naive_last": {
+            "mae": 533.3479710950528,
+            "rmse": 854.6106411525046,
+            "r2": 0.8242160292460389,
+            "n_test": 1799.0
+          },
+          "ridge": {
+            "mae": 502.4194664387136,
+            "rmse": 717.356779922708,
+            "r2": 0.876145128577172,
+            "n_test": 1799.0
+          },
+          "hgb": {
+            "mae": 299.10935521752407,
+            "rmse": 486.8540421312894,
+            "r2": 0.9429520243014454,
+            "n_test": 1799.0
+          }
+        },
+        "rmse_lift_vs_naive": {
+          "naive_last": 0.0,
+          "ridge": 0.1606039693639899,
+          "hgb": 0.4303206411346209
+        },
+        "best_rmse": "hgb",
+        "note": "chronological 70/30; classical regression only \u2014 not PO/excess"
+      },
+      {
+        "dataset": "beijing_pm25",
+        "ok": true,
+        "n_train": 4196,
+        "n_test": 1799,
+        "n_lags": 5,
+        "d_feat": 18,
+        "models": {
+          "naive_last": {
+            "mae": 16.147859922178988,
+            "rmse": 24.05935776246303,
+            "r2": 0.8950472482005803,
+            "n_test": 1799.0
+          },
+          "ridge": {
+            "mae": 17.889388230309795,
+            "rmse": 25.20144772129804,
+            "r2": 0.884846604181718,
+            "n_test": 1799.0
+          },
+          "hgb": {
+            "mae": 16.99132346920271,
+            "rmse": 24.680782121816357,
+            "r2": 0.8895556239490598,
+            "n_test": 1799.0
+          }
+        },
+        "rmse_lift_vs_naive": {
+          "naive_last": 0.0,
+          "ridge": -0.0474696777075605,
+          "hgb": -0.02582880081374661
+        },
+        "best_rmse": "naive_last",
+        "note": "chronological 70/30; classical regression only \u2014 not PO/excess"
+      },
+      {
+        "dataset": "waymo_proxy",
+        "ok": true,
+        "n_train": 4196,
+        "n_test": 1799,
+        "n_lags": 5,
+        "d_feat": 14,
+        "models": {
+          "naive_last": {
+            "mae": 0.21126053614090162,
+            "rmse": 0.2641771958606767,
+            "r2": -0.3703705311088923,
+            "n_test": 1799.0
+          },
+          "ridge": {
+            "mae": 0.10132393713543769,
+            "rmse": 0.12632064164100745,
+            "r2": 0.6866743099344401,
+            "n_test": 1799.0
+          },
+          "hgb": {
+            "mae": 0.17870796236035763,
+            "rmse": 0.22262413488605692,
+            "r2": 0.026822972698122838,
+            "n_test": 1799.0
+          }
+        },
+        "rmse_lift_vs_naive": {
+          "naive_last": 0.0,
+          "ridge": 0.5218336645997743,
+          "hgb": 0.15729238414860858
+        },
+        "best_rmse": "ridge",
+        "note": "chronological 70/30; classical regression only \u2014 not PO/excess"
+      }
+    ],
+    "scenario": "next-step stream forecast bakeoff",
+    "method": "naive_last / ridge / HGB \u2014 time split MAE\u00b7RMSE\u00b7R\u00b2",
+    "distance_from_agod": "no excess_auc, no IPTW, no soft_burn, no claim_router, no ToT"
+  },
+  "themes": {
+    "ok": true,
+    "n_prompts": 4000,
+    "runs": [
+      {
+        "ok": true,
+        "n_docs": 4000,
+        "k": 6,
+        "silhouette_cosine": -0.006990779549322563,
+        "cluster_sizes": [
+          1,
+          1,
+          3992,
+          1,
+          1,
+          4
+        ],
+        "top_terms": [
+          [
+            "zombie",
+            "apocalypse",
+            "detailed",
+            "fi",
+            "festival",
+            "fi surreal",
+            "ferri",
+            "fernandez rios"
+          ],
+          [
+            "bus",
+            "detailed symmetrical",
+            "eddie mendoza",
+            "eddie",
+            "mendoza",
+            "coherent",
+            "perfect",
+            "symmetrical"
+          ],
+          [
+            "art",
+            "detailed",
+            "painting",
+            "artstation",
+            "portrait",
+            "highly",
+            "highly detailed",
+            "photo"
+          ],
+          [
+            "winning photograph",
+            "walter white",
+            "pizza",
+            "walter",
+            "figurine",
+            "splash",
+            "photograph",
+            "award winning"
+          ],
+          [
+            "symbols",
+            "acid",
+            "art 8k",
+            "background digital",
+            "delicate",
+            "demon",
+            "details",
+            "8k"
+          ],
+          [
+            "spider man",
+            "spider",
+            "drawing",
+            "man",
+            "hyperdetailed realistic",
+            "garfield",
+            "andrew",
+            "hybrid"
+          ]
+        ],
+        "inertia": 3884.608940373866,
+        "note": "TF-IDF MiniBatchKMeans \u2014 unsupervised themes, not FSDS/PO"
+      },
+      {
+        "ok": true,
+        "n_docs": 4000,
+        "k": 8,
+        "silhouette_cosine": 0.01055068490800719,
+        "cluster_sizes": [
+          433,
+          295,
+          255,
+          447,
+          259,
+          1979,
+          268,
+          64
+        ],
+        "top_terms": [
+          [
+            "lighting",
+            "render",
+            "octane",
+            "octane render",
+            "cinematic",
+            "detailed",
+            "unreal",
+            "engine"
+          ],
+          [
+            "trending artstation",
+            "trending",
+            "artstation",
+            "greg",
+            "greg rutkowski",
+            "rutkowski",
+            "painting",
+            "detailed"
+          ],
+          [
+            "woman",
+            "face",
+            "beautiful",
+            "eyes",
+            "detailed",
+            "hair",
+            "wearing",
+            "black"
+          ],
+          [
+            "art",
+            "concept",
+            "concept art",
+            "digital art",
+            "digital",
+            "detailed",
+            "fantasy",
+            "portrait"
+          ],
+          [
+            "art",
+            "focus",
+            "highly detailed",
+            "sharp",
+            "highly",
+            "sharp focus",
+            "detailed",
+            "digital painting"
+          ],
+          [
+            "painting",
+            "style",
+            "portrait",
+            "detailed",
+            "oil",
+            "man",
+            "black",
+            "film"
+          ],
+          [
+            "photo",
+            "high",
+            "photography",
+            "quality",
+            "award",
+            "high quality",
+            "winning",
+            "award winning"
+          ],
+          [
+            "ilya kuvshinov",
+            "kuvshinov",
+            "ilya",
+            "baarle",
+            "lois",
+            "van baarle",
+            "lois van",
+            "van"
+          ]
+        ],
+        "inertia": 3772.1763274492487,
+        "note": "TF-IDF MiniBatchKMeans \u2014 unsupervised themes, not FSDS/PO"
+      },
+      {
+        "ok": true,
+        "n_docs": 4000,
+        "k": 10,
+        "silhouette_cosine": 0.011175084822925056,
+        "cluster_sizes": [
+          528,
+          151,
+          443,
+          62,
+          83,
+          190,
+          146,
+          221,
+          244,
+          1932
+        ],
+        "top_terms": [
+          [
+            "art",
+            "concept",
+            "concept art",
+            "digital",
+            "artstation",
+            "detailed",
+            "illustration",
+            "painting"
+          ],
+          [
+            "film",
+            "movie",
+            "life",
+            "cinematic",
+            "retro",
+            "poster",
+            "mm",
+            "real life"
+          ],
+          [
+            "detailed",
+            "highly",
+            "highly detailed",
+            "lighting",
+            "cinematic",
+            "artstation",
+            "intricate",
+            "render"
+          ],
+          [
+            "rockwell",
+            "norman rockwell",
+            "norman",
+            "craig mullins",
+            "craig",
+            "mullins",
+            "greg",
+            "bussiere craig"
+          ],
+          [
+            "man",
+            "model",
+            "spider man",
+            "spider",
+            "painting man",
+            "old",
+            "eyes",
+            "painting"
+          ],
+          [
+            "hyper",
+            "realistic",
+            "hyper realistic",
+            "render",
+            "octane",
+            "octane render",
+            "detailed",
+            "unreal engine"
+          ],
+          [
+            "style",
+            "portrait",
+            "painting",
+            "art style",
+            "art",
+            "cyberpunk",
+            "cover",
+            "background"
+          ],
+          [
+            "oil",
+            "painting",
+            "oil painting",
+            "beautiful",
+            "canvas",
+            "oil canvas",
+            "portrait",
+            "city"
+          ],
+          [
+            "black",
+            "red",
+            "shinkai",
+            "makoto shinkai",
+            "makoto",
+            "kuvshinov",
+            "ilya",
+            "ilya kuvshinov"
+          ],
+          [
+            "photo",
+            "portrait",
+            "photography",
+            "high",
+            "art",
+            "render",
+            "photograph",
+            "dark"
+          ]
+        ],
+        "inertia": 3783.4888741578284,
+        "note": "TF-IDF MiniBatchKMeans \u2014 unsupervised themes, not FSDS/PO"
+      }
+    ],
+    "best_k": 10,
+    "best_silhouette": 0.011175084822925056,
+    "best_top_terms_head": [
+      [
+        "art",
+        "concept",
+        "concept art",
+        "digital",
+        "artstation",
+        "detailed",
+        "illustration",
+        "painting"
+      ],
+      [
+        "film",
+        "movie",
+        "life",
+        "cinematic",
+        "retro",
+        "poster",
+        "mm",
+        "real life"
+      ],
+      [
+        "detailed",
+        "highly",
+        "highly detailed",
+        "lighting",
+        "cinematic",
+        "artstation",
+        "intricate",
+        "render"
+      ]
+    ],
+    "scenario": "DiffusionDB prompt theme clusters",
+    "method": "TF-IDF + MiniBatchKMeans + silhouette",
+    "distance_from_agod": "no temporal FSDS, no transfer AUC, no PO"
+  }
+}
