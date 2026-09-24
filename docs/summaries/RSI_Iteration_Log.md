@@ -23,3 +23,4 @@
 | 19 | 2026-09-24 | soft-weight burn policy + FLOPs ledger split | α≠compute; burn only if beats uniform; else SOFTEN_ONLY∛ | `agod/soft_burn.py` | `test_soft_burn` |
 | 20 | 2026-09-24 | SOFTEN_ONLY always ∛; burn col on power MD | soften is policy not which-loser-hurts-less | soft_burn + power scorecard | soft_burn tests |
 | 21 | 2026-09-24 | Stats-empowered Tree-of-Thoughts | ToT V=(mse,rank,cost); prune=burn/Pareto/duty | `agod/tot_eff.py` + doc | `test_tot_eff` |
+| 22 | 2026-09-24 | **scene pivot** 180-agent CL fleet (fraud×10, CUPED×10) | RSI efficiency = even force + feedback rehome, not soft-burn α | `agod/agent_fleet.py` + `RSI_Agent_Fleet_CL.md` | `test_agent_fleet` 9p |
