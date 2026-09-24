@@ -23,6 +23,8 @@ def test_plot_rsi_tomorrow_demo_smoke(tmp_path):
             str(ROOT / "results/agod_po_eff/po_eff_scorecard.json"),
             "--power",
             str(ROOT / "results/agod_po_power_eff/po_power_eff.json"),
+            "--freeze",
+            str(ROOT / "results/agod_freeze_eff/freeze_eff.json"),
             "--out",
             str(out),
         ]

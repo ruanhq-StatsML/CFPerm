@@ -18,7 +18,8 @@
 - [`../agod_po_eff/PO_EFF_SCORECARD.md`](../../results/agod_po_eff/PO_EFF_SCORECARD.md)
 - [`../agod_po_power_eff/PO_POWER_EFF.md`](../../results/agod_po_power_eff/PO_POWER_EFF.md)
 - [`../agod_freeze_eff/FREEZE_EFF.md`](../../results/agod_freeze_eff/FREEZE_EFF.md)
-- **Demo 图：** [`../agod_po_eff/rsi_tomorrow_demo.png`](../../results/agod_po_eff/rsi_tomorrow_demo.png)
+- **Demo 图（三栏）：** [`../agod_po_eff/rsi_tomorrow_demo.png`](../../results/agod_po_eff/rsi_tomorrow_demo.png)
+  - A rank_eff · B √/∛ · C freeze Pareto（绿区 = 同时更省算力且 MSE 更好）
 
 ### P3 注记（image-OOD）
 PO 不适合作 image-OOD 检测（见 `docs/agod/AGOD_image_ood_bench.md`）——obs AUROC 弱于 kNN/centroid；  
