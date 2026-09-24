@@ -3,6 +3,9 @@
 Not “AUC high = good.” This note elaborates the **logic** behind the panels
 and what still sits outside the board.
 
+Null / excess AUC / probe_eff (skill beyond chance per relative FLOPs):
+[`RSI_TenMin_Model_Stats_Loop.md`](./RSI_TenMin_Model_Stats_Loop.md).
+
 ## 1. DiffusionDB logic
 
 | piece | here |
