@@ -1,6 +1,6 @@
 # 审出加速 · 等待看板
 
-**NOT_READY** · feature_freeze=True · 巡检 2026-09-23T18:14:06Z
+**NOT_READY** · feature_freeze=True · 巡检 2026-09-24T00:07:41Z
 
 OOD 节奏：paused_10min→gate_check_every_6h
 
