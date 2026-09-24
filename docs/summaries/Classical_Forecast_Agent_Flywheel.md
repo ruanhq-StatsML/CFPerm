@@ -65,9 +65,11 @@
 ```bash
 PYTHONPATH=. python3 scripts/run_pack_router.py --out results/sandbox_router
 PYTHONPATH=. python3 scripts/run_theme_sticker.py --out results/sandbox_theme
+PYTHONPATH=. python3 scripts/run_naive_regime_watch.py --out results/sandbox_naive_watch
 ```
 
-`ThemeSticker.annotate_steps` 把 `theme:<id>` 插入每步 `decision_path`（observe 之后）。
+`ThemeSticker.annotate_steps` 把 `theme:<id>` 插入每步 `decision_path`（observe 之后）。  
+`naive_regime_watch`：RW 包只用 last-value；连续 surprise → `regime_alert` → 建议重跑 router。
 
 ---
 

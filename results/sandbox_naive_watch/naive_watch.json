@@ -1,0 +1,51 @@
+{
+  "rows": [
+    {
+      "ok": true,
+      "dataset": "metro_interstate",
+      "model": "naive_last",
+      "n_steps": 250,
+      "mae": 590.08,
+      "n_surprise": 1,
+      "surprise_rate": 0.004,
+      "n_regime_alerts": 0,
+      "note": "RW-pack watcher \u2014 no HGB; regime_alert \u21d2 re-bakeoff router",
+      "router_model": "hgb",
+      "is_naive_route": false,
+      "alerts_head": []
+    },
+    {
+      "ok": true,
+      "dataset": "beijing_pm25",
+      "model": "naive_last",
+      "n_steps": 250,
+      "mae": 15.808,
+      "n_surprise": 2,
+      "surprise_rate": 0.008,
+      "n_regime_alerts": 0,
+      "note": "RW-pack watcher \u2014 no HGB; regime_alert \u21d2 re-bakeoff router",
+      "router_model": "naive_last",
+      "is_naive_route": true,
+      "alerts_head": []
+    },
+    {
+      "ok": true,
+      "dataset": "waymo_proxy",
+      "model": "naive_last",
+      "n_steps": 250,
+      "mae": 0.20967082466505427,
+      "n_surprise": 31,
+      "surprise_rate": 0.124,
+      "n_regime_alerts": 0,
+      "note": "RW-pack watcher \u2014 no HGB; regime_alert \u21d2 re-bakeoff router",
+      "router_model": "ridge",
+      "is_naive_route": false,
+      "alerts_head": []
+    }
+  ],
+  "n_naive_routed": 1,
+  "total_regime_alerts": 0,
+  "naive_regime_alerts": 0,
+  "headline": "FW-pm25-naive watch: 1 naive-routed packs; regime_alerts on naive=0, all_packs=0",
+  "opportunity": "FW-pm25-naive"
+}

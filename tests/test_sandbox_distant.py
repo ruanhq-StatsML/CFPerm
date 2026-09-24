@@ -105,3 +105,25 @@ def test_theme_sticker_annotates_decision_path():
     assert out[0]["decision_path"][1].startswith("theme:")
     assert "theme_cluster" in out[0]
     assert len(out[0]["theme_terms"]) >= 1
+
+
+def test_naive_regime_watch_smoke():
+    from sandbox.forecast_bakeoff import Pack
+    from sandbox.naive_regime_watch import naive_regime_watch
+
+    rng = np.random.default_rng(0)
+    n = 400
+    # Calm AR then a violent jump block (clear regime break for last-value)
+    y = np.zeros(n)
+    for i in range(1, 220):
+        y[i] = 0.2 * y[i - 1] + rng.normal(scale=0.1)
+    for i in range(220, 240):
+        y[i] = y[i - 1] + 5.0 + rng.normal(scale=0.1)
+    for i in range(240, n):
+        y[i] = 0.2 * y[i - 1] + rng.normal(scale=0.1)
+    pack = Pack(name="rw", X=rng.normal(size=(n, 2)), y=y)
+    rep = naive_regime_watch(pack, warm=100, max_steps=200, surprise_k=2.0, streak=3)
+    assert rep["ok"]
+    assert rep["model"] == "naive_last"
+    assert rep["n_regime_alerts"] >= 1
+    assert rep["n_surprise"] >= 3
