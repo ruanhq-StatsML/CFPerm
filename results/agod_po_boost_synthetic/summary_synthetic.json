@@ -1,0 +1,118 @@
+{
+  "mods": [
+    "m0",
+    "m1",
+    "m2",
+    "m3",
+    "m4"
+  ],
+  "schedule_card": {
+    "label": "multi-mod (M>=3)",
+    "ema_po": 0.55,
+    "omega_long": 0.55,
+    "omega_short0": 0.45,
+    "spike_gain": 1.25,
+    "freeze_theta": 0.14,
+    "tau": 0.3,
+    "budget_floor": 0.15,
+    "step_mode": "per_mod",
+    "row_weight_mode": "sqrt",
+    "notes": "Allow freeze; Acc gate \u0394Acc>=-0.005; primary KPI cumFLOPs@\u2605",
+    "card_id": "M_ge_3",
+    "n_mods": 5
+  },
+  "versions": {
+    "equal": {
+      "continuous": {
+        "mean_flops_rel": 1.0,
+        "cum_flops": 12.0,
+        "t_to_acc_star": 8,
+        "cum_flops_to_acc_star": 9.0,
+        "mean_freeze_jaccard": 1.0,
+        "n_windows": 12,
+        "acc_star": 0.55
+      },
+      "mean_flops_rel": 1.0,
+      "t_to_acc_star": 8,
+      "cum_flops_to_acc_star": 9.0,
+      "mean_freeze_jaccard": 1.0,
+      "final_acc": 0.618,
+      "n_reject": 12,
+      "reject_sources": {
+        "proxy": 11,
+        "hop_oos": 1
+      },
+      "delta_acc": 0.0,
+      "ship_pass": false
+    },
+    "po_soft": {
+      "continuous": {
+        "mean_flops_rel": 1.0,
+        "cum_flops": 12.0,
+        "t_to_acc_star": 10,
+        "cum_flops_to_acc_star": 11.0,
+        "mean_freeze_jaccard": 1.0,
+        "n_windows": 12,
+        "acc_star": 0.55
+      },
+      "mean_flops_rel": 1.0,
+      "t_to_acc_star": 10,
+      "cum_flops_to_acc_star": 11.0,
+      "mean_freeze_jaccard": 1.0,
+      "final_acc": 0.5663750000000003,
+      "n_reject": 12,
+      "reject_sources": {
+        "proxy": 11,
+        "hop_oos": 1
+      },
+      "delta_acc": -0.0516249999999997,
+      "ship_pass": false
+    },
+    "po_gated": {
+      "continuous": {
+        "mean_flops_rel": 1.0,
+        "cum_flops": 12.0,
+        "t_to_acc_star": 10,
+        "cum_flops_to_acc_star": 11.0,
+        "mean_freeze_jaccard": 1.0,
+        "n_windows": 12,
+        "acc_star": 0.55
+      },
+      "mean_flops_rel": 1.0,
+      "t_to_acc_star": 10,
+      "cum_flops_to_acc_star": 11.0,
+      "mean_freeze_jaccard": 1.0,
+      "final_acc": 0.5663750000000003,
+      "n_reject": 12,
+      "reject_sources": {
+        "proxy": 11,
+        "hop_oos": 1
+      },
+      "delta_acc": -0.0516249999999997,
+      "ship_pass": false
+    },
+    "po_fuse": {
+      "continuous": {
+        "mean_flops_rel": 0.7777777777777778,
+        "cum_flops": 9.333333333333334,
+        "t_to_acc_star": 5,
+        "cum_flops_to_acc_star": 4.787878787878788,
+        "mean_freeze_jaccard": 0.7272727272727272,
+        "n_windows": 12,
+        "acc_star": 0.55
+      },
+      "mean_flops_rel": 0.7777777777777778,
+      "t_to_acc_star": 5,
+      "cum_flops_to_acc_star": 4.787878787878788,
+      "mean_freeze_jaccard": 0.7272727272727272,
+      "final_acc": 0.6972500000000004,
+      "n_reject": 12,
+      "reject_sources": {
+        "proxy": 11,
+        "hop_oos": 1
+      },
+      "delta_acc": 0.07925000000000038,
+      "ship_pass": true
+    }
+  }
+}

@@ -1,0 +1,253 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,hyperref,geometry,enumitem}
+\geometry{margin=1in}
+
+\title{\textbf{PO-Boosted Post-Training}\\[0.35em]
+\large Scenario summary and measured gains\\[0.1em]
+\large (PO-risk as the only sensor family)}
+\author{AGOD / CFPerm \quad \texttt{agod/po\_risk\_train.py} $\cdot$ IPTW $\sqrt{\mathrm{PO}}$}
+\date{2026-09-23}
+
+\newcommand{\PO}{\mathrm{PO}}
+\newcommand{\Flops}{\mathrm{FLOPs}_{\mathrm{rel}}}
+\newcommand{\Acc}{\mathrm{Acc}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We summarize how \textbf{PO-risk} boosts \emph{post-training}:
+not by replacing the loss, but by reallocating update budget across
+\textbf{scenarios}.
+Two resolutions share one sensor---batch/modality $\PO_m$ and
+observation $\PO_i$.
+Gains are reported as update $\Flops\downarrow$ / faster
+$T(\Acc^\star)$ under an Acc constraint, plus reject-gated
+next-MSE when sample weights fire.
+PO is sufficient here; other attributors are optional subtractors
+(MMD) or amplifiers (proto), not replacements.
+\end{abstract}
+
+\section{One-line logic}
+\[
+\PO
+\;\longrightarrow\;
+\begin{cases}
+\text{modality emphasis:} &
+  \alpha_m \to \{\mathrm{freeze},\,s_m,\,\lambda_m\}\\
+\text{sample weights:} &
+  w_i\propto\sqrt{\PO_i}\ \text{only after gate reject}
+\end{cases}
+\;\longrightarrow\;
+\text{faster post-train}.
+\]
+Train on the \emph{shift}, with Acc as constraint---not Acc chase alone.
+
+\paragraph{Allocation vs $\varepsilon$-greedy.}
+Budgeting is Softmax / fused long$\otimes$short (state-dependent), not a
+coin-flip explore schedule.
+The only $\varepsilon$-flavored knob is the \texttt{po\_budget} floor
+($f\approx\varepsilon/|M|$).
+Sensor-triggered OOD: gate high-$\PO$ only when uni-Acc/VIMP clear;
+then freeze$\leftarrow L$, dump$\leftarrow S$ on window $t{+}1$.
+See ContinuousTime roadmap \S\texttt{eps}.
+
+\section{Scenarios (where PO boosts)}
+\label{sec:scen}
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{2.2cm}p{3.4cm}p{3.6cm}@{}}
+\toprule
+Scenario & PO role & Expected gain \\
+\midrule
+\textbf{S1. Asymmetric multi-mod}
+  ($M\ge3$, Affec-like)
+  & Softmax / fuse $\PO_m$; freeze low-$L$ towers
+  & $\Flops\sim0.70$--$0.83$ at Acc$\approx$flat \\
+\textbf{S2. Concept spike}
+  (one mod residual jumps)
+  & Short track $\Delta\PO$ dumps steps; long $L$ keeps set stable
+  & Smaller $T(\Acc^\star)$; less freeze flicker \\
+\textbf{S3. Cov mush}
+  (high MMD, flat uni-acc)
+  & $\PO-\lambda\mathrm{MMD}$ or gate before spend
+  & Do not buy steps for pure $X$-shift \\
+\textbf{S4. Reject batch}
+  (RFPerm/CFPerm fires)
+  & Soft $w_i\propto\sqrt{\PO_i}$ on Fit$_{t+1}$
+  & Next-MSE / hard-rank; calm windows stay $w{=}1$ \\
+\textbf{S5. Saturated 2-mod}
+  (COCO Acc$\sim0.9$)
+  & Soft LR / stack prior only; freeze off
+  & \textbf{Near-zero FLOPs gain}---do not claim speedup \\
+\textbf{S6. Noise vs drift unclear}
+  & \texttt{po\_gated} then Softmax
+  & Primary FLOPs saver when $M$ large \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{PO is enough.}
+All scenarios above are driven by residual-concept $\PO$
+(optionally tempered by MMD/proto/$\Delta$).
+No second primary sensor is required for the boost claim.
+
+\section{What ``gain'' means}
+\label{sec:gain}
+
+\begin{center}
+\small
+\begin{tabular}{@{}llp{5.4cm}@{}}
+\toprule
+Gain KPI & Role & Note \\
+\midrule
+$\Flops=\#\{\mathrm{BWD\ on}\}/M$
+  & Primary speed
+  & FWD stays on; not inference latency \\
+$T(\Acc^\star)$
+  & Primary speed
+  & Windows to hit Acc bar \\
+$\Delta\Acc$ vs equal
+  & Constraint
+  & Pass only if $\ge-\varepsilon$ (e.g.\ $-0.5\%$) \\
+Next-MSE drop (reject)
+  & Sample-weight gain
+  & Only on gated rejects; vs uniform $w$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Ship rule:}
+$\Flops\downarrow$ or $T(\Acc^\star)\downarrow$
+\emph{and} Acc constraint holds.
+Acc$\uparrow$ alone without cost cut is not a post-train boost.
+
+\section{Measured gains (smoke summarize)}
+\label{sec:emp}
+
+\begin{center}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Pack & Best boost & $\Flops$ & $\Delta\Acc$ & Claim \\
+\midrule
+Affec ($M{=}5$)
+  & \texttt{po\_gated}
+  & $0.70$
+  & $-0.4\%$
+  & \textbf{yes} --- FLOPs cut, Acc held \\
+Affec
+  & \texttt{po\_proto}
+  & $0.83$
+  & $+0.2\%$
+  & yes --- mild Acc+cost \\
+Food / Fashion / COCO
+  & any
+  & $1.00$
+  & $0$
+  & \textbf{no} --- S5 noop \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{S1 Affec ($M{=}5$) detail.}
+Relative to \texttt{equal} ($\Flops{=}1$, Acc$\approx0.508$):
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item \texttt{po\_gated}: $\Flops\approx0.70$, $\Delta\Acc\approx-0.4\%$
+        --- best FLOPs cut (gain = update cost).
+  \item \texttt{po\_proto}: $\Flops\approx0.83$, $\Delta\Acc\approx+0.2\%$
+        --- mild quality+cost gain.
+  \item \texttt{po\_soft}/\texttt{po\_delta}: $\Flops\approx0.78$--$0.83$,
+        Acc roughly flat.
+\end{itemize}
+
+\paragraph{S5 Food / Fashion / COCO ($M{=}2$).}
+All metric versions $\Flops\approx1.0$, Acc unchanged
+$\Rightarrow$ \textbf{no boost claim}; keep equal or soft budget only.
+
+\paragraph{S4 Sample weights (stream packs).}
+Gated $\sqrt{\PO}$ beats always-$\sqrt{\PO}$ on the
+quality/cost tradeoff ($6/6$ packs in gated bench);
+raw $\propto\PO$ overfits the reject batch---soft sqrt is the
+default gain recipe.
+
+\paragraph{S2 Long$\otimes$short (\texttt{po\_fuse}).}
+Hierarchical actuators: freeze$\leftarrow$long $L$,
+step dump$\leftarrow$short $S$, LR$\leftarrow$fused $\alpha$.
+Gain vs single Softmax: less thrash + earlier dump on spikes
+(instrumented via $\omega_S$, \texttt{top\_concept}/\texttt{top\_spike}).
+
+\paragraph{Synthetic continuous stub (no Affec cache).}
+Script \texttt{scripts/smoke\_po\_boost\_synthetic.py}
+($M{=}5$ chronic imbalance + spike; Acc$^\star{=}0.55$):
+\begin{center}
+\small
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Version & $\Flops$ & $T(\Acc^\star)$ & cumFLOPs@$\star$ & Jaccard & Ship \\
+\midrule
+\texttt{equal} & $1.00$ & $8$ & $9.0$ & $1.00$ & no \\
+\texttt{po\_soft} & $1.00$ & $10$ & $11.0$ & $1.00$ & no \\
+\texttt{po\_gated} & $1.00$ & $10$ & $11.0$ & $1.00$ & no \\
+\texttt{po\_fuse} & $0.78$ & $5$ & $4.8$ & $0.73$ & \textbf{yes} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Amounts use \texttt{freeze\_flops\_rel}/\texttt{flops\_rel\_proj}
+($c_{pb}{\approx}2c_{pf}$), not bare $|A|/|M|$
+(which overstates savings).
+Reject sources: hop\_oos$\times1$ + proxy on other windows
+(\texttt{resolve\_stream\_reject}).
+Replace with Affec numbers when cache is present.
+
+\section{Scenario $\to$ actuator cheat-sheet}
+\label{sec:cheat}
+
+\begin{center}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+Scenario & Metric & Freeze & Weight \\
+\midrule
+S1 / S6 & \texttt{po\_gated} / \texttt{po\_soft}
+  & yes & uniform unless reject \\
+S2 & \texttt{po\_fuse} / \texttt{po\_delta}
+  & from $L$ & gated $\sqrt{\PO}$ if reject \\
+S3 & \texttt{po\_minus\_cov}
+  & cov-heavy & uniform \\
+S4 & (any) + IPTW
+  & --- & $\sqrt{\PO}$ on reject only \\
+S5 & \texttt{equal}/\texttt{po\_budget}
+  & never & optional soft only \\
+S6 & \texttt{po\_gated}
+  & yes & uniform unless reject \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\texttt{po\_fuse} in the compare runner uses
+\texttt{next\_step\_actuators\_fused} (freeze$\leftarrow L$,
+step dump$\leftarrow S$), not a single Softmax for all knobs.
+
+\section{Takeaway}
+\begin{enumerate}[leftmargin=1.2em,itemsep=2pt]
+  \item PO boosts post-training by \textbf{budget reallocation}
+        (modality + optional sample weights), not a new loss.
+  \item Real gains land on \textbf{S1/S2/S4/S6}; S5 is a known noop---
+        report honestly.
+  \item Headline Affec gain: $\Flops$ to $\sim0.7$ with Acc held;
+        reject $\sqrt{\PO}$ for row-level boost when the gate fires.
+  \item PO alone is the sensor; map scenarios $\to$ ROI dims
+        (\texttt{po\_posttrain\_roi\_map.sql}) if business tracking is needed.
+\end{enumerate}
+
+\vspace{0.5em}
+\noindent\textit{Detail:} \texttt{AGOD\_PO\_Risk\_PostTraining.tex},
+\texttt{AGOD\_po\_risk\_train\_compare.md},
+\texttt{AGOD\_po\_risk\_train\_tables\_only.tex}.
+
+\end{document}

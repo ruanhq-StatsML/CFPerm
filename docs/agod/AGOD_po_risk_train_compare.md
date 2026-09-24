@@ -1,10 +1,15 @@
 # AGOD PO-risk → next-step training metric compare
 
+> **Writeup (LaTeX):** [`PO_PostTrain_Accelerate.tex`](PO_PostTrain_Accelerate.tex) (Alg.~A modality + Alg.~B sample) · MVP: [`PO_Boost_MVP.md`](PO_Boost_MVP.md)  
+> **Goal lock:** accelerate post-training (FLOPs / steps / wall-clock / \(T(\mathrm{Acc}^\star)\)); Acc is a **constraint**, not the primary win.
+
 Iterate metric versions that map **PO-risk sensors → α → next-window training actuators**
 (LR multipliers, step budget, freeze mask, stack prior).
 
 Causal loop: sensors/α at window `t` only set actuators for window `t+1`
 (no same-window leakage).
+
+**Landing pass:** \(\mathrm{FLOPs_{rel}}\downarrow\) (or fewer windows to Acc bar) **and** \(\Delta\mathrm{Acc}\ge-\varepsilon\) vs `equal`. Acc↑ alone without cost cut is not an acceleration win.
 
 ## Metric versions
 
@@ -18,6 +23,7 @@ Causal loop: sensors/α at window `t` only set actuators for window `t+1`
 | `po_delta` | Softmax(EMA(PO) + γ·ΔPO) | anticipatory reallocation before Acc drops |
 | `po_budget` | floor + Softmax(PO) | keep all mods warm; soft reweight only |
 | `po_next` | α-hist ⊕ ΔPO forecast | next-α forecast for stack prior + LR |
+| `po_fuse` | long⊗short: freeze←L, steps←S, LR←α | concept-mod emphasis; spike-adaptive mix |
 
 ## Actuators (next window)
 

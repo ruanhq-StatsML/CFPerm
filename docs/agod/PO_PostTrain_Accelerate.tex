@@ -1,0 +1,250 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,float,algorithm,algpseudocode}
+\geometry{margin=1in}
+
+\title{\textbf{Accelerating Post-Training with PO-Risk}\\[0.35em]
+\large Two algorithms: modality reallocation \& sample reweighting}
+\author{}
+\date{2026-09-23}
+
+\newcommand{\PO}{\mathrm{PO}}
+\newcommand{\Acc}{\mathrm{Acc}}
+\newcommand{\Flops}{\mathrm{FLOPs}_{\mathrm{rel}}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Post-training on a shifting stream is slow when every update treats
+all towers and all rows equally.
+We use one sensor---\textbf{PO-risk} (residual under the control fit)---
+at two resolutions to \emph{accelerate} post-training under an accuracy
+constraint:
+\textbf{(A)} modality reallocation (freeze / step dump);
+\textbf{(B)} sample reweighting on OOD-large rows after a batch reject.
+Primary KPIs: update $\Flops$ and $T(\Acc^\star)$; Acc is a constraint.
+This note is an \textbf{MVP} (formulas + smoke); not a production claim.
+\end{abstract}
+
+\section{Goal}
+Fix a stream of windows $(X_t,Y_t)$ and a control fit $\hat\mu$.
+Accelerate post-training $=$ reach $\Acc\ge\Acc^\star$ with less update
+cost than dense equal fine-tuning, subject to
+$\Delta\Acc\ge-\varepsilon$ (e.g.\ $-0.5\%$).
+
+Sensor (both algorithms):
+\[
+  \PO_m
+  \;\;\text{(per modality)},
+  \qquad
+  \PO_i=|Y_i-\hat\mu(X_i)|
+  \;\;\text{(per sample)}.
+\]
+High $\PO$ means large residual under $\mu$, not ``intrinsic hardness.''
+
+\section{Algorithm A --- Modality reallocation}
+\emph{Which tower gets the next update budget.}
+
+\begin{algorithm}[H]
+\caption{PO-modality post-train step (window $t\to t{+}1$)}
+\label{alg:mod}
+\begin{algorithmic}[1]
+\Require features $\{X^{(m)}\}_{m\in\mathcal{M}}$, labels $Y$, previous $\PO^{\mathrm{prev}}$, EMA state
+\Ensure freeze mask, step alloc $\{s_m\}$, LR multipliers for Fit$_{t+1}$
+\State Compute $\PO_m$ on window $t$ for each modality $m$
+\State $L_m \gets \mathrm{EMA}_\rho(\PO_m)\cdot(1+\mathrm{proto}_m)$
+      \Comment{chronic}
+\State $S_m \gets \PO_m - \PO^{\mathrm{prev}}_m$
+      \Comment{spike}
+\State $\mathrm{freeze}_m \gets \mathbf{1}\{L_m < q_{0.3}(L)\}$
+      \Comment{BWD off; FWD on}
+\State $s \gets \mathrm{Softmax}(S)$ on active (non-frozen) mods;
+      allocate $\sum_m s_m = S_{\mathrm{tot}}$
+      \Comment{step dump}
+\State Optional: $\alpha\gets\mathrm{Softmax}(\omega_L z(L)+\omega_S z(S))$;
+      $\mathrm{LR}_m \propto \alpha_m$
+\State \textbf{return} $(\mathrm{freeze},\,s,\,\mathrm{LR})$ for window $t{+}1$
+\end{algorithmic}
+\end{algorithm}
+
+\noindent\textbf{Justify.}
+Low-$L$ towers mostly inject gradient noise: freezing them cuts update
+$\Flops$ and useless variance.
+High-$S$ towers are where Acc is about to drop: dumping steps there
+shrinks $T(\Acc^\star)$ without claiming a FLOPs save.
+Accounting: $\Flops=(C_{\mathrm{fwd}}+C_{\mathrm{bwd}}(A))/(C_{\mathrm{fwd}}+C_{\mathrm{bwd}}(M))$
+(FWD always on).
+
+\section{Algorithm B --- Sample reweighting}
+\emph{On OOD-large rows, up-weight the post-train loss---only after reject.}
+
+\begin{algorithm}[H]
+\caption{PO-sample post-train step (window $t\to t{+}1$)}
+\label{alg:samp}
+\begin{algorithmic}[1]
+\Require batch $(X,Y)$, control fit $\hat\mu$, probe errors $(e_t,e_{t-1})$ or RFPerm flag
+\Ensure sample weights $w\in\mathbb{R}^n$ for Fit$_{t+1}$
+\State $\texttt{rejected} \gets$
+      RFPerm/CFPerm
+      $\lor\; (e_t/e_{t-1}\ge\gamma)$
+      $\lor\;$ proxy on $(\overline{\PO},|\Delta\PO|,\overline{\mathrm{MMD}})$
+\If{$\neg\,\texttt{rejected}$}
+  \State \textbf{return} $w_i\gets 1$ for all $i$
+        \Comment{calm: no reweight}
+\EndIf
+\State $\PO_i \gets |Y_i-\hat\mu(X_i)|$ for each row $i$
+\State $w_i \gets
+      \mathrm{clip}\!\big(
+        \sqrt{\PO_i}/\mathrm{mean}_j\sqrt{\PO_j},\;[0.25,4]
+      \big)$
+\State Fit$_{t+1}$ with
+      $\mathcal{L}=\frac1n\sum_i w_i\,\ell(f_\theta(X_i),Y_i)$
+\State \textbf{return} $w$
+\end{algorithmic}
+\end{algorithm}
+
+\noindent\textbf{Justify.}
+Uniform CE wastes steps on easy in-support rows.
+After a batch is gated as OOD, $w_i\propto\sqrt{\PO_i}$ moves the
+\emph{same} step budget onto high-residual rows, so next-window MSE /
+Acc recovers sooner---without taxing calm windows (always-on $\sqrt{\PO}$
+does). Soft $\sqrt{\,\cdot\,}$ keeps $\mathrm{mean}\,w=1$ and limits
+reject-batch overfit vs raw $\propto\PO$.
+
+\section{Joint use}
+A and B are orthogonal and causal ($t$ decides $t{+}1$ only):
+run A every window; run B only when \texttt{rejected}.
+Ship: $\Flops<1$ and $\Delta\Acc\ge-\varepsilon$ (A);
+on reject windows, next-MSE vs uniform $w$ improves (B).
+
+\noindent\textbf{Optional by design.}
+Freeze / gated $\sqrt{\PO}$ are \emph{actuators}, not a mandatory
+retrain recipe: if the gate never bites, weights stay uniform and
+$\Flops{=}1$ (harmless noop --- Food / Fashion / COCO $M{=}2$).
+When residual mass is asymmetric enough for the gate to fire under
+the Acc constraint, the same loop \emph{does} cut update cost
+(Affec, synthetic \texttt{po\_fuse}, Amazon modality, COCO outdoor).
+So ``optional'' does not mean ``never accelerates'': it means
+acceleration is conditional and measurable, not always-on.
+
+\section{Numbers (smoke --- multi-pack)}
+\textit{Indicative only; not a leaderboard claim.}
+Ship rule for Alg~A: $\Flops<1$ and $\Delta\Acc\ge-0.005$
+vs equal / B1. When freeze never fires, report \textbf{noop}
+($\Flops{=}1$) --- valid, not a counterexample to acceleration
+on packs where the optional gate \emph{does} bite.
+
+\paragraph{Direct PO-risk actuators (Alg~A).}
+Same compare loop as \texttt{po\_risk\_train} /
+\texttt{smoke\_po\_boost\_synthetic}.
+\begin{center}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Pack & Method & $\Flops$ & note & ok? \\
+\midrule
+Affec ($M{=}5$)
+  & \texttt{po\_gated}
+  & $0.70$ & $\Delta\Acc\approx-0.39\%$ & held \\
+Affec
+  & \texttt{po\_proto}
+  & $0.83$ & $\Delta\Acc\approx+0.20\%$ & held \\
+Affec
+  & \texttt{po\_delta}
+  & $0.78$ & $\Delta\Acc\approx-0.39\%$ & held \\
+Synthetic ($M{=}5$)
+  & \texttt{po\_fuse}
+  & $0.78$ & $T^\star{=}5$ vs equal $8$ & held \\
+Food-101 ($M{=}2$)
+  & any PO version
+  & $1.00$ & no freeze bite & noop \\
+Fashion-IQ ($M{=}2$)
+  & any PO version
+  & $1.00$ & no freeze bite & noop \\
+COCO img/txt ($M{=}2$)
+  & any PO version
+  & $1.00$ & no freeze bite & noop \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Same freeze idea on other streams (portable $\alpha$-gate).}
+These packs use PO (with MMD) $\to$ $\alpha$, then hard-gate
+BWD when $\alpha_m<\theta$ --- the Alg~A freeze actuator, not a
+new sensor. Labelled \texttt{B5g} / Amazon \texttt{B3} in prior
+smoke JSON; Acc constraint checked vs equal / B1 Acc$_{\mathrm{post}}$.
+\begin{center}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Pack & Gate & $\Flops$ & $\Delta\Acc$ vs equal & ok? \\
+\midrule
+Amazon Reviews (img,txt)
+  & modality B3
+  & $0.50$ & loss $\approx$ flat (slightly $\downarrow$) & held$^\dagger$ \\
+Amazon online-select
+  & MSG B3
+  & $0.88$ & hold $\Delta\Acc$ gap $\approx-5\%$ & fail \\
+MSR-VTT features ($M{=}3$)
+  & B5g
+  & $0.71$ & Acc$\approx1$ (saturated) & held$^\ddagger$ \\
+MSR-VTT packed ($M{=}3$)
+  & B5g
+  & $0.75$ & Acc$_{\mathrm{post}}$ $0.671\!\to\!0.620$ & fail \\
+COCO outdoor/indoor ($M{=}3$)
+  & B5g
+  & $0.81$ & $\Delta\Acc\approx-0.15\%$ & held \\
+COCO time / center ($M{=}3$)
+  & B5g
+  & $0.78$ & $\Delta\Acc\approx-2.8\%$ & fail \\
+Fashion-IQ / MM / Indiana / Micro
+  & B5g
+  & $0.78$--$0.82$ & $\Delta\Acc\approx-3\%$--$-5\%$ & fail \\
+\bottomrule
+\end{tabular}
+\end{center}
+\smallskip
+\noindent\small
+$^\dagger$Amazon modality smoke reports mean loss, not Acc;
+FLOPs cut is BWD-only on the inactive tower every window.\\
+$^\ddagger$features\_window is too easy for Acc-lift smoke;
+use packed for Acc, features only for FLOPs accounting.
+
+\paragraph{Read-out (efficiency for post-training).}
+\begin{itemize}[leftmargin=1.2em,itemsep=0.2em]
+  \item \textbf{Where Alg~A saves update FLOPs under Acc:}
+        Affec ($0.70$--$0.83$), synthetic \texttt{po\_fuse}
+        ($0.78$ and faster $T^\star$), Amazon modality gate
+        ($0.50$), COCO outdoor/indoor B5g ($0.81$).
+  \item \textbf{Where freeze is a noop:} Food / Fashion / COCO
+        in the $M{=}2$ PO-risk compare --- soft LR only; do not
+        claim a FLOPs win.
+  \item \textbf{Where FLOPs$\downarrow$ but Acc constraint fails:}
+        MSR-VTT packed B5g, several img--txt packs, Amazon
+        online-select B3. Useful as \emph{negative} controls:
+        gate alone is not enough; soften $\theta$ / dump steps
+        instead of hard freeze.
+  \item \textbf{Alg~B (sample):} gated $\sqrt{\PO}$ is for
+        next-MSE / $T(\Acc^\star)$ on reject windows, not for
+        $\Flops$; prior gated-vs-always bench wins $6/6$ packs
+        (calm windows stay $w{=}1$).
+\end{itemize}
+
+\vspace{0.6em}
+\noindent\textit{Sources:}
+\texttt{results/agod\_po\_risk\_train/summary.json},
+\texttt{results/agod\_po\_boost\_synthetic/},
+\texttt{results/agod\_amazon/agod\_amazon\_modality\_lr.json},
+\texttt{results/agod\_amazon/agod\_amazon\_online\_select.json},
+\texttt{results/agod\_msrvtt/*.json},
+\texttt{results/agod\_imgtxt/agod\_imgtxt\_multidataset.json}.
+
+\vspace{0.4em}
+\noindent\textit{Code:}
+\texttt{po\_risk\_train.py}, \texttt{po\_iptw\_weights},
+\texttt{reject\_event.py}, \texttt{scripts/po\_boost\_mvp.py}.
+
+\end{document}

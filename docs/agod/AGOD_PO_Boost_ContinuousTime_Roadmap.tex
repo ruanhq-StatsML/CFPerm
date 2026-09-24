@@ -1,0 +1,319 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,hyperref,geometry,enumitem}
+\geometry{margin=1in}
+
+\title{\textbf{PO-Boost Continuous-Time Logic}\\[0.3em]
+\large Why the stream view helps post-training\\[0.1em]
+\large + elaboration roadmap}
+\author{AGOD \quad \texttt{po\_risk\_train} / \texttt{po\_fuse} / gated $\sqrt{\mathrm{PO}}$}
+\date{2026-09-23}
+
+\newcommand{\PO}{\mathrm{PO}}
+\newcommand{\Flops}{\mathrm{FLOPs}_{\mathrm{rel}}}
+\newcommand{\Acc}{\mathrm{Acc}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+PO-boost is most useful when read as a \emph{continuous-time}
+post-training controller on a non-stationary stream---not a one-shot
+reweight.
+Windows $t=0,1,2,\ldots$ are samples of an underlying continuous
+shift; EMA is a low-pass on residual concept; $\Delta\PO$ is a
+short-horizon derivative; actuators apply only to $t{+}1$ (causal).
+We spell that logic, then give a concrete \textbf{roadmap} to elaborate
+post-training further.
+\end{abstract}
+
+%----------------------------------------------------------------------
+\section{Continuous-time reading (why it feels significant)}
+\label{sec:ct}
+
+\subsection{Stream, not batch-once}
+Post-training in production is a stream of mini-windows
+$(X_t,Y_t)$.
+Uniform fine-tune treats each window as i.i.d.\ dense update.
+PO-boost treats the same stream as a \textbf{controlled dynamical
+system}:
+\[
+\underbrace{\PO_t}_{\text{sensor}}
+\;\xrightarrow{\;\text{filter}\;}
+\underbrace{(L_t,S_t,\alpha_t)}_{\text{state}}
+\;\xrightarrow{\;\text{actuate}\;}
+\underbrace{u_{t+1}}_{\text{LR / steps / freeze / }w}
+\;\xrightarrow{\;\text{train}\;}
+\theta_{t+1}.
+\]
+Significance: gains compound over time ($T(\Acc^\star)$, cumulative
+$\Flops$), which a single static reweight cannot express.
+
+\subsection{Three continuous-time primitives}
+\begin{center}
+\small
+\begin{tabular}{@{}llp{5.2cm}@{}}
+\toprule
+Primitive & Discrete form & Continuous reading \\
+\midrule
+Low-pass
+  & $L_t=\mathrm{EMA}_\rho(\PO_t)$
+  & Chronic residual-concept mass; sets stable modality set \\
+Derivative
+  & $S_t=\PO_t-\PO_{t-1}$
+  & Instant spike; dumps steps \emph{before} Acc collapses \\
+Causal hold
+  & $u_{t+1}=g(\mathrm{sensors}_t)$
+  & No same-window leakage; like a zero-order hold on actuators \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\texttt{po\_fuse} implements the split explicitly:
+freeze$\leftarrow L$ (slow), step dump$\leftarrow S$ (fast),
+LR$\leftarrow$fused $\alpha$.
+That is why concept-mod emphasis stays intuitive on a live stream.
+
+\subsection{Gate as event time}
+OnlineRFPerm / CFPerm reject is an \textbf{event} on the same clock:
+only then sample-level $w_i\propto\sqrt{\PO_i}$ fires.
+Calm time keeps $w=1$---continuous analogue of ``act only on alarm.''
+Gated soft IPTW beats always-on precisely because it respects event
+time vs clock time.
+
+\subsection{What the continuous view buys (gain story)}
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item \textbf{Anticipation:} $\Delta\PO$ / \texttt{po\_next} moves
+        budget before holdout Acc drops $\Rightarrow$ smaller
+        $T(\Acc^\star)$.
+  \item \textbf{Stability:} EMA freeze set does not thrash every window
+        $\Rightarrow$ less wasted BWD restart.
+  \item \textbf{Selective spend:} reject-gated row weights only on
+        event times $\Rightarrow$ no calm-pack regression.
+  \item \textbf{Honest noop:} on already-saturated streams (COCO),
+        continuous controller has nothing to reallocate---report
+        $\Flops=1$.
+\end{itemize}
+
+\subsection{Not $\varepsilon$-greedy: Softmax allocation + sensor-triggered OOD}
+\label{sec:eps}
+Next-step ``exploration'' is often asked whether it equals
+$\varepsilon$-greedy.
+\textbf{Partial analogy only.}
+
+\paragraph{Classic $\varepsilon$-greedy.}
+With probability $\varepsilon$ pick uniformly; else pick
+$\arg\max_m Q_m$.
+Exploration is a \emph{coin flip schedule}, largely independent of
+whether the stream is drifting.
+
+\paragraph{What we actually do.}
+\[
+\alpha=\mathrm{Softmax}\big(\mathrm{score}(\PO,L,S,\mathrm{MMD},\mathrm{gate})/\tau\big),
+\]
+optionally with a \textbf{structured floor} (\texttt{po\_budget}):
+\[
+\alpha_m=f+(1-|M|f)\,\mathrm{Softmax}(\PO)_m,
+\quad f\approx\varepsilon/|M|.
+\]
+So: Boltzmann / soft-max bandit + optional $\varepsilon$-\emph{mix},
+\textbf{not} random arm draws.
+$\tau\!\uparrow$ flattens (more explore-like); freeze is the opposite of
+explore (BWD off to cut update FLOPs).
+
+\paragraph{Sensor-triggered OOD response (justified).}
+On window $t$ (actuators apply only to $t{+}1$):
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item \textbf{Sense:} $\PO$ (concept residual), $\mathrm{MMD}$ (covariate),
+        $\mathrm{proto}$, $\Delta\PO$; auxiliaries $\mathrm{uni\_acc}$, VIMP.
+  \item \textbf{Judge:} \texttt{drift\_vs\_noise\_gate} --- boost only if
+        high $\PO$ \emph{and} uni-Acc not broken \emph{and} VIMP not bottom;
+        else damp $\PO$ (refuse noise-as-OOD).
+  \item \textbf{Filter:} $L=\mathrm{EMA}(\PO)\cdot(1+\mathrm{proto})$ chronic;
+        $S=\Delta\PO$ spike; $\omega_S$ rises with
+        $\|S\|_\infty/\mathrm{MAD}(L)$.
+  \item \textbf{Actuate:} freeze$\leftarrow L$; step dump$\leftarrow S$;
+        LR/stack$\leftarrow\alpha$; reject event$\Rightarrow w_i\propto\sqrt{\PO_i}$.
+\end{enumerate}
+\textbf{Why not schedule-$\varepsilon$:} calm windows must not burn FLOPs on
+random probes (Acc+FLOPs ship gate); OOD mass should move only when sensors
+clear the gate. Spontaneous OOD $=$ state-dependent control, not LLM nor
+coin flip.
+
+\paragraph{Allowed $\varepsilon$-flavored knob.}
+Only the \texttt{po\_budget} floor / \texttt{beta\_lr} floor---keeps cold
+towers barely warm so sensors can still fire. Do \emph{not} add
+``with probability $\varepsilon$ randomize $\alpha$''.
+
+\subsection{Spontaneous OOD characterization + FLOPs vs variance}
+\label{sec:ood-flops}
+\paragraph{How OOD is written down.}
+Unit $=$ window event, not a static ``OOD dataset'' label.
+\begin{center}
+\small
+\begin{tabular}{@{}llp{4.8cm}@{}}
+\toprule
+Layer & Object & Role \\
+\midrule
+Sensors
+  & $\PO_m,\,\mathrm{MMD}_m,\,L_m,\,S_m,\,\mathrm{spike\_ratio}$
+  & Continuous state of concept / covariate / chronic / spike \\
+Noise gate
+  & \texttt{drift\_vs\_noise}
+  & High $\PO$ alone $\neq$ OOD if uni-Acc/VIMP fail \\
+Reject event
+  & external RFPerm $\to$ hop OOS $\to$ proxy
+  & Discrete alarm; only then $w_i\propto\sqrt{\PO_i}$ \\
+Log
+  & $(\PO,L,S,\omega,\alpha,\mathrm{freeze},\mathrm{source},\Flops,\Acc)$
+  & Reproducible characterization \\
+\bottomrule
+\end{tabular}
+\end{center}
+Two legs: modality actuators every window; row IPTW only on reject.
+
+\paragraph{Why cutting FLOPs lowers update variance.}
+For tower $m$:
+$\Delta\theta_m\approx-\lambda_m g_m$,
+$\mathrm{Var}(\Delta\theta_m)\propto\lambda_m^2\sigma_m^2$.
+Low-$L$ / noise-gated towers have large $\sigma_m^2$ and weak Acc signal.
+Freeze sets $\lambda_m{=}0$ (BWD off, FWD on) $\Rightarrow$ that arm's
+gradient variance contribution vanishes \emph{and} $C_{\mathrm{bwd}}$ is unpaid.
+Step dump does \emph{not} claim FLOPs save---it reallocates a fixed step
+budget to high-$S$ (acceleration KPI).
+Ship gate: $\Flops{<}1$ and $\Delta\Acc\ge-\varepsilon$.
+
+\paragraph{Amount (honest accounting).}
+Use \texttt{flops\_rel\_proj} (not bare $|A|/|M|$):
+\[
+\Flops
+=
+\frac{C_{\mathrm{fwd}}+C_{\mathrm{bwd}}(A)}{C_{\mathrm{fwd}}+C_{\mathrm{bwd}}(M)},
+\quad
+C_{\mathrm{fwd}}=|M|c_{pf}+c_{sf},\;
+C_{\mathrm{bwd}}=|A|c_{pb}+c_{sb}.
+\]
+With $c_{pb}\approx 2c_{pf}$: $\Flops\approx(|M|+2|A|)/(3|M|)$.
+Empirical anchors: Affec \texttt{po\_gated}$\approx0.70$;
+synthetic \texttt{po\_fuse}$\approx0.78$ (\texttt{flops\_rel\_proj});
+$M{=}2$ packs often $\Flops{=}1$ (honest noop).
+
+%----------------------------------------------------------------------
+\section{Post-training elaboration roadmap}
+\label{sec:road}
+
+Goal lock stays: \textbf{accelerate post-train} (update $\Flops$,
+$T(\Acc^\star)$) with Acc as constraint; PO as primary sensor.
+\textbf{MVP frozen} --- see \texttt{docs/agod/PO\_Boost\_MVP.md};
+further elaboration follows advisor schedule.
+
+\subsection{Phase R0 --- Locked now (do not reopen)}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item Sensors $\to\alpha\to$ next-window actuators; causal $t\to t{+}1$.
+  \item Scenarios S1--S6 + Affec FLOPs$\approx0.7$ headline; COCO noop.
+  \item \texttt{po\_fuse} hierarchical path wired in compare runner.
+  \item ROI SQL map for next-modality / high-residual rows.
+\end{itemize}
+
+\subsection{Phase R1 --- Make continuous gains measurable (next)}
+\textbf{Status: in progress --- metrics landed in code.}
+\textbf{Deliverables}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item Log per window:
+        $(\PO,L,S,\omega,\alpha,\mathrm{freeze},s,\lambda,\Flops,\Acc)$.
+  \item Report \textbf{cumulative} update FLOPs to $\Acc^\star$
+        (not only mean $\Flops$) --- \texttt{continuous\_gain\_metrics}.
+  \item Freeze Jaccard$(t,t{+}1)$ as stability KPI (S2 claim).
+  \item Affec run: \texttt{po\_fuse} vs \texttt{po\_soft} vs
+        \texttt{po\_gated} on $T(\Acc^\star)$ + Jaccard
+        (needs Affec cache).
+\end{enumerate}
+\textbf{Exit:} one table ``continuous gains'' filled from Affec smoke.
+
+\paragraph{R1 metric definitions (code).}
+\texttt{agod.po\_risk\_train.continuous\_gain\_metrics}:
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item \texttt{mean\_freeze\_jaccard}: adjacent freeze-set Jaccard (↑=stable).
+  \item \texttt{t\_to\_acc\_star}: first window with $\Acc\ge\Acc^\star$.
+  \item \texttt{cum\_flops\_to\_acc\_star}: $\sum_{u\le t^\star}\Flops_u$.
+\end{itemize}
+Wired into \texttt{run\_agod\_po\_risk\_train\_compare.py} cell summary.
+
+\subsection{Phase R2 --- Wire real step budget}
+\textbf{Status: landed in code (Affec ablate pending cache).}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item Map $s_m$ to optimizer steps via
+        \texttt{realize\_step\_alloc} + \texttt{expand\_step\_schedule}
+        (\texttt{step\_mode=per\_mod}, block dump).
+  \item Ablate: LR-only (\texttt{--step-mode shared}) vs LR+steps
+        (\texttt{per\_mod}) vs fused freeze+steps.
+  \item Exit: show steps wiring lifts $T(\Acc^\star)$ beyond LR-only
+        on Affec (needs cache).
+\end{enumerate}
+
+\subsection{Phase R3 --- Event-time sample weights in the same loop}
+\textbf{Status: landed (proxy reject; RFPerm hook ready).}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item \texttt{stream\_reject\_proxy} + \texttt{po\_iptw\_weights} in
+        \texttt{po\_risk\_train}; compare applies $w$ on window $t{+}1$
+        (causal, orthogonal to freeze/steps).
+  \item Modes: gated $\sqrt{\PO}$ (default) vs cbrt vs prop vs uniform;
+        calm $\Rightarrow w=1$.
+  \item Exit remaining: Affec joint FLOPs + reject-window next-MSE;
+        \texttt{resolve\_stream\_reject} priority
+        external RFPerm $\to$ hop OOS $\to$ proxy (landed).
+\end{enumerate}
+
+###{Phase R4 --- Continuous schedule polish}
+\textbf{Status: skeleton + default cards locked (Affec sweep pending).}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item Grid helper \texttt{schedule\_param\_grid} +
+        \texttt{rank\_schedule\_pareto} / \texttt{pareto\_nondominated}
+        (Acc@FLOPs; ship gate first).
+  \item Locked cards in \texttt{configs/agod\_po\_schedule\_cards.json}
+        and \texttt{DEFAULT\_SCHEDULE\_CARDS}:
+        $M\ge3$ ($\theta_{\mathrm{fr}}{=}0.14$) vs $M{=}2$
+        ($\theta_{\mathrm{fr}}{=}0.35$, softer $\tau$).
+  \item Remaining: fill grid metrics from Affec smoke; optional
+        $\tau(t)$ when spike\_ratio high.
+\end{enumerate}
+
+\subsection{Phase R5 --- Productize (only after R1--R3)}
+\textbf{Status: landed --- export path + schedule card wired.}
+\begin{enumerate}[leftmargin=1.2em,itemsep=1pt]
+  \item \texttt{agod/po\_roi\_export.py}: rows$\to$\texttt{po\_roi\_window\_log};
+        compare writes sqlite + jsonl under \texttt{results/agod\_po\_risk\_train/}.
+  \item Default schedule card applied per $|M|$ unless
+        \texttt{--no-schedule-card}.
+  \item Do \emph{not} claim inference latency; ship gate stays Acc+FLOPs
+        in SQL views.
+\end{enumerate}
+
+\subsection{Out of roadmap (explicit)}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item Backprop into $\alpha$ / learned routers as primary.
+  \item Replacing Drill / math-Eval lanes.
+  \item Review-accel human-gate features while NOT\_READY.
+\end{itemize}
+
+%----------------------------------------------------------------------
+\section{Suggested sequence (one screen)}
+\begin{verbatim}
+R1  measure continuous gains (T(Acc*), Jaccard, logs)
+R2  real step_alloc wiring
+R3  joint modality + reject √PO on same stream
+R4  schedule Pareto (rho, omega, freeze_theta)
+R5  ROI SQL fill + ship gate
+\end{verbatim}
+Each phase must keep: PO-only sensor family; causal $t\to t{+}1$;
+Acc constraint; honest S5 noop.
+
+\vspace{0.6em}
+\noindent\textit{Companions:}
+\texttt{AGOD\_PO\_Boost\_PostTrain\_Scenarios.tex},
+\texttt{AGOD\_PO\_Risk\_PostTraining.tex},
+\texttt{po\_posttrain\_roi\_map.sql}.
+
+\end{document}

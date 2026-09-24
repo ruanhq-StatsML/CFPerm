@@ -1,0 +1,661 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\geometry{margin=1in}
+
+\title{\textbf{PO-risk Metrics $\to$ Accelerate Post-Training}\\[0.35em]
+\large Goal, landing KPIs, long$\otimes$short fusion for concept-mod emphasis\\[0.15em]
+\large (focus: faster next-window updates, quality as constraint)}
+\author{CFPerm / AGOD \quad \texttt{agod/po\_risk\_train.py}, \texttt{fuse\_long\_short}}
+\date{2026-09-23}
+
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\newcommand{\PO}{\mathrm{PO}}
+\newcommand{\MMD}{\mathrm{MMD}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Acc}{\mathrm{Acc}}
+\newcommand{\Flops}{\mathrm{FLOPs}_{\mathrm{rel}}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\textbf{Goal (only).}
+Accelerate \emph{post-training} / online adaptation:
+reach a target holdout quality with fewer update FLOPs / wall-clock /
+optimizer steps than uniform dense fine-tuning.
+
+\textbf{Role of metrics.}
+PO-risk (and optional MMD / proto / $\Delta\PO$) are not leaderboard
+scores; they are \emph{sensors} whose landing procedure is
+\[
+  \text{metric}_t
+  \;\xrightarrow{\;\text{map}\;}
+  \text{actuators}_{t+1}
+  \;\xrightarrow{\;\text{train}\;}
+  \text{speed KPIs}.
+\]
+Primary report: $\Flops$, step budget used, wall-clock to
+$\Acc\ge\Acc^\star$.
+Secondary (constraint): $\Acc$ / MSE must not collapse vs equal.
+A core elaboration is \textbf{fusing long-term and short-term metrics}
+so that, at each step, concept-modality emphasis is stable enough to
+freeze safely and sharp enough to dump steps on the spike
+(\texttt{po\_fuse} / \texttt{fuse\_long\_short}).
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+%======================================================================
+\section{Goal lock: accelerate post-training}
+\label{sec:goal}
+
+\begin{definition}[Post-training acceleration]
+Fix a pretrained / distilled reference $f_{\mathrm{ref}}$.
+On a stream of windows $t=1,2,\ldots$, a policy $\pi$ sets
+next-window update knobs.
+Acceleration means, relative to dense equal post-train $\pi_0$:
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item \textbf{Primary} --- lower update cost to hit a quality bar:
+        \[
+          T_{\pi}(\Acc^\star)
+          \;=\;
+          \min\bigl\{\,T:\ \Acc_T\ge\Acc^\star\,\bigr\}
+          \quad\text{smaller is better},
+        \]
+        or fixed-$T$ cost $\sum_{t\le T}\mathrm{UpdateFLOPs}_t$
+        (proxy $\Flops\times S_{\mathrm{tot}}$).
+  \item \textbf{Constraint} --- holdout $\Acc$ / MSE within a
+        tolerance of $\pi_0$ (e.g.\ $\Delta\Acc\ge -0.5\%$ abs).
+\end{enumerate}
+Inference latency is \emph{out of scope} (FWD stays on).
+\end{definition}
+
+\paragraph{What we optimize with PO metrics.}
+Not ``higher PO is better.''
+Higher $\PO_m$ means modality $m$ deserves \emph{more of a fixed
+budget} (or others get frozen) so the same quality arrives with less
+wasted BWD.
+
+\paragraph{Brief loop (landing).}
+\[
+\boxed{
+\begin{aligned}
+&\text{1. Compute metrics on window }t
+  \quad(\PO_m,\,\text{optional }\MMD_m,\mathrm{proto}_m,\Delta\PO_m)\\
+&\text{2. Map}\to\alpha^{(t)}\text{ (or }w_i\text{)}
+  \quad\texttt{metric\_to\_alpha}\ /\ \texttt{po\_iptw\_weights}\\
+&\text{3. Actuate window }t{+}1\text{: }
+  \{\lambda_m,\,s_m,\,\mathrm{freeze}_m,\,\pi^{\mathrm{stack}}\}\
+  \text{or sample }w\\
+&\text{4. Score speed: }\Flops,\ \sum s_m,\ \text{wall-clock};\
+  \text{gate on }\Acc
+\end{aligned}
+}
+\]
+Causal rule: metrics at $t$ never reweight the same-window evaluation
+labels used to report $\Acc_{t+1}$.
+
+%======================================================================
+\section{Two expected logics (modality emphasis $+$ hard up-weight)}
+\label{sec:two-logics}
+
+The acceleration story the design is meant to match is \emph{not}
+``PO replaces the loss.'' It is two complementary budget reallocations
+of the \textbf{same} residual-concept signal $\PO$:
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{2.4cm}p{5.2cm}p{4.2cm}@{}}
+\toprule
+Logic & Question answered & Actuator \\
+\midrule
+\textbf{A. Modality emphasis}
+  (high-residual concept)
+  & \emph{Which tower} carries the residual-concept drift
+    $P(Y\mid X)$ this regime?
+  & Long$\otimes$short $\alpha$:
+    freeze / step dump / LR
+    (Sec.~\ref{sec:fuse}) \\
+\textbf{B. Hard-sample up-weight}
+  (post-reject)
+  & \emph{Which rows} inside a rejected batch
+    are still hard under $\mu$?
+  & $w_i\propto\sqrt{\PO_i}$ only if
+    OnlineRFPerm/CFPerm rejects \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Logic A --- modality emphasis (high-residual concept)}
+\label{sec:logicA}
+
+\paragraph{Meaning of high residual.}
+For modality block $X_m$, batch PO-risk
+$R^{\PO}_m=\E[\hat\tau(X_m)^2]$ (or the observation proxy
+$|Y-\hat\mu(X_m)|$) is large when the current labels are poorly
+explained by a control fit on that view.
+That is a \emph{concept} / residual signal, not pure covariate shape
+(MMD can be subtracted so we do not buy steps for $X$-only mush).
+
+\paragraph{How emphasis lands (accelerate).}
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item Rank / Softmax modalities by fused long$\otimes$short $\PO$
+        $\Rightarrow\alpha_m$.
+  \item \textbf{Spend} on high-$\alpha$: larger $\lambda_m$, larger $s_m$.
+  \item \textbf{Skip} low long-track $L_m$: BWD freeze
+        $\Rightarrow\Flops\downarrow$ while FWD stays on.
+  \item Hold Acc within $-\varepsilon$ of equal; else soften freeze.
+\end{enumerate}
+Intuition: the same wall-clock budget is no longer split $1/M$; it is
+aimed at the high-residual concept tower, so $T(\Acc^\star)$ falls
+when that tower was the bottleneck.
+
+\subsection{Logic B --- reject-gated hard-sample up-weight}
+\label{sec:logicB}
+
+\paragraph{When it fires.}
+Only after a distribution / concept gate rejects batch $t$
+(OnlineRFPerm rank/EWMA+$p$, or CFPerm). Calm batches keep $w_i=1$.
+
+\paragraph{How up-weight lands.}
+\[
+  \PO_i \;=\; |Y_i-\hat\mu(X_i)|
+  \quad(\text{optionally blend batch }R^{\PO}),
+  \qquad
+  w_i \;=\; \frac{\sqrt{\PO_i}}{\mathrm{mean}_j\sqrt{\PO_j}}
+  \;\xrightarrow{\mathrm{clip}}\;
+  \mathrm{Fit}(\cdot;\,\texttt{sample\_weight}=w).
+\]
+Soft $\sqrt{\PO}$ (not raw $\propto\PO$) avoids overfitting the reject
+batch; gated-$\sqrt{}$ beats always-$\sqrt{}$ on stream packs.
+
+\paragraph{Why this accelerates.}
+Gradient steps that would have been spent on easy in-support rows are
+redirected to high-residual rows \emph{when} the batch is already
+flagged OOD---so the next fit corrects the hard region sooner
+(next-MSE / hard-rank), without paying up-weight cost on calm windows.
+
+\subsection{How A and B fit together}
+\label{sec:logicAB}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item Same sensor family ($\PO$), two resolutions:
+        \textbf{column} (modality) vs \textbf{row} (observation).
+  \item Same goal: accelerate post-train under Acc constraint.
+  \item Orthogonal knobs: A changes \emph{which head} gets BWD;
+        B changes \emph{which rows} get weight inside an update.
+  \item Typical schedule: run A every window (cheap $\alpha$);
+        run B only on reject (Path~A IPTW).
+  \item Do not conflate: high $\PO_m$ does not by itself up-weight rows
+        if the gate did not reject; reject does not by itself freeze
+        a modality.
+\end{itemize}
+
+\[
+\boxed{
+\begin{aligned}
+&\text{every }t:\;
+  \PO_m \xrightarrow{\mathrm{fuse}} \alpha
+  \xrightarrow{} \{\mathrm{freeze},\,s,\,\lambda\}
+  &&\text{(modality emphasis)}\\
+&\text{if reject}_t:\;
+  \PO_i \xrightarrow{\sqrt{\,\cdot\,}} w_i
+  \xrightarrow{} \mathrm{Fit}_{t+1}
+  &&\text{(hard up-weight)}
+\end{aligned}
+}
+\]
+
+%======================================================================
+\section{Landing KPIs (report these, in this order)}
+\label{sec:kpi}
+
+\begin{center}
+\small
+\begin{tabular}{@{}llp{6.2cm}@{}}
+\toprule
+KPI & Role & Definition / procedure \\
+\midrule
+$\Flops$
+  & \textbf{Primary speed}
+  & $\#\{\text{mods with BWD on}\}/|\mathcal{M}|$
+    averaged over post-train windows \\
+$\bar s / S_{\mathrm{tot}}$
+  & Primary speed
+  & Fraction of step budget actually spent
+    (after freeze / realloc) \\
+Wall-clock$_{t\to t+1}$
+  & Primary speed
+  & Update time only (exclude sensor fit if amortized) \\
+$T(\Acc^\star)$
+  & Primary speed
+  & Windows until holdout Acc hits bar \\
+$\Delta\Acc$ vs equal
+  & \textbf{Constraint}
+  & Must stay $\ge -\varepsilon$; else metric landing fails \\
+$\Delta$MSE vs equal
+  & Constraint
+  & Same; report with Acc \\
+$H(\alpha)$
+  & Diagnostic
+  & Entropy of $\alpha$; mid preferred; not a win alone \\
+Hard-rank / IPTW next-MSE
+  & Path~A diagnostic
+  & Only when sample reweight is the actuator \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{remark}[Do not land Acc as the primary metric]
+Acc lift without FLOPs / step / wall-clock is \emph{not} an
+acceleration win.
+Conversely, FLOPs cut that breaks the Acc constraint is a failed
+landing---retune $\theta_{\mathrm{fr}}$ / $\tau$ / floor, do not ship.
+\end{remark}
+
+%======================================================================
+\section{Shared landing procedure (all metric versions)}
+\label{sec:shared}
+
+Code path: \texttt{metric\_to\_alpha} $\to$
+\texttt{next\_step\_actuators} $\to$ optimizer on window $t{+}1$.
+
+\paragraph{Procedure P0 (every window).}
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item \textbf{Sense.} Fit / reuse nuisances; record
+        $\PO_m$ (required); optionally $\MMD_m$, proto distance,
+        uni-acc, VIMP, $\PO_m^{\mathrm{prev}}$.
+  \item \textbf{Map.} Choose version $v$ (Table~\ref{tab:land});
+        $\alpha^{(t)}=\mathrm{Map}_v(\mathrm{sensors}_t)$.
+  \item \textbf{Actuate (accelerate).}
+        \begin{itemize}[leftmargin=1em,itemsep=1pt]
+          \item $\lambda_m\leftarrow\texttt{alpha\_to\_lr}(\alpha;\beta)$
+                --- put LR on high-$\PO$ mods.
+          \item $s_m\leftarrow$ integer alloc $\propto\alpha$,
+                $\sum s_m\approx S_{\mathrm{tot}}$ --- dump steps
+                to the spike.
+          \item $\mathrm{freeze}_m\leftarrow[\alpha_m<\theta_{\mathrm{fr}}]$
+                (BWD off, FWD on) --- \emph{the} FLOPs cut.
+          \item $\pi^{\mathrm{stack}}\leftarrow\alpha$ --- optional;
+                does not save FLOPs by itself.
+        \end{itemize}
+  \item \textbf{Train} window $t{+}1$ under $(\lambda,s,\mathrm{freeze})$.
+  \item \textbf{Score.} Log $\Flops$, steps used, wall-clock,
+        $\Acc$, MSE. Mark landing \texttt{OK} iff
+        $\Flops < 1$ (or $T(\Acc^\star)$ smaller) \textbf{and}
+        $\Delta\Acc\ge-\varepsilon$.
+\end{enumerate}
+
+\paragraph{Path A add-on (sample IPTW, when reject).}
+If OnlineRFPerm rejects batch $t$: set
+$w_i\propto\sqrt{\PO_i}$ (mean-1, clipped), fit next model with
+\texttt{sample\_weight}=$w$.
+Landing KPIs: next-MSE / wall-clock of that fit; gate Acc/MSE vs
+uniform. Default soft $\sqrt{\PO}$; always-on without gate is not
+the acceleration recipe (calm packs regress).
+
+%======================================================================
+\section{Per-metric landing (focus = speed actuators)}
+\label{sec:per}
+
+Each row: \emph{when to fire}, \emph{map}, \emph{which speed knob},
+\emph{pass/fail}.
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{1.55cm}p{2.4cm}p{2.6cm}p{2.8cm}@{}}
+\toprule
+Version & Fire when & Map (brief) & Speed landing \\
+\midrule
+\texttt{equal}
+  & Baseline / Acc saturated
+  & $\alpha=1/M$
+  & No cut; use to measure $\Acc^\star$ bar \\
+\texttt{po\_soft}
+  & Clear $\PO$ spike, $M\ge3$
+  & Softmax$(\PO/\tau)$
+  & LR+steps $\to$ top-$\alpha$; freeze tail \\
+\texttt{po\_minus\_cov}
+  & High MMD, flat concept
+  & Softmax$(\PO-\lambda\MMD)$
+  & \textbf{Do not} buy steps for pure $X$-shift;
+    freeze cov-heavy mods \\
+\texttt{po\_gated}
+  & Noise vs drift unclear
+  & Gate then Softmax
+  & Primary FLOPs saver on Affec-like;
+    skip noisy BWD \\
+\texttt{po\_proto}
+  & Centroid move + $\PO$
+  & Softmax$(\PO(1+\mathrm{proto})-\lambda\MMD)$
+  & Concentrate steps on true move;
+    Acc constraint easier \\
+\texttt{po\_delta}
+  & Rising $\Delta\PO$
+  & Softmax$(\mathrm{EMA}+\gamma\Delta)$
+  & Reallocate \emph{before} Acc drop
+    $\Rightarrow$ smaller $T(\Acc^\star)$ \\
+\texttt{po\_budget}
+  & Need always-on towers
+  & Floor + Softmax
+  & Soft LR only; \textbf{no} freeze
+    (speed via realloc, not cut) \\
+\texttt{po\_next}
+  & Stable hist + $\Delta\PO$
+  & Forecast next $\alpha$
+  & Same actuators from forecast;
+    earlier freeze/realloc \\
+\texttt{po\_fuse}
+  & Need concept emphasis
+    with both chronic + spike
+  & Long$\otimes$short
+    (Sec.~\ref{sec:fuse})
+  & Freeze from long; step dump from short;
+    LR from fused $\alpha$ \\
+\bottomrule
+\end{tabular}
+\label{tab:land}
+\end{center}
+
+\paragraph{Landing checklist (operator).}
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+  \item Pick $v$ from the table for the pack regime (not from Acc chase).
+  \item Fix $S_{\mathrm{tot}}$, $\theta_{\mathrm{fr}}$, $\tau$, $\varepsilon$.
+  \item Run $\ge$ one burn-in then score P0 on holdout windows.
+  \item \textbf{Pass:} $\Flops\downarrow$ (or $T(\Acc^\star)\downarrow$)
+        with $\Delta\Acc\ge-\varepsilon$.
+  \item \textbf{Fail:} Acc broken $\to$ raise floor / lower
+        $\theta_{\mathrm{fr}}$ / switch to \texttt{po\_budget};
+        or FLOPs flat $\to$ raise $\theta_{\mathrm{fr}}$ / use
+        \texttt{po\_gated} (only if $M\ge3$).
+\end{enumerate}
+
+%======================================================================
+\section{Elaboration strategy: long$\otimes$short for concept-mod emphasis}
+\label{sec:fuse}
+
+\paragraph{Why fuse (the key observation).}
+At a given post-train step the interesting object is
+\emph{which concept modality deserves emphasis}.
+A pure short-term map (instant $\PO_t$ or $\Delta\PO$) thrashs
+freeze masks and wastes wall-clock on flicker.
+A pure long-term map (EMA / $\alpha$-hist only) is too slow: the
+spike modality does not get the step dump in time, so
+$T(\Acc^\star)$ does not fall.
+Acceleration needs \textbf{both}:
+long track decides \emph{who stays in the concept set};
+short track decides \emph{who gets the budget spike this window}.
+
+\subsection{Two tracks}
+\label{sec:fuse-tracks}
+
+\begin{definition}[Long-term concept track $L_m$]
+Chronic residual-concept mass for modality $m$:
+\[
+  L_m^{(t)}
+  \;=\;
+  \underbrace{\mathrm{EMA}_{\rho}(\PO_m^{(t)})}_{\text{slow PO}}
+  \cdot
+  \bigl(1+\mathrm{proto}_m^{(t)}\bigr)
+  \;+\;
+  \eta\,\alpha_m^{(t-1)},
+\]
+with $\rho\!\approx\!0.55$, $\eta\!\approx\!0.15$ (mild institutional pull
+from last emphasis).
+Optional: subtract $\lambda\MMD$ only later in the fused score.
+\end{definition}
+
+\begin{definition}[Short-term spike track $S_m$]
+This-step anticipatory tilt:
+\[
+  S_m^{(t)}
+  \;=\;
+  \PO_m^{(t)}-\PO_m^{(t-1)}
+  \quad\text{(fallback: }\PO_m^{(t)}-\mathrm{EMA}_{\rho}(\PO_m)\text{)}.
+\]
+\end{definition}
+
+\paragraph{Diagnostics to log every window.}
+\texttt{top\_concept\_mod}$=\arg\max_m L_m$ (chronic focus);
+\texttt{top\_spike\_mod}$=\arg\max_m S_m$ (this-step dump);
+\texttt{spike\_ratio}$=\|S\|_\infty / (\mathrm{MAD}(L)+\varepsilon)$
+(clipped).
+
+\subsection{Adaptive mix}
+\label{sec:fuse-mix}
+
+\[
+\begin{aligned}
+  r_t &= \mathrm{clip}\bigl(\mathrm{spike\_ratio},\,0,4\bigr),\\
+  \omega_S &=
+  \begin{cases}
+    1-\omega_L^{0} & r_t < 0.25 \quad\text{(calm: prefer long)}\\
+    \mathrm{clip}\bigl(\omega_S^{0}(1+g\,r_t),\,0,1\bigr) & \text{else},
+  \end{cases}\\
+  \omega_L &= 1-\omega_S,
+\end{aligned}
+\]
+defaults $\omega_L^{0}{=}0.55$, $\omega_S^{0}{=}0.45$, $g{=}1.25$.
+
+Fused score and emphasis simplex:
+\[
+  \mathrm{score}_m
+  \;=\;
+  \omega_L\,z(L_m)+\omega_S\,z(S_m)-\lambda\,\MMD_m,
+  \qquad
+  \alpha^{(t)}=\mathrm{Softmax}_{\tau}(\mathrm{score}).
+\]
+Code: \texttt{fuse\_long\_short} / metric version \texttt{po\_fuse}.
+
+\subsection{Hierarchical actuators (do not use one $\alpha$ for everything)}
+\label{sec:fuse-hier}
+
+This is the elaboration that turns fusion into \emph{acceleration}:
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Knob & Driven by & Why \\
+\midrule
+$\mathrm{freeze}_m$
+  & \textbf{Long} $L_m < q_{0.3}(L)$
+  & Slow set membership --- no flicker FLOPs thrash \\
+$s_m$ step dump
+  & \textbf{Short} Softmax$(S)$ on active set
+  & Instant concept spike gets the budget now \\
+$\lambda_m$ LR
+  & Fused $\alpha$
+  & Smooth correction across chronic+spike \\
+$\pi^{\mathrm{stack}}$
+  & Fused $\alpha$
+  & Mixer prior matches emphasis \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Code path: \texttt{next\_step\_actuators\_fused}.
+
+\paragraph{Worked intuition.}
+Suppose $\texttt{txt}$ has been the chronic residual-concept
+($L_{\mathrm{txt}}$ high for many windows) and this window
+$\Delta\PO_{\mathrm{aud}}$ spikes.
+Then: keep $\texttt{txt}$ unfrozen (long), dump most of $S_{\mathrm{tot}}$
+onto $\texttt{aud}$ among actives (short), LR follows fused $\alpha$
+(both get lift, aud more).
+Pure \texttt{po\_soft} might freeze $\texttt{txt}$ wrongly on one calm
+frame; pure EMA would under-allocate to $\texttt{aud}$ this window.
+
+\subsection{Elaboration strategy (how to iterate the fusion)}
+\label{sec:fuse-strategy}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=3pt]
+  \item \textbf{Instrument first.}
+        Per window log
+        $(L,S,\omega_L,\omega_S,\texttt{top\_concept},\texttt{top\_spike},
+        \mathrm{freeze},s,\lambda,\Flops,\Acc)$.
+        Without this, fusion knobs are not justifiable.
+
+  \item \textbf{Separate ablations.}
+        Compare four policies on the same stream:
+        (i) long-only freeze+equal steps;
+        (ii) short-only steps+no freeze;
+        (iii) single Softmax$(\omega_L L+\omega_S S)$ for all knobs;
+        (iv) \textbf{hierarchical} long-freeze / short-steps (ours).
+        Primary score: $\Flops$ and $T(\Acc^\star)$ under $\Delta\Acc\ge-\varepsilon$.
+
+  \item \textbf{Tune in this order} (acceleration-first).
+        \begin{enumerate}[label=\alph*.,leftmargin=1.2em]
+          \item $\theta$ / quantile for long freeze --- set FLOPs level.
+          \item $\omega_L^{0},\omega_S^{0},g$ --- calm vs spike sensitivity.
+          \item $\rho$ (EMA) --- longer $\rho$ = stickier concept set.
+          \item $\tau$ --- sharpness of $\alpha$ / step tilt.
+          \item Only then touch Acc constraint $\varepsilon$.
+        \end{enumerate}
+
+  \item \textbf{Regime playbook.}
+        \begin{itemize}[leftmargin=1em,itemsep=1pt]
+          \item Calm ($r_t{<}0.25$): $\omega_L$ high; freeze from $L$;
+                steps nearly equal on active --- save thrash.
+          \item Spike ($r_t$ large): raise $\omega_S$; dump $s_m$ to
+                \texttt{top\_spike\_mod}; keep long freeze stable.
+          \item Concept handover (top\_concept changes for $K$ windows):
+                allow freeze set to follow $L$; do not chase $S$.
+          \item $M{=}2$ saturated Acc: skip freeze; use fused $\alpha$
+                only as soft LR / stack prior (\texttt{po\_budget}-like).
+        \end{itemize}
+
+  \item \textbf{Pass/fail for fusion landing.}
+        Pass if hierarchical (iv) beats (iii) on
+        $\Flops$ or $T(\Acc^\star)$ at same Acc constraint,
+        \emph{or} beats long-only on $T(\Acc^\star)$ at similar FLOPs.
+        Fail if freeze flickers (Jaccard of freeze masks across $t,t{+}1$
+        low while $L$ stable) --- lengthen $\rho$ / freeze from $L$ only.
+
+  \item \textbf{Default ship recipe.}
+        Use \texttt{po\_fuse} + \texttt{next\_step\_actuators\_fused}
+        on $M\ge3$ asymmetric packs; fall back to \texttt{po\_gated}
+        if only FLOPs matter and spikes are rare; fall back to
+        \texttt{po\_budget} when freeze must stay off.
+\end{enumerate}
+
+\begin{remark}[Relation to \texttt{po\_delta} / \texttt{po\_next}]
+\texttt{po\_delta} already adds $\mathrm{EMA}+\gamma\Delta$ in one score
+but drives \emph{all} actuators from that single Softmax.
+\texttt{po\_next} mixes EMA$(\alpha)$ with Softmax$(\Delta\PO)$ for
+forecast $\alpha$, still one vector for everything.
+\texttt{po\_fuse} keeps the mix \textbf{and} splits tracks onto
+different knobs---that split is the elaboration for concept-mod
+emphasis under an acceleration goal.
+\end{remark}
+
+%======================================================================
+\section{Actuator $\leftrightarrow$ acceleration (why each knob)}
+\label{sec:knobs}
+
+\begin{center}
+\small
+\begin{tabular}{@{}llp{5.8cm}@{}}
+\toprule
+Actuator & Speeds post-train by & Landing note \\
+\midrule
+$\mathrm{freeze}_m$ (BWD)
+  & Cutting inactive tower backward
+  & Main $\Flops$ lever; FWD stays on \\
+$s_m$ step alloc
+  & Same wall-clock budget, more steps on spike
+  & Must be wired to real optimizer steps \\
+$\lambda_m$ LR mult
+  & Faster correction on high-$\PO$ mods
+  & Alone rarely cuts FLOPs; pair with freeze \\
+$w_i\propto\sqrt{\PO}$
+  & Fewer wasted steps on easy rows (Path~A)
+  & Gated; report next-MSE + fit time \\
+$\pi^{\mathrm{stack}}=\alpha$
+  & Faster mixer convergence (indirect)
+  & Secondary; do not count as FLOPs win alone \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{remark}[Wire \texttt{step\_alloc} for real]
+If the trainer only scales LR and ignores $s_m$, the landing loses
+the largest unused acceleration lever.
+Procedure: set per-mod max\_steps / grad accum from $s_m$ before
+claiming speedups.
+\end{remark}
+
+%======================================================================
+\section{Smoke reading under the acceleration lens}
+\label{sec:emp}
+
+Source: \texttt{AGOD\_po\_risk\_train\_compare.md}.
+
+\paragraph{Affec ($M{=}5$) --- acceleration headroom.}
+\texttt{po\_gated}: $\Flops\approx 0.70$, Acc $\approx$ flat
+$\Rightarrow$ \textbf{pass} as FLOPs landing.
+\texttt{po\_proto}: small Acc lift at $\Flops\approx 0.825$
+$\Rightarrow$ pass if bar is Acc-first with mild cut.
+Prefer these over Acc-only ablations.
+
+\paragraph{COCO / Fashion / Food (2-mod, Acc already high).}
+$\Flops\approx 1$ for all versions at default $\theta_{\mathrm{fr}}$
+$\Rightarrow$ \textbf{no acceleration claim}.
+Landing: keep \texttt{equal}/\texttt{po\_budget}; do not freeze;
+optional stack prior only.
+
+\paragraph{Path~A stream packs.}
+Gated $\sqrt{\PO}$ beats always-$\sqrt{}$ on update quality/cost
+tradeoff ($6/6$ vs always); use gate so calm windows stay uniform
+(zero extra weight compute / no harmful upweight).
+
+%======================================================================
+\section{Out of scope}
+\label{sec:out}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=2pt]
+  \item Inference p50/p99 latency.
+  \item Acc leaderboard without cost.
+  \item Backprop into $\alpha$ / learned routers as the metric.
+  \item Review-agent / brush-inject commercial polarity cards.
+\end{itemize}
+
+%======================================================================
+\section{Takeaway}
+\label{sec:take}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=3pt]
+  \item \textbf{Goal:} accelerate post-training
+        ($\Flops$, steps, wall-clock, $T(\Acc^\star)$);
+        Acc is a constraint.
+  \item \textbf{Metrics land only via actuators:}
+        sense $\to$ map $\to$ freeze/LR/steps/IPTW $\to$ speed KPIs.
+  \item \textbf{Concept-mod emphasis:} fuse long $L$ (chronic PO/proto)
+        with short $S$ ($\Delta\PO$); freeze$\leftarrow L$,
+        step dump$\leftarrow S$, LR$\leftarrow$fused $\alpha$
+        (\texttt{po\_fuse}).
+  \item \textbf{Elaboration:} instrument $\to$ ablate hierarchical vs
+        single-$\alpha$ $\to$ tune freeze quantile before mix weights
+        $\to$ regime playbook (calm/spike/handover).
+  \item \textbf{Ship rule:} FLOPs or $T(\Acc^\star)$ down
+        \emph{and} $\Delta\Acc\ge-\varepsilon$; else retune, don't claim.
+\end{enumerate}
+
+\vspace{0.5em}
+\noindent\textit{Code:} \texttt{agod/po\_risk\_train.py}
+(\texttt{fuse\_long\_short}, \texttt{next\_step\_actuators\_fused}),
+\texttt{agod/po\_iptw.py}.
+\textit{Tables:} \texttt{AGOD\_po\_risk\_train\_compare.md}.
+
+\end{document}

@@ -2,7 +2,10 @@
 """Iterate PO-risk metric versions → next-window training actuators.
 
 Compares metric versions on Affec / Food-101 / Fashion-IQ / COCO (when present):
-  equal | po_soft | po_minus_cov | po_gated | po_proto | po_delta | po_budget | po_next
+  equal | po_soft | po_minus_cov | po_gated | po_proto | po_delta | po_budget | po_next | po_fuse
+
+Long⊗short concept emphasis: see docs/agod/AGOD_PO_Risk_PostTraining.tex §fuse
+(freeze←long, step dump←short, LR←fused α).
 
 Actuators applied next window:
   - modality LR multipliers from α
@@ -10,7 +13,10 @@ Actuators applied next window:
   - optional freeze of low-α modalities
   - stack prior = α (KL on stacking weights)
 
-Efficiency signal: relative online-update FLOPs proxy (#active mods / M).
+Efficiency signal: relative online-update FLOPs proxy.
+Default ``step_mode=per_mod`` (R2): ``step_alloc[m]`` is real optimizer
+steps on modality ``m`` (block schedule, highest dump first).
+Legacy ``step_mode=shared`` only scales a shared loop length.
 """
 
 from __future__ import annotations
@@ -30,11 +36,23 @@ from agod.po_risk_train import (
     METRIC_VERSIONS,
     NextStepActuatorConfig,
     PORiskMetricConfig,
+    continuous_gain_metrics,
+    expand_step_schedule,
+    freeze_flops_rel,
     metric_to_alpha,
     next_step_actuators,
+    next_step_actuators_fused,
     opportunity_rank,
+    pick_default_schedule_card,
+    po_iptw_weights,
+    realize_step_alloc,
+    row_po_residual,
+    step_flops_rel,
+    stream_reject_proxy,
 )
+from agod.po_roi_export import export_roi_sqlite, rows_to_roi_records, write_roi_jsonl
 from agod.proto_drift import ModalityPrototypeBank
+from agod.reject_event import resolve_stream_reject
 from agod.shift import residual_concept
 
 
@@ -201,6 +219,14 @@ def window_sensors(
 # ---------------------------------------------------------------------------
 
 
+def _weighted_ce(logits: "torch.Tensor", yb: "torch.Tensor", w_row: "torch.Tensor | None"):
+    """CE with optional per-row IPTW (R3)."""
+    if w_row is None:
+        return F.cross_entropy(logits, yb)
+    per = F.cross_entropy(logits, yb, reduction="none")
+    return (per * w_row).mean()
+
+
 def run_version(
     feats: Dict[str, np.ndarray],
     y: np.ndarray,
@@ -213,6 +239,9 @@ def run_version(
     device: torch.device,
     metric_cfg: PORiskMetricConfig,
     act_cfg: NextStepActuatorConfig,
+    step_mode: str = "per_mod",
+    row_weight_mode: str = "sqrt",
+    enable_row_iptw: bool = True,
 ) -> Dict[str, Any]:
     xs, ys = _pack_windows(feats, y, window=window, n_windows=n_windows, seed=seed)
     torch.manual_seed(seed + 101)
@@ -228,65 +257,136 @@ def run_version(
     alpha_hist: List[Dict[str, float]] = []
     prev_x = None
     prev_y = None
+    # R3: reject at t → weights for t+1 (causal, same as modality actuators)
+    next_w_np: Optional[np.ndarray] = None
+    next_rejected = False
+    prev_probe_err: Optional[float] = None
 
     accs, mses, flops, ents = [], [], [], []
     rows = []
+    reject_mses = []
+    calm_ws = []
+    reject_sources: Dict[str, int] = {}
 
     for t, (xw, yw) in enumerate(zip(xs, ys)):
         xb = {m: torch.from_numpy(np.asarray(xw[m], dtype=np.float32)).to(device) for m in mods}
         yb = torch.from_numpy(np.asarray(yw, dtype=np.int64)).to(device)
 
+        # row weights decided at end of previous window
+        if enable_row_iptw and next_w_np is not None and next_rejected:
+            w_row = torch.from_numpy(np.asarray(next_w_np, dtype=np.float32)).to(device)
+            used_reject_w = True
+        else:
+            w_row = None
+            used_reject_w = False
+            if enable_row_iptw:
+                calm_ws.append(1.0)
+
         # --- train THIS window with actuators decided at end of previous window ---
         base_lr = 1e-2
-        param_groups = []
         for m in mods:
             frozen = bool(act["freeze_mask"].get(m, False))
             for p in list(model.projs[m].parameters()) + list(model.heads[m].parameters()):
                 p.requires_grad_(not frozen)
-            if frozen:
-                continue
-            lr_m = base_lr * float(act["lr_mult"][m]) * float(act["lr_shared"])
-            param_groups.append(
-                {
-                    "params": list(model.projs[m].parameters()) + list(model.heads[m].parameters()),
-                    "lr": max(lr_m, 1e-5),
-                }
-            )
-        param_groups.append(
-            {"params": [model.stack_logits], "lr": base_lr * float(act["lr_shared"])}
+
+        realized = realize_step_alloc(
+            act["step_alloc"], act["freeze_mask"], mods, redistribute=False
         )
-        if not any(not act["freeze_mask"].get(m, False) for m in mods):
-            top = act["top_mod"]
-            for p in list(model.projs[top].parameters()) + list(model.heads[top].parameters()):
-                p.requires_grad_(True)
-            param_groups.insert(
-                0,
-                {
-                    "params": list(model.projs[top].parameters()) + list(model.heads[top].parameters()),
-                    "lr": base_lr * float(act["lr_shared"]),
-                },
+        steps_done = {m: 0 for m in mods}
+
+        if step_mode == "shared":
+            param_groups = []
+            for m in mods:
+                if act["freeze_mask"].get(m, False):
+                    continue
+                lr_m = base_lr * float(act["lr_mult"][m]) * float(act["lr_shared"])
+                param_groups.append(
+                    {
+                        "params": list(model.projs[m].parameters())
+                        + list(model.heads[m].parameters()),
+                        "lr": max(lr_m, 1e-5),
+                    }
+                )
+            param_groups.append(
+                {"params": [model.stack_logits], "lr": base_lr * float(act["lr_shared"])}
             )
-
-        opt = torch.optim.SGD(param_groups, momentum=0.0)
-        # more steps so LR / freeze allocation can bite
-        n_steps = max(2, min(12, int(sum(act["step_alloc"].values()) // max(len(mods), 1))))
-
-        for _ in range(n_steps):
-            logits, _h, _lm, w = model(xb, return_parts=True)
-            ce = F.cross_entropy(logits, yb)
-            kl_pack = alpha_stack_kl(w, act["stack_prior"], mods, lambda_kl=0.10)
-            loss = ce + kl_pack["loss"]
-            opt.zero_grad(set_to_none=True)
-            loss.backward()
-            opt.step()
+            if not any(not act["freeze_mask"].get(m, False) for m in mods):
+                top = act["top_mod"]
+                for p in list(model.projs[top].parameters()) + list(model.heads[top].parameters()):
+                    p.requires_grad_(True)
+                param_groups.insert(
+                    0,
+                    {
+                        "params": list(model.projs[top].parameters())
+                        + list(model.heads[top].parameters()),
+                        "lr": base_lr * float(act["lr_shared"]),
+                    },
+                )
+            opt = torch.optim.SGD(param_groups, momentum=0.0)
+            n_steps = max(
+                2, min(12, int(sum(act["step_alloc"].values()) // max(len(mods), 1)))
+            )
+            for _ in range(n_steps):
+                logits, _h, _lm, w = model(xb, return_parts=True)
+                ce = _weighted_ce(logits, yb, w_row)
+                kl_pack = alpha_stack_kl(w, act["stack_prior"], mods, lambda_kl=0.10)
+                loss = ce + kl_pack["loss"]
+                opt.zero_grad(set_to_none=True)
+                loss.backward()
+                opt.step()
+            flops_this = freeze_flops_rel(act["freeze_mask"], mods)
+        else:
+            schedule = expand_step_schedule(realized, mods, mode="block")
+            if not schedule:
+                top = act["top_mod"]
+                for p in list(model.projs[top].parameters()) + list(model.heads[top].parameters()):
+                    p.requires_grad_(True)
+                schedule = [top]
+                realized = {m: int(m == top) for m in mods}
+            for m_upd in schedule:
+                lr_m = base_lr * float(act["lr_mult"][m_upd]) * float(act["lr_shared"])
+                groups = [
+                    {
+                        "params": list(model.projs[m_upd].parameters())
+                        + list(model.heads[m_upd].parameters()),
+                        "lr": max(lr_m, 1e-5),
+                    },
+                    {
+                        "params": [model.stack_logits],
+                        "lr": base_lr * float(act["lr_shared"]),
+                    },
+                ]
+                opt_m = torch.optim.SGD(groups, momentum=0.0)
+                logits, _h, _lm, w = model(xb, return_parts=True)
+                ce = _weighted_ce(logits, yb, w_row)
+                kl_pack = alpha_stack_kl(w, act["stack_prior"], mods, lambda_kl=0.10)
+                loss = ce + kl_pack["loss"]
+                opt_m.zero_grad(set_to_none=True)
+                loss.backward()
+                for m_o in mods:
+                    if m_o == m_upd:
+                        continue
+                    for p in list(model.projs[m_o].parameters()) + list(
+                        model.heads[m_o].parameters()
+                    ):
+                        if p.grad is not None:
+                            p.grad = None
+                opt_m.step()
+                steps_done[m_upd] = steps_done.get(m_upd, 0) + 1
+            # MVP accounting: BWD-only proj (not steps_used/total — dump ≠ save)
+            flops_this = freeze_flops_rel(act["freeze_mask"], mods)
 
         with torch.no_grad():
             logits, _h, _lm, w = model(xb, return_parts=True)
             pred = logits.argmax(-1)
             acc = float((pred == yb).float().mean().item())
             mse = float(((pred.float() - yb.float()) ** 2).mean().item())
+            proba = torch.softmax(logits, dim=-1)[:, 1].detach().cpu().numpy()
 
-        # --- sensors AFTER train → α / actuators for NEXT window ---
+        if used_reject_w:
+            reject_mses.append(mse)
+
+        # --- sensors AFTER train → α / actuators + reject→weights for NEXT window ---
         sens = window_sensors(
             xw,
             yw,
@@ -310,8 +410,12 @@ def run_version(
             cfg=metric_cfg,
         )
         alpha = pack["alpha"]
-        next_act = next_step_actuators(alpha, mods, cfg=act_cfg)
+        if version == "po_fuse":
+            next_act = next_step_actuators_fused(pack, mods, cfg=act_cfg)
+        else:
+            next_act = next_step_actuators(alpha, mods, cfg=act_cfg)
         alpha_hist.append(dict(alpha))
+        prev_po_for_reject = prev_po
         prev_po = dict(sens["po"])
         if po_ema is None:
             po_ema = dict(sens["po"])
@@ -319,28 +423,78 @@ def run_version(
             for m in mods:
                 po_ema[m] = 0.8 * float(po_ema[m]) + 0.2 * float(sens["po"][m])
 
+        # R3 event-time row weights: RFPerm flag > hop OOS > proxy
+        probe_err = float(1.0 - acc)  # shallow OOS proxy without sklearn RF
+        rej = resolve_stream_reject(
+            external_rejected=None,  # wire OnlineRFPerm flag here when available
+            e_now=probe_err,
+            e_prev=prev_probe_err,
+            oos_gate=1.5,
+            po_mods=sens["po"],
+            mmd_mods=sens.get("mmd"),
+            po_prev=prev_po_for_reject,
+            mods=mods,
+            use_proxy_fallback=True,
+        )
+        prev_probe_err = probe_err
+        src = str(rej.get("source") or "none")
+        reject_sources[src] = reject_sources.get(src, 0) + 1
+        po_i = row_po_residual(np.asarray(yw), proba)
+        if enable_row_iptw and rej["rejected"]:
+            next_w_np = po_iptw_weights(
+                po_i, mode=row_weight_mode, rejected=True
+            )
+            next_rejected = True
+        else:
+            next_w_np = np.ones(len(yw), dtype=float)
+            next_rejected = False
+
         accs.append(acc)
         mses.append(mse)
-        flops.append(float(act["flops_rel"]))
+        flops.append(flops_this)
         ents.append(float(act["alpha_entropy"]))
-        rows.append(
-            {
-                "t": t,
-                "acc": acc,
-                "mse": mse,
-                "alpha": {m: float(alpha[m]) for m in mods},
-                "lr_mult": {m: float(act["lr_mult"][m]) for m in mods},
-                "step_alloc": {m: int(act["step_alloc"][m]) for m in mods},
-                "freeze": {m: bool(act["freeze_mask"][m]) for m in mods},
-                "flops_rel": float(act["flops_rel"]),
-                "top_mod": act["top_mod"],
-                "po": {m: float(sens["po"][m]) for m in mods},
+        row = {
+            "t": t,
+            "acc": acc,
+            "mse": mse,
+            "alpha": {m: float(alpha[m]) for m in mods},
+            "lr_mult": {m: float(act["lr_mult"][m]) for m in mods},
+            "step_alloc": {m: int(act["step_alloc"][m]) for m in mods},
+            "step_realized": {m: int(realized.get(m, 0)) for m in mods},
+            "steps_done": {m: int(steps_done.get(m, 0)) for m in mods},
+            "step_mode": step_mode,
+            "freeze": {m: bool(act["freeze_mask"][m]) for m in mods},
+            "flops_rel": flops_this,
+            "top_mod": act["top_mod"],
+            "po": {m: float(sens["po"][m]) for m in mods},
+            "rejected_for_next": bool(next_rejected),
+            "reject_event": rej,
+            "reject_proxy": rej,  # back-compat alias
+            "row_weight_mode": row_weight_mode if next_rejected else "uniform",
+            "used_reject_w": used_reject_w,
+            "mean_row_w_next": float(np.mean(next_w_np)) if next_w_np is not None else 1.0,
+            "probe_err": probe_err,
+        }
+        diag = dict(pack.get("diag") or {})
+        if version == "po_fuse":
+            row["fuse"] = {
+                "omega_long": diag.get("omega_long"),
+                "omega_short": diag.get("omega_short"),
+                "spike_ratio": diag.get("spike_ratio"),
+                "top_concept_mod": diag.get("top_concept_mod"),
+                "top_spike_mod": diag.get("top_spike_mod"),
             }
-        )
+            if "step_tilt" in next_act:
+                row["step_tilt"] = {
+                    m: float(next_act["step_tilt"].get(m, 0.0)) for m in mods
+                }
+        rows.append(row)
         act = next_act
         prev_x = {m: np.asarray(xw[m]) for m in mods}
         prev_y = np.asarray(yw)
 
+    cg = continuous_gain_metrics(rows, mods=mods, acc_star=0.55)
+    n_reject = sum(1 for r in rows if r.get("rejected_for_next"))
     return {
         "version": version,
         "n_windows": len(accs),
@@ -350,6 +504,20 @@ def run_version(
         "mean_alpha_entropy": float(np.mean(ents)) if ents else 0.0,
         "final_alpha": rows[-1]["alpha"] if rows else {},
         "rows": rows,
+        "continuous": cg,
+        "cum_flops": cg["cum_flops"],
+        "t_to_acc_star": cg["t_to_acc_star"],
+        "cum_flops_to_acc_star": cg["cum_flops_to_acc_star"],
+        "mean_freeze_jaccard": cg["mean_freeze_jaccard"],
+        "step_mode": step_mode,
+        "row_iptw": {
+            "enabled": enable_row_iptw,
+            "mode": row_weight_mode,
+            "n_reject_events": n_reject,
+            "mean_mse_on_reject_fit": float(np.mean(reject_mses)) if reject_mses else None,
+            "calm_w_ones": bool(calm_ws) and all(c == 1.0 for c in calm_ws),
+            "reject_sources": reject_sources,
+        },
     }
 
 
@@ -363,6 +531,10 @@ def summarize_cell(cell: Dict[str, Any], baseline: Dict[str, Any]) -> Dict[str, 
         "mean_acc_lift": float(cell["mean_acc_post"] - baseline["mean_acc_post"]),
         "mean_mse_drop": float(baseline["mean_mse_post"] - cell["mean_mse_post"]),
         "final_alpha": cell["final_alpha"],
+        "cum_flops": cell.get("cum_flops"),
+        "t_to_acc_star": cell.get("t_to_acc_star"),
+        "cum_flops_to_acc_star": cell.get("cum_flops_to_acc_star"),
+        "mean_freeze_jaccard": cell.get("mean_freeze_jaccard"),
     }
 
 
@@ -393,6 +565,9 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "| `po_delta` | Softmax(EMA(PO) + γ·ΔPO) | anticipatory reallocation before Acc drops |",
         "| `po_budget` | floor + Softmax(PO) | keep all mods warm; soft reweight only |",
         "| `po_next` | α-hist ⊕ ΔPO forecast | next-α forecast for stack prior + LR |",
+        "| `po_fuse` | long⊗short: freeze←L, steps←S, LR←α | concept-mod emphasis; spike-adaptive mix |",
+        "",
+        "Scenario gains summarize: [`AGOD_PO_Boost_PostTrain_Scenarios.tex`](AGOD_PO_Boost_PostTrain_Scenarios.tex).",
         "",
         "## Actuators (next window)",
         "",
@@ -400,7 +575,7 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "- `step_alloc` proportional to α (sum ≈ `total_steps`)",
         "- `freeze_mask` when α_m < `freeze_theta` (BWD off; FWD still on)",
         "- `stack_prior = α` for KL(stack_w ‖ α)",
-        "- efficiency proxy: `flops_rel = (#active mods) / M`",
+        "- efficiency proxy: `freeze_flops_rel` / `flops_rel_proj` (BWD-only; FWD on)",
         "",
     ]
     cross_votes: Dict[str, int] = {}
@@ -410,14 +585,21 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
             "",
             f"mods = `{block.get('mods')}`",
             "",
-            "| version | Acc↑ | MSE↓ | Acc lift vs equal | MSE drop vs equal | FLOPs_rel | H(α) |",
-            "|---|---:|---:|---:|---:|---:|---:|",
+            "| version | Acc↑ | MSE↓ | Acc lift vs equal | MSE drop vs equal | FLOPs_rel | H(α) | Jaccard | T(Acc*) | cumFLOPs@★ |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
         for v, c in block["summary"].items():
+            t_star = c.get("t_to_acc_star")
+            t_s = "—" if t_star is None else str(t_star)
+            cum_star = c.get("cum_flops_to_acc_star")
+            cum_s = "—" if cum_star is None else f"{float(cum_star):.2f}"
+            jac = c.get("mean_freeze_jaccard")
+            jac_s = "—" if jac is None else f"{float(jac):.3f}"
             lines.append(
                 f"| `{v}` | {c['mean_acc_post']:.4f} | {c['mean_mse_post']:.4f} | "
                 f"{c['mean_acc_lift']:+.4f} | {c['mean_mse_drop']:+.4f} | "
-                f"{c['mean_flops_rel']:.3f} | {c['mean_alpha_entropy']:.3f} |"
+                f"{c['mean_flops_rel']:.3f} | {c['mean_alpha_entropy']:.3f} | "
+                f"{jac_s} | {t_s} | {cum_s} |"
             )
         lines.append("")
         if block.get("ranking"):
@@ -476,10 +658,28 @@ def write_docs(out: Path, payload: Dict[str, Any]) -> None:
         "### D. Suggested next training adjustments (priority)",
         "",
         "1. Affec online loop: switch default metric `equal` → `po_gated` (or `po_proto` if Acc-first).",
-        "2. Wire `step_alloc` into real optimizer step counts (not just LR scale) — biggest unused lever.",
+        "2. ~~Wire `step_alloc` into real optimizer step counts~~ **done (R2, `step_mode=per_mod`)**; ablate vs `--step-mode shared`.",
         "3. Add holdout Acc@FLOPs Pareto (freeze_theta sweep) before claiming efficiency wins.",
         "4. For Food-101 / Fashion-IQ: keep stacking KL prior = α, but keep freeze off; try `po_budget`.",
-        "5. Log per-window (PO, α, lr_mult, freeze, Acc) — use to tune τ / λ_cov / freeze_theta.",
+        "5. Log per-window (PO, α, lr_mult, step_realized, freeze, Acc) — use to tune τ / λ_cov / freeze_theta.",
+        "",
+        "### E. R2 step wiring",
+        "",
+        "- `realize_step_alloc`: freeze → 0 steps (FLOPs cut; no redistribute by default).",
+        "- `expand_step_schedule(..., mode='block')`: highest budget modality dumped first.",
+        "- `freeze_flops_rel` = BWD-only proj amount (MVP default; dump ≠ save).",
+        "- CLI: `--step-mode {per_mod,shared}` (default `per_mod`).",
+        "",
+        "### F. R3 reject-gated row IPTW (same stream)",
+        "",
+        "- `resolve_stream_reject`: external RFPerm flag → hop OOS (`e_now/e_prev`) → proxy.",
+        "- Causal: reject at \(t\) weights Fit at \(t+1\); calm \(w=1\).",
+        "- Orthogonal to modality freeze/steps; CLI `--row-weight-mode` / `--no-row-iptw`.",
+        "",
+        "### G. MVP freeze",
+        "",
+        "- Advisor-facing entry: `python3 scripts/po_boost_mvp.py` · `docs/agod/PO_Boost_MVP.md`.",
+        "- Further roadmap items wait on advisor schedule.",
         "",
     ]
     (out / "AGOD_po_risk_train_compare.md").write_text("\n".join(lines), encoding="utf-8")
@@ -530,11 +730,39 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--versions", nargs="+", default=list(METRIC_VERSIONS))
     ap.add_argument("--out", type=Path, default=Path("results/agod_po_risk_train"))
+    ap.add_argument(
+        "--step-mode",
+        choices=("per_mod", "shared"),
+        default="per_mod",
+        help="R2: per_mod = real step_alloc budgets; shared = legacy loop-length scale",
+    )
+    ap.add_argument(
+        "--row-weight-mode",
+        choices=("sqrt", "cbrt", "prop", "uniform"),
+        default="sqrt",
+        help="R3: IPTW on reject windows only (calm stays w=1)",
+    )
+    ap.add_argument(
+        "--no-row-iptw",
+        action="store_true",
+        help="Disable R3 reject-gated sample weights",
+    )
+    ap.add_argument(
+        "--no-schedule-card",
+        action="store_true",
+        help="Disable R4 M>=3/M=2 schedule card defaults",
+    )
+    ap.add_argument(
+        "--no-export-roi",
+        action="store_true",
+        help="Disable R5 ROI sqlite/jsonl export",
+    )
     args = ap.parse_args()
+    apply_card = not args.no_schedule_card
+    do_export = not args.no_export_roi
 
     device = torch.device("cpu")
     metric_cfg = PORiskMetricConfig()
-    # stronger actuators so PO versions diverge on next-window train
     act_cfg = NextStepActuatorConfig(beta_lr=0.20, freeze_theta=0.14, total_steps=40, min_steps=2)
 
     payload: Dict[str, Any] = {
@@ -545,11 +773,13 @@ def main() -> None:
             "window": args.window,
             "n_windows": args.n_windows,
             "seed": args.seed,
-            "metric_cfg": metric_cfg.__dict__,
-            "act_cfg": act_cfg.__dict__,
+            "step_mode": args.step_mode,
+            "row_weight_mode": args.row_weight_mode,
+            "enable_row_iptw": not args.no_row_iptw,
+            "apply_schedule_card": apply_card,
+            "export_roi": do_export,
         },
     }
-    # gate dataclass not JSON-serializable cleanly
     payload["config"]["metric_cfg"] = {
         "tau": metric_cfg.tau,
         "lam_cov": metric_cfg.lam_cov,
@@ -557,6 +787,16 @@ def main() -> None:
         "ema_po": metric_cfg.ema_po,
         "budget_floor": metric_cfg.budget_floor,
     }
+    payload["config"]["act_cfg"] = {
+        "beta_lr": act_cfg.beta_lr,
+        "freeze_theta": act_cfg.freeze_theta,
+        "total_steps": act_cfg.total_steps,
+        "min_steps": act_cfg.min_steps,
+    }
+
+    schema_sql = args.root / "docs/agod/po_posttrain_roi_map.sql"
+    roi_db = args.out / "po_posttrain_roi.sqlite"
+    all_roi: List[Dict[str, Any]] = []
 
     for ds in args.datasets:
         packed = load_dataset(args.root, ds, args.max_n, args.seed)
@@ -565,6 +805,33 @@ def main() -> None:
             continue
         feats, y, mods, name = packed
         print(f"== {name} mods={mods} n={y.shape[0]} ==")
+        mcfg = PORiskMetricConfig(
+            tau=metric_cfg.tau,
+            lam_cov=metric_cfg.lam_cov,
+            gamma_delta=metric_cfg.gamma_delta,
+            ema_po=metric_cfg.ema_po,
+            budget_floor=metric_cfg.budget_floor,
+            omega_long=metric_cfg.omega_long,
+            omega_short0=metric_cfg.omega_short0,
+            spike_gain=metric_cfg.spike_gain,
+        )
+        acfg = NextStepActuatorConfig(
+            beta_lr=act_cfg.beta_lr,
+            freeze_theta=act_cfg.freeze_theta,
+            total_steps=act_cfg.total_steps,
+            min_steps=act_cfg.min_steps,
+        )
+        card = pick_default_schedule_card(len(mods)) if apply_card else None
+        if card:
+            mcfg.ema_po = float(card["ema_po"])
+            mcfg.omega_long = float(card["omega_long"])
+            mcfg.omega_short0 = float(card["omega_short0"])
+            mcfg.spike_gain = float(card["spike_gain"])
+            mcfg.tau = float(card["tau"])
+            mcfg.budget_floor = float(card["budget_floor"])
+            acfg.freeze_theta = float(card["freeze_theta"])
+            print(f"  schedule_card={card['card_id']} freeze_theta={acfg.freeze_theta}")
+
         cells: Dict[str, Any] = {}
         for ver in args.versions:
             print(f"  [{ver}] ...", flush=True)
@@ -577,14 +844,38 @@ def main() -> None:
                 n_windows=args.n_windows,
                 seed=args.seed + 17,
                 device=device,
-                metric_cfg=metric_cfg,
-                act_cfg=act_cfg,
+                metric_cfg=mcfg,
+                act_cfg=acfg,
+                step_mode=args.step_mode,
+                row_weight_mode=args.row_weight_mode,
+                enable_row_iptw=not args.no_row_iptw,
             )
             print(
                 f"    acc={cells[ver]['mean_acc_post']:.4f} "
                 f"mse={cells[ver]['mean_mse_post']:.4f} "
                 f"flops={cells[ver]['mean_flops_rel']:.3f}"
             )
+            if do_export:
+                recs = rows_to_roi_records(
+                    cells[ver].get("rows") or [],
+                    run_id=f"{name}:{ver}",
+                    pack=name,
+                    mods=mods,
+                    acc_equal=None,
+                    schedule_card_id=(card or {}).get("card_id"),
+                )
+                for rec in recs:
+                    rec["version"] = ver
+                    if recs and rec["window_t"] == recs[-1]["window_t"]:
+                        rec["t_to_acc_star"] = cells[ver].get("t_to_acc_star")
+                all_roi.extend(recs)
+
+        if do_export and "equal" in cells:
+            acc_eq = float(cells["equal"]["mean_acc_post"])
+            for rec in all_roi:
+                if rec.get("pack") == name:
+                    rec["acc_equal"] = acc_eq
+
         base = cells["equal"]
         summary = {v: summarize_cell(cells[v], base) for v in cells}
         ranking = opportunity_rank(list(summary.values()), baseline="equal")
@@ -594,11 +885,18 @@ def main() -> None:
             "summary": summary,
             "ranking": ranking,
             "cells": light,
+            "schedule_card": card,
         }
         top = ranking[0]["version"] if ranking else "n/a"
         print(f"  top opportunity: {top}")
 
     args.out.mkdir(parents=True, exist_ok=True)
+    if do_export and all_roi and schema_sql.is_file():
+        info = export_roi_sqlite(roi_db, all_roi, schema_sql=schema_sql)
+        write_roi_jsonl(args.out / "po_roi_window_log.jsonl", all_roi)
+        payload["roi_export"] = info
+        print(f"ROI export: {info}")
+
     (args.out / "summary.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
     docs = args.root / "docs/agod"
     docs.mkdir(parents=True, exist_ok=True)
