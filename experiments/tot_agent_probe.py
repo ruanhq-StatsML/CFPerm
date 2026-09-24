@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round7.json"
+OUT = Path(__file__).resolve().parent / "results_round8.json"
 # Weight on the spurious cue after drift. Below 1 so the calibrated score remains
 # in the judge and post-drift success is mixed rather than identically zero.
 # Overwritten per task in main. Weight on the spurious cue after the drift point.
@@ -126,6 +126,8 @@ class Gate:
         self.reverted = False
         self.kept = False
         self.ref_heur: list[float] = []
+        self.wins_streak = 0
+        self.latched = False
 
     def fallback_wins(self, t: int) -> bool:
         """Reference heuristic loss versus the judge's recent loss. No post-drift trial."""
@@ -170,10 +172,16 @@ class Gate:
         if policy == "gated" and self.switch_at is not None and t >= self.switch_at:
             return True
         if policy == "confirm":
+            if self.latched:
+                return True
             ok = self.fallback_wins(t)
-            if ok and self.switch_at is None:
-                self.switch_at = t
-            return ok
+            self.wins_streak = self.wins_streak + 1 if ok else 0
+            if self.wins_streak >= 2:
+                self.latched = True
+                if self.switch_at is None:
+                    self.switch_at = t
+                return True
+            return False
         return False
 
 
@@ -339,6 +347,7 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
@@ -507,6 +516,7 @@ def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
@@ -665,6 +675,7 @@ def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
@@ -793,6 +804,7 @@ def run_hotpot(n, drift_at, policy, beam, rng):
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
@@ -887,6 +899,7 @@ def run_webshop(n, drift_at, policy, beam, rng):
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
@@ -1078,6 +1091,7 @@ def main():
             if policy in ("gated", "confirm"):
                 summary = summarize(task, out, drift_at, len(out["success"]))
                 summary["reverted"] = out.get("reverted")
+                summary["latched"] = out.get("latched")
             elif policy == "noisy":
                 seed = abs(hash(task + "-noisy")) % 10_000
                 fsds = localize_fsds(out["feats"], drift_at, seed=seed)
