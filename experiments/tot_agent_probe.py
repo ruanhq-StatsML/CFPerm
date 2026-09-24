@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round4.json"
+OUT = Path(__file__).resolve().parent / "results_round5.json"
 # Weight on the spurious cue after drift. Below 1 so the calibrated score remains
 # in the judge and post-drift success is mixed rather than identically zero.
 # Overwritten per task in main. Weight on the spurious cue after the drift point.
@@ -122,6 +122,9 @@ class Gate:
         self.switch_at: int | None = None
         self.lord_at: int | None = None
         self.streak = 0
+        self.trial = 4
+        self.reverted = False
+        self.kept = False
 
     def observe(self, t: int, loss: float) -> None:
         self.losses.append(loss)
@@ -133,6 +136,18 @@ class Gate:
                 self.streak = 0
             if self.streak >= self.k:
                 self.switch_at = t + 1
+        if (
+            self.switch_at is not None
+            and not self.reverted
+            and not self.kept
+            and len(self.losses) >= self.switch_at + self.trial
+        ):
+            tried = self.losses[self.switch_at : self.switch_at + self.trial]
+            before = self.losses[self.switch_at - self.trial : self.switch_at]
+            if before and float(np.mean(tried)) > float(np.mean(before)) + 1e-9:
+                self.reverted = True
+            else:
+                self.kept = True
         if t >= self.burnin and self.lord_at is None:
             pvals = empirical_pvals(np.asarray(self.losses), burnin=5)
             if lord_reject(pvals)[t]:
@@ -142,6 +157,8 @@ class Gate:
         if policy == "stable":
             return True
         if policy == "gated" and self.switch_at is not None and t >= self.switch_at:
+            return True
+        if policy == "confirm" and self.switch_at is not None and t >= self.switch_at and not self.reverted:
             return True
         return False
 
@@ -294,13 +311,14 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
                 "y": y,
             }
         )
-        if policy == "gated":
+        if policy in ("gated", "confirm"):
             gate.observe(t, loss)
     return {
         "success": successes,
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
 
@@ -452,13 +470,14 @@ def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
                 "y": y,
             }
         )
-        if policy == "gated":
+        if policy in ("gated", "confirm"):
             gate.observe(t, loss)
     return {
         "success": successes,
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
 
@@ -601,13 +620,14 @@ def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
                 "y": y,
             }
         )
-        if policy == "gated":
+        if policy in ("gated", "confirm"):
             gate.observe(t, loss)
     return {
         "success": successes,
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
 
@@ -721,13 +741,14 @@ def run_hotpot(n, drift_at, policy, beam, rng):
                 "y": y,
             }
         )
-        if policy == "gated":
+        if policy in ("gated", "confirm"):
             gate.observe(t, loss)
     return {
         "success": successes,
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
 
@@ -812,13 +833,14 @@ def run_webshop(n, drift_at, policy, beam, rng):
                 "y": y,
             }
         )
-        if policy == "gated":
+        if policy in ("gated", "confirm"):
             gate.observe(t, loss)
     return {
         "success": successes,
         "loss": losses,
         "feats": feats,
         "switch_at": gate.switch_at,
+        "reverted": gate.reverted,
         "lord_at": gate.lord_at,
     }
 
@@ -949,7 +971,7 @@ def main():
     rng = random.Random(SEED)
     n = 40
     drift_at = 16
-    policies = ["noisy", "stable", "gated", "oracle"]
+    policies = ["noisy", "stable", "gated", "confirm", "oracle"]
     task_mix = {
         "game24": 0.28,
         "blocksworld": 0.30,
@@ -1006,8 +1028,9 @@ def main():
         for policy in policies:
             print(f"running {task} / {policy}")
             out = fn(policy)
-            if policy == "gated":
+            if policy in ("gated", "confirm"):
                 summary = summarize(task, out, drift_at, len(out["success"]))
+                summary["reverted"] = out.get("reverted")
             elif policy == "noisy":
                 seed = abs(hash(task + "-noisy")) % 10_000
                 fsds = localize_fsds(out["feats"], drift_at, seed=seed)
@@ -1027,7 +1050,7 @@ def main():
                 f"  pre={summary['pre_success']:.2f} post={summary['post_success']:.2f}"
                 + (
                     f" switch={summary.get('switch_at')}"
-                    if policy == "gated"
+                    if policy in ("gated", "confirm")
                     else ""
                 )
             )
