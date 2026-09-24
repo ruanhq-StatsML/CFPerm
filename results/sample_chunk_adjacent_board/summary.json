@@ -2293,12 +2293,14 @@
   },
   "sec": 11.118659257888794,
   "reason_codes": {
-    "n_codes": 28,
+    "n_codes": 32,
     "codes": [
       "RC_BOARD_NOT_SHIP",
       "RC_SHORTLIST_NOT_DRIVER",
+      "RC_AD_LAST_TOUCH_CANDIDATE",
       "RC_CONTENT_CREDIT_CANDIDATE",
       "RC_CONTENT_CREDIT_CANDIDATE",
+      "RC_AD_CONVERT_DIP",
       "RC_DIFFDB_TOKEN_NO_TRAVEL",
       "RC_DIFFDB_TOKEN_NO_TRAVEL",
       "RC_OPS_CONTENT_GAP",
@@ -2307,6 +2309,8 @@
       "RC_PROBE_DISAGREE",
       "RC_PROBE_DISAGREE",
       "RC_SHIFTING_DRIVERS",
+      "RC_AD_BUY_INTENSITY",
+      "RC_AD_FUNNEL_CONTEXT",
       "RC_INTENSITY_BASELINE",
       "RC_INTENSITY_BASELINE",
       "RC_PERSISTENT_ASSOCIATION",
@@ -2324,6 +2328,11 @@
       "RC_WEAK_TRANSFER",
       "RC_WEAK_TRANSFER"
     ],
-    "catalog_version": "board_rc_v1"
+    "catalog_version": "board_rc_v2_ad",
+    "ad_scenario": {
+      "family_code": "S2_inject",
+      "sign_Dy_board": "neg",
+      "read": "\u76f8\u90bb\u7a97\u8f6c\u5316\u6389\uff1a\u5148\u67e5\u5dee\u6d41\u704c\u5165\u3001\u843d\u5730\u52a3\u5316\u3001\u8d26\u6237\u88ab\u6253\u538b\u6b8b\u7559\u2014\u2014\u52ff\u76f4\u63a5\u5224\u5546\u6237/\u521b\u610f\u300c\u53d8\u5dee\u300d"
+    }
   }
 }

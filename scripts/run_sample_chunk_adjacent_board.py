@@ -714,6 +714,17 @@ def main() -> None:
     )
     (rc_dir / "REASON_CODES.md").write_text(render_md(rc))
     (rc_dir / "paste_for_agent.txt").write_text(rc["paste_for_agent"])
+    ad = rc.get("ad_scenario") or {}
+    if ad.get("ok"):
+        (rc_dir / "ad_scenario.json").write_text(
+            json.dumps(ad, indent=2, ensure_ascii=False, default=str) + "\n"
+        )
+        (rc_dir / "ad_scenario_paste.txt").write_text(ad["paste_for_agent"])
+        report["reason_codes"]["ad_scenario"] = {
+            "family_code": ad.get("family_code"),
+            "sign_Dy_board": ad.get("sign_Dy_board"),
+            "read": ad.get("read"),
+        }
     # rewrite summary with reason_codes index
     (args.out / "summary.json").write_text(
         json.dumps(report, indent=2, default=str) + "\n"

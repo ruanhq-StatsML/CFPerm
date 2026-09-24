@@ -39,6 +39,16 @@ Volume / credit feature names map through the same copy dictionary as
 `export_review_agent_card.TIP_BUCKETS` (末跳、份额、曝光强度…). Content
 candidates are meant to land on existing tip buckets; intensity stays ops-only.
 
+## Advertising funnel (TencentGR)
+
+When `tencent_gr` is in the summary, the generator also emits:
+
+- `ad_scenario` block (`family_code` ∈ {S1_brush, S2_inject, S3_drift})
+- AD_* codes (`RC_AD_BUY_INTENSITY`, `RC_AD_LAST_TOUCH_CANDIDATE`, `RC_AD_CONVERT_DIP`, …)
+- `ad_scenario_paste.txt`
+
+Deep dive: [`Ad_Funnel_Scenario_Board.md`](./Ad_Funnel_Scenario_Board.md).
+
 ## What this is for
 
 - Paste `paste_for_agent.txt` under a review card as structured 案由修饰

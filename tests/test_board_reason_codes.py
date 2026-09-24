@@ -139,3 +139,20 @@ def test_block_claims_sorted_first():
     sevs = [c["severity"] for c in payload["codes"]]
     assert sevs[0] == "block_claim"
     assert sevs[1] == "block_claim"
+
+
+def test_ad_scenario_from_tencent_neg_dy():
+    s = _mini_summary()
+    # mean_delta_Y already -0.01 on tencent in mini → neg → S2
+    payload = generate_reason_codes(s)
+    ad = payload["ad_scenario"]
+    assert ad["ok"] is True
+    assert ad["family_code"] == "S2_inject"
+    assert ad["sign_Dy_board"] == "neg"
+    assert ad["allows_ship_model"] is False
+    codes = {c["code"] for c in payload["codes"]}
+    assert "RC_AD_FUNNEL_CONTEXT" in codes
+    assert "RC_AD_BUY_INTENSITY" in codes
+    assert "RC_AD_LAST_TOUCH_CANDIDATE" in codes
+    assert "RC_AD_CONVERT_DIP" in codes
+    assert "广告漏斗" in payload["paste_for_agent"] or "广告" in payload["paste_for_agent"]

@@ -1,0 +1,9 @@
+【广告漏斗场景卡 · TencentGR】
+族: 灌入族 (`S2_inject`) / 子类: 转化下行/差流 (`ad_convert_dip`)
+读法: 相邻窗转化掉：先查差流灌入、落地劣化、账户被打压残留——勿直接判商户/创意「变差」
+sign_Dy(board)=neg · mean_Δȳ=-0.007833333333333333 · N=1000
+ops−content gap=0.1607264618473112
+ops tops: ['e_log1p_exp', 'e_n_exp', 'i_log1p_n_exp']
+content tops: ['i_credit_last', 'i_share_last', 'i_item_credit_rank']
+动作默认: L1_watch · auto_ban=false · 禁止 HGB 直接上线
+强度 = 买量基线；credit/share = 末跳候选 shortlist，非真驱动证书

@@ -1,6 +1,6 @@
 {
-  "note": "Reason codes auto-generated from adjacent-board summary. Routing / claim-control only; allows_ship_model=false always.",
-  "n_codes": 28,
+  "note": "Reason codes auto-generated from adjacent-board summary. Routing / claim-control only; allows_ship_model=false always. Includes TencentGR advertising funnel scenario when pack present.",
+  "n_codes": 32,
   "codes": [
     {
       "code": "RC_BOARD_NOT_SHIP",
@@ -38,6 +38,44 @@
         "禁止把 top_fsds 写成定罪话术"
       ],
       "tip_feats": [],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_AD_LAST_TOUCH_CANDIDATE",
+      "family": "ad_funnel",
+      "severity": "investigate",
+      "title": "末跳/路径归因候选（落地侧）",
+      "pack": "tencent_gr_content",
+      "chunk": 1000,
+      "evidence": {
+        "credit_hits": [
+          "i_credit_last",
+          "i_share_last",
+          "i_item_credit_rank",
+          "i_log1p_credit_linear",
+          "i_share_linear"
+        ]
+      },
+      "human_copy": "去量后 credit/share 进 top：广告路径末跳/份额 **候选**。对齐审出卡末跳桶；仍 L1，不做自动限投。",
+      "next_actions": [
+        "映射 tip 桶 i_share_last / i_credit_last",
+        "人审辨末跳操控 vs 正常回收"
+      ],
+      "tip_feats": [
+        {
+          "feature": "i_credit_last",
+          "copy": "末次归因偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_share_last",
+          "copy": "末次份额偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_item_credit_rank",
+          "copy": "商户归因秩变动"
+        }
+      ],
       "allows_ship_model": false,
       "allows_driver_claim": false
     },
@@ -136,6 +174,39 @@
         {
           "feature": "i_credit_last",
           "copy": "末次归因偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_item_credit_rank",
+          "copy": "商户归因秩变动"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_AD_CONVERT_DIP",
+      "family": "ad_funnel",
+      "severity": "watch",
+      "title": "相邻窗转化率下行（灌入/差流倾向）",
+      "pack": "tencent_gr",
+      "chunk": 1000,
+      "evidence": {
+        "sign_Dy_board": "neg",
+        "mean_delta_Y": -0.007833333333333333
+      },
+      "human_copy": "相邻窗 mean_Δȳ≈-0.0078（neg）：转化下行倾向。广告读法=灌入/差流/落地劣化候选，先 L1 盯梢。",
+      "next_actions": [
+        "对 S2_inject 队列",
+        "核对定向变更与打压残留"
+      ],
+      "tip_feats": [
+        {
+          "feature": "i_credit_last",
+          "copy": "末次归因偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_share_last",
+          "copy": "末次份额偏高（末跳嫌疑）"
         },
         {
           "feature": "i_item_credit_rank",
@@ -494,6 +565,73 @@
         {
           "feature": "m14",
           "copy": "特征 `m14`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_AD_BUY_INTENSITY",
+      "family": "ad_funnel",
+      "severity": "info",
+      "title": "投放/曝光强度基线（买量侧）",
+      "pack": "tencent_gr",
+      "chunk": 1000,
+      "evidence": {
+        "tops": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "i_credit_last",
+          "i_share_last"
+        ]
+      },
+      "human_copy": "买量/曝光强度在相邻窗稳传：这是投放量基线。可解释「量在不在」，不能单独解释「创意/落地好不好」。",
+      "next_actions": [
+        "ops 行只报曝光强度",
+        "创意问题看 content 面板"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
+        },
+        {
+          "feature": "i_log1p_n_exp",
+          "copy": "商户曝光规模(log)"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_AD_FUNNEL_CONTEXT",
+      "family": "ad_funnel",
+      "severity": "info",
+      "title": "广告漏斗语境：曝→点→转化",
+      "pack": "tencent_gr",
+      "chunk": 1000,
+      "evidence": {
+        "funnel": "exp→clk→y_convert",
+        "mean_delta_Y": -0.007833333333333333
+      },
+      "human_copy": "广告场景：边=曝光/点击流，Y=y_convert，商户键≈广告主。看板按每 N 条边切窗做 transfer 探针，服务审出分流而非出价模型。",
+      "next_actions": [
+        "用工单话术读 S1/S2/S3，不把 AUC 当 CTR 提升证明",
+        "强度与末跳分两行写"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
         }
       ],
       "allows_ship_model": false,
@@ -1213,6 +1351,69 @@
       "allows_driver_claim": false
     }
   ],
-  "paste_for_agent": "【board reason-codes】\n来源: sample-chunk adjacent transfer board（非定罪 / 非上线门）\n\n- `RC_BOARD_NOT_SHIP` [block_claim]: 本卡来自相邻切窗 transfer 探针，不是线上打分器。禁止因 AUC 高直接上线 HGB；缺 label delay / 校准 / Acc·时延 / 灰发回滚。\n- `RC_SHORTLIST_NOT_DRIVER` [block_claim]: 看板只做特征族 shortlist，不做真驱动认定。真驱动需 ablation / PO-risk / 干预实验。\n- `RC_CONTENT_CREDIT_CANDIDATE` [investigate] `tencent_gr_content`@N=1000: Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_CONTENT_CREDIT_CANDIDATE` [investigate] `tencent_gr_content`@N=2000: Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_DIFFDB_TOKEN_NO_TRAVEL` [watch] `diffusiondb`@N=1000: DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_DIFFDB_TOKEN_NO_TRAVEL` [watch] `diffusiondb`@N=2000: DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n- `RC_OPS_CONTENT_GAP` [watch] `tencent_gr`@N=1000: ops−content gap≈0.16 @N=1000：大半 transfer 是强度；content 残差才是归因候选空间。\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_PROBE_DISAGREE` [watch] `metro_interstate`@N=1000: `metro_interstate` @N=1000: HGB=0.97 vs LogReg=0.61 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m14: 特征 `m14`\n- `RC_PROBE_DISAGREE` [watch] `metro_interstate`@N=2000: `metro_interstate` @N=2000: HGB=0.98 vs LogReg=0.64 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m6: 特征 `m6`\n- `RC_PROBE_DISAGREE` [watch] `tencent_gr`@N=1000: `tencent_gr` @N=1000: HGB=1.00 vs LogReg=0.83 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PROBE_DISAGREE` [watch] `tencent_gr`@N=2000: `tencent_gr` @N=2000: HGB=1.00 vs LogReg=0.66 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_SHIFTING_DRIVERS` [watch] `metro_interstate`@N=1000: `metro_interstate` @N=1000: AUC 高但驱动名单 Jaccard≈0.23，预测还在、名单在换——按 regime/composition 读，勿锁死单一 tip。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m14: 特征 `m14`\n- `RC_INTENSITY_BASELINE` [info] `tencent_gr`@N=1000: Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_INTENSITY_BASELINE` [info] `tencent_gr`@N=2000: Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PERSISTENT_ASSOCIATION` [info] `beijing_pm25`@N=1000: `beijing_pm25` @N=1000: 高 transfer 且 top Jaccard≈0.56，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · p8: 特征 `p8`\n    · p0: 特征 `p0`\n    · p2: 特征 `p2`\n- `RC_PERSISTENT_ASSOCIATION` [info] `beijing_pm25`@N=2000: `beijing_pm25` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · p8: 特征 `p8`\n    · p0: 特征 `p0`\n    · p2: 特征 `p2`\n- `RC_PERSISTENT_ASSOCIATION` [info] `metro_interstate`@N=2000: `metro_interstate` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m6: 特征 `m6`\n- `RC_PERSISTENT_ASSOCIATION` [info] `tencent_gr`@N=1000: `tencent_gr` @N=1000: 高 transfer 且 top Jaccard≈0.70，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PERSISTENT_ASSOCIATION` [info] `waymo_proxy`@N=1000: `waymo_proxy` @N=1000: 高 transfer 且 top Jaccard≈0.72，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x3: 特征 `x3`\n- `RC_PERSISTENT_ASSOCIATION` [info] `waymo_proxy`@N=2000: `waymo_proxy` @N=2000: 高 transfer 且 top Jaccard≈1.00，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x5: 特征 `x5`\n- `RC_PLANTED_SANITY_OK` [info] `waymo_proxy`@N=1000: Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x3: 特征 `x3`\n- `RC_PLANTED_SANITY_OK` [info] `waymo_proxy`@N=2000: Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x5: 特征 `x5`\n- `RC_RANK_MEAN_SPLIT` [info] `diffusiondb`@N=1000: `diffusiondb` @N=1000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_RANK_MEAN_SPLIT` [info] `diffusiondb`@N=2000: `diffusiondb` @N=2000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n- `RC_RANK_MEAN_SPLIT` [info] `tencent_gr`@N=1000: `tencent_gr` @N=1000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_RANK_MEAN_SPLIT` [info] `tencent_gr`@N=2000: `tencent_gr` @N=2000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_WEAK_TRANSFER` [info] `diffusiondb`@N=1000: `diffusiondb` @N=1000: 下一段 AUC≈0.60，关联基本不传。不要把本窗 top 特征当成稳定过滤器。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_WEAK_TRANSFER` [info] `diffusiondb`@N=2000: `diffusiondb` @N=2000: 下一段 AUC≈0.61，关联基本不传。不要把本窗 top 特征当成稳定过滤器。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n",
-  "catalog_version": "board_rc_v1"
+  "ad_scenario": {
+    "ok": true,
+    "scenario_id": "tencent_gr_ad_funnel",
+    "pack": "tencent_gr",
+    "chunk": 1000,
+    "funnel": {
+      "layers": [
+        {
+          "name": "曝光 exp",
+          "feats": [
+            "e_n_exp",
+            "e_log1p_exp",
+            "i_n_exp"
+          ]
+        },
+        {
+          "name": "点击 clk",
+          "feats": [
+            "e_n_clk",
+            "e_ctr",
+            "u_ctr"
+          ]
+        },
+        {
+          "name": "转化 convert",
+          "y": "y_convert",
+          "note": "终端成功标签"
+        }
+      ],
+      "grain": "every 1000 edges by e_last_ts",
+      "entity": "user × item(ad/creative) × merchant≈advertiser"
+    },
+    "sign_Dy_board": "neg",
+    "mean_delta_Y": -0.007833333333333333,
+    "family": "灌入族",
+    "family_code": "S2_inject",
+    "sub": "转化下行/差流",
+    "sub_code": "ad_convert_dip",
+    "read": "相邻窗转化掉：先查差流灌入、落地劣化、账户被打压残留——勿直接判商户/创意「变差」",
+    "ops_content_gap": 0.1607264618473112,
+    "has_intensity_baseline": true,
+    "has_last_touch_candidate": true,
+    "tops_ops": [
+      "e_log1p_exp",
+      "e_n_exp",
+      "i_log1p_n_exp",
+      "i_credit_last",
+      "i_share_last"
+    ],
+    "tops_content": [
+      "i_credit_last",
+      "i_share_last",
+      "i_item_credit_rank",
+      "i_log1p_credit_linear",
+      "i_share_linear"
+    ],
+    "action_level_default": "L1_watch",
+    "auto_ban": false,
+    "allows_ship_model": false,
+    "allows_driver_claim": false,
+    "paste_for_agent": "【广告漏斗场景卡 · TencentGR】\n族: 灌入族 (`S2_inject`) / 子类: 转化下行/差流 (`ad_convert_dip`)\n读法: 相邻窗转化掉：先查差流灌入、落地劣化、账户被打压残留——勿直接判商户/创意「变差」\nsign_Dy(board)=neg · mean_Δȳ=-0.007833333333333333 · N=1000\nops−content gap=0.1607264618473112\nops tops: ['e_log1p_exp', 'e_n_exp', 'i_log1p_n_exp']\ncontent tops: ['i_credit_last', 'i_share_last', 'i_item_credit_rank']\n动作默认: L1_watch · auto_ban=false · 禁止 HGB 直接上线\n强度 = 买量基线；credit/share = 末跳候选 shortlist，非真驱动证书\n",
+    "aligned_with": "direction_report.scenario_from_direction (S1/S2/S3)"
+  },
+  "paste_for_agent": "【board reason-codes】\n来源: sample-chunk adjacent transfer board（非定罪 / 非上线门）\n\n—— 广告漏斗场景 ——\n【广告漏斗场景卡 · TencentGR】\n族: 灌入族 (`S2_inject`) / 子类: 转化下行/差流 (`ad_convert_dip`)\n读法: 相邻窗转化掉：先查差流灌入、落地劣化、账户被打压残留——勿直接判商户/创意「变差」\nsign_Dy(board)=neg · mean_Δȳ=-0.007833333333333333 · N=1000\nops−content gap=0.1607264618473112\nops tops: ['e_log1p_exp', 'e_n_exp', 'i_log1p_n_exp']\ncontent tops: ['i_credit_last', 'i_share_last', 'i_item_credit_rank']\n动作默认: L1_watch · auto_ban=false · 禁止 HGB 直接上线\n强度 = 买量基线；credit/share = 末跳候选 shortlist，非真驱动证书\n\n—— 全量 reason-codes ——\n\n- `RC_BOARD_NOT_SHIP` [block_claim]: 本卡来自相邻切窗 transfer 探针，不是线上打分器。禁止因 AUC 高直接上线 HGB；缺 label delay / 校准 / Acc·时延 / 灰发回滚。\n- `RC_SHORTLIST_NOT_DRIVER` [block_claim]: 看板只做特征族 shortlist，不做真驱动认定。真驱动需 ablation / PO-risk / 干预实验。\n- `RC_AD_LAST_TOUCH_CANDIDATE` [investigate] `tencent_gr_content`@N=1000: 去量后 credit/share 进 top：广告路径末跳/份额 **候选**。对齐审出卡末跳桶；仍 L1，不做自动限投。\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_CONTENT_CREDIT_CANDIDATE` [investigate] `tencent_gr_content`@N=1000: Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_CONTENT_CREDIT_CANDIDATE` [investigate] `tencent_gr_content`@N=2000: Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_AD_CONVERT_DIP` [watch] `tencent_gr`@N=1000: 相邻窗 mean_Δȳ≈-0.0078（neg）：转化下行倾向。广告读法=灌入/差流/落地劣化候选，先 L1 盯梢。\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_DIFFDB_TOKEN_NO_TRAVEL` [watch] `diffusiondb`@N=1000: DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_DIFFDB_TOKEN_NO_TRAVEL` [watch] `diffusiondb`@N=2000: DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n- `RC_OPS_CONTENT_GAP` [watch] `tencent_gr`@N=1000: ops−content gap≈0.16 @N=1000：大半 transfer 是强度；content 残差才是归因候选空间。\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_PROBE_DISAGREE` [watch] `metro_interstate`@N=1000: `metro_interstate` @N=1000: HGB=0.97 vs LogReg=0.61 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m14: 特征 `m14`\n- `RC_PROBE_DISAGREE` [watch] `metro_interstate`@N=2000: `metro_interstate` @N=2000: HGB=0.98 vs LogReg=0.64 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m6: 特征 `m6`\n- `RC_PROBE_DISAGREE` [watch] `tencent_gr`@N=1000: `tencent_gr` @N=1000: HGB=1.00 vs LogReg=0.83 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PROBE_DISAGREE` [watch] `tencent_gr`@N=2000: `tencent_gr` @N=2000: HGB=1.00 vs LogReg=0.66 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_SHIFTING_DRIVERS` [watch] `metro_interstate`@N=1000: `metro_interstate` @N=1000: AUC 高但驱动名单 Jaccard≈0.23，预测还在、名单在换——按 regime/composition 读，勿锁死单一 tip。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m14: 特征 `m14`\n- `RC_AD_BUY_INTENSITY` [info] `tencent_gr`@N=1000: 买量/曝光强度在相邻窗稳传：这是投放量基线。可解释「量在不在」，不能单独解释「创意/落地好不好」。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_AD_FUNNEL_CONTEXT` [info] `tencent_gr`@N=1000: 广告场景：边=曝光/点击流，Y=y_convert，商户键≈广告主。看板按每 N 条边切窗做 transfer 探针，服务审出分流而非出价模型。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n- `RC_INTENSITY_BASELINE` [info] `tencent_gr`@N=1000: Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_INTENSITY_BASELINE` [info] `tencent_gr`@N=2000: Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PERSISTENT_ASSOCIATION` [info] `beijing_pm25`@N=1000: `beijing_pm25` @N=1000: 高 transfer 且 top Jaccard≈0.56，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · p8: 特征 `p8`\n    · p0: 特征 `p0`\n    · p2: 特征 `p2`\n- `RC_PERSISTENT_ASSOCIATION` [info] `beijing_pm25`@N=2000: `beijing_pm25` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · p8: 特征 `p8`\n    · p0: 特征 `p0`\n    · p2: 特征 `p2`\n- `RC_PERSISTENT_ASSOCIATION` [info] `metro_interstate`@N=2000: `metro_interstate` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m6: 特征 `m6`\n- `RC_PERSISTENT_ASSOCIATION` [info] `tencent_gr`@N=1000: `tencent_gr` @N=1000: 高 transfer 且 top Jaccard≈0.70，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PERSISTENT_ASSOCIATION` [info] `waymo_proxy`@N=1000: `waymo_proxy` @N=1000: 高 transfer 且 top Jaccard≈0.72，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x3: 特征 `x3`\n- `RC_PERSISTENT_ASSOCIATION` [info] `waymo_proxy`@N=2000: `waymo_proxy` @N=2000: 高 transfer 且 top Jaccard≈1.00，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x5: 特征 `x5`\n- `RC_PLANTED_SANITY_OK` [info] `waymo_proxy`@N=1000: Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x3: 特征 `x3`\n- `RC_PLANTED_SANITY_OK` [info] `waymo_proxy`@N=2000: Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x5: 特征 `x5`\n- `RC_RANK_MEAN_SPLIT` [info] `diffusiondb`@N=1000: `diffusiondb` @N=1000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_RANK_MEAN_SPLIT` [info] `diffusiondb`@N=2000: `diffusiondb` @N=2000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n- `RC_RANK_MEAN_SPLIT` [info] `tencent_gr`@N=1000: `tencent_gr` @N=1000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_RANK_MEAN_SPLIT` [info] `tencent_gr`@N=2000: `tencent_gr` @N=2000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_WEAK_TRANSFER` [info] `diffusiondb`@N=1000: `diffusiondb` @N=1000: 下一段 AUC≈0.60，关联基本不传。不要把本窗 top 特征当成稳定过滤器。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_WEAK_TRANSFER` [info] `diffusiondb`@N=2000: `diffusiondb` @N=2000: 下一段 AUC≈0.61，关联基本不传。不要把本窗 top 特征当成稳定过滤器。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n",
+  "catalog_version": "board_rc_v2_ad"
 }
