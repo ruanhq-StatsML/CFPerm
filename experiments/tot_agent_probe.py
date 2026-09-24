@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round8.json"
+OUT = Path(__file__).resolve().parent / "results_round9.json"
 # Weight on the spurious cue after drift. Below 1 so the calibrated score remains
 # in the judge and post-drift success is mixed rather than identically zero.
 # Overwritten per task in main. Weight on the spurious cue after the drift point.
@@ -196,12 +196,14 @@ class StepView:
     stable: float
     spurious: float
     progress: float
+    pick: object = None
 
 
 def beam_search(root, expand, score_fn, beam: int, depth: int, rng: random.Random):
     """score_fn(state) -> StepView. Returns (final_or_None, chosen-step view, expansions)."""
     frontier = [root]
     chosen = score_fn(root)
+    chosen.pick = root
     expansions = 0
     for step in range(depth):
         cand = []
@@ -215,8 +217,10 @@ def beam_search(root, expand, score_fn, beam: int, depth: int, rng: random.Rando
         cand.sort(key=lambda z: z[0], reverse=True)
         if step == 0:
             chosen = cand[0][3]
+        chosen.pick = cand[0][1]
         for _, nxt, done, _ in cand[:beam]:
             if done:
+                chosen.pick = nxt
                 return nxt, chosen, expansions
         frontier = [nxt for _, nxt, _, _ in cand[:beam]]
     return None, chosen, expansions
@@ -337,6 +341,7 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
                 "stable": chosen.stable,
                 "spurious": chosen.spurious,
                 "progress": chosen.progress,
+                "pick": chosen.pick,
                 "y": y,
             }
         )
@@ -506,6 +511,7 @@ def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
                 "stable": chosen.stable,
                 "spurious": chosen.spurious,
                 "progress": chosen.progress,
+                "pick": chosen.pick,
                 "y": y,
             }
         )
@@ -665,6 +671,7 @@ def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
                 "stable": chosen.stable,
                 "spurious": chosen.spurious,
                 "progress": chosen.progress,
+                "pick": chosen.pick,
                 "y": y,
             }
         )
@@ -794,6 +801,7 @@ def run_hotpot(n, drift_at, policy, beam, rng):
                 "stable": chosen.stable,
                 "spurious": chosen.spurious,
                 "progress": chosen.progress,
+                "pick": chosen.pick,
                 "y": y,
             }
         )
@@ -889,6 +897,7 @@ def run_webshop(n, drift_at, policy, beam, rng):
                 "stable": chosen.stable,
                 "spurious": chosen.spurious,
                 "progress": chosen.progress,
+                "pick": chosen.pick,
                 "y": y,
             }
         )
@@ -908,6 +917,50 @@ def run_webshop(n, drift_at, policy, beam, rng):
 # ---------------------------------------------------------------------------
 # Localization: permute batch labels, per-feature mean shift
 # ---------------------------------------------------------------------------
+
+def _batch_gap(flags, drift_at):
+    pre = [y for y, _ in flags[:drift_at]]
+    post = [y for y, _ in flags[drift_at:]]
+    if not pre or not post:
+        return None
+    return float(np.mean(pre) - np.mean(post))
+
+
+def subset_removal(feats, drift_at, candidates):
+    """Drop episodes whose chosen action hits a subset. Report how the pre/post success gap changes."""
+    flags = [(f["y"], f.get("pick")) for f in feats]
+    full = _batch_gap(flags, drift_at)
+    rows = []
+    for name, pred in candidates:
+        kept = [(y, pick) for y, pick in flags if not pred(pick)]
+        # Map kept episodes back by filtering indices so drift_at still splits time.
+        idx = [i for i, (_, pick) in enumerate(flags) if not pred(pick)]
+        pre_i = [i for i in idx if i < drift_at]
+        post_i = [i for i in idx if i >= drift_at]
+        if len(pre_i) < 3 or len(post_i) < 3:
+            rows.append({
+                "subset": name,
+                "removed": int(len(flags) - len(idx)),
+                "gap_full": full,
+                "gap_remaining": None,
+                "reduction": None,
+            })
+            continue
+        pre_y = [flags[i][0] for i in pre_i]
+        post_y = [flags[i][0] for i in post_i]
+        rest = float(np.mean(pre_y) - np.mean(post_y))
+        rows.append({
+            "subset": name,
+            "removed": int(len(flags) - len(idx)),
+            "n_pre": len(pre_i),
+            "n_post": len(post_i),
+            "gap_full": full,
+            "gap_remaining": rest,
+            "reduction": None if full is None else float(full - rest),
+        })
+    rows.sort(key=lambda r: -1 if r["reduction"] is None else -r["reduction"])
+    return rows
+
 
 def localize(feats, drift_at, n_perm=400, seed=0):
     rng = np.random.default_rng(seed)
@@ -1101,6 +1154,25 @@ def main():
                     "fsds_top_feature": fsds[0]["feature"] if fsds else None,
                     "fsds_localization": fsds,
                 }
+                if task == "hotpot_twohop":
+                    lengths = [len(p.split()) for p in PASSAGES]
+                    med = float(np.median(lengths))
+                    cands = [(f"mean_length_ge_{med:.0f}", lambda pick, med=med, lengths=lengths: bool(pick) and float(np.mean([lengths[i] for i in pick])) >= med)]
+                    used = set()
+                    for f in out["feats"]:
+                        if f.get("pick"):
+                            used |= set(f["pick"])
+                    for pid in sorted(used):
+                        cands.append((f"passage_{pid}", lambda pick, pid=pid: bool(pick) and pid in pick))
+                    summary["subsets"] = subset_removal(out["feats"], drift_at, cands)
+                if task == "webshop_attr":
+                    catalog = webshop_catalog(random.Random(SEED + 3))
+                    med = float(np.median([it["reviews"] for it in catalog]))
+                    cands = [("reviews_ge_median", lambda pick, med=med, catalog=catalog: pick is not None and catalog[pick]["reviews"] >= med)]
+                    for key in ("color", "price", "cat"):
+                        for level in sorted({it[key] for it in catalog}):
+                            cands.append((f"{key}_{level}", lambda pick, key=key, level=level, catalog=catalog: pick is not None and catalog[pick][key] == level))
+                    summary["subsets"] = subset_removal(out["feats"], drift_at, cands)
             else:
                 summary = {
                     "pre_success": rate(out["success"], 0, drift_at),
