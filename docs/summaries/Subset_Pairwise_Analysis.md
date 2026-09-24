@@ -25,8 +25,12 @@
 
 ```bash
 PYTHONPATH=. python3 scripts/run_subset_pairwise_analysis.py \
-  --chunk-size 1000 --out results/subset_pairwise_analysis
+  --chunk-size 1000 --cross --stride 500 --by-advertiser 5 \
+  --out results/subset_pairwise_analysis
 ```
+
+深讲（AUC≠作弊≠限投、相似度指标、交叉/stride/广告主）：  
+[`Ad_Baseline_Pairwise_Similarity.md`](./Ad_Baseline_Pairwise_Similarity.md)
 
 ---
 

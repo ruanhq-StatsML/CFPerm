@@ -1,260 +1,339 @@
 {
   "note": "Subset pairwise = same edge sort + pairwise(N), but only edges in cohort. Intensity tertiles = buy-volume baseline slices; credit tertiles = last-touch slices. Pack scorecard = sample-count pairwise; calendar scorecard = DiffDB width-min board (different grain).",
   "chunk_size": 1000,
-  "n_edges_used": 12000,
+  "n_edges_used": 16000,
   "intensity_col": "i_log1p_n_exp",
   "credit_col": "i_item_credit_rank",
+  "stride": 500,
+  "cross": true,
+  "advertiser": {
+    "ok": false,
+    "merchant_error": "Parquet magic bytes not found in footer. Either the file is corrupted or this is not a parquet file.",
+    "fallback_key": "item_id",
+    "note": "item_feat merchant map unavailable; using top item_id by edge count as creative/account proxy (not true advertiser).",
+    "top": [
+      "9091091",
+      "5082634",
+      "8500991",
+      "9626548",
+      "4055558"
+    ]
+  },
   "subsets": [
     {
       "ok": true,
       "name": "all",
       "panel": "ops",
-      "n": 12000,
-      "n_chunks": 12,
-      "n_pairs": 6,
-      "mean_auc": 0.9944498030747795,
-      "mean_logreg_auc": 0.9959043949150055,
-      "mean_delta_Y": -0.003500000000000001,
-      "mean_jaccard": 0.6023809523809524,
-      "mean_span_hours": 585.8249768518519,
+      "n": 16000,
+      "window_mode": "stride_500",
+      "n_pairs": 2,
+      "mean_auc": 0.9971568472595167,
+      "mean_logreg_auc": 0.997393776654557,
+      "mean_delta_Y": 0.011000000000000001,
+      "mean_jaccard": null,
+      "mean_span_hours": 1455.6517592592593,
       "span_hours_by_chunk": [
-        4160.609166666667,
-        420.5702777777778,
-        234.95888888888888,
-        155.95777777777778,
-        126.8963888888889,
-        113.02083333333333,
-        97.63222222222223,
-        84.39861111111111
+        3954.0597222222223,
+        85.52944444444445,
+        327.36611111111114
       ],
-      "reading": "strong transfer + stable top feats (persistent drivers)",
+      "reading": "transfer holds; feature set partially stable",
       "top0": [
         "e_log1p_exp",
         "e_n_exp",
         "i_log1p_n_exp",
         "i_credit_last"
       ],
-      "y_rate": 0.026
+      "y_rate": 0.0259375
     },
     {
       "ok": true,
       "name": "all",
       "panel": "content",
-      "n": 12000,
-      "n_chunks": 12,
-      "n_pairs": 6,
-      "mean_auc": 0.8003264822825388,
-      "mean_logreg_auc": 0.798480866991644,
-      "mean_delta_Y": -0.003500000000000001,
-      "mean_jaccard": 0.6571428571428571,
-      "mean_span_hours": 585.8249768518519,
-      "span_hours_by_chunk": [
-        4160.609166666667,
-        420.5702777777778,
-        234.95888888888888,
-        155.95777777777778,
-        126.8963888888889,
-        113.02083333333333,
-        97.63222222222223,
-        84.39861111111111
-      ],
-      "reading": "strong transfer + stable top feats (persistent drivers)",
-      "top0": [
-        "i_credit_last",
-        "i_share_last",
-        "i_item_credit_rank",
-        "i_log1p_credit_linear"
-      ],
-      "y_rate": 0.026
-    },
-    {
-      "ok": true,
-      "name": "intensity_high",
-      "panel": "ops",
-      "n": 3539,
-      "n_chunks": 4,
+      "n": 16000,
+      "window_mode": "stride_500",
       "n_pairs": 2,
-      "mean_auc": 0.9942583235795295,
-      "mean_logreg_auc": 0.9943347882217846,
-      "mean_delta_Y": -0.009000000000000001,
-      "mean_jaccard": 0.6666666666666666,
-      "mean_span_hours": 1313.7982638888889,
+      "mean_auc": 0.771473510922778,
+      "mean_logreg_auc": 0.7603648061691046,
+      "mean_delta_Y": 0.011000000000000001,
+      "mean_jaccard": null,
+      "mean_span_hours": 1455.6517592592593,
       "span_hours_by_chunk": [
-        3744.387222222222,
-        323.4175,
-        300.13305555555553,
-        887.2552777777778
-      ],
-      "reading": "strong transfer + stable top feats (persistent drivers)",
-      "top0": [
-        "e_log1p_exp",
-        "e_n_exp",
-        "i_credit_last",
-        "i_share_last"
-      ],
-      "y_rate": 0.012715456343599886
-    },
-    {
-      "ok": true,
-      "name": "intensity_high",
-      "panel": "content",
-      "n": 3539,
-      "n_chunks": 4,
-      "n_pairs": 2,
-      "mean_auc": 0.810885044975808,
-      "mean_logreg_auc": 0.9063615992329754,
-      "mean_delta_Y": -0.009000000000000001,
-      "mean_jaccard": 0.6666666666666666,
-      "mean_span_hours": 1313.7982638888889,
-      "span_hours_by_chunk": [
-        3744.387222222222,
-        323.4175,
-        300.13305555555553,
-        887.2552777777778
-      ],
-      "reading": "strong transfer + stable top feats (persistent drivers)",
-      "top0": [
-        "i_credit_last",
-        "i_share_last",
-        "i_log1p_credit_linear",
-        "i_credit_linear"
-      ],
-      "y_rate": 0.012715456343599886
-    },
-    {
-      "ok": true,
-      "name": "intensity_low",
-      "panel": "ops",
-      "n": 6744,
-      "n_chunks": 7,
-      "n_pairs": 4,
-      "mean_auc": 0.9896927213022573,
-      "mean_logreg_auc": 0.9910913151221821,
-      "mean_delta_Y": -0.015000000000000001,
-      "mean_jaccard": 0.7777777777777777,
-      "mean_span_hours": 1004.345,
-      "span_hours_by_chunk": [
-        4334.5625,
-        473.48777777777775,
-        286.19388888888886,
-        197.4663888888889,
-        184.35166666666666,
-        326.8308333333333,
-        1227.5219444444444
-      ],
-      "reading": "strong transfer + stable top feats (persistent drivers)",
-      "top0": [
-        "e_log1p_exp",
-        "e_n_exp",
-        "i_log1p_n_exp",
-        "i_n_exp"
-      ],
-      "y_rate": 0.03692170818505338
-    },
-    {
-      "ok": true,
-      "name": "intensity_low",
-      "panel": "content",
-      "n": 6744,
-      "n_chunks": 7,
-      "n_pairs": 4,
-      "mean_auc": 0.810552579625711,
-      "mean_logreg_auc": 0.8402567036410011,
-      "mean_delta_Y": -0.015000000000000001,
-      "mean_jaccard": 0.42857142857142855,
-      "mean_span_hours": 1004.345,
-      "span_hours_by_chunk": [
-        4334.5625,
-        473.48777777777775,
-        286.19388888888886,
-        197.4663888888889,
-        184.35166666666666,
-        326.8308333333333,
-        1227.5219444444444
+        3954.0597222222223,
+        85.52944444444445,
+        327.36611111111114
       ],
       "reading": "transfer holds; feature set partially stable",
       "top0": [
         "i_credit_last",
         "i_share_last",
         "i_item_credit_rank",
-        "i_n_covisit_neighbors"
+        "i_log1p_credit_linear"
       ],
-      "y_rate": 0.03692170818505338
+      "y_rate": 0.0259375
+    },
+    {
+      "ok": true,
+      "name": "intensity_high",
+      "panel": "ops",
+      "n": 4750,
+      "window_mode": "stride_500",
+      "n_pairs": 2,
+      "mean_auc": 0.9941595059076263,
+      "mean_logreg_auc": 0.9970408163265305,
+      "mean_delta_Y": -0.002999999999999999,
+      "mean_jaccard": null,
+      "mean_span_hours": 1374.394814814815,
+      "span_hours_by_chunk": [
+        3643.985,
+        237.28,
+        241.91944444444445
+      ],
+      "reading": "transfer holds; feature set partially stable",
+      "top0": [
+        "e_log1p_exp",
+        "e_n_exp",
+        "u_ctr",
+        "u_n_exp"
+      ],
+      "y_rate": 0.012210526315789474
+    },
+    {
+      "ok": true,
+      "name": "intensity_high",
+      "panel": "content",
+      "n": 4750,
+      "window_mode": "stride_500",
+      "n_pairs": 2,
+      "mean_auc": 0.7249111101930651,
+      "mean_logreg_auc": 0.8431291139937757,
+      "mean_delta_Y": -0.002999999999999999,
+      "mean_jaccard": null,
+      "mean_span_hours": 1374.394814814815,
+      "span_hours_by_chunk": [
+        3643.985,
+        237.28,
+        241.91944444444445
+      ],
+      "reading": "transfer holds; feature set partially stable",
+      "top0": [
+        "i_credit_last",
+        "i_share_last",
+        "i_log1p_n_covisit_neighbors",
+        "i_item_credit_rank"
+      ],
+      "y_rate": 0.012210526315789474
+    },
+    {
+      "ok": true,
+      "name": "intensity_low",
+      "panel": "ops",
+      "n": 9034,
+      "window_mode": "stride_500",
+      "n_pairs": 2,
+      "mean_auc": 0.9921485283327388,
+      "mean_logreg_auc": 0.9931670984302563,
+      "mean_delta_Y": 0.010499999999999999,
+      "mean_jaccard": null,
+      "mean_span_hours": 1565.788611111111,
+      "span_hours_by_chunk": [
+        4117.471666666666,
+        185.32722222222222,
+        394.56694444444446
+      ],
+      "reading": "transfer holds; feature set partially stable",
+      "top0": [
+        "e_n_exp",
+        "e_log1p_exp",
+        "i_n_exp",
+        "i_log1p_n_exp"
+      ],
+      "y_rate": 0.0370821341598406
+    },
+    {
+      "ok": true,
+      "name": "intensity_low",
+      "panel": "content",
+      "n": 9034,
+      "window_mode": "stride_500",
+      "n_pairs": 2,
+      "mean_auc": 0.7782788572262257,
+      "mean_logreg_auc": 0.8326912537438853,
+      "mean_delta_Y": 0.010499999999999999,
+      "mean_jaccard": null,
+      "mean_span_hours": 1565.788611111111,
+      "span_hours_by_chunk": [
+        4117.471666666666,
+        185.32722222222222,
+        394.56694444444446
+      ],
+      "reading": "transfer holds; feature set partially stable",
+      "top0": [
+        "i_credit_last",
+        "i_share_last",
+        "i_item_credit_rank",
+        "u_span_sec"
+      ],
+      "y_rate": 0.0370821341598406
     },
     {
       "ok": true,
       "name": "credit_high",
       "panel": "ops",
-      "n": 3031,
-      "n_chunks": 4,
-      "n_pairs": 2,
-      "mean_auc": 0.9933007812500001,
-      "mean_logreg_auc": 0.9943497054303279,
-      "mean_delta_Y": -0.0205,
-      "mean_jaccard": 0.6666666666666666,
-      "mean_span_hours": 1596.9788888888888,
+      "n": 4015,
+      "window_mode": "stride_500",
+      "n_pairs": 3,
+      "mean_auc": 0.9979839633447881,
+      "mean_logreg_auc": 0.9968843069873996,
+      "mean_delta_Y": -0.014,
+      "mean_jaccard": null,
+      "mean_span_hours": 1710.294814814815,
       "span_hours_by_chunk": [
-        4665.740555555555,
-        365.3308333333333,
-        764.0391666666667,
-        592.805
+        4521.4925,
+        353.7577777777778,
+        255.63416666666666
       ],
-      "reading": "strong transfer + stable top feats (persistent drivers)",
+      "reading": "transfer holds; feature set partially stable",
+      "top0": [
+        "e_n_exp",
+        "e_log1p_exp",
+        "i_share_last",
+        "i_credit_last"
+      ],
+      "y_rate": 0.04632627646326277
+    },
+    {
+      "ok": true,
+      "name": "credit_high",
+      "panel": "content",
+      "n": 4015,
+      "window_mode": "stride_500",
+      "n_pairs": 3,
+      "mean_auc": 0.6617243534737342,
+      "mean_logreg_auc": 0.7128140780726092,
+      "mean_delta_Y": -0.014,
+      "mean_jaccard": null,
+      "mean_span_hours": 1710.294814814815,
+      "span_hours_by_chunk": [
+        4521.4925,
+        353.7577777777778,
+        255.63416666666666
+      ],
+      "reading": "transfer holds; feature set partially stable",
+      "top0": [
+        "i_share_last",
+        "i_credit_last",
+        "u_span_sec",
+        "ui_pop_mismatch"
+      ],
+      "y_rate": 0.04632627646326277
+    },
+    {
+      "ok": true,
+      "name": "credit_low",
+      "panel": "ops",
+      "n": 8684,
+      "window_mode": "stride_500",
+      "n_pairs": 0,
+      "mean_auc": null,
+      "mean_logreg_auc": null,
+      "mean_delta_Y": null,
+      "mean_jaccard": null,
+      "mean_span_hours": 1717.688611111111,
+      "span_hours_by_chunk": [
+        4772.260555555556,
+        94.67833333333333,
+        286.12694444444446
+      ],
+      "reading": "no pairs",
+      "top0": [],
+      "y_rate": 0.0
+    },
+    {
+      "ok": true,
+      "name": "credit_low",
+      "panel": "content",
+      "n": 8684,
+      "window_mode": "stride_500",
+      "n_pairs": 0,
+      "mean_auc": null,
+      "mean_logreg_auc": null,
+      "mean_delta_Y": null,
+      "mean_jaccard": null,
+      "mean_span_hours": 1717.688611111111,
+      "span_hours_by_chunk": [
+        4772.260555555556,
+        94.67833333333333,
+        286.12694444444446
+      ],
+      "reading": "no pairs",
+      "top0": [],
+      "y_rate": 0.0
+    },
+    {
+      "ok": true,
+      "name": "I_high_C_high",
+      "panel": "ops",
+      "n": 2446,
+      "window_mode": "stride_500",
+      "n_pairs": 2,
+      "mean_auc": 0.9934823055133163,
+      "mean_logreg_auc": 0.9990896641365163,
+      "mean_delta_Y": -0.006500000000000001,
+      "mean_jaccard": null,
+      "mean_span_hours": 2067.2433333333333,
+      "span_hours_by_chunk": [
+        3703.0775,
+        431.4091666666667
+      ],
+      "reading": "transfer holds; feature set partially stable",
       "top0": [
         "e_log1p_exp",
         "e_n_exp",
         "i_share_last",
         "i_credit_last"
       ],
-      "y_rate": 0.04256021115143517
+      "y_rate": 0.022485690923957483
     },
     {
       "ok": true,
-      "name": "credit_high",
+      "name": "I_high_C_high",
       "panel": "content",
-      "n": 3031,
-      "n_chunks": 4,
+      "n": 2446,
+      "window_mode": "stride_500",
       "n_pairs": 2,
-      "mean_auc": 0.7225619023224044,
-      "mean_logreg_auc": 0.766893143784153,
-      "mean_delta_Y": -0.0205,
-      "mean_jaccard": 0.25,
-      "mean_span_hours": 1596.9788888888888,
+      "mean_auc": 0.5495973992035417,
+      "mean_logreg_auc": 0.7738557314958215,
+      "mean_delta_Y": -0.006500000000000001,
+      "mean_jaccard": null,
+      "mean_span_hours": 2067.2433333333333,
       "span_hours_by_chunk": [
-        4665.740555555555,
-        365.3308333333333,
-        764.0391666666667,
-        592.805
+        3703.0775,
+        431.4091666666667
       ],
-      "reading": "strong transfer but shifting drivers (regime / composition change)",
+      "reading": "weak transfer (association does not travel)",
       "top0": [
         "i_share_last",
         "i_credit_last",
-        "i_credit_first",
-        "i_share_first"
+        "i_credit_linear",
+        "i_share_linear"
       ],
-      "y_rate": 0.04256021115143517
+      "y_rate": 0.022485690923957483
     },
     {
       "ok": true,
-      "name": "credit_low",
+      "name": "I_high_C_low",
       "panel": "ops",
-      "n": 6530,
-      "n_chunks": 7,
+      "n": 1686,
+      "window_mode": "stride_500",
       "n_pairs": 0,
       "mean_auc": null,
       "mean_logreg_auc": null,
       "mean_delta_Y": null,
       "mean_jaccard": null,
-      "mean_span_hours": 1004.385634920635,
+      "mean_span_hours": 1926.1747222222223,
       "span_hours_by_chunk": [
-        4926.710277777778,
-        314.42555555555555,
-        165.66027777777776,
-        120.16888888888889,
-        178.03944444444446,
-        348.69305555555553,
-        977.0019444444445
+        1926.1747222222223
       ],
       "reading": "no pairs",
       "top0": [],
@@ -262,28 +341,120 @@
     },
     {
       "ok": true,
-      "name": "credit_low",
+      "name": "I_high_C_low",
       "panel": "content",
-      "n": 6530,
-      "n_chunks": 7,
+      "n": 1686,
+      "window_mode": "stride_500",
       "n_pairs": 0,
       "mean_auc": null,
       "mean_logreg_auc": null,
       "mean_delta_Y": null,
       "mean_jaccard": null,
-      "mean_span_hours": 1004.385634920635,
+      "mean_span_hours": 1926.1747222222223,
       "span_hours_by_chunk": [
-        4926.710277777778,
-        314.42555555555555,
-        165.66027777777776,
-        120.16888888888889,
-        178.03944444444446,
-        348.69305555555553,
-        977.0019444444445
+        1926.1747222222223
       ],
       "reading": "no pairs",
       "top0": [],
       "y_rate": 0.0
+    },
+    {
+      "ok": false,
+      "name": "I_low_C_high",
+      "panel": "ops",
+      "n": 1004,
+      "reason": "too_small(need>=1500)"
+    },
+    {
+      "ok": false,
+      "name": "I_low_C_high",
+      "panel": "content",
+      "n": 1004,
+      "reason": "too_small(need>=1500)"
+    },
+    {
+      "ok": true,
+      "name": "I_low_C_low",
+      "panel": "ops",
+      "n": 5770,
+      "window_mode": "stride_500",
+      "n_pairs": 0,
+      "mean_auc": null,
+      "mean_logreg_auc": null,
+      "mean_delta_Y": null,
+      "mean_jaccard": null,
+      "mean_span_hours": 1792.8048148148148,
+      "span_hours_by_chunk": [
+        4859.426944444444,
+        186.3925,
+        332.595
+      ],
+      "reading": "no pairs",
+      "top0": [],
+      "y_rate": 0.0
+    },
+    {
+      "ok": true,
+      "name": "I_low_C_low",
+      "panel": "content",
+      "n": 5770,
+      "window_mode": "stride_500",
+      "n_pairs": 0,
+      "mean_auc": null,
+      "mean_logreg_auc": null,
+      "mean_delta_Y": null,
+      "mean_jaccard": null,
+      "mean_span_hours": 1792.8048148148148,
+      "span_hours_by_chunk": [
+        4859.426944444444,
+        186.3925,
+        332.595
+      ],
+      "reading": "no pairs",
+      "top0": [],
+      "y_rate": 0.0
+    },
+    {
+      "ok": false,
+      "name": "item_9091091",
+      "panel": "ops",
+      "n": 10,
+      "reason": "too_small(need>=1500)"
+    },
+    {
+      "ok": false,
+      "name": "item_9091091",
+      "panel": "content",
+      "n": 10,
+      "reason": "too_small(need>=1500)"
+    },
+    {
+      "ok": false,
+      "name": "item_5082634",
+      "panel": "ops",
+      "n": 8,
+      "reason": "too_small(need>=1500)"
+    },
+    {
+      "ok": false,
+      "name": "item_5082634",
+      "panel": "content",
+      "n": 8,
+      "reason": "too_small(need>=1500)"
+    },
+    {
+      "ok": false,
+      "name": "item_8500991",
+      "panel": "ops",
+      "n": 8,
+      "reason": "too_small(need>=1500)"
+    },
+    {
+      "ok": false,
+      "name": "item_8500991",
+      "panel": "content",
+      "n": 8,
+      "reason": "too_small(need>=1500)"
     }
   ],
   "pack_pairwise_scorecard": [
@@ -456,51 +627,51 @@
     {
       "chunk": 0,
       "n": 1000,
-      "span_hours": 4160.609166666667,
-      "y_rate": 0.07
+      "span_hours": 3954.0597222222223,
+      "y_rate": 0.05
     },
     {
       "chunk": 1,
       "n": 1000,
-      "span_hours": 420.5702777777778,
-      "y_rate": 0.061
+      "span_hours": 466.5511111111111,
+      "y_rate": 0.066
     },
     {
       "chunk": 2,
       "n": 1000,
-      "span_hours": 234.95888888888888,
-      "y_rate": 0.046
+      "span_hours": 225.0525,
+      "y_rate": 0.065
     },
     {
       "chunk": 3,
       "n": 1000,
-      "span_hours": 155.95777777777778,
-      "y_rate": 0.044
+      "span_hours": 170.46694444444444,
+      "y_rate": 0.035
     },
     {
       "chunk": 4,
       "n": 1000,
-      "span_hours": 126.8963888888889,
-      "y_rate": 0.018
+      "span_hours": 119.50305555555556,
+      "y_rate": 0.049
     },
     {
       "chunk": 5,
       "n": 1000,
-      "span_hours": 113.02083333333333,
-      "y_rate": 0.022
+      "span_hours": 99.0875,
+      "y_rate": 0.027
     },
     {
       "chunk": 6,
       "n": 1000,
-      "span_hours": 97.63222222222223,
-      "y_rate": 0.021
+      "span_hours": 91.73666666666666,
+      "y_rate": 0.022
     },
     {
       "chunk": 7,
       "n": 1000,
-      "span_hours": 84.39861111111111,
-      "y_rate": 0.014
+      "span_hours": 85.52944444444445,
+      "y_rate": 0.022
     }
   ],
-  "sec": 3.9537174701690674
+  "sec": 3.1735851764678955
 }

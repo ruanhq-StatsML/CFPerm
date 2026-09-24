@@ -100,31 +100,93 @@ def run_subset(
     select_k: int,
     seed: int,
     max_pairs: int,
+    stride: Optional[int] = None,
 ) -> Dict[str, Any]:
     sub = df_sorted.loc[mask].reset_index(drop=True)
     n = len(sub)
-    if n < chunk_size * 2:
-        return {"ok": False, "name": name, "panel": panel, "n": n, "reason": "too_small"}
+    stride_eff = int(stride) if stride and stride > 0 else int(chunk_size)
+    need = chunk_size + (stride_eff if stride_eff < chunk_size else chunk_size)
+    if n < need:
+        return {
+            "ok": False,
+            "name": name,
+            "panel": panel,
+            "n": n,
+            "reason": f"too_small(need>={need})",
+        }
     X, y, names = _tencent_xy(sub, panel=panel)
-    T = chunk_by_n(n, chunk_size)
-    # calendar span per occupied chunk (side effect of equal-count)
-    spans = []
-    for cid in sorted(np.unique(T)):
-        sl = sub.iloc[T == cid]
-        spans.append(
-            float((sl["e_last_ts"].max() - sl["e_last_ts"].min()) / 3600.0)
+    if stride_eff >= chunk_size:
+        # non-overlap: classic chunk ids
+        T = chunk_by_n(n, chunk_size)
+        spans = []
+        for cid in sorted(np.unique(T)):
+            sl = sub.iloc[T == cid]
+            spans.append(
+                float((sl["e_last_ts"].max() - sl["e_last_ts"].min()) / 3600.0)
+            )
+        rows = fs_adjacent(
+            X,
+            y,
+            T,
+            names,
+            select_k=select_k,
+            y_quantile=0.7,
+            seed=seed,
+            max_pairs=max_pairs,
+            min_n=min(80, chunk_size // 2),
         )
-    rows = fs_adjacent(
-        X,
-        y,
-        T,
-        names,
-        select_k=select_k,
-        y_quantile=0.7,
-        seed=seed,
-        max_pairs=max_pairs,
-        min_n=min(80, chunk_size // 2),
-    )
+        mode = "nonoverlap"
+    else:
+        # overlapping windows of length N, step=stride; pairwise consecutive starts
+        from itertools import pairwise as _pw
+
+        starts = list(range(0, n - chunk_size + 1, stride_eff))
+        if len(starts) < 2:
+            return {
+                "ok": False,
+                "name": name,
+                "panel": panel,
+                "n": n,
+                "reason": "stride_too_few_windows",
+            }
+        pairs = list(_pw(starts))
+        if max_pairs > 0 and len(pairs) > max_pairs:
+            idx = np.linspace(0, len(pairs) - 1, num=max_pairs, dtype=int)
+            pairs = [pairs[i] for i in idx]
+        # map to pseudo chunk ids 0..W-1 on a synthetic T for reporting spans only
+        # run FS manually per pair
+        rows = []
+        spans = []
+        for s0, s1 in pairs:
+            m0 = np.zeros(n, dtype=bool)
+            m1 = np.zeros(n, dtype=bool)
+            m0[s0 : s0 + chunk_size] = True
+            m1[s1 : s1 + chunk_size] = True
+            T = np.full(n, -1, dtype=int)
+            T[m0] = 0
+            T[m1] = 1
+            # only keep the two windows' rows for a tiny adjacent call
+            keep = m0 | m1
+            # Remap to contiguous for fs_adjacent with ids 0,1
+            Tk = np.where(m0[keep], 0, 1)
+            pair_rows = fs_adjacent(
+                X[keep],
+                y[keep],
+                Tk,
+                names,
+                select_k=select_k,
+                y_quantile=0.7,
+                seed=seed,
+                max_pairs=1,
+                min_n=min(80, chunk_size // 2),
+            )
+            rows.extend(pair_rows)
+            sl0 = sub.iloc[s0 : s0 + chunk_size]
+            spans.append(
+                float((sl0["e_last_ts"].max() - sl0["e_last_ts"].min()) / 3600.0)
+            )
+        mode = f"stride_{stride_eff}"
+
     m_auc = mean_key(rows, "hgb_auc")
     m_lr = mean_key(rows, "logreg_auc")
     m_dy = mean_key(rows, "delta_Y")
@@ -134,7 +196,7 @@ def run_subset(
         "name": name,
         "panel": panel,
         "n": n,
-        "n_chunks": int(len(np.unique(T))),
+        "window_mode": mode,
         "n_pairs": len(rows),
         "mean_auc": m_auc,
         "mean_logreg_auc": m_lr,
@@ -203,6 +265,23 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--max-pairs", type=int, default=8)
     ap.add_argument(
+        "--cross",
+        action="store_true",
+        help="also run intensity×credit 2×2 cross cohorts",
+    )
+    ap.add_argument(
+        "--stride",
+        type=int,
+        default=0,
+        help="if 0 < stride < chunk-size, use overlapping windows (robustness)",
+    )
+    ap.add_argument(
+        "--by-advertiser",
+        type=int,
+        default=0,
+        help="if >0, also slice top-K merchants (item_feat.122) as advertiser packs",
+    )
+    ap.add_argument(
         "--out", type=Path, default=ROOT / "results/subset_pairwise_analysis"
     )
     args = ap.parse_args()
@@ -236,11 +315,61 @@ def main() -> None:
         ("credit_high", credit["high"]),
         ("credit_low", credit["low"]),
     ]
+    if args.cross:
+        cohorts += [
+            ("I_high_C_high", inten["high"] & credit["high"]),
+            ("I_high_C_low", inten["high"] & credit["low"]),
+            ("I_low_C_high", inten["low"] & credit["high"]),
+            ("I_low_C_low", inten["low"] & credit["low"]),
+        ]
 
+    # Optional advertiser / account-like slice
+    advertiser_note = None
+    if args.by_advertiser > 0:
+        try:
+            import sys
+
+            sys.path.insert(0, str(ROOT / "scripts/tencent_gr"))
+            from run_three_step_subset_localize import (  # type: ignore
+                attach_merchant,
+                load_item_merchant_map,
+            )
+
+            imap = load_item_merchant_map(ROOT / "data/tencent_subset", merchant_col="122")
+            df = attach_merchant(df, imap)
+            vc = df["merchant_id"].value_counts()
+            top = vc.head(int(args.by_advertiser)).index.tolist()
+            advertiser_note = {
+                "key": "merchant_id",
+                "top": [str(x) for x in top],
+            }
+            for mid in top[: min(3, len(top))]:
+                cohorts.append((f"adv_{mid}", (df["merchant_id"] == mid).to_numpy()))
+        except Exception as e:
+            # Fallback: top items as creative/account proxy when merchant parquet missing
+            vc = df["item_id"].value_counts()
+            top = vc.head(int(args.by_advertiser)).index.tolist()
+            advertiser_note = {
+                "ok": False,
+                "merchant_error": str(e),
+                "fallback_key": "item_id",
+                "note": (
+                    "item_feat merchant map unavailable; using top item_id by edge "
+                    "count as creative/account proxy (not true advertiser)."
+                ),
+                "top": [str(x) for x in top],
+            }
+            for iid in top[: min(3, len(top))]:
+                cohorts.append((f"item_{iid}", (df["item_id"] == iid).to_numpy()))
+
+    stride = args.stride if args.stride > 0 else None
     subset_rows: List[Dict[str, Any]] = []
     for name, mask in cohorts:
         for panel in ("ops", "content"):
-            print(f"subset {name} panel={panel} n={int(mask.sum())}", flush=True)
+            print(
+                f"subset {name} panel={panel} n={int(mask.sum())} stride={stride}",
+                flush=True,
+            )
             subset_rows.append(
                 run_subset(
                     df,
@@ -251,6 +380,7 @@ def main() -> None:
                     select_k=args.select_k,
                     seed=args.seed,
                     max_pairs=args.max_pairs,
+                    stride=stride,
                 )
             )
 
@@ -288,6 +418,9 @@ def main() -> None:
         "n_edges_used": len(df),
         "intensity_col": inten_col,
         "credit_col": cred_col,
+        "stride": stride,
+        "cross": bool(args.cross),
+        "advertiser": advertiser_note,
         "subsets": subset_rows,
         "pack_pairwise_scorecard": pack_card,
         "calendar_width_scorecard": cal_card,

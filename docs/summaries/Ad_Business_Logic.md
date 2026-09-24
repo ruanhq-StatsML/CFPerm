@@ -5,7 +5,8 @@
 
 相关：[`Ad_Funnel_Scenario_Board.md`](./Ad_Funnel_Scenario_Board.md) ·
 [`Subset_Pairwise_Analysis.md`](./Subset_Pairwise_Analysis.md) ·
-[`Business_Scenarios_Brush_vs_Inject.md`](./Business_Scenarios_Brush_vs_Inject.md)
+[`Business_Scenarios_Brush_vs_Inject.md`](./Business_Scenarios_Brush_vs_Inject.md) ·
+[`Ad_Baseline_Pairwise_Similarity.md`](./Ad_Baseline_Pairwise_Similarity.md)
 
 ---
 

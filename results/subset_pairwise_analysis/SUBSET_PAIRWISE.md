@@ -6,16 +6,30 @@ Subset pairwise = same edge sort + pairwise(N), but only edges in cohort. Intens
 
 | subset | panel | n | pairs | HGB | LogReg | ΔȲ | Jac | mean_span_h | reading | top0 |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
-| all | ops | 12000 | 6 | 0.994 | 0.996 | -0.0035 | 0.60 | 585.8 | strong transfer + stable top feats (persistent drivers) | e_log1p_exp, e_n_exp, i_log1p_n_exp |
-| all | content | 12000 | 6 | 0.800 | 0.798 | -0.0035 | 0.66 | 585.8 | strong transfer + stable top feats (persistent drivers) | i_credit_last, i_share_last, i_item_credit_rank |
-| intensity_high | ops | 3539 | 2 | 0.994 | 0.994 | -0.009 | 0.67 | 1313.8 | strong transfer + stable top feats (persistent drivers) | e_log1p_exp, e_n_exp, i_credit_last |
-| intensity_high | content | 3539 | 2 | 0.811 | 0.906 | -0.009 | 0.67 | 1313.8 | strong transfer + stable top feats (persistent drivers) | i_credit_last, i_share_last, i_log1p_credit_linear |
-| intensity_low | ops | 6744 | 4 | 0.990 | 0.991 | -0.015 | 0.78 | 1004.3 | strong transfer + stable top feats (persistent drivers) | e_log1p_exp, e_n_exp, i_log1p_n_exp |
-| intensity_low | content | 6744 | 4 | 0.811 | 0.840 | -0.015 | 0.43 | 1004.3 | transfer holds; feature set partially stable | i_credit_last, i_share_last, i_item_credit_rank |
-| credit_high | ops | 3031 | 2 | 0.993 | 0.994 | -0.0205 | 0.67 | 1597.0 | strong transfer + stable top feats (persistent drivers) | e_log1p_exp, e_n_exp, i_share_last |
-| credit_high | content | 3031 | 2 | 0.723 | 0.767 | -0.0205 | 0.25 | 1597.0 | strong transfer but shifting drivers (regime / composition change) | i_share_last, i_credit_last, i_credit_first |
-| credit_low | ops | 6530 | 0 | nan | nan | 0 | nan | 1004.4 | no pairs |  |
-| credit_low | content | 6530 | 0 | nan | nan | 0 | nan | 1004.4 | no pairs |  |
+| all | ops | 16000 | 2 | 0.997 | 0.997 | 0.011 | nan | 1455.7 | transfer holds; feature set partially stable | e_log1p_exp, e_n_exp, i_log1p_n_exp |
+| all | content | 16000 | 2 | 0.771 | 0.760 | 0.011 | nan | 1455.7 | transfer holds; feature set partially stable | i_credit_last, i_share_last, i_item_credit_rank |
+| intensity_high | ops | 4750 | 2 | 0.994 | 0.997 | -0.003 | nan | 1374.4 | transfer holds; feature set partially stable | e_log1p_exp, e_n_exp, u_ctr |
+| intensity_high | content | 4750 | 2 | 0.725 | 0.843 | -0.003 | nan | 1374.4 | transfer holds; feature set partially stable | i_credit_last, i_share_last, i_log1p_n_covisit_neighbors |
+| intensity_low | ops | 9034 | 2 | 0.992 | 0.993 | 0.0105 | nan | 1565.8 | transfer holds; feature set partially stable | e_n_exp, e_log1p_exp, i_n_exp |
+| intensity_low | content | 9034 | 2 | 0.778 | 0.833 | 0.0105 | nan | 1565.8 | transfer holds; feature set partially stable | i_credit_last, i_share_last, i_item_credit_rank |
+| credit_high | ops | 4015 | 3 | 0.998 | 0.997 | -0.014 | nan | 1710.3 | transfer holds; feature set partially stable | e_n_exp, e_log1p_exp, i_share_last |
+| credit_high | content | 4015 | 3 | 0.662 | 0.713 | -0.014 | nan | 1710.3 | transfer holds; feature set partially stable | i_share_last, i_credit_last, u_span_sec |
+| credit_low | ops | 8684 | 0 | nan | nan | 0 | nan | 1717.7 | no pairs |  |
+| credit_low | content | 8684 | 0 | nan | nan | 0 | nan | 1717.7 | no pairs |  |
+| I_high_C_high | ops | 2446 | 2 | 0.993 | 0.999 | -0.0065 | nan | 2067.2 | transfer holds; feature set partially stable | e_log1p_exp, e_n_exp, i_share_last |
+| I_high_C_high | content | 2446 | 2 | 0.550 | 0.774 | -0.0065 | nan | 2067.2 | weak transfer (association does not travel) | i_share_last, i_credit_last, i_credit_linear |
+| I_high_C_low | ops | 1686 | 0 | nan | nan | 0 | nan | 1926.2 | no pairs |  |
+| I_high_C_low | content | 1686 | 0 | nan | nan | 0 | nan | 1926.2 | no pairs |  |
+| I_low_C_high | ops | 1004 | — | — | — | — | — | — | too_small(need>=1500) | — |
+| I_low_C_high | content | 1004 | — | — | — | — | — | — | too_small(need>=1500) | — |
+| I_low_C_low | ops | 5770 | 0 | nan | nan | 0 | nan | 1792.8 | no pairs |  |
+| I_low_C_low | content | 5770 | 0 | nan | nan | 0 | nan | 1792.8 | no pairs |  |
+| item_9091091 | ops | 10 | — | — | — | — | — | — | too_small(need>=1500) | — |
+| item_9091091 | content | 10 | — | — | — | — | — | — | too_small(need>=1500) | — |
+| item_5082634 | ops | 8 | — | — | — | — | — | — | too_small(need>=1500) | — |
+| item_5082634 | content | 8 | — | — | — | — | — | — | too_small(need>=1500) | — |
+| item_8500991 | ops | 8 | — | — | — | — | — | — | too_small(need>=1500) | — |
+| item_8500991 | content | 8 | — | — | — | — | — | — | too_small(need>=1500) | — |
 
 ## Pack pairwise scorecard (sample-count grain)
 
@@ -48,14 +62,14 @@ Same N edges ≠ same hours — burstiness:
 
 | chunk | n | span_h | y_rate |
 |---:|---:|---:|---:|
-| 0 | 1000 | 4160.6 | 0.0700 |
-| 1 | 1000 | 420.6 | 0.0610 |
-| 2 | 1000 | 235.0 | 0.0460 |
-| 3 | 1000 | 156.0 | 0.0440 |
-| 4 | 1000 | 126.9 | 0.0180 |
-| 5 | 1000 | 113.0 | 0.0220 |
-| 6 | 1000 | 97.6 | 0.0210 |
-| 7 | 1000 | 84.4 | 0.0140 |
+| 0 | 1000 | 3954.1 | 0.0500 |
+| 1 | 1000 | 466.6 | 0.0660 |
+| 2 | 1000 | 225.1 | 0.0650 |
+| 3 | 1000 | 170.5 | 0.0350 |
+| 4 | 1000 | 119.5 | 0.0490 |
+| 5 | 1000 | 99.1 | 0.0270 |
+| 6 | 1000 | 91.7 | 0.0220 |
+| 7 | 1000 | 85.5 | 0.0220 |
 
 ## How to read
 
