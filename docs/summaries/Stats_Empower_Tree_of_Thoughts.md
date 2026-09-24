@@ -6,7 +6,24 @@
 
 相关：[`Soft_Weight_Burn_Logic.md`](./Soft_Weight_Burn_Logic.md) ·
 [`RSI_PO_Efficiency_Pivot.md`](./RSI_PO_Efficiency_Pivot.md) ·
-代码：`agod/tot_eff.py`
+代码：`agod/tot_eff.py` · `agod/feat_x.py`（X = edge∥stream）
+
+---
+
+## 0. 观测契约：X / Y / intermediate
+
+| 符号 | 本栈定义 | 不是什么 |
+|---|---|---|
+| **X** | **边特征 ∥ 流特征**（`hstack`，同行索引 / 时间序） | 不是单模态；不是 ToT 节点本身 |
+| **Y** | 该行下游标签（转化 / 流量 / …） | 不是思维中间量 |
+| **intermediate** | **策略 Thought** = `{adapt, α, freeze, rank_eff, mse_eff, flops, burn}` | **≠ Ŷ**（不把预测当树节点） |
+
+构建：`agod.feat_x.concat_edge_stream(X_edge, X_stream, y=…)` → `FeatBlocks`；  
+ToT 挂载：`tot_with_observation(blocks, gate_duty=…)`。
+
+边块：UI / 图谱边表（TencentGR `e_*`/`u_*`/`i_*` 等）。  
+流块：时间序 pack（metro / stocks / pm25 / waymo_proxy…）。  
+行对齐由调用方按 `e_last_ts` / pack 时间预对齐；concat 只做共同前缀截断。
 
 ---
 
@@ -152,5 +169,6 @@ freeze 支路：electricity 进绿区留下；synthetic 标 conditional_pareto �
 
 ## 9. 一句话
 
+> **X = 边∥流；Y = 标签；树节点 = 策略 Thought（≠Ŷ）。**  
 > **ToT 负责想分叉；rank_eff / mse_eff / burn / duty 负责谁留下。**  
 > 排序好只够把枝留在「分流」层；下游变好才允许烧软权重；算力由 duty×refit 记账，与 α 无关。

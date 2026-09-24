@@ -2,11 +2,13 @@
 
 Statistical empowerment (not LLM self-scores)
 ---------------------------------------------
+- Observation: X = edge ∥ stream (see ``agod.feat_x``); Y = target
 - Expand: adapt ∈ {ref, probe, refit} × alpha ∈ {None, 0.5, 1/3} × freeze?
 - Value:  rank_eff / mse_eff / expected_flops (from scorecards)
 - Prune:  soft_burn decisions + budget + conditional Pareto
 
-Thought = a policy node; V = scorecard metrics; prune = burn/Pareto/budget.
+Thought = a *policy* node (intermediate ≠ Ŷ); V = scorecard metrics;
+prune = burn/Pareto/budget.
 """
 from __future__ import annotations
 
@@ -15,6 +17,11 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
+from agod.feat_x import (
+    FeatBlocks,
+    concat_edge_stream,
+    tot_observation_spec,
+)
 from agod.po_eff import (
     budget_ratio_refit_vs_probe,
     expected_adapt_flops,
@@ -257,3 +264,23 @@ def tot_from_pack_metrics(
         mse_eff_cbrt=mse_refit,
         **kwargs,
     )
+
+
+def tot_with_observation(
+    blocks: FeatBlocks,
+    *,
+    gate_duty: float,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """Run policy ToT and attach the edge∥stream observation contract.
+
+    ``blocks`` is the board/stream design matrix; search still values
+    *policy* leaves (Thought), not row-wise Ŷ.
+    """
+    rep = beam_search_policy_tot(gate_duty=gate_duty, **kwargs)
+    rep["observation"] = {
+        **tot_observation_spec(),
+        **blocks.to_meta(),
+        "feature_names_head": blocks.names[:8],
+    }
+    return rep
