@@ -55,6 +55,7 @@ from run_standardize_mmd_fsds import (  # noqa: E402
     standardize,
     w1w2_candidate_columns,
 )
+from direction_report import build_direction_dict  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -472,6 +473,25 @@ def main() -> None:
             out["top_features"] = res["ranking"].head(args.select_k)["feature"].tolist()
         return out
 
+    tip_feats = ranking.head(args.select_k)["feature"].astype(str).tolist() if len(ranking) else []
+    # feature means on localized support for tip signs
+    X1 = standardize(sc, _matrix(g1_fs, cols)) if len(g1_fs) else np.zeros((0, len(cols)))
+    X2 = standardize(sc, _matrix(g2_fs, cols)) if len(g2_fs) else np.zeros((0, len(cols)))
+    feat_rows = []
+    for j, c in enumerate(cols):
+        m1 = float(X1[:, j].mean()) if len(X1) else 0.0
+        m2 = float(X2[:, j].mean()) if len(X2) else 0.0
+        feat_rows.append({"feature": c, "mean_W1": m1, "mean_W2": m2, "cmean_abs": abs(m2 - m1)})
+    feat_diag = pd.DataFrame(feat_rows)
+    direction = build_direction_dict(
+        g1_fs,
+        g2_fs,
+        tip_feats,
+        feat_diag=feat_diag,
+        y_col="y_convert",
+        extra={"support": "merchant_user", "k": {"merchant": len(mer_ids), "user": len(user_ids)}},
+    )
+
     blob = {
         "procedure": [
             "Standardization",
@@ -479,6 +499,7 @@ def main() -> None:
             "L2 user MMD (in merchants)",
             "L3 order shift (in users)",
             "FSDS on localized merchant×user edges",
+            "direction JSON: sign(Δȳ) + tip sign(δ_j) on K*",
         ],
         "merchant_col": args.merchant_col,
         "merchant_mapped_rate_W1": float(g1["merchant_mapped"].mean()),
@@ -487,10 +508,12 @@ def main() -> None:
         "n_edges": {"W1_loc": int(len(g1_fs)), "W2_loc": int(len(g2_fs))},
         "fsds_W1": _strip(res_w1),
         "fsds_W2": _strip(res_w2),
+        "direction": direction,
         "W1_meta": p1["meta"],
         "W2_meta": p2["meta"],
     }
     (args.out_dir / "summary.json").write_text(json.dumps(blob, indent=2, default=str))
+    print("direction:", direction.get("report"), flush=True)
 
     plot_three_step(
         mer[mer["selected"] == 1] if len(mer) else mer,

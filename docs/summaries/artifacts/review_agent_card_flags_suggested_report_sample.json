@@ -1,0 +1,20 @@
+{
+  "suggest_type": "review_card_gray_from_useful_rate",
+  "ts": "2026-09-23T08:41:00Z",
+  "disclaimer": "建议文件，不自动覆盖现网 flags；人工确认后 cp。",
+  "inputs": {
+    "n_labeled": 1,
+    "useful_rate": 1.0,
+    "current_sample_rate": 1.0,
+    "current_kill_switch": false,
+    "min_n": 5
+  },
+  "action": "hold",
+  "reason": "need_n>=5 (have 1)",
+  "suggested_flags": {
+    "enabled": true,
+    "sample_rate": 1.0,
+    "kill_switch": false,
+    "note": "审出加速灰度：kill_switch=true 时导出卡标记 disabled，不建议写入工单"
+  }
+}

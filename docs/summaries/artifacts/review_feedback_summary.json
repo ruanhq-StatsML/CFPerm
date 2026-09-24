@@ -1,0 +1,17 @@
+{
+  "n_feedback": 1,
+  "overall": {
+    "useful": 1,
+    "not_useful": 0,
+    "useful_rate": 1.0
+  },
+  "by_queue_bucket": [
+    {
+      "queue_bucket": "路径线性份额变动",
+      "useful": 1,
+      "not_useful": 0,
+      "useful_rate": 1.0
+    }
+  ],
+  "kpi_note": "人分钟代理：useful_rate↑ 且件均耗时可另接工单系统"
+}

@@ -1,0 +1,71 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,booktabs,geometry,enumitem,hyperref}
+\geometry{margin=1in}
+
+\title{\textbf{Continuous-time Gang / Cohort Discovery}\\
+\large Our recipe: OnlineRFPerm + MMD/PO/cmean Drill\\
+\large (Leiden $=$ upstream key only)}
+\author{TencentGR summary}
+\date{2026-09-21}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We map locked attribution to continuous-time \emph{gang / cohort}
+discovery: OnlineRFPerm on MMD/PO/cmean answers \emph{when};
+Leiden (or merchant) supplies entity keys; Drill
+rank-average(MMD,PO,cmean) answers \emph{which block};
+one FSDS + signed direction answers \emph{what tipped}.
+Communities are retrieval supports, not ATE subgroups;
+modularity $Q$ never enters the Drill gate.
+\end{abstract}
+
+\section{Pipeline}
+\[
+(u,i,t)\to G_t
+\xrightarrow{\text{optional Leiden}_\gamma}
+\texttt{community\_id}
+\xrightarrow{\text{OnlineRFPerm}}
+R_t
+\xrightarrow{R_t=1}
+\text{Drill}\to K^\star
+\to\text{one FSDS}.
+\]
+
+\section{Definition (non-causal)}
+Gang-support $K^\star_t=$ entities whose joint period/stream shift
+explains $\delta(S_t)$. Report
+\texttt{[Gang-support]} with $\mathrm{sign}(\Delta\bar y)$ and tip signs.
+Forbidden: calling $K^\star$ a causal collusion subgroup.
+
+\section{When}
+Same three streams $T_t^{\mathrm{MMD}}$, $T_t^{\mathrm{PO}}$,
+$T_t^{\mathrm{cmean}}$. Optional diagnostic
+$T_t^{\mathrm{comm}}=\mathrm{MMD}^2$ inside the current top community
+--- still not gated by $Q$.
+
+\section{Where}
+Fixed keys: merchant$\to$user$\to$order.
+Preferred structure keys: multi-resolution Leiden on slice / rolling
+graph; score communities by rank-average(cmean, MMD, PO); same
+Tail/CV/$R$/$\pi$ product. Leiden changes the key, not the lock.
+
+\section{Lifecycle}
+Appear / intensify / split-merge / fade, with cross-time community
+alignment (Jaccard/Hungarian or fixed rolling partition).
+Compare $\mathrm{eff}$ of merchant vs community at the same reject.
+
+\section{Data}
+\texttt{data/tencent\_subset} (Git LFS) on branch
+\texttt{cursor/graph-localize-elab-abce};
+\texttt{feature\_engineer}$\to$edges/grid;
+edge contract $(u,i,ts,action)$.
+
+\section{Takeaway}
+Continuous gang finding $=$ CT monitor + structure keys +
+MMD/PO/cmean Drill + one FSDS. Do not gate on modularity.
+
+\end{document}

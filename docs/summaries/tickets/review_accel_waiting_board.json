@@ -1,0 +1,26 @@
+{
+  "board_type": "review_accel_waiting",
+  "ts": "2026-09-23T18:14:06Z",
+  "status": "NOT_READY",
+  "ready": false,
+  "feature_freeze": true,
+  "blocker": "need_1_human_useful_or_not_useful",
+  "next_action": "把 review_agent_card.md 贴给 1 位真人审核，打 useful/not_useful（--reviewer 真名）",
+  "ood_timer": "paused_10min→gate_check_every_6h",
+  "n_human_feedback": 0,
+  "n_smoke_feedback": 1,
+  "do_now": [
+    "发 handoff §0 IM 一句话给审核同学",
+    "填 handoff 责任人 OWNER / 审核同学",
+    "等人打标后跑 check_review_accel_human_gate.py"
+  ],
+  "do_not": [
+    "继续 10min 堆 feature（已停）",
+    "新 tip 排序模型 / Web UI / 自动覆盖 flags / 新行业 overlay / ETA / 规则包"
+  ],
+  "links": {
+    "handoff": "docs/summaries/artifacts/review_accel_human_handoff.md",
+    "gate": "docs/summaries/artifacts/review_accel_human_gate.json",
+    "waiting_board": "docs/summaries/artifacts/review_accel_waiting_board.md"
+  }
+}
