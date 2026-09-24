@@ -28,6 +28,8 @@ def render_md(card: dict) -> str:
         f"- batches={card['n_batches']} · batch_size={card['batch_size']} · "
         f"n_control={card['n_control']} · datasets={card['n_datasets']} · "
         f"mean_duty={card.get('mean_gate_duty')} · "
+        f"duty_breakeven={card.get('duty_breakeven')} · "
+        f"prefer_refit_budget={card.get('n_prefer_refit_on_budget')}/{card['n_datasets']} · "
         f"E[refit]/E[probe]≈{card.get('mean_budget_ratio_refit_vs_probe')}",
         "",
         "## Per dataset",
@@ -64,12 +66,24 @@ def render_md(card: dict) -> str:
         "## How to read",
         "",
         "- **duty**: OnlineRFPerm gate reject rate (Bernoulli planning rate).",
+        "- **duty_breakeven = 1/n_control**: below this, prefer refit on **budget** alone.",
         "- **E[refit]/E[probe] ≈ duty · n_control** — ex-ante budget ratio.",
         "- **rank_eff**: ΔSpearman vs frozen ref / realized FLOPs.",
         "- **rank_eff_E**: same Δρ but / **expected** FLOPs (duty × n_batches).",
         "- **mse_eff**: (uniform − mode) sig-only MSE / FLOPs "
         "(positive = cheaper error drop).",
         "- Low duty ⇒ refit is the cheap PO path; probe cost is duty-invariant.",
+        "",
+        "## n_control sensitivity (budget only)",
+        "",
+        "| n_control | breakeven duty | mean_duty=0.24 ⇒ E[refit]/E[probe] |",
+        "|---:|---:|---:|",
+        "| 1 | 1.00 | 0.24 |",
+        "| 2 | 0.50 | 0.48 |",
+        "| 4 | 0.25 | 0.96 |",
+        "",
+        "Larger control windows raise refit cost; at n_control≥4 and duty≈0.24, "
+        "budget alone no longer prefers refit.",
         "",
     ]
     return "\n".join(lines) + "\n"

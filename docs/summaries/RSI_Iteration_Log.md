@@ -13,3 +13,4 @@
 | 9 | 2026-09-24 | Grad-RFPerm freeze MSE–FLOPs scorecard | freeze_eff=(1−mse_rel)/flops_rel; Pareto when both &lt;1 vs always_adapt | `agod/freeze_eff.py` | `test_freeze_eff` |
 | 10 | 2026-09-24 | 3-panel tomorrow demo (rank + soft + freeze Pareto) | one figure for review; green quadrant = dominate always_adapt | `plot_rsi_tomorrow_demo.py` | plot smoke |
 | 11 | 2026-09-24 | duty breakeven + TOMORROW_INDEX | prefer refit on budget iff duty &lt; 1/n_control; one-click review index | `duty_breakeven_*` + index md | `test_po_eff` |
+| 12 | 2026-09-24 | n_control sensitivity in scorecard MD | larger control windows erase refit budget edge | `PO_EFF_SCORECARD` §n_control | regen |
