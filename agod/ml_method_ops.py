@@ -18,6 +18,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score
 
 from agod.transfer_null import excess_auc, permute_auc
+from agod.claim_router import Evidence, harden_reading, route_ml_suite_claims
 
 
 def residualize_vs_confounder(
@@ -175,11 +176,14 @@ def _curve_reading(rows: Sequence[Mapping]) -> str:
     if len(ex) < 2:
         return "insufficient points"
     gain = float(ex[-1] - ex[0])
+    ev = Evidence(n_points=len(ex), excess_auc=float(ex[-1]) if ex else None)
     if abs(gain) < 0.02:
-        return "excess stable early — estimate not sample-hungry"
-    if gain > 0.05:
-        return "excess rises with n — need more eval mass before claiming skill"
-    return "excess softens / noisy with n — check rare labels / confounders"
+        proposed = "excess flat across prefixes — estimate may not be sample-hungry"
+    elif gain > 0.05:
+        proposed = "excess rises with n — need more eval mass before strong claims"
+    else:
+        proposed = "excess softens / noisy with n — check rare labels / confounders"
+    return harden_reading(proposed, ev)
 
 
 def page_hinkley_skill(
@@ -227,10 +231,19 @@ def page_hinkley_skill(
         "delta": float(delta),
         "n": len(xs),
         "mean_excess": float(np.mean(xs)),
-        "reading": (
-            f"skill-drop alarm at pair index {alarm_i}"
-            if alarm_i is not None
-            else "no sustained excess drop detected"
+        "reading": harden_reading(
+            (
+                f"PH statistic crossed threshold at pair index {alarm_i} "
+                "(skill-drop *candidate*; confirm before acting)"
+                if alarm_i is not None
+                else "no sustained excess drop detected on this series"
+            ),
+            Evidence(
+                ph_alarm=alarm_i is not None,
+                ph_series_len=len(xs),
+                excess_auc=float(np.mean(xs)),
+                n_points=len(xs),
+            ),
         ),
     }
 
@@ -276,7 +289,16 @@ def ml_method_suite(
         "learning_curve": curve,
         "partial_excess": partial,
         "page_hinkley": ph,
+        "claims": route_ml_suite_claims(
+            {
+                "excess_auc": ex,
+                "partial_excess": partial,
+                "learning_curve": curve,
+                "page_hinkley": ph,
+            }
+        ),
         "method_note": (
-            "composes with transfer_null; does not modify null / PO / soft_burn cores"
+            "composes with transfer_null; does not modify null / PO / soft_burn cores; "
+            "readings pass claim_router (overclaim check + fallback)"
         ),
     }

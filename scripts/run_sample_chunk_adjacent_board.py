@@ -465,18 +465,14 @@ def interpret_pack(
     mean_j: Optional[float],
     mean_excess: Optional[float] = None,
 ) -> str:
-    if mean_auc is None:
-        return "no pairs"
-    # Excess over label-permutation null — skill beyond chance (cross-pack)
-    if mean_excess is not None and np.isfinite(mean_excess) and mean_excess < 0.05:
-        return "AUC near null (little transferable skill beyond chance)"
-    if mean_auc < 0.65:
-        return "weak transfer (association does not travel)"
-    if mean_j is not None and mean_j >= 0.5:
-        return "strong transfer + stable top feats (persistent drivers)"
-    if mean_j is not None and mean_j < 0.35:
-        return "strong transfer but shifting drivers (regime / composition change)"
-    return "transfer holds; feature set partially stable"
+    from agod.claim_router import route_pack_interpretation
+
+    routed = route_pack_interpretation(
+        mean_auc=mean_auc,
+        mean_jaccard=mean_j,
+        mean_excess=mean_excess,
+    )
+    return str(routed["text"])
 
 
 def plot_dataset_board(name: str, by_chunk: Dict[int, List[Dict]], out_png: Path) -> None:

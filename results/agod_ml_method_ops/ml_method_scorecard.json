@@ -78,7 +78,7 @@
     "delta": 0.002,
     "n": 12,
     "mean_excess": 0.10083333333333334,
-    "reading": "skill-drop alarm at pair index 6"
+    "reading": "PH statistic crossed threshold at pair index 6 (skill-drop *candidate*; confirm before acting)"
   },
   "suite": {
     "auc_obs": 0.7008147480663814,
@@ -153,15 +153,223 @@
       "delta": 0.005,
       "n": 12,
       "mean_excess": 0.11582415542372743,
-      "reading": "skill-drop alarm at pair index 6"
+      "reading": "PH statistic crossed threshold at pair index 6 (skill-drop *candidate*; confirm before acting)"
     },
-    "method_note": "composes with transfer_null; does not modify null / PO / soft_burn cores"
+    "claims": {
+      "curve": {
+        "ok": true,
+        "level": "L1_DIAGNOSTIC",
+        "text": "excess softens / noisy with n \u2014 check rare labels / confounders",
+        "proposed": "excess softens / noisy with n \u2014 check rare labels / confounders",
+        "flags": [],
+        "fallback_applied": false,
+        "max_supported": "L2_EVIDENTIAL",
+        "evidence": {
+          "excess_auc": 0.19988986508472895,
+          "excess_partial": 0.22270406247653374,
+          "delta_excess": -0.02281419739180479,
+          "excess_ci_lo": null,
+          "rel_vs_uniform": null,
+          "burn": null,
+          "burn_decision": null,
+          "n_points": 5,
+          "ph_alarm": true,
+          "ph_series_len": 12,
+          "mean_auc": null,
+          "mean_jaccard": null,
+          "allow_action_hint": false
+        }
+      },
+      "page_hinkley": {
+        "ok": true,
+        "level": "L2_EVIDENTIAL",
+        "text": "PH statistic crossed threshold at pair index 6 (skill-drop *candidate*; confirm before acting)",
+        "proposed": "PH statistic crossed threshold at pair index 6 (skill-drop *candidate*; confirm before acting)",
+        "flags": [
+          {
+            "tag": "skill_word",
+            "need_level": "L2_EVIDENTIAL",
+            "pattern": "\\bskill\\b"
+          }
+        ],
+        "fallback_applied": false,
+        "max_supported": "L2_EVIDENTIAL",
+        "evidence": {
+          "excess_auc": 0.19988986508472895,
+          "excess_partial": 0.22270406247653374,
+          "delta_excess": -0.02281419739180479,
+          "excess_ci_lo": null,
+          "rel_vs_uniform": null,
+          "burn": null,
+          "burn_decision": null,
+          "n_points": 5,
+          "ph_alarm": true,
+          "ph_series_len": 12,
+          "mean_auc": null,
+          "mean_jaccard": null,
+          "allow_action_hint": false
+        }
+      },
+      "partial": {
+        "ok": true,
+        "level": "L1_DIAGNOSTIC",
+        "text": "delta_excess=-0.02281419739180479 (raw=0.19988986508472895, partial=0.22270406247653374)",
+        "proposed": "delta_excess=-0.02281419739180479 (raw=0.19988986508472895, partial=0.22270406247653374)",
+        "flags": [],
+        "fallback_applied": false,
+        "max_supported": "L2_EVIDENTIAL",
+        "evidence": {
+          "excess_auc": 0.19988986508472895,
+          "excess_partial": 0.22270406247653374,
+          "delta_excess": -0.02281419739180479,
+          "excess_ci_lo": null,
+          "rel_vs_uniform": null,
+          "burn": null,
+          "burn_decision": null,
+          "n_points": 5,
+          "ph_alarm": true,
+          "ph_series_len": 12,
+          "mean_auc": null,
+          "mean_jaccard": null,
+          "allow_action_hint": false
+        }
+      },
+      "headline": {
+        "ok": true,
+        "level": "L1_DIAGNOSTIC",
+        "text": "excess above null under current evidence \u2014 evidential only, not a driver ID",
+        "proposed": "excess above null under current evidence \u2014 evidential only, not a driver ID",
+        "flags": [],
+        "fallback_applied": false,
+        "max_supported": "L2_EVIDENTIAL",
+        "evidence": {
+          "excess_auc": 0.19988986508472895,
+          "excess_partial": 0.22270406247653374,
+          "delta_excess": -0.02281419739180479,
+          "excess_ci_lo": null,
+          "rel_vs_uniform": null,
+          "burn": null,
+          "burn_decision": null,
+          "n_points": 5,
+          "ph_alarm": true,
+          "ph_series_len": 12,
+          "mean_auc": null,
+          "mean_jaccard": null,
+          "allow_action_hint": false
+        }
+      }
+    },
+    "method_note": "composes with transfer_null; does not modify null / PO / soft_burn cores; readings pass claim_router (overclaim check + fallback)"
   },
   "effect_reading": {
     "volume_delta_excess": 0.3462703252032519,
     "real_delta_excess": -0.026108545468198407,
     "curve_reading": "excess softens / noisy with n \u2014 check rare labels / confounders",
-    "ph_reading": "skill-drop alarm at pair index 6",
-    "headline": "volume case: large \u0394excess (skill collapses after partialling); real case: \u0394excess small; PH alarms on injected skill drop; cores untouched."
+    "ph_reading": "PH statistic crossed threshold at pair index 6 (skill-drop *candidate*; confirm before acting)",
+    "claims": {
+      "curve": {
+        "ok": true,
+        "level": "L1_DIAGNOSTIC",
+        "text": "excess softens / noisy with n \u2014 check rare labels / confounders",
+        "proposed": "excess softens / noisy with n \u2014 check rare labels / confounders",
+        "flags": [],
+        "fallback_applied": false,
+        "max_supported": "L2_EVIDENTIAL",
+        "evidence": {
+          "excess_auc": 0.19988986508472895,
+          "excess_partial": 0.22270406247653374,
+          "delta_excess": -0.02281419739180479,
+          "excess_ci_lo": null,
+          "rel_vs_uniform": null,
+          "burn": null,
+          "burn_decision": null,
+          "n_points": 5,
+          "ph_alarm": true,
+          "ph_series_len": 12,
+          "mean_auc": null,
+          "mean_jaccard": null,
+          "allow_action_hint": false
+        }
+      },
+      "page_hinkley": {
+        "ok": true,
+        "level": "L2_EVIDENTIAL",
+        "text": "PH statistic crossed threshold at pair index 6 (skill-drop *candidate*; confirm before acting)",
+        "proposed": "PH statistic crossed threshold at pair index 6 (skill-drop *candidate*; confirm before acting)",
+        "flags": [
+          {
+            "tag": "skill_word",
+            "need_level": "L2_EVIDENTIAL",
+            "pattern": "\\bskill\\b"
+          }
+        ],
+        "fallback_applied": false,
+        "max_supported": "L2_EVIDENTIAL",
+        "evidence": {
+          "excess_auc": 0.19988986508472895,
+          "excess_partial": 0.22270406247653374,
+          "delta_excess": -0.02281419739180479,
+          "excess_ci_lo": null,
+          "rel_vs_uniform": null,
+          "burn": null,
+          "burn_decision": null,
+          "n_points": 5,
+          "ph_alarm": true,
+          "ph_series_len": 12,
+          "mean_auc": null,
+          "mean_jaccard": null,
+          "allow_action_hint": false
+        }
+      },
+      "partial": {
+        "ok": true,
+        "level": "L1_DIAGNOSTIC",
+        "text": "delta_excess=-0.02281419739180479 (raw=0.19988986508472895, partial=0.22270406247653374)",
+        "proposed": "delta_excess=-0.02281419739180479 (raw=0.19988986508472895, partial=0.22270406247653374)",
+        "flags": [],
+        "fallback_applied": false,
+        "max_supported": "L2_EVIDENTIAL",
+        "evidence": {
+          "excess_auc": 0.19988986508472895,
+          "excess_partial": 0.22270406247653374,
+          "delta_excess": -0.02281419739180479,
+          "excess_ci_lo": null,
+          "rel_vs_uniform": null,
+          "burn": null,
+          "burn_decision": null,
+          "n_points": 5,
+          "ph_alarm": true,
+          "ph_series_len": 12,
+          "mean_auc": null,
+          "mean_jaccard": null,
+          "allow_action_hint": false
+        }
+      },
+      "headline": {
+        "ok": true,
+        "level": "L1_DIAGNOSTIC",
+        "text": "excess above null under current evidence \u2014 evidential only, not a driver ID",
+        "proposed": "excess above null under current evidence \u2014 evidential only, not a driver ID",
+        "flags": [],
+        "fallback_applied": false,
+        "max_supported": "L2_EVIDENTIAL",
+        "evidence": {
+          "excess_auc": 0.19988986508472895,
+          "excess_partial": 0.22270406247653374,
+          "delta_excess": -0.02281419739180479,
+          "excess_ci_lo": null,
+          "rel_vs_uniform": null,
+          "burn": null,
+          "burn_decision": null,
+          "n_points": 5,
+          "ph_alarm": true,
+          "ph_series_len": 12,
+          "mean_auc": null,
+          "mean_jaccard": null,
+          "allow_action_hint": false
+        }
+      }
+    },
+    "headline": "excess above null under current evidence \u2014 evidential only, not a driver ID"
   }
 }

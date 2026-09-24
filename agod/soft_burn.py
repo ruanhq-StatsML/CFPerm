@@ -233,16 +233,41 @@ def summarize_burn_decisions(
     finite_shares = [s for s in shares if np.isfinite(s)]
     mean_w_share = float(np.mean(finite_shares)) if finite_shares else float("nan")
     share_s = f"{mean_w_share:.2e}" if np.isfinite(mean_w_share) else "n/a"
+    from agod.claim_router import ClaimLevel, Evidence, harden_reading
+
+    # Headline: factual counts OK; never imply ship/ROI. "beats" only if any burn.
+    proposed = (
+        f"burn soft IPTW on {n_burn}/{len(enriched)} packs; "
+        f"decisions={dict(counts)}; mean weighting_share={share_s}. "
+        "Default KEEP_UNIFORM / SOFTEN_ONLY — α is not a FLOPs knob."
+    )
+    # Use weakest pack evidence for gate (conservative)
+    rels = []
+    for c in enriched:
+        by = {m["mode"]: m for m in (c.get("modes") or [])}
+        for key in ("gated_sqrt", "gated_cbrt"):
+            r = (by.get(key) or {}).get("rel_vs_uniform")
+            if r is not None:
+                try:
+                    rels.append(float(r))
+                except Exception:
+                    pass
+    best_rel = min(rels) if rels else None
+    ev = Evidence(
+        burn=n_burn > 0,
+        burn_decision=("BURN_SQRT" if n_burn > 0 else "SOFTEN_ONLY"),
+        rel_vs_uniform=best_rel,
+        allow_action_hint=True,
+        n_points=len(enriched),
+    )
     return {
         "n_packs": len(enriched),
         "n_burn": n_burn,
         "decision_counts": dict(counts),
         "mean_weighting_share": mean_w_share,
         "cards": enriched,
-        "headline": (
-            f"burn soft IPTW on {n_burn}/{len(enriched)} packs; "
-            f"decisions={dict(counts)}; mean weighting_share={share_s}. "
-            "Default KEEP_UNIFORM / SOFTEN_ONLY — α is not a FLOPs knob."
+        "headline": harden_reading(
+            proposed, ev, requested_level=ClaimLevel.L3_ACTION_HINT
         ),
         "policy": (
             "1) Do not burn soft weights to save FLOPs (they don't). "

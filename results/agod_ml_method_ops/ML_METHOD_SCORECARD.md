@@ -1,6 +1,6 @@
 # ML method ops scorecard (20-min RSI)
 
-**Headline:** volume case: large Δexcess (skill collapses after partialling); real case: Δexcess small; PH alarms on injected skill drop; cores untouched.
+**Headline:** excess above null under current evidence — evidential only, not a driver ID
 
 Composes with `transfer_null` excess / null — **no core rewrite**.
 
@@ -20,7 +20,7 @@ Composes with `transfer_null` excess / null — **no core rewrite**.
 ## Page–Hinkley on excess stream
 
 - alarm: **True** (index=6)
-- reading: skill-drop alarm at pair index 6
+- reading: PH statistic crossed threshold at pair index 6 (skill-drop *candidate*; confirm before acting)
 
 ## Effect (what improved)
 
