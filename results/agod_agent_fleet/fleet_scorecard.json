@@ -1,0 +1,514 @@
+{
+  "even": {
+    "fairness": {
+      "n_agents": 180,
+      "n_cohorts": 10,
+      "gini_wip": 0.24285714282823134,
+      "hhi_headcount": 0.1388888888888889,
+      "hhi_wip": 0.1292517006733074,
+      "even_hhi_ref": 0.1,
+      "soft_cap_frac": 0.12,
+      "cohorts": [
+        {
+          "cohort": "antifraud",
+          "n_agents": 10,
+          "wip": 5,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.05555555555555555
+        },
+        {
+          "cohort": "board_stream",
+          "n_agents": 15,
+          "wip": 7,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.08333333333333333
+        },
+        {
+          "cohort": "cuped",
+          "n_agents": 10,
+          "wip": 5,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.05555555555555555
+        },
+        {
+          "cohort": "data_contract",
+          "n_agents": 15,
+          "wip": 7,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.08333333333333333
+        },
+        {
+          "cohort": "eta_gate",
+          "n_agents": 10,
+          "wip": 5,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.05555555555555555
+        },
+        {
+          "cohort": "flex_reserve",
+          "n_agents": 50,
+          "wip": 21,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.2777777777777778
+        },
+        {
+          "cohort": "gray_rollback",
+          "n_agents": 15,
+          "wip": 7,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.08333333333333333
+        },
+        {
+          "cohort": "localize_fsds",
+          "n_agents": 20,
+          "wip": 10,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.1111111111111111
+        },
+        {
+          "cohort": "review_accel",
+          "n_agents": 20,
+          "wip": 10,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.1111111111111111
+        },
+        {
+          "cohort": "roi_ops",
+          "n_agents": 15,
+          "wip": 7,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.08333333333333333
+        }
+      ]
+    },
+    "fairness_after_tick": {
+      "n_agents": 180,
+      "n_cohorts": 10,
+      "gini_wip": -2.220446049250313e-16,
+      "hhi_headcount": 0.1388888888888889,
+      "hhi_wip": 0.09999999999999998,
+      "even_hhi_ref": 0.1,
+      "soft_cap_frac": 0.12,
+      "cohorts": [
+        {
+          "cohort": "antifraud",
+          "n_agents": 10,
+          "wip": 0,
+          "mean_score": 1.5,
+          "n_shipped": 5,
+          "share_agents": 0.05555555555555555
+        },
+        {
+          "cohort": "board_stream",
+          "n_agents": 15,
+          "wip": 0,
+          "mean_score": 0.6666666666666666,
+          "n_shipped": 7,
+          "share_agents": 0.08333333333333333
+        },
+        {
+          "cohort": "cuped",
+          "n_agents": 10,
+          "wip": 0,
+          "mean_score": 1.5,
+          "n_shipped": 5,
+          "share_agents": 0.05555555555555555
+        },
+        {
+          "cohort": "data_contract",
+          "n_agents": 15,
+          "wip": 0,
+          "mean_score": 0.8,
+          "n_shipped": 7,
+          "share_agents": 0.08333333333333333
+        },
+        {
+          "cohort": "eta_gate",
+          "n_agents": 10,
+          "wip": 0,
+          "mean_score": 0.4,
+          "n_shipped": 5,
+          "share_agents": 0.05555555555555555
+        },
+        {
+          "cohort": "flex_reserve",
+          "n_agents": 50,
+          "wip": 0,
+          "mean_score": 0.62,
+          "n_shipped": 21,
+          "share_agents": 0.2777777777777778
+        },
+        {
+          "cohort": "gray_rollback",
+          "n_agents": 15,
+          "wip": 0,
+          "mean_score": 0.6666666666666666,
+          "n_shipped": 7,
+          "share_agents": 0.08333333333333333
+        },
+        {
+          "cohort": "localize_fsds",
+          "n_agents": 20,
+          "wip": 0,
+          "mean_score": 0.85,
+          "n_shipped": 10,
+          "share_agents": 0.1111111111111111
+        },
+        {
+          "cohort": "review_accel",
+          "n_agents": 20,
+          "wip": 0,
+          "mean_score": 0.7,
+          "n_shipped": 10,
+          "share_agents": 0.1111111111111111
+        },
+        {
+          "cohort": "roi_ops",
+          "n_agents": 15,
+          "wip": 0,
+          "mean_score": 0.8,
+          "n_shipped": 7,
+          "share_agents": 0.08333333333333333
+        }
+      ]
+    },
+    "tick": {
+      "tick": 1,
+      "fraud": {
+        "rate": 0.525,
+        "lift_vs_baseline": 0.17500000000000004,
+        "n": 80.0,
+        "baseline": 0.35
+      },
+      "cuped": {
+        "var_y": 0.9391230203858677,
+        "var_cuped": 0.5752429288242472,
+        "ratio": 0.6125320286450766,
+        "theta": 0.595708508125012,
+        "n": 500.0
+      },
+      "fairness_before": {
+        "gini_wip": 0.24285714282823134,
+        "hhi_wip": 0.1292517006733074,
+        "hhi_headcount": 0.1388888888888889
+      },
+      "fairness_after": {
+        "gini_wip": -2.220446049250313e-16,
+        "hhi_wip": 0.09999999999999998,
+        "hhi_headcount": 0.1388888888888889
+      },
+      "reflection": {
+        "action": "keep_specialty_mix",
+        "reason": "fraud lift\u22650, CUPED ratio\u22641, WIP gini ok \u2014 average force holds",
+        "underserved": [
+          "eta_gate",
+          "board_stream",
+          "gray_rollback"
+        ]
+      },
+      "mean_score": 0.7777777777777778
+    },
+    "mean_score": 0.7777777777777778,
+    "cohort_counts": {
+      "antifraud": 10,
+      "cuped": 10,
+      "review_accel": 20,
+      "localize_fsds": 20,
+      "board_stream": 15,
+      "eta_gate": 10,
+      "gray_rollback": 15,
+      "data_contract": 15,
+      "roi_ops": 15,
+      "flex_reserve": 50
+    }
+  },
+  "pile_on": {
+    "fairness": {
+      "n_agents": 180,
+      "n_cohorts": 10,
+      "gini_wip": 0.6337016574235523,
+      "hhi_headcount": 0.4298765432098766,
+      "hhi_wip": 0.48847715266914066,
+      "even_hhi_ref": 0.1,
+      "soft_cap_frac": 0.12,
+      "cohorts": [
+        {
+          "cohort": "antifraud",
+          "n_agents": 116,
+          "wip": 125,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.6444444444444445
+        },
+        {
+          "cohort": "board_stream",
+          "n_agents": 10,
+          "wip": 10,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.05555555555555555
+        },
+        {
+          "cohort": "cuped",
+          "n_agents": 8,
+          "wip": 7,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.044444444444444446
+        },
+        {
+          "cohort": "data_contract",
+          "n_agents": 7,
+          "wip": 7,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.03888888888888889
+        },
+        {
+          "cohort": "eta_gate",
+          "n_agents": 6,
+          "wip": 7,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.03333333333333333
+        },
+        {
+          "cohort": "flex_reserve",
+          "n_agents": 6,
+          "wip": 3,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.03333333333333333
+        },
+        {
+          "cohort": "gray_rollback",
+          "n_agents": 7,
+          "wip": 6,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.03888888888888889
+        },
+        {
+          "cohort": "localize_fsds",
+          "n_agents": 5,
+          "wip": 6,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.027777777777777776
+        },
+        {
+          "cohort": "review_accel",
+          "n_agents": 7,
+          "wip": 5,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.03888888888888889
+        },
+        {
+          "cohort": "roi_ops",
+          "n_agents": 8,
+          "wip": 5,
+          "mean_score": 0.0,
+          "n_shipped": 0,
+          "share_agents": 0.044444444444444446
+        }
+      ]
+    },
+    "fairness_after_tick": {
+      "n_agents": 180,
+      "n_cohorts": 10,
+      "gini_wip": -2.220446049250313e-16,
+      "hhi_headcount": 0.43783950617283957,
+      "hhi_wip": 0.09999999999999998,
+      "even_hhi_ref": 0.1,
+      "soft_cap_frac": 0.12,
+      "cohorts": [
+        {
+          "cohort": "antifraud",
+          "n_agents": 117,
+          "wip": 0,
+          "mean_score": 0.6752136752136753,
+          "n_shipped": 79,
+          "share_agents": 0.65
+        },
+        {
+          "cohort": "board_stream",
+          "n_agents": 10,
+          "wip": 0,
+          "mean_score": 0.7,
+          "n_shipped": 7,
+          "share_agents": 0.05555555555555555
+        },
+        {
+          "cohort": "cuped",
+          "n_agents": 8,
+          "wip": 0,
+          "mean_score": 1.875,
+          "n_shipped": 5,
+          "share_agents": 0.044444444444444446
+        },
+        {
+          "cohort": "data_contract",
+          "n_agents": 7,
+          "wip": 0,
+          "mean_score": 1.0,
+          "n_shipped": 4,
+          "share_agents": 0.03888888888888889
+        },
+        {
+          "cohort": "eta_gate",
+          "n_agents": 6,
+          "wip": 0,
+          "mean_score": 1.0,
+          "n_shipped": 4,
+          "share_agents": 0.03333333333333333
+        },
+        {
+          "cohort": "flex_reserve",
+          "n_agents": 1,
+          "wip": 0,
+          "mean_score": 2.0,
+          "n_shipped": 1,
+          "share_agents": 0.005555555555555556
+        },
+        {
+          "cohort": "gray_rollback",
+          "n_agents": 7,
+          "wip": 0,
+          "mean_score": 0.8571428571428571,
+          "n_shipped": 5,
+          "share_agents": 0.03888888888888889
+        },
+        {
+          "cohort": "localize_fsds",
+          "n_agents": 7,
+          "wip": 0,
+          "mean_score": 0.5714285714285714,
+          "n_shipped": 4,
+          "share_agents": 0.03888888888888889
+        },
+        {
+          "cohort": "review_accel",
+          "n_agents": 7,
+          "wip": 0,
+          "mean_score": 1.0,
+          "n_shipped": 4,
+          "share_agents": 0.03888888888888889
+        },
+        {
+          "cohort": "roi_ops",
+          "n_agents": 10,
+          "wip": 0,
+          "mean_score": 0.5,
+          "n_shipped": 3,
+          "share_agents": 0.05555555555555555
+        }
+      ]
+    },
+    "tick": {
+      "tick": 1,
+      "fraud": {
+        "rate": 0.325,
+        "lift_vs_baseline": -0.024999999999999967,
+        "n": 80.0,
+        "baseline": 0.35
+      },
+      "cuped": {
+        "var_y": 0.9391230203858677,
+        "var_cuped": 0.5752429288242472,
+        "ratio": 0.6125320286450766,
+        "theta": 0.595708508125012,
+        "n": 500.0
+      },
+      "fairness_before": {
+        "gini_wip": 0.6337016574235523,
+        "hhi_wip": 0.48847715266914066,
+        "hhi_headcount": 0.4298765432098766
+      },
+      "fairness_after": {
+        "gini_wip": -2.220446049250313e-16,
+        "hhi_wip": 0.09999999999999998,
+        "hhi_headcount": 0.4298765432098766
+      },
+      "reflection": {
+        "action": "rehome_flex_to_underserved",
+        "reason": "feedback or concentration asks for rebalance toward low-score specialties",
+        "underserved": [
+          "localize_fsds",
+          "roi_ops",
+          "antifraud"
+        ],
+        "crowded": null
+      },
+      "mean_score": 0.7666666666666667
+    },
+    "mean_score": 0.7666666666666667,
+    "cohort_counts": {
+      "antifraud": 117,
+      "roi_ops": 10,
+      "gray_rollback": 7,
+      "eta_gate": 6,
+      "localize_fsds": 7,
+      "board_stream": 10,
+      "review_accel": 7,
+      "data_contract": 7,
+      "cuped": 8,
+      "flex_reserve": 1
+    }
+  },
+  "verdict": "even-force lower headcount HHI (0.139<0.430); even-force lower WIP Gini; even-force mean commercial score \u2265 pile-on; antifraud useful lift>0 under specialty-10; CUPED var ratio=0.61<1",
+  "multi_tick_cl": {
+    "n_ticks": 5,
+    "actions": [
+      "rehome_flex_to_underserved",
+      "rehome_flex_to_underserved",
+      "keep_specialty_mix",
+      "keep_specialty_mix",
+      "keep_specialty_mix"
+    ],
+    "mean_scores": [
+      0.6944444444444444,
+      1.1888888888888889,
+      1.3833333333333333,
+      1.5888888888888888,
+      1.7
+    ],
+    "cuped_ratios": [
+      0.9657493377718093,
+      0.997565612241602,
+      0.6574876703658095,
+      0.7559891797527903,
+      0.7110074747382394
+    ],
+    "fraud_lifts": [
+      -0.09999999999999998,
+      -0.19999999999999998,
+      0.31666666666666665,
+      0.21666666666666667,
+      0.2666666666666667
+    ],
+    "reading": "early weak feedback \u2192 rehome_flex_to_underserved; later fraud lift\u2191 / CUPED ratio\u2193 \u2192 keep_specialty_mix",
+    "final_cohort_counts": {
+      "antifraud": 14,
+      "cuped": 10,
+      "review_accel": 20,
+      "localize_fsds": 21,
+      "board_stream": 16,
+      "eta_gate": 12,
+      "gray_rollback": 17,
+      "data_contract": 15,
+      "roi_ops": 15,
+      "flex_reserve": 40
+    }
+  }
+}

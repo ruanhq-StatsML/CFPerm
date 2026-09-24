@@ -2,7 +2,8 @@
 
 > 节奏：**每 10 分钟一轮** — 自我更新 · 自我修复 · 自我迭代。  
 > 视角：**模型与统计方法**（null、校准、FLOPs、流式探针、多模态 OOD、PO-risk），  
-> **不**强制挂广告 S1/S2/S3。发散找机会；持续轮次后再 polish。
+> **不**强制挂广告 S1/S2/S3。发散找机会；持续轮次后再 polish。  
+> **场景换轨（Iter22）：** 连续学习赋能 ~180 agent 均力 — 见 [`RSI_Agent_Fleet_CL.md`](./RSI_Agent_Fleet_CL.md)。
 
 账本：[`RSI_Iteration_Log.md`](./RSI_Iteration_Log.md)
 
