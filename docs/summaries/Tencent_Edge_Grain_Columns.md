@@ -161,3 +161,5 @@ PYTHONPATH=. python3 scripts/export_tencent_edge_grain_schema.py
 写出 `results/sample_chunk_adjacent_board/edge_grain_schema.json`。
 
 相关：[`Ad_Funnel_Scenario_Board.md`](./Ad_Funnel_Scenario_Board.md)
+
+相关子集分析：[`Subset_Pairwise_Analysis.md`](./Subset_Pairwise_Analysis.md)
