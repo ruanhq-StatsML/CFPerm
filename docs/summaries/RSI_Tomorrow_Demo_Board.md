@@ -12,10 +12,12 @@
 | 1 | **排序技能 ≠ IPTW 收益** | refit 赢 rank_eff 6/6，但多数 pack mse_eff&lt;0 |
 | 2 | **低 duty 时 refit 更便宜** | mean duty≈0.24 ⇒ E[refit]/E[probe]≈0.24 |
 | 3 | **√ vs ∛ 同 FLOPs** | 软权重是 bias–variance 旋钮；∛≤√ 多数 pack，但 **uniform 仍常最优** |
+| 4 | **Freeze 可 Pareto** | electricity：~0.86× MSE @ ~0.7× FLOPs；synthetic 省算力但 MSE↑ |
 
 产物：
 - [`../agod_po_eff/PO_EFF_SCORECARD.md`](../../results/agod_po_eff/PO_EFF_SCORECARD.md)
 - [`../agod_po_power_eff/PO_POWER_EFF.md`](../../results/agod_po_power_eff/PO_POWER_EFF.md)
+- [`../agod_freeze_eff/FREEZE_EFF.md`](../../results/agod_freeze_eff/FREEZE_EFF.md)
 - **Demo 图：** [`../agod_po_eff/rsi_tomorrow_demo.png`](../../results/agod_po_eff/rsi_tomorrow_demo.png)
 
 ### P3 注记（image-OOD）

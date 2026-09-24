@@ -41,7 +41,7 @@ PYTHONPATH=. python3 scripts/run_po_eff_scorecard.py \
 | P1 | gate duty × flops → 期望适应预算 | **Iter6 落地** |
 | P2 | cbrt vs sqrt IPTW 的 mse_eff | **Iter7 落地**（同 FLOPs，软权重） |
 | P3 | image-OOD bench 接入同一 FLOPs 尺 | **关掉**：PO 不适合 image-OOD（负结果）；省 FLOPs |
-| P4 | Grad-RFPerm freeze 闭环 MSE–FLOPs 并表 | backlog |
+| P4 | Grad-RFPerm freeze 闭环 MSE–FLOPs 并表 | **Iter9 落地** |
 | P5 | Tomorrow demo 双栏图 | **Iter8 落地** |
 
 ### P1 读法
