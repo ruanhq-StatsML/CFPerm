@@ -5,7 +5,8 @@
 
 相关：[`Board_Reason_Codes.md`](./Board_Reason_Codes.md) ·
 [`Business_Scenarios_Brush_vs_Inject.md`](./Business_Scenarios_Brush_vs_Inject.md) ·
-[`Graph_CT_AD_Interface.md`](./Graph_CT_AD_Interface.md)
+[`Graph_CT_AD_Interface.md`](./Graph_CT_AD_Interface.md) ·
+**投放读法主文**：[`Ad_Business_Logic.md`](./Ad_Business_Logic.md)
 
 ---
 
