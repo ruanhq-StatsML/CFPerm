@@ -82,3 +82,12 @@ def test_binary_y_rare_positive():
     )
     assert len(rows) >= 2
     assert all(r["y_threshold"] == 0.5 for r in rows)
+    assert all("logreg_auc" in r and "fsds_cmean_jaccard" in r for r in rows)
+
+
+def test_ship_gate_never_promotes():
+    from scripts.run_sample_chunk_adjacent_board import ship_gate_from_board
+
+    g = ship_gate_from_board([])
+    assert g["promote_HGB_to_production"] is False
+    assert "true_driver" in g["what_needs_other_tools"]

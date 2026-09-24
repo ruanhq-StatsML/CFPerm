@@ -39,7 +39,8 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import SelectKBest, VarianceThreshold, f_classif
 from sklearn.ensemble import HistGradientBoostingClassifier
-from sklearn.metrics import roc_auc_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import brier_score_loss, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -132,6 +133,58 @@ def mean_jaccard(rows: List[Dict[str, Any]]) -> Optional[float]:
     return float(np.mean(vals)) if vals else None
 
 
+def mean_key(rows: List[Dict[str, Any]], key: str) -> Optional[float]:
+    vals = [r[key] for r in rows if r.get(key) is not None and np.isfinite(r[key])]
+    return float(np.mean(vals)) if vals else None
+
+
+def ops_content_gap(report: Dict[str, Any], chunk: str) -> Optional[Dict[str, Any]]:
+    """Judgment metric: how much of ops transfer is pure volume."""
+    ops = report.get("datasets", {}).get("tencent_gr", {})
+    content = report.get("datasets", {}).get("tencent_gr_content", {})
+    if not ops.get("ok") or not content.get("ok"):
+        return None
+    ob = ops["by_chunk"].get(chunk)
+    cb = content["by_chunk"].get(chunk)
+    if not ob or not cb or ob.get("mean_auc") is None or cb.get("mean_auc") is None:
+        return None
+    return {
+        "chunk": int(chunk),
+        "ops_auc": ob["mean_auc"],
+        "content_auc": cb["mean_auc"],
+        "auc_gap_ops_minus_content": float(ob["mean_auc"] - cb["mean_auc"]),
+        "ops_top0": (ob["rows"][0]["top_fsds"][:3] if ob.get("rows") else []),
+        "content_top0": (cb["rows"][0]["top_fsds"][:3] if cb.get("rows") else []),
+        "reading": (
+            "volume explains most transfer"
+            if ob["mean_auc"] - cb["mean_auc"] >= 0.1
+            else "non-volume feats still carry substantial transfer"
+        ),
+    }
+
+
+def ship_gate_from_board(cross_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Explicit: this board alone never greenlights HGB to production."""
+    return {
+        "promote_HGB_to_production": False,
+        "reason": (
+            "Adjacent-chunk transfer probe ≠ online scorer. Missing: label delay, "
+            "calibration under serve skew, Acc/latency budget, abstain/rollback, "
+            "and causal/PO checks for 'true drivers'."
+        ),
+        "what_board_can_greenlight": [
+            "investigate a feature family (ops intensity vs content/credit)",
+            "flag weak-transfer packs (e.g. DiffusionDB tokens for NSFW)",
+            "compare grains N=1000 vs 2000 as business windows",
+        ],
+        "what_needs_other_tools": {
+            "true_driver": "ablation / PO-risk / randomized or quasi-exp — not AUC",
+            "ship_model": "holdout Acc + calibration + cost/latency + gray rollback",
+        },
+        "cross_pack_snapshot": cross_rows,
+    }
+
+
 def fs_adjacent(
     X: np.ndarray,
     y: np.ndarray,
@@ -181,8 +234,21 @@ def fs_adjacent(
             max_depth=3, learning_rate=0.1, max_iter=60, random_state=seed
         )
         hgb.fit(Xt, yb0)
-        proba = hgb.predict_proba(Xte)[:, 1]
-        auc = float(roc_auc_score(yb1, proba))
+        proba_h = hgb.predict_proba(Xte)[:, 1]
+        auc_h = float(roc_auc_score(yb1, proba_h))
+        # Second probe: same selected X, linear — if both transfer, not an HGB quirk
+        lr = LogisticRegression(max_iter=200, random_state=seed)
+        try:
+            lr.fit(Xt, yb0)
+            proba_l = lr.predict_proba(Xte)[:, 1]
+            auc_l = float(roc_auc_score(yb1, proba_l))
+            brier_l = float(brier_score_loss(yb1, proba_l))
+        except Exception:
+            auc_l, brier_l = float("nan"), float("nan")
+        try:
+            brier_h = float(brier_score_loss(yb1, proba_h))
+        except Exception:
+            brier_h = float("nan")
         var_mask = pre.named_steps["var"].get_support()
         cols_var = [c for c, m in zip(feat_names, var_mask) if m]
         ranking = (
@@ -192,6 +258,7 @@ def fs_adjacent(
         )
         dmu = X[m1].mean(0) - X[m0].mean(0)
         top_cmean = [feat_names[i] for i in np.argsort(-np.abs(dmu))[:5]]
+        top_fsds = ranking["feature"].tolist()
         rows.append(
             {
                 "t0": int(t0),
@@ -202,9 +269,13 @@ def fs_adjacent(
                 "y_mean_1": float(np.mean(y1)),
                 "delta_Y": float(np.mean(y1) - np.mean(y0)),
                 "y_threshold": thr,
-                "hgb_auc": auc,
-                "top_fsds": ranking["feature"].tolist(),
+                "hgb_auc": auc_h,
+                "logreg_auc": auc_l,
+                "hgb_brier": brier_h,
+                "logreg_brier": brier_l,
+                "top_fsds": top_fsds,
                 "top_cmean": top_cmean,
+                "fsds_cmean_jaccard": jaccard(top_fsds, top_cmean),
             }
         )
     return annotate_stability(rows)
@@ -382,6 +453,8 @@ def plot_dataset_board(name: str, by_chunk: Dict[int, List[Dict]], out_png: Path
         ax.bar(xs - 0.2, dys, width=0.25, color="#4C78A8", label="ΔȲ")
         ax2 = ax.twinx()
         ax2.plot(xs, aucs, "o-", color="#F58518", ms=4, label="HGB AUC")
+        lr = [r.get("logreg_auc", np.nan) for r in rows]
+        ax2.plot(xs, lr, "^:", color="#B279A2", ms=4, label="LogReg AUC")
         ax2.plot(xs, jacs, "s--", color="#54A24B", ms=4, label="Jaccard top5")
         ax.axhline(0, color="gray", lw=0.7)
         ax.set_title(f"every {cs} samples")
@@ -389,7 +462,7 @@ def plot_dataset_board(name: str, by_chunk: Dict[int, List[Dict]], out_png: Path
         ax.set_ylabel("ΔȲ")
         ax2.set_ylabel("AUC / Jaccard")
         ax2.set_ylim(0, 1.05)
-    fig.suptitle(f"{name}: transfer probe (AUC) + driver stability (Jaccard)", y=1.02)
+    fig.suptitle(f"{name}: dual probe (HGB/LogReg) + Jaccard", y=1.02)
     fig.tight_layout()
     fig.savefig(out_png, dpi=120, bbox_inches="tight")
     plt.close(fig)
@@ -456,14 +529,7 @@ def main() -> None:
         "datasets": {},
     }
 
-    md = [
-        "# Sample-chunk adjacent boards (multi-dataset)",
-        "",
-        report["note"],
-        "",
-        "See `docs/summaries/Sample_Chunk_Adjacent_Board.md` for the full justify.",
-        "",
-    ]
+    body_md: List[str] = []
     cross_rows: List[Dict[str, Any]] = []
 
     for ds in datasets:
@@ -499,15 +565,21 @@ def main() -> None:
         plot_dataset_board(ds, by_chunk, png)
         pack_blk: Dict[str, Any] = {}
         for cs, rows in by_chunk.items():
-            m_auc = float(np.mean([r["hgb_auc"] for r in rows])) if rows else None
-            m_dy = float(np.mean([r["delta_Y"] for r in rows])) if rows else None
+            m_auc = mean_key(rows, "hgb_auc")
+            m_lr = mean_key(rows, "logreg_auc")
+            m_dy = mean_key(rows, "delta_Y")
             m_j = mean_jaccard(rows)
+            m_fc = mean_key(rows, "fsds_cmean_jaccard")
+            m_bh = mean_key(rows, "hgb_brier")
             reading = interpret_pack(m_auc, m_j)
             pack_blk[str(cs)] = {
                 "n_pairs": len(rows),
                 "mean_delta_Y": m_dy,
                 "mean_auc": m_auc,
+                "mean_logreg_auc": m_lr,
+                "mean_hgb_brier": m_bh,
                 "mean_jaccard_top": m_j,
+                "mean_fsds_cmean_jaccard": m_fc,
                 "reading": reading,
                 "rows": rows,
             }
@@ -517,8 +589,10 @@ def main() -> None:
                         "dataset": ds,
                         "chunk": cs,
                         "mean_auc": m_auc,
+                        "mean_logreg_auc": m_lr,
                         "mean_delta_Y": m_dy,
                         "mean_jaccard": m_j,
+                        "mean_fsds_cmean_jaccard": m_fc,
                         "reading": reading,
                     }
                 )
@@ -528,7 +602,7 @@ def main() -> None:
             "by_chunk": pack_blk,
             "board_png": str(png.name),
         }
-        md += [
+        body_md += [
             f"## {ds}",
             f"- meta: `{meta}`",
             f"- ![{ds}]({png.name})",
@@ -536,15 +610,18 @@ def main() -> None:
         ]
         for cs, rows in by_chunk.items():
             blk = pack_blk[str(cs)]
-            md += [
+            body_md += [
                 f"### every {cs} samples",
                 (
-                    f"- pairs={len(rows)} · mean AUC={blk['mean_auc']} · "
-                    f"mean Jaccard={blk['mean_jaccard_top']} · **{blk['reading']}**"
+                    f"- pairs={len(rows)} · HGB={blk['mean_auc']} · "
+                    f"LogReg={blk['mean_logreg_auc']} · "
+                    f"Jaccard={blk['mean_jaccard_top']} · "
+                    f"FSDS∩cmean={blk['mean_fsds_cmean_jaccard']} · "
+                    f"**{blk['reading']}**"
                 ),
                 "",
-                "| t0→t1 | n0/n1 | ΔȲ | AUC | Jaccard | top_fsds |",
-                "|---|---|---:|---:|---:|---|",
+                "| t0→t1 | ΔȲ | HGB | LogReg | Jac | F∩c | top_fsds |",
+                "|---|---:|---:|---:|---:|---:|---|",
             ]
             for r in rows[:8]:
                 jac = (
@@ -552,17 +629,24 @@ def main() -> None:
                     if r.get("jaccard_top") is not None
                     else "—"
                 )
-                md.append(
-                    f"| {r['t0']}→{r['t1']} | {r['n0']}/{r['n1']} | "
-                    f"{r['delta_Y']:.4f} | {r['hgb_auc']:.3f} | {jac} | "
+                body_md.append(
+                    f"| {r['t0']}→{r['t1']} | {r['delta_Y']:.4f} | "
+                    f"{r['hgb_auc']:.3f} | {r['logreg_auc']:.3f} | {jac} | "
+                    f"{r['fsds_cmean_jaccard']:.2f} | "
                     f"{', '.join(r['top_fsds'][:3])} |"
                 )
-            md.append("")
+            body_md.append("")
 
     cross_png = args.out / "cross_pack_transfer.png"
     plot_cross_pack(cross_rows, cross_png)
     report["cross_pack"] = cross_rows
     report["cross_pack_png"] = cross_png.name
+    report["ops_content_gap"] = [
+        g
+        for g in (ops_content_gap(report, str(cs)) for cs in chunk_sizes)
+        if g is not None
+    ]
+    report["ship_gate"] = ship_gate_from_board(cross_rows)
     report["sec"] = float(time.time() - t0)
 
     md = [
@@ -572,17 +656,43 @@ def main() -> None:
         "",
         f"![cross]({cross_png.name})",
         "",
-        "| pack@N | mean AUC | |ΔȲ| | Jaccard | reading |",
-        "|---|---:|---:|---:|---|",
-    ] + [
-        (
-            f"| {r['dataset']}@{r['chunk']} | {r['mean_auc']:.3f} | "
+        "**ship_gate:** `promote_HGB_to_production=false` — board alone never ships.",
+        "",
+        "| pack@N | HGB | LogReg | |ΔȲ| | Jac | F∩c | reading |",
+        "|---|---:|---:|---:|---:|---:|---|",
+    ]
+    for r in cross_rows:
+        def _fmt(x: Optional[float]) -> str:
+            return f"{x:.3f}" if x is not None and np.isfinite(x) else "—"
+
+        def _fmt2(x: Optional[float]) -> str:
+            return f"{x:.2f}" if x is not None and np.isfinite(x) else "—"
+
+        md.append(
+            f"| {r['dataset']}@{r['chunk']} | {_fmt(r['mean_auc'])} | "
+            f"{_fmt(r['mean_logreg_auc'])} | "
             f"{abs(r['mean_delta_Y'] or 0):.4g} | "
-            f"{(r['mean_jaccard'] if r['mean_jaccard'] is not None else float('nan')):.2f} | "
+            f"{_fmt2(r['mean_jaccard'])} | "
+            f"{_fmt2(r['mean_fsds_cmean_jaccard'])} | "
             f"{r['reading']} |"
         )
-        for r in cross_rows
-    ] + ["", "---", ""] + md[5:]
+    md += ["", "### ops − content gap (Tencent)", ""]
+    if report["ops_content_gap"]:
+        md += [
+            "| N | ops AUC | content AUC | gap | reading |",
+            "|---:|---:|---:|---:|---|",
+        ]
+        for g in report["ops_content_gap"]:
+            md.append(
+                f"| {g['chunk']} | {g['ops_auc']:.3f} | {g['content_auc']:.3f} | "
+                f"{g['auc_gap_ops_minus_content']:.3f} | {g['reading']} |"
+            )
+            md.append(
+                f"- tops ops `{g['ops_top0']}` vs content `{g['content_top0']}`"
+            )
+    else:
+        md.append("_run both `tencent_gr` and `tencent_gr_content` to populate_")
+    md += ["", "---", ""] + body_md
 
     (args.out / "summary.json").write_text(
         json.dumps(report, indent=2, default=str) + "\n"
@@ -593,11 +703,19 @@ def main() -> None:
             {
                 "datasets": list(report["datasets"].keys()),
                 "chunk_sizes": chunk_sizes,
+                "ops_content_gap": report["ops_content_gap"],
+                "ship_gate": {
+                    "promote_HGB_to_production": report["ship_gate"][
+                        "promote_HGB_to_production"
+                    ],
+                    "reason": report["ship_gate"]["reason"],
+                },
                 "cross_pack": [
                     {
                         "dataset": r["dataset"],
                         "chunk": r["chunk"],
                         "mean_auc": r["mean_auc"],
+                        "mean_logreg_auc": r["mean_logreg_auc"],
                         "mean_jaccard": r["mean_jaccard"],
                         "reading": r["reading"],
                     }

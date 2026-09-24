@@ -87,5 +87,7 @@ Artifacts: per-pack `*_board.png`, `cross_pack_transfer.png`, `SAMPLE_CHUNK_BOAR
 
 ## Related
 
+- Logic deep-dive (DiffDB / ops·content / 真驱动 / 上线):
+  [`Sample_Chunk_Board_Logic.md`](./Sample_Chunk_Board_Logic.md)
 - Calendar-width board: [`DiffusionDB_Temporal_Attribution.md`](./DiffusionDB_Temporal_Attribution.md)
 - Cross-domain feature methods: [`Cross_Domain_Feature_Methods.md`](./Cross_Domain_Feature_Methods.md)

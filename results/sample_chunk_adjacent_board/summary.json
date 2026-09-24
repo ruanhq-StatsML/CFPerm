@@ -19,7 +19,10 @@
           "n_pairs": 7,
           "mean_delta_Y": 0.014843780122963442,
           "mean_auc": 0.6048427572700964,
+          "mean_logreg_auc": 0.6161109153514835,
+          "mean_hgb_brier": 0.20571762355752538,
           "mean_jaccard_top": 0.2400793650793651,
+          "mean_fsds_cmean_jaccard": 0.0,
           "reading": "weak transfer (association does not travel)",
           "rows": [
             {
@@ -32,6 +35,9 @@
               "delta_Y": 0.005406296325847493,
               "y_threshold": 0.13298637717962264,
               "hgb_auc": 0.602190048063072,
+              "logreg_auc": 0.60666938002753,
+              "hgb_brier": 0.2102065175144581,
+              "logreg_brier": 0.20938688037464476,
               "top_fsds": [
                 "mucha",
                 "alphonse mucha",
@@ -46,6 +52,7 @@
                 "on",
                 "4k"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": null
             },
             {
@@ -58,6 +65,9 @@
               "delta_Y": -0.004017552601173507,
               "y_threshold": 0.13811234831809993,
               "hgb_auc": 0.6364309415484457,
+              "logreg_auc": 0.6571829292726908,
+              "hgb_brier": 0.18992312234894485,
+              "logreg_brier": 0.18998720852650725,
               "top_fsds": [
                 "alphonse",
                 "alphonse mucha",
@@ -72,6 +82,7 @@
                 "painting by",
                 "high"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -84,6 +95,9 @@
               "delta_Y": 0.024570974251255373,
               "y_threshold": 0.13392269164323806,
               "hgb_auc": 0.609579395246901,
+              "logreg_auc": 0.6169183617560441,
+              "hgb_brier": 0.22982017213341732,
+              "logreg_brier": 0.2268197943970571,
               "top_fsds": [
                 "alphonse",
                 "alphonse mucha",
@@ -98,6 +112,7 @@
                 "of",
                 "highly detailed"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -110,6 +125,9 @@
               "delta_Y": -0.008782265396788697,
               "y_threshold": 0.1614324152469635,
               "hgb_auc": 0.6035583629424923,
+              "logreg_auc": 0.6304382155546783,
+              "hgb_brier": 0.1922835572394963,
+              "logreg_brier": 0.1853093937097335,
               "top_fsds": [
                 "artgerm",
                 "mucha",
@@ -124,6 +142,7 @@
                 "on",
                 "big"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.1111111111111111
             },
             {
@@ -136,6 +155,9 @@
               "delta_Y": 0.02135014239232985,
               "y_threshold": 0.147136677801609,
               "hgb_auc": 0.5941404761904763,
+              "logreg_auc": 0.6077,
+              "hgb_brier": 0.20594871918112784,
+              "logreg_brier": 0.2048032978539956,
               "top_fsds": [
                 "mucha",
                 "girl",
@@ -150,6 +172,7 @@
                 "art",
                 "sharp"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.1111111111111111
             },
             {
@@ -162,6 +185,9 @@
               "delta_Y": 0.037421689956448984,
               "y_threshold": 0.14709812998771662,
               "hgb_auc": 0.578838624964398,
+              "logreg_auc": 0.5814188683617265,
+              "hgb_brier": 0.20996746273838965,
+              "logreg_brier": 0.21070492229186766,
               "top_fsds": [
                 "dress",
                 "white",
@@ -176,6 +202,7 @@
                 "john",
                 "octane render"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.25
             },
             {
@@ -188,6 +215,9 @@
               "delta_Y": 0.027957175932824596,
               "y_threshold": 0.14432926625013348,
               "hgb_auc": 0.6091614519348896,
+              "logreg_auc": 0.6124486524877149,
+              "hgb_brier": 0.2018738137468436,
+              "logreg_brier": 0.20141300673308446,
               "top_fsds": [
                 "fashion",
                 "body",
@@ -202,6 +232,7 @@
                 "style",
                 "at"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.1111111111111111
             }
           ]
@@ -210,7 +241,10 @@
           "n_pairs": 3,
           "mean_delta_Y": 0.029074908243802683,
           "mean_auc": 0.6091376939024363,
+          "mean_logreg_auc": 0.6187648813337822,
+          "mean_hgb_brier": 0.20450607183117883,
           "mean_jaccard_top": 0.3392857142857143,
+          "mean_fsds_cmean_jaccard": 0.0,
           "reading": "weak transfer (association does not travel)",
           "rows": [
             {
@@ -223,6 +257,9 @@
               "delta_Y": 0.010971082687377925,
               "y_threshold": 0.13620897084474562,
               "hgb_auc": 0.6110781320669381,
+              "logreg_auc": 0.6273055178652193,
+              "hgb_brier": 0.2094259962819202,
+              "logreg_brier": 0.2087568981860608,
               "top_fsds": [
                 "alphonse mucha",
                 "alphonse",
@@ -237,6 +274,7 @@
                 "as",
                 "by"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": null
             },
             {
@@ -249,6 +287,9 @@
               "delta_Y": 0.014178292925003916,
               "y_threshold": 0.1475889816880226,
               "hgb_auc": 0.6033863095238094,
+              "logreg_auc": 0.6117107142857142,
+              "hgb_brier": 0.20537108717831248,
+              "logreg_brier": 0.20119796823324798,
               "top_fsds": [
                 "mucha",
                 "alphonse",
@@ -263,6 +304,7 @@
                 "art",
                 "on"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -275,6 +317,9 @@
               "delta_Y": 0.06207534911902621,
               "y_threshold": 0.147136677801609,
               "hgb_auc": 0.6129486401165615,
+              "logreg_auc": 0.6172784118504129,
+              "hgb_brier": 0.19872113203330377,
+              "logreg_brier": 0.19809177608387818,
               "top_fsds": [
                 "dress",
                 "woman",
@@ -289,6 +334,7 @@
                 "illustration",
                 "octane"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.25
             }
           ]
@@ -312,7 +358,10 @@
           "n_pairs": 6,
           "mean_delta_Y": -0.007833333333333333,
           "mean_auc": 0.9957951724897706,
+          "mean_logreg_auc": 0.8318962492242159,
+          "mean_hgb_brier": 0.004113661391988706,
           "mean_jaccard_top": 0.7047619047619047,
+          "mean_fsds_cmean_jaccard": 0.037037037037037035,
           "reading": "strong transfer + stable top feats (persistent drivers)",
           "rows": [
             {
@@ -325,6 +374,9 @@
               "delta_Y": 0.009000000000000001,
               "y_threshold": 0.5,
               "hgb_auc": 0.9900094881955684,
+              "logreg_auc": 0.9926978102732972,
+              "hgb_brier": 0.015191145220700536,
+              "logreg_brier": 0.015420932450743465,
               "top_fsds": [
                 "e_log1p_exp",
                 "e_n_exp",
@@ -339,6 +391,7 @@
                 "u_user_activity_rank",
                 "i_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": null
             },
             {
@@ -351,6 +404,9 @@
               "delta_Y": -0.027000000000000003,
               "y_threshold": 0.5,
               "hgb_auc": 1.0,
+              "logreg_auc": 0.9999999999999999,
+              "hgb_brier": 4.566812161646097e-06,
+              "logreg_brier": 1.0656504417641915e-05,
               "top_fsds": [
                 "e_log1p_exp",
                 "e_n_exp",
@@ -365,6 +421,7 @@
                 "i_n_covisit_neighbors",
                 "u_user_activity_rank"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -377,6 +434,9 @@
               "delta_Y": -0.015,
               "y_threshold": 0.5,
               "hgb_auc": 0.9985786802030456,
+              "logreg_auc": 0.9987817258883249,
+              "hgb_brier": 0.0009998847856622897,
+              "logreg_brier": 0.001012241078988237,
               "top_fsds": [
                 "e_n_exp",
                 "e_log1p_exp",
@@ -391,6 +451,7 @@
                 "i_n_covisit_neighbors",
                 "i_n_users"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 1.0
             },
             {
@@ -403,6 +464,9 @@
               "delta_Y": 0.004,
               "y_threshold": 0.5,
               "hgb_auc": 1.0,
+              "logreg_auc": 1.0,
+              "hgb_brier": 0.003251876567547992,
+              "logreg_brier": 1.613019159664049e-05,
               "top_fsds": [
                 "e_log1p_exp",
                 "e_n_exp",
@@ -417,6 +481,7 @@
                 "u_user_activity_rank",
                 "i_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -429,6 +494,9 @@
               "delta_Y": 0.0010000000000000009,
               "y_threshold": 0.5,
               "hgb_auc": 0.9971938775510204,
+              "logreg_auc": 0.9998979591836735,
+              "hgb_brier": 0.004238118710331962,
+              "logreg_brier": 0.0012332426250331447,
               "top_fsds": [
                 "e_log1p_exp",
                 "e_n_exp",
@@ -443,6 +511,7 @@
                 "u_user_activity_rank",
                 "i_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.1111111111111111,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -455,6 +524,9 @@
               "delta_Y": -0.019,
               "y_threshold": 0.5,
               "hgb_auc": 0.9889889889889889,
+              "logreg_auc": 0.0,
+              "hgb_brier": 0.0009963762555278124,
+              "logreg_brier": 0.001003865257759796,
               "top_fsds": [
                 "e_log1p_exp",
                 "e_n_exp",
@@ -469,6 +541,7 @@
                 "u_user_activity_rank",
                 "i_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.1111111111111111,
               "jaccard_top": 1.0
             }
           ]
@@ -477,7 +550,10 @@
           "n_pairs": 3,
           "mean_delta_Y": -0.017333333333333336,
           "mean_auc": 0.9987730084570958,
+          "mean_logreg_auc": 0.6634610688713213,
+          "mean_hgb_brier": 0.0008205347708349124,
           "mean_jaccard_top": 0.4583333333333333,
+          "mean_fsds_cmean_jaccard": 0.037037037037037035,
           "reading": "transfer holds; feature set partially stable",
           "rows": [
             {
@@ -490,6 +566,9 @@
               "delta_Y": -0.03,
               "y_threshold": 0.5,
               "hgb_auc": 1.0,
+              "logreg_auc": 1.0,
+              "hgb_brier": 5.500147919561991e-06,
+              "logreg_brier": 8.792451917303406e-06,
               "top_fsds": [
                 "e_log1p_exp",
                 "e_n_exp",
@@ -504,6 +583,7 @@
                 "u_user_activity_rank",
                 "i_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": null
             },
             {
@@ -516,6 +596,9 @@
               "delta_Y": -0.002999999999999999,
               "y_threshold": 0.5,
               "hgb_auc": 0.9973195256214125,
+              "logreg_auc": 0.9893827063638384,
+              "hgb_brier": 0.0019578317817260473,
+              "logreg_brier": 0.0023010686629488034,
               "top_fsds": [
                 "e_n_exp",
                 "e_log1p_exp",
@@ -530,6 +613,7 @@
                 "u_user_activity_rank",
                 "i_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.0,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -542,6 +626,9 @@
               "delta_Y": -0.019,
               "y_threshold": 0.5,
               "hgb_auc": 0.998999499749875,
+              "logreg_auc": 0.0010005002501251026,
+              "hgb_brier": 0.0004982723828591283,
+              "logreg_brier": 0.0005004930477241594,
               "top_fsds": [
                 "e_log1p_exp",
                 "e_n_exp",
@@ -556,6 +643,7 @@
                 "i_n_covisit_neighbors",
                 "u_user_activity_rank"
               ],
+              "fsds_cmean_jaccard": 0.1111111111111111,
               "jaccard_top": 0.25
             }
           ]
@@ -601,7 +689,10 @@
           "n_pairs": 6,
           "mean_delta_Y": -0.007833333333333333,
           "mean_auc": 0.8350687106424594,
+          "mean_logreg_auc": 0.8445150735163063,
+          "mean_hgb_brier": 0.021080089201706006,
           "mean_jaccard_top": 0.5714285714285714,
+          "mean_fsds_cmean_jaccard": 0.29298941798941797,
           "reading": "strong transfer + stable top feats (persistent drivers)",
           "rows": [
             {
@@ -614,6 +705,9 @@
               "delta_Y": 0.009000000000000001,
               "y_threshold": 0.5,
               "hgb_auc": 0.6552250190694127,
+              "logreg_auc": 0.6832244981488715,
+              "hgb_brier": 0.056247761745306775,
+              "logreg_brier": 0.05213541238730008,
               "top_fsds": [
                 "i_credit_last",
                 "i_share_last",
@@ -628,6 +722,7 @@
                 "u_n_uniq_items",
                 "i_log1p_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.1111111111111111,
               "jaccard_top": null
             },
             {
@@ -640,6 +735,9 @@
               "delta_Y": -0.027000000000000003,
               "y_threshold": 0.5,
               "hgb_auc": 0.7909450171821304,
+              "logreg_auc": 0.7782817869415808,
+              "hgb_brier": 0.025648218724993687,
+              "logreg_brier": 0.025740195726821617,
               "top_fsds": [
                 "i_credit_last",
                 "i_share_last",
@@ -654,6 +752,7 @@
                 "i_log1p_n_covisit_neighbors",
                 "ui_pop_mismatch"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -666,6 +765,9 @@
               "delta_Y": -0.015,
               "y_threshold": 0.5,
               "hgb_auc": 0.744331641285956,
+              "logreg_auc": 0.7864297800338409,
+              "hgb_brier": 0.01509962039690706,
+              "logreg_brier": 0.013354734791169305,
               "top_fsds": [
                 "i_credit_last",
                 "i_share_last",
@@ -680,6 +782,7 @@
                 "i_log1p_n_covisit_neighbors",
                 "ui_pop_mismatch"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -692,6 +795,9 @@
               "delta_Y": 0.004,
               "y_threshold": 0.5,
               "hgb_auc": 0.8639411985621546,
+              "logreg_auc": 0.8819410912602608,
+              "hgb_brier": 0.0176539001503928,
+              "logreg_brier": 0.016254852462405517,
               "top_fsds": [
                 "i_credit_last",
                 "i_share_last",
@@ -706,6 +812,7 @@
                 "u_n_uniq_items",
                 "i_log1p_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -718,6 +825,9 @@
               "delta_Y": 0.0010000000000000009,
               "y_threshold": 0.5,
               "hgb_auc": 0.9559693877551021,
+              "logreg_auc": 0.9382142857142857,
+              "hgb_brier": 0.011340718518091528,
+              "logreg_brier": 0.009325730450473343,
               "top_fsds": [
                 "i_credit_last",
                 "i_share_last",
@@ -732,6 +842,7 @@
                 "u_n_uniq_items",
                 "ui_pop_mismatch"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -744,6 +855,9 @@
               "delta_Y": -0.019,
               "y_threshold": 0.5,
               "hgb_auc": 1.0,
+              "logreg_auc": 0.9989989989989989,
+              "hgb_brier": 0.0004903156745441924,
+              "logreg_brier": 0.001390588984229732,
               "top_fsds": [
                 "i_share_last",
                 "i_credit_last",
@@ -758,6 +872,7 @@
                 "u_n_uniq_items",
                 "i_log1p_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.1111111111111111,
               "jaccard_top": 0.6666666666666666
             }
           ]
@@ -766,7 +881,10 @@
           "n_pairs": 3,
           "mean_delta_Y": -0.017333333333333336,
           "mean_auc": 0.9003182536545639,
+          "mean_logreg_auc": 0.8982588120690723,
+          "mean_hgb_brier": 0.01226206953461056,
           "mean_jaccard_top": 0.42857142857142855,
+          "mean_fsds_cmean_jaccard": 0.1574074074074074,
           "reading": "transfer holds; feature set partially stable",
           "rows": [
             {
@@ -779,6 +897,9 @@
               "delta_Y": -0.03,
               "y_threshold": 0.5,
               "hgb_auc": 0.7772605853935777,
+              "logreg_auc": 0.7841545893719807,
+              "hgb_brier": 0.020735369198319368,
+              "logreg_brier": 0.02003213614606992,
               "top_fsds": [
                 "i_share_last",
                 "i_credit_last",
@@ -793,6 +914,7 @@
                 "u_n_uniq_items",
                 "i_log1p_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.1111111111111111,
               "jaccard_top": null
             },
             {
@@ -805,6 +927,9 @@
               "delta_Y": -0.002999999999999999,
               "y_threshold": 0.5,
               "hgb_auc": 0.9261954261954262,
+              "logreg_auc": 0.9136233475856117,
+              "hgb_brier": 0.015557289664753738,
+              "logreg_brier": 0.014169944224625674,
               "top_fsds": [
                 "i_share_last",
                 "i_credit_last",
@@ -819,6 +944,7 @@
                 "u_n_uniq_items",
                 "i_credit_linear"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -831,6 +957,9 @@
               "delta_Y": -0.019,
               "y_threshold": 0.5,
               "hgb_auc": 0.9974987493746874,
+              "logreg_auc": 0.9969984992496248,
+              "hgb_brier": 0.0004935497407585779,
+              "logreg_brier": 0.0006413820720517945,
               "top_fsds": [
                 "i_share_last",
                 "i_credit_last",
@@ -845,6 +974,7 @@
                 "u_n_uniq_items",
                 "i_log1p_n_covisit_neighbors"
               ],
+              "fsds_cmean_jaccard": 0.1111111111111111,
               "jaccard_top": 0.42857142857142855
             }
           ]
@@ -867,7 +997,10 @@
           "n_pairs": 7,
           "mean_delta_Y": 0.2307242796562466,
           "mean_auc": 0.9399096272322387,
+          "mean_logreg_auc": 0.9457475548663155,
+          "mean_hgb_brier": 0.08887029972778994,
           "mean_jaccard_top": 0.7222222222222222,
+          "mean_fsds_cmean_jaccard": 0.6802721088435374,
           "reading": "strong transfer + stable top feats (persistent drivers)",
           "rows": [
             {
@@ -880,6 +1013,9 @@
               "delta_Y": 0.21307667773961503,
               "y_threshold": 0.9987810501789236,
               "hgb_auc": 0.9434952758427416,
+              "logreg_auc": 0.9524731763952277,
+              "hgb_brier": 0.08123613089423797,
+              "logreg_brier": 0.08070917963023921,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -894,6 +1030,7 @@
                 "x3",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": null
             },
             {
@@ -906,6 +1043,9 @@
               "delta_Y": 0.2036352712331173,
               "y_threshold": 1.2154519866521336,
               "hgb_auc": 0.9283616074933837,
+              "logreg_auc": 0.9379800564405503,
+              "hgb_brier": 0.10098043661588489,
+              "logreg_brier": 0.09961756429759072,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -920,6 +1060,7 @@
                 "x8",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": 1.0
             },
             {
@@ -932,6 +1073,9 @@
               "delta_Y": 0.23586031907147254,
               "y_threshold": 1.4166978508559815,
               "hgb_auc": 0.937458606083943,
+              "logreg_auc": 0.9435040431266848,
+              "hgb_brier": 0.09294011814756599,
+              "logreg_brier": 0.08375478553172484,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -946,6 +1090,7 @@
                 "x8",
                 "x2"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -958,6 +1103,9 @@
               "delta_Y": 0.23222106071682336,
               "y_threshold": 1.6504953171460046,
               "hgb_auc": 0.9407109128925824,
+              "logreg_auc": 0.9425772330333317,
+              "hgb_brier": 0.08543508491269455,
+              "logreg_brier": 0.08572910632823418,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -972,6 +1120,7 @@
                 "x8",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -984,6 +1133,9 @@
               "delta_Y": 0.237311379046395,
               "y_threshold": 1.8923511218421185,
               "hgb_auc": 0.9379230894706795,
+              "logreg_auc": 0.9407572791778811,
+              "hgb_brier": 0.09368986749240936,
+              "logreg_brier": 0.08121438119516516,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -998,6 +1150,7 @@
                 "x8",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 1.0,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -1010,6 +1163,9 @@
               "delta_Y": 0.2464661853380017,
               "y_threshold": 2.1255906019023154,
               "hgb_auc": 0.9443604172087778,
+              "logreg_auc": 0.9508467776910399,
+              "hgb_brier": 0.08417848251562128,
+              "logreg_brier": 0.07715104778177474,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -1024,6 +1180,7 @@
                 "x3",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -1036,6 +1193,9 @@
               "delta_Y": 0.24649906444830139,
               "y_threshold": 2.3703655520091256,
               "hgb_auc": 0.9470574816335631,
+              "logreg_auc": 0.9520943181994929,
+              "hgb_brier": 0.08363197751611548,
+              "logreg_brier": 0.07883142752386714,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -1050,6 +1210,7 @@
                 "x8",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": 0.6666666666666666
             }
           ]
@@ -1058,7 +1219,10 @@
           "n_pairs": 3,
           "mean_delta_Y": 0.46176069549992277,
           "mean_auc": 0.9692848500223602,
+          "mean_logreg_auc": 0.9776463157951998,
+          "mean_hgb_brier": 0.03274003414798928,
           "mean_jaccard_top": 1.0,
+          "mean_fsds_cmean_jaccard": 1.0,
           "reading": "strong transfer + stable top feats (persistent drivers)",
           "rows": [
             {
@@ -1071,6 +1235,9 @@
               "delta_Y": 0.42810376963866115,
               "y_threshold": 1.116354225784982,
               "hgb_auc": 0.9627565615933587,
+              "logreg_auc": 0.9722607817508165,
+              "hgb_brier": 0.03763053105849521,
+              "logreg_brier": 0.03277274753741437,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -1085,6 +1252,7 @@
                 "x3",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 1.0,
               "jaccard_top": null
             },
             {
@@ -1097,6 +1265,9 @@
               "delta_Y": 0.468806909775757,
               "y_threshold": 1.552994606434652,
               "hgb_auc": 0.9723179166714355,
+              "logreg_auc": 0.9778077895917503,
+              "hgb_brier": 0.030726678059044988,
+              "logreg_brier": 0.02844996216261446,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -1111,6 +1282,7 @@
                 "x3",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 1.0,
               "jaccard_top": 1.0
             },
             {
@@ -1123,6 +1295,9 @@
               "delta_Y": 0.4883714070853502,
               "y_threshold": 2.0188487286702554,
               "hgb_auc": 0.9727800718022864,
+              "logreg_auc": 0.9828703760430324,
+              "hgb_brier": 0.029862893326427636,
+              "logreg_brier": 0.02478257452152829,
               "top_fsds": [
                 "x0",
                 "x8",
@@ -1137,6 +1312,7 @@
                 "x3",
                 "x4"
               ],
+              "fsds_cmean_jaccard": 1.0,
               "jaccard_top": 1.0
             }
           ]
@@ -1159,7 +1335,10 @@
           "n_pairs": 7,
           "mean_delta_Y": -20.366857142857175,
           "mean_auc": 0.9718807034328297,
+          "mean_logreg_auc": 0.6090001912223876,
+          "mean_hgb_brier": 0.05723708290815566,
           "mean_jaccard_top": 0.2334656084656085,
+          "mean_fsds_cmean_jaccard": 0.2556689342403628,
           "reading": "strong transfer but shifting drivers (regime / composition change)",
           "rows": [
             {
@@ -1172,6 +1351,9 @@
               "delta_Y": -267.1500000000001,
               "y_threshold": 5032.0,
               "hgb_auc": 0.9543415679185914,
+              "logreg_auc": 0.5685601749570418,
+              "hgb_brier": 0.07189756930619935,
+              "logreg_brier": 0.20593242219997063,
               "top_fsds": [
                 "m5",
                 "m0",
@@ -1186,6 +1368,7 @@
                 "m16",
                 "m4"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": null
             },
             {
@@ -1198,6 +1381,9 @@
               "delta_Y": -218.663,
               "y_threshold": 4685.0,
               "hgb_auc": 0.9644818038902837,
+              "logreg_auc": 0.5019298904244586,
+              "hgb_brier": 0.07844522223783496,
+              "logreg_brier": 0.20085429109949401,
               "top_fsds": [
                 "m5",
                 "m9",
@@ -1212,6 +1398,7 @@
                 "m4",
                 "m5"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.25
             },
             {
@@ -1224,6 +1411,9 @@
               "delta_Y": 243.3420000000001,
               "y_threshold": 4279.3,
               "hgb_auc": 0.9695040688381422,
+              "logreg_auc": 0.6139381810857948,
+              "hgb_brier": 0.05765459429920143,
+              "logreg_brier": 0.23743468612451346,
               "top_fsds": [
                 "m5",
                 "m6",
@@ -1238,6 +1428,7 @@
                 "m4",
                 "m5"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.25
             },
             {
@@ -1250,6 +1441,9 @@
               "delta_Y": -3.7380000000002838,
               "y_threshold": 4665.9,
               "hgb_auc": 0.9739295588412069,
+              "logreg_auc": 0.6338406058420484,
+              "hgb_brier": 0.05420627191384676,
+              "logreg_brier": 0.22045143544519333,
               "top_fsds": [
                 "m5",
                 "m0",
@@ -1264,6 +1458,7 @@
                 "m8",
                 "m9"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.1111111111111111
             },
             {
@@ -1276,6 +1471,9 @@
               "delta_Y": 171.82300000000032,
               "y_threshold": 4611.199999999999,
               "hgb_auc": 0.9825836916891582,
+              "logreg_auc": 0.6101002535394363,
+              "hgb_brier": 0.05030023572515546,
+              "logreg_brier": 0.2368891666983314,
               "top_fsds": [
                 "m5",
                 "m14",
@@ -1290,6 +1488,7 @@
                 "m4",
                 "m8"
               ],
+              "fsds_cmean_jaccard": 0.1111111111111111,
               "jaccard_top": 0.25
             },
             {
@@ -1302,6 +1501,9 @@
               "delta_Y": 42.47599999999966,
               "y_threshold": 4877.2,
               "hgb_auc": 0.984241165952504,
+              "logreg_auc": 0.6046800901811398,
+              "hgb_brier": 0.043391636933301364,
+              "logreg_brier": 0.23661980717715544,
               "top_fsds": [
                 "m5",
                 "m0",
@@ -1316,6 +1518,7 @@
                 "m5",
                 "m16"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.1111111111111111
             },
             {
@@ -1328,6 +1531,9 @@
               "delta_Y": -110.6579999999999,
               "y_threshold": 4962.0,
               "hgb_auc": 0.9740830668999216,
+              "logreg_auc": 0.7299521425267941,
+              "hgb_brier": 0.044764049941550324,
+              "logreg_brier": 0.19659727424153914,
               "top_fsds": [
                 "m5",
                 "m1",
@@ -1342,6 +1548,7 @@
                 "m1",
                 "m4"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.42857142857142855
             }
           ]
@@ -1350,7 +1557,10 @@
           "n_pairs": 3,
           "mean_delta_Y": 15.445333333333414,
           "mean_auc": 0.9753765691624277,
+          "mean_logreg_auc": 0.6396613442498914,
+          "mean_hgb_brier": 0.05437326656652311,
           "mean_jaccard_top": 0.5476190476190476,
+          "mean_fsds_cmean_jaccard": 0.30952380952380953,
           "reading": "strong transfer + stable top feats (persistent drivers)",
           "rows": [
             {
@@ -1363,6 +1573,9 @@
               "delta_Y": -230.567,
               "y_threshold": 4845.4,
               "hgb_auc": 0.9678572215489699,
+              "logreg_auc": 0.6355065917520474,
+              "hgb_brier": 0.06797617958618954,
+              "logreg_brier": 0.1656069960029744,
               "top_fsds": [
                 "m5",
                 "m0",
@@ -1377,6 +1590,7 @@
                 "m4",
                 "m5"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": null
             },
             {
@@ -1389,6 +1603,9 @@
               "delta_Y": 203.84450000000015,
               "y_threshold": 4461.3,
               "hgb_auc": 0.9796887958739373,
+              "logreg_auc": 0.6605101855691479,
+              "hgb_brier": 0.05024779727552354,
+              "logreg_brier": 0.21623746980704428,
               "top_fsds": [
                 "m5",
                 "m6",
@@ -1403,6 +1620,7 @@
                 "m8",
                 "m9"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -1415,6 +1633,9 @@
               "delta_Y": 73.0585000000001,
               "y_threshold": 4762.6,
               "hgb_auc": 0.9785836900643757,
+              "logreg_auc": 0.6229672554284791,
+              "hgb_brier": 0.04489582283785626,
+              "logreg_brier": 0.23913914310595483,
               "top_fsds": [
                 "m5",
                 "m0",
@@ -1429,6 +1650,7 @@
                 "m1",
                 "m4"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.6666666666666666
             }
           ]
@@ -1451,7 +1673,10 @@
           "n_pairs": 7,
           "mean_delta_Y": 7.190857142857142,
           "mean_auc": 0.9780904023588342,
+          "mean_logreg_auc": 0.978103102615826,
+          "mean_hgb_brier": 0.049087477068677506,
           "mean_jaccard_top": 0.5634920634920634,
+          "mean_fsds_cmean_jaccard": 0.5391156462585033,
           "reading": "strong transfer + stable top feats (persistent drivers)",
           "rows": [
             {
@@ -1464,6 +1689,9 @@
               "delta_Y": 12.75200000000001,
               "y_threshold": 91.29999999999995,
               "hgb_auc": 0.9712967164725915,
+              "logreg_auc": 0.9741672529860658,
+              "hgb_brier": 0.06266111509199424,
+              "logreg_brier": 0.06549345053246824,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1478,6 +1706,7 @@
                 "p1",
                 "p0"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": null
             },
             {
@@ -1490,6 +1719,9 @@
               "delta_Y": -12.228000000000009,
               "y_threshold": 115.0,
               "hgb_auc": 0.9859901414799412,
+              "logreg_auc": 0.976027413859121,
+              "hgb_brier": 0.03518491631241936,
+              "logreg_brier": 0.06274716020291424,
               "top_fsds": [
                 "p8",
                 "p2",
@@ -1504,6 +1736,7 @@
                 "p0",
                 "p2"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": 0.6666666666666666
             },
             {
@@ -1516,6 +1749,9 @@
               "delta_Y": 8.362000000000009,
               "y_threshold": 111.0,
               "hgb_auc": 0.9569629599614606,
+              "logreg_auc": 0.9544822183502844,
+              "hgb_brier": 0.07664091845928685,
+              "logreg_brier": 0.08933427680466843,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1530,6 +1766,7 @@
                 "p8",
                 "p2"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -1542,6 +1779,9 @@
               "delta_Y": 24.037999999999997,
               "y_threshold": 117.0,
               "hgb_auc": 0.982019613507961,
+              "logreg_auc": 0.9870995441705188,
+              "hgb_brier": 0.047389526227399045,
+              "logreg_brier": 0.04209566013237654,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1556,6 +1796,7 @@
                 "p1",
                 "p2"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -1568,6 +1809,9 @@
               "delta_Y": -5.549999999999997,
               "y_threshold": 168.29999999999995,
               "hgb_auc": 0.9684508740204943,
+              "logreg_auc": 0.9707836045810729,
+              "hgb_brier": 0.0540272492666341,
+              "logreg_brier": 0.05728332291893977,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1582,6 +1826,7 @@
                 "p0",
                 "p7"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": 1.0
             },
             {
@@ -1594,6 +1839,9 @@
               "delta_Y": -5.078000000000003,
               "y_threshold": 140.0,
               "hgb_auc": 0.993287573915042,
+              "logreg_auc": 0.9934547316074301,
+              "hgb_brier": 0.030926027767473618,
+              "logreg_brier": 0.028137676580686374,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1608,6 +1856,7 @@
                 "p2",
                 "p8"
               ],
+              "fsds_cmean_jaccard": 0.25,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -1620,6 +1869,9 @@
               "delta_Y": 28.039999999999992,
               "y_threshold": 115.0,
               "hgb_auc": 0.988624937154349,
+              "logreg_auc": 0.9907069527562886,
+              "hgb_brier": 0.03678258635553536,
+              "logreg_brier": 0.03775809738096068,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1634,6 +1886,7 @@
                 "p3",
                 "p2"
               ],
+              "fsds_cmean_jaccard": 0.6666666666666666,
               "jaccard_top": 0.42857142857142855
             }
           ]
@@ -1642,7 +1895,10 @@
           "n_pairs": 3,
           "mean_delta_Y": 9.979999999999999,
           "mean_auc": 0.9797058426155137,
+          "mean_logreg_auc": 0.97320706540759,
+          "mean_hgb_brier": 0.04860177775401738,
           "mean_jaccard_top": 0.5476190476190476,
+          "mean_fsds_cmean_jaccard": 0.42857142857142855,
           "reading": "strong transfer + stable top feats (persistent drivers)",
           "rows": [
             {
@@ -1655,6 +1911,9 @@
               "delta_Y": -1.6710000000000065,
               "y_threshold": 105.0,
               "hgb_auc": 0.9707047867626206,
+              "logreg_auc": 0.9465876258508225,
+              "hgb_brier": 0.056682413764404437,
+              "logreg_brier": 0.08166286053778381,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1669,6 +1928,7 @@
                 "p3",
                 "p7"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": null
             },
             {
@@ -1681,6 +1941,9 @@
               "delta_Y": 25.444000000000003,
               "y_threshold": 115.0,
               "hgb_auc": 0.9771239644295812,
+              "logreg_auc": 0.9801950799321021,
+              "hgb_brier": 0.05548470025945719,
+              "logreg_brier": 0.061220440043962945,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1695,6 +1958,7 @@
                 "p1",
                 "p2"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.42857142857142855
             },
             {
@@ -1707,6 +1971,9 @@
               "delta_Y": 6.167000000000002,
               "y_threshold": 155.0,
               "hgb_auc": 0.9912887766543395,
+              "logreg_auc": 0.9928384904398457,
+              "hgb_brier": 0.033638219238190506,
+              "logreg_brier": 0.030379969462459796,
               "top_fsds": [
                 "p8",
                 "p0",
@@ -1721,6 +1988,7 @@
                 "p2",
                 "p8"
               ],
+              "fsds_cmean_jaccard": 0.42857142857142855,
               "jaccard_top": 0.6666666666666666
             }
           ]
@@ -1734,99 +2002,294 @@
       "dataset": "diffusiondb",
       "chunk": 1000,
       "mean_auc": 0.6048427572700964,
+      "mean_logreg_auc": 0.6161109153514835,
       "mean_delta_Y": 0.014843780122963442,
       "mean_jaccard": 0.2400793650793651,
+      "mean_fsds_cmean_jaccard": 0.0,
       "reading": "weak transfer (association does not travel)"
     },
     {
       "dataset": "diffusiondb",
       "chunk": 2000,
       "mean_auc": 0.6091376939024363,
+      "mean_logreg_auc": 0.6187648813337822,
       "mean_delta_Y": 0.029074908243802683,
       "mean_jaccard": 0.3392857142857143,
+      "mean_fsds_cmean_jaccard": 0.0,
       "reading": "weak transfer (association does not travel)"
     },
     {
       "dataset": "tencent_gr",
       "chunk": 1000,
       "mean_auc": 0.9957951724897706,
+      "mean_logreg_auc": 0.8318962492242159,
       "mean_delta_Y": -0.007833333333333333,
       "mean_jaccard": 0.7047619047619047,
+      "mean_fsds_cmean_jaccard": 0.037037037037037035,
       "reading": "strong transfer + stable top feats (persistent drivers)"
     },
     {
       "dataset": "tencent_gr",
       "chunk": 2000,
       "mean_auc": 0.9987730084570958,
+      "mean_logreg_auc": 0.6634610688713213,
       "mean_delta_Y": -0.017333333333333336,
       "mean_jaccard": 0.4583333333333333,
+      "mean_fsds_cmean_jaccard": 0.037037037037037035,
       "reading": "transfer holds; feature set partially stable"
     },
     {
       "dataset": "tencent_gr_content",
       "chunk": 1000,
       "mean_auc": 0.8350687106424594,
+      "mean_logreg_auc": 0.8445150735163063,
       "mean_delta_Y": -0.007833333333333333,
       "mean_jaccard": 0.5714285714285714,
+      "mean_fsds_cmean_jaccard": 0.29298941798941797,
       "reading": "strong transfer + stable top feats (persistent drivers)"
     },
     {
       "dataset": "tencent_gr_content",
       "chunk": 2000,
       "mean_auc": 0.9003182536545639,
+      "mean_logreg_auc": 0.8982588120690723,
       "mean_delta_Y": -0.017333333333333336,
       "mean_jaccard": 0.42857142857142855,
+      "mean_fsds_cmean_jaccard": 0.1574074074074074,
       "reading": "transfer holds; feature set partially stable"
     },
     {
       "dataset": "waymo_proxy",
       "chunk": 1000,
       "mean_auc": 0.9399096272322387,
+      "mean_logreg_auc": 0.9457475548663155,
       "mean_delta_Y": 0.2307242796562466,
       "mean_jaccard": 0.7222222222222222,
+      "mean_fsds_cmean_jaccard": 0.6802721088435374,
       "reading": "strong transfer + stable top feats (persistent drivers)"
     },
     {
       "dataset": "waymo_proxy",
       "chunk": 2000,
       "mean_auc": 0.9692848500223602,
+      "mean_logreg_auc": 0.9776463157951998,
       "mean_delta_Y": 0.46176069549992277,
       "mean_jaccard": 1.0,
+      "mean_fsds_cmean_jaccard": 1.0,
       "reading": "strong transfer + stable top feats (persistent drivers)"
     },
     {
       "dataset": "metro_interstate",
       "chunk": 1000,
       "mean_auc": 0.9718807034328297,
+      "mean_logreg_auc": 0.6090001912223876,
       "mean_delta_Y": -20.366857142857175,
       "mean_jaccard": 0.2334656084656085,
+      "mean_fsds_cmean_jaccard": 0.2556689342403628,
       "reading": "strong transfer but shifting drivers (regime / composition change)"
     },
     {
       "dataset": "metro_interstate",
       "chunk": 2000,
       "mean_auc": 0.9753765691624277,
+      "mean_logreg_auc": 0.6396613442498914,
       "mean_delta_Y": 15.445333333333414,
       "mean_jaccard": 0.5476190476190476,
+      "mean_fsds_cmean_jaccard": 0.30952380952380953,
       "reading": "strong transfer + stable top feats (persistent drivers)"
     },
     {
       "dataset": "beijing_pm25",
       "chunk": 1000,
       "mean_auc": 0.9780904023588342,
+      "mean_logreg_auc": 0.978103102615826,
       "mean_delta_Y": 7.190857142857142,
       "mean_jaccard": 0.5634920634920634,
+      "mean_fsds_cmean_jaccard": 0.5391156462585033,
       "reading": "strong transfer + stable top feats (persistent drivers)"
     },
     {
       "dataset": "beijing_pm25",
       "chunk": 2000,
       "mean_auc": 0.9797058426155137,
+      "mean_logreg_auc": 0.97320706540759,
       "mean_delta_Y": 9.979999999999999,
       "mean_jaccard": 0.5476190476190476,
+      "mean_fsds_cmean_jaccard": 0.42857142857142855,
       "reading": "strong transfer + stable top feats (persistent drivers)"
     }
   ],
   "cross_pack_png": "cross_pack_transfer.png",
-  "sec": 6.2287585735321045
+  "ops_content_gap": [
+    {
+      "chunk": 1000,
+      "ops_auc": 0.9957951724897706,
+      "content_auc": 0.8350687106424594,
+      "auc_gap_ops_minus_content": 0.1607264618473112,
+      "ops_top0": [
+        "e_log1p_exp",
+        "e_n_exp",
+        "i_log1p_n_exp"
+      ],
+      "content_top0": [
+        "i_credit_last",
+        "i_share_last",
+        "i_item_credit_rank"
+      ],
+      "reading": "volume explains most transfer"
+    },
+    {
+      "chunk": 2000,
+      "ops_auc": 0.9987730084570958,
+      "content_auc": 0.9003182536545639,
+      "auc_gap_ops_minus_content": 0.09845475480253196,
+      "ops_top0": [
+        "e_log1p_exp",
+        "e_n_exp",
+        "i_log1p_n_exp"
+      ],
+      "content_top0": [
+        "i_share_last",
+        "i_credit_last",
+        "i_item_credit_rank"
+      ],
+      "reading": "non-volume feats still carry substantial transfer"
+    }
+  ],
+  "ship_gate": {
+    "promote_HGB_to_production": false,
+    "reason": "Adjacent-chunk transfer probe \u2260 online scorer. Missing: label delay, calibration under serve skew, Acc/latency budget, abstain/rollback, and causal/PO checks for 'true drivers'.",
+    "what_board_can_greenlight": [
+      "investigate a feature family (ops intensity vs content/credit)",
+      "flag weak-transfer packs (e.g. DiffusionDB tokens for NSFW)",
+      "compare grains N=1000 vs 2000 as business windows"
+    ],
+    "what_needs_other_tools": {
+      "true_driver": "ablation / PO-risk / randomized or quasi-exp \u2014 not AUC",
+      "ship_model": "holdout Acc + calibration + cost/latency + gray rollback"
+    },
+    "cross_pack_snapshot": [
+      {
+        "dataset": "diffusiondb",
+        "chunk": 1000,
+        "mean_auc": 0.6048427572700964,
+        "mean_logreg_auc": 0.6161109153514835,
+        "mean_delta_Y": 0.014843780122963442,
+        "mean_jaccard": 0.2400793650793651,
+        "mean_fsds_cmean_jaccard": 0.0,
+        "reading": "weak transfer (association does not travel)"
+      },
+      {
+        "dataset": "diffusiondb",
+        "chunk": 2000,
+        "mean_auc": 0.6091376939024363,
+        "mean_logreg_auc": 0.6187648813337822,
+        "mean_delta_Y": 0.029074908243802683,
+        "mean_jaccard": 0.3392857142857143,
+        "mean_fsds_cmean_jaccard": 0.0,
+        "reading": "weak transfer (association does not travel)"
+      },
+      {
+        "dataset": "tencent_gr",
+        "chunk": 1000,
+        "mean_auc": 0.9957951724897706,
+        "mean_logreg_auc": 0.8318962492242159,
+        "mean_delta_Y": -0.007833333333333333,
+        "mean_jaccard": 0.7047619047619047,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "reading": "strong transfer + stable top feats (persistent drivers)"
+      },
+      {
+        "dataset": "tencent_gr",
+        "chunk": 2000,
+        "mean_auc": 0.9987730084570958,
+        "mean_logreg_auc": 0.6634610688713213,
+        "mean_delta_Y": -0.017333333333333336,
+        "mean_jaccard": 0.4583333333333333,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "reading": "transfer holds; feature set partially stable"
+      },
+      {
+        "dataset": "tencent_gr_content",
+        "chunk": 1000,
+        "mean_auc": 0.8350687106424594,
+        "mean_logreg_auc": 0.8445150735163063,
+        "mean_delta_Y": -0.007833333333333333,
+        "mean_jaccard": 0.5714285714285714,
+        "mean_fsds_cmean_jaccard": 0.29298941798941797,
+        "reading": "strong transfer + stable top feats (persistent drivers)"
+      },
+      {
+        "dataset": "tencent_gr_content",
+        "chunk": 2000,
+        "mean_auc": 0.9003182536545639,
+        "mean_logreg_auc": 0.8982588120690723,
+        "mean_delta_Y": -0.017333333333333336,
+        "mean_jaccard": 0.42857142857142855,
+        "mean_fsds_cmean_jaccard": 0.1574074074074074,
+        "reading": "transfer holds; feature set partially stable"
+      },
+      {
+        "dataset": "waymo_proxy",
+        "chunk": 1000,
+        "mean_auc": 0.9399096272322387,
+        "mean_logreg_auc": 0.9457475548663155,
+        "mean_delta_Y": 0.2307242796562466,
+        "mean_jaccard": 0.7222222222222222,
+        "mean_fsds_cmean_jaccard": 0.6802721088435374,
+        "reading": "strong transfer + stable top feats (persistent drivers)"
+      },
+      {
+        "dataset": "waymo_proxy",
+        "chunk": 2000,
+        "mean_auc": 0.9692848500223602,
+        "mean_logreg_auc": 0.9776463157951998,
+        "mean_delta_Y": 0.46176069549992277,
+        "mean_jaccard": 1.0,
+        "mean_fsds_cmean_jaccard": 1.0,
+        "reading": "strong transfer + stable top feats (persistent drivers)"
+      },
+      {
+        "dataset": "metro_interstate",
+        "chunk": 1000,
+        "mean_auc": 0.9718807034328297,
+        "mean_logreg_auc": 0.6090001912223876,
+        "mean_delta_Y": -20.366857142857175,
+        "mean_jaccard": 0.2334656084656085,
+        "mean_fsds_cmean_jaccard": 0.2556689342403628,
+        "reading": "strong transfer but shifting drivers (regime / composition change)"
+      },
+      {
+        "dataset": "metro_interstate",
+        "chunk": 2000,
+        "mean_auc": 0.9753765691624277,
+        "mean_logreg_auc": 0.6396613442498914,
+        "mean_delta_Y": 15.445333333333414,
+        "mean_jaccard": 0.5476190476190476,
+        "mean_fsds_cmean_jaccard": 0.30952380952380953,
+        "reading": "strong transfer + stable top feats (persistent drivers)"
+      },
+      {
+        "dataset": "beijing_pm25",
+        "chunk": 1000,
+        "mean_auc": 0.9780904023588342,
+        "mean_logreg_auc": 0.978103102615826,
+        "mean_delta_Y": 7.190857142857142,
+        "mean_jaccard": 0.5634920634920634,
+        "mean_fsds_cmean_jaccard": 0.5391156462585033,
+        "reading": "strong transfer + stable top feats (persistent drivers)"
+      },
+      {
+        "dataset": "beijing_pm25",
+        "chunk": 2000,
+        "mean_auc": 0.9797058426155137,
+        "mean_logreg_auc": 0.97320706540759,
+        "mean_delta_Y": 9.979999999999999,
+        "mean_jaccard": 0.5476190476190476,
+        "mean_fsds_cmean_jaccard": 0.42857142857142855,
+        "reading": "strong transfer + stable top feats (persistent drivers)"
+      }
+    ]
+  },
+  "sec": 11.118659257888794
 }
