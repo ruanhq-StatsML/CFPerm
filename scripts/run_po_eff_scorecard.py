@@ -26,12 +26,15 @@ def render_md(card: dict) -> str:
         card.get("headline", ""),
         "",
         f"- batches={card['n_batches']} · batch_size={card['batch_size']} · "
-        f"n_control={card['n_control']} · datasets={card['n_datasets']}",
+        f"n_control={card['n_control']} · datasets={card['n_datasets']} · "
+        f"mean_duty={card.get('mean_gate_duty')} · "
+        f"E[refit]/E[probe]≈{card.get('mean_budget_ratio_refit_vs_probe')}",
         "",
         "## Per dataset",
         "",
-        "| dataset | n_rej | ref ρ | probe Δρ | refit Δρ | "
-        "probe rank_eff | refit rank_eff | probe mse_eff | refit mse_eff | reading |",
+        "| dataset | duty | E[refit]/E[probe] | ref ρ | "
+        "probe rank_eff | refit rank_eff | refit rank_eff_E | "
+        "probe mse_eff | refit mse_eff | reading |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     for c in card.get("cards") or []:
@@ -49,21 +52,24 @@ def render_md(card: dict) -> str:
                 return "—"
 
         lines.append(
-            f"| `{c['dataset']}` | {c['n_reject']} | {f(c['ref_spearman'], 3)} | "
-            f"{f(p.get('delta_spearman_vs_ref'), 3)} | {f(r.get('delta_spearman_vs_ref'), 3)} | "
+            f"| `{c['dataset']}` | {f(c.get('gate_duty'), 3)} | "
+            f"{f(c.get('budget_ratio_refit_vs_probe'), 3)} | "
+            f"{f(c['ref_spearman'], 3)} | "
             f"{f(p.get('rank_eff'))} | {f(r.get('rank_eff'))} | "
+            f"{f(r.get('rank_eff_expected'))} | "
             f"{f(p.get('mse_eff'))} | {f(r.get('mse_eff'))} | {c.get('reading')} |"
         )
     lines += [
         "",
         "## How to read",
         "",
-        "- **rank_eff**: ΔSpearman vs frozen ref per million adaptation FLOPs.",
-        "- **mse_eff**: (uniform − mode) sig-only MSE per million FLOPs "
+        "- **duty**: OnlineRFPerm gate reject rate (Bernoulli planning rate).",
+        "- **E[refit]/E[probe] ≈ duty · n_control** — ex-ante budget ratio.",
+        "- **rank_eff**: ΔSpearman vs frozen ref / realized FLOPs.",
+        "- **rank_eff_E**: same Δρ but / **expected** FLOPs (duty × n_batches).",
+        "- **mse_eff**: (uniform − mode) sig-only MSE / FLOPs "
         "(positive = cheaper error drop).",
-        "- Probe pays *always-on* fits; refit pays only on reject — so a tiny "
-        "Δρ for refit can still beat probe on rank_eff.",
-        "- Negative mse_eff with positive rank_eff ⇒ keep for triage, not for IPTW.",
+        "- Low duty ⇒ refit is the cheap PO path; probe cost is duty-invariant.",
         "",
     ]
     return "\n".join(lines) + "\n"

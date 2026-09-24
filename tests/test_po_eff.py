@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
+
 from agod.po_eff import (
     fit_flops,
     mode_relative_flops,
@@ -42,6 +44,7 @@ def test_scorecard_from_mini_block():
         "results": {
             "uniform": {
                 "mse_mean_sig": 100.0,
+                "gate_duty": 0.2,
                 "po_quality": {
                     "n_reject": 4,
                     "ref": {"spearman": 0.2},
@@ -58,8 +61,32 @@ def test_scorecard_from_mini_block():
         "toy", block, n_batches=20, batch_size=50, n_control=1
     )
     assert c["ok"]
+    assert abs(c["gate_duty"] - 0.2) < 1e-9
+    assert abs(c["budget_ratio_refit_vs_probe"] - 0.2) < 1e-9
     assert c["best_rank_eff_mode"] in ("probe", "refit")
     assert c["best_mse_eff_mode"] == "refit"  # only positive mse_eff spender
+    refit = next(m for m in c["modes"] if m["mode"] == "refit")
+    assert np.isfinite(refit["rank_eff_expected"])
+
+
+def test_expected_flops_scales_with_duty():
+    from agod.po_eff import expected_adapt_flops, budget_ratio_refit_vs_probe
+
+    low = expected_adapt_flops(
+        "refit", gate_duty=0.1, n_batches=40, batch_size=100, n_control=1
+    )
+    high = expected_adapt_flops(
+        "refit", gate_duty=0.5, n_batches=40, batch_size=100, n_control=1
+    )
+    probe = expected_adapt_flops(
+        "probe", gate_duty=0.1, n_batches=40, batch_size=100, n_control=1
+    )
+    assert high > low
+    assert abs(probe - expected_adapt_flops(
+        "probe", gate_duty=0.9, n_batches=40, batch_size=100
+    )) < 1e-9  # probe duty-invariant
+    assert abs(budget_ratio_refit_vs_probe(0.25, n_control=2) - 0.5) < 1e-9
+    assert abs(low / probe - 0.1) < 1e-9
 
 
 def test_scorecard_from_repo_summary_smoke():

@@ -50,7 +50,7 @@ def mode_relative_flops(
     batch_size: int,
     n_control: int = 1,
 ) -> float:
-    """Adaptation FLOPs proxy for one PO mode over a stream."""
+    """Adaptation FLOPs proxy for one PO mode over a stream (realized rejects)."""
     fit = fit_flops(batch_size)
     m = mode.lower().replace("_po", "")
     if m in ("ref", "uniform", "dre"):
@@ -64,6 +64,51 @@ def mode_relative_flops(
         win = fit_flops(batch_size * max(int(n_control), 1))
         return float(max(n_reject, 1) * win)
     return float("nan")
+
+
+def expected_adapt_flops(
+    mode: str,
+    *,
+    gate_duty: float,
+    n_batches: int,
+    batch_size: int,
+    n_control: int = 1,
+) -> float:
+    """Ex-ante adaptation budget: E[flops] = f(duty), not realized n_reject.
+
+    Statistical justify
+    -------------------
+    Realized ``n_reject`` is a post-hoc count.  Planning / comparing gates
+    needs **expected** cost under a Bernoulli reject rate ``duty``:
+
+      E[flops_refit]  = n_batches · duty · fit(window)
+      E[flops_probe]  = n_batches · fit(batch)          # duty-invariant
+      E[flops_ref]    ≈ ε
+
+    ``budget_ratio = E[refit] / E[probe] ≈ duty · (n_control)`` when fit
+    scales with window size — low duty ⇒ refit is the cheap PO path.
+    """
+    duty = float(np.clip(gate_duty, 0.0, 1.0))
+    fit = fit_flops(batch_size)
+    m = mode.lower().replace("_po", "")
+    if m in ("ref", "uniform", "dre"):
+        return 1.0
+    if m == "probe":
+        return float(max(n_batches, 1) * fit)
+    if m == "refit":
+        win = fit_flops(batch_size * max(int(n_control), 1))
+        return float(max(n_batches, 1) * duty * win)
+    return float("nan")
+
+
+def budget_ratio_refit_vs_probe(
+    gate_duty: float,
+    *,
+    n_control: int = 1,
+) -> float:
+    """E[refit]/E[probe] ≈ duty · n_control (same batch_size scale)."""
+    duty = float(np.clip(gate_duty, 0.0, 1.0))
+    return float(duty * max(int(n_control), 1))
 
 
 def rank_efficiency(
@@ -117,9 +162,12 @@ def scorecard_from_dataset_block(
     n_reject = int(pq.get("n_reject") or 0)
     ref_sp = float((pq.get("ref") or {}).get("spearman", float("nan")))
     rows: List[Dict[str, Any]] = []
-    unif_mse = float(
-        (results.get("uniform") or {}).get("mse_mean_sig", float("nan"))
-    )
+    unif = results.get("uniform") or {}
+    unif_mse = float(unif.get("mse_mean_sig", float("nan")))
+    gate_duty = float(unif.get("gate_duty", float("nan")))
+    if not np.isfinite(gate_duty) and n_batches > 0:
+        # fallback: realized reject rate
+        gate_duty = float(n_reject) / float(max(n_batches, 1))
 
     for label, key in (
         ("ref", "ref"),
@@ -132,6 +180,13 @@ def scorecard_from_dataset_block(
             label,
             n_batches=n_batches,
             n_reject=n_reject,
+            batch_size=batch_size,
+            n_control=n_control,
+        )
+        e_flops = expected_adapt_flops(
+            label,
+            gate_duty=gate_duty if np.isfinite(gate_duty) else 0.0,
+            n_batches=n_batches,
             batch_size=batch_size,
             n_control=n_control,
         )
@@ -148,8 +203,11 @@ def scorecard_from_dataset_block(
                 ),
                 "mse_mean_sig": mse,
                 "relative_flops": flops,
+                "expected_flops": e_flops,
                 "rank_eff": rank_efficiency(sp, ref_sp, flops),
                 "mse_eff": mse_efficiency(mse, unif_mse, flops),
+                "rank_eff_expected": rank_efficiency(sp, ref_sp, e_flops),
+                "mse_eff_expected": mse_efficiency(mse, unif_mse, e_flops),
             }
         )
 
@@ -158,6 +216,14 @@ def scorecard_from_dataset_block(
     best_rank = max(spend, key=lambda r: r["rank_eff"])["mode"] if spend else None
     spend_m = [r for r in rows if r["mode"] in ("probe", "refit") and np.isfinite(r["mse_eff"])]
     best_mse = max(spend_m, key=lambda r: r["mse_eff"])["mode"] if spend_m else None
+    spend_e = [
+        r
+        for r in rows
+        if r["mode"] in ("probe", "refit") and np.isfinite(r["rank_eff_expected"])
+    ]
+    best_rank_E = (
+        max(spend_e, key=lambda r: r["rank_eff_expected"])["mode"] if spend_e else None
+    )
 
     return {
         "dataset": name,
@@ -165,12 +231,17 @@ def scorecard_from_dataset_block(
         "n_reject": n_reject,
         "n_batches": n_batches,
         "batch_size": batch_size,
+        "gate_duty": gate_duty,
+        "budget_ratio_refit_vs_probe": budget_ratio_refit_vs_probe(
+            gate_duty if np.isfinite(gate_duty) else 0.0, n_control=n_control
+        ),
         "uniform_mse_sig": unif_mse,
         "ref_spearman": ref_sp,
         "modes": rows,
         "best_rank_eff_mode": best_rank,
         "best_mse_eff_mode": best_mse,
-        "reading": _reading(rows, best_rank, best_mse),
+        "best_rank_eff_expected_mode": best_rank_E,
+        "reading": _reading(rows, best_rank, best_mse, gate_duty),
     }
 
 
@@ -178,19 +249,21 @@ def _reading(
     rows: Sequence[Dict[str, Any]],
     best_rank: Optional[str],
     best_mse: Optional[str],
+    gate_duty: float = float("nan"),
 ) -> str:
     by = {r["mode"]: r for r in rows}
     refit = by.get("refit") or {}
     probe = by.get("probe") or {}
+    duty_s = f"duty={gate_duty:.2f}" if np.isfinite(gate_duty) else "duty=?"
     if best_rank == "probe" and (probe.get("mse_eff") or 0) < 0:
-        return "probe buys ranking cheaply but IPTW hurts sig MSE"
+        return f"{duty_s}: probe buys ranking cheaply but IPTW hurts sig MSE"
     if best_rank == "refit" and (refit.get("rank_eff") or 0) > (probe.get("rank_eff") or -1e9):
-        return "refit: more Spearman per reject-FLOP than probe's always-on cost"
+        return f"{duty_s}: refit wins rank_eff (reject-only vs always-on probe)"
     if best_mse == "refit" and (refit.get("mse_eff") or 0) > 0:
-        return "refit reduces sig MSE per reject-FLOP vs uniform"
+        return f"{duty_s}: refit reduces sig MSE per reject-FLOP vs uniform"
     if best_mse is None or all((r.get("mse_eff") or 0) <= 0 for r in rows if r["mode"] != "ref"):
-        return "adaptation spends FLOPs without sig-MSE win — prefer ref/uniform for risk"
-    return f"rank_eff→{best_rank}; mse_eff→{best_mse}"
+        return f"{duty_s}: adaptation spends FLOPs without sig-MSE win — prefer ref/uniform"
+    return f"{duty_s}: rank_eff→{best_rank}; mse_eff→{best_mse}"
 
 
 def scorecard_from_summary(summary: Mapping[str, Any]) -> Dict[str, Any]:
@@ -216,16 +289,33 @@ def scorecard_from_summary(summary: Mapping[str, Any]) -> Dict[str, Any]:
 
     br = Counter(c["best_rank_eff_mode"] for c in ok if c.get("best_rank_eff_mode"))
     bm = Counter(c["best_mse_eff_mode"] for c in ok if c.get("best_mse_eff_mode"))
+    be = Counter(
+        c["best_rank_eff_expected_mode"]
+        for c in ok
+        if c.get("best_rank_eff_expected_mode")
+    )
+    mean_duty = float(
+        np.mean([c["gate_duty"] for c in ok if np.isfinite(c.get("gate_duty", np.nan))])
+    ) if ok else float("nan")
     return {
         "n_datasets": len(ok),
         "batch_size": batch_size,
         "n_batches": n_batches,
         "n_control": n_control,
+        "mean_gate_duty": mean_duty,
+        "mean_budget_ratio_refit_vs_probe": (
+            float(budget_ratio_refit_vs_probe(mean_duty, n_control=n_control))
+            if np.isfinite(mean_duty)
+            else float("nan")
+        ),
         "best_rank_eff_counts": dict(br),
         "best_mse_eff_counts": dict(bm),
+        "best_rank_eff_expected_counts": dict(be),
         "cards": cards,
         "headline": (
-            f"rank_eff wins {dict(br)}; mse_eff wins {dict(bm)} — "
-            "ranking skill ≠ MSE win; FLOPs decide which PO to keep."
+            f"mean duty={mean_duty:.3f} ⇒ E[refit]/E[probe]≈"
+            f"{budget_ratio_refit_vs_probe(mean_duty, n_control=n_control):.3f}; "
+            f"rank_eff wins {dict(br)}; expected-rank wins {dict(be)}; "
+            f"mse_eff wins {dict(bm)}."
         ),
     }

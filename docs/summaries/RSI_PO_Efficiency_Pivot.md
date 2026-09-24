@@ -36,9 +36,12 @@ PYTHONPATH=. python3 scripts/run_po_eff_scorecard.py \
 
 ## 3. 后续发散（本方向）
 
-| ID | 点子 |
-|---|---|
-| P1 | gate duty × flops → 期望适应预算 |
-| P2 | cbrt vs sqrt IPTW 的 mse_eff |
-| P3 | image-OOD bench 接入同一 FLOPs 尺 |
-| P4 | Grad-RFPerm freeze 闭环 MSE–FLOPs 并表 |
+| ID | 点子 | 状态 |
+|---|---|---|
+| P1 | gate duty × flops → 期望适应预算 | **Iter6 落地** |
+| P2 | cbrt vs sqrt IPTW 的 mse_eff | backlog |
+| P3 | image-OOD bench 接入同一 FLOPs 尺 | backlog |
+| P4 | Grad-RFPerm freeze 闭环 MSE–FLOPs 并表 | backlog |
+
+### P1 读法
+`E[refit]/E[probe] ≈ duty · n_control`。duty≈0.13–0.18 时 refit 预算约是 probe 的 1/5–1/6；`rank_eff_E` 用期望 FLOPs 再比一次。
