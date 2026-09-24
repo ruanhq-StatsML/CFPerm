@@ -46,6 +46,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from agod.stream_packs import load_beijing_pm25, load_metro_interstate
+from agod.transfer_null import enrich_row_with_null, summarize_null_pack
 from scripts.generate_board_reason_codes import generate_reason_codes, render_md
 from scripts.run_diffusiondb_temporal_fsds import (
     build_light_token_X,
@@ -207,6 +208,7 @@ def fs_adjacent(
     seed: int,
     max_pairs: int,
     min_n: int = 80,
+    n_null_perm: int = 5,
 ) -> List[Dict[str, Any]]:
     pairs = adjacent_chunk_pairs(T)
     if max_pairs > 0 and len(pairs) > max_pairs:
@@ -270,25 +272,35 @@ def fs_adjacent(
         dmu = X[m1].mean(0) - X[m0].mean(0)
         top_cmean = [feat_names[i] for i in np.argsort(-np.abs(dmu))[:5]]
         top_fsds = ranking["feature"].tolist()
-        rows.append(
-            {
-                "t0": int(t0),
-                "t1": int(t1),
-                "n0": int(m0.sum()),
-                "n1": int(m1.sum()),
-                "y_mean_0": float(np.mean(y0)),
-                "y_mean_1": float(np.mean(y1)),
-                "delta_Y": float(np.mean(y1) - np.mean(y0)),
-                "y_threshold": thr,
-                "hgb_auc": auc_h,
-                "logreg_auc": auc_l,
-                "hgb_brier": brier_h,
-                "logreg_brier": brier_l,
-                "top_fsds": top_fsds,
-                "top_cmean": top_cmean,
-                "fsds_cmean_jaccard": jaccard(top_fsds, top_cmean),
-            }
-        )
+        row = {
+            "t0": int(t0),
+            "t1": int(t1),
+            "n0": int(m0.sum()),
+            "n1": int(m1.sum()),
+            "y_mean_0": float(np.mean(y0)),
+            "y_mean_1": float(np.mean(y1)),
+            "delta_Y": float(np.mean(y1) - np.mean(y0)),
+            "y_threshold": thr,
+            "hgb_auc": auc_h,
+            "logreg_auc": auc_l,
+            "hgb_brier": brier_h,
+            "logreg_brier": brier_l,
+            "top_fsds": top_fsds,
+            "top_cmean": top_cmean,
+            "fsds_cmean_jaccard": jaccard(top_fsds, top_cmean),
+        }
+        # Null on HGB scores: skill beyond chance + FLOPs-normalized efficiency
+        if n_null_perm > 0:
+            row = enrich_row_with_null(
+                row,
+                yb1,
+                proba_h,
+                auc_key="hgb_auc",
+                n_perm=n_null_perm,
+                seed=seed + int(t0) * 17,
+                selected_k=k_eff,
+            )
+        rows.append(row)
     return annotate_stability(rows)
 
 
@@ -436,9 +448,16 @@ LOADERS = {
 }
 
 
-def interpret_pack(mean_auc: Optional[float], mean_j: Optional[float]) -> str:
+def interpret_pack(
+    mean_auc: Optional[float],
+    mean_j: Optional[float],
+    mean_excess: Optional[float] = None,
+) -> str:
     if mean_auc is None:
         return "no pairs"
+    # Excess over label-permutation null — skill beyond chance (cross-pack)
+    if mean_excess is not None and np.isfinite(mean_excess) and mean_excess < 0.05:
+        return "AUC near null (little transferable skill beyond chance)"
     if mean_auc < 0.65:
         return "weak transfer (association does not travel)"
     if mean_j is not None and mean_j >= 0.5:
@@ -582,7 +601,9 @@ def main() -> None:
             m_j = mean_jaccard(rows)
             m_fc = mean_key(rows, "fsds_cmean_jaccard")
             m_bh = mean_key(rows, "hgb_brier")
-            reading = interpret_pack(m_auc, m_j)
+            null_sum = summarize_null_pack(rows)
+            m_ex = null_sum.get("mean_excess_auc")
+            reading = interpret_pack(m_auc, m_j, m_ex)
             pack_blk[str(cs)] = {
                 "n_pairs": len(rows),
                 "mean_delta_Y": m_dy,
@@ -591,6 +612,9 @@ def main() -> None:
                 "mean_hgb_brier": m_bh,
                 "mean_jaccard_top": m_j,
                 "mean_fsds_cmean_jaccard": m_fc,
+                "mean_null_auc": null_sum.get("mean_null_auc"),
+                "mean_excess_auc": m_ex,
+                "mean_probe_eff": null_sum.get("mean_probe_eff"),
                 "reading": reading,
                 "rows": rows,
             }
@@ -604,6 +628,8 @@ def main() -> None:
                         "mean_delta_Y": m_dy,
                         "mean_jaccard": m_j,
                         "mean_fsds_cmean_jaccard": m_fc,
+                        "mean_excess_auc": m_ex,
+                        "mean_probe_eff": null_sum.get("mean_probe_eff"),
                         "reading": reading,
                     }
                 )
@@ -626,12 +652,14 @@ def main() -> None:
                 (
                     f"- pairs={len(rows)} · HGB={blk['mean_auc']} · "
                     f"LogReg={blk['mean_logreg_auc']} · "
+                    f"excess={blk.get('mean_excess_auc')} · "
+                    f"probe_eff={blk.get('mean_probe_eff')} · "
                     f"Jaccard={blk['mean_jaccard_top']} · "
                     f"FSDS∩cmean={blk['mean_fsds_cmean_jaccard']} · "
                     f"**{blk['reading']}**"
                 ),
                 "",
-                "| t0→t1 | ΔȲ | HGB | LogReg | Jac | F∩c | top_fsds |",
+                "| t0→t1 | ΔȲ | HGB | excess | probe_eff | Jac | top_fsds |",
                 "|---|---:|---:|---:|---:|---:|---|",
             ]
             for r in rows[:8]:
@@ -640,10 +668,13 @@ def main() -> None:
                     if r.get("jaccard_top") is not None
                     else "—"
                 )
+                ex = r.get("excess_auc", float("nan"))
+                pe = r.get("probe_eff", float("nan"))
+                ex_s = f"{ex:.3f}" if np.isfinite(ex) else "—"
+                pe_s = f"{pe:.3f}" if np.isfinite(pe) else "—"
                 body_md.append(
                     f"| {r['t0']}→{r['t1']} | {r['delta_Y']:.4f} | "
-                    f"{r['hgb_auc']:.3f} | {r['logreg_auc']:.3f} | {jac} | "
-                    f"{r['fsds_cmean_jaccard']:.2f} | "
+                    f"{r['hgb_auc']:.3f} | {ex_s} | {pe_s} | {jac} | "
                     f"{', '.join(r['top_fsds'][:3])} |"
                 )
             body_md.append("")
