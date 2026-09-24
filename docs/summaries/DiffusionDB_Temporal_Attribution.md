@@ -60,6 +60,31 @@ into token VIMP. (Qwen/CLIP embedding can concat the same way later.)
 Sweep artifact: `results/diffusiondb_window_sweep/` — \(\Delta\bar Y\), HGB AUC,
 `n_by_T`, `span_hours_by_T`, top features all move with the cut.
 
+### Adjacent-batch board (业务切窗看板)
+
+Same FS, no new estimator: pick width (5/10/20/60 min …), `groupby T`,
+adjacent pairs \(t\to t{+}1\) as train→test, dump joint table + PNG.
+
+```bash
+PYTHONPATH=. python3 scripts/run_diffusiondb_adjacent_board.py \
+  --widths-min 5,10,20,60 --out results/diffusiondb_adjacent_board
+```
+
+Just a rolling visualization board for business time grains.
+
+### Sample-chunk adjacent board (每 N 条切窗)
+
+Same board, no calendar weirdness: sort → cut every **1000 / 2000** rows →
+adjacent chunks \(t\to t{+}1\) as train→test. Ported across DiffusionDB,
+Tencent-GR edges, Waymo proxy, Metro Interstate, Beijing PM2.5.
+
+```bash
+PYTHONPATH=. python3 scripts/run_sample_chunk_adjacent_board.py \
+  --chunk-sizes 1000,2000 --out results/sample_chunk_adjacent_board
+```
+
+Artifact: `results/sample_chunk_adjacent_board/` — per-dataset PNG + `SAMPLE_CHUNK_BOARD.md`.
+
 ## Smoke notes
 
 - \(Y\) = continuous `image_nsfw` (not JSON aggregate); FSDS uses early-quantile binary
