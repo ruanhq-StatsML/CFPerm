@@ -110,3 +110,21 @@ def test_blocked_bootstrap_ci_covers_mean():
     rows = [{"excess_auc": v} for v in vals]
     pci = pack_excess_ci(rows, seed=2)
     assert np.isfinite(pci["lo"]) and np.isfinite(pci["hi"])
+
+
+def test_reservoir_sample_uniform_size_and_modes():
+    from agod.transfer_null import reservoir_sample_indices, select_pair_indices
+
+    idx = reservoir_sample_indices(100, 10, seed=0)
+    assert len(idx) == 10
+    assert idx == sorted(idx)
+    assert len(set(idx)) == 10
+    assert select_pair_indices(50, 50) == list(range(50))
+    lin = select_pair_indices(20, 5, mode="linspace", seed=0)
+    assert len(lin) == 5
+    res = select_pair_indices(20, 5, mode="reservoir", seed=0)
+    assert len(res) == 5
+    # different seeds → often different reservoirs (smoke, not flaky hard assert)
+    r2 = select_pair_indices(20, 5, mode="reservoir", seed=1)
+    assert len(r2) == 5
+    assert select_pair_indices(20, 5, mode="head") == [0, 1, 2, 3, 4]

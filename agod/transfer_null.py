@@ -262,3 +262,61 @@ def pack_excess_ci(
     return blocked_bootstrap_ci(
         vals, block_size=block_size, n_boot=n_boot, alpha=alpha, seed=seed
     )
+
+
+def reservoir_sample_indices(
+    n: int,
+    k: int,
+    *,
+    seed: int = 0,
+) -> List[int]:
+    """Algorithm R: uniform reservoir of ``k`` indices from a stream of length ``n``.
+
+    Efficiency justify
+    ------------------
+    Full adjacent-pair scan costs O(N_pairs) probe fits.  When N is large,
+    a *uniform* subsample of size k gives an unbiased estimator of the
+    pack mean (excess / ECE) with variance ≈ (N/k) times larger — fixed
+    compute budget, known bias-variance trade.
+
+    Contrast with ``np.linspace`` thinning: linspace is deterministic and
+    *not* a simple-random sample of pairs (over-weights evenly spaced
+    positions; under-weights local bursts).  Reservoir is the streaming
+    SSRS analogue when the pair list is revealed online.
+    """
+    if n <= 0 or k <= 0:
+        return []
+    if k >= n:
+        return list(range(n))
+    rng = np.random.default_rng(seed)
+    # classic reservoir: first k, then replace with decreasing prob
+    res = list(range(k))
+    for i in range(k, n):
+        j = int(rng.integers(0, i + 1))
+        if j < k:
+            res[j] = i
+    res.sort()
+    return res
+
+
+def select_pair_indices(
+    n_pairs: int,
+    max_pairs: int,
+    *,
+    mode: str = "reservoir",
+    seed: int = 0,
+) -> List[int]:
+    """Choose which adjacent pairs to evaluate under a compute budget.
+
+    Modes: ``reservoir`` (default, unbiased SSRS), ``linspace`` (legacy
+    evenly spaced), ``head`` (first k — for smoke only).
+    """
+    if max_pairs <= 0 or max_pairs >= n_pairs:
+        return list(range(n_pairs))
+    if mode == "linspace":
+        return list(
+            np.linspace(0, n_pairs - 1, num=max_pairs, dtype=int)
+        )
+    if mode == "head":
+        return list(range(max_pairs))
+    return reservoir_sample_indices(n_pairs, max_pairs, seed=seed)

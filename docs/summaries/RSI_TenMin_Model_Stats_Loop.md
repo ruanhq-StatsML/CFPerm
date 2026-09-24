@@ -78,9 +78,21 @@ IID bootstrap 会**低估** mean excess 的方差。
 
 读法：CI 盖住 0 → 别把 pack 均值写成「稳定技能」；跨 pack 比区间宽度，不比点估计。
 
-### 2.5 与业务案由正交
+### 2.5 算力预算：reservoir 抽对（Iter4）
 
-`sign_Dy` 定 S1/S2/S3；excess/probe_eff/ECE/CI 定「故事有没有超出偶然的统计含量 / 概率能不能信 / 均值稳不稳」。  
+全量相邻对 = \(O(N_{\mathrm{pairs}})\) 次探针。预算 `max_pairs=k` 时：
+
+| 模式 | 统计性质 | 何时用 |
+|---|---|---|
+| **reservoir**（默认） | 均匀无偏 SSRS；流式可在线揭示 | 估 pack 均值 / 效率默认 |
+| linspace | 等距覆盖时间轴，**非**简单随机 | 要「扫一遍日历」的展示 |
+| head | 前 k 对 | smoke only |
+
+方差 ≈ 全量的 \(N/k\) 倍 —— 用 Iter3 的块 bootstrap CI 一起读。
+
+### 2.6 与业务案由正交
+
+`sign_Dy` 定 S1/S2/S3；excess/probe_eff/ECE/CI/reservoir 定「故事有没有超出偶然的统计含量 / 概率能不能信 / 均值稳不稳 / 算力怎么花」。  
 高 excess 的买量基线仍 **≠ 限投**（业务门另写）。
 
 ---
@@ -93,7 +105,7 @@ IID bootstrap 会**低估** mean excess 的方差。
 | R2 | Blocked bootstrap CI on mean excess / ECE | 相邻对共享端点 → 块 bootstrap 保守区间 | **Iter3 落地** |
 | R3 | ECE bins on LogReg/HGB transfer | 校准 vs 排序；高 excess+高 ECE=能排不能信 | **Iter2 落地** |
 | R4 | DiffusionDB token excess vs Tencent | 弱特征族的 null 对照 | backlog |
-| R5 | Streaming reservoir subsample of pairs | 线性扫描 vs 全对；偏差-方差 | backlog |
+| R5 | Streaming reservoir subsample of pairs | 固定 k 无偏估 pack 均值；vs linspace 非 SSRS | **Iter4 落地** |
 | R6 | AGOD gate FLOPs vs probe_eff 对照表 | 适应 FLOPs 双尺子 | backlog |
 | R7 | PO refit vs ref IPTW MSE / FLOP | 已有脚本串联 scorecard | backlog |
 | R8 | Multimodal image-OOD bench 抽 1 指标进账本 | OOD 效率 | backlog |

@@ -49,6 +49,7 @@ from agod.stream_packs import load_beijing_pm25, load_metro_interstate
 from agod.transfer_null import (
     enrich_row_with_null,
     pack_excess_ci,
+    select_pair_indices,
     summarize_null_pack,
 )
 from scripts.generate_board_reason_codes import generate_reason_codes, render_md
@@ -213,10 +214,14 @@ def fs_adjacent(
     max_pairs: int,
     min_n: int = 80,
     n_null_perm: int = 5,
+    pair_sample: str = "reservoir",
 ) -> List[Dict[str, Any]]:
     pairs = adjacent_chunk_pairs(T)
-    if max_pairs > 0 and len(pairs) > max_pairs:
-        idx = np.linspace(0, len(pairs) - 1, num=max_pairs, dtype=int)
+    n_all = len(pairs)
+    if max_pairs > 0 and n_all > max_pairs:
+        idx = select_pair_indices(
+            n_all, max_pairs, mode=pair_sample, seed=seed
+        )
         pairs = [pairs[i] for i in idx]
     rows = []
     for t0, t1 in pairs:
@@ -549,6 +554,13 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--max-pairs", type=int, default=12)
     ap.add_argument(
+        "--pair-sample",
+        type=str,
+        default="reservoir",
+        choices=("reservoir", "linspace", "head"),
+        help="how to thin adjacent pairs under --max-pairs (default: unbiased reservoir)",
+    )
+    ap.add_argument(
         "--out", type=Path, default=ROOT / "results/sample_chunk_adjacent_board"
     )
     args = ap.parse_args()
@@ -560,8 +572,11 @@ def main() -> None:
     report: Dict[str, Any] = {
         "note": (
             "HGB AUC = next-chunk transfer probe after SelectKBest on chunk t; "
-            "not a causal tip / not a production model. Read with ΔȲ and Jaccard."
+            "not a causal tip / not a production model. Read with ΔȲ, Jaccard, "
+            "excess/ECE/CI. Pair thinning: reservoir (unbiased) by default."
         ),
+        "pair_sample": args.pair_sample,
+        "max_pairs": args.max_pairs,
         "chunk_sizes": chunk_sizes,
         "datasets": {},
     }
@@ -594,6 +609,7 @@ def main() -> None:
                 y_quantile=args.y_quantile,
                 seed=args.seed,
                 max_pairs=args.max_pairs,
+                pair_sample=args.pair_sample,
             )
             by_chunk[cs] = rows
             print(f"  chunk={cs} pairs_reported={len(rows)}", flush=True)
