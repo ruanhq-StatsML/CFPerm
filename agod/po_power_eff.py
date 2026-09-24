@@ -165,6 +165,7 @@ def power_scorecard_from_summary(summary: Mapping[str, Any]) -> Dict[str, Any]:
         "n_datasets": len(ok),
         "n_batches": n_batches,
         "batch_size": batch_size,
+        "n_control": n_control,
         "soft_win_rate_cbrt_le_sqrt": soft_rate,
         "mean_soft_mse_eff_gap_cbrt_minus_sqrt": mean_gap,
         "median_soft_mse_eff_gap_cbrt_minus_sqrt": median_gap,
