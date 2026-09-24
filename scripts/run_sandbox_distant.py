@@ -12,7 +12,8 @@ from pathlib import Path
 
 import numpy as np
 
-from sandbox.forecast_bakeoff import bakeoff_all
+from sandbox.forecast_bakeoff import bakeoff_all, load_packs
+from sandbox.forecast_flywheel import flywheel_suite, opportunity_map_from_bakeoff
 from sandbox.prompt_themes import run_theme_job
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,11 +34,11 @@ def _clean(o):
     return o
 
 
-def render_md(forecast: dict, themes: dict) -> str:
+def render_md(forecast: dict, themes: dict, flywheel: dict | None = None) -> str:
     lines = [
         "# Sandbox distant bakeoff (away from AGOD methods)",
         "",
-        "Two unrelated classical ML jobs — **no** excess / PO / soft-burn / claim router.",
+        "Classical ML jobs — **no** excess / PO / soft-burn / claim router.",
         "",
         "## A. Next-step stream forecast",
         "",
@@ -76,17 +77,45 @@ def render_md(forecast: dict, themes: dict) -> str:
         lines.append(f"- skipped: `{themes.get('reason')}`")
     else:
         lines.append(f"- n_prompts: {themes.get('n_prompts')}")
-        lines.append(f"- best k: **{themes.get('best_k')}** (silhouette={themes.get('best_silhouette')})")
+        lines.append(
+            f"- best k: **{themes.get('best_k')}** "
+            f"(silhouette={themes.get('best_silhouette')})"
+        )
         lines.append("- top terms (first 3 clusters):")
         for i, terms in enumerate(themes.get("best_top_terms_head") or []):
             lines.append(f"  - C{i}: {', '.join(terms[:6])}")
+
+    fw = flywheel or {}
+    lines += ["", "## C. Classical forecast → agent flywheel", ""]
+    if fw:
+        lines.append(f"**Headline:** {fw.get('headline')}")
+        lines.append("")
+        lines.append("| id | pack | opportunity | priority |")
+        lines.append("|---|---|---|---|")
+        for o in fw.get("opportunities") or []:
+            lines.append(
+                f"| `{o.get('id')}` | `{o.get('pack')}` | {o.get('opportunity')} | "
+                f"{o.get('priority')} |"
+            )
+        lines.append("")
+        lines.append("| pack | model | MAE | surprise_rate | retrains | fallback |")
+        lines.append("|---|---|---:|---:|---:|:---:|")
+        for r in fw.get("runs") or []:
+            if not r.get("ok"):
+                continue
+            lines.append(
+                f"| `{r.get('dataset')}` | `{r.get('model')}` | {f(r.get('mae'))} | "
+                f"{f(r.get('surprise_rate'))} | {r.get('n_retrain')} | "
+                f"{'Y' if r.get('fell_back_to_naive') else 'N'} |"
+            )
     lines += [
         "",
         "## Effect reading (plain)",
         "",
-        "- Forecast: if HGB lift ≫ 0 on a pack, lag+X features beat last-value; if ≈0, series is near random-walk.",
-        "- Themes: silhouette picks a usable k; terms are descriptive clusters only.",
-        "- Explicitly **not** an AGOD efficiency / causal / transfer claim.",
+        "- Forecast: HGB lift ≫ 0 ⇒ learnable pack; ≈0 ⇒ random-walk (naive agent).",
+        "- Flywheel: opportunity is **pack→model routing + surprise/retrain/fallback**, not deeper nets.",
+        "- Themes: silhouette/terms only — context sticker for other agents.",
+        "- Not an AGOD efficiency / causal claim.",
         "",
     ]
     return "\n".join(lines) + "\n"
@@ -100,10 +129,14 @@ def main() -> None:
     args = ap.parse_args()
     forecast = bakeoff_all(max_n=args.max_n, seed=args.seed)
     themes = run_theme_job(max_n=min(4000, args.max_n), seed=args.seed)
-    blob = {"forecast": forecast, "themes": themes}
+    packs = load_packs(max_n=args.max_n)
+    flywheel = flywheel_suite(forecast, packs, seed=args.seed)
+    blob = {"forecast": forecast, "themes": themes, "flywheel": flywheel}
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "sandbox_distant.json").write_text(json.dumps(_clean(blob), indent=2) + "\n")
-    md = render_md(forecast, themes)
+    (args.out / "sandbox_distant.json").write_text(
+        json.dumps(_clean(blob), indent=2) + "\n"
+    )
+    md = render_md(forecast, themes, flywheel)
     (args.out / "SANDBOX_DISTANT.md").write_text(md)
     print(md)
 

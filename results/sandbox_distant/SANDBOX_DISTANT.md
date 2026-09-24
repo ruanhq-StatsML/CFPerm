@@ -1,18 +1,18 @@
 # Sandbox distant bakeoff (away from AGOD methods)
 
-Two unrelated classical ML jobs — **no** excess / PO / soft-burn / claim router.
+Classical ML jobs — **no** excess / PO / soft-burn / claim router.
 
 ## A. Next-step stream forecast
 
 - packs ok: 3
 - best_rmse counts: `{'hgb': 1, 'naive_last': 1, 'ridge': 1}`
-- mean HGB RMSE lift vs naive: **0.18726140815649428**
+- mean HGB RMSE lift vs naive: **0.16083352137950715**
 
 | dataset | best | naive RMSE | ridge RMSE | HGB RMSE | HGB lift |
 |---|---|---:|---:|---:|---:|
-| `metro_interstate` | `hgb` | 854.6 | 717.4 | 486.9 | 0.4303 |
-| `beijing_pm25` | `naive_last` | 24.06 | 25.2 | 24.68 | -0.02583 |
-| `waymo_proxy` | `ridge` | 0.2642 | 0.1263 | 0.2226 | 0.1573 |
+| `metro_interstate` | `hgb` | 912.4 | 791.2 | 559.5 | 0.3868 |
+| `beijing_pm25` | `naive_last` | 21.21 | 21.38 | 22.82 | -0.07566 |
+| `waymo_proxy` | `ridge` | 0.2514 | 0.1251 | 0.2083 | 0.1713 |
 
 ## B. DiffusionDB prompt themes
 
@@ -23,9 +23,27 @@ Two unrelated classical ML jobs — **no** excess / PO / soft-burn / claim route
   - C1: film, movie, life, cinematic, retro, poster
   - C2: detailed, highly, highly detailed, lighting, cinematic, artstation
 
+## C. Classical forecast → agent flywheel
+
+**Headline:** 3 P0 flywheel opportunities; mean surprise_rate=0.003; 1 packs fell back to naive online
+
+| id | pack | opportunity | priority |
+|---|---|---|---|
+| `FW-metro_interstate-hgb` | `metro_interstate` | specialize an HGB forecast agent | P0 |
+| `FW-beijing_pm25-naive` | `beijing_pm25` | do NOT spend an HGB agent here | P1 |
+| `FW-waymo_proxy-ridge` | `waymo_proxy` | cheap linear forecast agent | P0 |
+| `FW-router` | `*` | pack→model router agent | P0 |
+
+| pack | model | MAE | surprise_rate | retrains | fallback |
+|---|---|---:|---:|---:|:---:|
+| `metro_interstate` | `hgb` | 460.4 | 0 | 1 | Y |
+| `beijing_pm25` | `naive_last` | 16.28 | 0.01 | 6 | N |
+| `waymo_proxy` | `ridge` | 0.09833 | 0 | 6 | N |
+
 ## Effect reading (plain)
 
-- Forecast: if HGB lift ≫ 0 on a pack, lag+X features beat last-value; if ≈0, series is near random-walk.
-- Themes: silhouette picks a usable k; terms are descriptive clusters only.
-- Explicitly **not** an AGOD efficiency / causal / transfer claim.
+- Forecast: HGB lift ≫ 0 ⇒ learnable pack; ≈0 ⇒ random-walk (naive agent).
+- Flywheel: opportunity is **pack→model routing + surprise/retrain/fallback**, not deeper nets.
+- Themes: silhouette/terms only — context sticker for other agents.
+- Not an AGOD efficiency / causal claim.
 

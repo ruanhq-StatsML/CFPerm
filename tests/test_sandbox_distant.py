@@ -44,3 +44,24 @@ def test_theme_clusters_smoke():
     assert rep["ok"]
     assert len(rep["top_terms"]) == 3
     assert rep["n_docs"] == 120
+
+
+def test_opportunity_map_and_flywheel_smoke():
+    from sandbox.forecast_bakeoff import Pack, run_bakeoff
+    from sandbox.forecast_flywheel import opportunity_map_from_bakeoff, run_flywheel
+
+    rng = np.random.default_rng(0)
+    n = 500
+    X = rng.normal(size=(n, 2))
+    y = np.zeros(n)
+    for i in range(1, n):
+        y[i] = 0.6 * y[i - 1] + 0.2 * X[i, 0] + rng.normal(scale=0.25)
+    pack = Pack(name="toy", X=X, y=y)
+    card = run_bakeoff(pack, n_lags=3, seed=0)
+    bakeoff = {"cards": [card]}
+    opps = opportunity_map_from_bakeoff(bakeoff)
+    assert any(o["pack"] == "toy" for o in opps)
+    fw = run_flywheel(pack, model_name="hgb", warm=120, max_steps=80, seed=0)
+    assert fw["ok"]
+    assert fw["n_steps"] == 80
+    assert "surprise_rate" in fw
