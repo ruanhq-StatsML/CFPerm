@@ -69,7 +69,7 @@
 | 人审先看什么 | 活动、推荐改版、库存、流量结构；**慎升强动作** |
 | 和刷量/灌入的边界 | 一旦后补到可靠 `sign_Dy=pos/neg`，再改族，不在 flat 上赌 |
 
-当前 `tencent_gr_w1w2_mmd_po_fsds`：顶 tip 是路径线性份额/归因 + 共现；direction 空 → **按 S3 讲故事**，不要硬讲成刷量。
+当前 `tencent_gr_w1w2_mmd_po_fsds`：顶 tip 是路径线性份额/归因 + 共现；`ensure_direction` 回填 tip_signs 后仍 **dy_missing→flat** → 按 **S3 漂移族** 讲故事（`scenario.family_code=S3_drift`），不要硬讲成刷量。
 
 ---
 
