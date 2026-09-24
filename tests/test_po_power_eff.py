@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
+
 from agod.po_power_eff import power_card_from_dataset, power_scorecard_from_summary
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,3 +35,6 @@ def test_repo_cbrt_summary_smoke():
     card = power_scorecard_from_summary(json.loads(path.read_text()))
     assert card["n_datasets"] >= 1
     assert 0.0 <= card["soft_win_rate_cbrt_le_sqrt"] <= 1.0
+    assert "median_soft_mse_eff_gap_cbrt_minus_sqrt" in card
+    # median should be more robust than mean when one pack dominates
+    assert np.isfinite(card["median_soft_mse_eff_gap_cbrt_minus_sqrt"])

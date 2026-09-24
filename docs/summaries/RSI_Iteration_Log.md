@@ -16,3 +16,4 @@
 | 12 | 2026-09-24 | n_control sensitivity in scorecard MD | larger control windows erase refit budget edge | `PO_EFF_SCORECARD` §n_control | regen |
 | 13 | 2026-09-24 | walkthrough note + refresh demo artifact | 12 tests green; one figure for human review tomorrow | `RSI_Walkthrough.md` + artifacts png | 12 passed |
 | 14 | 2026-09-24 | Δmse_eff(∛−√) + strict freeze JSON | soft gap quantifies how much ∛ saves vs √ per FLOP; NaN→null | `po_power_eff` + freeze dump | power+freeze tests |
+| 15 | 2026-09-24 | median Δmse_eff for soft gap headline | mean dominated by metro; median is the review number | `po_power_eff` headline | power tests |

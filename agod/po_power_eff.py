@@ -149,21 +149,34 @@ def power_scorecard_from_summary(summary: Mapping[str, Any]) -> Dict[str, Any]:
     ok = [c for c in cards if c.get("ok")]
     soft = [c["soft_win_cbrt_le_sqrt"] for c in ok if c.get("soft_win_cbrt_le_sqrt") is not None]
     soft_rate = float(np.mean(soft)) if soft else float("nan")
+    gaps = [
+        float(c["soft_mse_eff_gap_cbrt_minus_sqrt"])
+        for c in ok
+        if np.isfinite(c.get("soft_mse_eff_gap_cbrt_minus_sqrt", np.nan))
+    ]
+    mean_gap = float(np.mean(gaps)) if gaps else float("nan")
+    median_gap = float(np.median(gaps)) if gaps else float("nan")
     best_counts = Counter(c["best_sig_mode"] for c in ok if c.get("best_sig_mode"))
     return {
         "n_datasets": len(ok),
         "n_batches": n_batches,
         "batch_size": batch_size,
         "soft_win_rate_cbrt_le_sqrt": soft_rate,
+        "mean_soft_mse_eff_gap_cbrt_minus_sqrt": mean_gap,
+        "median_soft_mse_eff_gap_cbrt_minus_sqrt": median_gap,
         "best_sig_counts": dict(best_counts),
         "cards": cards,
         "headline": (
             f"gated∛≤gated√ on {soft_rate:.0%} of packs; "
+            f"median Δmse_eff(∛−√)={median_gap:+.3g} "
+            f"(mean={mean_gap:+.3g}, metro-skewed); "
             f"best_sig counts {dict(best_counts)}. "
             "Same FLOPs — softness is the only knob."
         ),
         "note": (
             "sqrt vs cbrt IPTW share adaptation FLOPs; compare rel MSE / soft wins, "
-            "not compute. Prefer ∛ when PO ranks well but √ IPTW hurts."
+            "not compute. Prefer ∛ when PO ranks well but √ IPTW hurts. "
+            "Δmse_eff(∛−√)>0 ⇒ ∛ loses less (or gains more) per FLOP. "
+            "Prefer **median** gap over mean — one pack (metro) can dominate."
         ),
     }
