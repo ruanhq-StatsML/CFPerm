@@ -1,0 +1,109 @@
+【board reason-codes】
+来源: sample-chunk adjacent transfer board（非定罪 / 非上线门）
+
+- `RC_BOARD_NOT_SHIP` [block_claim]: 本卡来自相邻切窗 transfer 探针，不是线上打分器。禁止因 AUC 高直接上线 HGB；缺 label delay / 校准 / Acc·时延 / 灰发回滚。
+- `RC_SHORTLIST_NOT_DRIVER` [block_claim]: 看板只做特征族 shortlist，不做真驱动认定。真驱动需 ablation / PO-risk / 干预实验。
+- `RC_CONTENT_CREDIT_CANDIDATE` [investigate] `tencent_gr_content`@N=1000: Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。
+    · i_credit_last: 末次归因偏高（末跳嫌疑）
+    · i_share_last: 末次份额偏高（末跳嫌疑）
+    · i_item_credit_rank: 商户归因秩变动
+- `RC_CONTENT_CREDIT_CANDIDATE` [investigate] `tencent_gr_content`@N=2000: Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。
+    · i_share_last: 末次份额偏高（末跳嫌疑）
+    · i_credit_last: 末次归因偏高（末跳嫌疑）
+    · i_item_credit_rank: 商户归因秩变动
+- `RC_DIFFDB_TOKEN_NO_TRAVEL` [watch] `diffusiondb`@N=1000: DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。
+    · mucha: 特征 `mucha`
+    · alphonse mucha: token `alphonse mucha`
+    · alphonse: 特征 `alphonse`
+- `RC_DIFFDB_TOKEN_NO_TRAVEL` [watch] `diffusiondb`@N=2000: DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。
+    · alphonse mucha: token `alphonse mucha`
+    · alphonse: 特征 `alphonse`
+    · mucha: 特征 `mucha`
+- `RC_OPS_CONTENT_GAP` [watch] `tencent_gr`@N=1000: ops−content gap≈0.16 @N=1000：大半 transfer 是强度；content 残差才是归因候选空间。
+    · i_credit_last: 末次归因偏高（末跳嫌疑）
+    · i_share_last: 末次份额偏高（末跳嫌疑）
+    · i_item_credit_rank: 商户归因秩变动
+- `RC_PROBE_DISAGREE` [watch] `metro_interstate`@N=1000: `metro_interstate` @N=1000: HGB=0.97 vs LogReg=0.61 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。
+    · m5: 特征 `m5`
+    · m0: 特征 `m0`
+    · m14: 特征 `m14`
+- `RC_PROBE_DISAGREE` [watch] `metro_interstate`@N=2000: `metro_interstate` @N=2000: HGB=0.98 vs LogReg=0.64 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。
+    · m5: 特征 `m5`
+    · m0: 特征 `m0`
+    · m6: 特征 `m6`
+- `RC_PROBE_DISAGREE` [watch] `tencent_gr`@N=1000: `tencent_gr` @N=1000: HGB=1.00 vs LogReg=0.83 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。
+    · e_log1p_exp: 边曝光强度(log)
+    · e_n_exp: 边曝光次数
+    · i_log1p_n_exp: 商户曝光规模(log)
+- `RC_PROBE_DISAGREE` [watch] `tencent_gr`@N=2000: `tencent_gr` @N=2000: HGB=1.00 vs LogReg=0.66 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。
+    · e_log1p_exp: 边曝光强度(log)
+    · e_n_exp: 边曝光次数
+    · i_log1p_n_exp: 商户曝光规模(log)
+- `RC_SHIFTING_DRIVERS` [watch] `metro_interstate`@N=1000: `metro_interstate` @N=1000: AUC 高但驱动名单 Jaccard≈0.23，预测还在、名单在换——按 regime/composition 读，勿锁死单一 tip。
+    · m5: 特征 `m5`
+    · m0: 特征 `m0`
+    · m14: 特征 `m14`
+- `RC_INTENSITY_BASELINE` [info] `tencent_gr`@N=1000: Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。
+    · e_log1p_exp: 边曝光强度(log)
+    · e_n_exp: 边曝光次数
+    · i_log1p_n_exp: 商户曝光规模(log)
+- `RC_INTENSITY_BASELINE` [info] `tencent_gr`@N=2000: Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。
+    · e_log1p_exp: 边曝光强度(log)
+    · e_n_exp: 边曝光次数
+    · i_log1p_n_exp: 商户曝光规模(log)
+- `RC_PERSISTENT_ASSOCIATION` [info] `beijing_pm25`@N=1000: `beijing_pm25` @N=1000: 高 transfer 且 top Jaccard≈0.56，关联稳传——先当 persistent correlate，勿直接当因果驱动。
+    · p8: 特征 `p8`
+    · p0: 特征 `p0`
+    · p2: 特征 `p2`
+- `RC_PERSISTENT_ASSOCIATION` [info] `beijing_pm25`@N=2000: `beijing_pm25` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。
+    · p8: 特征 `p8`
+    · p0: 特征 `p0`
+    · p2: 特征 `p2`
+- `RC_PERSISTENT_ASSOCIATION` [info] `metro_interstate`@N=2000: `metro_interstate` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。
+    · m5: 特征 `m5`
+    · m0: 特征 `m0`
+    · m6: 特征 `m6`
+- `RC_PERSISTENT_ASSOCIATION` [info] `tencent_gr`@N=1000: `tencent_gr` @N=1000: 高 transfer 且 top Jaccard≈0.70，关联稳传——先当 persistent correlate，勿直接当因果驱动。
+    · e_log1p_exp: 边曝光强度(log)
+    · e_n_exp: 边曝光次数
+    · i_log1p_n_exp: 商户曝光规模(log)
+- `RC_PERSISTENT_ASSOCIATION` [info] `waymo_proxy`@N=1000: `waymo_proxy` @N=1000: 高 transfer 且 top Jaccard≈0.72，关联稳传——先当 persistent correlate，勿直接当因果驱动。
+    · x0: 特征 `x0`
+    · x8: 特征 `x8`
+    · x3: 特征 `x3`
+- `RC_PERSISTENT_ASSOCIATION` [info] `waymo_proxy`@N=2000: `waymo_proxy` @N=2000: 高 transfer 且 top Jaccard≈1.00，关联稳传——先当 persistent correlate，勿直接当因果驱动。
+    · x0: 特征 `x0`
+    · x8: 特征 `x8`
+    · x5: 特征 `x5`
+- `RC_PLANTED_SANITY_OK` [info] `waymo_proxy`@N=1000: Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。
+    · x0: 特征 `x0`
+    · x8: 特征 `x8`
+    · x3: 特征 `x3`
+- `RC_PLANTED_SANITY_OK` [info] `waymo_proxy`@N=2000: Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。
+    · x0: 特征 `x0`
+    · x8: 特征 `x8`
+    · x5: 特征 `x5`
+- `RC_RANK_MEAN_SPLIT` [info] `diffusiondb`@N=1000: `diffusiondb` @N=1000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。
+    · mucha: 特征 `mucha`
+    · alphonse mucha: token `alphonse mucha`
+    · alphonse: 特征 `alphonse`
+- `RC_RANK_MEAN_SPLIT` [info] `diffusiondb`@N=2000: `diffusiondb` @N=2000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。
+    · alphonse mucha: token `alphonse mucha`
+    · alphonse: 特征 `alphonse`
+    · mucha: 特征 `mucha`
+- `RC_RANK_MEAN_SPLIT` [info] `tencent_gr`@N=1000: `tencent_gr` @N=1000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。
+    · e_log1p_exp: 边曝光强度(log)
+    · e_n_exp: 边曝光次数
+    · i_log1p_n_exp: 商户曝光规模(log)
+- `RC_RANK_MEAN_SPLIT` [info] `tencent_gr`@N=2000: `tencent_gr` @N=2000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。
+    · e_log1p_exp: 边曝光强度(log)
+    · e_n_exp: 边曝光次数
+    · i_log1p_n_exp: 商户曝光规模(log)
+- `RC_WEAK_TRANSFER` [info] `diffusiondb`@N=1000: `diffusiondb` @N=1000: 下一段 AUC≈0.60，关联基本不传。不要把本窗 top 特征当成稳定过滤器。
+    · mucha: 特征 `mucha`
+    · alphonse mucha: token `alphonse mucha`
+    · alphonse: 特征 `alphonse`
+- `RC_WEAK_TRANSFER` [info] `diffusiondb`@N=2000: `diffusiondb` @N=2000: 下一段 AUC≈0.61，关联基本不传。不要把本窗 top 特征当成稳定过滤器。
+    · alphonse mucha: token `alphonse mucha`
+    · alphonse: 特征 `alphonse`
+    · mucha: 特征 `mucha`

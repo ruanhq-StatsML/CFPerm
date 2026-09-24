@@ -1,0 +1,1218 @@
+{
+  "note": "Reason codes auto-generated from adjacent-board summary. Routing / claim-control only; allows_ship_model=false always.",
+  "n_codes": 28,
+  "codes": [
+    {
+      "code": "RC_BOARD_NOT_SHIP",
+      "family": "ship_gate",
+      "severity": "block_claim",
+      "title": "看板禁止直接上线 HGB",
+      "pack": null,
+      "chunk": null,
+      "evidence": {
+        "promote_HGB_to_production": false,
+        "reason": "Adjacent-chunk transfer probe ≠ online scorer. Missing: label delay, calibration under serve skew, Acc/latency budget, abstain/rollback, and causal/PO checks for 'true drivers'."
+      },
+      "human_copy": "本卡来自相邻切窗 transfer 探针，不是线上打分器。禁止因 AUC 高直接上线 HGB；缺 label delay / 校准 / Acc·时延 / 灰发回滚。",
+      "next_actions": [
+        "保持 promote_HGB_to_production=false",
+        "若要上线另走 holdout Acc + calibration + gray rollback"
+      ],
+      "tip_feats": [],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_SHORTLIST_NOT_DRIVER",
+      "family": "driver_gate",
+      "severity": "block_claim",
+      "title": "shortlist ≠ 真驱动",
+      "pack": null,
+      "chunk": null,
+      "evidence": {
+        "note": "transfer shortlist only"
+      },
+      "human_copy": "看板只做特征族 shortlist，不做真驱动认定。真驱动需 ablation / PO-risk / 干预实验。",
+      "next_actions": [
+        "shortlist 进 localize/PO 队列",
+        "禁止把 top_fsds 写成定罪话术"
+      ],
+      "tip_feats": [],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_CONTENT_CREDIT_CANDIDATE",
+      "family": "tencent_content",
+      "severity": "investigate",
+      "title": "content 面板 credit/share 候选",
+      "pack": "tencent_gr_content",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.8350687106424594,
+        "mean_logreg_auc": 0.8445150735163063,
+        "mean_jaccard": 0.5714285714285714,
+        "mean_fsds_cmean_jaccard": 0.29298941798941797,
+        "mean_delta_Y": -0.007833333333333333,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "i_credit_last",
+          "i_share_last",
+          "i_item_credit_rank",
+          "i_log1p_credit_linear",
+          "i_share_linear"
+        ],
+        "credit_hits": [
+          "i_credit_last",
+          "i_share_last",
+          "i_item_credit_rank",
+          "i_log1p_credit_linear",
+          "i_share_linear"
+        ]
+      },
+      "human_copy": "Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。",
+      "next_actions": [
+        "映射 TIP_BUCKETS 末跳/份额话术",
+        "进 localize / PO shortlist",
+        "人审 useful 票后再谈升桶"
+      ],
+      "tip_feats": [
+        {
+          "feature": "i_credit_last",
+          "copy": "末次归因偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_share_last",
+          "copy": "末次份额偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_item_credit_rank",
+          "copy": "商户归因秩变动"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_CONTENT_CREDIT_CANDIDATE",
+      "family": "tencent_content",
+      "severity": "investigate",
+      "title": "content 面板 credit/share 候选",
+      "pack": "tencent_gr_content",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9003182536545639,
+        "mean_logreg_auc": 0.8982588120690723,
+        "mean_jaccard": 0.42857142857142855,
+        "mean_fsds_cmean_jaccard": 0.1574074074074074,
+        "mean_delta_Y": -0.017333333333333336,
+        "reading": "transfer holds; feature set partially stable",
+        "top_fsds": [
+          "i_share_last",
+          "i_credit_last",
+          "i_item_credit_rank",
+          "i_log1p_credit_linear",
+          "i_credit_linear"
+        ],
+        "credit_hits": [
+          "i_share_last",
+          "i_credit_last",
+          "i_item_credit_rank",
+          "i_log1p_credit_linear",
+          "i_credit_linear"
+        ]
+      },
+      "human_copy": "Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。",
+      "next_actions": [
+        "映射 TIP_BUCKETS 末跳/份额话术",
+        "进 localize / PO shortlist",
+        "人审 useful 票后再谈升桶"
+      ],
+      "tip_feats": [
+        {
+          "feature": "i_share_last",
+          "copy": "末次份额偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_credit_last",
+          "copy": "末次归因偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_item_credit_rank",
+          "copy": "商户归因秩变动"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_DIFFDB_TOKEN_NO_TRAVEL",
+      "family": "diffusiondb",
+      "severity": "watch",
+      "title": "DiffDB prompt token 对 NSFW 不稳传",
+      "pack": "diffusiondb",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.6048427572700964,
+        "mean_logreg_auc": 0.6161109153514835,
+        "mean_jaccard": 0.2400793650793651,
+        "mean_fsds_cmean_jaccard": 0.0,
+        "mean_delta_Y": 0.014843780122963442,
+        "reading": "weak transfer (association does not travel)",
+        "top_fsds": [
+          "mucha",
+          "alphonse mucha",
+          "alphonse",
+          "character",
+          "focus illustration"
+        ]
+      },
+      "human_copy": "DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。",
+      "next_actions": [
+        "NSFW 故事不要押在单一风格 token",
+        "可选：concat CFG/step 或换 embedding 后再跑探针"
+      ],
+      "tip_feats": [
+        {
+          "feature": "mucha",
+          "copy": "特征 `mucha`"
+        },
+        {
+          "feature": "alphonse mucha",
+          "copy": "token `alphonse mucha`"
+        },
+        {
+          "feature": "alphonse",
+          "copy": "特征 `alphonse`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_DIFFDB_TOKEN_NO_TRAVEL",
+      "family": "diffusiondb",
+      "severity": "watch",
+      "title": "DiffDB prompt token 对 NSFW 不稳传",
+      "pack": "diffusiondb",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.6091376939024363,
+        "mean_logreg_auc": 0.6187648813337822,
+        "mean_jaccard": 0.3392857142857143,
+        "mean_fsds_cmean_jaccard": 0.0,
+        "mean_delta_Y": 0.029074908243802683,
+        "reading": "weak transfer (association does not travel)",
+        "top_fsds": [
+          "alphonse mucha",
+          "alphonse",
+          "mucha",
+          "woman",
+          "and alphonse"
+        ]
+      },
+      "human_copy": "DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。",
+      "next_actions": [
+        "NSFW 故事不要押在单一风格 token",
+        "可选：concat CFG/step 或换 embedding 后再跑探针"
+      ],
+      "tip_feats": [
+        {
+          "feature": "alphonse mucha",
+          "copy": "token `alphonse mucha`"
+        },
+        {
+          "feature": "alphonse",
+          "copy": "特征 `alphonse`"
+        },
+        {
+          "feature": "mucha",
+          "copy": "特征 `mucha`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_OPS_CONTENT_GAP",
+      "family": "tencent_gap",
+      "severity": "watch",
+      "title": "ops−content 缺口：强度解释大半 transfer",
+      "pack": "tencent_gr",
+      "chunk": 1000,
+      "evidence": {
+        "chunk": 1000,
+        "ops_auc": 0.9957951724897706,
+        "content_auc": 0.8350687106424594,
+        "auc_gap_ops_minus_content": 0.1607264618473112,
+        "ops_top0": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp"
+        ],
+        "content_top0": [
+          "i_credit_last",
+          "i_share_last",
+          "i_item_credit_rank"
+        ],
+        "reading": "volume explains most transfer"
+      },
+      "human_copy": "ops−content gap≈0.16 @N=1000：大半 transfer 是强度；content 残差才是归因候选空间。",
+      "next_actions": [
+        "汇报时先报 gap 再报 content tops",
+        "强度基线与 content 候选分两行写进工单"
+      ],
+      "tip_feats": [
+        {
+          "feature": "i_credit_last",
+          "copy": "末次归因偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_share_last",
+          "copy": "末次份额偏高（末跳嫌疑）"
+        },
+        {
+          "feature": "i_item_credit_rank",
+          "copy": "商户归因秩变动"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PROBE_DISAGREE",
+      "family": "probe",
+      "severity": "watch",
+      "title": "HGB 与 LogReg transfer 分歧",
+      "pack": "metro_interstate",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9718807034328297,
+        "mean_logreg_auc": 0.6090001912223876,
+        "mean_jaccard": 0.2334656084656085,
+        "mean_fsds_cmean_jaccard": 0.2556689342403628,
+        "mean_delta_Y": -20.366857142857175,
+        "reading": "strong transfer but shifting drivers (regime / composition change)",
+        "top_fsds": [
+          "m5",
+          "m0",
+          "m14",
+          "m16",
+          "m18"
+        ]
+      },
+      "human_copy": "`metro_interstate` @N=1000: HGB=0.97 vs LogReg=0.61 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。",
+      "next_actions": [
+        "并列报告双探针",
+        "优先信任两探针都同意的特征族"
+      ],
+      "tip_feats": [
+        {
+          "feature": "m5",
+          "copy": "特征 `m5`"
+        },
+        {
+          "feature": "m0",
+          "copy": "特征 `m0`"
+        },
+        {
+          "feature": "m14",
+          "copy": "特征 `m14`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PROBE_DISAGREE",
+      "family": "probe",
+      "severity": "watch",
+      "title": "HGB 与 LogReg transfer 分歧",
+      "pack": "metro_interstate",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9753765691624277,
+        "mean_logreg_auc": 0.6396613442498914,
+        "mean_jaccard": 0.5476190476190476,
+        "mean_fsds_cmean_jaccard": 0.30952380952380953,
+        "mean_delta_Y": 15.445333333333414,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "m5",
+          "m0",
+          "m6",
+          "m16",
+          "m9"
+        ]
+      },
+      "human_copy": "`metro_interstate` @N=2000: HGB=0.98 vs LogReg=0.64 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。",
+      "next_actions": [
+        "并列报告双探针",
+        "优先信任两探针都同意的特征族"
+      ],
+      "tip_feats": [
+        {
+          "feature": "m5",
+          "copy": "特征 `m5`"
+        },
+        {
+          "feature": "m0",
+          "copy": "特征 `m0`"
+        },
+        {
+          "feature": "m6",
+          "copy": "特征 `m6`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PROBE_DISAGREE",
+      "family": "probe",
+      "severity": "watch",
+      "title": "HGB 与 LogReg transfer 分歧",
+      "pack": "tencent_gr",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9957951724897706,
+        "mean_logreg_auc": 0.8318962492242159,
+        "mean_jaccard": 0.7047619047619047,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "mean_delta_Y": -0.007833333333333333,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "i_credit_last",
+          "i_share_last"
+        ]
+      },
+      "human_copy": "`tencent_gr` @N=1000: HGB=1.00 vs LogReg=0.83 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。",
+      "next_actions": [
+        "并列报告双探针",
+        "优先信任两探针都同意的特征族"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
+        },
+        {
+          "feature": "i_log1p_n_exp",
+          "copy": "商户曝光规模(log)"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PROBE_DISAGREE",
+      "family": "probe",
+      "severity": "watch",
+      "title": "HGB 与 LogReg transfer 分歧",
+      "pack": "tencent_gr",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9987730084570958,
+        "mean_logreg_auc": 0.6634610688713213,
+        "mean_jaccard": 0.4583333333333333,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "mean_delta_Y": -0.017333333333333336,
+        "reading": "transfer holds; feature set partially stable",
+        "top_fsds": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "u_n_exp",
+          "i_share_last"
+        ]
+      },
+      "human_copy": "`tencent_gr` @N=2000: HGB=1.00 vs LogReg=0.66 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。",
+      "next_actions": [
+        "并列报告双探针",
+        "优先信任两探针都同意的特征族"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
+        },
+        {
+          "feature": "i_log1p_n_exp",
+          "copy": "商户曝光规模(log)"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_SHIFTING_DRIVERS",
+      "family": "stability",
+      "severity": "watch",
+      "title": "高 transfer 但驱动名单在换",
+      "pack": "metro_interstate",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9718807034328297,
+        "mean_logreg_auc": 0.6090001912223876,
+        "mean_jaccard": 0.2334656084656085,
+        "mean_fsds_cmean_jaccard": 0.2556689342403628,
+        "mean_delta_Y": -20.366857142857175,
+        "reading": "strong transfer but shifting drivers (regime / composition change)",
+        "top_fsds": [
+          "m5",
+          "m0",
+          "m14",
+          "m16",
+          "m18"
+        ]
+      },
+      "human_copy": "`metro_interstate` @N=1000: AUC 高但驱动名单 Jaccard≈0.23，预测还在、名单在换——按 regime/composition 读，勿锁死单一 tip。",
+      "next_actions": [
+        "对比 N=1000 vs 2000 粒度",
+        "人审看当窗 top，不复用上窗话术"
+      ],
+      "tip_feats": [
+        {
+          "feature": "m5",
+          "copy": "特征 `m5`"
+        },
+        {
+          "feature": "m0",
+          "copy": "特征 `m0`"
+        },
+        {
+          "feature": "m14",
+          "copy": "特征 `m14`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_INTENSITY_BASELINE",
+      "family": "tencent_ops",
+      "severity": "info",
+      "title": "强度基线（曝光量在传）",
+      "pack": "tencent_gr",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9957951724897706,
+        "mean_logreg_auc": 0.8318962492242159,
+        "mean_jaccard": 0.7047619047619047,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "mean_delta_Y": -0.007833333333333333,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "i_credit_last",
+          "i_share_last"
+        ],
+        "volume_hits": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp"
+        ]
+      },
+      "human_copy": "Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。",
+      "next_actions": [
+        "对照 tencent_gr_content 面板看缺口",
+        "强度特征只做 ops 分流，不进定罪桶"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
+        },
+        {
+          "feature": "i_log1p_n_exp",
+          "copy": "商户曝光规模(log)"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_INTENSITY_BASELINE",
+      "family": "tencent_ops",
+      "severity": "info",
+      "title": "强度基线（曝光量在传）",
+      "pack": "tencent_gr",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9987730084570958,
+        "mean_logreg_auc": 0.6634610688713213,
+        "mean_jaccard": 0.4583333333333333,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "mean_delta_Y": -0.017333333333333336,
+        "reading": "transfer holds; feature set partially stable",
+        "top_fsds": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "u_n_exp",
+          "i_share_last"
+        ],
+        "volume_hits": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "u_n_exp"
+        ]
+      },
+      "human_copy": "Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。",
+      "next_actions": [
+        "对照 tencent_gr_content 面板看缺口",
+        "强度特征只做 ops 分流，不进定罪桶"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
+        },
+        {
+          "feature": "i_log1p_n_exp",
+          "copy": "商户曝光规模(log)"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PERSISTENT_ASSOCIATION",
+      "family": "stability",
+      "severity": "info",
+      "title": "关联稳传且 top 稳定",
+      "pack": "beijing_pm25",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9780904023588342,
+        "mean_logreg_auc": 0.978103102615826,
+        "mean_jaccard": 0.5634920634920634,
+        "mean_fsds_cmean_jaccard": 0.5391156462585033,
+        "mean_delta_Y": 7.190857142857142,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "p8",
+          "p0",
+          "p2",
+          "p3",
+          "p12"
+        ]
+      },
+      "human_copy": "`beijing_pm25` @N=1000: 高 transfer 且 top Jaccard≈0.56，关联稳传——先当 persistent correlate，勿直接当因果驱动。",
+      "next_actions": [
+        "记入 shortlist",
+        "上 PO/ablation 前保持 L1"
+      ],
+      "tip_feats": [
+        {
+          "feature": "p8",
+          "copy": "特征 `p8`"
+        },
+        {
+          "feature": "p0",
+          "copy": "特征 `p0`"
+        },
+        {
+          "feature": "p2",
+          "copy": "特征 `p2`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PERSISTENT_ASSOCIATION",
+      "family": "stability",
+      "severity": "info",
+      "title": "关联稳传且 top 稳定",
+      "pack": "beijing_pm25",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9797058426155137,
+        "mean_logreg_auc": 0.97320706540759,
+        "mean_jaccard": 0.5476190476190476,
+        "mean_fsds_cmean_jaccard": 0.42857142857142855,
+        "mean_delta_Y": 9.979999999999999,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "p8",
+          "p0",
+          "p2",
+          "p3",
+          "p12"
+        ]
+      },
+      "human_copy": "`beijing_pm25` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。",
+      "next_actions": [
+        "记入 shortlist",
+        "上 PO/ablation 前保持 L1"
+      ],
+      "tip_feats": [
+        {
+          "feature": "p8",
+          "copy": "特征 `p8`"
+        },
+        {
+          "feature": "p0",
+          "copy": "特征 `p0`"
+        },
+        {
+          "feature": "p2",
+          "copy": "特征 `p2`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PERSISTENT_ASSOCIATION",
+      "family": "stability",
+      "severity": "info",
+      "title": "关联稳传且 top 稳定",
+      "pack": "metro_interstate",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9753765691624277,
+        "mean_logreg_auc": 0.6396613442498914,
+        "mean_jaccard": 0.5476190476190476,
+        "mean_fsds_cmean_jaccard": 0.30952380952380953,
+        "mean_delta_Y": 15.445333333333414,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "m5",
+          "m0",
+          "m6",
+          "m16",
+          "m9"
+        ]
+      },
+      "human_copy": "`metro_interstate` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。",
+      "next_actions": [
+        "记入 shortlist",
+        "上 PO/ablation 前保持 L1"
+      ],
+      "tip_feats": [
+        {
+          "feature": "m5",
+          "copy": "特征 `m5`"
+        },
+        {
+          "feature": "m0",
+          "copy": "特征 `m0`"
+        },
+        {
+          "feature": "m6",
+          "copy": "特征 `m6`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PERSISTENT_ASSOCIATION",
+      "family": "stability",
+      "severity": "info",
+      "title": "关联稳传且 top 稳定",
+      "pack": "tencent_gr",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9957951724897706,
+        "mean_logreg_auc": 0.8318962492242159,
+        "mean_jaccard": 0.7047619047619047,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "mean_delta_Y": -0.007833333333333333,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "i_credit_last",
+          "i_share_last"
+        ]
+      },
+      "human_copy": "`tencent_gr` @N=1000: 高 transfer 且 top Jaccard≈0.70，关联稳传——先当 persistent correlate，勿直接当因果驱动。",
+      "next_actions": [
+        "记入 shortlist",
+        "上 PO/ablation 前保持 L1"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
+        },
+        {
+          "feature": "i_log1p_n_exp",
+          "copy": "商户曝光规模(log)"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PERSISTENT_ASSOCIATION",
+      "family": "stability",
+      "severity": "info",
+      "title": "关联稳传且 top 稳定",
+      "pack": "waymo_proxy",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9399096272322387,
+        "mean_logreg_auc": 0.9457475548663155,
+        "mean_jaccard": 0.7222222222222222,
+        "mean_fsds_cmean_jaccard": 0.6802721088435374,
+        "mean_delta_Y": 0.2307242796562466,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "x0",
+          "x8",
+          "x3",
+          "x1",
+          "x5"
+        ]
+      },
+      "human_copy": "`waymo_proxy` @N=1000: 高 transfer 且 top Jaccard≈0.72，关联稳传——先当 persistent correlate，勿直接当因果驱动。",
+      "next_actions": [
+        "记入 shortlist",
+        "上 PO/ablation 前保持 L1"
+      ],
+      "tip_feats": [
+        {
+          "feature": "x0",
+          "copy": "特征 `x0`"
+        },
+        {
+          "feature": "x8",
+          "copy": "特征 `x8`"
+        },
+        {
+          "feature": "x3",
+          "copy": "特征 `x3`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PERSISTENT_ASSOCIATION",
+      "family": "stability",
+      "severity": "info",
+      "title": "关联稳传且 top 稳定",
+      "pack": "waymo_proxy",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9692848500223602,
+        "mean_logreg_auc": 0.9776463157951998,
+        "mean_jaccard": 1.0,
+        "mean_fsds_cmean_jaccard": 1.0,
+        "mean_delta_Y": 0.46176069549992277,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "x0",
+          "x8",
+          "x5",
+          "x4",
+          "x3"
+        ]
+      },
+      "human_copy": "`waymo_proxy` @N=2000: 高 transfer 且 top Jaccard≈1.00，关联稳传——先当 persistent correlate，勿直接当因果驱动。",
+      "next_actions": [
+        "记入 shortlist",
+        "上 PO/ablation 前保持 L1"
+      ],
+      "tip_feats": [
+        {
+          "feature": "x0",
+          "copy": "特征 `x0`"
+        },
+        {
+          "feature": "x8",
+          "copy": "特征 `x8`"
+        },
+        {
+          "feature": "x5",
+          "copy": "特征 `x5`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PLANTED_SANITY_OK",
+      "family": "sanity",
+      "severity": "info",
+      "title": "种植漂移包探针正常",
+      "pack": "waymo_proxy",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9399096272322387,
+        "mean_logreg_auc": 0.9457475548663155,
+        "mean_jaccard": 0.7222222222222222,
+        "mean_fsds_cmean_jaccard": 0.6802721088435374,
+        "mean_delta_Y": 0.2307242796562466,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "x0",
+          "x8",
+          "x3",
+          "x1",
+          "x5"
+        ]
+      },
+      "human_copy": "Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。",
+      "next_actions": [
+        "保留为回归对照包"
+      ],
+      "tip_feats": [
+        {
+          "feature": "x0",
+          "copy": "特征 `x0`"
+        },
+        {
+          "feature": "x8",
+          "copy": "特征 `x8`"
+        },
+        {
+          "feature": "x3",
+          "copy": "特征 `x3`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_PLANTED_SANITY_OK",
+      "family": "sanity",
+      "severity": "info",
+      "title": "种植漂移包探针正常",
+      "pack": "waymo_proxy",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9692848500223602,
+        "mean_logreg_auc": 0.9776463157951998,
+        "mean_jaccard": 1.0,
+        "mean_fsds_cmean_jaccard": 1.0,
+        "mean_delta_Y": 0.46176069549992277,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "x0",
+          "x8",
+          "x5",
+          "x4",
+          "x3"
+        ]
+      },
+      "human_copy": "Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。",
+      "next_actions": [
+        "保留为回归对照包"
+      ],
+      "tip_feats": [
+        {
+          "feature": "x0",
+          "copy": "特征 `x0`"
+        },
+        {
+          "feature": "x8",
+          "copy": "特征 `x8`"
+        },
+        {
+          "feature": "x5",
+          "copy": "特征 `x5`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_RANK_MEAN_SPLIT",
+      "family": "selection",
+      "severity": "info",
+      "title": "FSDS 排名与 cmean 漂移不一致",
+      "pack": "diffusiondb",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.6048427572700964,
+        "mean_logreg_auc": 0.6161109153514835,
+        "mean_jaccard": 0.2400793650793651,
+        "mean_fsds_cmean_jaccard": 0.0,
+        "mean_delta_Y": 0.014843780122963442,
+        "reading": "weak transfer (association does not travel)",
+        "top_fsds": [
+          "mucha",
+          "alphonse mucha",
+          "alphonse",
+          "character",
+          "focus illustration"
+        ]
+      },
+      "human_copy": "`diffusiondb` @N=1000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。",
+      "next_actions": [
+        "卡上同时贴 top_fsds 与 top_cmean",
+        "禁止只用 cmean 讲「预测力」"
+      ],
+      "tip_feats": [
+        {
+          "feature": "mucha",
+          "copy": "特征 `mucha`"
+        },
+        {
+          "feature": "alphonse mucha",
+          "copy": "token `alphonse mucha`"
+        },
+        {
+          "feature": "alphonse",
+          "copy": "特征 `alphonse`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_RANK_MEAN_SPLIT",
+      "family": "selection",
+      "severity": "info",
+      "title": "FSDS 排名与 cmean 漂移不一致",
+      "pack": "diffusiondb",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.6091376939024363,
+        "mean_logreg_auc": 0.6187648813337822,
+        "mean_jaccard": 0.3392857142857143,
+        "mean_fsds_cmean_jaccard": 0.0,
+        "mean_delta_Y": 0.029074908243802683,
+        "reading": "weak transfer (association does not travel)",
+        "top_fsds": [
+          "alphonse mucha",
+          "alphonse",
+          "mucha",
+          "woman",
+          "and alphonse"
+        ]
+      },
+      "human_copy": "`diffusiondb` @N=2000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。",
+      "next_actions": [
+        "卡上同时贴 top_fsds 与 top_cmean",
+        "禁止只用 cmean 讲「预测力」"
+      ],
+      "tip_feats": [
+        {
+          "feature": "alphonse mucha",
+          "copy": "token `alphonse mucha`"
+        },
+        {
+          "feature": "alphonse",
+          "copy": "特征 `alphonse`"
+        },
+        {
+          "feature": "mucha",
+          "copy": "特征 `mucha`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_RANK_MEAN_SPLIT",
+      "family": "selection",
+      "severity": "info",
+      "title": "FSDS 排名与 cmean 漂移不一致",
+      "pack": "tencent_gr",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.9957951724897706,
+        "mean_logreg_auc": 0.8318962492242159,
+        "mean_jaccard": 0.7047619047619047,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "mean_delta_Y": -0.007833333333333333,
+        "reading": "strong transfer + stable top feats (persistent drivers)",
+        "top_fsds": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "i_credit_last",
+          "i_share_last"
+        ]
+      },
+      "human_copy": "`tencent_gr` @N=1000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。",
+      "next_actions": [
+        "卡上同时贴 top_fsds 与 top_cmean",
+        "禁止只用 cmean 讲「预测力」"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
+        },
+        {
+          "feature": "i_log1p_n_exp",
+          "copy": "商户曝光规模(log)"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_RANK_MEAN_SPLIT",
+      "family": "selection",
+      "severity": "info",
+      "title": "FSDS 排名与 cmean 漂移不一致",
+      "pack": "tencent_gr",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.9987730084570958,
+        "mean_logreg_auc": 0.6634610688713213,
+        "mean_jaccard": 0.4583333333333333,
+        "mean_fsds_cmean_jaccard": 0.037037037037037035,
+        "mean_delta_Y": -0.017333333333333336,
+        "reading": "transfer holds; feature set partially stable",
+        "top_fsds": [
+          "e_log1p_exp",
+          "e_n_exp",
+          "i_log1p_n_exp",
+          "u_n_exp",
+          "i_share_last"
+        ]
+      },
+      "human_copy": "`tencent_gr` @N=2000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。",
+      "next_actions": [
+        "卡上同时贴 top_fsds 与 top_cmean",
+        "禁止只用 cmean 讲「预测力」"
+      ],
+      "tip_feats": [
+        {
+          "feature": "e_log1p_exp",
+          "copy": "边曝光强度(log)"
+        },
+        {
+          "feature": "e_n_exp",
+          "copy": "边曝光次数"
+        },
+        {
+          "feature": "i_log1p_n_exp",
+          "copy": "商户曝光规模(log)"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_WEAK_TRANSFER",
+      "family": "transfer",
+      "severity": "info",
+      "title": "关联下一段传不过去",
+      "pack": "diffusiondb",
+      "chunk": 1000,
+      "evidence": {
+        "mean_auc": 0.6048427572700964,
+        "mean_logreg_auc": 0.6161109153514835,
+        "mean_jaccard": 0.2400793650793651,
+        "mean_fsds_cmean_jaccard": 0.0,
+        "mean_delta_Y": 0.014843780122963442,
+        "reading": "weak transfer (association does not travel)",
+        "top_fsds": [
+          "mucha",
+          "alphonse mucha",
+          "alphonse",
+          "character",
+          "focus illustration"
+        ]
+      },
+      "human_copy": "`diffusiondb` @N=1000: 下一段 AUC≈0.60，关联基本不传。不要把本窗 top 特征当成稳定过滤器。",
+      "next_actions": [
+        "降权该特征族的 tip 叙事",
+        "若业务仍关心 Y，换 X（如 DiffDB 加超参/CLIP）再探针"
+      ],
+      "tip_feats": [
+        {
+          "feature": "mucha",
+          "copy": "特征 `mucha`"
+        },
+        {
+          "feature": "alphonse mucha",
+          "copy": "token `alphonse mucha`"
+        },
+        {
+          "feature": "alphonse",
+          "copy": "特征 `alphonse`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    },
+    {
+      "code": "RC_WEAK_TRANSFER",
+      "family": "transfer",
+      "severity": "info",
+      "title": "关联下一段传不过去",
+      "pack": "diffusiondb",
+      "chunk": 2000,
+      "evidence": {
+        "mean_auc": 0.6091376939024363,
+        "mean_logreg_auc": 0.6187648813337822,
+        "mean_jaccard": 0.3392857142857143,
+        "mean_fsds_cmean_jaccard": 0.0,
+        "mean_delta_Y": 0.029074908243802683,
+        "reading": "weak transfer (association does not travel)",
+        "top_fsds": [
+          "alphonse mucha",
+          "alphonse",
+          "mucha",
+          "woman",
+          "and alphonse"
+        ]
+      },
+      "human_copy": "`diffusiondb` @N=2000: 下一段 AUC≈0.61，关联基本不传。不要把本窗 top 特征当成稳定过滤器。",
+      "next_actions": [
+        "降权该特征族的 tip 叙事",
+        "若业务仍关心 Y，换 X（如 DiffDB 加超参/CLIP）再探针"
+      ],
+      "tip_feats": [
+        {
+          "feature": "alphonse mucha",
+          "copy": "token `alphonse mucha`"
+        },
+        {
+          "feature": "alphonse",
+          "copy": "特征 `alphonse`"
+        },
+        {
+          "feature": "mucha",
+          "copy": "特征 `mucha`"
+        }
+      ],
+      "allows_ship_model": false,
+      "allows_driver_claim": false
+    }
+  ],
+  "paste_for_agent": "【board reason-codes】\n来源: sample-chunk adjacent transfer board（非定罪 / 非上线门）\n\n- `RC_BOARD_NOT_SHIP` [block_claim]: 本卡来自相邻切窗 transfer 探针，不是线上打分器。禁止因 AUC 高直接上线 HGB；缺 label delay / 校准 / Acc·时延 / 灰发回滚。\n- `RC_SHORTLIST_NOT_DRIVER` [block_claim]: 看板只做特征族 shortlist，不做真驱动认定。真驱动需 ablation / PO-risk / 干预实验。\n- `RC_CONTENT_CREDIT_CANDIDATE` [investigate] `tencent_gr_content`@N=1000: Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_CONTENT_CREDIT_CANDIDATE` [investigate] `tencent_gr_content`@N=2000: Tencent content（已去量）：credit/share 进入 top——作为末跳/路径归因 **候选** 进审出卡，不做真驱动/L2。\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_DIFFDB_TOKEN_NO_TRAVEL` [watch] `diffusiondb`@N=1000: DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_DIFFDB_TOKEN_NO_TRAVEL` [watch] `diffusiondb`@N=2000: DiffusionDB：prompt TF-IDF 对 image_nsfw 弱传。风格 token 常进 SelectKBest，但不构成稳定 NSFW 过滤。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n- `RC_OPS_CONTENT_GAP` [watch] `tencent_gr`@N=1000: ops−content gap≈0.16 @N=1000：大半 transfer 是强度；content 残差才是归因候选空间。\n    · i_credit_last: 末次归因偏高（末跳嫌疑）\n    · i_share_last: 末次份额偏高（末跳嫌疑）\n    · i_item_credit_rank: 商户归因秩变动\n- `RC_PROBE_DISAGREE` [watch] `metro_interstate`@N=1000: `metro_interstate` @N=1000: HGB=0.97 vs LogReg=0.61 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m14: 特征 `m14`\n- `RC_PROBE_DISAGREE` [watch] `metro_interstate`@N=2000: `metro_interstate` @N=2000: HGB=0.98 vs LogReg=0.64 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m6: 特征 `m6`\n- `RC_PROBE_DISAGREE` [watch] `tencent_gr`@N=1000: `tencent_gr` @N=1000: HGB=1.00 vs LogReg=0.83 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PROBE_DISAGREE` [watch] `tencent_gr`@N=2000: `tencent_gr` @N=2000: HGB=1.00 vs LogReg=0.66 分歧≥0.15。别把非线性探针优势误写成业务必然；对照 content/线性面板。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_SHIFTING_DRIVERS` [watch] `metro_interstate`@N=1000: `metro_interstate` @N=1000: AUC 高但驱动名单 Jaccard≈0.23，预测还在、名单在换——按 regime/composition 读，勿锁死单一 tip。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m14: 特征 `m14`\n- `RC_INTENSITY_BASELINE` [info] `tencent_gr`@N=1000: Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_INTENSITY_BASELINE` [info] `tencent_gr`@N=2000: Tencent ops：transfer 几乎由曝光/点击强度贡献。这是强度基线，不是 content tip；勿写成商户内容问题。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PERSISTENT_ASSOCIATION` [info] `beijing_pm25`@N=1000: `beijing_pm25` @N=1000: 高 transfer 且 top Jaccard≈0.56，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · p8: 特征 `p8`\n    · p0: 特征 `p0`\n    · p2: 特征 `p2`\n- `RC_PERSISTENT_ASSOCIATION` [info] `beijing_pm25`@N=2000: `beijing_pm25` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · p8: 特征 `p8`\n    · p0: 特征 `p0`\n    · p2: 特征 `p2`\n- `RC_PERSISTENT_ASSOCIATION` [info] `metro_interstate`@N=2000: `metro_interstate` @N=2000: 高 transfer 且 top Jaccard≈0.55，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · m5: 特征 `m5`\n    · m0: 特征 `m0`\n    · m6: 特征 `m6`\n- `RC_PERSISTENT_ASSOCIATION` [info] `tencent_gr`@N=1000: `tencent_gr` @N=1000: 高 transfer 且 top Jaccard≈0.70，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_PERSISTENT_ASSOCIATION` [info] `waymo_proxy`@N=1000: `waymo_proxy` @N=1000: 高 transfer 且 top Jaccard≈0.72，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x3: 特征 `x3`\n- `RC_PERSISTENT_ASSOCIATION` [info] `waymo_proxy`@N=2000: `waymo_proxy` @N=2000: 高 transfer 且 top Jaccard≈1.00，关联稳传——先当 persistent correlate，勿直接当因果驱动。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x5: 特征 `x5`\n- `RC_PLANTED_SANITY_OK` [info] `waymo_proxy`@N=1000: Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x3: 特征 `x3`\n- `RC_PLANTED_SANITY_OK` [info] `waymo_proxy`@N=2000: Waymo proxy 种植漂移上探针高 transfer——看板 sanity 通过；若此处失败，先修探针再读业务包。\n    · x0: 特征 `x0`\n    · x8: 特征 `x8`\n    · x5: 特征 `x5`\n- `RC_RANK_MEAN_SPLIT` [info] `diffusiondb`@N=1000: `diffusiondb` @N=1000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_RANK_MEAN_SPLIT` [info] `diffusiondb`@N=2000: `diffusiondb` @N=2000: FSDS∩cmean≈0.00，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n- `RC_RANK_MEAN_SPLIT` [info] `tencent_gr`@N=1000: `tencent_gr` @N=1000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_RANK_MEAN_SPLIT` [info] `tencent_gr`@N=2000: `tencent_gr` @N=2000: FSDS∩cmean≈0.04，排名选中的特征和均值漂移特征不是一回事——查法分开写。\n    · e_log1p_exp: 边曝光强度(log)\n    · e_n_exp: 边曝光次数\n    · i_log1p_n_exp: 商户曝光规模(log)\n- `RC_WEAK_TRANSFER` [info] `diffusiondb`@N=1000: `diffusiondb` @N=1000: 下一段 AUC≈0.60，关联基本不传。不要把本窗 top 特征当成稳定过滤器。\n    · mucha: 特征 `mucha`\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n- `RC_WEAK_TRANSFER` [info] `diffusiondb`@N=2000: `diffusiondb` @N=2000: 下一段 AUC≈0.61，关联基本不传。不要把本窗 top 特征当成稳定过滤器。\n    · alphonse mucha: token `alphonse mucha`\n    · alphonse: 特征 `alphonse`\n    · mucha: 特征 `mucha`\n",
+  "catalog_version": "board_rc_v1"
+}

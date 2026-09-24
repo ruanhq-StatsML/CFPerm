@@ -151,3 +151,6 @@ What needs other tools:
 
 Artifacts: `results/sample_chunk_adjacent_board/summary.json`
 (`ops_content_gap`, `ship_gate`), `SAMPLE_CHUNK_BOARD.md`.
+
+Reason codes (auto): `results/sample_chunk_adjacent_board/reason_codes/` —
+see [`Board_Reason_Codes.md`](./Board_Reason_Codes.md).

@@ -45,6 +45,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from agod.stream_packs import load_beijing_pm25, load_metro_interstate
+from scripts.generate_board_reason_codes import generate_reason_codes, render_md
 from scripts.run_diffusiondb_temporal_fsds import (
     build_light_token_X,
     load_subset as load_diffusion_subset,
@@ -698,6 +699,26 @@ def main() -> None:
         json.dumps(report, indent=2, default=str) + "\n"
     )
     (args.out / "SAMPLE_CHUNK_BOARD.md").write_text("\n".join(md) + "\n")
+
+    # Auto reason-code generation from the same summary
+    rc = generate_reason_codes(report)
+    report["reason_codes"] = {
+        "n_codes": rc["n_codes"],
+        "codes": [c["code"] for c in rc["codes"]],
+        "catalog_version": rc["catalog_version"],
+    }
+    rc_dir = args.out / "reason_codes"
+    rc_dir.mkdir(parents=True, exist_ok=True)
+    (rc_dir / "reason_codes.json").write_text(
+        json.dumps(rc, indent=2, ensure_ascii=False, default=str) + "\n"
+    )
+    (rc_dir / "REASON_CODES.md").write_text(render_md(rc))
+    (rc_dir / "paste_for_agent.txt").write_text(rc["paste_for_agent"])
+    # rewrite summary with reason_codes index
+    (args.out / "summary.json").write_text(
+        json.dumps(report, indent=2, default=str) + "\n"
+    )
+
     print(
         json.dumps(
             {
@@ -710,6 +731,7 @@ def main() -> None:
                     ],
                     "reason": report["ship_gate"]["reason"],
                 },
+                "reason_codes": report["reason_codes"],
                 "cross_pack": [
                     {
                         "dataset": r["dataset"],
