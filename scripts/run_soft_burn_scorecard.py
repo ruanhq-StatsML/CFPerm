@@ -64,8 +64,9 @@ def render_md(rep: dict) -> str:
         "",
         "## 算力账",
         "",
-        "- Adaptation FLOPs = duty × refit（真账单）",
-        "- Weighting FLOPs ≈ O(n)（α 不改总账）",
+        "- Adaptation FLOPs = duty × refit（真账单；见 `flops_ledger.adapt_flops`）",
+        "- Weighting FLOPs ≈ O(n)（α 不改总账；`alpha_changes_flops=0`）",
+        f"- mean weighting_share = {rep.get('mean_weighting_share')}",
         "- 因此：该不该烧看 MSE 风险，不看「省不算力」",
         "",
     ]
@@ -82,7 +83,12 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=ROOT / "results/agod_soft_burn")
     args = ap.parse_args()
     power = power_scorecard_from_summary(json.loads(args.summary.read_text()))
-    rep = summarize_burn_decisions(power.get("cards") or [])
+    rep = summarize_burn_decisions(
+        power.get("cards") or [],
+        n_batches=int(power.get("n_batches") or 40),
+        batch_size=int(power.get("batch_size") or 100),
+        n_control=int(power.get("n_control") or 1),
+    )
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "soft_burn.json").write_text(
         json.dumps(_clean(rep), indent=2) + "\n"

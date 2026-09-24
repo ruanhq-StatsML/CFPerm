@@ -43,7 +43,26 @@ gated_α 的 sig-MSE 比 uniform 更好？
 
 ---
 
-## 3. 和「排序 ≠ 下游」怎么拼
+## 3. 数值算力账（ledger）
+
+`attach_burn_to_power_card` 在每张 power card 上挂：
+
+```text
+flops_ledger = {
+  adapt_flops,          # E[refit] = n_batches · duty · fit(window)
+  weighting_flops,      # O(n) ≈ n_batches · batch_size
+  total_flops,
+  weighting_share,      # ≪ 1% when adapt ≫ n
+  alpha_changes_flops,  # 恒为 0（√/∛ 同阶）
+  duty
+}
+```
+
+读法：若 `weighting_share ≈ 1e-4`，则换 α **不能**当省算力；烧不烧只看 `rel_vs_uniform`。
+
+---
+
+## 4. 和「排序 ≠ 下游」怎么拼
 
 | 层 | 结论 |
 |---|---|
@@ -57,7 +76,7 @@ gated_α 的 sig-MSE 比 uniform 更好？
 
 ---
 
-## 4. 跑法
+## 5. 跑法
 
 ```bash
 PYTHONPATH=. python3 scripts/run_soft_burn_scorecard.py \

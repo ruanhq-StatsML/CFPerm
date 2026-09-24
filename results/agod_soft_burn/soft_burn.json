@@ -5,11 +5,16 @@
     "BURN_SQRT": 1,
     "SOFTEN_ONLY": 5
   },
+  "mean_weighting_share": 0.02747723432204319,
   "cards": [
     {
       "dataset": "metro_interstate",
       "ok": true,
       "gate_duty": 0.1794871794871795,
+      "expected_adapt_flops": 129230.76923076923,
+      "n_batches": 40,
+      "batch_size": 100,
+      "n_control": 1,
       "modes": [
         {
           "mode": "uniform",
@@ -60,9 +65,11 @@
         "flops_note": "weighting FLOPs\u22480; bill already paid by gate/refit"
       },
       "flops_ledger": {
-        "adapt_flops": "duty\u00b7n\u00b7fit (see po_eff)",
-        "weighting_flops": "~O(n) negligible",
-        "weighting_share": "~0",
+        "adapt_flops": 129230.76923076923,
+        "weighting_flops": 4000.0,
+        "total_flops": 133230.76923076925,
+        "weighting_share": 0.030023094688221705,
+        "alpha_changes_flops": 0.0,
         "duty": 0.1794871794871795
       }
     },
@@ -70,6 +77,10 @@
       "dataset": "beijing_pm25",
       "ok": true,
       "gate_duty": 0.1282051282051282,
+      "expected_adapt_flops": 92307.6923076923,
+      "n_batches": 40,
+      "batch_size": 100,
+      "n_control": 1,
       "modes": [
         {
           "mode": "uniform",
@@ -120,9 +131,11 @@
         "flops_note": "\u03b1 choice \u2260 FLOPs; keep adaptation budget on refit/duty"
       },
       "flops_ledger": {
-        "adapt_flops": "duty\u00b7n\u00b7fit (see po_eff)",
-        "weighting_flops": "~O(n) negligible",
-        "weighting_share": "~0",
+        "adapt_flops": 92307.6923076923,
+        "weighting_flops": 4000.0,
+        "total_flops": 96307.6923076923,
+        "weighting_share": 0.0415335463258786,
+        "alpha_changes_flops": 0.0,
         "duty": 0.1282051282051282
       }
     },
@@ -130,6 +143,10 @@
       "dataset": "stocks_AAPL",
       "ok": true,
       "gate_duty": 0.1794871794871795,
+      "expected_adapt_flops": 129230.76923076923,
+      "n_batches": 40,
+      "batch_size": 100,
+      "n_control": 1,
       "modes": [
         {
           "mode": "uniform",
@@ -180,9 +197,11 @@
         "flops_note": "\u03b1 choice \u2260 FLOPs; keep adaptation budget on refit/duty"
       },
       "flops_ledger": {
-        "adapt_flops": "duty\u00b7n\u00b7fit (see po_eff)",
-        "weighting_flops": "~O(n) negligible",
-        "weighting_share": "~0",
+        "adapt_flops": 129230.76923076923,
+        "weighting_flops": 4000.0,
+        "total_flops": 133230.76923076925,
+        "weighting_share": 0.030023094688221705,
+        "alpha_changes_flops": 0.0,
         "duty": 0.1794871794871795
       }
     },
@@ -190,6 +209,10 @@
       "dataset": "waymo_proxy",
       "ok": true,
       "gate_duty": 0.5641025641025641,
+      "expected_adapt_flops": 406153.8461538461,
+      "n_batches": 40,
+      "batch_size": 100,
+      "n_control": 1,
       "modes": [
         {
           "mode": "uniform",
@@ -240,9 +263,11 @@
         "flops_note": "\u03b1 choice \u2260 FLOPs; keep adaptation budget on refit/duty"
       },
       "flops_ledger": {
-        "adapt_flops": "duty\u00b7n\u00b7fit (see po_eff)",
-        "weighting_flops": "~O(n) negligible",
-        "weighting_share": "~0",
+        "adapt_flops": 406153.8461538461,
+        "weighting_flops": 4000.0,
+        "total_flops": 410153.8461538461,
+        "weighting_share": 0.009752438109527382,
+        "alpha_changes_flops": 0.0,
         "duty": 0.5641025641025641
       }
     },
@@ -250,6 +275,10 @@
       "dataset": "stocks_MSFT",
       "ok": true,
       "gate_duty": 0.23076923076923078,
+      "expected_adapt_flops": 166153.84615384619,
+      "n_batches": 40,
+      "batch_size": 100,
+      "n_control": 1,
       "modes": [
         {
           "mode": "uniform",
@@ -300,9 +329,11 @@
         "flops_note": "\u03b1 choice \u2260 FLOPs; keep adaptation budget on refit/duty"
       },
       "flops_ledger": {
-        "adapt_flops": "duty\u00b7n\u00b7fit (see po_eff)",
-        "weighting_flops": "~O(n) negligible",
-        "weighting_share": "~0",
+        "adapt_flops": 166153.84615384619,
+        "weighting_flops": 4000.0,
+        "total_flops": 170153.84615384619,
+        "weighting_share": 0.02350813743218806,
+        "alpha_changes_flops": 0.0,
         "duty": 0.23076923076923078
       }
     },
@@ -310,6 +341,10 @@
       "dataset": "stocks_IWM",
       "ok": true,
       "gate_duty": 0.1794871794871795,
+      "expected_adapt_flops": 129230.76923076923,
+      "n_batches": 40,
+      "batch_size": 100,
+      "n_control": 1,
       "modes": [
         {
           "mode": "uniform",
@@ -360,13 +395,15 @@
         "flops_note": "\u03b1 choice \u2260 FLOPs; keep adaptation budget on refit/duty"
       },
       "flops_ledger": {
-        "adapt_flops": "duty\u00b7n\u00b7fit (see po_eff)",
-        "weighting_flops": "~O(n) negligible",
-        "weighting_share": "~0",
+        "adapt_flops": 129230.76923076923,
+        "weighting_flops": 4000.0,
+        "total_flops": 133230.76923076925,
+        "weighting_share": 0.030023094688221705,
+        "alpha_changes_flops": 0.0,
         "duty": 0.1794871794871795
       }
     }
   ],
-  "headline": "burn soft IPTW on 1/6 packs; decisions={'BURN_SQRT': 1, 'SOFTEN_ONLY': 5}. Default KEEP_UNIFORM / SOFTEN_ONLY \u2014 \u03b1 is not a FLOPs knob.",
+  "headline": "burn soft IPTW on 1/6 packs; decisions={'BURN_SQRT': 1, 'SOFTEN_ONLY': 5}; mean weighting_share=2.75e-02. Default KEEP_UNIFORM / SOFTEN_ONLY \u2014 \u03b1 is not a FLOPs knob.",
   "policy": "1) Do not burn soft weights to save FLOPs (they don't). 2) Burn only if gated_\u03b1 beats uniform on sig-MSE. 3) If gate is mandatory and hurts, SOFTEN_ONLY with \u221b. 4) Keep the real bill on duty \u00d7 refit (\u7b97\u529b\u8d26)."
 }

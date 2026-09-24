@@ -1,6 +1,6 @@
 # Soft IPTW burn decisions
 
-burn soft IPTW on 1/6 packs; decisions={'BURN_SQRT': 1, 'SOFTEN_ONLY': 5}. Default KEEP_UNIFORM / SOFTEN_ONLY — α is not a FLOPs knob.
+burn soft IPTW on 1/6 packs; decisions={'BURN_SQRT': 1, 'SOFTEN_ONLY': 5}; mean weighting_share=2.75e-02. Default KEEP_UNIFORM / SOFTEN_ONLY — α is not a FLOPs knob.
 
 1) Do not burn soft weights to save FLOPs (they don't). 2) Burn only if gated_α beats uniform on sig-MSE. 3) If gate is mandatory and hurts, SOFTEN_ONLY with ∛. 4) Keep the real bill on duty × refit (算力账).
 
@@ -15,7 +15,8 @@ burn soft IPTW on 1/6 packs; decisions={'BURN_SQRT': 1, 'SOFTEN_ONLY': 5}. Defau
 
 ## 算力账
 
-- Adaptation FLOPs = duty × refit（真账单）
-- Weighting FLOPs ≈ O(n)（α 不改总账）
+- Adaptation FLOPs = duty × refit（真账单；见 `flops_ledger.adapt_flops`）
+- Weighting FLOPs ≈ O(n)（α 不改总账；`alpha_changes_flops=0`）
+- mean weighting_share = 0.02747723432204319
 - 因此：该不该烧看 MSE 风险，不看「省不算力」
 

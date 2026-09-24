@@ -59,6 +59,7 @@ def soft_flops_ledger(
         "weighting_flops": w,
         "total_flops": total,
         "weighting_share": share,  # typically ≪ 1%
+        "alpha_changes_flops": 0.0,  # √ vs ∛ identical O(n)
     }
 
 
@@ -130,7 +131,52 @@ def burn_soft_weights(
     }
 
 
-def attach_burn_to_power_card(card: Mapping[str, Any]) -> Dict[str, Any]:
+def _resolve_adapt_flops(
+    card: Mapping[str, Any],
+    *,
+    n_batches: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    n_control: Optional[int] = None,
+) -> float:
+    """Prefer card.expected_adapt_flops; else recompute from duty · refit."""
+    raw = card.get("expected_adapt_flops")
+    try:
+        v = float(raw) if raw is not None else float("nan")
+    except Exception:
+        v = float("nan")
+    if np.isfinite(v):
+        return v
+    duty = card.get("gate_duty")
+    try:
+        duty_f = float(duty) if duty is not None else float("nan")
+    except Exception:
+        duty_f = float("nan")
+    if not np.isfinite(duty_f):
+        return float("nan")
+    from agod.po_eff import expected_adapt_flops
+
+    nb = int(n_batches if n_batches is not None else card.get("n_batches") or 40)
+    bs = int(batch_size if batch_size is not None else card.get("batch_size") or 100)
+    nc = int(n_control if n_control is not None else card.get("n_control") or 1)
+    return float(
+        expected_adapt_flops(
+            "refit",
+            gate_duty=duty_f,
+            n_batches=nb,
+            batch_size=bs,
+            n_control=nc,
+        )
+    )
+
+
+def attach_burn_to_power_card(
+    card: Mapping[str, Any],
+    *,
+    n_batches: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    n_control: Optional[int] = None,
+    n_rows: Optional[int] = None,
+) -> Dict[str, Any]:
     """Enrich one ``power_card_from_dataset`` row with burn decision + ledger."""
     out = dict(card)
     by = {m["mode"]: m for m in (card.get("modes") or [])}
@@ -142,20 +188,16 @@ def attach_burn_to_power_card(card: Mapping[str, Any]) -> Dict[str, Any]:
         soft_win_cbrt_le_sqrt=card.get("soft_win_cbrt_le_sqrt"),
         gate_already_on=True,
     )
-    # adapt flops from gated mse_eff denominator path: use expected refit scale if present
-    adapt = float("nan")
-    for m in (gs, gc):
-        # recover adapt flops from mse_eff definition if possible — optional
-        break
-    duty = card.get("gate_duty")
-    # ledger without needing n_rows: weighting share → 0 message
-    ledger = soft_flops_ledger(adapt_flops=1.0, n_rows=0)  # placeholder scale
-    ledger = {
-        "adapt_flops": "duty·n·fit (see po_eff)",
-        "weighting_flops": "~O(n) negligible",
-        "weighting_share": "~0",
-        "duty": duty,
-    }
+    adapt = _resolve_adapt_flops(
+        card, n_batches=n_batches, batch_size=batch_size, n_control=n_control
+    )
+    # Default n_rows ≈ stream length if caller omits: n_batches · batch_size
+    if n_rows is None:
+        nb = int(n_batches if n_batches is not None else card.get("n_batches") or 0)
+        bs = int(batch_size if batch_size is not None else card.get("batch_size") or 0)
+        n_rows = int(nb * bs) if nb > 0 and bs > 0 else 0
+    ledger = soft_flops_ledger(adapt_flops=adapt, n_rows=int(n_rows))
+    ledger["duty"] = card.get("gate_duty")
     out["burn"] = decision
     out["flops_ledger"] = ledger
     return out
@@ -163,20 +205,43 @@ def attach_burn_to_power_card(card: Mapping[str, Any]) -> Dict[str, Any]:
 
 def summarize_burn_decisions(
     cards: Sequence[Mapping[str, Any]],
+    *,
+    n_batches: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    n_control: Optional[int] = None,
+    n_rows: Optional[int] = None,
 ) -> Dict[str, Any]:
     from collections import Counter
 
-    enriched = [attach_burn_to_power_card(c) for c in cards if c.get("ok")]
+    enriched = [
+        attach_burn_to_power_card(
+            c,
+            n_batches=n_batches,
+            batch_size=batch_size,
+            n_control=n_control,
+            n_rows=n_rows,
+        )
+        for c in cards
+        if c.get("ok")
+    ]
     counts = Counter((c.get("burn") or {}).get("decision") for c in enriched)
     n_burn = sum(1 for c in enriched if (c.get("burn") or {}).get("burn"))
+    shares = [
+        float((c.get("flops_ledger") or {}).get("weighting_share", float("nan")))
+        for c in enriched
+    ]
+    finite_shares = [s for s in shares if np.isfinite(s)]
+    mean_w_share = float(np.mean(finite_shares)) if finite_shares else float("nan")
+    share_s = f"{mean_w_share:.2e}" if np.isfinite(mean_w_share) else "n/a"
     return {
         "n_packs": len(enriched),
         "n_burn": n_burn,
         "decision_counts": dict(counts),
+        "mean_weighting_share": mean_w_share,
         "cards": enriched,
         "headline": (
             f"burn soft IPTW on {n_burn}/{len(enriched)} packs; "
-            f"decisions={dict(counts)}. "
+            f"decisions={dict(counts)}; mean weighting_share={share_s}. "
             "Default KEEP_UNIFORM / SOFTEN_ONLY — α is not a FLOPs knob."
         ),
         "policy": (

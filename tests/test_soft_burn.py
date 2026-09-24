@@ -18,6 +18,31 @@ def test_weighting_negligible_vs_adapt():
     led = soft_flops_ledger(adapt_flops=1e6, n_rows=100)
     assert led["weighting_flops"] == 100
     assert led["weighting_share"] < 1e-3
+    assert led["alpha_changes_flops"] == 0.0
+
+
+def test_attach_burn_numeric_ledger():
+    from agod.soft_burn import attach_burn_to_power_card
+
+    card = {
+        "ok": True,
+        "dataset": "toy",
+        "gate_duty": 0.2,
+        "expected_adapt_flops": 1e5,
+        "n_batches": 40,
+        "batch_size": 100,
+        "modes": [
+            {"mode": "gated_sqrt", "rel_vs_uniform": 1.1},
+            {"mode": "gated_cbrt", "rel_vs_uniform": 1.05},
+        ],
+        "soft_win_cbrt_le_sqrt": True,
+    }
+    out = attach_burn_to_power_card(card)
+    led = out["flops_ledger"]
+    assert led["adapt_flops"] == 1e5
+    assert led["weighting_flops"] == 4000.0  # 40*100
+    assert led["weighting_share"] < 0.05
+    assert out["burn"]["decision"] == "SOFTEN_ONLY"
 
 
 def test_burn_when_beats_uniform():

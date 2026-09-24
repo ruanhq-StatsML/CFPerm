@@ -35,7 +35,12 @@ def render_md(card: dict) -> str:
     from agod.soft_burn import attach_burn_to_power_card
 
     for c in card.get("cards") or []:
-        c = attach_burn_to_power_card(c)
+        c = attach_burn_to_power_card(
+            c,
+            n_batches=int(card.get("n_batches") or 40),
+            batch_size=int(card.get("batch_size") or 100),
+            n_control=int(card.get("n_control") or 1),
+        )
         by = {m["mode"]: m for m in c.get("modes") or []}
         u, gs, gc = by.get("uniform", {}), by.get("gated_sqrt", {}), by.get("gated_cbrt", {})
         b = c.get("burn") or {}
