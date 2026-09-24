@@ -69,9 +69,18 @@
 
 与 Brier 并存：Brier 是整体 proper score；ECE 局部化偏差。
 
-### 2.4 与业务案由正交
+### 2.4 不确定性：块 bootstrap（Iter3）
 
-`sign_Dy` 定 S1/S2/S3；excess/probe_eff/ECE 定「故事有没有超出偶然的统计含量 / 概率能不能信」。  
+相邻对 `(t,t+1),(t+1,t+2)` **共享端点** → 对上的 `excess_auc` 序列相关。  
+IID bootstrap 会**低估** mean excess 的方差。
+
+**做法：** moving-block bootstrap（默认 `block_size=2`），对有序 pair 序列重采样，报 90% CI：`excess_auc_ci90` / `hgb_ece_ci90`。
+
+读法：CI 盖住 0 → 别把 pack 均值写成「稳定技能」；跨 pack 比区间宽度，不比点估计。
+
+### 2.5 与业务案由正交
+
+`sign_Dy` 定 S1/S2/S3；excess/probe_eff/ECE/CI 定「故事有没有超出偶然的统计含量 / 概率能不能信 / 均值稳不稳」。  
 高 excess 的买量基线仍 **≠ 限投**（业务门另写）。
 
 ---
@@ -81,7 +90,7 @@
 | ID | 点子 | Justify | 状态 |
 |---|---|---|---|
 | R1 | Transfer null + excess + probe_eff | §2 | **Iter1 落地** |
-| R2 | Blocked bootstrap CI on mean excess | 窗相关 → 块 bootstrap | backlog |
+| R2 | Blocked bootstrap CI on mean excess / ECE | 相邻对共享端点 → 块 bootstrap 保守区间 | **Iter3 落地** |
 | R3 | ECE bins on LogReg/HGB transfer | 校准 vs 排序；高 excess+高 ECE=能排不能信 | **Iter2 落地** |
 | R4 | DiffusionDB token excess vs Tencent | 弱特征族的 null 对照 | backlog |
 | R5 | Streaming reservoir subsample of pairs | 线性扫描 vs 全对；偏差-方差 | backlog |

@@ -96,3 +96,17 @@ def test_fs_adjacent_exposes_ece():
     )
     assert any(np.isfinite(r.get("hgb_ece", np.nan)) for r in rows)
     assert any(np.isfinite(r.get("logreg_ece", np.nan)) for r in rows)
+
+
+def test_blocked_bootstrap_ci_covers_mean():
+    from agod.transfer_null import blocked_bootstrap_ci, pack_excess_ci
+
+    rng = np.random.default_rng(0)
+    # slowly drifting series → dependence
+    vals = list(0.3 + 0.02 * np.arange(20) + rng.normal(0, 0.01, 20))
+    ci = blocked_bootstrap_ci(vals, block_size=2, n_boot=300, alpha=0.1, seed=1)
+    assert ci["lo"] <= ci["mean"] <= ci["hi"]
+    assert ci["hi"] - ci["lo"] > 0
+    rows = [{"excess_auc": v} for v in vals]
+    pci = pack_excess_ci(rows, seed=2)
+    assert np.isfinite(pci["lo"]) and np.isfinite(pci["hi"])

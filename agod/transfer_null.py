@@ -193,3 +193,72 @@ def summarize_null_pack(rows: Sequence[Dict[str, Any]]) -> Dict[str, Optional[fl
         "mean_hgb_ece": _mean("hgb_ece"),
         "mean_logreg_ece": _mean("logreg_ece"),
     }
+
+
+def blocked_bootstrap_ci(
+    values: Sequence[float],
+    *,
+    block_size: int = 2,
+    n_boot: int = 200,
+    alpha: float = 0.1,
+    seed: int = 0,
+) -> Dict[str, float]:
+    """Moving-block bootstrap CI for the mean of an ordered series.
+
+    Adjacent-chunk pairs share endpoints → dependence.  IID bootstrap
+    understates variance; resampling contiguous blocks of length
+    ``block_size`` (default 2 ≈ overlapping neighbors) restores a
+    conservative interval for mean excess / ECE across packs.
+
+    Returns mean, lo, hi (percentile), n_used.  NaN if too few finite vals.
+    """
+    vals = np.asarray(
+        [float(v) for v in values if v is not None and np.isfinite(float(v))],
+        dtype=float,
+    )
+    n = int(vals.size)
+    if n < 2:
+        return {
+            "mean": float(vals[0]) if n == 1 else float("nan"),
+            "lo": float("nan"),
+            "hi": float("nan"),
+            "n_used": float(n),
+            "n_boot": 0.0,
+            "block_size": float(block_size),
+        }
+    bs = max(1, min(int(block_size), n))
+    n_blocks = int(np.ceil(n / bs))
+    rng = np.random.default_rng(seed)
+    means = []
+    for _ in range(max(1, int(n_boot))):
+        # sample starting indices for blocks with replacement
+        starts = rng.integers(0, n - bs + 1, size=n_blocks)
+        pieces = [vals[s : s + bs] for s in starts]
+        sample = np.concatenate(pieces)[:n]
+        means.append(float(np.mean(sample)))
+    lo = float(np.quantile(means, alpha / 2))
+    hi = float(np.quantile(means, 1.0 - alpha / 2))
+    return {
+        "mean": float(np.mean(vals)),
+        "lo": lo,
+        "hi": hi,
+        "n_used": float(n),
+        "n_boot": float(len(means)),
+        "block_size": float(bs),
+    }
+
+
+def pack_excess_ci(
+    rows: Sequence[Dict[str, Any]],
+    *,
+    key: str = "excess_auc",
+    block_size: int = 2,
+    n_boot: int = 200,
+    alpha: float = 0.1,
+    seed: int = 0,
+) -> Dict[str, float]:
+    """Blocked-bootstrap CI for mean of ``key`` over ordered adjacent pairs."""
+    vals = [r.get(key) for r in rows]
+    return blocked_bootstrap_ci(
+        vals, block_size=block_size, n_boot=n_boot, alpha=alpha, seed=seed
+    )

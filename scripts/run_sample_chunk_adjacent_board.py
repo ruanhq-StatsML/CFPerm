@@ -46,7 +46,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from agod.stream_packs import load_beijing_pm25, load_metro_interstate
-from agod.transfer_null import enrich_row_with_null, summarize_null_pack
+from agod.transfer_null import (
+    enrich_row_with_null,
+    pack_excess_ci,
+    summarize_null_pack,
+)
 from scripts.generate_board_reason_codes import generate_reason_codes, render_md
 from scripts.run_diffusiondb_temporal_fsds import (
     build_light_token_X,
@@ -606,6 +610,8 @@ def main() -> None:
             m_bh = mean_key(rows, "hgb_brier")
             null_sum = summarize_null_pack(rows)
             m_ex = null_sum.get("mean_excess_auc")
+            excess_ci = pack_excess_ci(rows, key="excess_auc", seed=args.seed)
+            ece_ci = pack_excess_ci(rows, key="hgb_ece", seed=args.seed + 1)
             reading = interpret_pack(m_auc, m_j, m_ex)
             pack_blk[str(cs)] = {
                 "n_pairs": len(rows),
@@ -617,8 +623,17 @@ def main() -> None:
                 "mean_fsds_cmean_jaccard": m_fc,
                 "mean_null_auc": null_sum.get("mean_null_auc"),
                 "mean_excess_auc": m_ex,
+                "excess_auc_ci90": {
+                    "lo": excess_ci.get("lo"),
+                    "hi": excess_ci.get("hi"),
+                    "block_size": excess_ci.get("block_size"),
+                },
                 "mean_probe_eff": null_sum.get("mean_probe_eff"),
                 "mean_hgb_ece": null_sum.get("mean_hgb_ece"),
+                "hgb_ece_ci90": {
+                    "lo": ece_ci.get("lo"),
+                    "hi": ece_ci.get("hi"),
+                },
                 "mean_logreg_ece": null_sum.get("mean_logreg_ece"),
                 "reading": reading,
                 "rows": rows,
@@ -634,6 +649,8 @@ def main() -> None:
                         "mean_jaccard": m_j,
                         "mean_fsds_cmean_jaccard": m_fc,
                         "mean_excess_auc": m_ex,
+                        "excess_auc_ci90_lo": excess_ci.get("lo"),
+                        "excess_auc_ci90_hi": excess_ci.get("hi"),
                         "mean_probe_eff": null_sum.get("mean_probe_eff"),
                         "mean_hgb_ece": null_sum.get("mean_hgb_ece"),
                         "mean_logreg_ece": null_sum.get("mean_logreg_ece"),
@@ -659,7 +676,9 @@ def main() -> None:
                 (
                     f"- pairs={len(rows)} · HGB={blk['mean_auc']} · "
                     f"LogReg={blk['mean_logreg_auc']} · "
-                    f"excess={blk.get('mean_excess_auc')} · "
+                    f"excess={blk.get('mean_excess_auc')} "
+                    f"CI90=[{(blk.get('excess_auc_ci90') or {}).get('lo')},"
+                    f"{(blk.get('excess_auc_ci90') or {}).get('hi')}] · "
                     f"probe_eff={blk.get('mean_probe_eff')} · "
                     f"ECE(H/L)={blk.get('mean_hgb_ece')}/"
                     f"{blk.get('mean_logreg_ece')} · "
