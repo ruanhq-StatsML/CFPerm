@@ -1,6 +1,6 @@
 # PO-risk adaptation efficiency
 
-mean duty=0.244 ⇒ E[refit]/E[probe]≈0.244; rank_eff wins {'refit': 6}; expected-rank wins {'refit': 6}; mse_eff wins {'refit': 1, 'probe': 5}.
+mean duty=0.244 (breakeven=1.00) ⇒ E[refit]/E[probe]≈0.244; 6/6 packs prefer refit on budget; rank_eff wins {'refit': 6}; mse_eff wins {'refit': 1, 'probe': 5}.
 
 - batches=40 · batch_size=100 · n_control=1 · datasets=6 · mean_duty=0.2435897435897436 · E[refit]/E[probe]≈0.2435897435897436
 

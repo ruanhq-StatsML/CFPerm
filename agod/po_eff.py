@@ -111,6 +111,24 @@ def budget_ratio_refit_vs_probe(
     return float(duty * max(int(n_control), 1))
 
 
+def duty_breakeven_refit_vs_probe(*, n_control: int = 1) -> float:
+    """Duty where E[refit FLOPs] = E[probe FLOPs].
+
+    With window size = n_control · batch, breakeven duty = 1/n_control.
+    Below this, prefer reject-only refit on *budget* grounds alone.
+    """
+    return float(1.0 / max(int(n_control), 1))
+
+
+def prefer_refit_on_budget(gate_duty: float, *, n_control: int = 1) -> bool:
+    """True iff expected refit cost is strictly below always-on probe."""
+    return bool(
+        np.isfinite(gate_duty)
+        and budget_ratio_refit_vs_probe(gate_duty, n_control=n_control)
+        < 1.0 - 1e-12
+    )
+
+
 def rank_efficiency(
     spearman: float,
     spearman_ref: float,
@@ -289,7 +307,7 @@ def scorecard_from_summary(summary: Mapping[str, Any]) -> Dict[str, Any]:
 
     br = Counter(c["best_rank_eff_mode"] for c in ok if c.get("best_rank_eff_mode"))
     bm = Counter(c["best_mse_eff_mode"] for c in ok if c.get("best_mse_eff_mode"))
-    be = Counter(
+    be_counts = Counter(
         c["best_rank_eff_expected_mode"]
         for c in ok
         if c.get("best_rank_eff_expected_mode")
@@ -297,12 +315,20 @@ def scorecard_from_summary(summary: Mapping[str, Any]) -> Dict[str, Any]:
     mean_duty = float(
         np.mean([c["gate_duty"] for c in ok if np.isfinite(c.get("gate_duty", np.nan))])
     ) if ok else float("nan")
+    be = duty_breakeven_refit_vs_probe(n_control=n_control)
+    n_budget_refit = sum(
+        1
+        for c in ok
+        if prefer_refit_on_budget(c.get("gate_duty", float("nan")), n_control=n_control)
+    )
     return {
         "n_datasets": len(ok),
         "batch_size": batch_size,
         "n_batches": n_batches,
         "n_control": n_control,
         "mean_gate_duty": mean_duty,
+        "duty_breakeven": be,
+        "n_prefer_refit_on_budget": n_budget_refit,
         "mean_budget_ratio_refit_vs_probe": (
             float(budget_ratio_refit_vs_probe(mean_duty, n_control=n_control))
             if np.isfinite(mean_duty)
@@ -310,12 +336,12 @@ def scorecard_from_summary(summary: Mapping[str, Any]) -> Dict[str, Any]:
         ),
         "best_rank_eff_counts": dict(br),
         "best_mse_eff_counts": dict(bm),
-        "best_rank_eff_expected_counts": dict(be),
+        "best_rank_eff_expected_counts": dict(be_counts),
         "cards": cards,
         "headline": (
-            f"mean duty={mean_duty:.3f} ⇒ E[refit]/E[probe]≈"
-            f"{budget_ratio_refit_vs_probe(mean_duty, n_control=n_control):.3f}; "
-            f"rank_eff wins {dict(br)}; expected-rank wins {dict(be)}; "
-            f"mse_eff wins {dict(bm)}."
+            f"mean duty={mean_duty:.3f} (breakeven={be:.2f}) ⇒ "
+            f"E[refit]/E[probe]≈{budget_ratio_refit_vs_probe(mean_duty, n_control=n_control):.3f}; "
+            f"{n_budget_refit}/{len(ok)} packs prefer refit on budget; "
+            f"rank_eff wins {dict(br)}; mse_eff wins {dict(bm)}."
         ),
     }

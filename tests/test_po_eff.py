@@ -70,7 +70,12 @@ def test_scorecard_from_mini_block():
 
 
 def test_expected_flops_scales_with_duty():
-    from agod.po_eff import expected_adapt_flops, budget_ratio_refit_vs_probe
+    from agod.po_eff import (
+        expected_adapt_flops,
+        budget_ratio_refit_vs_probe,
+        duty_breakeven_refit_vs_probe,
+        prefer_refit_on_budget,
+    )
 
     low = expected_adapt_flops(
         "refit", gate_duty=0.1, n_batches=40, batch_size=100, n_control=1
@@ -87,6 +92,10 @@ def test_expected_flops_scales_with_duty():
     )) < 1e-9  # probe duty-invariant
     assert abs(budget_ratio_refit_vs_probe(0.25, n_control=2) - 0.5) < 1e-9
     assert abs(low / probe - 0.1) < 1e-9
+    assert duty_breakeven_refit_vs_probe(n_control=1) == 1.0
+    assert duty_breakeven_refit_vs_probe(n_control=2) == 0.5
+    assert prefer_refit_on_budget(0.2, n_control=1) is True
+    assert prefer_refit_on_budget(1.0, n_control=1) is False
 
 
 def test_scorecard_from_repo_summary_smoke():

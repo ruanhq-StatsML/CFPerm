@@ -4,6 +4,8 @@
   "n_batches": 40,
   "n_control": 1,
   "mean_gate_duty": 0.2435897435897436,
+  "duty_breakeven": 1.0,
+  "n_prefer_refit_on_budget": 6,
   "mean_budget_ratio_refit_vs_probe": 0.2435897435897436,
   "best_rank_eff_counts": {
     "refit": 6
@@ -335,5 +337,5 @@
       "reading": "duty=0.18: refit wins rank_eff (reject-only vs always-on probe)"
     }
   ],
-  "headline": "mean duty=0.244 \u21d2 E[refit]/E[probe]\u22480.244; rank_eff wins {'refit': 6}; expected-rank wins {'refit': 6}; mse_eff wins {'refit': 1, 'probe': 5}."
+  "headline": "mean duty=0.244 (breakeven=1.00) \u21d2 E[refit]/E[probe]\u22480.244; 6/6 packs prefer refit on budget; rank_eff wins {'refit': 6}; mse_eff wins {'refit': 1, 'probe': 5}."
 }
