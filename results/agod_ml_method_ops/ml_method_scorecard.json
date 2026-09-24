@@ -1,0 +1,167 @@
+{
+  "partial_volume_driven": {
+    "auc_raw": 0.8401000625390869,
+    "excess_raw": 0.3446615071919949,
+    "auc_partial": 0.5059474671669795,
+    "excess_partial": -0.0016088180112570072,
+    "delta_excess": 0.3462703252032519,
+    "confounder_r2": 0.9948020527022349,
+    "n": 800.0,
+    "beta": 1.0002718199296166
+  },
+  "partial_real_signal": {
+    "auc_raw": 0.7008147480663814,
+    "excess_raw": 0.21385650546919988,
+    "auc_partial": 0.724418662862006,
+    "excess_partial": 0.23996505093739828,
+    "delta_excess": -0.026108545468198407,
+    "confounder_r2": 0.2245978470844029,
+    "n": 800.0,
+    "beta": 0.0508153797962423
+  },
+  "learning_curve": {
+    "points": [
+      {
+        "frac": 0.2,
+        "n": 160,
+        "auc": 0.7024535083606813,
+        "excess": 0.2434442881700266
+      },
+      {
+        "frac": 0.4,
+        "n": 320,
+        "auc": 0.7107958098811755,
+        "excess": 0.18937617260787964
+      },
+      {
+        "frac": 0.6,
+        "n": 480,
+        "auc": 0.7091379549874964,
+        "excess": 0.21226382328424542
+      },
+      {
+        "frac": 0.8,
+        "n": 640,
+        "auc": 0.704856872186032,
+        "excess": 0.20765301637839262
+      },
+      {
+        "frac": 1.0,
+        "n": 800,
+        "auc": 0.7008147480663814,
+        "excess": 0.19988986508472895
+      }
+    ],
+    "excess_at_full": 0.19988986508472895,
+    "excess_at_20pct": 0.2434442881700266,
+    "curve_gain_20_to_full": -0.04355442308529767,
+    "reading": "excess softens / noisy with n \u2014 check rare labels / confounders"
+  },
+  "page_hinkley": {
+    "alarm": true,
+    "alarm_index": 6,
+    "ph_stat": [
+      0.0,
+      0.0029999999999999766,
+      0.0,
+      0.0,
+      0.005999999999999979,
+      0.018999999999999993,
+      0.1412857142857143,
+      0.2567857142857143,
+      0.34145238095238095,
+      0.435452380952381,
+      0.5116341991341992,
+      0.5904675324675325
+    ],
+    "lambda": 0.04,
+    "delta": 0.002,
+    "n": 12,
+    "mean_excess": 0.10083333333333334,
+    "reading": "skill-drop alarm at pair index 6"
+  },
+  "suite": {
+    "auc_obs": 0.7008147480663814,
+    "excess_auc": 0.19988986508472895,
+    "null_auc_mean": 0.5009248829816525,
+    "learning_curve": {
+      "points": [
+        {
+          "frac": 0.2,
+          "n": 160,
+          "auc": 0.7024535083606813,
+          "excess": 0.24967442829608794
+        },
+        {
+          "frac": 0.4,
+          "n": 320,
+          "auc": 0.7107958098811755,
+          "excess": 0.1781191369606001
+        },
+        {
+          "frac": 0.6,
+          "n": 480,
+          "auc": 0.7091379549874964,
+          "excess": 0.18940446420301926
+        },
+        {
+          "frac": 0.8,
+          "n": 640,
+          "auc": 0.704856872186032,
+          "excess": 0.20844605482903772
+        },
+        {
+          "frac": 1.0,
+          "n": 800,
+          "auc": 0.7008147480663814,
+          "excess": 0.20315302912734784
+        }
+      ],
+      "excess_at_full": 0.20315302912734784,
+      "excess_at_20pct": 0.24967442829608794,
+      "curve_gain_20_to_full": -0.046521399168740096,
+      "reading": "excess softens / noisy with n \u2014 check rare labels / confounders"
+    },
+    "partial_excess": {
+      "auc_raw": 0.7008147480663814,
+      "excess_raw": 0.19988986508472895,
+      "auc_partial": 0.724418662862006,
+      "excess_partial": 0.22270406247653374,
+      "delta_excess": -0.02281419739180479,
+      "confounder_r2": 0.2245978470844029,
+      "n": 800.0,
+      "beta": 0.0508153797962423
+    },
+    "page_hinkley": {
+      "alarm": true,
+      "alarm_index": 6,
+      "ph_stat": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0029999999999999784,
+        0.01299999999999999,
+        0.13228571428571428,
+        0.2447857142857143,
+        0.326452380952381,
+        0.417452380952381,
+        0.4906341991341992,
+        0.4015684894731977
+      ],
+      "lambda": 0.05,
+      "delta": 0.005,
+      "n": 12,
+      "mean_excess": 0.11582415542372743,
+      "reading": "skill-drop alarm at pair index 6"
+    },
+    "method_note": "composes with transfer_null; does not modify null / PO / soft_burn cores"
+  },
+  "effect_reading": {
+    "volume_delta_excess": 0.3462703252032519,
+    "real_delta_excess": -0.026108545468198407,
+    "curve_reading": "excess softens / noisy with n \u2014 check rare labels / confounders",
+    "ph_reading": "skill-drop alarm at pair index 6",
+    "headline": "volume case: large \u0394excess (skill collapses after partialling); real case: \u0394excess small; PH alarms on injected skill drop; cores untouched."
+  }
+}

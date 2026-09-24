@@ -23,3 +23,4 @@
 | 19 | 2026-09-24 | soft-weight burn policy + FLOPs ledger split | α≠compute; burn only if beats uniform; else SOFTEN_ONLY∛ | `agod/soft_burn.py` | `test_soft_burn` |
 | 20 | 2026-09-24 | SOFTEN_ONLY always ∛; burn col on power MD | soften is policy not which-loser-hurts-less | soft_burn + power scorecard | soft_burn tests |
 | 21 | 2026-09-24 | Stats-empowered Tree-of-Thoughts | ToT V=(mse,rank,cost); prune=burn/Pareto/duty | `agod/tot_eff.py` + doc | `test_tot_eff` |
+| 23 | 2026-09-24 | **20min ML-ops** partial excess + curve + PH | compose w/ null; don't rewrite cores; skill≠confounder / sample hunger / skill-drop | `agod/ml_method_ops.py` | `test_ml_method_ops` |
