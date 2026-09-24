@@ -108,18 +108,15 @@ def burn_soft_weights(
 
     # Neither improves vs uniform
     if gate_already_on:
-        prefer_cbrt = soft_win_cbrt_le_sqrt is not False  # default soften
+        # Soften is a *policy*: always ∛ to shrink weight tails (same FLOPs).
+        # Do not flip to √ just because √ hurts slightly less among losers.
         return {
             "decision": "SOFTEN_ONLY",
             "burn": False,  # do not claim IPTW win
-            "alpha": (1.0 / 3.0) if prefer_cbrt else 0.5,
+            "alpha": 1.0 / 3.0,
             "reason": (
-                "gated IPTW does not beat uniform; √ hurts less than ∛ here"
-                if not prefer_cbrt
-                else (
-                    "gated IPTW does not beat uniform; if reject path is mandatory, "
-                    "use ∛ to limit damage (same FLOPs as √)"
-                )
+                "gated IPTW does not beat uniform; if reject path is mandatory, "
+                "use ∛ to limit damage (same FLOPs as √)"
             ),
             "flops_note": "α choice ≠ FLOPs; keep adaptation budget on refit/duty",
         }

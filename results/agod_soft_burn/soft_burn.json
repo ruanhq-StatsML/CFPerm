@@ -115,8 +115,8 @@
       "burn": {
         "decision": "SOFTEN_ONLY",
         "burn": false,
-        "alpha": 0.5,
-        "reason": "gated IPTW does not beat uniform; \u221a hurts less than \u221b here",
+        "alpha": 0.3333333333333333,
+        "reason": "gated IPTW does not beat uniform; if reject path is mandatory, use \u221b to limit damage (same FLOPs as \u221a)",
         "flops_note": "\u03b1 choice \u2260 FLOPs; keep adaptation budget on refit/duty"
       },
       "flops_ledger": {

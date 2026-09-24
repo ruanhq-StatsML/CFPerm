@@ -32,12 +32,12 @@ def test_soften_only_when_hurts():
     d = burn_soft_weights(
         rel_gated_sqrt=1.1,
         rel_gated_cbrt=1.05,
-        soft_win_cbrt_le_sqrt=True,
+        soft_win_cbrt_le_sqrt=False,  # even if √ hurts less among losers
         gate_already_on=True,
     )
     assert d["burn"] is False
     assert d["decision"] == "SOFTEN_ONLY"
-    assert abs(d["alpha"] - 1.0 / 3.0) < 1e-9
+    assert abs(d["alpha"] - 1.0 / 3.0) < 1e-9  # policy: always ∛
 
 
 def test_keep_uniform_when_gate_off():

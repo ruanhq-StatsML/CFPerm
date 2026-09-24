@@ -29,12 +29,16 @@ def render_md(card: dict) -> str:
         f"∛≤√ rate={card.get('soft_win_rate_cbrt_le_sqrt')}",
         "",
         "| dataset | duty | unif | gated√ rel | gated∛ rel | "
-        "gated√ mse_eff | gated∛ mse_eff | ∛≤√? | best | reading |",
-        "|---|---:|---:|---:|---:|---:|---:|:---:|---|---|",
+        "gated√ mse_eff | gated∛ mse_eff | ∛≤√? | best | burn | reading |",
+        "|---|---:|---:|---:|---:|---:|---:|:---:|---|---|---|",
     ]
+    from agod.soft_burn import attach_burn_to_power_card
+
     for c in card.get("cards") or []:
+        c = attach_burn_to_power_card(c)
         by = {m["mode"]: m for m in c.get("modes") or []}
         u, gs, gc = by.get("uniform", {}), by.get("gated_sqrt", {}), by.get("gated_cbrt", {})
+        b = c.get("burn") or {}
 
         def f(x, nd=4):
             try:
@@ -52,9 +56,15 @@ def render_md(card: dict) -> str:
             f"{f(u.get('mse_mean_sig'))} | {f(gs.get('rel_vs_uniform'), 3)} | "
             f"{f(gc.get('rel_vs_uniform'), 3)} | {f(gs.get('mse_eff'))} | "
             f"{f(gc.get('mse_eff'))} | {sw_s} | `{c.get('best_sig_mode')}` | "
-            f"{c.get('reading')} |"
+            f"`{b.get('decision')}` | {c.get('reading')} |"
         )
     lines += [
+        "",
+        "## Burn policy (α ≠ FLOPs)",
+        "",
+        "- See [`Soft_Weight_Burn_Logic.md`](../../docs/summaries/Soft_Weight_Burn_Logic.md).",
+        "- Default: do not burn; `SOFTEN_ONLY` → always ∛ if gate is mandatory.",
+        "- Burn only when gated_α beats uniform on sig-MSE.",
         "",
         "## Tomorrow-demo takeaway",
         "",
