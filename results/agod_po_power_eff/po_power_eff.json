@@ -3,6 +3,7 @@
   "n_batches": 40,
   "batch_size": 100,
   "soft_win_rate_cbrt_le_sqrt": 0.6666666666666666,
+  "mean_soft_mse_eff_gap_cbrt_minus_sqrt": -7586.878716652768,
   "best_sig_counts": {
     "gated_sqrt": 1,
     "uniform": 5
@@ -291,6 +292,6 @@
       "reading": "duty=0.18: keep uniform \u2014 gated IPTW does not buy sig MSE; \u221b\u2264\u221a on this pack; \u0394mse_eff(\u221b\u2212\u221a)=+0.000201"
     }
   ],
-  "headline": "gated\u221b\u2264gated\u221a on 67% of packs; best_sig counts {'gated_sqrt': 1, 'uniform': 5}. Same FLOPs \u2014 softness is the only knob.",
-  "note": "sqrt vs cbrt IPTW share adaptation FLOPs; compare rel MSE / soft wins, not compute. Prefer \u221b when PO ranks well but \u221a IPTW hurts."
+  "headline": "gated\u221b\u2264gated\u221a on 67% of packs; mean \u0394mse_eff(\u221b\u2212\u221a)=-7.59e+03; best_sig counts {'gated_sqrt': 1, 'uniform': 5}. Same FLOPs \u2014 softness is the only knob.",
+  "note": "sqrt vs cbrt IPTW share adaptation FLOPs; compare rel MSE / soft wins, not compute. Prefer \u221b when PO ranks well but \u221a IPTW hurts. \u0394mse_eff(\u221b\u2212\u221a)>0 \u21d2 \u221b loses less (or gains more) per FLOP."
 }

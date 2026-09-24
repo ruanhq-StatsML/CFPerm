@@ -1,8 +1,8 @@
 # IPTW power softness: √ vs ∛ (same FLOPs)
 
-gated∛≤gated√ on 67% of packs; best_sig counts {'gated_sqrt': 1, 'uniform': 5}. Same FLOPs — softness is the only knob.
+gated∛≤gated√ on 67% of packs; mean Δmse_eff(∛−√)=-7.59e+03; best_sig counts {'gated_sqrt': 1, 'uniform': 5}. Same FLOPs — softness is the only knob.
 
-sqrt vs cbrt IPTW share adaptation FLOPs; compare rel MSE / soft wins, not compute. Prefer ∛ when PO ranks well but √ IPTW hurts.
+sqrt vs cbrt IPTW share adaptation FLOPs; compare rel MSE / soft wins, not compute. Prefer ∛ when PO ranks well but √ IPTW hurts. Δmse_eff(∛−√)>0 ⇒ ∛ loses less (or gains more) per FLOP.
 
 - batches=40 · batch_size=100 · datasets=6 · ∛≤√ rate=0.6666666666666666
 
