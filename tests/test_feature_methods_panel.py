@@ -44,7 +44,29 @@ def test_panel_separates_fsds_only_and_shift_consensus():
     assert panel["note"]
     assert "cmean" in panel["methods"]
     assert panel["methods"]["fsds"]["role"] == "supervised_y"
-    assert panel["methods"]["po_vimp"]["role"] == "shift_po"
+    assert panel["methods"]["po_vimp"]["role"] == "shift_po_or_cov"
+
+
+def test_normalize_diffusiondb_aliases():
+    cmean = pd.DataFrame(
+        {
+            "feature": ["tok_a", "tok_b"],
+            "abs_delta": [0.2, 0.05],
+            "delta": [0.2, -0.05],
+            "sign": [1, -1],
+        }
+    )
+    cov = pd.DataFrame({"feature": ["tok_a", "tok_b"], "vimp_cov": [0.9, 0.1]})
+    fsds = pd.DataFrame(
+        {"feature": ["tok_a", "tok_b"], "f_score": [1.0, 5.0], "rank": [2, 1], "selected": [1, 1]}
+    )
+    diag = cmean.merge(cov, on="feature")
+    panel = build_feature_methods_panel(diag, fsds, top_k=2, domain="diffusiondb")
+    assert panel["methods"]["cmean"]["available"]
+    assert panel["methods"]["po_vimp"]["available"]
+    assert panel["methods"]["fsds"]["available"]
+    assert panel["domain"] == "diffusiondb"
+    assert "tok_b" in panel["tops"]["fsds"]
 
 
 def test_card_includes_feature_methods(tmp_path: Path):

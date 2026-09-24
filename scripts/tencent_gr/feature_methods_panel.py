@@ -25,12 +25,61 @@ METHOD_COLS = {
     "fsds": "f_score",
 }
 
+# Cross-domain aliases → canonical columns (same statistical roles).
+COL_ALIASES: Dict[str, List[str]] = {
+    "cmean_abs": ["cmean_abs", "abs_delta", "abs_mean_delta"],
+    "mmd_loco": ["mmd_loco", "mmd_delta"],
+    "po_vimp": ["po_vimp", "vimp_cov", "vimp", "cov_vimp"],
+    "f_score": ["f_score", "fsds_f", "score"],
+    "feature": ["feature", "token", "col", "name"],
+    "mean_W1": ["mean_W1", "mean_early", "mean_ref"],
+    "mean_W2": ["mean_W2", "mean_late", "mean_cur"],
+}
+
 METHOD_ROLE = {
     "cmean": "shift_mean",  # |μ_cur − μ_ref|
     "mmd_loco": "shift_mmd",  # ΔMMD when dropping j
-    "po_vimp": "shift_po",  # PO residual VIMP
-    "fsds": "supervised_y",  # SelectKBest F on y|K*
+    "po_vimp": "shift_po_or_cov",  # PO residual VIMP or X→T cov VIMP
+    "fsds": "supervised_y",  # SelectKBest F on y|support
 }
+
+
+def _rename_aliases(df: pd.DataFrame) -> pd.DataFrame:
+    """Map domain-specific column names onto the TencentGR canonical schema."""
+    if df is None or df.empty:
+        return pd.DataFrame() if df is None else df.copy()
+    out = df.copy()
+    lower = {c.lower(): c for c in out.columns}
+    renames = {}
+    for canon, aliases in COL_ALIASES.items():
+        if canon in out.columns:
+            continue
+        for a in aliases:
+            if a in out.columns:
+                renames[a] = canon
+                break
+            if a.lower() in lower:
+                renames[lower[a.lower()]] = canon
+                break
+    if renames:
+        out = out.rename(columns=renames)
+    return out
+
+
+def normalize_feature_tables(
+    feat_diag: Optional[pd.DataFrame] = None,
+    ranking: Optional[pd.DataFrame] = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Normalize any domain's method CSVs to canonical feature / score columns."""
+    diag = _rename_aliases(feat_diag) if feat_diag is not None else pd.DataFrame()
+    rank = _rename_aliases(ranking) if ranking is not None else pd.DataFrame()
+    if not diag.empty and "feature" in diag.columns:
+        diag["feature"] = diag["feature"].astype(str)
+        if "cmean_abs" not in diag.columns and "delta" in diag.columns:
+            diag["cmean_abs"] = pd.to_numeric(diag["delta"], errors="coerce").abs()
+    if not rank.empty and "feature" in rank.columns:
+        rank["feature"] = rank["feature"].astype(str)
+    return diag, rank
 
 
 def _top_features(df: pd.DataFrame, col: str, k: int) -> List[str]:
@@ -70,10 +119,10 @@ def build_feature_methods_panel(
     tip_features: Optional[Sequence[str]] = None,
     tip_signs: Optional[Mapping[str, str]] = None,
     top_k: int = 8,
+    domain: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build multi-method feature view for summary / review card."""
-    diag = feat_diag.copy() if feat_diag is not None else pd.DataFrame()
-    rank = ranking.copy() if ranking is not None else pd.DataFrame()
+    diag, rank = normalize_feature_tables(feat_diag, ranking)
 
     # unify on feature
     if not diag.empty and "feature" in diag.columns and not rank.empty and "feature" in rank.columns:
@@ -88,6 +137,7 @@ def build_feature_methods_panel(
         merged = rank.copy()
     else:
         return {
+            "domain": domain,
             "methods": {},
             "tops": {},
             "consensus_top": [],
@@ -185,11 +235,12 @@ def build_feature_methods_panel(
     if shift_only:
         read_bits.append(f"仅shift描述(cmean/MMD/PO): {', '.join(shift_only[:4])}")
     if po_only:
-        read_bits.append(f"仅PO-VIMP: {', '.join(po_only[:3])}")
+        read_bits.append(f"仅PO/cov-VIMP: {', '.join(po_only[:3])}")
     if not read_bits:
         read_bits.append("方法面板已挂；暂无交叉共识")
 
     return {
+        "domain": domain,
         "methods": methods_meta,
         "tops": tops,
         "consensus_top": consensus_top,
@@ -200,7 +251,10 @@ def build_feature_methods_panel(
         "po_only": po_only,
         "tip_method_table": tip_table,
         "read": "；".join(read_bits),
-        "note": "cmean/MMD/PO = shift 描述；FSDS = y|K* 监督 tip；并列不互相改门",
+        "note": (
+            "cmean/MMD/PO-or-covVIMP = shift 描述；FSDS = y|support 监督 tip；"
+            "列名可跨域别名归一；并列不互相改门"
+        ),
         "top_k": top_k,
     }
 
