@@ -1,0 +1,16 @@
+\begin{table}[ht]
+\centering
+\caption{Concept-drift DGP with null adjustment $\Delta_t=s_t-\mu_{\mathrm{ref}}$. Online AR-bootstrap CI on $\Delta$. Post-CP det.\ $=$ fraction of post-change batches with CI$_{\mathrm{lo}}>0$ (readable excess vs $D_{\mathrm{ref}}$). Delay $=$ batches from the labeled CP to the first such significant CI. Small $B$ is twitchy and hard to call a shift.}
+\label{tab:concept-batchsize-boot-ci}
+\small
+\begin{tabular}{@{}r ccccc@{}}
+\toprule
+$B$ & $\mu_{\mathrm{ref}}$ & TV$(\mathrm{lo})/1\mathrm{k}$ & cover0 pre & post det & delay \\
+\midrule
+1 & 0.976 & 5.378 & 1.000 & 0.967 & 78 \\
+10 & 0.976 & 1.768 & 1.000 & 0.840 & 53 \\
+20 & 0.976 & 1.594 & 1.000 & 0.743 & 44 \\
+50 & 0.922 & 1.821 & 1.000 & 0.614 & 28 \\
+\bottomrule
+\end{tabular}
+\end{table}
