@@ -130,6 +130,33 @@ def collect_hotpot(n: int, drift_at: int):
     return episodes
 
 
+def collect_game24(n: int, drift_at: int):
+    probe.CURRENT_MIX = 0.28
+    probe.MIX_JITTER = 0.0
+    puzzles = probe.make_game24(random.Random(SEED), n)
+    depth = 3
+
+    def score_at(state, t):
+        solv = 1.0 if probe._g24_solvable(state) else 0.0
+        close = max(probe.math.exp(-abs(x - 24) / 8) for x in state)
+        stable = close if len(state) == 1 else 0.45 * close + 0.15
+        spurious = sum(state) / (13 * len(state))
+        calibrated = 0.85 * solv + 0.15 * stable
+        judge = probe.drifted_judge(calibrated, spurious, t, drift_at)
+        return probe.StepView(judge, judge, stable, spurious, solv)
+
+    episodes = []
+    for t, puzzle in enumerate(puzzles):
+        trace = []
+        final, _, n_children = probe.beam_search(
+            puzzle, probe._g24_children, lambda state, t=t: score_at(state, t),
+            beam=4, depth=depth, rng=random.Random(SEED + 3000 + t), trace=trace,
+        )
+        xs = [step_x(view, step, depth) for step, view in trace]
+        episodes.append((np.vstack(xs) if xs else np.zeros((0, len(NAMES))), 1.0 if final is not None else 0.0, int(n_children)))
+    return episodes
+
+
 def _rows(episodes):
     xs, ys, ep = [], [], []
     for i, item in enumerate(episodes):
@@ -417,6 +444,7 @@ def main():
     report = {
         "doorkey": run_stream("minigrid_doorkey", collect_doorkey(n, drift_at), drift_at),
         "hotpot": run_stream("hotpot_twohop", collect_hotpot(n, drift_at), drift_at),
+        "game24": run_stream("game_of_24", collect_game24(n, drift_at), drift_at),
     }
     OUT.write_text(json.dumps(report, indent=2))
     for key, block in report.items():

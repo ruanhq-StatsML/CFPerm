@@ -1,0 +1,90 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,amssymb,booktabs,geometry}
+\geometry{margin=2.4cm}
+\title{An effect ledger for the continuous-time prompt\\on Game of 24}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+\section{What counts as an effect}
+Each prompt quantity is compared with its own pre-drift mean.
+The width of the gate is not part of the claim.
+A quantity has an effect when its post-drift mean is higher than its pre-drift mean.
+That rise is called an increment.
+The business outcome \(Y\) is kept on its own line.
+If the post-drift mean of \(Y\) is lower than its pre-drift mean, the outcome is recorded as a shortfall against the reference rate.
+
+\(Y\) is the business label of a finished episode.
+On Game of 24 it is \(1\) when search returns a state equal to \(24\), and \(0\) otherwise.
+The same slot can hold a repayment, a completed order, or a closed ticket.
+The residual, the online anomaly score, and the adjustment are written only after that label returns.
+They do not exist on the query beat.
+
+The clever covariate on a committed step is
+\[
+H=\frac{Y-e}{e(1-e)},
+\]
+where \(e\) is that step's stable score, clipped to \((0.001,0.999)\).
+The online anomaly score is \(|H|\).
+The sign is read separately: \(H>0.5\) is aggressive, \(H<-0.5\) is conservative, and the rest is keep.
+With a binary \(Y\), a success gives \(H=1/e\) and a failure gives \(H=-1/(1-e)\).
+
+\section{Game of 24}
+Forty episodes, drift at episode 16, beam 4, depth 3.
+The forest, the stack weight, and the feature split freeze after the first 12 episodes.
+Reference \(Y\) is identically \(1\), so every column has permutation importance \(0\), the residual columns are empty, and the stack weight is \(0\).
+The trail mean squared error is \(0.643\).
+The out-of-bag mean squared error on the reference is \(0\).
+On the 72 post-drift steps, the sign of \(H\) matches \(Y\) on every step.
+The mean anomaly score is \(2.82\) on successes and \(1.24\) on failures.
+
+\begin{center}
+\begin{tabular}{lrrrl}
+\toprule
+Channel & Pre-drift & Post-drift & Change & Reading \\
+\midrule
+Terminal \(Y\) & 1.00 & 0.25 & \(-0.75\) & shortfall \\
+Absolute residual & 0.00 & 0.75 & \(+0.75\) & increment \\
+Online anomaly \(|H|\) & 2.38 & 1.63 & \(-0.75\) & below reference \\
+Action prior \(e\) & 0.57 & 0.26 & \(-0.32\) & below reference \\
+Conservative share & 0.00 & 0.75 & \(+0.75\) & increment \\
+Hop rate & 0.00 & 0.25 & \(+0.25\) & increment \\
+Last-step absolute error & 0.00 & 0.75 & \(+0.75\) & increment \\
+Children scored per episode & 114.9 & 115.2 & \(+0.3\) & cost \\
+Prompt window & 8 & 8 & 0 & cost \\
+Prompt columns & 6 & 6 & 0 & cost \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Why these four rises are the effect}
+The forest stays frozen at a prediction of \(1\).
+After \(Y\) is written back, the absolute residual on a step is \(1-Y\).
+Its post-drift mean is therefore exactly the drop in the success rate, \(0.75\).
+The same \(0.75\) appears as the conservative share, because every failed step has \(H<0\), and as the last-step absolute error.
+The hop rate rises by \(0.25\): one quarter of the post-drift episodes move the successive squared error by enough to clear the hop.
+These four quantities were zero on the pre-drift side and positive after the drift.
+That is the effect.
+How far above zero they sit is not a separate claim.
+
+\(|H|\) does not rise.
+The prior on this task stays below one half, so a success has the larger absolute value: \(1/e > 1/(1-e)\).
+When failures become the majority, the average \(|H|\) falls from \(2.38\) to \(1.63\).
+The anomaly score still matches the sign of the outcome, but the rise-above-reference test does not open on \(|H|\) for Game of 24.
+The same split appeared on DoorKey (\(|H|\) from \(2.49\) to \(2.12\)) and the opposite split on the two-hop questions, where a prior clipped at \(0.001\) pulled the success score up to a post-drift mean of \(65.1\).
+
+\section{What the increment is, and what it is not}
+The increment on Game of 24 is the joint rise of the residual, the conservative share, the hop rate, and the last-step absolute error.
+It is recorded on beats whose \(Y\) is already known, and it is visible to the next episode's prompt.
+It does not raise the business outcome above the pre-drift rate.
+That rate is already \(1\), and the post-drift rate is \(0.25\).
+Scored children stay essentially flat, \(114.9\) to \(115.2\), because a depth-3 beam scores almost the same frontier whether or not the episode returns \(24\).
+The window length and the column count do not change.
+
+So the business line and the prompt line answer different questions.
+\(Y\) says the solved-puzzle rate fell by \(0.75\) and did not clear the reference.
+The prompt says four of its own quantities cleared theirs, by \(0.75\), \(0.75\), \(0.25\), and \(0.75\).
+Both statements use the same episodes.
+
+\end{document}
