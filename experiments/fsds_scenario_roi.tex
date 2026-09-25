@@ -1,0 +1,117 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,booktabs,geometry}
+\geometry{margin=2.3cm}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0em}
+\title{One drifted offer, three budgets\\
+\large A polished reading of the FSDS prototype}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Forty users, one judge, three offers. After user 16 the selected offer changes from habit to click and the outcome rate falls from \(0.50\) to \(0.167\). The judge score itself moves by \(0.012\). The spurious score rises by \(0.83\). Concept-drift SSE drops on the four columns tie at \(0.381\), and none has \(p\le 0.10\). A first spend rule follows a transient ranking and buys at most one outcome. A second rule waits for that \(p\)-value and spends nothing on incentive or retention. The subsidy, which is paid on every user, stays at \(9.6\) under the stated unit price.
+\end{abstract}
+
+\section{Setup}
+Each episode is one user. The search scores three offers and keeps the top one. Three children are scored on every user, before and after the drift.
+\[
+Y=\begin{cases}
+1 & \text{the kept offer produces the scene outcome},\\
+0 & \text{otherwise}.
+\end{cases}
+\]
+The habit offer produces the outcome on even user indices, so its rate is \(1/2\). The click offer produces it on multiples of five. With the drift at user 16, the judge keeps habit on users \(0\)--\(15\) and click on users \(16\)--\(39\). The post-drift rate is \(4/24=0.167\), eight outcomes below \(0.50\times 24\).
+
+The row attached to the kept offer is
+\[
+X=(\mathrm{judge},\,\mathrm{stable},\,\mathrm{spurious},\,\mathrm{progress}).
+\]
+Concept drift for a column \(x\) is the drop in residual sum of squares from \(Y\sim 1+\mathrm{batch}\) to \(Y\sim 1+\mathrm{batch}+x+\mathrm{batch}\cdot x\). The batch split is the first 12 users against the rest. A covariate check is the absolute mean shift of \(x\), with a permutation \(p\)-value. Unit prices used later are assumptions: \(1\) per outcome, \(0.20\) per incentive, \(0.50\) per retention, \(0.40\) per subsidized user. They are not estimated from these episodes.
+
+\section{The path of \(X\) and of \(Y\)}
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Column of \(X\) & Users \(0\)--\(15\) & Users \(16\)--\(39\) & Change \\
+\midrule
+judge & 0.820 & 0.808 & \(-0.012\) \\
+stable & 0.500 & 0.200 & \(-0.300\) \\
+spurious & 0.150 & 0.980 & \(+0.830\) \\
+progress & 0.900 & 0.100 & \(-0.800\) \\
+\(Y\) & 0.500 & 0.167 & \(-0.333\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The selection path is the offer change. Habit carries a high progress score and a low spurious score. Click reverses both. The judge score stays near \(0.81\) because the drifted mix rebuilds a similar number from the click offer's spurious score. A mean-shift permutation separates every column: each one is a step at the same index, so a shuffle cannot reproduce the split. The interpretable quantity is the size of the step. The judge step is \(0.012\). The spurious step is \(0.83\).
+
+\section{The concept test}
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Column & SSE drop & Permutation \(p\) \\
+\midrule
+judge & 0.381 & 0.41 \\
+stable & 0.381 & 0.41 \\
+spurious & 0.381 & 0.35 \\
+progress & 0.381 & 0.44 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The four drops agree to three digits. After the offer becomes a step, each column is a relabeling of that step, and the interaction \(\mathrm{batch}\cdot x\) does not isolate a carrier of the fall in \(Y\). The fall sits on the batch bit. No column clears \(p\le 0.10\). This run does not estimate an AUC and does not apply a conversion coefficient to one.
+
+\section{Two spend rules}
+Round 1 spends when the fit on users seen so far ranks spurious first. That ranking shows up at user 19 and is gone on the full judge stream, whose top column is judge with \(p=0.41\).
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Scene & Post-drift \(Y\) & Extra outcomes & Spend & Ratio \\
+\midrule
+Incentive & 0.208 & 1 & 0.20 & 5.00 \\
+Retention & 0.167 & 0 & 1.00 & 0.00 \\
+Subsidy & 0.208 & 1 & 9.60 & 0.15 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The incentive ratio is \(1/0.20\) because one outcome was bought for \(0.20\). The post-drift rate \(0.208\) is still below \(0.50\). Retention buys nothing. Subsidy pays all 24 post-drift users at \(0.40\), so the bill is \(9.6\) whether or not the extra order is credited to the rule.
+
+Round 2 spends only when the leading concept column is spurious, the SSE drop is positive, the mean of that column has moved, and the concept \(p\)-value is at most \(0.10\). No column qualifies. The lever stays off.
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Scene & Post-drift \(Y\) & Extra outcomes & Spend & Ratio \\
+\midrule
+Incentive & 0.167 & 0 & 0 & --- \\
+Retention & 0.167 & 0 & 0 & --- \\
+Subsidy & 0.167 & 0 & 9.60 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Incentive and retention have a zero denominator, so the ratio is left blank. Subsidy still pays \(9.6\), avoids none of the click waste, and has ratio \(0\) against the unmoved judge.
+
+\section{One path, three readings}
+\begin{center}
+\begin{tabular}{p{2.2cm}p{5.4cm}p{5.6cm}}
+\toprule
+Scene & Reading of the same step in \(X\) & Action under round 2 \\
+\midrule
+Incentive & A rise in spurious is a change of offer, not a rise in participation. & Do not scale the incentive. \(Y\) stays \(0.167\). \\
+Retention & A fall in progress is a worse offer, not a user already saved. & Do not buy the save offer. The shortfall stays eight users. \\
+Subsidy & A rise in spurious is the click offer taking the subsidy. & Do not withhold the subsidy on this test. Spend stays \(9.6\). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+An incentive increment would require post-drift \(Y>0.50\). A retention recovery would require sending the save offer and moving \(Y\) back toward \(0.50\). A subsidy cut would require the concept test to separate the spurious column from the other three. None of those conditions holds on this stream.
+
+\section{Efficiency}
+Scoring cost is three children per user on every policy and both rounds. Round 2 adds no outcome and no intervention. Round 1, which treats a tied and transient ranking as a signal, buys one outcome in two of the scenes and leaves all three below the pre-drift rate. Computing the four SSE drops is cheap relative to opening a budget on a column the full sample does not separate.
+
+\end{document}

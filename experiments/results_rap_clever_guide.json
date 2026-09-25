@@ -1,0 +1,12 @@
+{
+  "demo_prior_0.3_outcome_1": {
+    "H": 3.333333333333333,
+    "hint": "aggressive"
+  },
+  "post_drift_hint_counts": {
+    "aggressive": 4,
+    "conservative": 19,
+    "keep": 0
+  },
+  "prompt_after_first_post_drift_failure": "[Clever Covariate Signal]\nPrevious prior: 0.200\nObserved outcome: 0\nClever covariate H: -1.250\nOnline anomaly |H|: 1.250\nAdjustment hint: conservative\n\n- If hint = aggressive: the outcome was much better than expected.\n  Explore more boldly, consider higher-risk/higher-reward branches.\n- If hint = conservative: the outcome was much worse than expected.\n  Be more cautious, prefer safe and proven branches, reduce exploration.\n- If hint = keep: the outcome matched expectation.\n  Continue with the current strategy.\n\n[Current State]\nUser 17. Three offers: habit, growth, click. Y for this user is not known yet.\n\n[Recent History]\nt=13 Y=0 e=0.500 H=-2.000 conservative\nt=14 Y=1 e=0.500 H=2.000 aggressive\nt=15 Y=0 e=0.500 H=-2.000 conservative\n\nBased on the above, generate the next planning step or candidate actions.\n"
+}
