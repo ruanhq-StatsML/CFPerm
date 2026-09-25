@@ -1,0 +1,5 @@
+{
+  "n": 40,
+  "screen": {"p": 20000, "seconds": 0.296, "us_per_column": 14.8, "extrapolated_1e7_seconds": 148.0},
+  "permutation": {"p": 50, "shuffles": 80, "ms_per_column": 2.28, "note": "two least-squares fits inside each shuffle, so this is an upper envelope"}
+}
