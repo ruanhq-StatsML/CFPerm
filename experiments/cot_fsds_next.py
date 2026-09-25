@@ -76,11 +76,14 @@ def run_game24(n: int, drift_at: int, policy: str):
         return probe.StepView(judge, judge, stable, spurious, solv)
 
     for t, puzzle in enumerate(puzzles):
+        # FSDS fits here, before this episode's chain, on episodes whose Y is already stored.
+        # It is not called inside the three greedy steps: those steps have no Y yet.
         if policy == "fsds" and len(feats) >= REF + MIN_POST:
             weights, concept, covariate = concept_weights(feats)
         else:
             weights = {"judge": 1.0, "stable": 0.0, "spurious": 0.0, "progress": 0.0}
             concept, covariate = [], []
+        fit_on_n = len(feats) if concept else 0
         state = puzzle
         last = view_of(t, state)
         solved = 0.0
@@ -114,6 +117,7 @@ def run_game24(n: int, drift_at: int, policy: str):
             "w_stable": weights["stable"],
             "concept_top": top_c,
             "covariate_top": top_v,
+            "fit_on_n": fit_on_n,
             "y": solved,
         })
     return _pack("game24", successes, weight_trace, drift_at)
@@ -129,11 +133,13 @@ def run_hotpot(n: int, drift_at: int, policy: str):
     for t in range(n):
         question, gold = bank[t % len(bank)]
         need = 2
+        # Same gate as Game of 24: fit on finished episodes, then both hops of this question use the weights.
         if policy == "fsds" and len(feats) >= REF + MIN_POST:
             weights, concept, covariate = concept_weights(feats)
         else:
             weights = {"judge": 1.0, "stable": 0.0, "spurious": 0.0, "progress": 0.0}
             concept, covariate = [], []
+        fit_on_n = len(feats) if concept else 0
         picked = frozenset()
         last = None
         for _ in range(2):
@@ -166,6 +172,7 @@ def run_hotpot(n: int, drift_at: int, policy: str):
             "w_stable": weights["stable"],
             "concept_top": concept[0]["feature"] if concept else None,
             "covariate_top": covariate[0]["feature"] if covariate else None,
+            "fit_on_n": fit_on_n,
             "concept": concept,
             "covariate": covariate,
             "y": y,
@@ -191,9 +198,9 @@ def _pack(task, successes, trace, drift_at):
         "post_w_judge": mean_w("w_judge"),
         "post_w_stable": mean_w("w_stable"),
         "concept_top_counts": tops,
-        "last": {k: trace[-1][k] for k in ("t", "w_judge", "w_stable", "concept_top", "covariate_top", "y")},
+        "last": {k: trace[-1][k] for k in ("t", "w_judge", "w_stable", "concept_top", "covariate_top", "fit_on_n", "y")},
         "trace_tail": [
-            {k: row[k] for k in ("t", "w_judge", "w_stable", "concept_top", "covariate_top", "y")}
+            {k: row[k] for k in ("t", "w_judge", "w_stable", "concept_top", "covariate_top", "fit_on_n", "y")}
             for row in trace[-6:]
         ],
     }
@@ -201,7 +208,16 @@ def _pack(task, successes, trace, drift_at):
 
 def main():
     n, drift_at = 40, 16
-    report = {"ref_episodes": REF, "min_post": MIN_POST, "tasks": {}}
+    report = {
+        "ref_episodes": REF,
+        "min_post": MIN_POST,
+        "fsds_step": {
+            "fit": "after an episode appends Y, before the next episode starts. Needs at least 12 reference episodes and 5 later episodes.",
+            "apply": "the greedy choice of every step in the next episode: score = w_judge * judge + w_stable * stable.",
+            "not_used": "inside the current episode's chain. That chain has not returned Y, so the SSE comparison cannot be fit there.",
+        },
+        "tasks": {},
+    }
     for task, runner in (("game24", run_game24), ("hotpot_twohop", run_hotpot)):
         report["tasks"][task] = {}
         for policy in ("judge", "fsds"):

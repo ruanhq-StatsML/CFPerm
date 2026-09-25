@@ -1,6 +1,11 @@
 {
   "ref_episodes": 12,
   "min_post": 5,
+  "fsds_step": {
+    "fit": "after an episode appends Y, before the next episode starts. Needs at least 12 reference episodes and 5 later episodes.",
+    "apply": "the greedy choice of every step in the next episode: score = w_judge * judge + w_stable * stable.",
+    "not_used": "inside the current episode's chain. That chain has not returned Y, so the SSE comparison cannot be fit there."
+  },
   "tasks": {
     "game24": {
       "judge": {
@@ -18,6 +23,7 @@
           "w_stable": 0.0,
           "concept_top": null,
           "covariate_top": null,
+          "fit_on_n": 0,
           "y": 0.0
         },
         "trace_tail": [
@@ -27,6 +33,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -35,6 +42,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 1.0
           },
           {
@@ -43,6 +51,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -51,6 +60,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -59,6 +69,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -67,6 +78,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           }
         ]
@@ -87,6 +99,7 @@
           "w_stable": 0.21990579658903253,
           "concept_top": "progress",
           "covariate_top": "stable",
+          "fit_on_n": 39,
           "y": 0.0
         },
         "trace_tail": [
@@ -96,6 +109,7 @@
             "w_stable": 0.26606622347418596,
             "concept_top": "progress",
             "covariate_top": "spurious",
+            "fit_on_n": 34,
             "y": 0.0
           },
           {
@@ -104,6 +118,7 @@
             "w_stable": 0.2410269884760808,
             "concept_top": "progress",
             "covariate_top": "judge",
+            "fit_on_n": 35,
             "y": 1.0
           },
           {
@@ -112,6 +127,7 @@
             "w_stable": 0.24652965262859883,
             "concept_top": "progress",
             "covariate_top": "stable",
+            "fit_on_n": 36,
             "y": 0.0
           },
           {
@@ -120,6 +136,7 @@
             "w_stable": 0.2255012688341358,
             "concept_top": "progress",
             "covariate_top": "progress",
+            "fit_on_n": 37,
             "y": 0.0
           },
           {
@@ -128,6 +145,7 @@
             "w_stable": 0.2171669738348339,
             "concept_top": "progress",
             "covariate_top": "stable",
+            "fit_on_n": 38,
             "y": 0.0
           },
           {
@@ -136,6 +154,7 @@
             "w_stable": 0.21990579658903253,
             "concept_top": "progress",
             "covariate_top": "stable",
+            "fit_on_n": 39,
             "y": 0.0
           }
         ]
@@ -157,6 +176,7 @@
           "w_stable": 0.0,
           "concept_top": null,
           "covariate_top": null,
+          "fit_on_n": 0,
           "y": 1.0
         },
         "trace_tail": [
@@ -166,6 +186,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -174,6 +195,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -182,6 +204,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -190,6 +213,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -198,6 +222,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 0.0
           },
           {
@@ -206,6 +231,7 @@
             "w_stable": 0.0,
             "concept_top": null,
             "covariate_top": null,
+            "fit_on_n": 0,
             "y": 1.0
           }
         ]
@@ -225,6 +251,7 @@
           "w_stable": 0.41336150994651394,
           "concept_top": "progress",
           "covariate_top": "judge",
+          "fit_on_n": 39,
           "y": 1.0
         },
         "trace_tail": [
@@ -234,6 +261,7 @@
             "w_stable": 0.41846238549005704,
             "concept_top": "progress",
             "covariate_top": "judge",
+            "fit_on_n": 34,
             "y": 0.0
           },
           {
@@ -242,6 +270,7 @@
             "w_stable": 0.4173976019185929,
             "concept_top": "progress",
             "covariate_top": "judge",
+            "fit_on_n": 35,
             "y": 0.0
           },
           {
@@ -250,6 +279,7 @@
             "w_stable": 0.4150040091867005,
             "concept_top": "progress",
             "covariate_top": "judge",
+            "fit_on_n": 36,
             "y": 0.0
           },
           {
@@ -258,6 +288,7 @@
             "w_stable": 0.4141672386248364,
             "concept_top": "progress",
             "covariate_top": "judge",
+            "fit_on_n": 37,
             "y": 0.0
           },
           {
@@ -266,6 +297,7 @@
             "w_stable": 0.41219634098090085,
             "concept_top": "progress",
             "covariate_top": "judge",
+            "fit_on_n": 38,
             "y": 0.0
           },
           {
@@ -274,6 +306,7 @@
             "w_stable": 0.41336150994651394,
             "concept_top": "progress",
             "covariate_top": "judge",
+            "fit_on_n": 39,
             "y": 1.0
           }
         ]
