@@ -1,0 +1,223 @@
+{
+  "judge": {
+    "policy": "judge",
+    "lever_at": null,
+    "pre_activation": 0.5,
+    "post_activation": 0.16666666666666666,
+    "kind": "\u633d\u635f",
+    "extra_activations_vs_pre": -8.0,
+    "channels": [
+      {
+        "name": "terminal_Y",
+        "role": "outcome",
+        "pre": 0.5,
+        "post": 0.16666666666666666,
+        "delta": -0.33333333333333337,
+        "kind": "\u633d\u635f"
+      },
+      {
+        "name": "abs_residual",
+        "role": "monitor",
+        "pre": 0.5,
+        "post": 0.4833333333333332,
+        "delta": -0.016666666666666774,
+        "kind": "\u4f4e\u4e8e\u53c2\u8003"
+      },
+      {
+        "name": "online_anomaly_|H|",
+        "role": "monitor",
+        "pre": 2.0,
+        "post": 1.8749999999999993,
+        "delta": -0.12500000000000067,
+        "kind": "\u4f4e\u4e8e\u53c2\u8003"
+      },
+      {
+        "name": "prior_e",
+        "role": "monitor",
+        "pre": 0.5,
+        "post": 0.20000000000000004,
+        "delta": -0.29999999999999993,
+        "kind": "\u4f4e\u4e8e\u53c2\u8003"
+      },
+      {
+        "name": "conservative_share",
+        "role": "monitor",
+        "pre": 0.5,
+        "post": 0.8333333333333334,
+        "delta": 0.33333333333333337,
+        "kind": "\u7528\u589e"
+      },
+      {
+        "name": "hop_rate",
+        "role": "monitor",
+        "pre": 0.0,
+        "post": 0.0,
+        "delta": 0.0,
+        "kind": "\u6301\u5e73"
+      },
+      {
+        "name": "abs_error_last_step",
+        "role": "monitor",
+        "pre": 0.5,
+        "post": 0.4833333333333332,
+        "delta": -0.016666666666666774,
+        "kind": "\u4f4e\u4e8e\u53c2\u8003"
+      },
+      {
+        "name": "children_scored",
+        "role": "cost",
+        "pre": 3.0,
+        "post": 3.0,
+        "delta": 0.0,
+        "kind": "\u6210\u672c"
+      },
+      {
+        "name": "prompt_window_rows",
+        "role": "cost",
+        "pre": 8.0,
+        "post": 8.0,
+        "delta": 0.0,
+        "kind": "\u6210\u672c"
+      },
+      {
+        "name": "prompt_columns",
+        "role": "cost",
+        "pre": 6.0,
+        "post": 6.0,
+        "delta": 0.0,
+        "kind": "\u6210\u672c"
+      }
+    ],
+    "yongzeng_channels": [
+      "conservative_share"
+    ],
+    "w_stack": 0.0,
+    "trail_mse": 0.2363392857142856,
+    "post_anomaly": {
+      "n_steps": 24,
+      "mean_prior": 0.20000000000000004,
+      "min_prior": 0.2,
+      "mean_abs_H_when_Y1": 4.999999999999999,
+      "mean_abs_H_when_Y0": 1.2499999999999998,
+      "sign_matches_outcome": 1.0,
+      "frac_aggressive_given_Y1": 1.0,
+      "frac_conservative_given_Y0": 1.0
+    }
+  },
+  "growth": {
+    "policy": "growth",
+    "lever_at": 17,
+    "pre_activation": 0.5,
+    "post_activation": 0.625,
+    "kind": "\u7528\u589e",
+    "extra_activations_vs_pre": 3.0,
+    "channels": [
+      {
+        "name": "terminal_Y",
+        "role": "outcome",
+        "pre": 0.5,
+        "post": 0.625,
+        "delta": 0.125,
+        "kind": "\u7528\u589e"
+      },
+      {
+        "name": "abs_residual",
+        "role": "monitor",
+        "pre": 0.5,
+        "post": 0.5062500000000001,
+        "delta": 0.006250000000000089,
+        "kind": "\u7528\u589e"
+      },
+      {
+        "name": "online_anomaly_|H|",
+        "role": "monitor",
+        "pre": 2.0,
+        "post": 1.9950201643298662,
+        "delta": -0.004979835670133825,
+        "kind": "\u4f4e\u4e8e\u53c2\u8003"
+      },
+      {
+        "name": "prior_e",
+        "role": "monitor",
+        "pre": 0.5,
+        "post": 0.6504166666666668,
+        "delta": 0.15041666666666675,
+        "kind": "\u7528\u589e"
+      },
+      {
+        "name": "conservative_share",
+        "role": "monitor",
+        "pre": 0.5,
+        "post": 0.375,
+        "delta": -0.125,
+        "kind": "\u4f4e\u4e8e\u53c2\u8003"
+      },
+      {
+        "name": "hop_rate",
+        "role": "monitor",
+        "pre": 0.0,
+        "post": 0.0,
+        "delta": 0.0,
+        "kind": "\u6301\u5e73"
+      },
+      {
+        "name": "abs_error_last_step",
+        "role": "monitor",
+        "pre": 0.5,
+        "post": 0.5062500000000001,
+        "delta": 0.006250000000000089,
+        "kind": "\u7528\u589e"
+      },
+      {
+        "name": "children_scored",
+        "role": "cost",
+        "pre": 3.0,
+        "post": 3.0,
+        "delta": 0.0,
+        "kind": "\u6210\u672c"
+      },
+      {
+        "name": "prompt_window_rows",
+        "role": "cost",
+        "pre": 8.0,
+        "post": 8.0,
+        "delta": 0.0,
+        "kind": "\u6210\u672c"
+      },
+      {
+        "name": "prompt_columns",
+        "role": "cost",
+        "pre": 6.0,
+        "post": 6.0,
+        "delta": 0.0,
+        "kind": "\u6210\u672c"
+      }
+    ],
+    "yongzeng_channels": [
+      "terminal_Y",
+      "abs_residual",
+      "prior_e",
+      "abs_error_last_step"
+    ],
+    "w_stack": 0.0,
+    "trail_mse": 0.2559821428571428,
+    "post_anomaly": {
+      "n_steps": 24,
+      "mean_prior": 0.6504166666666668,
+      "min_prior": 0.2,
+      "mean_abs_H_when_Y1": 1.4925373134328352,
+      "mean_abs_H_when_Y0": 2.832491582491583,
+      "sign_matches_outcome": 1.0,
+      "frac_aggressive_given_Y1": 1.0,
+      "frac_conservative_given_Y0": 1.0
+    }
+  },
+  "comparison": {
+    "pre_activation": 0.5,
+    "judge_post": 0.16666666666666666,
+    "growth_post": 0.625,
+    "extra_vs_drifted_judge": 11.0,
+    "growth_kind": "\u7528\u589e",
+    "judge_kind": "\u633d\u635f"
+  }
+}
