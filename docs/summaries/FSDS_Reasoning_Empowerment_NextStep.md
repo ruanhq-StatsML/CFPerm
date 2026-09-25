@@ -32,6 +32,7 @@
 | 测试 | `tests/test_fsds_reason_guide.py` |
 | 产物 | `results/fsds_reason_guide/` |
 | **LaTeX prototype (RAP)** | `docs/method/FSDS_Reasoning_Empowerment_RAP.tex` |
+| **LaTeX English (standalone)** | `docs/method/FSDS_Attribution_Guided_RAP_en.tex` |
 
 与 `agod/tot_eff.py`（策略 ToT：adapt×α×freeze）正交：本模块是 **推理节点级** 的 FSDS→下一步；`tot_eff` 是 **效率策略** ToT。
 
