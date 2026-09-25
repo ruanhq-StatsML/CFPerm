@@ -27,6 +27,7 @@ from online_llm_stack import (
     make_rf_adapter,
     make_tabpfn_adapter,
     online_stack_weights,
+    clever_covariate,
     pval_vs_ref,
     render_sliding_prompt,
     split_by_vimp,
@@ -196,14 +197,16 @@ def run_stream(name: str, episodes, drift_at: int):
             _, sig = llm["predict_uncertainty"](fit_llm, Xe[:, low])
             w = online_stack_weights(sig, w_stack=w_stack, sigma_med=sigma_med)
         for s in range(len(Xe)):
-            window.append({
+            row = {
                 "t": int(i * 100 + s),
                 "y": float(ye),
                 "rf": float(y_hat_rf[s]),
                 "e": float(ye - y_hat_rf[s]),
                 "w": float(w[s]),
                 "x": np.round(Xe[s], 4).tolist(),
-            })
+            }
+            row.update(clever_covariate(ye, float(Xe[s, 1]), score=float(Xe[s, 0])))
+            window.append(row)
         window = window[-PROMPT_WINDOW:]
 
     beat = REF_EPISODES * 100
@@ -220,7 +223,9 @@ def run_stream(name: str, episodes, drift_at: int):
                 w = float(online_stack_weights(sig, w_stack=w_stack, sigma_med=sigma_med)[0])
                 corr0 = float(corr[0])
             y_hat = y_rf + w * corr0
-            prompt = render_sliding_prompt(window, Xe[s], w_stack=w_stack, sigma_med=sigma_med)
+            prompt = render_sliding_prompt(
+                window, Xe[s], w_stack=w_stack, sigma_med=sigma_med, query_prior=float(Xe[s, 1])
+            )
             prompt = "X columns: " + ",".join(NAMES) + "\n" + "high_vimp=" + ",".join(NAMES[j] for j in high) + " low_vimp=" + ",".join(NAMES[j] for j in low) + "\n" + prompt
             prompts.append({"episode": i, "step": s, "text": prompt, "y_hat": y_hat, "y_rf": y_rf})
             step_pred.append(y_hat)
@@ -236,14 +241,16 @@ def run_stream(name: str, episodes, drift_at: int):
             _, sig = llm["predict_uncertainty"](fit_llm, Xe[:, low])
             w = online_stack_weights(sig, w_stack=w_stack, sigma_med=sigma_med)
         for s in range(len(Xe)):
-            window.append({
+            row = {
                 "t": int(beat - len(Xe) + s),
                 "y": float(ye),
                 "rf": float(y_rf[s]),
                 "e": float(ye - y_rf[s]),
                 "w": float(w[s]),
                 "x": np.round(Xe[s], 4).tolist(),
-            })
+            }
+            row.update(clever_covariate(ye, float(Xe[s, 1]), score=float(Xe[s, 0])))
+            window.append(row)
         window = window[-PROMPT_WINDOW:]
 
     mses = np.array([r["mse"] for r in pred_rows], float)

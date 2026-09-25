@@ -290,15 +290,50 @@ def pval_vs_ref(trail: np.ndarray, ref: np.ndarray) -> np.ndarray:
     return np.array([(1.0 + float(np.sum(ref >= s))) / (n + 1.0) for s in trail], dtype=float)
 
 
-def render_sliding_prompt(window_rows, query_x, *, w_stack: float, sigma_med: float) -> str:
+def clever_covariate(action: float, prior: float, *, lam: float = 0.3, tau: float = 0.3, temp0: float = 1.0, score: float = 0.0) -> dict:
+    """H(A, W) = (A - e(W)) / (e(W) (1 - e(W))).
+
+    A is the backed-up terminal reward once the episode has finished.
+    e(W) is the action prior. The four injections are λH on UCB and on R,
+    prune when score + λH < τ, and temperature T0 exp(-λH).
+    """
+    e = float(np.clip(prior, 1e-3, 1.0 - 1e-3))
+    A = float(action)
+    h = (A - e) / (e * (1.0 - e))
+    if h > 0.5:
+        adjustment = "aggressive"
+    elif h < -0.5:
+        adjustment = "conservative"
+    else:
+        adjustment = "keep"
+    return {
+        "A": A,
+        "prior": e,
+        "H": float(h),
+        "anomaly": float(abs(h)),
+        "adjustment": adjustment,
+        "lambda_H": float(lam * h),
+        "R_star": float(A + lam * h),
+        "prune": bool(float(score) + lam * h < tau),
+        "temperature": float(temp0 * np.exp(-lam * h)),
+    }
+
+
+def render_sliding_prompt(window_rows, query_x, *, w_stack: float, sigma_med: float, query_prior: float | None = None) -> str:
     """Prompt entry. The model sees only this text.
 
     The window is past batches only. The query is the current x, without Y.
     The requested output is the RF residual, because the stack adds it on top
-    of the frozen forest.
+    of the frozen forest. Completed rows carry the clever covariate of the
+    backed-up terminal reward against that step's action prior.
     """
     lines = [
         "Task: predict the residual e = Y - RF(X). Do not predict Y.",
+        "Terminal reward R is Y of the finished episode, written back after search returns.",
+        "Expansion cost is the number of children scored at that step. H is not a cost.",
+        "H(A,W)=(A-e(W))/(e(W)(1-e(W))). A is the backed-up R. e(W) is the action prior.",
+        "Inject λH into UCB and into R. Prune when score+λH<τ. Temperature is T0*exp(-λH).",
+        "adjustment is aggressive if H>0.5, conservative if H<-0.5, else keep.",
         "The forest is frozen. w_stack and sigma_med are frozen.",
         f"w_stack={float(w_stack):.4f} sigma_med={float(sigma_med):.4f}",
         "Sliding window, oldest to newest:",
@@ -309,8 +344,16 @@ def render_sliding_prompt(window_rows, query_x, *, w_stack: float, sigma_med: fl
         lines.append(
             "t={t} y={y:.4f} rf={rf:.4f} residual={e:.4f} w={w:.3f} x={x}".format(**row)
         )
+        if "H" in row:
+            lines.append(
+                "  A={A:.4f} prior={prior:.4f} H={H:.4f} anomaly={anomaly:.4f} adjustment={adjustment} "
+                "lambdaH={lambda_H:.4f} R*={R_star:.4f} prune={prune} temperature={temperature:.4f}".format(**row)
+            )
     q = np.asarray(query_x, dtype=float).ravel()
     lines.append("query_x=" + np.array2string(q, precision=4, separator=","))
+    if query_prior is not None:
+        lines.append(f"query_prior={float(query_prior):.4f}")
+        lines.append("query_A=withheld until the episode returns R")
     lines.append("output: residual")
     return "\n".join(lines)
 
