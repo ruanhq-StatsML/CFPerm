@@ -77,12 +77,12 @@ def collect_doorkey(n: int, drift_at: int):
     episodes = []
     for t in range(n):
         trace = []
-        final, _, _ = probe.beam_search(
+        final, _, n_children = probe.beam_search(
             start, expand, lambda state, t=t: score_at(state, t),
             beam=4, depth=depth, rng=random.Random(SEED + t), trace=trace,
         )
         xs = [step_x(view, step, depth) for step, view in trace]
-        episodes.append((np.vstack(xs) if xs else np.zeros((0, len(NAMES))), 1.0 if final is not None else 0.0))
+        episodes.append((np.vstack(xs) if xs else np.zeros((0, len(NAMES))), 1.0 if final is not None else 0.0, int(n_children)))
     return episodes
 
 
@@ -122,17 +122,18 @@ def collect_hotpot(n: int, drift_at: int):
             return probe.StepView(judge, judge, stable, spurious, progress)
 
         trace = []
-        final, _, _ = probe.beam_search(
+        final, _, n_children = probe.beam_search(
             frozenset(), expand, score_at, beam=3, depth=depth, rng=random.Random(SEED + 1000 + t), trace=trace,
         )
         xs = [step_x(view, step, depth) for step, view in trace]
-        episodes.append((np.vstack(xs) if xs else np.zeros((0, len(NAMES))), 1.0 if final is not None else 0.0))
+        episodes.append((np.vstack(xs) if xs else np.zeros((0, len(NAMES))), 1.0 if final is not None else 0.0, int(n_children)))
     return episodes
 
 
 def _rows(episodes):
     xs, ys, ep = [], [], []
-    for i, (X, y) in enumerate(episodes):
+    for i, item in enumerate(episodes):
+        X, y = item[0], item[1]
         if len(X) == 0:
             continue
         xs.append(X)
@@ -188,7 +189,9 @@ def run_stream(name: str, episodes, drift_at: int):
     e_prev = None
     hops = []
     # Reference beats enter the window only after that episode's Y is known.
-    for i, (Xe, ye) in enumerate(episodes[:REF_EPISODES]):
+    children = [int(item[2]) for item in episodes]
+    for i, item in enumerate(episodes[:REF_EPISODES]):
+        Xe, ye = item[0], item[1]
         if len(Xe) == 0:
             continue
         y_hat_rf = np.asarray(rf["predict"](fit_rf, Xe[:, high]), float)
@@ -208,11 +211,12 @@ def run_stream(name: str, episodes, drift_at: int):
             }
             row.update(clever_covariate(ye, float(Xe[s, 1])))
             window.append(row)
-            anomaly_rows.append({"episode": i, "post": False, "y": float(ye), "H": row["H"], "anomaly": row["anomaly"], "adjustment": row["adjustment"], "prior": row["prior"]})
+            anomaly_rows.append({"episode": i, "post": False, "y": float(ye), "H": row["H"], "anomaly": row["anomaly"], "adjustment": row["adjustment"], "prior": row["prior"], "residual": row["e"]})
         window = window[-PROMPT_WINDOW:]
 
     beat = REF_EPISODES * 100
-    for i, (Xe, ye) in enumerate(episodes[REF_EPISODES:], start=REF_EPISODES):
+    for i, item in enumerate(episodes[REF_EPISODES:], start=REF_EPISODES):
+        Xe, ye = item[0], item[1]
         if len(Xe) == 0:
             continue
         step_pred = []
@@ -253,7 +257,7 @@ def run_stream(name: str, episodes, drift_at: int):
             }
             row.update(clever_covariate(ye, float(Xe[s, 1])))
             window.append(row)
-            anomaly_rows.append({"episode": i, "post": i >= drift_at, "y": float(ye), "H": row["H"], "anomaly": row["anomaly"], "adjustment": row["adjustment"], "prior": row["prior"]})
+            anomaly_rows.append({"episode": i, "post": i >= drift_at, "y": float(ye), "H": row["H"], "anomaly": row["anomaly"], "adjustment": row["adjustment"], "prior": row["prior"], "residual": row["e"]})
         window = window[-PROMPT_WINDOW:]
 
     mses = np.array([r["mse"] for r in pred_rows], float)
@@ -283,11 +287,87 @@ def run_stream(name: str, episodes, drift_at: int):
         "prompt_example": prompts[0]["text"] if prompts else "",
         "n_prompts": len(prompts),
         "online_anomaly": anomaly_summary(anomaly_rows),
-        "roi": {
-            "delta_children": 0,
-            "extra_solved_vs_frozen_forest": 0,
-            "reason": "The next beat's argmax still reads the frozen forest. adjustment and |H| are written into the prompt and are not consumed, so the terminal-Y numerator does not move.",
-        },
+        "roi": yongzeng_ledger(anomaly_rows, pred_rows, children, hops, drift_at),
+    }
+
+
+def yongzeng_ledger(anomaly_rows, pred_rows, children, hops, drift_at: int) -> dict:
+    """用增 stacks the prompt quantities on top of terminal Y.
+
+    A channel is 用增 when its post-drift mean is above its pre-drift mean.
+    Terminal Y uses that same rule. Child-node count is a cost, not an increment.
+    The prompt width and the window length are fixed costs.
+    """
+    def channel(name, pre, post, role):
+        delta = None if pre is None or post is None else float(post - pre)
+        if role == "cost":
+            kind = "成本"
+        elif delta is None:
+            kind = None
+        elif delta > 1e-9:
+            kind = "用增"
+        elif delta < -1e-9:
+            kind = "挽损" if role == "outcome" else "低于参考"
+        else:
+            kind = "持平"
+        return {"name": name, "role": role, "pre": pre, "post": post, "delta": delta, "kind": kind}
+
+    pre = [r for r in anomaly_rows if r["episode"] < drift_at]
+    post = [r for r in anomaly_rows if r["episode"] >= drift_at]
+
+    def avg(rows, key, absolute=False):
+        if not rows:
+            return None
+        vals = np.array([r[key] for r in rows], float)
+        if absolute:
+            vals = np.abs(vals)
+        return float(np.mean(vals))
+
+    pre_hops = [h for h, r in zip(hops, pred_rows) if not r["post"]]
+    post_hops = [h for h, r in zip(hops, pred_rows) if r["post"]]
+    pre_err = [abs(r["y"] - r["y_hat_last"]) for r in pred_rows if not r["post"]]
+    post_err = [abs(r["y"] - r["y_hat_last"]) for r in pred_rows if r["post"]]
+    pre_kids = children[:drift_at]
+    post_kids = children[drift_at:]
+
+    channels = [
+        channel("terminal_Y", avg(pre, "y"), avg(post, "y"), "outcome"),
+        channel("abs_residual", avg(pre, "residual", True), avg(post, "residual", True), "monitor"),
+        channel("online_anomaly_|H|", avg(pre, "anomaly"), avg(post, "anomaly"), "monitor"),
+        channel("prior_e", avg(pre, "prior"), avg(post, "prior"), "monitor"),
+        channel(
+            "conservative_share",
+            float(np.mean([r["adjustment"] == "conservative" for r in pre])) if pre else None,
+            float(np.mean([r["adjustment"] == "conservative" for r in post])) if post else None,
+            "monitor",
+        ),
+        channel(
+            "hop_rate",
+            float(np.mean(pre_hops)) if pre_hops else None,
+            float(np.mean(post_hops)) if post_hops else None,
+            "monitor",
+        ),
+        channel(
+            "abs_error_last_step",
+            float(np.mean(pre_err)) if pre_err else None,
+            float(np.mean(post_err)) if post_err else None,
+            "monitor",
+        ),
+        channel(
+            "children_scored",
+            float(np.mean(pre_kids)) if pre_kids else None,
+            float(np.mean(post_kids)) if post_kids else None,
+            "cost",
+        ),
+        channel("prompt_window_rows", float(PROMPT_WINDOW), float(PROMPT_WINDOW), "cost"),
+        channel("prompt_columns", float(len(NAMES)), float(len(NAMES)), "cost"),
+    ]
+    raised = [c["name"] for c in channels if c["kind"] == "用增"]
+    return {
+        "rule": "post mean above pre mean is 用增. Terminal Y below its pre-drift mean is 挽损. Children, window length, and column count are costs.",
+        "channels": channels,
+        "yongzeng_channels": raised,
+        "delta_children": channels[7]["delta"],
     }
 
 
@@ -342,7 +422,7 @@ def main():
     for key, block in report.items():
         print(key, "w_stack", round(block["w_stack"], 3), "oob", round(block["oob_mse"], 3), "trail", None if block["trail_mse"] is None else round(block["trail_mse"], 3))
         print(" anomaly", json.dumps(block["online_anomaly"]["post_drift"], ensure_ascii=False))
-        print(" roi", block["roi"])
+        print(" yongzeng", [(c["name"], None if c["delta"] is None else round(c["delta"], 4), c["kind"]) for c in block["roi"]["channels"]])
         print(" rf", block["feature_selection"]["rf_columns"], "residual", block["feature_selection"]["residual_columns"])
         print("--- prompt ---")
         print(block["prompt_example"])

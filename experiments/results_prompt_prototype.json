@@ -76,9 +76,97 @@
       }
     },
     "roi": {
-      "delta_children": 0,
-      "extra_solved_vs_frozen_forest": 0,
-      "reason": "The next beat's argmax still reads the frozen forest. adjustment and |H| are written into the prompt and are not consumed, so the terminal-Y numerator does not move."
+      "rule": "post mean above pre mean is \u7528\u589e. Terminal Y below its pre-drift mean is \u633d\u635f. Children, window length, and column count are costs.",
+      "channels": [
+        {
+          "name": "terminal_Y",
+          "role": "outcome",
+          "pre": 1.0,
+          "post": 0.25925925925925924,
+          "delta": -0.7407407407407407,
+          "kind": "\u633d\u635f"
+        },
+        {
+          "name": "abs_residual",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.7407407407407407,
+          "delta": 0.7407407407407407,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "online_anomaly_|H|",
+          "role": "monitor",
+          "pre": 2.490737833594977,
+          "post": 2.1199111467085316,
+          "delta": -0.37082668688644516,
+          "kind": "\u4f4e\u4e8e\u53c2\u8003"
+        },
+        {
+          "name": "prior_e",
+          "role": "monitor",
+          "pre": 0.45238095238095244,
+          "post": 0.4722222222222222,
+          "delta": 0.01984126984126977,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "conservative_share",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.7407407407407407,
+          "delta": 0.7407407407407407,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "hop_rate",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.20833333333333334,
+          "delta": 0.20833333333333334,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "abs_error_last_step",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.625,
+          "delta": 0.625,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "children_scored",
+          "role": "cost",
+          "pre": 64.3125,
+          "post": 98.33333333333333,
+          "delta": 34.02083333333333,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_window_rows",
+          "role": "cost",
+          "pre": 8.0,
+          "post": 8.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_columns",
+          "role": "cost",
+          "pre": 6.0,
+          "post": 6.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        }
+      ],
+      "yongzeng_channels": [
+        "abs_residual",
+        "prior_e",
+        "conservative_share",
+        "hop_rate",
+        "abs_error_last_step"
+      ],
+      "delta_children": 34.02083333333333
     }
   },
   "hotpot": {
@@ -158,9 +246,97 @@
       }
     },
     "roi": {
-      "delta_children": 0,
-      "extra_solved_vs_frozen_forest": 0,
-      "reason": "The next beat's argmax still reads the frozen forest. adjustment and |H| are written into the prompt and are not consumed, so the terminal-Y numerator does not move."
+      "rule": "post mean above pre mean is \u7528\u589e. Terminal Y below its pre-drift mean is \u633d\u635f. Children, window length, and column count are costs.",
+      "channels": [
+        {
+          "name": "terminal_Y",
+          "role": "outcome",
+          "pre": 1.0,
+          "post": 0.375,
+          "delta": -0.625,
+          "kind": "\u633d\u635f"
+        },
+        {
+          "name": "abs_residual",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.625,
+          "delta": 0.625,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "online_anomaly_|H|",
+          "role": "monitor",
+          "pre": 2.881547619047619,
+          "post": 65.10192307692307,
+          "delta": 62.220375457875456,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "prior_e",
+          "role": "monitor",
+          "pre": 0.39609375,
+          "post": 0.29124553571428574,
+          "delta": -0.10484821428571428,
+          "kind": "\u4f4e\u4e8e\u53c2\u8003"
+        },
+        {
+          "name": "conservative_share",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.625,
+          "delta": 0.625,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "hop_rate",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.125,
+          "delta": 0.125,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "abs_error_last_step",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.625,
+          "delta": 0.625,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "children_scored",
+          "role": "cost",
+          "pre": 77.0,
+          "post": 77.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_window_rows",
+          "role": "cost",
+          "pre": 8.0,
+          "post": 8.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_columns",
+          "role": "cost",
+          "pre": 6.0,
+          "post": 6.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        }
+      ],
+      "yongzeng_channels": [
+        "abs_residual",
+        "online_anomaly_|H|",
+        "conservative_share",
+        "hop_rate",
+        "abs_error_last_step"
+      ],
+      "delta_children": 0.0
     }
   }
 }
