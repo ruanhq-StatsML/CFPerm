@@ -1,0 +1,472 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{multirow}
+\geometry{margin=1in}
+
+\title{\textbf{FSDS Reasoning Empowerment}\\[0.35em]
+\large Guiding the Next Step in Reasoning-via-Planning\\[0.15em]
+\large Mark expandable nodes $\cdot$ prune decoys $\cdot$ NetValue ledger}
+\author{LaTeX prototype \quad (skill: \texttt{fsds\_reasoning\_empowerment} v1)\\
+Code: \texttt{agod/fsds\_reason\_guide.py} \quad Scorecard: PR \#87}
+\date{2026-09-25}
+
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+\newtheorem{assumption}{Assumption}
+
+\newcommand{\imp}{\mathrm{imp}}
+\newcommand{\NV}{\mathrm{NetValue}}
+\newcommand{\ROI}{\mathrm{ROI}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\E}{\mathbb{E}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\textbf{One-line conclusion.}
+FSDS marks which reasoning nodes are worth \emph{expanding} next---and which
+to prune---so Reasoning-via-Planning (RAP) / Tree-of-Thoughts (ToT) search
+hits the good path more often at comparable token cost.
+
+We treat each search node $i$ as a supervised unit with covariates
+$X_i$ (structure, semantics, local score, search behaviour, cost, time, environment)
+and label
+\[
+  Y_i \;=\; \ind\{\text{node $i$ lies on the oracle optimal path}\}.
+\]
+FSDS attributes $X\!\to\!Y$ under shift (overlap router $\to$
+MMD-LOCO$+$RF-VIMP or PO-risk-LOCO$+$PermuCATE), yielding
+$\imp(i)\propto \widehat{P}(Y_i{=}1\mid X_i)$.
+A Guide then maps importance into
+\{\texttt{expand}, \texttt{prune}, \texttt{reorder}, \texttt{backtrack}\}.
+
+On a closed-loop RAP/ToT scorecard (40 train / 30 test synthetic trees),
+FSDS-guided search lifts held-out success from $13.3\%$ (score-greedy)
+to $93.3\%$ at nearly equal tokens, with simulation ledger
+$\Delta\NV \approx{+}4.45$ per task and $\ROI\approx 29.7$
+under the skill NetValue formula (not a causal production-\$ claim).
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+%======================================================================
+\section{Why this matters in Reasoning-via-Planning}
+\label{sec:why-rap}
+
+\paragraph{RAP in one sentence.}
+Reasoning-via-Planning \cite{hao2023rap} casts LLM reasoning as a
+\emph{tree / MDP search}: each node is a state (partial reasoning),
+actions expand children, a value / reward ranks frontier nodes, and
+planning (e.g.\ MCTS) chooses what to expand next.
+
+\paragraph{The bottleneck is the next-step policy.}
+At every frontier the planner must answer:
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.15em]
+  \item Which nodes are worth \textbf{expanding} (diffuse)?
+  \item Which nodes should be \textbf{pruned}?
+  \item When should we \textbf{backtrack}?
+  \item How should we \textbf{reorder} the frontier?
+\end{enumerate}
+Default answers---raw LLM self-score, local reward, or score-greedy
+beam---are noisy, decoy-prone, and brittle under distribution shift
+(new tasks, new depths, new prompt regimes).
+
+\paragraph{Our claim.}
+FSDS supplies a \emph{statistically grounded} node importance that is
+aligned with path success, not just local score. Marking expandable
+nodes with $\imp(i)$ is the actionable interface into RAP:
+\[
+  \underbrace{X_i}_{\text{node features}}
+  \xrightarrow{\ \mathrm{FSDS}\ }
+  \underbrace{\imp(i)}_{\propto P(Y_i=1)}
+  \xrightarrow{\ \mathrm{Guide}\ }
+  \underbrace{\{\mathrm{expand},\mathrm{prune},\ldots\}}_{\text{next-step action}}.
+\]
+
+\begin{remark}[Orthogonal to policy-ToT in this repo]
+The efficiency Tree-of-Thoughts in \texttt{agod/tot\_eff.py} searches over
+\emph{adaptation policies} (ref / probe / refit $\times$ soft weights).
+This prototype searches over \emph{reasoning nodes} inside RAP/ToT.
+Same empowerment idea; different $Y$.
+\end{remark}
+
+%======================================================================
+\section{Problem formalization}
+\label{sec:formal}
+
+\begin{definition}[Search episode]
+A RAP/ToT episode is a rooted tree $\mathcal{T}=(V,E)$ with root $r$,
+frontier $F_t\subseteq V$ at planning step $t$, and an (oracle) optimal
+root-to-leaf path $\pi^\star\subseteq V$.
+\end{definition}
+
+\begin{definition}[Node outcome]
+For each $i\in V$,
+\begin{equation}
+  Y_i \;=\; \ind\{ i \in \pi^\star \}\;\in\;\{0,1\}.
+  \label{eq:Y}
+\end{equation}
+$Y$ is fine-grained, retrospectively labelable from successful trajectories,
+and \emph{directly} tied to task success (hence to revenue in the ledger).
+\end{definition}
+
+\begin{definition}[Node covariates]
+\begin{equation}
+  X_i \;=\; \bigl[X^{\mathrm{struct}},\,
+                 X^{\mathrm{sem}},\,
+                 X^{\mathrm{score}},\,
+                 X^{\mathrm{search}},\,
+                 X^{\mathrm{cost}},\,
+                 X^{\mathrm{time}},\,
+                 X^{\mathrm{env}}\bigr]_i.
+  \label{eq:X}
+\end{equation}
+Blocks follow the skill feature system (depth, siblings, state entropy,
+score gap / rank / trend, expand--prune rates, tokens, batch / model /
+beam, \ldots).
+\end{definition}
+
+\begin{definition}[Treatment / intervention]
+The planner's next-step action on node $i$ is
+\begin{equation}
+  A_i \;\in\; \{\texttt{expand},\,\texttt{prune},\,\texttt{reorder},\,\texttt{backtrack}\}.
+\end{equation}
+Expanding $i$ grows children; pruning removes $i$ from the frontier;
+reorder changes beam priority; backtrack retreats on anomaly.
+\end{definition}
+
+\paragraph{Objective.}
+Learn a guide $g$ such that the induced search policy raises
+task success and NetValue relative to score-greedy:
+\begin{equation}
+  g(X_i) \;=\; A_i,
+  \qquad
+  \imp(i) \;=\; \widehat{P}(Y_i{=}1\mid X_i).
+\end{equation}
+
+%======================================================================
+\section{FSDS attribution for node importance}
+\label{sec:fsds}
+
+\subsection{Overlap router}
+Compute a propensity-style overlap on the training nodes,
+\begin{equation}
+  \mathrm{Overlap}
+  \;=\;
+  \E\bigl[\,2\min\bigl(\hat e(X),\,1-\hat e(X)\bigr)\,\bigr],
+  \qquad
+  \hat e(X)=\widehat{P}(Y{=}1\mid X).
+\end{equation}
+\begin{equation}
+  \begin{cases}
+    \mathrm{Overlap}<0.3 & \Rightarrow
+      \text{covariate-like separation}\;\to\;
+      \textbf{MMD-LOCO} + \textbf{RF-Binary-VIMP},\\[0.25em]
+    \mathrm{Overlap}\ge 0.3 & \Rightarrow
+      \text{concept-like regime}\;\to\;
+      \textbf{PO-risk-LOCO} + \textbf{PermuCATE}
+      \;(\text{+ RF-VIMP fuse}).
+  \end{cases}
+  \label{eq:router}
+\end{equation}
+
+\subsection{Four components (skill \S5)}
+
+\paragraph{MMD-LOCO (covariate).}
+Let $P_0,P_1$ be the empirical laws of $X\mid Y{=}0$ and $X\mid Y{=}1$.
+\begin{equation}
+  \mathrm{Importance}_{\mathrm{MMD}}(j)
+  \;=\;
+  \mathrm{MMD}^2(P_0,P_1)
+  -
+  \mathrm{MMD}^2(P_0^{(-j)},P_1^{(-j)}).
+\end{equation}
+
+\paragraph{RF-Binary-VIMP (covariate / always available).}
+Train a random forest classifier for $Y\mid X$; report Gini / impurity
+decrease per feature, and OOF AUC of $\widehat{P}(Y{=}1\mid X)$.
+
+\paragraph{PO-risk-LOCO (concept).}
+With a local treatment proxy $T=\ind\{\mathrm{score\_gap}>\mathrm{median}\}$
+(expand-worthy local signal) and outcome $Y$,
+\begin{equation}
+  \psi \;=\; (T-\hat e(X))\,(Y-\hat\mu(X)),
+  \qquad
+  \mathrm{PO\text{-}risk}=\E[\hat\tau(X)^2],
+\end{equation}
+\begin{equation}
+  \mathrm{Importance}_{\mathrm{PO}}(j)
+  \;=\;
+  \mathrm{PO\text{-}risk}_{\mathrm{full}}
+  -
+  \mathrm{PO\text{-}risk}_{(-j)}.
+\end{equation}
+
+\paragraph{PermuCATE (concept).}
+\begin{equation}
+  \mathrm{Importance}_{\mathrm{PC}}(j)
+  \;=\;
+  \E\bigl[\bigl(\hat\tau(X)-\hat\tau(X_{\pi_j})\bigr)^2\bigr],
+\end{equation}
+where $X_{\pi_j}$ permutes coordinate $j$.
+
+\subsection{Fused importance and node score}
+Z-score each active component, average, shift to a simplex $w_j$ over
+features (diagnostics / tip list). The \emph{actionable} node score is
+the RF probability itself:
+\begin{equation}
+  \boxed{\;\imp(i) \;=\; \widehat{P}(Y_i{=}1\mid X_i)\;}
+  \label{eq:imp}
+\end{equation}
+\textbf{This is the expandable-node marker.}
+
+%======================================================================
+\section{Guide: marking expandable nodes}
+\label{sec:guide}
+
+Calibrate thresholds on the training importance distribution
+(e.g.\ prune at the 20th percentile, expand at the 55th).
+Priority order (skill \S6.2): prune $\succ$ backtrack $\succ$ expand $\succ$ reorder.
+
+\begin{algorithm}[H]
+\caption{FSDS-guided next step (one frontier)}
+\label{alg:guide}
+\begin{algorithmic}[1]
+\Require Frontier $F$, model $\hat P$, thresholds $(\tau_{\mathrm{pr}},\tau_{\mathrm{ex}})$, beam $B$
+\For{each $i\in F$}
+  \State $\imp(i)\gets \hat P(Y{=}1\mid X_i)$
+  \If{$i$ is a clear loser (low $\imp$, bad gap/trend, over depth)}
+    \State \textbf{prune} $i$ \Comment{cost $\downarrow$}
+  \ElsIf{anomaly / consecutive failures}
+    \State \textbf{backtrack} \Comment{fail $\downarrow$}
+  \ElsIf{$\imp(i)\ge\tau_{\mathrm{ex}}$ and depth allows}
+    \State mark $i$ as \textbf{expandable} \Comment{revenue $\uparrow$}
+  \Else
+    \State \textbf{reorder} key $\propto \imp(i)\cdot(1+\mathrm{gap})/\mathrm{depth}$
+  \EndIf
+\EndFor
+\State Keep top-$B$ by expand/reorder key; expand their children as next frontier
+\State \textbf{Safety:} if all pruned, rescue $\arg\max_i \imp(i)$ (never empty-search)
+\end{algorithmic}
+\end{algorithm}
+
+\begin{proposition}[Why marking expandables works]
+\label{prop:why}
+If $\imp(i)$ is a well-calibrated estimate of $P(Y_i{=}1\mid X_i)$, then
+ranking the frontier by $\imp$ maximizes the probability that the beam
+covers $\pi^\star$ among all rankings that use only $X$-measurable scores.
+Score-greedy optimizes a different functional (local reward), which need
+not be monotone in $P(Y{=}1\mid X)$ when decoys exist.
+\end{proposition}
+
+\begin{remark}
+Proposition~\ref{prop:why} is an identification / ranking argument, not a
+finite-sample guarantee. The scorecard tests whether the learned $\imp$
+is good enough in practice to move success and NetValue.
+\end{remark}
+
+%======================================================================
+\section{Economic ledger}
+\label{sec:econ}
+
+\begin{definition}[Path NetValue]
+For a completed search with success bit $S\in\{0,1\}$, token/call stream
+$(N_{\mathrm{tok}},N_{\mathrm{call}})$, and off-optimal path cost waste $W$,
+\begin{align}
+  \mathrm{Revenue} &= S\cdot V_{\mathrm{task}},\\
+  \mathrm{Cost} &= N_{\mathrm{tok}}\,P_{\mathrm{tok}}
+                 + N_{\mathrm{call}}\,P_{\mathrm{call}}
+                 + \tfrac12 W,\\
+  \NV &= \mathrm{Revenue}-\mathrm{Cost}.
+  \label{eq:nv}
+\end{align}
+\end{definition}
+
+Incremental value vs.\ score-greedy baseline:
+\begin{equation}
+  \Delta
+  \;=\;
+  \Delta\mathrm{Revenue}
+  + \Delta\mathrm{Cost\_savings}
+  + \Delta\mathrm{AUC}\cdot V_{\mathrm{auc}}
+  - \mathrm{Cost}_{\mathrm{FSDS}},
+  \qquad
+  \ROI \;=\; \Delta / \mathrm{invest}.
+  \label{eq:roi}
+\end{equation}
+
+\paragraph{Key economic identity.}
+$Y$ is the direct driver of $S$ (and thus Revenue). Raising
+$\mathrm{AUC}$ of $\widehat{P}(Y{=}1\mid X)$ raises the Guide's ability to
+(i) expand true path nodes and (ii) prune decoys---exactly the two
+levers in~\eqref{eq:nv}.
+
+%======================================================================
+\section{Justification}
+\label{sec:justify}
+
+\subsection{Why FSDS (not raw score / LLM self-eval)}
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Shift.} RAP frontiers drift with depth, task family, and
+        model version; FSDS components are built for covariate / concept
+        change (router~\eqref{eq:router}).
+  \item \textbf{Decoys.} Local score correlates only partially with
+        $Y$; semantic + structural blocks recover path membership.
+  \item \textbf{Nonlinear interactions.} RF / LOCO / PermuCATE do not
+        assume a linear scoring rule.
+  \item \textbf{Auditable tips.} Fused $w_j$ lists which features drove
+        expandability (state entropy, keywords, depth, \ldots).
+\end{itemize}
+
+\subsection{Why $Y=\ind\{\text{on optimal path}\}$}
+\begin{itemize}[leftmargin=1.2em]
+  \item Labelable from solved trajectories (offline RAP logs).
+  \item Node-fine: every expand/prune decision has a target.
+  \item Intervenable: Guide actions change which $Y{=}1$ nodes are visited.
+  \item Economically aligned: path hit $\Leftrightarrow$ task success $\Leftrightarrow$ Revenue.
+\end{itemize}
+
+\subsection{Why the Guide four-action set}
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Action & Trigger & Priority & Economic role \\
+\midrule
+prune & low $\imp$, bad gap/trend & 0.9 & cost $\downarrow$ \\
+backtrack & anomaly / fail streak & 0.85 & fail $\downarrow$ \\
+expand & high $\imp$ (marked) & 0.8 & revenue $\uparrow$ \\
+reorder & default & 0.7 & efficiency $\uparrow$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Why this is the RAP interface}
+RAP already has a value / prior over nodes. Replacing or blending that
+prior with $\imp(i)=\widehat{P}(Y_i{=}1\mid X_i)$ is a drop-in
+\emph{statistical prior} for MCTS selection / beam expansion---no need
+to rewrite the planner, only the next-step scorer.
+
+%======================================================================
+\section{Prototype protocol \& scorecard}
+\label{sec:proto}
+
+\subsection{Synthetic RAP trees}
+Depth $D{=}4$, branching $3$, beam $2$. One oracle path per tree; optimal
+nodes receive a latent quality bump that \emph{leaks} into semantic /
+structural features (so $X\!\to\!Y$ is learnable) while local scores remain
+noisy (so score-greedy has decoys). This is a \textbf{mechanism probe},
+not a claim about production RAP logs.
+
+\subsection{Implementation map}
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Piece & Path \\
+\midrule
+Core & \texttt{agod/fsds\_reason\_guide.py} \\
+Scorecard & \texttt{scripts/run\_fsds\_reason\_guide.py} \\
+Tests & \texttt{tests/test\_fsds\_reason\_guide.py} \\
+Summary & \texttt{docs/summaries/FSDS\_Reasoning\_Empowerment\_NextStep.md} \\
+Artifacts & \texttt{results/fsds\_reason\_guide/} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Held-out effect (seed 0; 40 train / 30 test)}
+\begin{center}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Policy & Success & Tokens/task & Cost/task & Net/task \\
+\midrule
+Score-greedy & $13.3\%$ & $824$ & $2.10$ & $-1.43$ \\
+FSDS-guided & $\mathbf{93.3\%}$ & $819$ & $1.84$ & $\mathbf{+2.82}$ \\
+$\Delta$ & $\mathbf{+80.0}$pp & $-5$ & $-0.26$ & $\mathbf{+4.26}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.5em}
+\noindent
+Additional diagnostics:
+\begin{itemize}[leftmargin=1.2em]
+  \item Overlap $=0.045$ $\Rightarrow$ regime \texttt{covariate\_shift}
+        $\Rightarrow$ MMD-LOCO $+$ RF-Binary-VIMP.
+  \item AUC of $\widehat{P}(Y{=}1\mid X)$: $\mathbf{0.995}$ vs.\ score-only AUC $0.822$.
+  \item Off-optimal waste: $0.565\to 0.071$ (decoys pruned).
+  \item Ledger~\eqref{eq:roi}: $\Delta\mathrm{Revenue}{+}4.00$,
+        $\Delta\mathrm{Cost}{+}0.26$, $\Delta\mathrm{AUC}\cdot V_{\mathrm{auc}}{+}0.35$,
+        $\mathrm{Cost}_{\mathrm{FSDS}}{-}0.15$
+        $\Rightarrow$ $\Delta\approx\mathbf{+4.45}$/task, $\ROI\approx\mathbf{29.7}$.
+\end{itemize}
+
+\begin{remark}[Claim boundary]
+These are \textbf{simulation ledger} numbers under known oracle paths and
+an intentional semantic leak. They justify the mechanism
+(mark expandables $\to$ success $\uparrow$ / waste $\downarrow$) and show the
+NetValue formula is computable. They are \emph{not} identified causal
+dollar ROI on production RAP/LATS.
+\end{remark}
+
+%======================================================================
+\section{How to plug into a real RAP loop}
+\label{sec:plug}
+
+\begin{enumerate}[leftmargin=1.3em]
+  \item \textbf{Log} every RAP node: state text / embedding features,
+        tree structure, local reward, tokens, timestamps, model id.
+  \item \textbf{Label} $Y_i$ offline from successful episodes
+        (nodes on the chosen successful path), or from human/oracle paths.
+  \item \textbf{Fit} FSDS on a rolling train window; refresh when Overlap
+        or AUC drifts.
+  \item \textbf{Serve} $\imp(i)$ as the MCTS prior / beam key:
+        expand top-$\imp$ children; prune below $\tau_{\mathrm{pr}}$.
+  \item \textbf{A/B} against score-greedy / LLM-value on the same task
+        mix; report success, tokens, and ledger~\eqref{eq:nv}--\eqref{eq:roi}.
+\end{enumerate}
+
+%======================================================================
+\section{One-page takeaway}
+\label{sec:takeaway}
+
+\begin{center}
+\fbox{\parbox{0.92\linewidth}{
+\textbf{FSDS Reasoning Empowerment (RAP next-step).}\\[0.35em]
+Predict $Y_i=\ind\{i\in\pi^\star\}$ from node features $X_i$.\\
+Mark expandable nodes by $\imp(i)=\widehat{P}(Y_i{=}1\mid X_i)$.\\
+Guide $\{\expand / prune / reorder / backtrack}\\
+$\Rightarrow$ higher path hit, lower decoy waste, auditable NetValue.\\[0.35em]
+\textit{Core formula:}
+$\NV = S\cdot V_{\mathrm{task}} - \mathrm{Cost}(\mathrm{tokens},\mathrm{waste})$.\\
+\textit{Core logic:}
+ability to predict $Y$ $=$ ability to predict economic value;
+Guide is the bridge into RAP planning.
+}}
+\end{center}
+
+\vspace{1em}
+\begin{thebibliography}{9}
+\bibitem{hao2023rap}
+S.~Hao et~al.
+\newblock Reasoning with Language Model is Planning with World Model.
+\newblock \emph{EMNLP}, 2023.
+\bibitem{yao2023tot}
+S.~Yao et~al.
+\newblock Tree of Thoughts: Deliberate Problem Solving with Large Language Models.
+\newblock \emph{NeurIPS}, 2023.
+\end{thebibliography}
+
+\end{document}
