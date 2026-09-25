@@ -30,7 +30,10 @@ from pathlib import Path
 
 import numpy as np
 
-OUT = Path(__file__).resolve().parent / "results_round9.json"
+OUT = Path(__file__).resolve().parent / "results_round10.json"
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "Python" / "src"))
+from online_llm_stack import hop_fires
 # Weight on the spurious cue after drift. Below 1 so the calibrated score remains
 # in the judge and post-drift success is mixed rather than identically zero.
 # Overwritten per task in main. Weight on the spurious cue after the drift point.
@@ -199,22 +202,64 @@ class StepView:
     pick: object = None
 
 
-def beam_search(root, expand, score_fn, beam: int, depth: int, rng: random.Random):
+class MidHop:
+    """At mid-depth, |judge - stable| versus the frozen reference gaps."""
+
+    def __init__(self):
+        self.on = False
+        self.prev = None
+        self.ref: list[float] = []
+        self.stable_ref: list[float] = []
+        self.judge_recent: list[float] = []
+        self.n_fired = 0
+        self.n_seen = 0
+
+    def allow(self) -> bool:
+        recent = self.judge_recent[-8:]
+        if len(self.stable_ref) < 8 or len(recent) < 4:
+            return False
+        return float(np.mean(self.stable_ref)) + 1e-9 < float(np.mean(recent))
+
+    def observe(self, gap: float, collecting: bool) -> None:
+        self.on = False
+        if collecting:
+            self.ref.append(float(gap))
+            self.prev = float(gap)
+            return
+        self.n_seen += 1
+        ratio = hop_fires(gap, self.prev, e_floor=0.02)
+        p_hit = False
+        if len(self.ref) >= 8:
+            p = (1.0 + sum(r >= gap - 1e-15 for r in self.ref)) / (len(self.ref) + 1.0)
+            p_hit = p <= 0.05
+        self.prev = float(gap)
+        if (ratio or p_hit) and self.allow():
+            self.on = True
+            self.n_fired += 1
+
+
+def beam_search(root, expand, score_fn, beam: int, depth: int, rng: random.Random, midhop: MidHop | None = None, collect_mid: bool = False):
     """score_fn(state) -> StepView. Returns (final_or_None, chosen-step view, expansions)."""
     frontier = [root]
     chosen = score_fn(root)
     chosen.pick = root
     expansions = 0
+    mid_at = (depth // 2 - 1) if depth >= 2 else None
     for step in range(depth):
         cand = []
         for state in frontier:
             for nxt, done in expand(state):
                 expansions += 1
                 view = score_fn(nxt)
-                cand.append((view.value + rng.uniform(-1e-9, 1e-9), nxt, done, view))
+                key = view.stable if (midhop is not None and midhop.on) else view.value
+                cand.append((key + rng.uniform(-1e-9, 1e-9), nxt, done, view))
         if not cand:
             break
         cand.sort(key=lambda z: z[0], reverse=True)
+        if midhop is not None and (step == mid_at or depth < 2):
+            midhop.observe(abs(cand[0][3].judge - cand[0][3].stable), collect_mid)
+            if midhop.on and depth < 2:
+                cand.sort(key=lambda z: z[3].stable, reverse=True)
         if step == 0:
             chosen = cand[0][3]
         chosen.pick = cand[0][1]
@@ -318,22 +363,28 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
         return StepView(steer, judge, stable, spurious, solv)
 
     gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
+    midhop = MidHop() if policy == "midhop" else None
     for t, puzzle in enumerate(puzzles):
-        if policy == "confirm" and t < gate.burnin:
+        if policy in ("confirm", "midhop") and t < gate.burnin:
             held, _, _ = beam_search(
                 puzzle, _g24_children,
                 lambda state, t=t: make_score(t, state, True),
                 beam=beam, depth=3, rng=random.Random(10_000 + t),
             )
             gate.ref_heur.append(0.0 if held is not None else 1.0)
+            if midhop is not None:
+                midhop.stable_ref.append(gate.ref_heur[-1])
         use_stable = gate.use_stable(t, policy)
 
         final, chosen, _ = beam_search(
-            puzzle, _g24_children, lambda state, t=t, use_stable=use_stable: make_score(t, state, use_stable), beam=beam, depth=3, rng=rng
+            puzzle, _g24_children, lambda state, t=t, use_stable=use_stable: make_score(t, state, use_stable),
+            beam=beam, depth=3, rng=rng, midhop=midhop, collect_mid=(midhop is not None and t < 12),
         )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
         losses.append(loss)
+        if midhop is not None:
+            midhop.judge_recent.append(loss)
         successes.append(y)
         feats.append(
             {
@@ -355,6 +406,7 @@ def run_game24(puzzles, drift_at: int, policy: str, beam: int, rng: random.Rando
         "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
+        "mid_fire_rate": None if midhop is None or midhop.n_seen == 0 else midhop.n_fired / midhop.n_seen,
     }
 
 
@@ -471,6 +523,7 @@ def bw_spurious(state) -> float:
 def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
     successes, losses, feats = [], [], []
     gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
+    midhop = MidHop() if policy == "midhop" else None
 
     def expand(state):
         out = []
@@ -489,22 +542,26 @@ def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
         return StepView(steer, judge, stable, spurious, progress)
 
     for t, start in enumerate(starts):
-        if policy == "confirm" and t < gate.burnin:
+        if policy in ("confirm", "midhop") and t < gate.burnin:
             held, _, _ = beam_search(
                 start, expand,
                 lambda state, t=t: score_at(state, t, True),
                 beam=beam, depth=4, rng=random.Random(10_000 + t),
             )
             gate.ref_heur.append(0.0 if held is not None else 1.0)
+            if midhop is not None:
+                midhop.stable_ref.append(gate.ref_heur[-1])
         use_stable = gate.use_stable(t, policy)
         final, chosen, _ = beam_search(
             start, expand, lambda state, t=t, use_stable=use_stable: score_at(state, t, use_stable),
-            beam=beam, depth=4, rng=rng,
+            beam=beam, depth=4, rng=rng, midhop=midhop, collect_mid=(midhop is not None and t < 12),
         )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
         successes.append(y)
         losses.append(loss)
+        if midhop is not None:
+            midhop.judge_recent.append(loss)
         feats.append(
             {
                 "judge": chosen.judge,
@@ -525,6 +582,7 @@ def run_blocksworld(starts, drift_at, policy, beam, rng, dist_map):
         "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
+        "mid_fire_rate": None if midhop is None or midhop.n_seen == 0 else midhop.n_fired / midhop.n_seen,
     }
 
 
@@ -635,6 +693,7 @@ def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
     start = (1, 1, 0, 0, 0)
     successes, losses, feats = [], [], []
     gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
+    midhop = MidHop() if policy == "midhop" else None
 
     def expand(state):
         return dk_neighbors(state)
@@ -650,21 +709,25 @@ def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
         return StepView(steer, judge, stable, spurious, progress)
 
     for t in range(n):
-        if policy == "confirm" and t < gate.burnin:
+        if policy in ("confirm", "midhop") and t < gate.burnin:
             held, _, _ = beam_search(
                 start, expand, lambda state, t=t: score_at(state, t, True),
                 beam=beam, depth=12, rng=random.Random(11_000 + t),
             )
             gate.ref_heur.append(0.0 if held is not None else 1.0)
+            if midhop is not None:
+                midhop.stable_ref.append(gate.ref_heur[-1])
         use_stable = gate.use_stable(t, policy)
         final, chosen, _ = beam_search(
             start, expand, lambda state, t=t, use_stable=use_stable: score_at(state, t, use_stable),
-            beam=beam, depth=12, rng=rng,
+            beam=beam, depth=12, rng=rng, midhop=midhop, collect_mid=(midhop is not None and t < 12),
         )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
         successes.append(y)
         losses.append(loss)
+        if midhop is not None:
+            midhop.judge_recent.append(loss)
         feats.append(
             {
                 "judge": chosen.judge,
@@ -685,6 +748,7 @@ def run_doorkey(n, drift_at, policy, beam, rng, dist_map):
         "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
+        "mid_fire_rate": None if midhop is None or midhop.n_seen == 0 else midhop.n_fired / midhop.n_seen,
     }
 
 
@@ -744,6 +808,7 @@ def run_hotpot(n, drift_at, policy, beam, rng):
     bank = hop_questions()
     successes, losses, feats = [], [], []
     gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
+    midhop = MidHop() if policy == "midhop" else None
 
     for t in range(n):
         question, gold = bank[t % len(bank)]
@@ -779,22 +844,26 @@ def run_hotpot(n, drift_at, policy, beam, rng):
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
-        if policy == "confirm" and t < gate.burnin:
+        if policy in ("confirm", "midhop") and t < gate.burnin:
             held, _, _ = beam_search(
                 frozenset(), expand, lambda picked, t=t: score_at(picked, t, True),
                 beam=beam, depth=2, rng=random.Random(12_000 + t),
             )
             gate.ref_heur.append(0.0 if held is not None else 1.0)
+            if midhop is not None:
+                midhop.stable_ref.append(gate.ref_heur[-1])
         use_stable = gate.use_stable(t, policy)
         final, chosen, _ = beam_search(
             frozenset(), expand,
             lambda picked, t=t, use_stable=use_stable: score_at(picked, t, use_stable),
-            beam=beam, depth=2, rng=rng,
+            beam=beam, depth=2, rng=rng, midhop=midhop, collect_mid=(midhop is not None and t < 12),
         )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
         successes.append(y)
         losses.append(loss)
+        if midhop is not None:
+            midhop.judge_recent.append(loss)
         feats.append(
             {
                 "judge": chosen.judge,
@@ -815,6 +884,7 @@ def run_hotpot(n, drift_at, policy, beam, rng):
         "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
+        "mid_fire_rate": None if midhop is None or midhop.n_seen == 0 else midhop.n_fired / midhop.n_seen,
     }
 
 
@@ -841,6 +911,7 @@ def webshop_catalog(rng: random.Random):
 def run_webshop(n, drift_at, policy, beam, rng):
     successes, losses, feats = [], [], []
     gate = Gate(k=2, trial=0 if policy == "confirm" else 4)
+    midhop = MidHop() if policy == "midhop" else None
     catalog = webshop_catalog(rng)
 
     for t in range(n):
@@ -875,22 +946,26 @@ def run_webshop(n, drift_at, policy, beam, rng):
             steer = progress if policy == "oracle" else (stable if use_stable else judge)
             return StepView(steer, judge, stable, spurious, progress)
 
-        if policy == "confirm" and t < gate.burnin:
+        if policy in ("confirm", "midhop") and t < gate.burnin:
             held, _, _ = beam_search(
                 None, expand, lambda state, t=t: score_at(state, t, True),
                 beam=max(beam, 3), depth=1, rng=random.Random(13_000 + t),
             )
             gate.ref_heur.append(0.0 if held is not None else 1.0)
+            if midhop is not None:
+                midhop.stable_ref.append(gate.ref_heur[-1])
         use_stable = gate.use_stable(t, policy)
         final, chosen, _ = beam_search(
             None, expand,
             lambda state, t=t, use_stable=use_stable: score_at(state, t, use_stable),
-            beam=max(beam, 3), depth=1, rng=rng,
+            beam=max(beam, 3), depth=1, rng=rng, midhop=midhop, collect_mid=(midhop is not None and t < 12),
         )
         y = 1.0 if final is not None else 0.0
         loss = 1.0 - y
         successes.append(y)
         losses.append(loss)
+        if midhop is not None:
+            midhop.judge_recent.append(loss)
         feats.append(
             {
                 "judge": chosen.judge,
@@ -911,6 +986,7 @@ def run_webshop(n, drift_at, policy, beam, rng):
         "latched": gate.latched,
         "reverted": gate.reverted,
         "lord_at": gate.lord_at,
+        "mid_fire_rate": None if midhop is None or midhop.n_seen == 0 else midhop.n_fired / midhop.n_seen,
     }
 
 
@@ -1077,6 +1153,7 @@ def summarize(name, out, drift_at, n):
         "localization": loc,
         "fsds_top_feature": fsds_top,
         "fsds_localization": fsds,
+        "mid_fire_rate": out.get("mid_fire_rate"),
     }
 
 
@@ -1084,7 +1161,7 @@ def main():
     rng = random.Random(SEED)
     n = 40
     drift_at = 16
-    policies = ["noisy", "stable", "gated", "confirm", "oracle"]
+    policies = ["noisy", "stable", "gated", "confirm", "midhop", "oracle"]
     task_mix = {
         "game24": 0.28,
         "blocksworld": 0.30,
@@ -1177,6 +1254,7 @@ def main():
                 summary = {
                     "pre_success": rate(out["success"], 0, drift_at),
                     "post_success": rate(out["success"], drift_at, len(out["success"])),
+                    "mid_fire_rate": out.get("mid_fire_rate"),
                 }
             report["tasks"][task][policy] = summary
             print(
@@ -1184,6 +1262,11 @@ def main():
                 + (
                     f" switch={summary.get('switch_at')}"
                     if policy in ("gated", "confirm")
+                    else ""
+                )
+                + (
+                    f" mid_fire={out.get('mid_fire_rate')}"
+                    if policy == "midhop"
                     else ""
                 )
             )
