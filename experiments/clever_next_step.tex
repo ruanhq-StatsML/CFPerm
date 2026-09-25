@@ -1,0 +1,59 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,booktabs,geometry}
+\geometry{margin=2.3cm}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0em}
+\title{MVP: the clever covariate on the next step}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+One beat is one committed step.
+\(Y=1\) when that episode's search returns a solved state, and \(0\) otherwise.
+\(Y\) is written onto the committed steps only after the episode returns.
+The query beat has \(X\) and the action prior \(e\). It does not have \(Y\).
+After the write-back,
+\[
+H=\frac{Y-e}{e(1-e)},
+\]
+with \(e\) clipped to \((0.001,0.999)\).
+The online anomaly score is \(|H|\).
+\(H>0.5\) is aggressive, \(H<-0.5\) is conservative, and the rest is keep.
+No UCB term is added.
+
+On a binary \(Y\), a success gives \(H=1/e>0\) and a failure gives \(H=-1/(1-e)<0\).
+The sign is the detector.
+When \(e<1/2\), a success has the larger absolute value, so \(|H|\) alone is not a failure score.
+The step that produced \(Y\) cannot read its own \(H\).
+The next episode can.
+
+The read is tested on the three-offer search.
+Forty users, drift at user 16, three children each.
+The habit offer activates half of the users.
+After the drift the judge selects click and the activation rate falls from \(0.50\) to \(0.167\).
+The next-user rule stays on habit through the first 12 users.
+It switches when the mean loss of the last four finished users exceeds the reference mean by \(0.15\).
+That is the same information as a run of conservative \(H\), because a failure is exactly \(H<0\).
+The switch occurs at user 17.
+
+\begin{center}
+\begin{tabular}{lrrl}
+\toprule
+Policy & Pre-drift \(Y\) & Post-drift \(Y\) & Reading \\
+\midrule
+Judge, \(H\) not read & 0.500 & 0.167 & shortfall, \(-8\) users \\
+Next user reads the sign & 0.500 & 0.625 & increment, \(+3\) users \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The second line activates 11 more of the 24 post-drift users than the drifted judge, and 3 more than the pre-drift rate.
+Children stay at 3.
+The prior on the selected offer moves from \(0.50\) to \(0.65\).
+The conservative share moves from \(0.50\) to \(0.375\).
+\(|H|\) stays near \(2\).
+Writing \(H\) into the prompt, without letting the next argmax read the sign, does not move \(Y\).
+The increment is the read.
+
+\end{document}
