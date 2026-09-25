@@ -290,12 +290,13 @@ def pval_vs_ref(trail: np.ndarray, ref: np.ndarray) -> np.ndarray:
     return np.array([(1.0 + float(np.sum(ref >= s))) / (n + 1.0) for s in trail], dtype=float)
 
 
-def clever_covariate(action: float, prior: float, *, lam: float = 0.3, tau: float = 0.3, temp0: float = 1.0, score: float = 0.0) -> dict:
-    """H(A, W) = (A - e(W)) / (e(W) (1 - e(W))).
+def clever_covariate(action: float, prior: float) -> dict:
+    """Online anomaly score from the clever covariate.
 
-    A is the backed-up terminal reward once the episode has finished.
-    e(W) is the action prior. The four injections are λH on UCB and on R,
-    prune when score + λH < τ, and temperature T0 exp(-λH).
+    H(A, W) = (A - e(W)) / (e(W) (1 - e(W))).
+    A is the terminal reward Y after the episode returns.
+    e(W) is the action prior. The detection score is |H|.
+    The sign sets the adjustment: H > 0.5 aggressive, H < -0.5 conservative, else keep.
     """
     e = float(np.clip(prior, 1e-3, 1.0 - 1e-3))
     A = float(action)
@@ -312,10 +313,6 @@ def clever_covariate(action: float, prior: float, *, lam: float = 0.3, tau: floa
         "H": float(h),
         "anomaly": float(abs(h)),
         "adjustment": adjustment,
-        "lambda_H": float(lam * h),
-        "R_star": float(A + lam * h),
-        "prune": bool(float(score) + lam * h < tau),
-        "temperature": float(temp0 * np.exp(-lam * h)),
     }
 
 
@@ -329,11 +326,12 @@ def render_sliding_prompt(window_rows, query_x, *, w_stack: float, sigma_med: fl
     """
     lines = [
         "Task: predict the residual e = Y - RF(X). Do not predict Y.",
-        "Terminal reward R is Y of the finished episode, written back after search returns.",
-        "Expansion cost is the number of children scored at that step. H is not a cost.",
-        "H(A,W)=(A-e(W))/(e(W)(1-e(W))). A is the backed-up R. e(W) is the action prior.",
-        "Inject λH into UCB and into R. Prune when score+λH<τ. Temperature is T0*exp(-λH).",
-        "adjustment is aggressive if H>0.5, conservative if H<-0.5, else keep.",
+        "Y is 1 if this episode's search returned a solved state, else 0.",
+        "Y is written onto every committed step only after the episode returns.",
+        "Clock: one beat is one committed step. The window holds only beats whose Y is already known.",
+        "The query beat has X and the action prior. It does not have Y.",
+        "After Y is written, H=(Y-e)/(e(1-e)). Online anomaly score = |H|.",
+        "H>0.5 aggressive, H<-0.5 conservative, else keep.",
         "The forest is frozen. w_stack and sigma_med are frozen.",
         f"w_stack={float(w_stack):.4f} sigma_med={float(sigma_med):.4f}",
         "Sliding window, oldest to newest:",
@@ -346,8 +344,7 @@ def render_sliding_prompt(window_rows, query_x, *, w_stack: float, sigma_med: fl
         )
         if "H" in row:
             lines.append(
-                "  A={A:.4f} prior={prior:.4f} H={H:.4f} anomaly={anomaly:.4f} adjustment={adjustment} "
-                "lambdaH={lambda_H:.4f} R*={R_star:.4f} prune={prune} temperature={temperature:.4f}".format(**row)
+                "  A={A:.4f} prior={prior:.4f} H={H:.4f} online_anomaly={anomaly:.4f} adjustment={adjustment}".format(**row)
             )
     q = np.asarray(query_x, dtype=float).ravel()
     lines.append("query_x=" + np.array2string(q, precision=4, separator=","))

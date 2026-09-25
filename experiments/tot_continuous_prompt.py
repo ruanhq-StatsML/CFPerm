@@ -184,6 +184,7 @@ def run_stream(name: str, episodes, drift_at: int):
     window = []
     prompts = []
     pred_rows = []
+    anomaly_rows = []
     e_prev = None
     hops = []
     # Reference beats enter the window only after that episode's Y is known.
@@ -205,8 +206,9 @@ def run_stream(name: str, episodes, drift_at: int):
                 "w": float(w[s]),
                 "x": np.round(Xe[s], 4).tolist(),
             }
-            row.update(clever_covariate(ye, float(Xe[s, 1]), score=float(Xe[s, 0])))
+            row.update(clever_covariate(ye, float(Xe[s, 1])))
             window.append(row)
+            anomaly_rows.append({"episode": i, "post": False, "y": float(ye), "H": row["H"], "anomaly": row["anomaly"], "adjustment": row["adjustment"], "prior": row["prior"]})
         window = window[-PROMPT_WINDOW:]
 
     beat = REF_EPISODES * 100
@@ -249,8 +251,9 @@ def run_stream(name: str, episodes, drift_at: int):
                 "w": float(w[s]),
                 "x": np.round(Xe[s], 4).tolist(),
             }
-            row.update(clever_covariate(ye, float(Xe[s, 1]), score=float(Xe[s, 0])))
+            row.update(clever_covariate(ye, float(Xe[s, 1])))
             window.append(row)
+            anomaly_rows.append({"episode": i, "post": i >= drift_at, "y": float(ye), "H": row["H"], "anomaly": row["anomaly"], "adjustment": row["adjustment"], "prior": row["prior"]})
         window = window[-PROMPT_WINDOW:]
 
     mses = np.array([r["mse"] for r in pred_rows], float)
@@ -279,6 +282,53 @@ def run_stream(name: str, episodes, drift_at: int):
         "post_abs_err_last_step": float(np.mean([abs(r["y"] - r["y_hat_last"]) for r in pred_rows if r["post"]])) if any(post) else None,
         "prompt_example": prompts[0]["text"] if prompts else "",
         "n_prompts": len(prompts),
+        "online_anomaly": anomaly_summary(anomaly_rows),
+        "roi": {
+            "delta_children": 0,
+            "extra_solved_vs_frozen_forest": 0,
+            "reason": "The next beat's argmax still reads the frozen forest. adjustment and |H| are written into the prompt and are not consumed, so the terminal-Y numerator does not move.",
+        },
+    }
+
+
+def anomaly_summary(rows: list) -> dict:
+    """|H| is the online anomaly score. The sign is the detector.
+
+    Y in {0, 1} and prior e in (0, 1) give H = 1/e when Y=1 and H = -1/(1-e) when Y=0.
+    If e < 1/2, a success has a larger |H| than a failure with the same prior.
+    Magnitude alone is not a failure detector.
+    """
+    def pack(subset):
+        if not subset:
+            return None
+        y = np.array([r["y"] for r in subset], float)
+        h = np.array([r["H"] for r in subset], float)
+        a = np.array([r["anomaly"] for r in subset], float)
+        e = np.array([r["prior"] for r in subset], float)
+        sign_ok = float(np.mean(np.sign(h) == np.where(y >= 0.5, 1.0, -1.0)))
+        return {
+            "n_steps": int(len(subset)),
+            "mean_prior": float(np.mean(e)),
+            "min_prior": float(np.min(e)),
+            "mean_abs_H_when_Y1": float(np.mean(a[y >= 0.5])) if np.any(y >= 0.5) else None,
+            "mean_abs_H_when_Y0": float(np.mean(a[y < 0.5])) if np.any(y < 0.5) else None,
+            "sign_matches_outcome": sign_ok,
+            "frac_aggressive_given_Y1": float(np.mean([r["adjustment"] == "aggressive" for r in subset if r["y"] >= 0.5])) if np.any(y >= 0.5) else None,
+            "frac_conservative_given_Y0": float(np.mean([r["adjustment"] == "conservative" for r in subset if r["y"] < 0.5])) if np.any(y < 0.5) else None,
+        }
+
+    post = [r for r in rows if r["post"]]
+    return {
+        "score": "|H|",
+        "formula": "H=(Y-e)/(e(1-e)), e=stable score of the committed step",
+        "other_scores_not_this_one": [
+            "residual |Y-RF(X)|",
+            "successive MSE hop ratio",
+            "mid-depth |judge-stable| versus frozen gaps",
+            "path agreement with the first visit",
+        ],
+        "all_steps": pack(rows),
+        "post_drift": pack(post),
     }
 
 
@@ -291,6 +341,8 @@ def main():
     OUT.write_text(json.dumps(report, indent=2))
     for key, block in report.items():
         print(key, "w_stack", round(block["w_stack"], 3), "oob", round(block["oob_mse"], 3), "trail", None if block["trail_mse"] is None else round(block["trail_mse"], 3))
+        print(" anomaly", json.dumps(block["online_anomaly"]["post_drift"], ensure_ascii=False))
+        print(" roi", block["roi"])
         print(" rf", block["feature_selection"]["rf_columns"], "residual", block["feature_selection"]["residual_columns"])
         print("--- prompt ---")
         print(block["prompt_example"])
