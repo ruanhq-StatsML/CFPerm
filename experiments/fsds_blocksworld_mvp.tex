@@ -1,44 +1,104 @@
 \documentclass[11pt,a4paper]{article}
-\usepackage{booktabs,geometry}
-\geometry{margin=2.3cm}
-\setlength{\parskip}{0.35em}
+\usepackage{amsmath,booktabs,geometry}
+\geometry{margin=2.2cm}
+\setlength{\parskip}{0.32em}
 \setlength{\parindent}{0em}
-\title{MVP: the same attribution on Blocksworld}
+\title{ToT interpretation:\\
+which column carries the drifted search}
 \author{}
 \date{2026}
 \begin{document}
 \maketitle
 
-This is the same column-wise procedure on a second search.
-Four blocks, beam 4, depth 4, forty episodes, drift at episode 16, judge mix \(0.30\).
-\(Y=1\) when the goal tower \((A,B,C,D)\) is returned.
-The state encoding is four numbers in \([0,1]\): stack count, tallest stack, goal-prefix length, and whether \(D\) is clear.
-No text encoder, no preset layer weights, no AUC.
+\section{The object}
+An episode is one finished search.
+\(Y=1\) when the search returns a solved state, and \(Y=0\) otherwise.
+The current episode's residual is not a feature, because that residual contains \(Y\).
+Each finished episode supplies one row.
+A column \(x\) is one number on the committed path.
+Its concept contribution is the drop in residual sum of squares
+\[
+\Delta(x)
+=
+\mathrm{SSE}(Y\sim 1+\mathrm{batch})
+-
+\mathrm{SSE}(Y\sim 1+\mathrm{batch}+x+\mathrm{batch}\cdot x),
+\]
+with the batch split after the first 12 episodes.
+An 80-shuffle permutation supplies the \(p\)-value.
+A second number is the absolute mean shift of \(x\) from the pre-drift episodes to the post-drift episodes.
+Columns are scored one at a time.
+A layer share is the sum of the positive drops inside the layer, divided by the sum over layers.
+No layer weight is chosen in advance, and AUC is not an input.
 
-\(Y\) moves from \(1.00\) to \(0.542\).
+The six layers on the committed path are:
+graph (depth, children, siblings, path length, branch count);
+history (previous score, score change, rolling mean, rolling standard deviation, previous \(Y\));
+statistics (score standard deviation, score \(z\), score entropy);
+a four-number state encoding;
+interactions (children per depth, depth times the gap to the second candidate, score times path length);
+context (beam, maximum depth, fraction of the depth used by the last step).
+The state encoding is not a 768-dimensional text vector.
+
+\section{Blocksworld}
+Four blocks, beam 4, depth 4, forty episodes, drift at episode 16, judge mix \(0.30\).
+\(Y=1\) only when the returned state is the goal tower \((A,B,C,D)\).
+The four encoding coordinates, each in \([0,1]\), are the stack count, the tallest stack, the longest goal prefix, and whether \(D\) is clear.
+\(Y\) moves from \(1.00\) on the first 16 episodes to \(0.542\) on the next 24.
 
 \begin{center}
-\begin{tabular}{lrrrl}
+\begin{tabular}{lrrrr}
 \toprule
 Layer & SSE share & Best column & Best \(p\) & Largest mean shift \\
 \midrule
-State encoding & 0.560 & stack count \(e_0\) & 0.012 & 0.115 on tallest stack \\
-Graph & 0.293 & children & 0.012 & 0.578 on children \\
-Statistics & 0.060 & score \(z\) & 0.025 & 1.051 on score \(z\) \\
-Interaction & 0.059 & children per depth & 0.025 & 0.242 \\
-History & 0.018 & rolling std & 0.160 & 0.354 on previous \(Y\) \\
+State encoding & 0.560 & stack count & 0.012 & 0.115, tallest stack \\
+Graph & 0.293 & children & 0.012 & 0.578, children \\
+Statistics & 0.060 & score \(z\) & 0.025 & 1.051, score \(z\) \\
+Interaction & 0.059 & children / depth & 0.025 & 0.242 \\
+History & 0.018 & rolling std & 0.160 & 0.354, previous \(Y\) \\
 Context & 0.009 & last-step fraction & 0.247 & 0.005 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-On Game of 24 the graph layer was \(9\%\) of the SSE and the score profile was the larger part.
-Here the committed tower encoding is \(56\%\) and the child count is \(29\%\), and both clear \(p=0.012\).
-The drifted judge is expanding a different frontier: more or fewer legal moves, and a different tower shape.
-History does not clear \(0.10\). Beam and maximum depth stay fixed, so context stays near zero.
+The three encoding columns that describe the tower each drop the SSE by \(6.68\), and each has \(p=0.012\).
+They tie because a change of tower moves stack count, height, and prefix together.
+The graph columns that count the frontier also tie: children, branch count, and siblings each drop the SSE by \(3.27\), again at \(p=0.012\).
+The child-count mean moves by \(0.578\).
+That is the structural fact.
+After the drift the judge expands a different set of legal moves, and the committed tower has a different shape.
+Score \(z\) and children per depth still clear \(p=0.025\), with smaller drops, \(1.36\) and \(1.70\).
+Previous \(Y\) moves by \(0.354\), but its concept \(p\)-value is \(0.160\), so the history layer does not clear \(0.10\).
+Beam and maximum depth are fixed by the experiment, and the last-step fraction moves by \(0.005\).
+Context is effectively silent.
 
-The screen is unchanged.
-One column, one SSE drop, one mean shift.
-Blocksworld only changes which columns are allowed to be nonzero.
+The interpretation is therefore local.
+The fall in \(Y\) of \(0.458\) is carried by the identity of the committed tower and by the width of the frontier, not by the clock, the beam setting, or the previous outcome.
+
+\section{The same screen on two other searches}
+Game of 24 uses beam 4 and depth 3, with judge mix \(0.28\).
+\(Y\) falls from \(1.00\) to \(0.25\).
+The score-profile layers dominate: statistics \(0.354\) (score entropy, \(p=0.012\)), history \(0.294\) (rolling mean, \(p=0.012\)), interaction \(0.164\).
+The four-number encoding of the partial expression is \(0.095\), and its largest mean shift is \(27.1\) because intermediate values, scaled by 24, land on different magnitudes.
+The graph layer is \(0.094\).
+Its best column is the sibling count, mean shift \(0.88\), \(p=0.074\), which does not clear \(0.05\).
+Context is \(0\): every episode still commits three steps, so beam, depth, and the last-step fraction do not move.
+
+The one-step offer search uses beam 1 and depth 1.
+Every user scores three children and commits one step, so every graph column and every context column is constant.
+\(Y\) falls from \(0.50\) to \(0.167\).
+The graph share is \(0\), the statistics share is \(0\) because a single score has standard deviation zero, and the context share is \(0\).
+Previous \(Y\) takes share \(0.732\), with \(p=0.012\) and mean shift \(0.333\): once failures cluster, the last outcome predicts the next one.
+The offer-identity coordinate shifts by \(1\), which is the habit-to-click change, and its concept \(p\)-value is \(0.42\).
+That coordinate restates the batch bit, so the interaction adds almost no SSE beyond \(Y\sim 1+\mathrm{batch}\).
+
+\section{What the three searches justify}
+The procedure does not invent a different story for each task.
+It returns a share, a column, a \(p\)-value, and a mean shift.
+Blocksworld is the search on which the graph dictionary is informative: child count and tower shape both clear \(p=0.012\), and together they are \(85\%\) of the positive SSE.
+Game of 24 is the search on which the score profile along a still-depth-3 path carries the drop, and the graph signal is smaller.
+The offer search is the search on which the tree cannot explain anything, because the tree does not change.
+A large dictionary is usable for the same reason.
+Columns that are constant, and columns that only rename the batch, contribute \(\Delta=0\) or a tied drop with a large \(p\)-value, and they fall out of the ranking without a preset weight.
 
 \end{document}
