@@ -1,0 +1,96 @@
+{
+  "doorkey": {
+    "task": "minigrid_doorkey",
+    "T": "one committed search step. The prompt index t is that beat. T is not a column of X.",
+    "X": [
+      "judge",
+      "stable",
+      "spurious",
+      "progress",
+      "gap",
+      "depth_frac"
+    ],
+    "Y": "episode success, 1 if the search returns a solved state else 0. Written onto every step of that episode only after the episode ends. The query beat does not contain Y.",
+    "feature_selection": {
+      "vimp": {
+        "judge": 0.0,
+        "stable": 0.0,
+        "spurious": 0.0,
+        "progress": 0.0,
+        "gap": 0.0,
+        "depth_frac": 0.0
+      },
+      "rf_columns": [
+        "judge",
+        "stable",
+        "spurious",
+        "progress",
+        "gap",
+        "depth_frac"
+      ],
+      "residual_columns": [],
+      "note": "reference Y does not vary, so every column has vimp 0 and no column is sent to the residual"
+    },
+    "w_stack": 0.0,
+    "sigma_med": 1e-08,
+    "oob_mse": 0.0,
+    "trail_mse": 0.5357142857142857,
+    "pval_vs_oob_batches": [
+      1.0,
+      0.08333333333333333,
+      1.0,
+      0.08333333333333333
+    ],
+    "hop_rate_post": 0.20833333333333334,
+    "post_abs_err_last_step": 0.625,
+    "prompt_example": "X columns: judge,stable,spurious,progress,gap,depth_frac\nhigh_vimp=judge,stable,spurious,progress,gap,depth_frac low_vimp=\nTask: predict the residual e = Y - RF(X). Do not predict Y.\nThe forest is frozen. w_stack and sigma_med are frozen.\nw_stack=0.0000 sigma_med=0.0000\nSliding window, oldest to newest:\nt=1006 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.9012, 0.625, 0.15, 0.95, 0.2762, 0.5]\nt=1100 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.59, 0.25, 0.5, 0.65, 0.34, 0.0]\nt=1101 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.6387, 0.2917, 0.55, 0.7, 0.3471, 0.0833]\nt=1102 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.6875, 0.3333, 0.6, 0.75, 0.3542, 0.1667]\nt=1103 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.7612, 0.5417, 0.6, 0.8, 0.2196, 0.25]\nt=1104 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8038, 0.5417, 0.6, 0.85, 0.2621, 0.3333]\nt=1105 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8525, 0.5833, 0.15, 0.9, 0.2692, 0.4167]\nt=1106 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.9012, 0.625, 0.15, 0.95, 0.2762, 0.5]\nquery_x=[0.59,0.25,0.5 ,0.65,0.34,0.  ]\noutput: residual",
+    "n_prompts": 271
+  },
+  "hotpot": {
+    "task": "hotpot_twohop",
+    "T": "one committed search step. The prompt index t is that beat. T is not a column of X.",
+    "X": [
+      "judge",
+      "stable",
+      "spurious",
+      "progress",
+      "gap",
+      "depth_frac"
+    ],
+    "Y": "episode success, 1 if the search returns a solved state else 0. Written onto every step of that episode only after the episode ends. The query beat does not contain Y.",
+    "feature_selection": {
+      "vimp": {
+        "judge": 0.0,
+        "stable": 0.0,
+        "spurious": 0.0,
+        "progress": 0.0,
+        "gap": 0.0,
+        "depth_frac": 0.0
+      },
+      "rf_columns": [
+        "judge",
+        "stable",
+        "spurious",
+        "progress",
+        "gap",
+        "depth_frac"
+      ],
+      "residual_columns": [],
+      "note": "reference Y does not vary, so every column has vimp 0 and no column is sent to the residual"
+    },
+    "w_stack": 0.0,
+    "sigma_med": 1e-08,
+    "oob_mse": 0.0,
+    "trail_mse": 0.5357142857142857,
+    "pval_vs_oob_batches": [
+      1.0,
+      0.25,
+      0.25,
+      1.0
+    ],
+    "hop_rate_post": 0.125,
+    "post_abs_err_last_step": 0.625,
+    "prompt_example": "X columns: judge,stable,spurious,progress,gap,depth_frac\nhigh_vimp=judge,stable,spurious,progress,gap,depth_frac low_vimp=\nTask: predict the residual e = Y - RF(X). Do not predict Y.\nThe forest is frozen. w_stack and sigma_med are frozen.\nw_stack=0.0000 sigma_med=0.0000\nSliding window, oldest to newest:\nt=800 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.5, 0.5, 0.5833, 0.5, 0.0, 0.0]\nt=801 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8125, 0.25, 0.75, 1.0, 0.5625, 0.5]\nt=900 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.4464, 0.2857, 0.5833, 0.5, 0.1607, 0.0]\nt=901 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8036, 0.2143, 0.5, 1.0, 0.5893, 0.5]\nt=1000 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.5, 0.5, 0.5, 0.5, 0.0, 0.0]\nt=1001 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8594, 0.4375, 0.4583, 1.0, 0.4219, 0.5]\nt=1100 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.5179, 0.5714, 0.5, 0.5, 0.0536, 0.0]\nt=1101 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8571, 0.4286, 0.4167, 1.0, 0.4286, 0.5]\nquery_x=[0.5,0.5,0.5,0.5,0. ,0. ]\noutput: residual",
+    "n_prompts": 56
+  }
+}

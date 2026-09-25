@@ -238,7 +238,7 @@ class MidHop:
             self.n_fired += 1
 
 
-def beam_search(root, expand, score_fn, beam: int, depth: int, rng: random.Random, midhop: MidHop | None = None, collect_mid: bool = False):
+def beam_search(root, expand, score_fn, beam: int, depth: int, rng: random.Random, midhop: MidHop | None = None, collect_mid: bool = False, trace: list | None = None):
     """score_fn(state) -> StepView. Returns (final_or_None, chosen-step view, expansions)."""
     frontier = [root]
     chosen = score_fn(root)
@@ -263,10 +263,15 @@ def beam_search(root, expand, score_fn, beam: int, depth: int, rng: random.Rando
         if step == 0:
             chosen = cand[0][3]
         chosen.pick = cand[0][1]
-        for _, nxt, done, _ in cand[:beam]:
+        committed = cand[0][3]
+        for _, nxt, done, view in cand[:beam]:
             if done:
                 chosen.pick = nxt
+                if trace is not None:
+                    trace.append((step, view))
                 return nxt, chosen, expansions
+        if trace is not None:
+            trace.append((step, committed))
         frontier = [nxt for _, nxt, _, _ in cand[:beam]]
     return None, chosen, expansions
 
