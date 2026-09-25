@@ -1,0 +1,103 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,booktabs,geometry}
+\geometry{margin=2.3cm}
+\title{What FSDS can attribute on one drifted offer\\
+across incentive, retention, and subsidy}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+\section{What is measured}
+One episode is one user. Three offers are scored and the top offer is kept.
+\(Y=1\) when that offer produces the scene outcome, and \(0\) otherwise.
+On the judge stream the habit offer is selected before user 16 and the click offer after it.
+Habit activates half of the users. Click activates multiples of five.
+So \(Y\) moves from \(0.50\) on the first 16 users to \(0.167\) on the next 24.
+That is eight fewer outcomes than the pre-drift rate.
+Each user scores three children either way. Search cost does not move.
+
+\(X\) on the selected offer is \((\mathrm{judge},\mathrm{stable},\mathrm{spurious},\mathrm{progress})\).
+On the judge stream the means move as follows.
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Column & Pre-drift & Post-drift & Change \\
+\midrule
+judge & 0.820 & 0.808 & \(-0.012\) \\
+stable & 0.500 & 0.200 & \(-0.300\) \\
+spurious & 0.150 & 0.980 & \(+0.830\) \\
+progress & 0.900 & 0.100 & \(-0.800\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The judge number barely moves. The path of the selection is the other three columns:
+the committed offer becomes the click offer, its spurious score jumps, and its progress score collapses.
+A permutation test of the mean shift separates every column from a shuffled past, because each column is a step at the same index.
+The size of the step is the interpretable part. The judge step is \(0.012\). The spurious step is \(0.83\).
+
+\section{What the concept test adds}
+Concept drift here is the drop in residual sum of squares from
+\(Y \sim 1 + \mathrm{batch}\) to \(Y \sim 1 + \mathrm{batch} + x + \mathrm{batch}\cdot x\),
+with the batch split after the first 12 users.
+On the judge stream the four drops are \(0.381\), \(0.381\), \(0.381\), and \(0.381\),
+with permutation \(p\)-values \(0.41\), \(0.41\), \(0.35\), and \(0.44\).
+No column clears \(0.10\).
+The drops tie because, once the offer itself is a step at the drift, every column is a relabeling of that step.
+The interaction does not name a unique carrier of the fall in \(Y\).
+The fall is carried by the batch bit: the offer changed.
+FSDS still returns a usable path, and it is the covariate path above, not a unique SSE ranking.
+
+AUC is not an input. These episodes do not estimate an AUC, and they do not estimate a coefficient from AUC to conversion.
+A dollar figure built as \(\Delta\mathrm{AUC}\times\alpha\times V\times N\) is not a result of this run.
+
+\section{Two rounds of the spend rule}
+Unit prices below are assumptions used only to turn the measured counts into a ratio.
+\(V=1\) per outcome. Incentive cost \(0.20\) per treated user. Retention cost \(0.50\). Subsidy \(0.40\) on every paid user.
+
+Round 1 spent when the running fit ranked spurious first.
+That rank appeared at user 19 and did not survive the full sample.
+Incentive then treated one later user, gained one outcome, spent \(0.20\), and finished at post-drift \(Y=0.208\), still below \(0.50\).
+Retention spent \(1.0\) and gained no outcome.
+Subsidy spent \(0.40\times 24=9.6\) because every user is paid, gained one order, and the ratio of extra orders to that spend is \(0.15\).
+The action text from the full-sample fit still says not to spend: the running rank and the full-sample rank disagreed.
+
+Round 2 spends only when the top concept column is spurious, its SSE drop is positive, its mean has moved, and its concept \(p\)-value is at most \(0.10\).
+None of the four columns clears that bar.
+The lever stays off. Post-drift \(Y\) stays \(0.167\).
+Incentive and retention spend \(0\). Their ratio is undefined because the denominator is zero.
+Subsidy still pays \(9.6\), avoids \(0\) of the click waste, and has ratio \(0\) against the unmoved judge.
+Search cost remains three children per user.
+
+\section{The same path, read in three scenes}
+The measured path is one path. The scene changes which budget that path is allowed to open.
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Scene & Reading of the same \(X\) move & Round-2 action & Money at the stated prices \\
+\midrule
+Incentive & Spurious up is not more participation. & Do not scale the incentive. & Spend \(0\). \(Y\) stays \(0.167\). \\
+Retention & Progress down is a worse offer, not a saved user. & Do not buy the save offer. & Spend \(0\). Shortfall stays 8 users. \\
+Subsidy & Spurious up is the click offer taking the subsidy. & Do not cut the subsidy on this test. & Spend \(9.6\). Waste is unchanged. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Incentive would become an increment only if a later action raised \(Y\) above \(0.50\).
+This fit does not authorize that action.
+Retention would be a partial recovery if the save offer were sent and \(Y\) moved back toward \(0.50\) without passing it.
+The concept test does not open that spend, so the shortfall is left in place.
+Subsidy already pays every user. The fraud reading is the spurious step of \(+0.83\), and the concept \(p\)-values do not separate that column from the others, so the prototype does not convert the reading into a withheld subsidy.
+
+\section{Efficiency}
+The search scores the same three children before and after the drift, and before and after either round of the rule.
+Round 2 adds no outcome and no intervention.
+The information in the fit is the tied SSE drop plus the unequal mean shifts.
+Acting on the tied drop, as in round 1, buys at most one outcome and leaves every scene below its pre-drift rate.
+Waiting for a column that actually separates, as in round 2, spends nothing on incentive and retention and leaves the subsidy bill unchanged.
+That is the efficiency claim: the attribution is cheap to compute and expensive to obey too early.
+
+\end{document}
