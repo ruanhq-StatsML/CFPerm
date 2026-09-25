@@ -1,0 +1,112 @@
+{
+  "pre_Y": 1.0,
+  "post_Y": 0.5416666666666666,
+  "layers": [
+    {
+      "layer": "L4_embed",
+      "sse_sum": 20.035714285714278,
+      "sse_best": 6.678571428571425,
+      "best_feature": "e0",
+      "best_p": 0.012345679012345678,
+      "mean_shift_max": 0.11458333333333337,
+      "shift_feature": "e1",
+      "sse_share": 0.5604831476318224
+    },
+    {
+      "layer": "L1_graph",
+      "sse_sum": 10.461391905863278,
+      "sse_best": 3.265518913676041,
+      "best_feature": "n_children",
+      "best_p": 0.012345679012345678,
+      "mean_shift_max": 0.578125,
+      "shift_feature": "n_children",
+      "sse_share": 0.2926491055120018
+    },
+    {
+      "layer": "L3_stat",
+      "sse_sum": 2.1481607427396368,
+      "sse_best": 1.3572565295547152,
+      "best_feature": "score_z",
+      "best_p": 0.024691358024691357,
+      "mean_shift_max": 1.0514101372138003,
+      "shift_feature": "score_z",
+      "sse_share": 0.06009308565396634
+    },
+    {
+      "layer": "L5_interact",
+      "sse_sum": 2.120812122152822,
+      "sse_best": 1.7008899810014633,
+      "best_feature": "child_per_depth",
+      "best_p": 0.024691358024691357,
+      "mean_shift_max": 0.24236111111111125,
+      "shift_feature": "child_per_depth",
+      "sse_share": 0.05932802977767967
+    },
+    {
+      "layer": "L2_history",
+      "sse_sum": 0.6487231845273378,
+      "sse_best": 0.41759122707256235,
+      "best_feature": "roll_std",
+      "best_p": 0.16049382716049382,
+      "mean_shift_max": 0.35416666666666663,
+      "shift_feature": "prev_y",
+      "sse_share": 0.018147514344665622
+    },
+    {
+      "layer": "L6_context",
+      "sse_sum": 0.3324175824175777,
+      "sse_best": 0.3324175824175777,
+      "best_feature": "step_frac",
+      "best_p": 0.24691358024691357,
+      "mean_shift_max": 0.00520833333333337,
+      "shift_feature": "step_frac",
+      "sse_share": 0.009299117079864194
+    }
+  ],
+  "top_features": [
+    {
+      "feature": "e0",
+      "sse_drop": 6.678571428571425,
+      "p": 0.012345679012345678
+    },
+    {
+      "feature": "e1",
+      "sse_drop": 6.678571428571425,
+      "p": 0.012345679012345678
+    },
+    {
+      "feature": "e2",
+      "sse_drop": 6.678571428571425,
+      "p": 0.012345679012345678
+    },
+    {
+      "feature": "n_children",
+      "sse_drop": 3.265518913676041,
+      "p": 0.012345679012345678
+    },
+    {
+      "feature": "branch",
+      "sse_drop": 3.265518913676041,
+      "p": 0.012345679012345678
+    },
+    {
+      "feature": "n_siblings",
+      "sse_drop": 3.2655189136760385,
+      "p": 0.012345679012345678
+    },
+    {
+      "feature": "child_per_depth",
+      "sse_drop": 1.7008899810014633,
+      "p": 0.024691358024691357
+    },
+    {
+      "feature": "score_z",
+      "sse_drop": 1.3572565295547152,
+      "p": 0.024691358024691357
+    }
+  ],
+  "dataset": "blocksworld",
+  "mix": 0.3,
+  "beam": 4,
+  "depth": 4
+}

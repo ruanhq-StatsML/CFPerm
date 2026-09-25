@@ -1,0 +1,44 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{booktabs,geometry}
+\geometry{margin=2.3cm}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0em}
+\title{MVP: the same attribution on Blocksworld}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+This is the same column-wise procedure on a second search.
+Four blocks, beam 4, depth 4, forty episodes, drift at episode 16, judge mix \(0.30\).
+\(Y=1\) when the goal tower \((A,B,C,D)\) is returned.
+The state encoding is four numbers in \([0,1]\): stack count, tallest stack, goal-prefix length, and whether \(D\) is clear.
+No text encoder, no preset layer weights, no AUC.
+
+\(Y\) moves from \(1.00\) to \(0.542\).
+
+\begin{center}
+\begin{tabular}{lrrrl}
+\toprule
+Layer & SSE share & Best column & Best \(p\) & Largest mean shift \\
+\midrule
+State encoding & 0.560 & stack count \(e_0\) & 0.012 & 0.115 on tallest stack \\
+Graph & 0.293 & children & 0.012 & 0.578 on children \\
+Statistics & 0.060 & score \(z\) & 0.025 & 1.051 on score \(z\) \\
+Interaction & 0.059 & children per depth & 0.025 & 0.242 \\
+History & 0.018 & rolling std & 0.160 & 0.354 on previous \(Y\) \\
+Context & 0.009 & last-step fraction & 0.247 & 0.005 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+On Game of 24 the graph layer was \(9\%\) of the SSE and the score profile was the larger part.
+Here the committed tower encoding is \(56\%\) and the child count is \(29\%\), and both clear \(p=0.012\).
+The drifted judge is expanding a different frontier: more or fewer legal moves, and a different tower shape.
+History does not clear \(0.10\). Beam and maximum depth stay fixed, so context stays near zero.
+
+The screen is unchanged.
+One column, one SSE drop, one mean shift.
+Blocksworld only changes which columns are allowed to be nonzero.
+
+\end{document}
