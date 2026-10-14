@@ -1,0 +1,69 @@
+{
+  "per_board": {
+    "bandit_cov": {
+      "vs_static": 0.2530021768957491,
+      "vs_naive_boost": -0.023689133675715457,
+      "fsds_full": 2.429798750616964,
+      "static": 2.176796573721215,
+      "naive_boost": 2.4534878842926795,
+      "best_module": "meta_only"
+    },
+    "bandit_concept": {
+      "vs_static": 0.36604840360791435,
+      "vs_naive_boost": -0.015213827070981623,
+      "fsds_full": 2.98318927547954,
+      "static": 2.6171408718716256,
+      "naive_boost": 2.9984031025505216,
+      "best_module": "meta_only"
+    },
+    "bandit_mixed": {
+      "vs_static": 0.3571135860841732,
+      "vs_naive_boost": -0.025125016404597744,
+      "fsds_full": 3.1195526036401056,
+      "static": 2.7624390175559324,
+      "naive_boost": 3.1446776200447033,
+      "best_module": "meta_only"
+    },
+    "maze_proxy": {
+      "vs_static": 0.16468774833991828,
+      "vs_naive_boost": -0.01314377044001136,
+      "fsds_full": 0.9459694057684975,
+      "static": 0.7812816574285792,
+      "naive_boost": 0.9591131762085089,
+      "best_module": "meta_only"
+    },
+    "causal_proxy": {
+      "vs_static": 0.07629096808883779,
+      "vs_naive_boost": -0.0009265356233474908,
+      "fsds_full": -0.3625633882545533,
+      "static": -0.4388543563433911,
+      "naive_boost": -0.3616368526312058,
+      "best_module": "fsds_full"
+    },
+    "procgen_proxy": {
+      "vs_static": 0.06296091541596244,
+      "vs_naive_boost": -0.009003303709764425,
+      "fsds_full": 0.042352423861105784,
+      "static": -0.02060849155485666,
+      "naive_boost": 0.05135572757087021,
+      "best_module": "meta_only"
+    },
+    "meta_vision": {
+      "vs_static": 0.13848898050454128,
+      "vs_naive_boost": -0.043382037249820815,
+      "fsds_full": 3.633886679695638,
+      "static": 3.4953976991910967,
+      "naive_boost": 3.6772687169454588,
+      "best_module": "meta_only"
+    }
+  },
+  "ranked_vs_static": [
+    "bandit_concept",
+    "bandit_mixed",
+    "bandit_cov",
+    "maze_proxy",
+    "meta_vision",
+    "causal_proxy",
+    "procgen_proxy"
+  ]
+}
