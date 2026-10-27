@@ -1,0 +1,16 @@
+{
+  "local_dir": "/workspace/data/tencent_subset",
+  "total_bytes": 24794817400,
+  "indexer_bytes": 526961190,
+  "seq_bytes": 1048179143,
+  "item_feat_bytes": 364037920,
+  "user_feat_bytes": 91481983,
+  "emb82_bytes": 18315279599,
+  "emb84_bytes": 3958605995,
+  "n_emb82_parquet": 94,
+  "n_emb84_parquet": 5,
+  "cache_dir": "/workspace/data/tencent_subset_cache",
+  "cache_bytes": 338066840,
+  "total_gb": 23.09,
+  "cache_mb": 322.4
+}

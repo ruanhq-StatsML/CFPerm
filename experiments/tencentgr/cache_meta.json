@@ -1,0 +1,38 @@
+{
+  "cfg": {
+    "root": "/workspace/data/tencent_subset",
+    "cache_dir": "/workspace/data/tencent_subset_cache",
+    "seq_shards": [
+      "seq/part-00000-*.parquet"
+    ],
+    "dataset_name": "TAAC2025/TencentGR-10M",
+    "mm_emb_configs": [
+      "mm_emb_82_1024",
+      "mm_emb_84_32"
+    ],
+    "mm_emb_dims": {
+      "mm_emb_82_1024": 1024,
+      "mm_emb_84_32": 32
+    },
+    "max_seq_len": 50,
+    "emb_dim": 1056,
+    "split_ratio": 0.8,
+    "batch_size": 128,
+    "lr": 0.001,
+    "epochs": 5,
+    "device": "cpu",
+    "max_users": 8000,
+    "user_feat_dim": 20,
+    "tower_dim": 64,
+    "hidden_dim": 128,
+    "pad_id": 0
+  },
+  "split": "all",
+  "n_seq": 8000,
+  "n_item_feat": 235484,
+  "n_user_feat": 7989,
+  "n_mm": 214976,
+  "n_samples": 7989,
+  "emb_dim": 1056,
+  "user_feat_dim": 20
+}

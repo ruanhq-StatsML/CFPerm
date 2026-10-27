@@ -1,0 +1,326 @@
+{
+  "n_users": 8000,
+  "n_events": 768724,
+  "events_parquet": "/workspace/data/tencent_subset_cache/events.parquet",
+  "scale_cols": [
+    "n_events",
+    "n_exposure",
+    "n_click",
+    "n_conversion",
+    "n_unique_items",
+    "n_unique_click_items",
+    "n_unique_conv_items",
+    "repeat_rate",
+    "click_rate",
+    "conversion_rate",
+    "engage_rate",
+    "span_days",
+    "mean_gap_hours",
+    "median_gap_hours",
+    "recency_to_end_days",
+    "pos_last_click",
+    "pos_last_conv",
+    "n_item_format",
+    "n_clicks_last20",
+    "n_conv_last20",
+    "engage_last20",
+    "click_rate_last20",
+    "decay_engage",
+    "n_exp_to_click",
+    "mean_item_log_freq"
+  ],
+  "scaler_mean": {
+    "n_events": 96.0905,
+    "n_exposure": 90.88575,
+    "n_click": 2.763875,
+    "n_conversion": 2.440875,
+    "n_unique_items": 95.8985,
+    "n_unique_click_items": 2.759875,
+    "n_unique_conv_items": 2.4385,
+    "repeat_rate": 0.0019588212434611114,
+    "click_rate": 0.028536937949133357,
+    "conversion_rate": 0.02529125368547411,
+    "engage_rate": 0.05382819163460747,
+    "span_days": 60.19050076822918,
+    "mean_gap_hours": 17.241952214960666,
+    "median_gap_hours": 8.83912032986111,
+    "recency_to_end_days": 52.561267138310185,
+    "pos_last_click": 38.67525,
+    "pos_last_conv": 29.68225,
+    "n_item_format": 3.622,
+    "n_clicks_last20": 0.395875,
+    "n_conv_last20": 0.1995,
+    "engage_last20": 0.595375,
+    "click_rate_last20": 0.019999177879653884,
+    "decay_engage": 0.2818158564589378,
+    "n_exp_to_click": 2.256625,
+    "mean_item_log_freq": 1.5376360194420828
+  },
+  "scaler_scale": {
+    "n_events": 16.27789328353028,
+    "n_exposure": 16.80438772873026,
+    "n_click": 4.0387646606821495,
+    "n_conversion": 4.246822840003454,
+    "n_unique_items": 16.26238597961566,
+    "n_unique_click_items": 4.029977045142441,
+    "n_unique_conv_items": 4.242902043413211,
+    "repeat_rate": 0.009099074129292731,
+    "click_rate": 0.0417541257710956,
+    "conversion_rate": 0.045302856280605014,
+    "engage_rate": 0.07094836580376561,
+    "span_days": 45.502888608844565,
+    "mean_gap_hours": 23.964706265695252,
+    "median_gap_hours": 15.245982275625432,
+    "recency_to_end_days": 13.367888158366767,
+    "pos_last_click": 36.075016111396266,
+    "pos_last_conv": 33.51309497700115,
+    "n_item_format": 1.3169533021333748,
+    "n_clicks_last20": 1.0131179518570381,
+    "n_conv_last20": 0.6557055360449536,
+    "engage_last20": 1.3667127018415393,
+    "click_rate_last20": 0.05120885630743345,
+    "decay_engage": 0.6220109287338811,
+    "n_exp_to_click": 2.973427081563461,
+    "mean_item_log_freq": 0.2858864215344492
+  },
+  "pca_var": [
+    0.3943170323718013,
+    0.15559764148346936
+  ],
+  "mean_n_click": 2.763875,
+  "mean_n_conversion": 2.440875,
+  "mean_engage_rate": 0.05382819163460747,
+  "frac_any_click": 0.655875,
+  "frac_any_conversion": 0.56825,
+  "frac_has_user_feat": 0.998625,
+  "frac_iso_outlier": 0.05,
+  "engage_rate_early": 0.07966479005375209,
+  "engage_rate_late": 0.027991593215462848,
+  "n_click_early": 4.1295,
+  "n_click_late": 1.39825,
+  "time_late_cv_auc": [
+    0.83715625,
+    0.8313328125000001,
+    0.8253609375,
+    0.8476999999999999,
+    0.85481875
+  ],
+  "time_late_cv_auc_mean": 0.8392737499999999,
+  "time_late_excluded_leak": [
+    "recency_to_end_days"
+  ],
+  "time_late_logit_top": [
+    {
+      "feature": "decay_engage",
+      "coef": -1.596461451589099
+    },
+    {
+      "feature": "n_unique_click_items",
+      "coef": 0.8908979133080576
+    },
+    {
+      "feature": "pos_last_conv",
+      "coef": -0.681819702219179
+    },
+    {
+      "feature": "span_days",
+      "coef": 0.6713118454688785
+    },
+    {
+      "feature": "pos_last_click",
+      "coef": -0.6603190866859222
+    },
+    {
+      "feature": "n_unique_conv_items",
+      "coef": 0.6143758227846599
+    },
+    {
+      "feature": "conversion_rate",
+      "coef": -0.45619215356061826
+    },
+    {
+      "feature": "median_gap_hours",
+      "coef": 0.38968716891832667
+    },
+    {
+      "feature": "n_conversion",
+      "coef": 0.34840267089018423
+    },
+    {
+      "feature": "engage_rate",
+      "coef": -0.31915062130138394
+    },
+    {
+      "feature": "n_exp_to_click",
+      "coef": -0.28835866300949975
+    },
+    {
+      "feature": "n_click",
+      "coef": -0.25697539013053344
+    }
+  ],
+  "perm_importance_top": [
+    {
+      "feature": "decay_engage",
+      "import_mean": 0.10026378125000004,
+      "import_std": 0.004058963924023409
+    },
+    {
+      "feature": "pos_last_click",
+      "import_mean": 0.06533925000000007,
+      "import_std": 0.0036804578039796774
+    },
+    {
+      "feature": "pos_last_conv",
+      "import_mean": 0.06357581875000005,
+      "import_std": 0.002938080330467702
+    },
+    {
+      "feature": "span_days",
+      "import_mean": 0.042949962500000036,
+      "import_std": 0.0019065696939812738
+    },
+    {
+      "feature": "n_unique_click_items",
+      "import_mean": 0.030931931250000034,
+      "import_std": 0.0023899049284339903
+    },
+    {
+      "feature": "conversion_rate",
+      "import_mean": 0.01939813750000008,
+      "import_std": 0.0012513460721265547
+    },
+    {
+      "feature": "n_unique_conv_items",
+      "import_mean": 0.01717100625000001,
+      "import_std": 0.0007481895046857358
+    },
+    {
+      "feature": "engage_rate",
+      "import_mean": 0.010597409375000023,
+      "import_std": 0.001239880037154102
+    }
+  ],
+  "rank_time_late_top": [
+    {
+      "feature": "decay_engage",
+      "auc": 0.1858006875,
+      "auc_abs": 0.8141993125,
+      "cohens_d": -0.7846967010442936,
+      "mean_y0": 0.36528159350330874,
+      "mean_y1": -0.36528159350330863,
+      "rank": 1
+    },
+    {
+      "feature": "pos_last_click",
+      "auc": 0.23026403125,
+      "auc_abs": 0.76973596875,
+      "cohens_d": -1.0892906233934225,
+      "mean_y0": 0.47835044471535504,
+      "mean_y1": -0.47835044471535504,
+      "rank": 2
+    },
+    {
+      "feature": "engage_rate",
+      "auc": 0.24092184374999998,
+      "auc_abs": 0.75907815625,
+      "cohens_d": -0.7819197251530939,
+      "mean_y0": 0.3641605853277219,
+      "mean_y1": -0.36416058532772205,
+      "rank": 3
+    },
+    {
+      "feature": "n_click",
+      "auc": 0.274245375,
+      "auc_abs": 0.725754625,
+      "cohens_d": -0.7184937733138346,
+      "mean_y0": 0.33812938230705053,
+      "mean_y1": -0.3381293823070506,
+      "rank": 4
+    },
+    {
+      "feature": "n_unique_click_items",
+      "auc": 0.27429759375,
+      "auc_abs": 0.7257024062499999,
+      "cohens_d": -0.7180302623650684,
+      "mean_y0": 0.33793616805871013,
+      "mean_y1": -0.33793616805871024,
+      "rank": 5
+    },
+    {
+      "feature": "click_rate",
+      "auc": 0.27480775,
+      "auc_abs": 0.72519225,
+      "cohens_d": -0.7108526528656155,
+      "mean_y0": 0.3349387385485126,
+      "mean_y1": -0.3349387385485128,
+      "rank": 6
+    },
+    {
+      "feature": "n_exp_to_click",
+      "auc": 0.275329625,
+      "auc_abs": 0.724670375,
+      "cohens_d": -0.7718055610286088,
+      "mean_y0": 0.36006431993518184,
+      "mean_y1": -0.36006431993518184,
+      "rank": 7
+    },
+    {
+      "feature": "pos_last_conv",
+      "auc": 0.2768910625,
+      "auc_abs": 0.7231089374999999,
+      "cohens_d": -0.8954795040985071,
+      "mean_y0": 0.4086909910707866,
+      "mean_y1": -0.40869099107078655,
+      "rank": 8
+    }
+  ],
+  "rank_time_late_with_recency_top": [
+    {
+      "feature": "recency_to_end_days",
+      "auc": 0.0,
+      "auc_abs": 1.0,
+      "cohens_d": -2.4207272764590906,
+      "mean_y0": 0.7709588185867369,
+      "mean_y1": -0.7709588185867369,
+      "rank": 1
+    },
+    {
+      "feature": "decay_engage",
+      "auc": 0.1858006875,
+      "auc_abs": 0.8141993125,
+      "cohens_d": -0.7846967010442936,
+      "mean_y0": 0.36528159350330874,
+      "mean_y1": -0.36528159350330863,
+      "rank": 2
+    },
+    {
+      "feature": "pos_last_click",
+      "auc": 0.23026403125,
+      "auc_abs": 0.76973596875,
+      "cohens_d": -1.0892906233934225,
+      "mean_y0": 0.47835044471535504,
+      "mean_y1": -0.47835044471535504,
+      "rank": 3
+    }
+  ],
+  "any_click_structural_cv_auc": [
+    0.6900686679388718,
+    0.6812139813390681,
+    0.6912330298149305,
+    0.6828588744588744,
+    0.6758441558441558
+  ],
+  "any_click_structural_cv_auc_mean": 0.6842437418791801,
+  "featuretools_available": false,
+  "other_sequence_summaries": [
+    "counts and rates (n_click, click_rate, engage_rate)",
+    "recency (recency_to_end_days, pos_last_click, decay_engage, last-20)",
+    "pacing (span_days, mean/median inter-event gap)",
+    "diversity (n_unique_items, repeat_rate, n_item_format)",
+    "transitions (exposure\u2192click)",
+    "item-side mix (mean_item_log_freq)",
+    "missingness (has_user_feat; mm missing stays on the tower path)"
+  ],
+  "note": "Counts/rates StandardScaled for tabular/DR. IsolationForest flags unusual sequences. recency_to_end_days is a monotone function of tmax and is dropped from the time_late classifier (otherwise AUC is 1). Logistic AUC and permutation importance are a batch-shift probe, not CATE. Rank tables localize sequence summaries; they are not a unique CS/CD decomposition. featuretools is optional: the default path is pandas DFS (COUNT/NUM_UNIQUE/MEAN/LAST/window/decay)."
+}

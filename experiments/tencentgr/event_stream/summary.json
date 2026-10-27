@@ -1,0 +1,22 @@
+{
+  "n_events": 768724,
+  "n_users": 8000,
+  "n_exposure": 727086,
+  "n_click": 22111,
+  "n_conversion": 19527,
+  "mean_gap_sec": 54689.57746962104,
+  "median_gap_sec": 21776.0,
+  "mean_session_len": 1.973997560505874,
+  "y_ctr_on_exposure": 1.2378178097226463e-05,
+  "y_cvr_on_exposure": 3.438382804785129e-05,
+  "y_next_is_click_on_exposure": 0.02482924990991437,
+  "y_cvr_on_click": 0.0007236217267423455,
+  "frac_item_exp_1d_gt0": 3.38222821194603e-05,
+  "mean_user_exp_1d": 2.225618037162883,
+  "channel_lengths": {
+    "exposure": 727086,
+    "click": 22111,
+    "conversion": 19527
+  },
+  "note": "gap/fatigue are features (history before t). y_ctr/y_cvr are same-item future labels with attribution windows. Not CATE, not unique CS/CD."
+}
