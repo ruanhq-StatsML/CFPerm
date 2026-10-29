@@ -25,9 +25,9 @@ jobs:
       run: |
         # Syntax / undefined-name gate on tests + runners only.
         # Legacy Python/src ships pre-existing E999/F821 in older CFPerm scripts.
-        flake8 tests scripts --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 tests scripts --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        python -m flake8 tests scripts --count --select=E9,F63,F7,F82 --show-source --statistics
+        python -m flake8 tests scripts --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
         export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$GITHUB_WORKSPACE/Python/src"
-        pytest tests
+        python -m pytest tests
