@@ -10,10 +10,13 @@ Synthetic argument (this module):
   2. Naive OLS / T-side residualization vs 2SLS
   3. IV selection by first-stage partial-F (+ exclusion residual screen)
   4. Suite: oracle-valid / selected / all-Z / invalid-only / naive
+  5. E-value + Rosenbaum Γ sensitivity on the naive association
+  6. Subset localization: IV strength heterogeneity across segments
 
 Locked takeaway for the FSDS product case:
   when treatment is confounded, uplift monitors need an IV channel;
-  selection must prefer strong + exclusion-plausible Z, not raw correlation.
+  selection must prefer strong + exclusion-plausible Z, not raw correlation;
+  report how fragile the naive effect is (E-value / Γ) and where Z is strong.
 """
 from __future__ import annotations
 
@@ -22,10 +25,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from scipy import stats
 from sklearn.linear_model import LinearRegression
 
 SEED = 2026
 F_WEAK = 10.0  # Staiger–Stock rule-of-thumb for first-stage strength
+ROSENBAUM_GAMMAS = (
+    1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 15.0, 20.0, 30.0,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -56,12 +63,16 @@ def make_iv_dgp(
     valid_strength=1.0,
     invalid_y=0.8,
     weak_strength=0.05,
+    het_strength=1.2,
     seed=SEED,
 ):
-    """Linear IV world with one hidden confounder.
+    """Linear IV world with one hidden confounder + segment IV-strength het.
 
-    T = X β_t + Z_valid γ_v + Z_weak γ_w + α_t U + ε_t
-    Y = τ T + X β_y + Z_invalid δ + α_y U + ε_y
+    T = X β_t + s(X0)·Z_valid γ_v + Z_weak γ_w + Z_invalid γ_i + α U + ε_t
+    Y = τ T + X β_y + Z_invalid δ + α U + ε_y
+
+    ``s(X0) = 1 + het_strength·σ(X0)`` scales the valid first stage so high-X0
+    segments have stronger instruments (subset localization target).
 
     Valid Z: affect T, excluded from Y.
     Invalid Z: appear in Y directly (exclusion violated) and may weakly enter T.
@@ -82,11 +93,13 @@ def make_iv_dgp(
     gamma_i = 0.15 * rng.normal(size=n_invalid)
     delta_i = invalid_y * (0.5 + 0.5 * rng.random(n_invalid))
 
+    # segment scaler on valid first stage (logistic in X0)
+    seg_scale = 1.0 + float(het_strength) / (1.0 + np.exp(-X[:, 0]))
     eps_t = rng.normal(scale=0.5, size=n)
     eps_y = rng.normal(scale=0.5, size=n)
     T = (
         X @ beta_t
-        + Zv @ gamma_v
+        + (Zv * seg_scale[:, None]) @ gamma_v
         + Zw @ gamma_w
         + Zi @ gamma_i
         + float(conf_strength) * U
@@ -103,6 +116,9 @@ def make_iv_dgp(
     roles = (
         ["valid"] * n_valid + ["invalid"] * n_invalid + ["weak"] * n_weak
     )
+    # quartile segment labels on X0 for subset localization
+    edges = np.quantile(X[:, 0], [0.0, 0.25, 0.5, 0.75, 1.0])
+    seg = np.digitize(X[:, 0], edges[1:-1], right=True)  # 0..3
     return IVBundle(
         X=X,
         Z=Z,
@@ -118,6 +134,10 @@ def make_iv_dgp(
                 range(n_valid + n_invalid, n_valid + n_invalid + n_weak)
             ),
             "names": [f"Z_{r}{i}" for i, r in enumerate(roles)],
+            "segment": seg.astype(int),
+            "segment_edges": edges.tolist(),
+            "segment_names": ["Q1_low", "Q2", "Q3", "Q4_high"],
+            "seg_scale": seg_scale,
         },
         meta={
             "n": n,
@@ -126,6 +146,7 @@ def make_iv_dgp(
             "valid_strength": float(valid_strength),
             "invalid_y": float(invalid_y),
             "weak_strength": float(weak_strength),
+            "het_strength": float(het_strength),
             "seed": int(seed),
         },
     )
@@ -317,6 +338,341 @@ def iv_2sls_ate(Y, T, X, Z):
 
 
 # ---------------------------------------------------------------------------
+# E-value (VanderWeele & Ding) + Rosenbaum Γ sensitivity
+# ---------------------------------------------------------------------------
+
+
+def approx_rr_from_continuous(beta, sd_y):
+    """Approximate risk-ratio scale for a continuous effect (Ding & VanderWeele).
+
+    RR ≈ exp(0.91 · |β| / σ_Y). Used only to put E-values on a familiar scale.
+    """
+    sd = max(float(sd_y), 1e-8)
+    return float(np.exp(0.91 * abs(float(beta)) / sd))
+
+
+def evalue_from_rr(rr):
+    """Point E-value for an approximate risk ratio (≥1)."""
+    rr = float(rr)
+    if rr < 1.0:
+        rr = 1.0 / max(rr, 1e-12)
+    if rr <= 1.0:
+        return 1.0
+    return float(rr + np.sqrt(rr * (rr - 1.0)))
+
+
+def evalue_analysis(Y, T, X, ate_hat=None):
+    """E-value for the naive controlled association (how strong U must be).
+
+    Reports:
+      - point E-value for the OLS/partial effect
+      - E-value for the CI lower bound (null-crossing fragility)
+    """
+    Y = np.asarray(Y, dtype=float).reshape(-1)
+    T = np.asarray(T, dtype=float).reshape(-1)
+    X = np.asarray(X, dtype=float)
+    if ate_hat is None:
+        ate_hat = ols_ate(Y, T, X)
+    # residual SE of Y | T,X for RR approximation + Wald CI
+    design = np.hstack([T.reshape(-1, 1), X])
+    reg = LinearRegression().fit(design, Y)
+    resid = Y - reg.predict(design)
+    n, k = design.shape
+    sigma = float(np.sqrt(np.sum(resid ** 2) / max(n - k - 1, 1)))
+    # SE of β_T from OLS formula
+    XtX_inv = np.linalg.pinv(design.T @ design)
+    se = float(sigma * np.sqrt(max(XtX_inv[0, 0], 0.0)))
+    z = 1.96
+    lo = float(ate_hat - z * se)
+    hi = float(ate_hat + z * se)
+    rr_pt = approx_rr_from_continuous(ate_hat, sigma)
+    # CI bound closer to null on the RR scale
+    if ate_hat >= 0:
+        rr_ci = approx_rr_from_continuous(max(lo, 0.0), sigma) if lo > 0 else 1.0
+    else:
+        rr_ci = approx_rr_from_continuous(min(hi, 0.0), sigma) if hi < 0 else 1.0
+    return {
+        "ate_hat": float(ate_hat),
+        "se": se,
+        "ci95": [lo, hi],
+        "sigma_y": sigma,
+        "approx_rr": rr_pt,
+        "evalue_point": evalue_from_rr(rr_pt),
+        "evalue_ci": evalue_from_rr(rr_ci),
+        "null_in_ci": bool(lo <= 0.0 <= hi),
+    }
+
+
+def _matched_pair_diffs(Y, T, X, n_pairs=400, seed=SEED):
+    """Build residualized high-T vs low-T matched pairs on X (Mahalanobis-ish).
+
+    Continuous Rosenbaum analysis needs paired outcomes; we pair each high-T
+    unit to a nearest low-T neighbor in covariate space.
+    """
+    rng = np.random.default_rng(int(seed))
+    Y = np.asarray(Y, dtype=float).reshape(-1)
+    T = np.asarray(T, dtype=float).reshape(-1)
+    X = np.asarray(X, dtype=float)
+    Yr = _resid(Y, X)
+    Tr = _resid(T, X)
+    med = float(np.median(Tr))
+    hi = np.where(Tr >= med)[0]
+    lo = np.where(Tr < med)[0]
+    if len(hi) == 0 or len(lo) == 0:
+        return np.zeros(0)
+    # subsample for speed
+    n_pairs = int(min(n_pairs, len(hi), len(lo)))
+    hi = rng.choice(hi, size=n_pairs, replace=False)
+    # standardize X for nearest neighbor
+    sd = X.std(0)
+    sd = np.where(sd < 1e-8, 1.0, sd)
+    Xs = (X - X.mean(0)) / sd
+    diffs = []
+    used = set()
+    for i in hi:
+        d2 = np.sum((Xs[lo] - Xs[i]) ** 2, axis=1)
+        order = np.argsort(d2)
+        for j in order:
+            jj = int(lo[j])
+            if jj not in used:
+                used.add(jj)
+                diffs.append(float(Yr[i] - Yr[jj]))
+                break
+    return np.asarray(diffs, dtype=float)
+
+
+def rosenbaum_sign_pvalue(diffs, gamma):
+    """Rosenbaum upper-bound p-value for one-sided positive effect (sign test).
+
+    Under Γ, P(positive pair) ≤ p+ = Γ/(1+Γ). Bound = P(Bin(n,p+) ≥ #positives).
+    """
+    diffs = np.asarray(diffs, dtype=float)
+    diffs = diffs[np.isfinite(diffs) & (np.abs(diffs) > 1e-15)]
+    n = len(diffs)
+    if n == 0:
+        return 1.0
+    k = int(np.sum(diffs > 0))
+    p_plus = float(gamma) / (1.0 + float(gamma))
+    # survival function of Binomial
+    return float(stats.binom.sf(k - 1, n, p_plus))
+
+
+def rosenbaum_analysis(Y, T, X, gammas=None, n_pairs=400, seed=SEED, alpha=0.05):
+    """Rosenbaum Γ curve for the naive high-vs-low treatment contrast.
+
+    Returns p-value upper bounds vs Γ and the critical Γ* where the bound
+    first exceeds ``alpha`` (effect becomes insignificant under that bias).
+    """
+    gammas = list(gammas or ROSENBAUM_GAMMAS)
+    diffs = _matched_pair_diffs(Y, T, X, n_pairs=n_pairs, seed=seed)
+    mean_diff = float(np.mean(diffs)) if len(diffs) else float("nan")
+    curve = []
+    gamma_star = None
+    for g in gammas:
+        p_up = rosenbaum_sign_pvalue(diffs, g)
+        curve.append({"gamma": float(g), "p_upper": p_up})
+        if gamma_star is None and p_up > float(alpha):
+            gamma_star = float(g)
+    robust_beyond = gamma_star is None
+    if gamma_star is None and curve:
+        # still significant at max Γ — report as lower bound on fragility
+        gamma_star = float(curve[-1]["gamma"])
+    return {
+        "n_pairs": int(len(diffs)),
+        "mean_pair_diff": mean_diff,
+        "alpha": float(alpha),
+        "gamma_star": float(gamma_star) if gamma_star is not None else float("nan"),
+        "robust_beyond_max_gamma": bool(robust_beyond),
+        "max_gamma_tried": float(gammas[-1]) if gammas else float("nan"),
+        "curve": curve,
+        "p_at_gamma1": float(curve[0]["p_upper"]) if curve else float("nan"),
+        "p_at_max_gamma": float(curve[-1]["p_upper"]) if curve else float("nan"),
+    }
+
+
+def sensitivity_bundle(bundle, z_mode="auto", seed=SEED):
+    """E-value on naive association + Rosenbaum Γ + IV point for contrast."""
+    scores = score_instruments(bundle)
+    naive = ols_ate(bundle.Y, bundle.T, bundle.X)
+    ev = evalue_analysis(bundle.Y, bundle.T, bundle.X, ate_hat=naive)
+    rb = rosenbaum_analysis(bundle.Y, bundle.T, bundle.X, seed=seed)
+    idx = select_instruments(scores, mode=z_mode)
+    Zs = bundle.Z[:, idx] if idx else np.zeros((len(bundle.T), 0))
+    iv_hat, iv_info = iv_2sls_ate(bundle.Y, bundle.T, bundle.X, Zs)
+    return {
+        "naive_ate": float(naive),
+        "iv_ate": float(iv_hat),
+        "true_ate": float(bundle.true_ate),
+        "evalue": ev,
+        "rosenbaum": rb,
+        "iv_info": iv_info,
+        "selected": idx,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Subset localization — IV strength heterogeneity across segments
+# ---------------------------------------------------------------------------
+
+
+def subset_iv_localization(bundle, z_mode="oracle", min_n=80):
+    """Per-segment first-stage F / R² / 2SLS ATE (IV strength heterogeneity).
+
+    Segments = quartiles of X0 (customer segment proxy). Under the DGP,
+    high-X0 segments have stronger valid instruments.
+    """
+    seg = np.asarray(bundle.z_meta["segment"], dtype=int)
+    names = bundle.z_meta["segment_names"]
+    scores = score_instruments(bundle)
+    idx = select_instruments(scores, mode=z_mode)
+    if not idx:
+        idx = select_instruments(scores, mode="oracle")
+    rows = []
+    for s, name in enumerate(names):
+        mask = seg == s
+        n_s = int(mask.sum())
+        if n_s < int(min_n):
+            rows.append(
+                {
+                    "segment": int(s),
+                    "name": name,
+                    "n": n_s,
+                    "stage1_f": float("nan"),
+                    "stage1_r2": float("nan"),
+                    "ate_hat": float("nan"),
+                    "abs_err": float("nan"),
+                    "mean_seg_scale": float("nan"),
+                }
+            )
+            continue
+        X_s = bundle.X[mask]
+        T_s = bundle.T[mask]
+        Y_s = bundle.Y[mask]
+        Z_s = bundle.Z[mask][:, idx]
+        ate, info = iv_2sls_ate(Y_s, T_s, X_s, Z_s)
+        # also report mean designed strength scaler
+        scale = np.asarray(bundle.z_meta["seg_scale"], dtype=float)[mask]
+        rows.append(
+            {
+                "segment": int(s),
+                "name": name,
+                "n": n_s,
+                "stage1_f": float(info.get("stage1_f", float("nan"))),
+                "stage1_r2": float(info.get("stage1_r2", float("nan"))),
+                "ate_hat": float(ate),
+                "abs_err": float(abs(ate - bundle.true_ate)),
+                "mean_seg_scale": float(np.mean(scale)),
+                "n_z": int(info.get("n_z", 0)),
+            }
+        )
+    fs = np.array([r["stage1_f"] for r in rows], dtype=float)
+    finite = fs[np.isfinite(fs)]
+    het_ratio = (
+        float(np.nanmax(finite) / max(np.nanmin(finite), 1e-8))
+        if finite.size >= 2
+        else float("nan")
+    )
+    return {
+        "z_mode": z_mode,
+        "segments": rows,
+        "f_heterogeneity_ratio": het_ratio,
+        "f_max": float(np.nanmax(finite)) if finite.size else float("nan"),
+        "f_min": float(np.nanmin(finite)) if finite.size else float("nan"),
+    }
+
+
+def run_sensitivity_suite(seeds=None, n=2000, conf_strength=1.0):
+    seeds = list(seeds if seeds is not None else range(SEED, SEED + 8))
+    sens_rows, subset_rows = [], []
+    for s in seeds:
+        bundle = make_iv_dgp(n=n, conf_strength=conf_strength, seed=int(s))
+        sens = sensitivity_bundle(bundle, z_mode="auto", seed=int(s))
+        sens_rows.append(
+            {
+                "seed": int(s),
+                "naive_ate": sens["naive_ate"],
+                "iv_ate": sens["iv_ate"],
+                "true_ate": sens["true_ate"],
+                "evalue_point": sens["evalue"]["evalue_point"],
+                "evalue_ci": sens["evalue"]["evalue_ci"],
+                "approx_rr": sens["evalue"]["approx_rr"],
+                "gamma_star": sens["rosenbaum"]["gamma_star"],
+                "robust_beyond_max_gamma": int(
+                    sens["rosenbaum"]["robust_beyond_max_gamma"]
+                ),
+                "rosenbaum_p_gamma1": sens["rosenbaum"]["p_at_gamma1"],
+                "rosenbaum_p_max": sens["rosenbaum"]["p_at_max_gamma"],
+                "rosenbaum_curve": sens["rosenbaum"]["curve"],
+            }
+        )
+        loc = subset_iv_localization(bundle, z_mode="oracle")
+        for seg in loc["segments"]:
+            subset_rows.append({"seed": int(s), **seg})
+    # aggregate sensitivity
+    def _agg(key):
+        v = np.array([r[key] for r in sens_rows], dtype=float)
+        return {
+            "mean": float(np.nanmean(v)),
+            "sd": float(np.nanstd(v, ddof=1) if len(v) > 1 else 0.0),
+        }
+
+    # mean Rosenbaum curve
+    gammas = [c["gamma"] for c in sens_rows[0]["rosenbaum_curve"]]
+    mean_curve = []
+    for i, g in enumerate(gammas):
+        ps = [r["rosenbaum_curve"][i]["p_upper"] for r in sens_rows]
+        mean_curve.append({"gamma": float(g), "p_upper_mean": float(np.mean(ps))})
+
+    # aggregate subset by segment name
+    seg_table = {}
+    for name in ("Q1_low", "Q2", "Q3", "Q4_high"):
+        sub = [r for r in subset_rows if r["name"] == name]
+        seg_table[name] = {
+            "n_mean": float(np.mean([r["n"] for r in sub])),
+            "stage1_f": _mstd([r["stage1_f"] for r in sub]),
+            "stage1_r2": _mstd([r["stage1_r2"] for r in sub]),
+            "ate_hat": _mstd([r["ate_hat"] for r in sub]),
+            "abs_err": _mstd([r["abs_err"] for r in sub]),
+            "mean_seg_scale": _mstd([r["mean_seg_scale"] for r in sub]),
+        }
+    f_by_seg = [seg_table[n]["stage1_f"]["mean"] for n in ("Q1_low", "Q2", "Q3", "Q4_high")]
+    return {
+        "seeds": seeds,
+        "n": int(n),
+        "conf_strength": float(conf_strength),
+        "sensitivity": {
+            "evalue_point": _agg("evalue_point"),
+            "evalue_ci": _agg("evalue_ci"),
+            "approx_rr": _agg("approx_rr"),
+            "gamma_star": _agg("gamma_star"),
+            "robust_beyond_frac": float(
+                np.mean([r["robust_beyond_max_gamma"] for r in sens_rows])
+            ),
+            "rosenbaum_p_max": _agg("rosenbaum_p_max"),
+            "naive_ate": _agg("naive_ate"),
+            "iv_ate": _agg("iv_ate"),
+            "rosenbaum_curve_mean": mean_curve,
+            "rows": sens_rows,
+        },
+        "subset": {
+            "by_segment": seg_table,
+            "f_heterogeneity_ratio": float(
+                max(f_by_seg) / max(min(f_by_seg), 1e-8)
+            ),
+            "rows": subset_rows,
+        },
+    }
+
+
+def _mstd(vals):
+    v = np.asarray(vals, dtype=float)
+    return {
+        "mean": float(np.nanmean(v)),
+        "sd": float(np.nanstd(v, ddof=1) if np.sum(np.isfinite(v)) > 1 else 0.0),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Suite
 # ---------------------------------------------------------------------------
 
@@ -480,7 +836,7 @@ def conf_sweep(conf_grid=None, seeds=None, n=2000):
     return out
 
 
-def plot_suite(suite, sweep, path):
+def plot_suite(suite, sweep, path, sens=None):
     import matplotlib.pyplot as plt
 
     methods = suite["methods"]
@@ -494,7 +850,9 @@ def plot_suite(suite, sweep, path):
         "iv_invalid": "#A33B24",
         "iv_weak": "#7A4E2D",
     }
-    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.2))
+    n_panels = 4 if sens is not None else 2
+    fig, axes = plt.subplots(1, n_panels, figsize=(3.4 * n_panels, 4.2), squeeze=False)
+    axes = axes[0]
 
     ax = axes[0]
     means = [suite["table"][m]["abs_err"]["mean"] for m in methods]
@@ -509,7 +867,7 @@ def plot_suite(suite, sweep, path):
     ax.set_yticks(ypos)
     ax.set_yticklabels(methods, fontsize=8)
     ax.set_xlabel("|ATÊ − τ| ↓")
-    ax.set_title("Synthetic IV: absolute error", loc="left", fontsize=10, fontweight="bold")
+    ax.set_title("IV absolute error", loc="left", fontsize=10, fontweight="bold")
     ax.grid(True, axis="x", alpha=0.35)
 
     ax = axes[1]
@@ -524,9 +882,49 @@ def plot_suite(suite, sweep, path):
     ax.legend(fontsize=7.5, frameon=False)
     ax.grid(True, alpha=0.35)
 
+    if sens is not None:
+        ax = axes[2]
+        curve = sens["sensitivity"]["rosenbaum_curve_mean"]
+        ax.plot(
+            [c["gamma"] for c in curve],
+            [c["p_upper_mean"] for c in curve],
+            "o-", color="#5B3A8C", lw=1.6,
+        )
+        ax.axhline(0.05, color="#A33B24", ls="--", lw=0.9, label="α=0.05")
+        gstar = sens["sensitivity"]["gamma_star"]["mean"]
+        ax.axvline(gstar, color="#C45C26", ls=":", lw=1.2, label="Γ*≈%.1f" % gstar)
+        ax.set_xlabel("Rosenbaum Γ")
+        ax.set_ylabel("p-value upper bound")
+        ax.set_title("Rosenbaum sensitivity", loc="left", fontsize=10, fontweight="bold")
+        ax.legend(fontsize=7.5, frameon=False)
+        ax.grid(True, alpha=0.35)
+
+        ax = axes[3]
+        names = ["Q1_low", "Q2", "Q3", "Q4_high"]
+        fs = [sens["subset"]["by_segment"][n]["stage1_f"]["mean"] for n in names]
+        fe = [sens["subset"]["by_segment"][n]["stage1_f"]["sd"] for n in names]
+        xpos = np.arange(len(names))
+        ax.bar(xpos, fs, yerr=fe, color="#1F6F8B", width=0.66, capsize=3, ecolor="#555")
+        ax.axhline(F_WEAK, color="#A33B24", ls="--", lw=0.9, label="F=10")
+        ax.set_xticks(xpos)
+        ax.set_xticklabels(names, fontsize=8)
+        ax.set_ylabel("first-stage F ↑")
+        ax.set_title(
+            "Subset IV strength (het≈%.1f×)" % sens["subset"]["f_heterogeneity_ratio"],
+            loc="left", fontsize=10, fontweight="bold",
+        )
+        ax.legend(fontsize=7.5, frameon=False)
+        ax.grid(True, axis="y", alpha=0.35)
+
     tau = suite["true_ate"]
+    ev = ""
+    if sens is not None:
+        ev = "  |  E-value≈%.2f  Γ*≈%.1f" % (
+            sens["sensitivity"]["evalue_point"]["mean"],
+            sens["sensitivity"]["gamma_star"]["mean"],
+        )
     fig.suptitle(
-        "Instrumental-variable selection on synthetic uplift (τ=%.2f)" % tau,
+        "Instrumental-variable selection + sensitivity (τ=%.2f)%s" % (tau, ev),
         fontsize=12, fontweight="bold", y=0.98,
     )
     fig.tight_layout(rect=[0, 0.02, 1, 0.94])
@@ -537,7 +935,7 @@ def plot_suite(suite, sweep, path):
     return path
 
 
-def write_readme(suite, sweep, path):
+def write_readme(suite, sweep, path, sens=None):
     lines = [
         "# Instrumental Variable selection — synthetic argument",
         "",
@@ -545,7 +943,7 @@ def write_readme(suite, sweep, path):
         "2SLS with **valid** instruments recovers `τ`; invalid / weak Z do not.",
         "",
         "Selection rule (`iv_auto`): first-stage partial **F ≥ 10** and",
-        "exclusion residual score ≤ 0.12.",
+        "exclusion excess screen.",
         "",
         "## Absolute error `|ATÊ − τ|` (lower better)",
         "",
@@ -594,6 +992,61 @@ def write_readme(suite, sweep, path):
                 r["iv_invalid_abs_err"],
                 r["selection_f1"],
             )
+        )
+    if sens is not None:
+        S = sens["sensitivity"]
+        lines.extend(
+            [
+                "",
+                "## Sensitivity on the naive association",
+                "",
+                "| metric | mean (sd) |",
+                "| --- | --- |",
+                "| E-value (point) | %.3f (%.3f) |"
+                % (S["evalue_point"]["mean"], S["evalue_point"]["sd"]),
+                "| E-value (CI) | %.3f (%.3f) |"
+                % (S["evalue_ci"]["mean"], S["evalue_ci"]["sd"]),
+                "| approx RR | %.3f (%.3f) |"
+                % (S["approx_rr"]["mean"], S["approx_rr"]["sd"]),
+                "| Rosenbaum Γ* (p-bound > 0.05) | %.2f (%.2f) |"
+                % (S["gamma_star"]["mean"], S["gamma_star"]["sd"]),
+                "| naive ATÊ | %.3f (%.3f) |"
+                % (S["naive_ate"]["mean"], S["naive_ate"]["sd"]),
+                "| iv ATÊ | %.3f (%.3f) |"
+                % (S["iv_ate"]["mean"], S["iv_ate"]["sd"]),
+                "",
+                "E-value: min strength of an unmeasured confounder (on the RR scale)",
+                "needed to explain away the naive effect. Rosenbaum Γ*: odds-ratio",
+                "bias in treatment assignment at which the matched-pair sign test",
+                "upper-bounds to insignificance.",
+                "",
+                "## Subset localization — IV strength heterogeneity",
+                "",
+                "Segments = quartiles of `X0` (designed stronger first stage in Q4).",
+                "",
+                "| segment | n | stage-1 F | R² | ATÊ | abs_err | scale |",
+                "| --- | --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for name in ("Q1_low", "Q2", "Q3", "Q4_high"):
+            t = sens["subset"]["by_segment"][name]
+            lines.append(
+                "| %s | %.0f | %.1f (%.1f) | %.3f | %.3f | %.3f | %.2f |"
+                % (
+                    name,
+                    t["n_mean"],
+                    t["stage1_f"]["mean"],
+                    t["stage1_f"]["sd"],
+                    t["stage1_r2"]["mean"],
+                    t["ate_hat"]["mean"],
+                    t["abs_err"]["mean"],
+                    t["mean_seg_scale"]["mean"],
+                )
+            )
+        lines.append("")
+        lines.append(
+            "**F heterogeneity ratio** (max/min across segments): **%.2f×**."
+            % sens["subset"]["f_heterogeneity_ratio"]
         )
     lines.extend(
         [

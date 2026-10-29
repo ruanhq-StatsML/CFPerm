@@ -42,6 +42,17 @@ Selection quality (`iv_auto` vs true valid set): **P=0.94, R=0.96, F1=0.94**.
 
 Confounding sweep: as `α` goes 0→2, naive error 0.06→0.63; `iv_auto` stays ~0.02–0.08.
 
+## Sensitivity + subset localization (8 seeds, n=2000, α=1)
+
+| tool | question | synthetic result |
+| --- | --- | --- |
+| **E-value** | how strong must U be (RR scale) to explain away the *naive* association? | point ≈ **5.1**, CI ≈ **5.0** |
+| **Rosenbaum Γ\*** | odds-ratio bias at which matched high-vs-low contrast loses significance | Γ\* ≈ **10** (fairly robust) |
+| **Subset localization** | does first-stage F vary across segments (X0 quartiles)? | Q1 F≈375 → Q4 F≈940 (**2.5×**) |
+
+Designed heterogeneity: valid first stage scaled by `1 + het·σ(X0)` → Q4 stronger than Q1.
+ATÊ stays near τ=1.5 in every quartile; **strength** is what moves, not the point estimate.
+
 ```bash
 python3 scripts/run_iv_selection_synth.py
 ```
