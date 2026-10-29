@@ -30,8 +30,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import Ridge
+from sklearn.model_selection import StratifiedKFold
 
 SEED = 2026
 ETA0 = 0.15
@@ -41,6 +42,8 @@ ETA_MAX_MULT = 2.5
 TAU_C = 0.15
 TAU_D = 0.08
 TOP_K = 8
+IV_QUANTILE = 0.70
+PO_CLIP = 0.01
 
 BOARDS = (
     "bandit_cov",
@@ -56,9 +59,11 @@ METHODS = (
     "lr_boost_only",    # module 3
     "reward_only",      # module 2
     "meta_only",        # module 1
-    "fsds_full",        # all three
+    "fsds_full",        # all three (ridge δ)
+    "fsds_meta_iv",     # all three + meta-learner uplift monitor + IV select
     "naive_boost",      # WRONG sign: raise η on covariate (ablation)
 )
+META_IV_METHODS = frozenset({"fsds_meta_iv"})
 
 
 # ---------------------------------------------------------------------------
@@ -377,7 +382,7 @@ def group_concept(X0, y0, X1, y1, groups, A0=None, A1=None):
 
 
 def topk_drift_features(X0, X1, y0, y1, groups, k=TOP_K):
-    """Coordinate-level drift scores for meta task descriptor."""
+    """Coordinate-level drift scores for meta task descriptor (ridge δ)."""
     c, _ = group_covariate(X0, X1, groups)
     d = group_concept(X0, y0, X1, y1, groups)
     # expand to coords: score = group typed intensity
@@ -395,11 +400,199 @@ def topk_drift_features(X0, X1, y0, y1, groups, k=TOP_K):
         "types": types[idx].tolist(),  # 0 cov, 1 concept
         "c": c,
         "delta": d,
+        "detector": "ridge",
+        "iv_indices": idx.tolist(),
+        "n_iv": int(len(idx)),
+        "uplift_r_po": float("nan"),
+        "uplift_ate": float("nan"),
+        "iv_group_share": {g: 1.0 / max(len(groups), 1) for g in groups},
     }
 
 
+# ---------------------------------------------------------------------------
+# Meta-learner uplift monitor + Important-Variable (IV) selection
+# Batch W = hop membership; τ̂ / PO-risk is the uplift distance (not ATE under H1)
+# ---------------------------------------------------------------------------
+
+
+def _rf_reg(p, n, seed, n_estimators=40):
+    depth = 3 if n < 80 else 4
+    leaf = max(2, n // 40)
+    return RandomForestRegressor(
+        n_estimators=n_estimators,
+        max_depth=depth,
+        min_samples_leaf=leaf,
+        random_state=int(seed),
+        n_jobs=1,
+    )
+
+
+def _rf_clf(p, n, seed, n_estimators=40):
+    depth = 3 if n < 80 else 4
+    leaf = max(2, n // 40)
+    return RandomForestClassifier(
+        n_estimators=n_estimators,
+        max_depth=depth,
+        min_samples_leaf=leaf,
+        random_state=int(seed),
+        n_jobs=1,
+    )
+
+
+def uplift_po_monitor(X0, X1, y0, y1, seed=SEED, n_estimators=40, n_splits=3):
+    """Meta-learner uplift monitor on a hop: W=batch, Y=reward.
+
+    Returns DR pseudo-outcome po, τ̂ RF importances (OOD VIMP), and
+    scalar monitors R_PO = E[τ̂²], ATE-proxy = E[po].
+    Same polarity as CFPerm / MSR-VTT PO-risk: distance estimator under shift.
+    """
+    X0 = np.asarray(X0, dtype=float)
+    X1 = np.asarray(X1, dtype=float)
+    y0 = np.asarray(y0, dtype=float).reshape(-1)
+    y1 = np.asarray(y1, dtype=float).reshape(-1)
+    X = np.vstack([X0, X1])
+    y = np.concatenate([y0, y1])
+    W = np.concatenate([np.zeros(len(X0), dtype=int), np.ones(len(X1), dtype=int)])
+    n, p = X.shape
+    if n < 12 or len(np.unique(W)) < 2:
+        return {
+            "po": np.zeros(n),
+            "vimp": np.ones(p) / max(p, 1),
+            "r_po": 0.0,
+            "ate": 0.0,
+        }
+    m_hat = np.zeros(n)
+    e_hat = np.zeros(n)
+    splits = max(2, min(int(n_splits), int(np.min(np.bincount(W)))))
+    cv = StratifiedKFold(n_splits=splits, shuffle=True, random_state=int(seed))
+    for fold, (tr, te) in enumerate(cv.split(X, W)):
+        m = _rf_reg(p, len(tr), seed + fold, n_estimators=n_estimators)
+        e = _rf_clf(p, len(tr), seed + 40 + fold, n_estimators=n_estimators)
+        m.fit(X[tr], y[tr])
+        e.fit(X[tr], W[tr])
+        m_hat[te] = m.predict(X[te])
+        e_hat[te] = e.predict_proba(X[te])[:, 1]
+    e_hat = np.clip(e_hat, PO_CLIP, 1.0 - PO_CLIP)
+    po = (y - m_hat) * (W - e_hat)
+    tau = _rf_reg(p, n, seed + 7, n_estimators=n_estimators)
+    tau.fit(X, po)
+    hat = tau.predict(X)
+    vimp = np.maximum(tau.feature_importances_.astype(float), 0.0)
+    if float(vimp.sum()) <= 0:
+        vimp = np.ones(p) / max(p, 1)
+    return {
+        "po": po,
+        "vimp": vimp,
+        "r_po": float(np.mean(hat ** 2)),
+        "ate": float(np.mean(po)),
+        "tau_hat": hat,
+    }
+
+
+def iv_select(vimp, k=TOP_K, q=IV_QUANTILE):
+    """Important-Variable selection from meta-learner OOD VIMP.
+
+    Keep coords at/above the ``q``-quantile of VIMP, capped at top-``k``
+    (CFPerm-style: only the shift-driving features pass through).
+    """
+    v = np.asarray(vimp, dtype=float)
+    v = np.maximum(v, 0.0)
+    p = len(v)
+    if p == 0:
+        return {
+            "indices": [],
+            "mask": np.zeros(0, dtype=bool),
+            "threshold": 0.0,
+            "scores": np.zeros(0),
+        }
+    thr = float(np.quantile(v, float(q)))
+    cand = np.where(v >= thr)[0]
+    if cand.size == 0:
+        cand = np.argsort(-v)[: max(1, min(int(k), p))]
+    order = cand[np.argsort(-v[cand])]
+    idx = order[: max(1, min(int(k), len(order)))]
+    mask = np.zeros(p, dtype=bool)
+    mask[idx] = True
+    return {
+        "indices": idx.astype(int).tolist(),
+        "mask": mask,
+        "threshold": thr,
+        "scores": v[idx],
+    }
+
+
+def group_delta_from_vimp(vimp, groups, iv_mask=None):
+    """Concept intensity per group = selected-IV VIMP mass (normalized)."""
+    v = np.asarray(vimp, dtype=float)
+    if iv_mask is not None:
+        v = v * np.asarray(iv_mask, dtype=float)
+    mass = {}
+    for name, sl in groups.items():
+        mass[name] = float(np.maximum(v[sl], 0.0).sum())
+    tot = sum(mass.values()) + 1e-12
+    return {k: mass[k] / tot for k in mass}
+
+
+def tss_region_lr_iv(c, delta, groups, iv_mask, eta0=ETA0, beta=BETA, lam=LAMBDA):
+    """TSS η, but groups with no selected IV stay at baseline (hold)."""
+    base = tss_region_lr(c, delta, eta0=eta0, beta=beta, lam=lam)
+    iv_mask = np.asarray(iv_mask, dtype=bool)
+    out = {}
+    for g, sl in groups.items():
+        if iv_mask[sl].any():
+            out[g] = base[g]
+        else:
+            out[g] = float(eta0)  # no important variable in group → hold
+    return out
+
+
+def topk_drift_features_meta_iv(X0, X1, y0, y1, groups, k=TOP_K, seed=SEED):
+    """Typed drift via meta-learner uplift monitor + IV selection.
+
+    c  ← RF-domain / Cohen (unchanged cov channel)
+    δ  ← PO-risk VIMP mass on selected IVs (concept / uplift channel)
+    descriptor / LR focus on selected important variables only.
+    """
+    c, _ = group_covariate(X0, X1, groups)
+    mon = uplift_po_monitor(X0, X1, y0, y1, seed=seed)
+    iv = iv_select(mon["vimp"], k=k)
+    d = group_delta_from_vimp(mon["vimp"], groups, iv_mask=iv["mask"])
+    p = X0.shape[1]
+    scores = np.zeros(p)
+    types = np.zeros(p, dtype=int)
+    for name, sl in groups.items():
+        # selected coords keep metalearner score; others zeroed for descriptor
+        local = np.asarray(mon["vimp"][sl], dtype=float) * iv["mask"][sl].astype(float)
+        scores[sl] = local
+        types[sl] = 1 if d[name] > c[name] else 0
+    idx = np.asarray(iv["indices"], dtype=int)
+    if idx.size == 0:
+        idx = np.argsort(-scores)[: int(k)]
+    return {
+        "indices": idx.tolist(),
+        "scores": scores[idx].tolist(),
+        "types": types[idx].tolist(),
+        "c": c,
+        "delta": d,
+        "detector": "meta_iv",
+        "iv_indices": idx.tolist(),
+        "n_iv": int(len(idx)),
+        "uplift_r_po": float(mon["r_po"]),
+        "uplift_ate": float(mon["ate"]),
+        "iv_group_share": dict(d),
+        "iv_mask": iv["mask"],
+        "iv_threshold": float(iv["threshold"]),
+    }
+
+
+def detect_drift(X0, X1, y0, y1, groups, detector="ridge", k=TOP_K, seed=SEED):
+    if detector in ("meta_iv", "metalearner", "po"):
+        return topk_drift_features_meta_iv(X0, X1, y0, y1, groups, k=k, seed=seed)
+    return topk_drift_features(X0, X1, y0, y1, groups, k=k)
+
+
 def task_descriptor(drift, dim=16):
-    """Encode top-K drift into a fixed vector for meta conditioning."""
+    """Encode top-K / selected-IV drift into a fixed vector for meta conditioning."""
     v = np.zeros(dim, dtype=float)
     scores = np.asarray(drift["scores"], dtype=float)
     types = np.asarray(drift["types"], dtype=float)
@@ -414,6 +607,12 @@ def task_descriptor(drift, dim=16):
         v[-3] = float(np.max(cvals))
         v[-2] = float(np.mean(dvals))
         v[-1] = float(np.max(dvals))
+    # pack uplift monitors when present
+    if dim >= 6 and "uplift_r_po" in drift:
+        rpo = drift.get("uplift_r_po")
+        if rpo == rpo:  # not NaN
+            v[-5] = float(np.tanh(float(rpo)))
+            v[-6] = float(np.tanh(abs(float(drift.get("uplift_ate", 0.0)))))
     return v
 
 
@@ -624,7 +823,11 @@ def offline_value(policy, X, A, R):
 
 
 def run_closed_loop(stream, method="fsds_full", seed=SEED):
-    """Hop over batches: detect → refresh reward → LR → meta-adapt → score."""
+    """Hop over batches: detect → refresh reward → LR → meta-adapt → score.
+
+    ``fsds_meta_iv`` swaps the concept channel for the meta-learner uplift
+    monitor (PO-risk) and gates region LR / descriptor via IV selection.
+    """
     X = stream.X
     A = stream.A
     R = stream.R
@@ -635,9 +838,10 @@ def run_closed_loop(stream, method="fsds_full", seed=SEED):
     n_arms = int(stream.meta.get("n_arms", int(A.max()) + 1))
     p = X.shape[1]
     Kc = Rc.shape[1]
+    use_meta_iv = method in META_IV_METHODS
+    use_full = method in ("fsds_full", "fsds_meta_iv")
     policy = LinearPolicy(p, n_arms, seed=seed)
     w_reward = np.ones(Kc) / Kc
-    rng = np.random.default_rng(int(seed))
     history = []
     # warm start on batch 0
     i0 = batch == 0
@@ -653,43 +857,49 @@ def run_closed_loop(stream, method="fsds_full", seed=SEED):
         A0, A1 = A[ip], A[ic]
         Rc0, Rc1 = Rc[ip], Rc[ic]
 
-        drift = topk_drift_features(X0, X1, R0, R1, groups)
+        detector = "meta_iv" if use_meta_iv else "ridge"
+        drift = detect_drift(
+            X0, X1, R0, R1, groups, detector=detector, seed=seed + 17 * t
+        )
         c, delta = drift["c"], drift["delta"]
         desc = task_descriptor(drift)
 
         # --- module 2 ---
-        if method in ("reward_only", "fsds_full"):
+        if method in ("reward_only", "fsds_full", "fsds_meta_iv"):
             w_reward = refresh_reward_weights(
                 Rc0, Rc1, R0, R1, w_reward, seed=seed + t
             )
         R1_hat = Rc1 @ w_reward
-        # reward-mix fidelity (lower better)
         mix_mse = float(np.mean((R1_hat - R1) ** 2))
 
         # --- module 3 ---
         if method == "naive_boost":
             lr_vec = naive_boost_lr(c, delta)
+        elif use_meta_iv:
+            iv_mask = drift.get("iv_mask")
+            if iv_mask is None:
+                iv_mask = np.zeros(p, dtype=bool)
+                iv_mask[np.asarray(drift["iv_indices"], dtype=int)] = True
+            lr_vec = tss_region_lr_iv(c, delta, groups, iv_mask)
         elif method in ("lr_boost_only", "fsds_full", "meta_only"):
             lr_vec = tss_region_lr(c, delta)
         else:
             lr_vec = {g: ETA0 for g in groups}
 
         # --- module 1 ---
-        # reward_only / fsds_full train on refreshed mix; others on observed R
-        train_R = R1_hat if method in ("reward_only", "fsds_full") else R1
-        if method in ("meta_only", "fsds_full"):
+        train_R = R1_hat if method in ("reward_only", "fsds_full", "fsds_meta_iv") else R1
+        if method in ("meta_only", "fsds_full", "fsds_meta_iv"):
             policy = meta_adapt(policy, X1, A1, train_R, desc, lr_vec, groups, n_inner=5)
         elif method in ("lr_boost_only", "reward_only", "naive_boost"):
             adv = train_R - train_R.mean()
             for _ in range(5):
                 policy = policy_grad_step(policy, X1, A1, adv, lr_vec, groups)
-        else:  # static: tiny update with base lr only
+        else:
             adv = R1 - R1.mean()
             lr_base = {g: ETA0 for g in groups}
             policy = policy_grad_step(policy, X1, A1, adv, lr_base, groups)
 
         v_off = offline_value(policy, X1, A1, R1)
-        # oracle arm scores: batch mean reward per arm as cheap online proxy
         arm_scores = np.zeros((len(A1), n_arms))
         for a in range(n_arms):
             mask = A1 == a
@@ -711,10 +921,24 @@ def run_closed_loop(stream, method="fsds_full", seed=SEED):
                 "w_reward": w_reward.tolist(),
                 "mean_c": float(np.mean(list(c.values()))),
                 "mean_delta": float(np.mean(list(delta.values()))),
+                "detector": drift.get("detector", "ridge"),
+                "n_iv": int(drift.get("n_iv", 0)),
+                "uplift_r_po": float(drift.get("uplift_r_po", float("nan"))),
+                "uplift_ate": float(drift.get("uplift_ate", float("nan"))),
+                "iv_indices": list(drift.get("iv_indices", [])),
             }
         )
     offline = np.array([h["offline_value"] for h in history], dtype=float)
     mix_mses = np.array([h["mix_mse"] for h in history], dtype=float)
+    n_ivs = np.array([h["n_iv"] for h in history], dtype=float)
+    r_pos = np.array([h["uplift_r_po"] for h in history], dtype=float)
+
+    def _nanmean(a):
+        a = np.asarray(a, dtype=float)
+        if a.size == 0 or not np.any(np.isfinite(a)):
+            return float("nan")
+        return float(np.nanmean(a))
+
     return {
         "method": method,
         "board": stream.meta.get("board"),
@@ -723,9 +947,13 @@ def run_closed_loop(stream, method="fsds_full", seed=SEED):
         "last_value": float(offline[-1]) if offline.size else float("nan"),
         "mean_w_err": float(np.mean([h["reward_w_err"] for h in history])) if history else float("nan"),
         "mean_mix_mse": float(np.mean(mix_mses)) if mix_mses.size else float("nan"),
+        "mean_n_iv": _nanmean(n_ivs) if use_meta_iv else float("nan"),
+        "mean_uplift_r_po": _nanmean(r_pos) if use_meta_iv else float("nan"),
         "path": offline.tolist(),
         "history": history,
         "meta": dict(stream.meta),
+        "use_meta_iv": bool(use_meta_iv),
+        "use_full": bool(use_full),
     }
 
 
@@ -750,6 +978,8 @@ def run_suite(boards=None, methods=None, seeds=None, n_per=200, n_batches=8):
                         "cum_value": rec["cum_value"],
                         "mean_w_err": rec["mean_w_err"],
                         "mean_mix_mse": rec["mean_mix_mse"],
+                        "mean_n_iv": rec.get("mean_n_iv", float("nan")),
+                        "mean_uplift_r_po": rec.get("mean_uplift_r_po", float("nan")),
                     }
                 )
     table = {}
@@ -768,6 +998,18 @@ def run_suite(boards=None, methods=None, seeds=None, n_per=200, n_batches=8):
                 [r["mean_mix_mse"] for r in rows if r["board"] == board and r["method"] == method],
                 dtype=float,
             )
+            niv = np.array(
+                [r["mean_n_iv"] for r in rows if r["board"] == board and r["method"] == method],
+                dtype=float,
+            )
+            rpo = np.array(
+                [
+                    r["mean_uplift_r_po"]
+                    for r in rows
+                    if r["board"] == board and r["method"] == method
+                ],
+                dtype=float,
+            )
             table[board][method] = {
                 "online_value": {
                     "mean": float(np.nanmean(v)),
@@ -780,6 +1022,14 @@ def run_suite(boards=None, methods=None, seeds=None, n_per=200, n_batches=8):
                 "mean_mix_mse": {
                     "mean": float(np.nanmean(mm)),
                     "sd": float(np.nanstd(mm, ddof=1) if len(mm) > 1 else 0.0),
+                },
+                "mean_n_iv": {
+                    "mean": float(np.nanmean(niv)) if np.any(np.isfinite(niv)) else float("nan"),
+                    "sd": float(np.nanstd(niv, ddof=1) if np.sum(np.isfinite(niv)) > 1 else 0.0),
+                },
+                "mean_uplift_r_po": {
+                    "mean": float(np.nanmean(rpo)) if np.any(np.isfinite(rpo)) else float("nan"),
+                    "sd": float(np.nanstd(rpo, ddof=1) if np.sum(np.isfinite(rpo)) > 1 else 0.0),
                 },
                 "n": int(len(v)),
             }
@@ -804,6 +1054,7 @@ def plot_suite(suite, path):
         "reward_only": "#2F6B4F",
         "meta_only": "#5B3A8C",
         "fsds_full": "#C45C26",
+        "fsds_meta_iv": "#1F6F8B",
         "naive_boost": "#A33B24",
     }
     fig, axes = plt.subplots(1, len(boards), figsize=(3.2 * len(boards), 4.2), squeeze=False)
@@ -848,6 +1099,7 @@ def write_readme(suite, path):
         "| meta_adapt | few-shot policy inner-loop conditioned on drift descriptor |",
         "| reward_refresh | mix weights over reward components from typed drift |",
         "| region_lr | TSS η per feature group |",
+        "| meta_iv | PO-risk uplift monitor + Important-Variable selection gates δ / η |",
         "",
         "## Boards (proxies — full sims not installed here)",
         "",
@@ -867,18 +1119,20 @@ def write_readme(suite, path):
     for board in suite["boards"]:
         lines.append("### `%s`" % board)
         lines.append("")
-        lines.append("| method | value ↑ | w_err ↓ | mix_mse ↓ |")
-        lines.append("| --- | --- | --- | --- |")
+        lines.append("| method | value ↑ | w_err ↓ | mix_mse ↓ | n_iv | R_PO |")
+        lines.append("| --- | --- | --- | --- | --- | --- |")
         for m in suite["methods"]:
             t = suite["table"][board][m]
             lines.append(
-                "| %s | %.4f (%.4f) | %.4f | %.4f |"
+                "| %s | %.4f (%.4f) | %.4f | %.4f | %.1f | %.4f |"
                 % (
                     m,
                     t["online_value"]["mean"],
                     t["online_value"]["sd"],
                     t["mean_w_err"]["mean"],
                     t["mean_mix_mse"]["mean"],
+                    t.get("mean_n_iv", {}).get("mean", float("nan")),
+                    t.get("mean_uplift_r_po", {}).get("mean", float("nan")),
                 )
             )
         lines.append("")
@@ -889,6 +1143,7 @@ def write_readme(suite, path):
             "```bash",
             "python3 scripts/run_fsds_rl_closed_loop.py",
             "python3 scripts/run_fsds_rl_closed_loop.py --quick",
+            "python3 scripts/run_fsds_rl_closed_loop.py --compare-meta-iv",
             "```",
             "",
             "Code: `Python/src/fsds_rl_closed_loop.py`",
@@ -898,6 +1153,8 @@ def write_readme(suite, path):
             "- Install `gymnasium` + Meta-World / Procgen / D4RL / CausalWorld to replace proxies.",
             "- Existing FSDS boards (MSR-VTT modality π, Amazon hop IW) already implement",
             "  module-3 style control; this package adds reward refresh + meta inner-loop.",
+            "- `fsds_meta_iv` reuses the repo meta-learner (PO-risk uplift) + IV selection",
+            "  to focus TSS / descriptor on shift-driving features.",
             "- Do **not** use `naive_boost` in production — it raises η on covariate shift.",
             "",
         ]

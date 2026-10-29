@@ -3,6 +3,7 @@
 
   python3 scripts/run_fsds_rl_closed_loop.py
   python3 scripts/run_fsds_rl_closed_loop.py --quick
+  python3 scripts/run_fsds_rl_closed_loop.py --compare-meta-iv
   python3 scripts/run_fsds_rl_closed_loop.py --boards bandit_mixed,causal_proxy,procgen_proxy
 """
 from __future__ import annotations
@@ -29,29 +30,55 @@ DOCS = ROOT / "docs" / "method"
 
 
 def _opportunity_lifts(suite):
-    """Δ online_value of fsds_full vs static / naive_boost per board."""
+    """Δ online_value of fsds_full / fsds_meta_iv vs static / naive_boost."""
     lifts = {}
     for board in suite["boards"]:
         tab = suite["table"][board]
         base = tab["static"]["online_value"]["mean"]
         naive = tab["naive_boost"]["online_value"]["mean"]
         full = tab["fsds_full"]["online_value"]["mean"]
-        lifts[board] = {
+        meta = tab.get("fsds_meta_iv", {}).get("online_value", {}).get("mean")
+        candidates = [
+            (m, tab[m]["online_value"]["mean"])
+            for m in (
+                "lr_boost_only",
+                "reward_only",
+                "meta_only",
+                "fsds_full",
+                "fsds_meta_iv",
+            )
+            if m in tab
+        ]
+        cell = {
             "vs_static": float(full - base),
             "vs_naive_boost": float(full - naive),
             "fsds_full": float(full),
             "static": float(base),
             "naive_boost": float(naive),
-            "best_module": max(
-                (
-                    (m, tab[m]["online_value"]["mean"])
-                    for m in ("lr_boost_only", "reward_only", "meta_only", "fsds_full")
-                ),
-                key=lambda kv: kv[1],
-            )[0],
+            "best_module": max(candidates, key=lambda kv: kv[1])[0],
         }
+        if meta is not None:
+            cell["fsds_meta_iv"] = float(meta)
+            cell["meta_iv_vs_static"] = float(meta - base)
+            cell["meta_iv_vs_full"] = float(meta - full)
+            cell["meta_iv_vs_naive"] = float(meta - naive)
+            if "fsds_meta_iv" in tab:
+                cell["meta_iv_mix_mse"] = float(tab["fsds_meta_iv"]["mean_mix_mse"]["mean"])
+                cell["full_mix_mse"] = float(tab["fsds_full"]["mean_mix_mse"]["mean"])
+                cell["meta_iv_n_iv"] = float(tab["fsds_meta_iv"]["mean_n_iv"]["mean"])
+                cell["meta_iv_r_po"] = float(tab["fsds_meta_iv"]["mean_uplift_r_po"]["mean"])
+        lifts[board] = cell
     ranked = sorted(lifts.items(), key=lambda kv: kv[1]["vs_static"], reverse=True)
-    return {"per_board": lifts, "ranked_vs_static": [b for b, _ in ranked]}
+    ranked_meta = sorted(
+        ((b, c) for b, c in lifts.items() if "meta_iv_vs_full" in c),
+        key=lambda kv: kv[1]["meta_iv_vs_full"],
+        reverse=True,
+    )
+    return {
+        "per_board": lifts,
+        "ranked_vs_static": [b for b, _ in ranked],
+        "ranked_meta_iv_vs_full": [b for b, _ in ranked_meta],
+    }
 
 
 def main():
@@ -62,13 +89,23 @@ def main():
     ap.add_argument("--n-batches", type=int, default=8)
     ap.add_argument("--boards", type=str, default=None, help="comma-separated subset")
     ap.add_argument("--methods", type=str, default=None, help="comma-separated subset")
+    ap.add_argument(
+        "--compare-meta-iv",
+        action="store_true",
+        help="focus ablation: static / fsds_full / fsds_meta_iv / naive_boost",
+    )
     args = ap.parse_args()
 
     n_per = 80 if args.quick else int(args.n_per)
     n_batches = 6 if args.quick else int(args.n_batches)
     n_seeds = 2 if args.quick else int(args.seeds)
     boards = [b.strip() for b in args.boards.split(",")] if args.boards else list(BOARDS)
-    methods = [m.strip() for m in args.methods.split(",")] if args.methods else list(METHODS)
+    if args.methods:
+        methods = [m.strip() for m in args.methods.split(",")]
+    elif args.compare_meta_iv:
+        methods = ["static", "fsds_full", "fsds_meta_iv", "naive_boost"]
+    else:
+        methods = list(METHODS)
     seeds = list(range(2026, 2026 + n_seeds))
 
     print(
@@ -94,13 +131,15 @@ def main():
         for method in methods:
             cell = suite["table"][board][method]
             print(
-                "  %s  value=%.4f (%.4f)  w_err=%.4f  mix_mse=%.4f"
+                "  %s  value=%.4f (%.4f)  w_err=%.4f  mix_mse=%.4f  n_iv=%.1f  R_PO=%.4f"
                 % (
                     method,
                     cell["online_value"]["mean"],
                     cell["online_value"]["sd"],
                     cell["mean_w_err"]["mean"],
                     cell["mean_mix_mse"]["mean"],
+                    cell.get("mean_n_iv", {}).get("mean", float("nan")),
+                    cell.get("mean_uplift_r_po", {}).get("mean", float("nan")),
                 ),
                 flush=True,
             )
@@ -110,7 +149,21 @@ def main():
             % (L["vs_static"], L["vs_naive_boost"], L["best_module"]),
             flush=True,
         )
+        if "meta_iv_vs_full" in L:
+            print(
+                "  meta_iv vs full=%+.4f  vs static=%+.4f  n_iv=%.1f  R_PO=%.4f  mixΔ=%+.4f"
+                % (
+                    L["meta_iv_vs_full"],
+                    L["meta_iv_vs_static"],
+                    L.get("meta_iv_n_iv", float("nan")),
+                    L.get("meta_iv_r_po", float("nan")),
+                    L.get("meta_iv_mix_mse", float("nan")) - L.get("full_mix_mse", float("nan")),
+                ),
+                flush=True,
+            )
     print("ranked opportunity:", lifts["ranked_vs_static"], flush=True)
+    if lifts.get("ranked_meta_iv_vs_full"):
+        print("ranked meta_iv vs full:", lifts["ranked_meta_iv_vs_full"], flush=True)
     print("wrote", OUT, flush=True)
 
 

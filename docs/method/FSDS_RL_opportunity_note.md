@@ -56,6 +56,37 @@ typed η / descriptor 做内环 —— **先对目标，再加速**。
 一句话产品口径：**FSDS 增量 = 漂移分型选执行器；奖励保真保证合成回报对准；
 策略回报保证相对无控制基线有升；`causal_proxy` 证明目标翻转时必须 full 闭环。**
 
+### 5. Meta-learner uplift 监控 + IV selection（本轮增量）
+
+把仓库本体的 **meta-learner OOD VIMP**（batch-as-treatment PO-risk / uplift
+distance）接到闭环的 concept 通道，再做 **Important-Variable selection**：
+
+| 步骤 | 做什么 |
+| --- | --- |
+| uplift monitor | hop 上 `W=batch`，`Y=R` → crossfit PO → `R_PO=E[τ̂²]`、ATE-proxy=`E[po]` |
+| IV select | VIMP ≥ q-quantile，再截 top-K（CFPerm 风格：只放过漂移驱动特征） |
+| 执行器门控 | 无 IV 的 feature group → η 保持 `η0`；descriptor 只编码选中 IV |
+
+方法名：`fsds_meta_iv`（对照 `fsds_full` 的 ridge-δ）。看的额外效果：
+`meta_iv_vs_full`、选中 `n_iv`、`R_PO`、mix_mse 是否更稳。
+
+```bash
+python3 scripts/run_fsds_rl_closed_loop.py --compare-meta-iv
+```
+
+**4-seed 实测（`--compare-meta-iv`）**
+
+| board | meta_iv vs full | vs static | n_iv | 解读 |
+| --- | --- | --- | --- | --- |
+| `causal_proxy` | **+0.019** | +0.095 | 6 | 目标翻转：IV 聚焦有额外收益，best module |
+| `procgen_proxy` | +0.002 | +0.065 | 7 | 布局 OOD + gem 翻转：持平偏正 |
+| `meta_vision` | +0.002 | +0.140 | 7 | 跨域 hop：持平偏正 |
+| bandit_* / maze | −0.015～−0.037 | 仍大幅正 | 6–7 | ridge-δ 已够；IV 门控略保守 |
+
+mix_mse 与 `fsds_full` **完全相同**（奖励刷新共享）—— IV 只动 η / descriptor，
+不伤合成回报保真。额外产品效果：**在因果/目标翻转板上用 uplift+IV
+比纯 ridge 检测更准；在简单 bandit 上不要过度门控。**
+
 ## Opportunity matrix
 
 | dataset | FSDS channel | best-fit module | why it is a closed-loop opportunity |
