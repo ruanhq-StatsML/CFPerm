@@ -1,6 +1,6 @@
 # Mag×Var PermuCATE PO — MVP + lit + fused results
 
-**Objective:** separate benign vs malignant. **Verdict:** meets expectation.
+**Objective:** separate benign vs malignant. **Verdict:** meets expectation — ship.
 
 ## Literature (short)
 
@@ -17,14 +17,18 @@ $u=(\varphi-\hat\tau)^2$; severity $=J+Y$-flip. Benign keeps $Y$; malignant flip
 
 ## Results (fused)
 
-### Headline
+### Headline — did we separate?
 
-| Suite | Metric |
-| --- | --- |
-| Tabular Mag×Var 2×2 | acc **1.00** |
-| Text severity AUC | pooled **1.00** |
-| 客群/region | hit-rate **1.00** (4/4) |
-| Decision-tree family | **1.00** (branch 0.75) |
+Headline = product KPI check (not a score dump). Four suites, one question, four answers that must agree before close.
+
+| Suite | KPI | What it proves |
+| --- | --- | --- |
+| Tabular Mag×Var | 2×2 acc **1.00** | shape alone: $J$ quiet vs explode (−0.21 vs +114) |
+| Text severity | AUC **1.00** | $J$ soft; $Y$-flip carries integrity |
+| 客群/region | hit-rate **1.00** | same口径 local — not one global alarm |
+| Decision tree | family **1.00** | typed actuator path (branch 0.75 ok) |
+
+**Headline logic:** any suite fails → do not ship that path; all four hit → MVP triage ready to close.
 
 ### Tabular 2×2 + $J$
 
@@ -74,5 +78,19 @@ $u=(\varphi-\hat\tau)^2$; severity $=J+Y$-flip. Benign keeps $Y$; malignant flip
 | true quiet/benign | 6 | 0 | 0 |
 | true sparse | 0 | 3 | 0 |
 | true dense | 0 | 0 | 3 |
+
+## Close — sync the contract, then ship
+
+Close mirrors headline (not a second cheer).
+
+| Step | Locked | Status |
+| --- | --- | --- |
+| Objective | separate + typed medicine | §2 |
+| PO / How | $u$; Mag×Var + $Y$-flip; 客群-local | §3–4 |
+| Justify | cosmetic $X$ ≠ outcome break | §5 |
+| Headline | four suites separate on same $u$ | §6 |
+| **Ship** | freeze口径; sync PR; stop | **here** |
+
+**Close logic (=「同步 PR 并收尾」):** (1) headline green → (2) PO is here → (3) freeze口径 → (4) sync delivery note to PR and stop. No Peak-first rewrite.
 
 LaTeX: `docs/method/AS_DTA_magvar_po_product_delivery.tex`
