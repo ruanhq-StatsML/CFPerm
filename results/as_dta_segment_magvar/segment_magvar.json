@@ -1,0 +1,144 @@
+{
+  "scope": "\u5ba2\u7fa4/region Mag\u00d7Var on PermuCATE unit PO \u2014 triage scoped per segment (finance / medicine / topic), not one global alarm.",
+  "estimator": {
+    "name": "PermuCATE RF text",
+    "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+    "Y": "response",
+    "W": "REF/LIVE",
+    "used_permucate_rf": true
+  },
+  "segments": [
+    {
+      "segment": "general",
+      "region": "hc3_all",
+      "vertical": "AIGC integrity",
+      "board": "hc3_all",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 4.917159041117891e-05,
+        "d_s": 0.012861287207632188,
+        "J": 0.03863303321330774,
+        "mu_live": 0.2555233495064744,
+        "s_live": 0.07073824189186181,
+        "label_flip_frac": 0.0,
+        "severity": 0.03863303321330774
+      },
+      "malignant": {
+        "d_mu": 0.011354239570724567,
+        "d_s": -0.016418874506175626,
+        "J": 0.011354239570724567,
+        "mu_live": 0.18555681542153404,
+        "s_live": 0.02290483915715304,
+        "label_flip_frac": 0.32142857142857145,
+        "severity": 0.41313995385643887
+      },
+      "severity_gap": 0.3745069206431311,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "finance",
+      "region": "hc3_finance",
+      "vertical": "AIGC integrity",
+      "board": "hc3_finance",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 0.046387677233591884,
+        "d_s": 0.013443114853697882,
+        "J": 0.08671702179468553,
+        "mu_live": 0.2636567074706513,
+        "s_live": 0.0762001304828303,
+        "label_flip_frac": 0.0,
+        "severity": 0.08671702179468553
+      },
+      "malignant": {
+        "d_mu": 0.04597434359565969,
+        "d_s": -0.03577625210318925,
+        "J": 0.04597434359565969,
+        "mu_live": 0.25804987402318325,
+        "s_live": 0.03171422151710363,
+        "label_flip_frac": 0.32142857142857145,
+        "severity": 0.44776005788137396
+      },
+      "severity_gap": 0.3610430360866884,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "medicine",
+      "region": "hc3_medicine",
+      "vertical": "AIGC integrity",
+      "board": "hc3_medicine",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 0.011569918256082515,
+        "d_s": -0.00430882067600883,
+        "J": 0.011569918256082515,
+        "mu_live": 0.06944323147526829,
+        "s_live": 0.03718871336100175,
+        "label_flip_frac": 0.0,
+        "severity": 0.011569918256082515
+      },
+      "malignant": {
+        "d_mu": 0.07724599138296445,
+        "d_s": -5.175202071211471e-05,
+        "J": 0.07724599138296445,
+        "mu_live": 0.15783405341305676,
+        "s_live": 0.06965854819452913,
+        "label_flip_frac": 0.32142857142857145,
+        "severity": 0.47903170566867875
+      },
+      "severity_gap": 0.46746178741259625,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "sci",
+      "region": "news20_sci",
+      "vertical": "topic monitor",
+      "board": "news20_sci",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": -0.005638061675512729,
+        "d_s": -0.04857325373028196,
+        "J": -0.005638061675512729,
+        "mu_live": 0.2506990865448402,
+        "s_live": 0.06734944026059811,
+        "label_flip_frac": 0.0,
+        "severity": -0.005638061675512729
+      },
+      "malignant": {
+        "d_mu": -0.0024784741039707014,
+        "d_s": 0.019589871690465728,
+        "J": 0.05629114096742648,
+        "mu_live": 0.2217221461394237,
+        "s_live": 0.07500600973402156,
+        "label_flip_frac": 0.32142857142857145,
+        "severity": 0.4580768552531408
+      },
+      "severity_gap": 0.4637149169286535,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    }
+  ],
+  "n_segments": 4,
+  "n_separated": 4,
+  "segment_hit_rate": 1.0,
+  "justify": "Same Mag\u00d7Var geometry, applied per \u5ba2\u7fa4/region. Finance and medicine can need different actuators even under one global detector \u2014 segment-local J / severity is the product table."
+}

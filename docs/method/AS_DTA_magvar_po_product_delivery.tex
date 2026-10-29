@@ -1,4 +1,4 @@
-% AS-DTA Mag×Var on PermuCATE PO-risk — product delivery note
+% AS-DTA Mag×Var on PermuCATE PO — single delivery note
 % Compile: pdflatex AS_DTA_magvar_po_product_delivery.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
@@ -7,7 +7,7 @@
 \usepackage{lmodern}
 
 \title{Magnitude $\times$ Variance of \textbf{PermuCATE} PO-risk\\
-\large Product delivery tables (ready to hand over)}
+\large Delivery note --- PO, Mag$\times$Var, segment/region, effect}
 \author{AS-DTA}
 \date{}
 
@@ -15,19 +15,20 @@
 \maketitle
 
 \begin{abstract}
-\noindent\textbf{PO here} $=u_i=(\varphi_i-\hat\tau_i)^2$ from PermuCATE RF
-(not $1-\hat p$). Mag$\times$Var $(\mu,s)$ on that $u$ is the product triage
-proxy: cheap, causal, and matches ops---stable var + mean lift $\Rightarrow$
-conformal; $Y$-break / sparse mass $\Rightarrow$ VAI-freeze.
+\noindent\textbf{Verdict:} effects match product intent --- ready to hand over.
+PO is $u_i=(\varphi_i-\hat\tau_i)^2$ (PermuCATE RF), \emph{not} $1-\hat p$.
+Mag$\times$Var $(\mu,s)$ on that $u$ is a cheap, business-aligned triage proxy;
+the same geometry applies \textbf{per 客群/region} (finance / medicine / topic),
+not as one global alarm.
 \end{abstract}
 
-%----------------------------------------------------------------------
-\section{PO in one place (canonical)}
-%----------------------------------------------------------------------
+%======================================================================
+\section{PO is here (canonical --- one definition)}
+%======================================================================
 
 \begin{table}[h]
 \centering
-\caption{PermuCATE unit PO --- the only risk used for Mag$\times$Var delivery.}
+\caption{PermuCATE unit PO --- every Mag$\times$Var table below uses this $u$.}
 \label{tab:po}
 \small
 \begin{tabular}{@{}>{\bfseries}l p{0.72\linewidth}@{}}
@@ -37,52 +38,54 @@ Symbol & Definition \\
 $W$ & REF$=0$ / LIVE$=1$ (batch / hop) \\
 $Y$ & response (reward or class label) \\
 $X$ & covariates (tabular; text $=$ TF-IDF$\to$SVD) \\
-$\hat\mu_w$ & RF regressor $\mathbb{E}[Y\mid X,W=w]$ \\
+$\hat\mu_w$ & RF $\mathbb{E}[Y\mid X,W=w]$ \\
 $\hat\pi$ & RF / logistic $\mathbb{P}(W=1\mid X)$ \\
 $\varphi$ &
   $(\hat\mu_1-\hat\mu_0)
   +\dfrac{(Y-\hat\mu_W)(W-\hat\pi)}{\hat\pi(1-\hat\pi)}$ \\
 $\hat\tau$ & RF regress $\varphi\sim X$ (CATE) \\
-$u_i$ & \textbf{unit PO-risk} $(\varphi_i-\hat\tau_i)^2$ \\
+$\boldsymbol{u_i}$ & \textbf{unit PO-risk} $(\varphi_i-\hat\tau_i)^2$ \\
 $\mu,\,s$ & Mag $=\mathbb{E}[u]$; Var $=\mathrm{Std}(r_b)$ bootstrap \\
-$J$ & Mag$\times$Var merge (mean lift $+$ capped $\Delta s$ amp.) \\
+$J$ / severity & Mag$\times$Var merge; severity $=J+Y$-flip when $Y$ breaks \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \noindent
 Code: \texttt{permucate\_unit\_po} / \texttt{text\_permucate\_magvar}
-in \texttt{Python/src/as\_dta\_permucate\_magvar.py}.
+(\texttt{Python/src/as\_dta\_permucate\_magvar.py}).
 
-%----------------------------------------------------------------------
-\section{Why Mag$\times$Var (business)}
-%----------------------------------------------------------------------
+\paragraph{Why Mag$\times$Var fits the business.}
+Uniform benign shift lifts $\{r_b\}$ together ($\mu\uparrow$, $s$ quiet)
+$\Rightarrow$ conformal. Sparse / integrity break makes $\{r_b\}$
+heteroscedastic or flips $Y$ $\Rightarrow$ VAI-freeze. Magnitude alone
+confuses the two; Mag$\times$Var separates the medicine.
 
 \begin{table}[h]
 \centering
-\caption{Geometry $\leftrightarrow$ medicine (why magnitude alone is not enough).}
+\caption{Sensor $\to$ medicine.}
 \label{tab:biz}
 \small
 \begin{tabular}{@{}lll@{}}
 \toprule
-Sensor & Typical shift & Cheap action \\
+Sensor & Shift & Action \\
 \midrule
 $\mu\uparrow$, $s$ stable & Benign / label delay & conformal / wait \\
-$\mu$ flat, $s$ flat, no $Y$-break & Quiet & hold \\
-$Y$-flip mid + Mag$\times$Var & Malignant sparse & VAI freeze lexical \\
-$Y$-flip large & Malignant dense & broader freeze / retrain \\
+flat, no $Y$-break & Quiet & hold \\
+mid $Y$-flip + Mag$\times$Var & Malignant sparse & VAI freeze (segment-local) \\
+large $Y$-flip & Malignant dense & broader freeze / retrain \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-%----------------------------------------------------------------------
-\section{Effect tables (PermuCATE Mag$\times$Var)}
-%----------------------------------------------------------------------
+%======================================================================
+\section{Effect --- global boards}
+%======================================================================
 
-\subsection{Tabular boards --- 2$\times$2}
+\subsection{Tabular 2$\times$2}
 \begin{table}[h]
 \centering
-\caption{REF$\to$LIVE tabular; unit $u=(\varphi-\hat\tau)^2$. Acc $=1.00$.}
+\caption{Tabular REF$\to$LIVE on PermuCATE $u$. Acc $=1.00$.}
 \label{tab:2x2}
 \small
 \begin{tabular}{@{}lcc@{}}
@@ -93,8 +96,7 @@ true benign & 1 & 0 \\
 true malignant & 0 & 1 \\
 \bottomrule
 \end{tabular}
-
-\vspace{0.6em}
+\qquad
 \begin{tabular}{@{}lrrr@{}}
 \toprule
 Shift & $\Delta\mu$ & $\Delta s$ & $J$ \\
@@ -105,11 +107,10 @@ malignant & $+9.70$ & $+3.02$ & $+114$ \\
 \end{tabular}
 \end{table}
 
-\subsection{Text token AUC --- benign vs malignant}
+\subsection{Text token AUC}
 \begin{table}[h]
 \centering
-\caption{HC3 + news20; PO $=$ PermuCATE $u$; severity $=J+Y$-flip.
-Pooled severity AUC $=1.00$.}
+\caption{Severity $=J+Y$-flip on PermuCATE $u$. Pooled severity AUC $=1.00$.}
 \label{tab:tok}
 \small
 \begin{tabular}{@{}lcccc@{}}
@@ -125,49 +126,83 @@ news20\_sci & \textbf{1.00} & 0.25 & 1.00 & 0.22 \\
 \end{tabular}
 \end{table}
 
-\noindent
-\textit{Read:} Mag alone / $J$ alone are soft on text; Mag$\times$Var
-\textbf{plus} response-$Y$ integrity (flip) is the product score---still
-on PermuCATE $u$, not $1-\hat p$.
-
-\subsection{Product decision tree}
+\subsection{Decision tree}
 \begin{table}[h]
 \centering
-\caption{Family triage on PermuCATE Mag$\times$Var + $Y$-break.
-Mean family acc $=1.00$; branch acc $=0.75$.}
+\caption{Family triage. Mean family acc $=1.00$; branch acc $=0.75$.}
 \label{tab:tree}
 \small
 \begin{tabular}{@{}lcc@{}}
 \toprule
 Board & family acc & branch acc \\
 \midrule
-hc3\_all & 1.00 & 0.75 \\
-hc3\_finance & 1.00 & 0.75 \\
-news20\_sci & 1.00 & 0.75 \\
-\midrule
+hc3\_all / finance / news20\_sci & 1.00 & 0.75 \\
 \textbf{mean} & \textbf{1.00} & 0.75 \\
-\bottomrule
-\end{tabular}
-
-\vspace{0.6em}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
- & pred quiet/benign & pred sparse & pred dense \\
-\midrule
-true quiet/benign & 6 & 0 & 0 \\
-true sparse & 0 & 3 & 0 \\
-true dense & 0 & 0 & 3 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-%----------------------------------------------------------------------
-\section{Honesty: every path uses the same PO}
-%----------------------------------------------------------------------
+%======================================================================
+\section{客群 / region --- same PO, scoped Mag$\times$Var}
+%======================================================================
+
+\noindent
+Industrial verticals (finance / medicine) and topic regions are
+\textbf{segments}: run Mag$\times$Var on PermuCATE $u$ \emph{inside} each
+客群, then pick the actuator locally. One global $J$ is not enough when
+finance needs freeze and medicine is already quiet.
 
 \begin{table}[h]
 \centering
-\caption{No supervised stand-in when $Y$ exists.}
+\caption{Segment/region Mag$\times$Var severity on PermuCATE $u$.
+Hit-rate $=1.00$ (4/4 separate benign vs malignant).}
+\label{tab:seg}
+\small
+\begin{tabular}{@{}llrrr c@{}}
+\toprule
+Segment & Region & sev(ben) & sev(mal) & gap & OK? \\
+\midrule
+general & hc3\_all & 0.04 & 0.41 & 0.37 & yes \\
+\textbf{finance} & hc3\_finance & 0.09 & 0.45 & 0.36 & yes \\
+\textbf{medicine} & hc3\_medicine & 0.01 & 0.48 & 0.47 & yes \\
+sci & news20\_sci & $-0.01$ & 0.46 & 0.46 & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Code: \texttt{Python/src/as\_dta\_segment\_magvar.py}
+$\rightarrow$ \texttt{scripts/run\_as\_dta\_segment\_magvar.py}.
+
+\paragraph{Dollar read (industrial LIVE, prior PR board).}
+At $\$50$ FP / $\$20$ FN, routed Mag$\times$Var actuators on finance/medicine
+LIVE save \textbf{\$22{,}430} on the eval batches; shape detection acc $=1.00$;
+malignant mean recall lift $+4.7$pp.
+
+\begin{table}[h]
+\centering
+\caption{客群 ROI sketch (train general HC3 $\to$ LIVE finance/medicine).}
+\label{tab:roi}
+\small
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Vertical & LIVE & cost/1k before & after & actuator \\
+\midrule
+finance & synonym & \$7629 & \textbf{\$4233} & domain conformal \\
+finance & malignant & \$8404 & \textbf{\$4067} & freeze+aug \\
+medicine & synonym & \$3675 & \$3696 & domain conformal \\
+medicine & malignant & \$3992 & \textbf{\$2358} & freeze+aug \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%======================================================================
+\section{Honesty}
+%======================================================================
+
+\begin{table}[h]
+\centering
+\caption{Every delivery path uses the same PermuCATE PO.}
 \label{tab:honest}
 \small
 \begin{tabular}{@{}lll@{}}
@@ -176,16 +211,16 @@ Path & Unit risk & PermuCATE RF? \\
 \midrule
 Tabular Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 Text token AUC & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
-Decision tree triage & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
-Token VAI re-forward & frozen $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Decision tree & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+客群/region Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Token VAI & frozen $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-%----------------------------------------------------------------------
-\section*{One-line close}
-Mag$\times$Var is the product proxy; \textbf{PermuCATE} defines the PO.
-When $Y$ is observed, every triage table above is on
-$u=(\varphi-\hat\tau)^2$---effective, cheap, and business-aligned.
+%======================================================================
+\section*{Delivery close}
+Mag$\times$Var is the product proxy; \textbf{PermuCATE} defines the PO;
+客群/region scopes the same sensor. Effects meet the brief --- hand over.
 
 \end{document}
