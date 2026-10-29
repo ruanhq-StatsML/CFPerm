@@ -81,6 +81,12 @@ PO-mask inside $h_m$.
 
 \paragraph{Intermediate counterfactual attribution.}
 Fix hop risk $R$ and observed intermediates $h^{\mathrm{obs}}$.
+Default $R$: \textbf{R-risk} (head MSE) or \textbf{PO-risk} (concept /
+$Y\mid X$)---same $\mathrm{Attr}_m$ algebra.
+Also interchangeable: domain risk ($1{-}$AUC / CE of RF on $W$),
+MMD$^2$ on intermediates, AUUC (uplift heads), retrieval / InfoNCE,
+calibration (Brier / ECE).
+ESS overlap remains a \emph{gate}, not a risk.
 Reference worlds for donor $m$:
 $h_m\leftarrow\mu_{t-1}^m$ (past block mean; matches locked hop IW),
 zero/noise/missing on top-PO coords inside $h_m$,
