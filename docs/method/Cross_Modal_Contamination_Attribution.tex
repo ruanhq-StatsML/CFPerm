@@ -59,6 +59,71 @@ Large LOGO + small mask $\Rightarrow$ fusion soak ($\pi$ / fusion gate);
 large mask + stable $\pi$ $\Rightarrow$ localized donor concept (mask);
 both large $\Rightarrow$ compound (escalate).
 
+\subsection{How contamination arises, how to characterize it, intermediate CF}
+\label{sec:intermediate-cf}
+
+Contamination is a \textbf{counterfactual claim about an intermediate
+representation}, not a gradient highlight on pixels.
+Write encoders $h_m=\phi_m(X_m)$ and head / fusion $f(h_v,h_a,h_t)$
+(or cross-modal Ridge $h_t\approx A[h_v;h_a]$).
+Paths: encoder drift ($h_m$ moves); correlation proxy (RF mass on $m'$ while
+driver is $h_m$); fusion soak ($z=F([h])$ dominated by $\|h_m\|$);
+head-map drift ($f$ moves with quiet $h_{m'}$).
+Input-only LOGO confounds these---dropping $X_v$ kills every downstream
+$h_v$ \emph{and} its proxies---hence intermediate do-operators.
+
+\paragraph{Characterization (three views).}
+(i)~\textbf{Mass:} L1 shares $\pi_m$ (associational).
+(ii)~\textbf{Risk delta:} intervene on one intermediate, hold the rest
+(interventional).
+(iii)~\textbf{Edge signature:} compare input LOGO vs intermediate CF vs
+PO-mask inside $h_m$.
+
+\paragraph{Intermediate counterfactual attribution.}
+Fix hop risk $R$ and observed intermediates $h^{\mathrm{obs}}$.
+Reference worlds for donor $m$:
+$h_m\leftarrow\mu_{t-1}^m$ (past block mean; matches locked hop IW),
+zero/noise/missing on top-PO coords inside $h_m$,
+LOGO drop of $h_m$,
+or fusion splice $z\leftarrow F([\ldots;h_m^{\mathrm{cf}};\ldots])$.
+\[
+  \mathrm{Attr}_m
+  =
+  R\!\bigl(f(h^{\mathrm{obs}})\bigr)
+  -
+  R\!\bigl(f(\mathrm{do}(h_m=h_m^{\mathrm{ref}}))\bigr).
+\]
+Report the vector $(\mathrm{Attr}_v,\mathrm{Attr}_a,\mathrm{Attr}_t)$ and
+pairwise $C_{m\to m'}$; do not force additivity under nonlinear fusion.
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll l@{}}
+\toprule
+Input LOGO & Interm.\ CF (past-mean) & PO-mask in $h_m$ & Diagnosis \\
+\midrule
+large & large & small & fusion soak $\to$ $\pi$ / fuse-gate \\
+large & large & large & localized donor concept $\to$ PO-mask \\
+large & small & small & correlation proxy; check $m'$ \\
+small & large & -- & head/fusion path; audit $F$ \\
+$\approx 0$ (text) & $\approx 0$ & $\approx 0$ & structural null; report \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent MSR-VTT anchors (video-primary L1; hop$+\pi_m$: $0.0898\to 0.0896$;
+video mask $\Delta$MSE $+0.0009$ vs audio $-0.0004$) read as mild fusion/$\pi$,
+not a raging localized audio concept---the signature intermediate CF is for.
+
+\paragraph{Minimal hop recipe.}
+Encode / reuse $h_m^{\mathrm{obs}}$; set $h_m^{\mathrm{ref}}=\mu_{t-1}^m$ via
+\texttt{block\_means}; score $R^{\mathrm{obs}}$ and $R_m^{\mathrm{cf}}$;
+$\mathrm{Attr}_m=R^{\mathrm{obs}}-R_m^{\mathrm{cf}}$; cross-check with $\pi_m$
+and PO-mask; emit actuator.
+Product line: ``audio contaminated the text head on this hop'' becomes
+falsifiable (swap the do-world) and actionable (mask vs $\pi$ vs relearn)
+without a new multimodal loss.
+
 \subsection{Where the opportunity is}
 \begin{enumerate}\itemsep2pt
   \item[\textbf{O1.}] \textbf{Stop blaming the wrong modality.}
@@ -155,8 +220,10 @@ P1 & \textsc{ModalityMass} &
 Publish $\pi_m$ every hop; flag structural nulls. \\
 P1 & \textsc{ContamEdge} &
 Compute $C_{m\to m'}$ on the deployed head. \\
+P1 & \textsc{IntermCF} &
+$\mathrm{Attr}_m=R(h^{\mathrm{obs}})-R(\mathrm{do}(h_m=\mu_{t-1}^m))$; PO-mask inside $h_m$ for mechanism signature. \\
 P1 & \textsc{CrossCheckMM} &
-Require L1$\times$L3 cell on every reweight / mask ticket. \\
+Require L1$\times$L3$\times$IntermCF cell on every reweight / mask ticket. \\
 P2 & \textsc{PiHop} &
 Modality-$\pi$ hop when L1 moves and L3 mild. \\
 P2 & \textsc{PoMask} &
