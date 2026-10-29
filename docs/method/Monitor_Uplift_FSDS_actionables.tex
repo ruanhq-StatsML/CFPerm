@@ -1,0 +1,346 @@
+% =============================================================================
+% Append after ``Overall Recommendation for the Monitoring Uplift Models''
+% (no \begin{document} / \end{document} — paste into the MVP writeup).
+% Cross-links: IV subset strategy + meta-learner LOCO--AUUC localization.
+% Synthetic numbers from results/iv_selection_synth (8 seeds, n=2000).
+% =============================================================================
+
+\section{Iterated actionable items: meta-learner localization $\times$ IV subset tiers}
+\label{sec:actionables-meta-iv}
+
+The preceding sections fix \emph{where} the REF-frozen uplift ranker fails
+(LOCO--AUUC groups, LIVE domain quintiles, overlap band) and \emph{how} to
+ladder \textsc{Reallocate}$\to$\textsc{NarrowSupport}$\to$\textsc{Relearn}.
+This section iterates that list with two additions that the FSDS monitoring
+stack already exposes but that operations often leave uncoupled:
+\begin{enumerate}\itemsep2pt
+  \item \textbf{IV subset localization} --- first-stage strength is
+        \emph{not} portable across customer / traffic strata; local $F$
+        maps to action tiers before any spend claim.
+  \item \textbf{Meta-learner localization} --- LOCO--AUUC and LIVE
+        quintiles name the slices where ranking broke; those names must be
+        \textbf{cross-validated} against IV identification before a
+        business move that assumes an identified incremental effect.
+\end{enumerate}
+The joint object is an \textbf{actionable items list}: every emitted rule
+carries (a)~an FSDS / AUUC localization handle, (b)~an IV tier (or
+explicit ``IV not run''), and (c)~a business owner gate when the two
+disagree.
+
+\subsection{Why IV subset localization helps the uplift monitor}
+\label{sec:iv-helps-monitor}
+
+Uplift monitoring answers ``does $\hat\tau$ still \emph{rank} on LIVE?''
+IV answers a different but adjacent question: ``in this stratum, is an
+incremental effect \emph{identifiable} from exogenous variation in $T$?''
+When targeting / incentives are themselves endogenous (self-selection,
+sales ops override, budget caps correlated with $X$), a LIVE quintile with
+high $\widehat{\tau}^{\mathrm{obs}}$ can be a confounded contrast.
+Instrumental-variable 2SLS with a first-stage screen localizes
+\emph{identification coverage}, not ranking quality.
+
+On a synthetic confounded DGP designed so that valid instruments weaken in
+low-$X_0$ quartiles (extreme segment scaler; see
+\texttt{iv\_selection\_synth}), subset localization recovers a sharp
+strength gap and a population mix that forces strategy change
+(Table~\ref{tab:iv-tiers}).
+
+\begin{table}[H]
+\centering
+\small
+\caption{IV subset tiers after localization (synthetic extreme F-het;
+8 seeds $\times$ $n{=}2000$). Tier rules reuse Staiger--Stock / Stock--Yogo
+thresholds already used for IV KEEP/WATCH/RETIRE.}
+\label{tab:iv-tiers}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Tier & Local first-stage $F$ & Population share & Statistical action \\
+\midrule
+\texttt{NO\_ACT} & $F<10$ & $31.2\%$ & local-retire IV; hold; do not quote IV ATE \\
+\texttt{ESTIMATE\_ONLY} & $10\le F<20$ & $15.6\%$ & publish local IV + WATCH; do not scale \\
+\texttt{ACT} & $F\ge 20$ & $53.1\%$ & use local IV ATE; F-/precision-weight eligible \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Coverage summaries (same suite): identification ($F\ge 10$)
+$68.8\%$; action ($F\ge 20$) $53.1\%$;
+\textbf{policy conflict} $31.2\%$ --- share of mass that is local
+\texttt{NO\_ACT} but would still receive a \emph{global} IV ATE quote if
+strategy ignored localization.
+Segment diagnostics (oracle valid $Z$): Q1 $F\approx 1.2$ (NO\_ACT),
+Q2 $F\approx 13.6$ (ESTIMATE\_ONLY), Q3/Q4 $F\approx 213$ / $1112$ (ACT);
+F-heterogeneity ratio $\max F/\min F \approx 930\times$ on the mean table
+(seed-level ratios larger).
+
+\paragraph{Aggregator insight (pre-ROI).}
+Once tiers exist, \emph{how} one aggregates local ATEs matters as much as
+the global 2SLS point (Table~\ref{tab:iv-agg}).
+Flat-pooling weak segments pollutes the pooled ATE; F- or precision-weights
+among identified segments, or ACT-only aggregation, beat global IV on
+$|\widehat{\mathrm{ATE}}-\tau|$ in this design.
+
+\begin{table}[H]
+\centering
+\small
+\caption{After localization: aggregator absolute error vs true $\tau$
+(synthetic; mean over 8 seeds).}
+\label{tab:iv-agg}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Aggregator & $|\widehat{\mathrm{ATE}}-\tau|$ (sd) \\
+\midrule
+\texttt{naive\_ols} & $0.221$ $(0.050)$ \\
+\texttt{equal\_pool\_all} & $0.181$ $(0.120)$ \\
+\texttt{global\_iv} & $0.020$ $(0.008)$ \\
+\texttt{equal\_pool\_id} ($F\ge 10$) & $0.044$ $(0.055)$ \\
+\texttt{f\_weighted} / \texttt{precision\_wt} & $\mathbf{0.012}$ $(0.007)$ \\
+\texttt{adaptive\_act} (ACT mass only) & $\mathbf{0.011}$ $(0.007)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Justification.}
+IV subset localization is helpful for uplift monitoring because it supplies
+an \emph{identification map} that AUUC alone cannot: a LIVE quintile can
+have healthy $\mathrm{AUUC}_k$ (ranker sorts well) while local $F<10$
+(any IV-backed incremental claim is invalid there), or weak AUUC with
+strong local $F$ (ranking broken, but a valid IV ATE still exists for
+relearn / holdout design).
+The ROI layer later consumes the same tiers
+(\texttt{ACT}$\to$ scalable bets; \texttt{ESTIMATE\_ONLY}$\to$ probes;
+\texttt{NO\_ACT}$\to$ do not spend on an IV-identified uplift claim)
+without pretending dollar ROI is identified from the synthetic suite.
+
+\subsection{Why the meta-learner helps --- and why its localization is not enough alone}
+\label{sec:meta-helps}
+
+Under the two-batch contract, the monitor meta-learner $\hat\tau$ (refit on
+REF only) is the cheap probe for Layer~2: $\mathrm{AUUC}_{\mathrm{live}}$,
+$\Delta_{\mathrm{AUUC}}$, group LOCO--AUUC drops, and LIVE domain-quintile
+tables.
+Empirically (Hillstrom / injected covariate / synthetic concept rows above),
+this stack already emits \textsc{REALLOCATE} / \textsc{RELEARN} /
+\textsc{MONITOR} rules tied to named slices
+($Q_k$, LOCO block $g$, overlap band).
+That is the right \emph{ranking} localization.
+
+What it does \textbf{not} certify:
+\begin{itemize}\itemsep2pt
+  \item that $\widehat{\tau}^{\mathrm{obs}}_k$ inside a quintile is a
+        causal incremental effect (Layer~2 ATE is descriptive unless
+        randomized or IV-backed);
+  \item that a LOCO group $g$ with large $\mathrm{drop}_{\mathrm{live}}^{(g)}$
+        is a valid \emph{instrument} or a valid \emph{policy lever} ---
+        LOCO measures dependence of AUUC on features in $\hat\tau$, not
+        exclusion or first-stage strength;
+  \item that narrowing support or capping $Q_{k^\star}$ improves
+        \emph{identified} incremental profit rather than only the ranking
+        metric on the remaining mass.
+\end{itemize}
+Hence meta-learner localization and IV localization answer complementary
+questions and must be cross-checked before business scale-up.
+
+\subsection{Cross-validation matrix: meta localization $\times$ IV tier}
+\label{sec:cross-validate}
+
+Let $S$ be a named subset from the uplift monitor
+(LIVE quintile $Q_k$, LOCO-defined segment on extreme $g$, or overlap
+band $\mathcal{L}_{\mathrm{ovlp}}$).
+Run the same IV scorecard \emph{inside} $S$ (or the nearest stratum where
+instruments are defined): local first-stage $F_S$, exclusion / Conley
+screen, KEEP/WATCH/RETIRE, and tier
+$\mathrm{tier}(S)\in\{\texttt{NO\_ACT},\texttt{ESTIMATE\_ONLY},\texttt{ACT}\}$.
+Table~\ref{tab:cross-matrix} is the operational join.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Cross-validation of meta-learner localization vs IV subset tier.
+``Business gate'' is required whenever the two columns disagree or when
+\texttt{ESTIMATE\_ONLY} meets a P1 REALLOCATE.}
+\label{tab:cross-matrix}
+\begin{tabular}{@{}p{0.22\linewidth}p{0.22\linewidth}p{0.24\linewidth}p{0.24\linewidth}@{}}
+\toprule
+Meta / AUUC read on $S$ & IV $\mathrm{tier}(S)$ & Joint statistical read & Default actionable item \\
+\midrule
+AUUC$_S$ healthy; $\bar{\hat\tau}_S\approx\widehat{\tau}^{\mathrm{obs}}_S$ &
+\texttt{ACT} &
+Ranking OK + ID OK &
+\textsc{Continue} / scale within SLA; F-weight $S$ in portfolio \\
+\addlinespace
+AUUC$_S$ healthy &
+\texttt{NO\_ACT} &
+Ranker sorts; incremental effect \emph{not} IV-identified &
+\textsc{Monitor} ranking; \textbf{do not} claim IV uplift; business: decide treat on RCT / margin rules only \\
+\addlinespace
+AUUC$_S$ red (cap candidate) &
+\texttt{ACT} &
+Ranking broken; ID still OK &
+\textsc{Reallocate} / narrow on ranking; keep IV ATE as \emph{relearn target}; prefer \textsc{Refit} components over killing identified mass \\
+\addlinespace
+AUUC$_S$ red &
+\texttt{NO\_ACT} &
+Double red: bad rank + weak ID &
+\textsc{Hold} spend; \textsc{RefreshRef} / design better $Z$ or RCT before REALLOCATE-as-uplift \\
+\addlinespace
+AUUC$_S$ mixed; LOCO flags $g$ &
+\texttt{ESTIMATE\_ONLY} &
+Soft ID; ranking drivers unstable &
+\textsc{Watch}: small probe only; owner sign-off; no national scale \\
+\addlinespace
+High $|\Delta\widehat{\tau}^{\mathrm{obs}}|$ pair; PO-risk accept &
+any &
+Descriptive ATE contrast; IV may disagree &
+\textsc{Monitor} only (as in Hillstrom rules); never REALLOCATE on Layer~2 ATE alone \\
+\addlinespace
+$\mathrm{AUUC}_{\mathrm{ovlp}}\gg\mathrm{AUUC}_{\mathrm{live}}$ &
+\texttt{ACT} on overlap, \texttt{NO\_ACT} on tail &
+Classic mix shift &
+\textsc{NarrowSupport} to overlap; hold out-of-support until REF absorbs; do not global-IV the tail \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Conflict rate as a KPI.}
+Report, each window,
+\[
+  \widehat{p}_{\mathrm{conflict}}
+  =
+  \frac{1}{n_{\mathrm{live}}}
+  \sum_{i\in\mathrm{LIVE}}
+  \mathbf{1}\{\mathrm{tier}(S(x_i))=\texttt{NO\_ACT}\}
+  \cdot
+  \mathbf{1}\{\text{global IV or global AUUC would still act on }i\}.
+\]
+On the synthetic IV suite this is $\approx 31\%$; on LIVE traffic it is the
+share of users who would be oversold an identified-uplift story.
+Meta LOCO / quintile caps without this KPI systematically over-act on
+weak-ID mass.
+
+\subsection{Business intervention --- when owners must enter}
+\label{sec:business-gate}
+
+Automation covers ranking caps and IV tiers; it does \textbf{not} cover
+objective translation or instrument legitimacy.
+Require a named business gate (growth / risk / marketplace ops) in the
+following cases --- these are the iterated additions to the actionable
+list:
+
+\begin{enumerate}\itemsep3pt
+  \item[\textbf{B1.}] \textbf{AUUC-green $\times$ IV-\texttt{NO\_ACT}.}
+        Product wants to scale because the ranker looks good; stats refuse
+        an IV uplift claim.
+        Owner chooses: (i)~run / trust an RCT in $S$, (ii)~treat on
+        margin / LTV rules without causal branding, or (iii)~hold.
+        Engineering must not silently convert $\widehat{\tau}^{\mathrm{obs}}$
+        into ``incremental profit.''
+
+  \item[\textbf{B2.}] \textbf{AUUC-red $\times$ IV-\texttt{ACT}.}
+        Monitor wants to \textsc{Cap} $S$; IV says the stratum is still
+        identified.
+        Owner chooses whether capping is a \emph{ranking} repair (allowed)
+        or a \emph{budget exit} from an identified incremental segment
+        (needs explicit P\&L sign-off). Prefer component refit /
+        propensity calibration before exiting ACT mass.
+
+  \item[\textbf{B3.}] \textbf{Instrument legitimacy.}
+        KEEP/WATCH/RETIRE and Conley $\gamma^\star$ are statistical screens;
+        whether $Z$ is an ethically / contractually usable instrument
+        (incentive lottery, geo shock, waitlist) is a business + legal
+        call. WATCH + subset F-het $\ge 3\times$ (valid $Z$ not portable)
+        escalates to owner before national creative / incentive rollout.
+
+  \item[\textbf{B4.}] \textbf{\texttt{ESTIMATE\_ONLY} meets P1 REALLOCATE.}
+        Soft ID + aggressive reallocation is the highest false-confidence
+        zone. Require dual sign-off (monitor owner + IV owner) or downgrade
+        to probe volume.
+
+  \item[\textbf{B5.}] \textbf{Layer~2 ATE pair vs IV tier disagree.}
+        If the higher-$\widehat{\tau}^{\mathrm{obs}}$ quintile is
+        \texttt{NO\_ACT} under IV, forbid Layer~2 budget shift; keep
+        \textsc{Monitor}. If it is \texttt{ACT} and PO-risk rejects, allow
+        conditional Layer~2 move under the existing PO gate.
+\end{enumerate}
+
+\subsection{Updated actionable items list (v2)}
+\label{sec:actionables-v2}
+
+Core trio already intuitive on the floor: \textsc{ReallocAUUC} (ranking),
+\textsc{Relearn} (prototype / prod refit after trial),
+\textsc{MonitorATE} (Layer~2 descriptive only).
+Priority order when rules collide is unchanged
+(\textsc{RefreshRef} if ESS fails $\to$ Layer~1 cap $\to$ narrow support
+$\to$ Layer~2 last $\to$ \textsc{Relearn} after trial), with IV tiers as an
+additional gate on any item that claims incremental effect.
+
+\begin{center}
+\small
+\begin{tabular}{@{}clp{0.72\linewidth}@{}}
+\toprule
+Pri. & Code & Actionable item \\
+\midrule
+P0 & \textsc{GateSRM} &
+Fail closed if SRM on $T$ breaks in REF or LIVE --- no AUUC, no IV ATE, no REALLOCATE. \\
+P0 & \textsc{GateESS} &
+If $\mathrm{ESS}_{\mathrm{ovlp}}$ low or domain AUC$\approx 1$, only \textsc{RefreshRef} / stratify; defer LOCO-driven cuts and defer IV portfolio weights on mix-shifted support. \\
+P1 & \textsc{ReallocAUUC} &
+Cap worst LIVE quintile / continue best pairwise AUUC slice --- \emph{ranking} move only; attach IV $\mathrm{tier}(S)$ in the ticket. \\
+P1 & \textsc{NarrowSupport} &
+Deploy REF $\hat\tau$ only on overlap band when $\mathrm{AUUC}_{\mathrm{ovlp}}\gg\mathrm{AUUC}_{\mathrm{live}}$; hold tail until REF absorbs. \\
+P1 & \textsc{IV-NoActHold} &
+On $\mathrm{tier}(S)=\texttt{NO\_ACT}$, do not quote IV ATE; do not scale ``identified uplift'' spend; local-retire $Z$ for that subset. \\
+P2 & \textsc{HoldFeature} &
+LOCO top group $g$: keep in prod features; down-rank extreme-$g$ targeting segments; plan REF extension if LOGO-MMD flags $g$. \\
+P2 & \textsc{IV-ActWeight} &
+On \texttt{ACT} slices, aggregate local IV ATEs by $F$ or $1/\mathrm{se}^2$ (not equal-pool); prefer \texttt{adaptive\_act} over global IV when F-het is large. \\
+P2 & \textsc{IV-WatchProbe} &
+\texttt{ESTIMATE\_ONLY}: publish estimate + WATCH; probe volume only; dual sign-off before P1 spend. \\
+P2 & \textsc{CrossCheck} &
+Every P1 REALLOCATE ticket must show the Table~\ref{tab:cross-matrix} cell (AUUC read $\times$ IV tier) and B1--B5 gate if conflict. \\
+P2 & \textsc{RefitPropensity} &
+Mix / propensity drift with PO-risk accept: refit $e(T\mid X)$ only (needs $X,T$) before full $\tau$ relearn. \\
+P2 & \textsc{CalibrateScore} &
+When $\bar{\hat\tau}_k\approx\widehat{\tau}^{\mathrm{obs}}_k$ but AUUC still weak: recalibrate scores / segment rules first. \\
+P3 & \textsc{RefitOutcome} &
+PO-risk / DRPerm reject on overlap core: refit outcome $\mu$ (needs $X,T,Y$); if propensity also drifted $\to$ \textsc{RefitBoth}. \\
+P3 & \textsc{Relearn} &
+After $\ge 1$ REALLOCATE / narrow trial: if PO-risk still rejects and $\bar{\hat\tau}\not\approx\widehat{\tau}^{\mathrm{obs}}$, or overlap AUUC still below SLA --- schedule prod $\hat\tau$ relearn; use IV-\texttt{ACT} mass as labeled priority for evaluation design. \\
+P3 & \textsc{RetireZ} &
+Global RETIRE if $F<10$, exclusion fail, or Conley fragile; subset RETIRE\_LOCAL if segment $F<10$; WATCH if subset F-ratio $\ge 3\times$. \\
+P4 & \textsc{MonitorATE} &
+Layer~2 $|\Delta\widehat{\tau}^{\mathrm{obs}}|$ pairs: diagnostic only unless PO reject \emph{and} IV tier is \texttt{ACT}. \\
+P4 & \textsc{PolicyConflict} &
+Report LIVE share that is local IV-\texttt{NO\_ACT} but would still get a global IV / global-AUUC act --- KPI for overselling identified uplift. \\
+P4 & \textsc{SensWatch} &
+E-value / Rosenbaum $\Gamma$ / OVB RV / Conley $\gamma^\star$ on the \emph{naive} association: explain why IV was needed; do \textbf{not} retire $Z$ from these alone. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What else is worth shipping (beyond AUUC / Relearn / MonitorATE)?}
+Three that stay equally intuitive:
+\textbf{(i)} \textsc{NarrowSupport} --- keep the same $\hat\tau$ but only score the overlap band when $\mathrm{AUUC}_{\mathrm{ovlp}}\gg\mathrm{AUUC}_{\mathrm{live}}$;
+\textbf{(ii)} \textsc{RefitPropensity} / \textsc{RefitOutcome} --- component-level relearn prototype, cheaper than full $\tau$ rebuild;
+\textbf{(iii)} \textsc{PolicyConflict} --- single coverage number from IV subset tiers for how much traffic would be oversold without localization.
+
+\paragraph{One-line justification for the iteration.}
+Meta-learner LOCO--AUUC localizes \emph{ranking failure}; IV subset tiers
+localize \emph{identification failure}; business gates resolve
+\emph{objective and instrument legitimacy}.
+Acting on either localization alone over-claims: AUUC-only moves can scale
+confounded slices; IV-only moves can protect identified mass that the
+ranker no longer sorts.
+The cross-validation matrix and B1--B5 gates are the minimal coupling that
+keeps the FSDS uplift monitor actionable without a second, disconnected
+causal stack.
+
+\paragraph{Reproducibility.}
+\begin{verbatim}
+python3 scripts/run_iv_selection_synth.py
+python3 scripts/run_fsds_rl_closed_loop.py --compare-meta-iv
+\end{verbatim}
+Code: \texttt{Python/src/iv\_selection\_synth.py}
+(\texttt{subset\_adaptive\_strategy}, \texttt{strategy\_suite});
+monitor path as in Figure~\ref{fig:Monitoring\_UpliftModel}.
+Docs: \texttt{docs/method/IV\_subset\_strategy.md}.

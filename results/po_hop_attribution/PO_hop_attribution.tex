@@ -1,0 +1,27 @@
+% PO-risk × hop-ridge. Auto-generated.
+\begin{table}[ht]\centering
+\caption{PO-risk feature selection on the heatmap hop. Amazon online rating MSE;
+token mask $\Delta$MSE for top-PO coordinates; MSR-VTT modality-specific hop weights
+and per-block patch mask $\Delta$MSE (cross-modal Ridge: video+audio $\to$ text).}
+\label{tab:po-hop-ridge}
+\small\begin{tabular}{@{}lc@{}}\toprule
+Amazon method & online MSE \\
+\midrule
+ridge\_past & $1.402$ ($0.052$) \\
+hop\_ridge & $1.378$ ($0.043$) \\
+hop\_po\_feat & $1.551$ ($0.065$) \\
+hop\_po\_amp & $1.448$ ($0.045$) \\
+hop\_po\_mod & $1.378$ ($0.043$) \\
+hop\_po\_both & $1.551$ ($0.065$) \\
+\midrule
+\multicolumn{2}{@{}l}{Amazon token mask $\Delta$MSE (top-PO)} \\
+mask zero & $+0.126$ ($0.028$) \\
+mask noise & $+0.144$ ($0.026$) \\
+mask missing & $+0.126$ ($0.028$) \\
+\midrule
+MSR-VTT hop / hop+$\pi_m$ (cross-modal) & $0.0898$ / $0.0896$ \\
+mask video patches (zero) $\Delta$MSE & $+0.0009$ \\
+mask audio patches (zero) $\Delta$MSE & $-0.0004$ \\
+\bottomrule
+\end{tabular}
+\end{table}

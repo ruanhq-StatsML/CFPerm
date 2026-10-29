@@ -1,0 +1,267 @@
+{
+  "layout": {
+    "declared_in": "Python/src/msrvtt_multimodal_attribution.py",
+    "constants": {
+      "D_VIDEO": 768,
+      "D_AUDIO": 512,
+      "D_TEXT": 768,
+      "P_X": 2048,
+      "P_s": 2049
+    },
+    "groups": {
+      "video": {
+        "start": 0,
+        "stop": 768,
+        "dim": 768
+      },
+      "audio": {
+        "start": 768,
+        "stop": 1280,
+        "dim": 512
+      },
+      "text": {
+        "start": 1280,
+        "stop": 2048,
+        "dim": 768
+      }
+    },
+    "s": "[n, 2049] = concat(video 768, audio 512, text 768, label 1)",
+    "msrvtt_extract": {
+      "s": [
+        320,
+        2049
+      ],
+      "n_videos": 16,
+      "n_windows": 20,
+      "on_disk": "data/msrvtt/features_window/meta.json (npy not in this checkout)"
+    }
+  },
+  "stream": {
+    "X": [
+      384,
+      2048
+    ],
+    "y": [
+      384
+    ],
+    "batch": [
+      384
+    ],
+    "n_batches": 8,
+    "n_classes": 6,
+    "n_per": 48,
+    "meta": {
+      "n_batches": 8,
+      "n_per": 48,
+      "n_classes": 6,
+      "cov": {
+        "video": 0.18,
+        "audio": 0.05,
+        "text": 0.0
+      },
+      "concept": {
+        "video": 0.0,
+        "audio": 0.0,
+        "text": 0.0
+      },
+      "concept_at": 6,
+      "seed": 2026
+    }
+  },
+  "hop": {
+    "t": 3,
+    "n_prev": 48,
+    "n_curr": 48
+  },
+  "blocks": {
+    "video": {
+      "X_prev": [
+        48,
+        768
+      ],
+      "X_curr": [
+        48,
+        768
+      ],
+      "mu_old": [
+        6,
+        768
+      ],
+      "mu_sdc": [
+        6,
+        768
+      ],
+      "mu_true": [
+        6,
+        768
+      ],
+      "field": [
+        768
+      ],
+      "cos_stale": 0.6198690694454841,
+      "cos_sdc": 0.7589771198873176,
+      "instdisc": {
+        "X": [
+          48,
+          768
+        ],
+        "W": [
+          768,
+          32
+        ],
+        "f": [
+          48,
+          32
+        ],
+        "V": [
+          48,
+          32
+        ],
+        "extra_keys": [
+          48,
+          32
+        ],
+        "logits": [
+          48,
+          96
+        ]
+      },
+      "gpm_M": [
+        768,
+        8
+      ],
+      "gpm_k": 8,
+      "gpm_explained": 0.32127145434193655,
+      "dW": [
+        768,
+        6
+      ]
+    },
+    "audio": {
+      "X_prev": [
+        48,
+        512
+      ],
+      "X_curr": [
+        48,
+        512
+      ],
+      "mu_old": [
+        6,
+        512
+      ],
+      "mu_sdc": [
+        6,
+        512
+      ],
+      "mu_true": [
+        6,
+        512
+      ],
+      "field": [
+        512
+      ],
+      "cos_stale": 0.29566892815969165,
+      "cos_sdc": 0.42935998135420067,
+      "instdisc": {
+        "X": [
+          48,
+          512
+        ],
+        "W": [
+          512,
+          32
+        ],
+        "f": [
+          48,
+          32
+        ],
+        "V": [
+          48,
+          32
+        ],
+        "extra_keys": [
+          48,
+          32
+        ],
+        "logits": [
+          48,
+          96
+        ]
+      },
+      "gpm_M": [
+        512,
+        8
+      ],
+      "gpm_k": 8,
+      "gpm_explained": 0.2619903479714713,
+      "dW": [
+        512,
+        6
+      ]
+    },
+    "text": {
+      "X_prev": [
+        48,
+        768
+      ],
+      "X_curr": [
+        48,
+        768
+      ],
+      "mu_old": [
+        6,
+        768
+      ],
+      "mu_sdc": [
+        6,
+        768
+      ],
+      "mu_true": [
+        6,
+        768
+      ],
+      "field": [
+        768
+      ],
+      "cos_stale": 0.15169207936931287,
+      "cos_sdc": 0.2924993538722586,
+      "instdisc": {
+        "X": [
+          48,
+          768
+        ],
+        "W": [
+          768,
+          32
+        ],
+        "f": [
+          48,
+          32
+        ],
+        "V": [
+          48,
+          32
+        ],
+        "extra_keys": [
+          48,
+          32
+        ],
+        "logits": [
+          48,
+          96
+        ]
+      },
+      "gpm_M": [
+        768,
+        8
+      ],
+      "gpm_k": 8,
+      "gpm_explained": 0.23643130933932072,
+      "dW": [
+        768,
+        6
+      ]
+    }
+  }
+}

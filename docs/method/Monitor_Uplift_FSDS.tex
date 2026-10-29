@@ -1,0 +1,683 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+ \usepackage{textcomp}
+\usepackage{multirow}
+\usepackage{paralist}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{csvsimple}
+\usepackage{subcaption}
+\usepackage[round]{natbib}
+\usepackage{float}
+\usepackage{url}
+\usepackage{algorithm}
+\usepackage{mathrsfs}
+\usepackage{hyperref}
+\usepackage{amssymb}
+\newcommand\mycaption[1]{{\footnotesize #1}}
+\usepackage[mathscr]{euscript}
+\usepackage{titlesec}
+\usepackage{amsthm}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{example}{Example}
+
+% Copied from mathrsfs.sty
+\DeclareSymbolFont{rsfs}{U}{rsfs}{m}{n}
+\DeclareSymbolFontAlphabet{\mathscrsfs}{rsfs}
+\usepackage{geometry}
+ \geometry{
+ a4paper,
+ total={170mm,257mm},
+ left= 15mm,
+ top=15mm,
+ right = 15mm,
+ bottom = 22.5mm
+ }
+
+\title{Minimal Viable Prototype: FSDS for monitoring the uplift model}
+\author{Heqiao Ruan}
+\date{Oct 1st, 2026}
+
+
+
+\begin{document}
+
+\maketitle
+
+\section{Monitor Uplift Model via \textbf{FSDS}(feature selection for distribution shift) method}
+\par Our FSDS procedure can be adapted to monitor uplift models via pseudo-outcome risk and the RF domain classifier. Uplift models are widely used in modern data science, notably in advertising, incentives, and budget allocation, where the objective is to target individual users or units for budget and incentive decisions. This requires careful selection of a subset of units to prioritize. Yet post-deployment monitoring of such models remains relatively scarce in both the literature and current practice. Our procedure thus offers a concrete contribution to this domain through a feature selection for distribution shift (FSDS) approach - through both the covariate shift and concept drift - we want to mention that the overall framework would be helpful for both the meta-learner and the double machine learning model for the deployed uplift model.\\
+
+\par The post-hoc localization is performed at two levels: one based on AUUC (evaluated on a single batch) and the other based on estimated uplift, followed by pseudo-outcome risk. This design is highly efficient and beneficial for downstream procedures. Moreover, the AUC of the RF-domain binary classifier is instrumental for monitoring covariate shift. These elements collectively produce compound insights that facilitate interpretation. The overall architecture is presented in Figure \ref{fig:Monitoring_UpliftModel}. \\
+\par Overall, monitoring an uplift model is slightly different from monitoring a predictive model, but the essence remains the same: the objective---AUUC or uplift---serves as a proxy for MSE or cross-entropy. Refitting the propensity score model is fairly self-contained, whereas monitoring the outcome model requires more detailed and cautious elaboration, along with the overall ranking of the estimated uplift (AUUC or Spearman's correlation with that in the original batch) and the model's overall justification and ranking.
+
+
+
+\subsection{Motivation and value.}
+Uplift models fail silently under batch shift: $P(X)$ may change while offline metrics on a frozen holdout look fine, or $\hat\tau(X)$ may stop ranking incremental users on LIVE even when covariates appear stable.
+Reusing the \emph{same} batch FSDS toolkit already applied to traces and scores avoids a second monitoring stack.
+Layer~1 (MMD, domain RF AUC on $X$, overlap) answers \emph{whether inputs shifted}; Layer~2 (AUUC + LOCO--AUUC with refit-on-REF meta-learners) answers \emph{whether targeting quality degraded and which feature groups drive it}; Layer~3 (PO-risk / DRPerm on stacked batches) answers \emph{whether $Y\mid X$ or batch--outcome interaction changed} when AUUC falls but $X$-shift signals are ambiguous.
+Checks are coupled to actions: REALLOCATE targeting and propensity calibration before full $\tau$ relearn; ESS overlap or domain AUC gate attributions so LOCO is not interpreted under mix shift.
+The monitor probe (Registry T/X/R) is deliberately cheap to retrain inside LOCO; production scorers (e.g.\ Dragon-Net) may differ and are confirmed only on alert.
+This is a direct, feature-specific operationalization of FSDS---no separate multimodal objective---suitable for hourly windows and audit trails (SRM on $T$, bootstrap AUUC on LIVE).\\
+
+\emph{Windows and validity.}
+Reference batch $\mathcal{D}_{\mathrm{ref}}$ (calibration) and live batch $\mathcal{D}_{\mathrm{live}}$ (deployment).
+Batch label $W_i\in\{0,1\}$; uplift treatment $T_i\in\{0,1\}$; outcome $Y_i$; features $X_i\in\mathbb{R}^p$.
+\textbf{SRM} on $T$ in REF train and LIVE: treatment balance is required before interpreting AUUC.
+
+\paragraph{Layer 1 --- $X$ (batch FSDS, embedded).}
+\[
+  \widehat{\mathrm{MMD}}^2(X_{\mathrm{ref}},X_{\mathrm{live}}),
+  \qquad
+  \widehat{\mathrm{AUC}}_{\mathrm{dom}}^{\mathrm{RF}}(X),
+  \qquad
+  \mathrm{ESS}_{\mathrm{ovlp}}\bigl(\hat e(W{=}1\mid X)\bigr).
+\]
+Domain RF AUC and MMD$^2$ quantify covariate shift; ESS overlap (or extreme domain AUC $\approx 1$) gates whether LOCO--AUUC attributions are trustworthy---if support is poor, refresh or stratify $\mathcal{D}_{\mathrm{ref}}$ first.
+
+\paragraph{Layer 2 --- ranking (LOCO--AUUC).}
+Fit meta-learner $\hat\tau$ on \emph{REF train only} from $(X,T,Y)$.
+Primary metric: AUUC (aligned with \texttt{sklift.uplift\_auc\_score}):
+\[
+  \mathrm{AUUC}_{\mathrm{ref}},\quad \mathrm{AUUC}_{\mathrm{live}},\quad
+  \Delta_{\mathrm{AUUC}}=\mathrm{AUUC}_{\mathrm{ref}}-\mathrm{AUUC}_{\mathrm{live}}.
+\]
+\textbf{Group LOCO--AUUC:} drop feature group $g$, retrain $\hat\tau$ on REF, recompute AUUC on REF eval and LIVE:
+\[
+  \mathrm{drop}_{\mathrm{live}}^{(g)}=\mathrm{AUUC}_{\mathrm{live}}^{\mathrm{full}}-\mathrm{AUUC}_{\mathrm{live}}^{(-g)},\qquad
+  \rho=\mathrm{Spearman}\bigl(\mathrm{drop}_{\mathrm{ref}},\mathrm{drop}_{\mathrm{live}}\bigr).
+\]
+
+\paragraph{Layer 3 --- $Y\mid X$ (FSDS PO-risk, same window).}
+Cross-fit $\hat\mu(X)$, $\hat e(W\mid X)$ on $\mathcal{D}_{\mathrm{ref}}\cup\mathcal{D}_{\mathrm{live}}$;
+$\tilde Y=(Y-\hat\mu(X))(W-\hat e(X))$; pseudo-outcome learner $\hat\tau_Y(X)$ from Model Registry:
+\[
+  \mathrm{PO\text{-}risk}=\frac{1}{n}\sum_{i=1}^n \hat\tau_Y(X_i)^2.
+\]
+\textbf{DRPerm} (permute $W$, refit) tests global shift; \textbf{PO-LOCO} localizes features via
+$\mathrm{VIMP}_j=\mathrm{PO\text{-}risk}^{\mathrm{full}}-\mathrm{PO\text{-}risk}^{(-j)}$.
+
+\paragraph{Diagnosis and response (summary).}
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.28\linewidth}p{0.32\linewidth}p{0.32\linewidth}@{}}
+\toprule
+Signal & Typical read & First response \\
+\midrule
+MMD or $\widehat{\mathrm{AUC}}_{\mathrm{dom}}\uparrow$, ESS OK, $\mathrm{AUUC}_{\mathrm{live}}\downarrow$ &
+Covariate shift; ranking loss on LIVE &
+LOCO blocks; recalibrate $e(T\mid X)$; cap segments; AUUC on overlap support \\
+ESS low or domain AUC $\approx 1$ &
+Mix / new population &
+Refresh REF; stratify; defer LOCO-driven cuts \\
+MMD flat, AUUC$\downarrow$, PO-risk reject &
+Concept / $Y\mid X$ or $\tau$ surface &
+PO-LOCO + LOCO--AUUC; extend labels; retrain prod $\hat\tau$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[t]
+	\centering
+	\begin{subfigure}{0.75\linewidth}
+\includegraphics[width=\linewidth]{results_csv/slide1_upliftModel.png}
+		\label{fig:Figure1}
+	\end{subfigure}   
+	\begin{subfigure}{0.75\linewidth}
+\includegraphics[width=\linewidth]{results_csv/slide2_upliftModel.png}
+		\label{fig:Figure2}
+	\end{subfigure}  
+	\begin{subfigure}{0.75\linewidth}
+\includegraphics[width=\linewidth]{results_csv/slide3_upliftModel.png}
+		\label{fig:Figure3}
+	\end{subfigure}  
+    \caption{Monitoring Flow for the FSDS for monitoring the Uplift Model - Whole pipeline and schema}\label{fig:Monitoring_UpliftModel}
+\end{figure}
+
+
+\paragraph{Empirical monitoring benchmarks.}
+Four REF/LIVE scenarios: Hillstrom (real email uplift); Hillstrom with injected covariate shift on $X$;
+synthetic covariate shift ($f_0$ offset on LIVE); synthetic concept shift (new driver $f_3$ on LIVE).
+Layer~1 reports Online PFI on $X$ (MMD$^2$, domain RF AUC, overlap ESS); Layer~2 is group LOCO--AUUC
+(2 blocks, 6 retrains per learner). AUUC matches \texttt{sklift}; $|\Delta\mathrm{sklift}|=0$ on all runs below.
+Monitor overlap ESS on stacked REF/LIVE is high ($\gtrsim 0.7$) in most rows---LOCO attributions are gated in.
+
+\subparagraph{hillstrom.}
+Gates: $\widehat{\mathrm{MMD}}^2=0.0016$, $\mathrm{ESS}_{\mathrm{ovlp}}=0.990$, PO-risk $p=0.7273$ (accept). Diagnosis: \texttt{concept\_drift\_or\_tau\_change}. Regime: \texttt{x\_stable\_gap\_large\_check\_loco\_and\_po\_risk}.
+Global Layer~1: $\mathrm{AUUC}_{\mathrm{ref}}=-0.0449$, $\mathrm{AUUC}_{\mathrm{live}}=0.0154$, $\Delta_{\mathrm{AUUC}}=-0.0603$.
+
+\noindent\textbf{LOCO--AUUC (top groups).}
+\begin{center}\small
+\begin{tabular}{lrrr}
+\toprule Group & $\mathrm{drop}_{\mathrm{ref}}$ & $\mathrm{drop}_{\mathrm{live}}$ & $\mathrm{drop\_gap}$ \\
+\midrule
+block\_0 & -0.0868 & -0.0167 & 0.0701 \\
+block\_1 & 0.0179 & -0.0033 & -0.0212 \\
+\bottomrule\end{tabular}\end{center}
+\noindent Top pairwise AUUC (L1): cap \texttt{domain\_quintile\_3}, continue \texttt{domain\_quintile\_4} ($|\Delta\mathrm{AUUC}|=0.1260$).
+\noindent\textbf{LIVE quintiles (L1 AUUC + L2 effect).}
+\begin{center}\small
+\begin{tabular}{lrrrrr}
+\toprule Slice & $n$ & $\mathrm{AUUC}_{\mathrm{live}}$ & $\widehat{\tau}^{\mathrm{obs}}$ & $\bar{\hat\tau}$ & $\hat s$ \\
+\midrule
+Q1 & 220 & 0.0492 & 0.0613 & 0.0837 & 0.559 \\
+Q2 & 260 & 0.0422 & 0.0868 & 0.0856 & 0.701 \\
+Q3 & 240 & -0.0557 & 0.1101 & 0.0831 & 0.782 \\
+Q4 & 228 & 0.0703 & 0.0789 & 0.0764 & 0.880 \\
+Q5 & 252 & -0.0031 & 0.0057 & 0.0638 & 0.961 \\
+\bottomrule\end{tabular}\end{center}
+\noindent Top pairwise empirical ATE (L2): \texttt{domain\_quintile\_3} vs \texttt{domain\_quintile\_5}, $\Delta\widehat{\tau}^{\mathrm{obs}}=0.1043$ (higher: \texttt{domain\_quintile\_3}).
+\noindent\textbf{Business rules emitted.}
+\begin{itemize}\itemsep2pt
+\item[\textsc{REALLOCATE} (P1).] Cap uplift in domain quintile 'domain\_quintile\_3' (AUUC\_live=-0.0557, n=240); continue in 'domain\_quintile\_4' where ranking remains stronger.
+\item[\textsc{REALLOCATE} (P2).] Uplift ranking on LIVE depends on group 'block\_0': do not drop this block from the model without replacement; if trimming segments, keep users where this group's LOCO signal is stable (LOCO AUUC drop\_live=-0.0167).
+\item[\textsc{REALLOCATE} (P2).] Uplift ranking on LIVE depends on group 'block\_1': do not drop this block from the model without replacement; if trimming segments, keep users where this group's LOCO signal is stable (LOCO AUUC drop\_live=-0.0033).
+\item[\textsc{RELEARN} (P2).] X stable but AUUC gap large: extend labels and schedule prod uplift model relearn after REALLOCATE trial.
+\item[\textsc{MONITOR} (P4).] Layer-2 diagnostic (PO-risk not reject): largest slice ATE contrast domain\_quintile\_3 vs domain\_quintile\_5 ($\Delta$ATE=0.1043) --- do not REALLOCATE on ATE alone; use Layer-1 AUUC rules first.
+\end{itemize}
+
+\subparagraph{hillstrom\_covariate\_drift.}
+Gates: $\widehat{\mathrm{MMD}}^2=0.0041$, $\mathrm{ESS}_{\mathrm{ovlp}}=0.683$, PO-risk $p=1.0000$ (accept). Diagnosis: \texttt{concept\_drift\_or\_tau\_change}. Regime: \texttt{x\_stable\_gap\_large\_check\_loco\_and\_po\_risk}.
+Global Layer~1: $\mathrm{AUUC}_{\mathrm{ref}}=0.0144$, $\mathrm{AUUC}_{\mathrm{live}}=-0.0181$, $\Delta_{\mathrm{AUUC}}=0.0325$.
+
+
+\subparagraph{synthetic\_covariate.}
+Gates: $\widehat{\mathrm{MMD}}^2=0.0034$, $\mathrm{ESS}_{\mathrm{ovlp}}=0.756$, PO-risk $p=0.3636$ (accept). Diagnosis: \texttt{concept\_drift\_or\_tau\_change}. Regime: \texttt{x\_stable\_gap\_large\_check\_loco\_and\_po\_risk}.
+Global Layer~1: $\mathrm{AUUC}_{\mathrm{ref}}=-0.0160$, $\mathrm{AUUC}_{\mathrm{live}}=0.0112$, $\Delta_{\mathrm{AUUC}}=-0.0272$.
+
+\noindent\textbf{LOCO--AUUC (top groups).}
+\begin{center}\small
+\begin{tabular}{lrrr}
+\toprule Group & $\mathrm{drop}_{\mathrm{ref}}$ & $\mathrm{drop}_{\mathrm{live}}$ & $\mathrm{drop\_gap}$ \\
+\midrule
+block\_1 & -0.0161 & 0.0144 & 0.0305 \\
+block\_0 & -0.0034 & 0.0022 & 0.0056 \\
+\bottomrule\end{tabular}\end{center}
+\noindent Top pairwise AUUC (L1): cap \texttt{domain\_quintile\_2}, continue \texttt{domain\_quintile\_4} ($|\Delta\mathrm{AUUC}|=0.1252$).
+\noindent\textbf{LIVE quintiles (L1 AUUC + L2 effect).}
+\begin{center}\small
+\begin{tabular}{lrrrrr}
+\toprule Slice & $n$ & $\mathrm{AUUC}_{\mathrm{live}}$ & $\widehat{\tau}^{\mathrm{obs}}$ & $\bar{\hat\tau}$ & $\hat s$ \\
+\midrule
+Q1 & 195 & -0.0165 & -0.0212 & 0.0046 & 0.726 \\
+Q2 & 200 & -0.0338 & 0.0399 & 0.0089 & 0.815 \\
+Q3 & 186 & -0.0163 & 0.0312 & 0.0141 & 0.863 \\
+Q4 & 176 & 0.0913 & 0.0487 & 0.0015 & 0.900 \\
+Q5 & 243 & 0.0155 & -0.1188 & -0.0114 & 0.948 \\
+\bottomrule\end{tabular}\end{center}
+\noindent Top pairwise empirical ATE (L2): \texttt{domain\_quintile\_4} vs \texttt{domain\_quintile\_5}, $\Delta\widehat{\tau}^{\mathrm{obs}}=0.1675$ (higher: \texttt{domain\_quintile\_4}).
+\noindent\textbf{Business rules emitted.}
+\begin{itemize}\itemsep2pt
+\item[\textsc{REALLOCATE} (P1).] Cap uplift in domain quintile 'domain\_quintile\_2' (AUUC\_live=-0.0338, n=200); continue in 'domain\_quintile\_4' where ranking remains stronger.
+\item[\textsc{REALLOCATE} (P2).] Uplift ranking on LIVE depends on group 'block\_1': do not drop this block from the model without replacement; if trimming segments, keep users where this group's LOCO signal is stable (LOCO AUUC drop\_live=0.0144).
+\item[\textsc{RELEARN} (P2).] X stable but AUUC gap large: extend labels and schedule prod uplift model relearn after REALLOCATE trial.
+\item[\textsc{REALLOCATE} (P3).] Restrict targeting to overlap-support users on LIVE (AUUC\_live=0.0226 on support band vs global 0.0112).
+\item[\textsc{MONITOR} (P4).] Layer-2 diagnostic (PO-risk not reject): largest slice ATE contrast domain\_quintile\_4 vs domain\_quintile\_5 ($\Delta$ ATE=0.1675) --- do not REALLOCATE on ATE alone; use Layer-1 AUUC rules first.
+\end{itemize}
+
+\subparagraph{synthetic\_concept.}
+Gates: $\widehat{\mathrm{MMD}}^2=0.0020$, $\mathrm{ESS}_{\mathrm{ovlp}}=0.991$, PO-risk $p=0.0303$ (reject). Diagnosis: \texttt{concept\_drift\_or\_tau\_change}. Regime: \texttt{x\_stable\_gap\_large\_check\_loco\_and\_po\_risk}.
+Global Layer~1: $\mathrm{AUUC}_{\mathrm{ref}}=0.0088$, $\mathrm{AUUC}_{\mathrm{live}}=-0.0026$, $\Delta_{\mathrm{AUUC}}=0.0114$.
+
+\noindent\textbf{LOCO--AUUC (top groups).}
+\begin{center}\small
+\begin{tabular}{lrrr}
+\toprule Group & $\mathrm{drop}_{\mathrm{ref}}$ & $\mathrm{drop}_{\mathrm{live}}$ & $\mathrm{drop\_gap}$ \\
+\midrule
+block\_1 & -0.0216 & 0.0704 & 0.0921 \\
+block\_0 & 0.0024 & -0.0297 & -0.0321 \\
+\bottomrule\end{tabular}\end{center}
+\noindent Top pairwise AUUC (L1): cap \texttt{domain\_quintile\_3}, continue \texttt{domain\_quintile\_2} ($|\Delta\mathrm{AUUC}|=0.0922$).
+\noindent\textbf{LIVE quintiles (L1 AUUC + L2 effect).}
+\begin{center}\small
+\begin{tabular}{lrrrrr}
+\toprule Slice & $n$ & $\mathrm{AUUC}_{\mathrm{live}}$ & $\widehat{\tau}^{\mathrm{obs}}$ & $\bar{\hat\tau}$ & $\hat s$ \\
+\midrule
+Q1 & 171 & -0.0194 & 0.0389 & 0.0632 & 0.737 \\
+Q2 & 143 & 0.0514 & 0.0727 & 0.0891 & 0.782 \\
+Q3 & 200 & -0.0408 & -0.1114 & 0.0607 & 0.806 \\
+Q4 & 261 & -0.0006 & -0.0802 & 0.0565 & 0.836 \\
+Q5 & 225 & 0.0186 & 0.0421 & 0.0537 & 0.882 \\
+\bottomrule\end{tabular}\end{center}
+
+
+We applied this procedure to real-world datasets including Hillstrom and Creptio, as well as to synthetic covariate- and concept-drift settings. Across these settings, FSDS on \(X\) yields low \(\mathrm{MMD}^2\) and near-perfect domain AUC: for \emph{hillstrom\_covariate\_drift}, \(\mathrm{MMD}^2=0.0039\), \(\widehat{\mathrm{AUC}}_{\mathrm{dom}}^{\mathrm{RF}}=1.0000\), and \(\mathrm{ESS}_{\mathrm{ovlp}}=1.000\); for \emph{synthetic\_covariate}, \(\mathrm{MMD}^2=0.0029\), domain AUC \(=0.9999\), and \(\mathrm{ESS}_{\mathrm{ovlp}}=0.753\); and for \emph{synthetic\_concept}, \(\mathrm{MMD}^2=0.0015\), domain AUC \(=1.0000\), and \(\mathrm{ESS}_{\mathrm{ovlp}}=0.893\).
+\emph{Results \& Conclusions} On Hillstrom, MMD is low and monitor ESS is high ($\approx 0.98$);
+Registry Logistic-X and DragonNet achieve the highest AUUC$_{\mathrm{live}}$, while meta LOCO is $\approx 10\times$ faster.
+On covariate-drifting Hillstrom/synthetic data, domain AUC approaches $1$ and AUUC$_{\mathrm{live}}$ often flips sign.
+Under synthetic concept drift, the AUUC gap widens as LOCO Spearman reaches $\pm 1$ across blocks---feature-level reallocation becomes visible.
+
+
+
+\subsection{Uplift monitoring via embedded FSDS + LOCO--AUUC (use case).}
+We emphasize that this is a straightforward application of our developed \textbf{FSDS} procedure; the only difference is that the model evaluation metric is AUUC (area under the uplift curve) instead of MSE (mean squared error). The same batch FSDS stack is applied to $X$ and to $Y\mid X$ (PO-risk) as elsewhere; the only change in the ranking layer is replacing \textbf{MSE} with \textbf{AUUC} on a refit-on-REF meta-learner $\hat\tau(X,T,Y)$.
+SRM on treatment $T$ gates validity, while ESS$_{\mathrm{ovlp}}(\hat e(W{=}1\mid X))$ or domain RF AUC$(X)$ gates the LOCO attributions.
+\paragraph{Key insight (AUUC sensitivity).}
+LOCO--AUUC with embedded FSDS is \textbf{sensitive to both covariate shift and concept drift} through one primary metric: $\mathrm{AUUC}_{\mathrm{live}}$ and $\Delta_{\mathrm{AUUC}}=\mathrm{AUUC}_{\mathrm{ref}}-\mathrm{AUUC}_{\mathrm{live}}$.
+\begin{itemize}\itemsep2pt
+  \item \textbf{Covariate shift:} $\widehat{\mathrm{MMD}}^2(X)$ and $\widehat{\mathrm{AUC}}_{\mathrm{dom}}^{\mathrm{RF}}(X)$ rise; overlap ESS often stays high---yet $\mathrm{AUUC}_{\mathrm{live}}$ drops or flips sign (ranking on LIVE fails while REF may look stable).
+  \item \textbf{Concept drift:} MMD on $X$ flat or modest; PO-risk / DRPerm on $Y\mid X$ may reject; $\Delta_{\mathrm{AUUC}}$ widens and LOCO Spearman $\rho$ on $\mathrm{drop}_{\mathrm{ref}}$ vs.\ $\mathrm{drop}_{\mathrm{live}}$ goes to $\pm 1$ (targeting drivers reallocate across feature groups).
+\end{itemize}
+Layer~1 FSDS disambiguates the failure mode; AUUC signals that uplift ranking broke; LOCO--AUUC localizes where to REALLOCATE before RELEARN---no second monitoring framework.
+\noindent\textbf{FSDS on $X$:}\
+$\widehat{\mathrm{MMD}}^2(X_{\mathrm{ref}},X_{\mathrm{live}})$,
+$\widehat{\mathrm{AUC}}_{\mathrm{dom}}^{\mathrm{RF}}(X)$,
+$\mathrm{ESS}_{\mathrm{ovlp}}(\hat e(W{=}1\mid X))$.
+\noindent\textbf{LOCO--AUUC:}\
+$\mathrm{AUUC}_{\mathrm{ref}}$, $\mathrm{AUUC}_{\mathrm{live}}$, $\Delta_{\mathrm{AUUC}}$;
+group LOCO: $\mathrm{drop}_{\mathrm{live}}^{(g)}=\mathrm{AUUC}_{\mathrm{live}}^{\mathrm{full}}-\mathrm{AUUC}_{\mathrm{live}}^{(-g)}$,
+$\rho=\mathrm{Spearman}(\mathrm{drop}_{\mathrm{ref}},\mathrm{drop}_{\mathrm{live}})$.
+\noindent\textbf{FSDS PO-risk on $Y\mid X$:}\
+$\tilde Y=(Y-\hat\mu(X))(W-\hat e(X))$,
+$\mathrm{PO\text{-}risk}=n^{-1}\sum_i \hat\tau_Y(X_i)^2$,
+DRPerm on batch $W$; PO-LOCO $\mathrm{VIMP}_j$.\\
+
+\subsection{Monitoring an uplift model (direct FSDS use case).}
+Split data into a \textbf{reference} window (REF) and a \textbf{live} window (LIVE).
+Use the same batch FSDS you already use---nothing new except the \textbf{ranking score}: for uplift we track \textbf{AUUC} instead of MSE.
+\medskip
+\noindent\textbf{Step 1 --- Did $X$ change?}
+Run FSDS on features: $\widehat{\mathrm{MMD}}^2(X_{\mathrm{ref}},X_{\mathrm{live}})$ and domain RF AUC$(X)$.
+Check SRM on treatment $T$ (balance in REF and LIVE).
+Optional: ESS overlap on $\hat e(W{=}1\mid X)$ before trusting feature attributions.
+\noindent\textbf{Step 2 --- Is uplift ranking still good?}\quad
+Train a meta-learner $\hat\tau$ on REF only.
+Report $\mathrm{AUUC}_{\mathrm{ref}}$, $\mathrm{AUUC}_{\mathrm{live}}$, and the gap $\Delta_{\mathrm{AUUC}}=\mathrm{AUUC}_{\mathrm{ref}}-\mathrm{AUUC}_{\mathrm{live}}$.
+\textbf{LOCO--AUUC:} drop a feature group, retrain on REF, recompute AUUC; large $\mathrm{drop}_{\mathrm{live}}$ means that group matters for ranking on LIVE.
+\noindent\textbf{Step 3 (optional) --- Did $Y\mid X$ change?}\quad
+Same window: PO-risk / DRPerm with batch label $W$ (REF vs LIVE), as in standard FSDS.
+
+
+\par Thus as we can see, the key takeaway here is that \textbf{AUUC goes down under both covariate shift and concept drift.}
+If MMD / domain AUC on $X$ is up, suspect population shift first.
+If $X$ looks stable but AUUC is down, suspect concept drift and check PO-risk.
+LOCO--AUUC tells which feature groups to fix before retraining the production model.
+Production may use Dragon-Net; the monitor can use a cheap Registry X-learner---same procedure.
+
+\subsection{Cross-batch interpretation and business recommendations}
+\label{sec:cross-batch-business}
+
+\paragraph{Paragraph 1 --- What the localized subset means (cross-batch).}
+After post-hoc localization you hold \emph{named} subsets: a LOCO feature group $g$ with large $\mathrm{drop}_{\mathrm{live}}^{(g)}$; a LIVE domain quintile $Q_k$ (users with similar $\hat s(x)$); a pairwise ranking contrast $(Q_a,Q_b)$ from Layer~1; optionally an overlap-support band and a Layer~2 pair with large $|\Delta\widehat{\tau}^{\mathrm{obs}}_{a,b}|$.
+In the two-batch contract these names are \textbf{not} interchangeable with product segments.
+$Q_k$ slices \textbf{LIVE rows only}, while $\hat s$ is trained on REF$\cup$LIVE, so high $k$ marks users who look \textbf{more LIVE-like versus REF}, not necessarily ``high value.''
+$\mathrm{AUUC}_k$ judges whether the \textbf{REF-frozen} ranker sorts that slice; $\widehat{\tau}^{\mathrm{obs}}_k$ judges \textbf{observed treat--control lift on today's LIVE traffic} inside the slice---they can diverge (high ATE, low AUUC).
+Large $\Delta_{\mathrm{AUUC}}$ means REF holdout ranked better than LIVE under the same $\hat\tau$, not that population uplift collapsed.
+Before any subset-driven change, require SRM on $T$; if $\mathrm{ESS}_{\mathrm{ovlp}}$ is low, treat only \textsc{RefreshRef} as valid (extend or match REF, defer caps).
+If $\widehat{\mathrm{AUC}}_{\mathrm{dom}}^{\mathrm{RF}}$ or MMD flag covariate shift, read quintiles as \textbf{support/mix} slices; if they are flat and DRPerm rejects, read the same quintiles as \textbf{concept} slices and allow Layer~2 budget moves only under PO-risk.
+
+\paragraph{Paragraph 2 --- How to adjust strategy once the subset is identified.}
+Default \textbf{action ladder} on LIVE is \textsc{Reallocate} (cap bad slices or \textbf{narrow support}) $\rightarrow$ re-run the two-batch monitor on the \textbf{next} LIVE window $\rightarrow$ \textsc{Relearn} only if ranking or concept remains broken after that trial.
+Full prod $\hat\tau$ retrain is intentionally \emph{last}: most cross-batch alerts are fixed by \textbf{where} you treat, not by immediate refit.
+\textbf{(i) Feature subset (LOCO / LOGO-MMD top group $g$).}
+Do \textbf{not} drop $g$ from the prod feature pipeline because LOCO reported dependence---that drop is exactly what worsened AUUC in the monitor.
+Adjust by \textsc{HoldFeature}: keep $g$ in the model; in \emph{targeting rules}, down-rank or exclude \textbf{segments defined by extreme values of $g$} until REF is refreshed or LOGO-MMD falls; if $g$ drove batch shift, plan REF extension so the shifted support enters calibration rather than hard-suppressing $g$ without data.
+\textbf{(ii) User subset --- worst quintile $Q_{k^\star}=\arg\min_k \mathrm{AUUC}_k$.}
+\textsc{Reallocate} Layer~1: reduce treat probability or impression cap on $Q_{k^\star}$ (e.g.\ score-based targeting only outside $Q_{k^\star}$); shift volume to the \textbf{better} quintile $Q_b$ from the largest pairwise $|\mathrm{AUUC}_a-\mathrm{AUUC}_b|$ when $Q_b$ meets SLA.
+\textbf{(iii) Narrow support} (overlap band $\mathcal{L}_{\mathrm{ovlp}}=\{x:\ \hat e(W\mid x)\in[\ell,u]\}$ when $\mathrm{AUUC}_{\mathrm{ovlp}}\gg \mathrm{AUUC}_{\mathrm{live}}$).
+This is a first-class strategy, not a fallback: \textbf{deploy the existing REF $\hat\tau$ only on $\mathcal{L}_{\mathrm{ovlp}}$} (gate scores at scoring or policy time), hold out or uniform-random treat outside the band, and report $\mathrm{AUUC}_{\mathrm{live}}$ \emph{conditional on the narrowed policy} in the next window.
+High-$\hat s$ LIVE-like tails that fail AUUC are treated as \textbf{out-of-support} until REF absorbs them over several stable days (\textsc{RefreshRef} in parallel).
+Narrow support often restores acceptable ranking \textbf{without} RELEARN when global LIVE AUUC is red but the overlap core is green---typical under covariate shift with intact $Y\mid X$ on the shared support.
+\textbf{(iv) Layer~2 pair (high $|\Delta\widehat{\tau}^{\mathrm{obs}}|$) when DRPerm $p\le\alpha$.}
+Shift same-day treat/holdout budget toward the higher-empirical-ATE quintile in the top pair \textbf{only if} Layer~1 does not cap that quintile; without PO reject, record the pair as \textsc{Monitor} only.
+\textbf{(v) \textsc{Relearn}.}
+Schedule prod $\hat\tau$ retrain \textbf{after} at least one REALLOCATE or narrow-support trial if \textbf{(a)} DRPerm still rejects and $\bar{\hat\tau}_k$ vs $\widehat{\tau}^{\mathrm{obs}}_k$ disagree across quintiles (model level wrong under concept shift), or \textbf{(b)} $\mathrm{AUUC}_{\mathrm{ovlp}}$ and capped-quintile AUUC remain below SLA despite narrowed deployment (ranking not recoverable by support alone).
+Do \textbf{not} RELEARN when only global $\mathrm{AUUC}_{\mathrm{live}}$ is low but $\mathrm{AUUC}_{\mathrm{ovlp}}$ is healthy---keep narrowed support and widen REF instead.
+When $\bar{\hat\tau}_k\approx\widehat{\tau}^{\mathrm{obs}}_k$ but AUUC stays weak, prefer recalibrating $e(T\mid X)$ and segment rules before neural or full-graph relearn.
+\textbf{Priority when rules collide:} \textsc{RefreshRef} if ESS fails; then Layer~1 cap; \textbf{narrow support} alongside (not instead of) quintile caps when overlap diagnostic fires; Layer~2 spend last and never on a capped quintile; RELEARN after trial failure, not on first alert. \\
+\par Overall this really depends on the fact that the AUUC and the uplift would have direct correspondence to the economic benefits or the incremental profit - as long as the Y is well defined or the objective function to be optimized contains terms related to economic benefits.
+
+\subsection{Refitting framework via AUUC quantiles and post-hoc subset localization.}
+Global refitting of an uplift model is often prohibitively expensive and may destabilize subpopulations that remain well-calibrated. We therefore refit only when necessary, only where necessary, and only the component that is actually broken. The procedure proceeds in two stages. First, we partition the evaluation sample into $K$ quantiles $\{Q_1,\dots,Q_K\}$ by the estimated uplift $\hat{\tau}(x)$ and compute the AUUC on each quantile for both the reference and the live batch; a significant drop $\Delta_k = \mathrm{AUUC}_k^{\mathrm{ref}} - \mathrm{AUUC}_k^{\mathrm{live}} > \delta$ flags quantile $Q_k$ as problematic, answering \emph{where} the ranking quality has degraded. Second, for each flagged quantile we localize the root cause along two axes: feature-level attribution via FSDS, which ranks the driving features and their drift types (covariate, concept, or compound), and component-level diagnosis, which separates the uplift model into its propensity component $e(x)$ and outcome component $m(x)$ and identifies the primary cause by comparing their drift scores. The refit decision then follows directly: propensity drift alone triggers \textsc{RefitPropensity} (requiring only $X$ and $T$), outcome drift alone triggers \textsc{RefitOutcome} (requiring $X$, $T$, and $Y$), and simultaneous drift triggers \textsc{RefitBoth}. The refit scope is local if only a minority of quantiles are flagged, and global otherwise. In a federated setting, subset localization and local refitting are performed node-locally and aggregated via secure averaging. This yields a principled, cost-efficient refitting policy that pinpoints both the stratum and the faulty component under distribution shift.
+\subsection{Overall Recommendation for the Monitoring Uplift Models}
+\par Under a two-batch contract, a frozen REF ranker $\hat\tau$ is scored on LIVE and monitored through the same geometry as batch FSDS: covariate/user-mixture shift is read from $\widehat{\mathrm{MMD}}^2$, domain AUC on $(X,W)$, and the \emph{consistency} of ranking on comparable support---global $\mathrm{AUUC}_{\mathrm{live}}$ versus overlap-band $\mathrm{AUUC}_{\mathrm{ovlp}}$ on $\hat e(W\mid X)\in[\ell,u]$---where a large gap indicates that policy and support adjustment (caps, narrow deployment, REF refresh) should precede any model refit\\
+\par Concept and outcome movement is gated separately by DRPerm / PO-risk on stacked REF$\cup$LIVE (clever covariates with batch label $W$): when this axis rejects, ranking degradation on the overlap core is treated as genuine $Y\mid X$ / CATE-surface drift and triggers heavier adaptation---Layer~2 budget moves conditional on PO-risk, then temporal-split joint refit of $e$, $\mu$, and $\tau$ with holdout validation---whereas mixture shift alone rarely justifies immediate $\hat\tau$ retraining.\\
+\par Online, full DML cross-fitting is replaced by a meta-learner monitor (LOCO--AUUC and slice tables) plus batch permute--refit tests; feedback-driven overlap collapse is handled by refitting propensity and matching before resuming caps. Thus the meta-learner would be preferred than the DML(double machine learning) in terms of the post-deployment monitoring stages.\\
+\par The resulting ladder---refresh when ESS fails, reallocate on ranking, narrow when $\mathrm{AUUC}_{\mathrm{ovlp}}\gg \mathrm{AUUC}_{\mathrm{live}}$, relearn only after trials fail under PO and $\bar{\hat\tau}\not\approx\widehat{\tau}^{\mathrm{obs}}$---minimizes ad hoc rules while retaining a clear statistical spine from FSDS and pseudo-outcome risk.\\
+
+\section{Iterated actionable items: meta-learner localization $\times$ IV subset tiers}
+\label{sec:actionables-meta-iv}
+
+The preceding sections fix \emph{where} the REF-frozen uplift ranker fails
+(LOCO--AUUC groups, LIVE domain quintiles, overlap band) and \emph{how} to
+ladder \textsc{Reallocate}$\to$\textsc{NarrowSupport}$\to$\textsc{Relearn}.
+This section iterates that list with two additions that the FSDS monitoring
+stack already exposes but that operations often leave uncoupled:
+\begin{enumerate}\itemsep2pt
+  \item \textbf{IV subset localization} --- first-stage strength is
+        \emph{not} portable across customer / traffic strata; local $F$
+        maps to action tiers before any spend claim.
+  \item \textbf{Meta-learner localization} --- LOCO--AUUC and LIVE
+        quintiles name the slices where ranking broke; those names must be
+        \textbf{cross-validated} against IV identification before a
+        business move that assumes an identified incremental effect.
+\end{enumerate}
+The joint object is an \textbf{actionable items list}: every emitted rule
+carries (a)~an FSDS / AUUC localization handle, (b)~an IV tier (or
+explicit ``IV not run''), and (c)~a business owner gate when the two
+disagree.
+
+\subsection{Why IV subset localization helps the uplift monitor}
+\label{sec:iv-helps-monitor}
+
+Uplift monitoring answers ``does $\hat\tau$ still \emph{rank} on LIVE?''
+IV answers a different but adjacent question: ``in this stratum, is an
+incremental effect \emph{identifiable} from exogenous variation in $T$?''
+When targeting / incentives are themselves endogenous (self-selection,
+sales ops override, budget caps correlated with $X$), a LIVE quintile with
+high $\widehat{\tau}^{\mathrm{obs}}$ can be a confounded contrast.
+Instrumental-variable 2SLS with a first-stage screen localizes
+\emph{identification coverage}, not ranking quality.
+
+On a synthetic confounded DGP designed so that valid instruments weaken in
+low-$X_0$ quartiles (extreme segment scaler; see
+\texttt{iv\_selection\_synth}), subset localization recovers a sharp
+strength gap and a population mix that forces strategy change
+(Table~\ref{tab:iv-tiers}).
+
+\begin{table}[H]
+\centering
+\small
+\caption{IV subset tiers after localization (synthetic extreme F-het;
+8 seeds $\times$ $n{=}2000$). Tier rules reuse Staiger--Stock / Stock--Yogo
+thresholds already used for IV KEEP/WATCH/RETIRE.}
+\label{tab:iv-tiers}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Tier & Local first-stage $F$ & Population share & Statistical action \\
+\midrule
+\texttt{NO\_ACT} & $F<10$ & $31.2\%$ & local-retire IV; hold; do not quote IV ATE \\
+\texttt{ESTIMATE\_ONLY} & $10\le F<20$ & $15.6\%$ & publish local IV + WATCH; do not scale \\
+\texttt{ACT} & $F\ge 20$ & $53.1\%$ & use local IV ATE; F-/precision-weight eligible \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Coverage summaries (same suite): identification ($F\ge 10$)
+$68.8\%$; action ($F\ge 20$) $53.1\%$;
+\textbf{policy conflict} $31.2\%$ --- share of mass that is local
+\texttt{NO\_ACT} but would still receive a \emph{global} IV ATE quote if
+strategy ignored localization.
+Segment diagnostics (oracle valid $Z$): Q1 $F\approx 1.2$ (NO\_ACT),
+Q2 $F\approx 13.6$ (ESTIMATE\_ONLY), Q3/Q4 $F\approx 213$ / $1112$ (ACT);
+F-heterogeneity ratio $\max F/\min F \approx 930\times$ on the mean table
+(seed-level ratios larger).
+
+\paragraph{Aggregator insight (pre-ROI).}
+Once tiers exist, \emph{how} one aggregates local ATEs matters as much as
+the global 2SLS point (Table~\ref{tab:iv-agg}).
+Flat-pooling weak segments pollutes the pooled ATE; F- or precision-weights
+among identified segments, or ACT-only aggregation, beat global IV on
+$|\widehat{\mathrm{ATE}}-\tau|$ in this design.
+
+\begin{table}[H]
+\centering
+\small
+\caption{After localization: aggregator absolute error vs true $\tau$
+(synthetic; mean over 8 seeds).}
+\label{tab:iv-agg}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Aggregator & $|\widehat{\mathrm{ATE}}-\tau|$ (sd) \\
+\midrule
+\texttt{naive\_ols} & $0.221$ $(0.050)$ \\
+\texttt{equal\_pool\_all} & $0.181$ $(0.120)$ \\
+\texttt{global\_iv} & $0.020$ $(0.008)$ \\
+\texttt{equal\_pool\_id} ($F\ge 10$) & $0.044$ $(0.055)$ \\
+\texttt{f\_weighted} / \texttt{precision\_wt} & $\mathbf{0.012}$ $(0.007)$ \\
+\texttt{adaptive\_act} (ACT mass only) & $\mathbf{0.011}$ $(0.007)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Justification.}
+IV subset localization is helpful for uplift monitoring because it supplies
+an \emph{identification map} that AUUC alone cannot: a LIVE quintile can
+have healthy $\mathrm{AUUC}_k$ (ranker sorts well) while local $F<10$
+(any IV-backed incremental claim is invalid there), or weak AUUC with
+strong local $F$ (ranking broken, but a valid IV ATE still exists for
+relearn / holdout design).
+The ROI layer later consumes the same tiers
+(\texttt{ACT}$\to$ scalable bets; \texttt{ESTIMATE\_ONLY}$\to$ probes;
+\texttt{NO\_ACT}$\to$ do not spend on an IV-identified uplift claim)
+without pretending dollar ROI is identified from the synthetic suite.
+
+\subsection{Why the meta-learner helps --- and why its localization is not enough alone}
+\label{sec:meta-helps}
+
+Under the two-batch contract, the monitor meta-learner $\hat\tau$ (refit on
+REF only) is the cheap probe for Layer~2: $\mathrm{AUUC}_{\mathrm{live}}$,
+$\Delta_{\mathrm{AUUC}}$, group LOCO--AUUC drops, and LIVE domain-quintile
+tables.
+Empirically (Hillstrom / injected covariate / synthetic concept rows above),
+this stack already emits \textsc{REALLOCATE} / \textsc{RELEARN} /
+\textsc{MONITOR} rules tied to named slices
+($Q_k$, LOCO block $g$, overlap band).
+That is the right \emph{ranking} localization.
+
+What it does \textbf{not} certify:
+\begin{itemize}\itemsep2pt
+  \item that $\widehat{\tau}^{\mathrm{obs}}_k$ inside a quintile is a
+        causal incremental effect (Layer~2 ATE is descriptive unless
+        randomized or IV-backed);
+  \item that a LOCO group $g$ with large $\mathrm{drop}_{\mathrm{live}}^{(g)}$
+        is a valid \emph{instrument} or a valid \emph{policy lever} ---
+        LOCO measures dependence of AUUC on features in $\hat\tau$, not
+        exclusion or first-stage strength;
+  \item that narrowing support or capping $Q_{k^\star}$ improves
+        \emph{identified} incremental profit rather than only the ranking
+        metric on the remaining mass.
+\end{itemize}
+Hence meta-learner localization and IV localization answer complementary
+questions and must be cross-checked before business scale-up.
+
+\subsection{Cross-validation matrix: meta localization $\times$ IV tier}
+\label{sec:cross-validate}
+
+Let $S$ be a named subset from the uplift monitor
+(LIVE quintile $Q_k$, LOCO-defined segment on extreme $g$, or overlap
+band $\mathcal{L}_{\mathrm{ovlp}}$).
+Run the same IV scorecard \emph{inside} $S$ (or the nearest stratum where
+instruments are defined): local first-stage $F_S$, exclusion / Conley
+screen, KEEP/WATCH/RETIRE, and tier
+$\mathrm{tier}(S)\in\{\texttt{NO\_ACT},\texttt{ESTIMATE\_ONLY},\texttt{ACT}\}$.
+Table~\ref{tab:cross-matrix} is the operational join.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Cross-validation of meta-learner localization vs IV subset tier.
+``Business gate'' is required whenever the two columns disagree or when
+\texttt{ESTIMATE\_ONLY} meets a P1 REALLOCATE.}
+\label{tab:cross-matrix}
+\begin{tabular}{@{}p{0.22\linewidth}p{0.22\linewidth}p{0.24\linewidth}p{0.24\linewidth}@{}}
+\toprule
+Meta / AUUC read on $S$ & IV $\mathrm{tier}(S)$ & Joint statistical read & Default actionable item \\
+\midrule
+AUUC$_S$ healthy; $\bar{\hat\tau}_S\approx\widehat{\tau}^{\mathrm{obs}}_S$ &
+\texttt{ACT} &
+Ranking OK + ID OK &
+\textsc{Continue} / scale within SLA; F-weight $S$ in portfolio \\
+\addlinespace
+AUUC$_S$ healthy &
+\texttt{NO\_ACT} &
+Ranker sorts; incremental effect \emph{not} IV-identified &
+\textsc{Monitor} ranking; \textbf{do not} claim IV uplift; business: decide treat on RCT / margin rules only \\
+\addlinespace
+AUUC$_S$ red (cap candidate) &
+\texttt{ACT} &
+Ranking broken; ID still OK &
+\textsc{Reallocate} / narrow on ranking; keep IV ATE as \emph{relearn target}; prefer \textsc{Refit} components over killing identified mass \\
+\addlinespace
+AUUC$_S$ red &
+\texttt{NO\_ACT} &
+Double red: bad rank + weak ID &
+\textsc{Hold} spend; \textsc{RefreshRef} / design better $Z$ or RCT before REALLOCATE-as-uplift \\
+\addlinespace
+AUUC$_S$ mixed; LOCO flags $g$ &
+\texttt{ESTIMATE\_ONLY} &
+Soft ID; ranking drivers unstable &
+\textsc{Watch}: small probe only; owner sign-off; no national scale \\
+\addlinespace
+High $|\Delta\widehat{\tau}^{\mathrm{obs}}|$ pair; PO-risk accept &
+any &
+Descriptive ATE contrast; IV may disagree &
+\textsc{Monitor} only (as in Hillstrom rules); never REALLOCATE on Layer~2 ATE alone \\
+\addlinespace
+$\mathrm{AUUC}_{\mathrm{ovlp}}\gg\mathrm{AUUC}_{\mathrm{live}}$ &
+\texttt{ACT} on overlap, \texttt{NO\_ACT} on tail &
+Classic mix shift &
+\textsc{NarrowSupport} to overlap; hold out-of-support until REF absorbs; do not global-IV the tail \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Conflict rate as a KPI.}
+Report, each window,
+\[
+  \widehat{p}_{\mathrm{conflict}}
+  =
+  \frac{1}{n_{\mathrm{live}}}
+  \sum_{i\in\mathrm{LIVE}}
+  \mathbf{1}\{\mathrm{tier}(S(x_i))=\texttt{NO\_ACT}\}
+  \cdot
+  \mathbf{1}\{\text{global IV or global AUUC would still act on }i\}.
+\]
+On the synthetic IV suite this is $\approx 31\%$; on LIVE traffic it is the
+share of users who would be oversold an identified-uplift story.
+Meta LOCO / quintile caps without this KPI systematically over-act on
+weak-ID mass.
+
+\subsection{Business intervention --- when owners must enter}
+\label{sec:business-gate}
+
+Automation covers ranking caps and IV tiers; it does \textbf{not} cover
+objective translation or instrument legitimacy.
+Require a named business gate (growth / risk / marketplace ops) in the
+following cases --- these are the iterated additions to the actionable
+list:
+
+\begin{enumerate}\itemsep3pt
+  \item[\textbf{B1.}] \textbf{AUUC-green $\times$ IV-\texttt{NO\_ACT}.}
+        Product wants to scale because the ranker looks good; stats refuse
+        an IV uplift claim.
+        Owner chooses: (i)~run / trust an RCT in $S$, (ii)~treat on
+        margin / LTV rules without causal branding, or (iii)~hold.
+        Engineering must not silently convert $\widehat{\tau}^{\mathrm{obs}}$
+        into ``incremental profit.''
+
+  \item[\textbf{B2.}] \textbf{AUUC-red $\times$ IV-\texttt{ACT}.}
+        Monitor wants to \textsc{Cap} $S$; IV says the stratum is still
+        identified.
+        Owner chooses whether capping is a \emph{ranking} repair (allowed)
+        or a \emph{budget exit} from an identified incremental segment
+        (needs explicit P\&L sign-off). Prefer component refit /
+        propensity calibration before exiting ACT mass.
+
+  \item[\textbf{B3.}] \textbf{Instrument legitimacy.}
+        KEEP/WATCH/RETIRE and Conley $\gamma^\star$ are statistical screens;
+        whether $Z$ is an ethically / contractually usable instrument
+        (incentive lottery, geo shock, waitlist) is a business + legal
+        call. WATCH + subset F-het $\ge 3\times$ (valid $Z$ not portable)
+        escalates to owner before national creative / incentive rollout.
+
+  \item[\textbf{B4.}] \textbf{\texttt{ESTIMATE\_ONLY} meets P1 REALLOCATE.}
+        Soft ID + aggressive reallocation is the highest false-confidence
+        zone. Require dual sign-off (monitor owner + IV owner) or downgrade
+        to probe volume.
+
+  \item[\textbf{B5.}] \textbf{Layer~2 ATE pair vs IV tier disagree.}
+        If the higher-$\widehat{\tau}^{\mathrm{obs}}$ quintile is
+        \texttt{NO\_ACT} under IV, forbid Layer~2 budget shift; keep
+        \textsc{Monitor}. If it is \texttt{ACT} and PO-risk rejects, allow
+        conditional Layer~2 move under the existing PO gate.
+\end{enumerate}
+
+\subsection{Updated actionable items list (v2)}
+\label{sec:actionables-v2}
+
+Core trio already intuitive on the floor: \textsc{ReallocAUUC} (ranking),
+\textsc{Relearn} (prototype / prod refit after trial),
+\textsc{MonitorATE} (Layer~2 descriptive only).
+Priority order when rules collide is unchanged
+(\textsc{RefreshRef} if ESS fails $\to$ Layer~1 cap $\to$ narrow support
+$\to$ Layer~2 last $\to$ \textsc{Relearn} after trial), with IV tiers as an
+additional gate on any item that claims incremental effect.
+
+\begin{center}
+\small
+\begin{tabular}{@{}clp{0.72\linewidth}@{}}
+\toprule
+Pri. & Code & Actionable item \\
+\midrule
+P0 & \textsc{GateSRM} &
+Fail closed if SRM on $T$ breaks in REF or LIVE --- no AUUC, no IV ATE, no REALLOCATE. \\
+P0 & \textsc{GateESS} &
+If $\mathrm{ESS}_{\mathrm{ovlp}}$ low or domain AUC$\approx 1$, only \textsc{RefreshRef} / stratify; defer LOCO-driven cuts and defer IV portfolio weights on mix-shifted support. \\
+P1 & \textsc{ReallocAUUC} &
+Cap worst LIVE quintile / continue best pairwise AUUC slice --- \emph{ranking} move only; attach IV $\mathrm{tier}(S)$ in the ticket. \\
+P1 & \textsc{NarrowSupport} &
+Deploy REF $\hat\tau$ only on overlap band when $\mathrm{AUUC}_{\mathrm{ovlp}}\gg\mathrm{AUUC}_{\mathrm{live}}$; hold tail until REF absorbs. \\
+P1 & \textsc{IV-NoActHold} &
+On $\mathrm{tier}(S)=\texttt{NO\_ACT}$, do not quote IV ATE; do not scale ``identified uplift'' spend; local-retire $Z$ for that subset. \\
+P2 & \textsc{HoldFeature} &
+LOCO top group $g$: keep in prod features; down-rank extreme-$g$ targeting segments; plan REF extension if LOGO-MMD flags $g$. \\
+P2 & \textsc{IV-ActWeight} &
+On \texttt{ACT} slices, aggregate local IV ATEs by $F$ or $1/\mathrm{se}^2$ (not equal-pool); prefer \texttt{adaptive\_act} over global IV when F-het is large. \\
+P2 & \textsc{IV-WatchProbe} &
+\texttt{ESTIMATE\_ONLY}: publish estimate + WATCH; probe volume only; dual sign-off before P1 spend. \\
+P2 & \textsc{CrossCheck} &
+Every P1 REALLOCATE ticket must show the Table~\ref{tab:cross-matrix} cell (AUUC read $\times$ IV tier) and B1--B5 gate if conflict. \\
+P2 & \textsc{RefitPropensity} &
+Mix / propensity drift with PO-risk accept: refit $e(T\mid X)$ only (needs $X,T$) before full $\tau$ relearn. \\
+P2 & \textsc{CalibrateScore} &
+When $\bar{\hat\tau}_k\approx\widehat{\tau}^{\mathrm{obs}}_k$ but AUUC still weak: recalibrate scores / segment rules first. \\
+P3 & \textsc{RefitOutcome} &
+PO-risk / DRPerm reject on overlap core: refit outcome $\mu$ (needs $X,T,Y$); if propensity also drifted $\to$ \textsc{RefitBoth}. \\
+P3 & \textsc{Relearn} &
+After $\ge 1$ REALLOCATE / narrow trial: if PO-risk still rejects and $\bar{\hat\tau}\not\approx\widehat{\tau}^{\mathrm{obs}}$, or overlap AUUC still below SLA --- schedule prod $\hat\tau$ relearn; use IV-\texttt{ACT} mass as labeled priority for evaluation design. \\
+P3 & \textsc{RetireZ} &
+Global RETIRE if $F<10$, exclusion fail, or Conley fragile; subset RETIRE\_LOCAL if segment $F<10$; WATCH if subset F-ratio $\ge 3\times$. \\
+P4 & \textsc{MonitorATE} &
+Layer~2 $|\Delta\widehat{\tau}^{\mathrm{obs}}|$ pairs: diagnostic only unless PO reject \emph{and} IV tier is \texttt{ACT}. \\
+P4 & \textsc{PolicyConflict} &
+Report LIVE share that is local IV-\texttt{NO\_ACT} but would still get a global IV / global-AUUC act --- KPI for overselling identified uplift. \\
+P4 & \textsc{SensWatch} &
+E-value / Rosenbaum $\Gamma$ / OVB RV / Conley $\gamma^\star$ on the \emph{naive} association: explain why IV was needed; do \textbf{not} retire $Z$ from these alone. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What else is worth shipping (beyond AUUC / Relearn / MonitorATE)?}
+Three that stay equally intuitive:
+\textbf{(i)} \textsc{NarrowSupport} --- keep the same $\hat\tau$ but only score the overlap band when $\mathrm{AUUC}_{\mathrm{ovlp}}\gg\mathrm{AUUC}_{\mathrm{live}}$;
+\textbf{(ii)} \textsc{RefitPropensity} / \textsc{RefitOutcome} --- component-level relearn prototype, cheaper than full $\tau$ rebuild;
+\textbf{(iii)} \textsc{PolicyConflict} --- single coverage number from IV subset tiers for how much traffic would be oversold without localization.
+
+\paragraph{One-line justification for the iteration.}
+Meta-learner LOCO--AUUC localizes \emph{ranking failure}; IV subset tiers
+localize \emph{identification failure}; business gates resolve
+\emph{objective and instrument legitimacy}.
+Acting on either localization alone over-claims: AUUC-only moves can scale
+confounded slices; IV-only moves can protect identified mass that the
+ranker no longer sorts.
+The cross-validation matrix and B1--B5 gates are the minimal coupling that
+keeps the FSDS uplift monitor actionable without a second, disconnected
+causal stack.
+
+\paragraph{Reproducibility.}
+\begin{verbatim}
+python3 scripts/run_iv_selection_synth.py
+python3 scripts/run_fsds_rl_closed_loop.py --compare-meta-iv
+\end{verbatim}
+Code: \texttt{Python/src/iv\_selection\_synth.py}
+(\texttt{subset\_adaptive\_strategy}, \texttt{strategy\_suite});
+monitor path as in Figure~\ref{fig:Monitoring\_UpliftModel}.
+Docs: \texttt{docs/method/IV\_subset\_strategy.md}.
+
+\end{document}

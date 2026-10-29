@@ -1,0 +1,212 @@
+{
+  "table": {
+    "plateau": {
+      "online_mse": {
+        "mean": 1.5899766702998668,
+        "sd": 0.06844224389159459
+      },
+      "n": 4
+    },
+    "bank": {
+      "online_mse": {
+        "mean": 1.5664578239094675,
+        "sd": 0.0630536690650958
+      },
+      "n": 4
+    },
+    "sdc": {
+      "online_mse": {
+        "mean": 2.2885836090830933,
+        "sd": 0.021849710712096574
+      },
+      "n": 4
+    },
+    "gpm_typed": {
+      "online_mse": {
+        "mean": 1.5929396903992386,
+        "sd": 0.07007985179634726
+      },
+      "n": 4
+    }
+  },
+  "shapes": {
+    "msrvtt": {
+      "s": "(n, 2049) = 768 video + 512 audio + 768 text + 1 label",
+      "X": "(n, 2048)",
+      "blocks": {
+        "video": 768,
+        "audio": 512,
+        "text": 768
+      }
+    },
+    "amazon": {
+      "X": "(N, P) TF-IDF, P<=128, vocab frozen on batch 0",
+      "y": "(N,) stars in [1, 5]",
+      "batch": "(N,) category id 0..K-1, K=9",
+      "mu": "(5, P) star prototypes",
+      "M": "(P, k) GPM bases"
+    },
+    "amazon_live": {
+      "X": [
+        2160,
+        128
+      ],
+      "y": [
+        2160
+      ],
+      "batch": [
+        2160
+      ],
+      "K": 9,
+      "P": 128,
+      "N": 2160,
+      "n_per": {
+        "0": 240,
+        "1": 240,
+        "2": 240,
+        "3": 240,
+        "4": 240,
+        "5": 240,
+        "6": 240,
+        "7": 240,
+        "8": 240
+      },
+      "y_range": [
+        1.0,
+        5.0
+      ],
+      "categories": [
+        "Gift_Cards",
+        "Digital_Music",
+        "All_Beauty",
+        "Software",
+        "Subscription_Boxes",
+        "Musical_Instruments",
+        "Magazine_Subscriptions",
+        "Handmade_Products",
+        "Amazon_Fashion"
+      ]
+    }
+  },
+  "seeds": [
+    2026,
+    2027,
+    2028,
+    2029
+  ],
+  "source": "amazon",
+  "rows": [
+    {
+      "seed": 2026,
+      "method": "plateau",
+      "online_mse": 1.5696829005366326,
+      "cum_mse": 12.557463204293061,
+      "last_online_mse": 1.4035137786825813
+    },
+    {
+      "seed": 2026,
+      "method": "bank",
+      "online_mse": 1.5478434802288907,
+      "cum_mse": 12.382747841831126,
+      "last_online_mse": 1.421207557750147
+    },
+    {
+      "seed": 2026,
+      "method": "sdc",
+      "online_mse": 2.3033553994884595,
+      "cum_mse": 18.426843195907676,
+      "last_online_mse": 1.8453518628480814
+    },
+    {
+      "seed": 2026,
+      "method": "gpm_typed",
+      "online_mse": 1.5696829005366326,
+      "cum_mse": 12.557463204293061,
+      "last_online_mse": 1.4035137786825813
+    },
+    {
+      "seed": 2027,
+      "method": "plateau",
+      "online_mse": 1.553330899724933,
+      "cum_mse": 12.426647197799465,
+      "last_online_mse": 1.6005214309090074
+    },
+    {
+      "seed": 2027,
+      "method": "bank",
+      "online_mse": 1.5317459982899286,
+      "cum_mse": 12.253967986319429,
+      "last_online_mse": 1.6022492439949134
+    },
+    {
+      "seed": 2027,
+      "method": "sdc",
+      "online_mse": 2.2718261224592786,
+      "cum_mse": 18.17460897967423,
+      "last_online_mse": 1.7407862028568635
+    },
+    {
+      "seed": 2027,
+      "method": "gpm_typed",
+      "online_mse": 1.5570465709181855,
+      "cum_mse": 12.456372567345484,
+      "last_online_mse": 1.6034028672956164
+    },
+    {
+      "seed": 2028,
+      "method": "plateau",
+      "online_mse": 1.6915122225682164,
+      "cum_mse": 13.532097780545733,
+      "last_online_mse": 1.3653644110977865
+    },
+    {
+      "seed": 2028,
+      "method": "bank",
+      "online_mse": 1.6600314860234051,
+      "cum_mse": 13.280251888187241,
+      "last_online_mse": 1.3506128391585115
+    },
+    {
+      "seed": 2028,
+      "method": "sdc",
+      "online_mse": 2.311154674567063,
+      "cum_mse": 18.489237396536502,
+      "last_online_mse": 1.7737875114519028
+    },
+    {
+      "seed": 2028,
+      "method": "gpm_typed",
+      "online_mse": 1.6971973294594784,
+      "cum_mse": 13.577578635675827,
+      "last_online_mse": 1.3777205532721728
+    },
+    {
+      "seed": 2029,
+      "method": "plateau",
+      "online_mse": 1.5453806583696845,
+      "cum_mse": 12.363045266957474,
+      "last_online_mse": 1.3337259542941067
+    },
+    {
+      "seed": 2029,
+      "method": "bank",
+      "online_mse": 1.5262103310956463,
+      "cum_mse": 12.20968264876517,
+      "last_online_mse": 1.3538664643364464
+    },
+    {
+      "seed": 2029,
+      "method": "sdc",
+      "online_mse": 2.2679982398175715,
+      "cum_mse": 18.143985918540572,
+      "last_online_mse": 1.774138134628572
+    },
+    {
+      "seed": 2029,
+      "method": "gpm_typed",
+      "online_mse": 1.547831960682657,
+      "cum_mse": 12.382655685461256,
+      "last_online_mse": 1.3346109416933107
+    }
+  ]
+}
