@@ -30,6 +30,23 @@ Backend: word 1–2 grams (syntactic proxy) + char_wb 3–5 (lexical / surface p
 | malignant_attack | 0.2317 → 0.2968 | **0.0290 → 0.0168** | **0.874 → 0.920** | freeze lexical + adv-aug syntactic head; peaks & accuracy improve |
 | benign_synonym | — | — | 0.963 → 0.965 | conformal thr≈0.44, FPR≈5.4%, recall≈0.97 |
 
+## Effect comparison (vs REF)
+
+| batch | Δmean | Δpeak | ΔCVaR | Δacc | unit p95 | action |
+| --- | --- | --- | --- | --- | --- | --- |
+| back-translate | +0.003 | +0.001 | +0.003 | −0.001 | 0.43 | hold |
+| synonym | +0.010 | +0.001 | +0.011 | +0.001 | 0.44 | conformal |
+| malignant | **+0.086** | **+0.010** | **+0.100** | **−0.093** | **0.72** | freeze lexical |
+
+Malignant unit PO std 0.14→0.21 — heteroscedastic peaks, not just a mean shift.
+
+### Adaptation before → after
+
+| path | Peak | Acc | read |
+| --- | --- | --- | --- |
+| malignant freeze+aug | 0.029→**0.017** | 0.874→**0.920** | peaks↓ +4.6pp acc |
+| synonym conformal | FPR 0.046→0.057 | recall 0.981→0.990 | near 5% FPR, recall holds |
+
 ## Quadrant read
 
 - **Bottom-left** REF / back-translate → hold
