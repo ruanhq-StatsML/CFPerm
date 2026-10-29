@@ -2581,7 +2581,8 @@
       "same": [
         "All kinds emit sparse evidence into the same strength enum",
         "Gray / low margin \u2192 vague \u2192 human (never hard strong-Y)",
-        "strong_neg / missing \u2192 never write Y=human; hand off to PO+FN"
+        "strong_neg / missing \u2192 never write Y=human; hand off to PO+FN",
+        "Wash/missing is observationally shared by evade vs privacy vs OOD"
       ],
       "diff": [
         "api_log: strongest provenance; robust\u2248score (no wash)",
@@ -2589,7 +2590,17 @@
         "fingerprint: never strong_pos alone; high FP under OOD",
         "user_declare: policy bit, not cryptographic recovery",
         "missing: structural absence, not a negative test result"
-      ]
+      ],
+      "negative_effects": {
+        "evade_intent": "Adversary washes WM / strips api_log to spoof human \u2014 if treated as human, FN + poisoned uplift Y",
+        "privacy_intent": "User/open-model redacts provenance / strips WM for privacy \u2014 same geometry as evade; sanctioning wash = trust/legal FP",
+        "uplift_misuse": "Using WM as hard filter or pseudo-Y induces selection bias and label noise in R_PO / ATE; WM must stay gate+stratum"
+      },
+      "intent_routing": {
+        "evade": "attack-shaped \u2192 PO+FN / freeze-lexical / audit",
+        "privacy": "stratify; hold; never force Y=AI from absence",
+        "benign_ood": "conformal_calibrate \u2014 not attack actuator"
+      }
     }
   },
   "rows": [

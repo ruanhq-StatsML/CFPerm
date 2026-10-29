@@ -266,6 +266,7 @@ def summarize(rows: Sequence[WmEvidence]) -> dict:
                 "All kinds emit sparse evidence into the same strength enum",
                 "Gray / low margin → vague → human (never hard strong-Y)",
                 "strong_neg / missing → never write Y=human; hand off to PO+FN",
+                "Wash/missing is observationally shared by evade vs privacy vs OOD",
             ],
             "diff": [
                 "api_log: strongest provenance; robust≈score (no wash)",
@@ -274,6 +275,25 @@ def summarize(rows: Sequence[WmEvidence]) -> dict:
                 "user_declare: policy bit, not cryptographic recovery",
                 "missing: structural absence, not a negative test result",
             ],
+            "negative_effects": {
+                "evade_intent": (
+                    "Adversary washes WM / strips api_log to spoof human — "
+                    "if treated as human, FN + poisoned uplift Y"
+                ),
+                "privacy_intent": (
+                    "User/open-model redacts provenance / strips WM for privacy — "
+                    "same geometry as evade; sanctioning wash = trust/legal FP"
+                ),
+                "uplift_misuse": (
+                    "Using WM as hard filter or pseudo-Y induces selection bias "
+                    "and label noise in R_PO / ATE; WM must stay gate+stratum"
+                ),
+            },
+            "intent_routing": {
+                "evade": "attack-shaped → PO+FN / freeze-lexical / audit",
+                "privacy": "stratify; hold; never force Y=AI from absence",
+                "benign_ood": "conformal_calibrate — not attack actuator",
+            },
         },
     }
 
@@ -432,6 +452,20 @@ def _write_readme(path: Path, summary: dict, png_name: str):
     lines.extend(["", "### Diff", ""])
     for s in summary["same_diff"]["diff"]:
         lines.append("- " + s)
+    neg = summary["same_diff"].get("negative_effects") or {}
+    intent = summary["same_diff"].get("intent_routing") or {}
+    if neg:
+        lines.extend(["", "## Negative effects (uplift / policy)", ""])
+        for k, v in neg.items():
+            lines.append("- **%s**: %s" % (k, v))
+    if intent:
+        lines.extend(["", "## Same wash, three intents", ""])
+        for k, v in intent.items():
+            lines.append("- **%s** → %s" % (k, v))
+        lines.append("")
+        lines.append(
+            "See also `docs/method/AS_DTA_watermark_uplift_side_effects.md`."
+        )
     lines.extend(
         [
             "",

@@ -7,6 +7,7 @@
 - All kinds emit sparse evidence into the same strength enum
 - Gray / low margin → vague → human (never hard strong-Y)
 - strong_neg / missing → never write Y=human; hand off to PO+FN
+- Wash/missing is observationally shared by evade vs privacy vs OOD
 
 ### Diff
 
