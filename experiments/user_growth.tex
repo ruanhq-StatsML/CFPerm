@@ -1,0 +1,58 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,booktabs,geometry}
+\geometry{margin=2.4cm}
+\title{User growth on the same prompt clock}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+\section{Scene}
+One episode is one arriving user. Three offers are scored, and the beam keeps only the top offer.
+\(Y=1\) when that offer activates the user.
+The habit offer activates even-numbered users, so the pre-drift rate is \(0.50\).
+The growth offer activates a user unless the index is a multiple of \(3\), which is two thirds of arrivals.
+The click offer activates only multiples of \(5\).
+Forty users, drift at user 16. Each user scores three children. The window and the column count stay fixed.
+
+Before the drift the judge follows the calibrated score and selects habit.
+After the drift, weight \(0.80\) moves onto the click score, and the judge selects click.
+The growth policy uses habit through the first 12 users.
+It switches the next user to the growth offer only after the mean loss of the last four finished users exceeds the reference mean loss by \(0.15\).
+That switch happens at user 17.
+
+\section{Activation}
+\begin{center}
+\begin{tabular}{lrrl}
+\toprule
+Policy & Pre-drift & Post-drift & Reading \\
+\midrule
+Judge & 0.500 & 0.167 & shortfall, \(-8\) activations \\
+Growth, lever at 17 & 0.500 & 0.625 & increment, \(+3\) activations \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Against the drifted judge, the growth policy activates 11 more of the 24 post-drift users.
+Against the pre-drift rate, it activates 3 more than \(0.50\times 24\).
+The post-drift rate \(0.625\) is above \(0.500\), so the business line itself is an increment.
+The earlier Game of 24 line could only record a shortfall, because its reference rate was already \(1\).
+
+\section{Prompt channels}
+The same comparison is applied after \(Y\) is written.
+On the judge policy the activation rate falls by \(0.33\).
+The conservative share rises from \(0.50\) to \(0.83\).
+\(|H|\) falls from \(2.00\) to \(1.88\), and the prior falls from \(0.50\) to \(0.20\), because the selected offer changes from habit to click.
+Children stay at 3.
+
+On the growth policy the activation rate rises by \(0.125\).
+The prior rises from \(0.50\) to \(0.65\), which is the growth offer's stable score taking over after user 17.
+The absolute residual rises only by \(0.006\).
+The conservative share falls from \(0.50\) to \(0.375\), because more users activate and \(H\) is positive on those steps.
+\(|H|\) stays near \(2.00\).
+Children stay at 3.
+
+The increment here is the activation rate clearing its own pre-drift mean.
+The prompt records that clearance as a higher prior and a lower conservative share, at the same scoring cost.
+
+\end{document}

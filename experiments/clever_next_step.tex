@@ -1,0 +1,101 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,booktabs,geometry}
+\geometry{margin=2.2cm}
+\setlength{\parskip}{0.32em}
+\setlength{\parindent}{0em}
+\title{The clever covariate on the next ToT step}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+\section{When \(H\) exists}
+One beat is one committed search step.
+\(Y=1\) if that episode's search returns a solved state, and \(Y=0\) otherwise.
+During the episode the query beat carries \(X\) and the action prior \(e\).
+It does not carry \(Y\).
+\(Y\) is copied onto every committed step of the episode only after the search returns.
+The step that produced \(Y\) cannot read its own score.
+The next episode can, because the window holds only beats whose \(Y\) is already known.
+
+After that write-back the clever covariate is
+\[
+H=\frac{Y-e}{e(1-e)},
+\]
+where \(e\) is the stable score of the committed step, clipped to \((0.001,0.999)\).
+The online anomaly score is \(|H|\).
+The sign sets the adjustment: \(H>0.5\) is aggressive, \(H<-0.5\) is conservative, and the remainder is keep.
+No UCB term, temperature, or prune threshold is added to this score.
+\(H\) is not a child-count and it is not the terminal reward.
+The terminal reward is \(Y\).
+The expansion cost is the number of children scored at the step.
+
+For \(Y\in\{0,1\}\) the two values are immediate.
+A success gives \(H=1/e>0\).
+A failure gives \(H=-1/(1-e)<0\).
+If \(e<1/2\), then \(1/e>1/(1-e)\), so a success has the larger absolute value.
+\(|H|\) is the size of the departure from the prior.
+The sign is what says whether the departure was a success or a failure.
+A detector that ranks beats by \(|H|\) alone will rank confident successes above failures whenever the prior is below one half.
+
+\section{The judge, with the score unread}
+The test search has three offers and keeps only the top one.
+Each user scores three children.
+The habit offer activates even-numbered users, so its rate is \(1/2\).
+The growth offer activates a user unless the index is a multiple of \(3\).
+The click offer activates only multiples of \(5\).
+Forty users, drift at user 16, judge mix \(0.80\) toward the click score after that index.
+Before the drift the judge selects habit.
+After the drift it selects click.
+
+On that unread stream, \(Y\) moves from \(0.500\) to \(0.167\).
+That is eight fewer activations than \(0.500\times 24\).
+The prior on the committed offer moves from \(0.50\) to \(0.20\), which is the stable score of the click offer.
+\(|H|\) moves from \(2.00\) to \(1.875\).
+Conditional on the outcome the split is sharp: after the drift, successes have mean \(|H|=5.00\) and failures have mean \(|H|=1.25\), because \(e=0.20\) gives \(1/e=5\) and \(1/(1-e)=1.25\).
+The sign matches \(Y\) on all 24 post-drift steps.
+Every success is aggressive and every failure is conservative.
+The conservative share is the only channel that rises.
+Children stay at 3, the window stays at 8 rows, and the prompt stays at 6 columns.
+Writing the row does not change the argmax, so the business rate stays at the shortfall.
+
+\section{The next user reads the sign}
+The growth policy uses the judge through the first 12 users.
+It switches the next user to the growth offer when the mean loss of the last four finished users exceeds the reference mean loss by \(0.15\).
+A finished failure is exactly \(H<0\), so a run of high loss is a run of conservative scores.
+The switch occurs at user 17, the second post-drift user.
+From there the beam ranks by the stable score, and the growth offer is the one with stable score \(0.67\).
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Policy & Pre \(Y\) & Post \(Y\) & Extra vs judge & Reading \\
+\midrule
+Sign not read & 0.500 & 0.167 & 0 & shortfall, \(-8\) \\
+Sign read at user 17 & 0.500 & 0.625 & \(+11\) & increment, \(+3\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The second line activates 11 more of the 24 post-drift users than the drifted judge, and 3 more than the pre-drift habit rate \(0.500\times 24\).
+Post-drift \(Y=0.625\) is above \(0.500\), so the business outcome itself clears its own reference.
+Children remain 3 per user, so the search cost does not buy the increment.
+The prior on the selected offer moves from \(0.50\) to \(0.650\).
+The conservative share moves from \(0.50\) to \(0.375\), because more users activate and those steps have \(H>0\).
+\(|H|\) stays at \(1.995\), against \(2.00\) before the drift.
+The absolute residual moves from \(0.500\) to \(0.506\).
+The anomaly magnitude is not the channel that records the increment.
+The channels that move with the read are the activation rate, the prior of the chosen offer, and the share of conservative steps.
+
+\section{What the read does not do}
+On Game of 24 the same \(H\) was written into the sliding window and the next argmax still followed the frozen forest.
+\(Y\) fell from \(1.00\) to \(0.25\).
+The absolute residual, the conservative share, and the last-step absolute error each rose by \(0.75\), and the hop rate rose by \(0.25\).
+\(|H|\) fell from \(2.38\) to \(1.63\), for the same reason as above: the prior stayed below \(1/2\), and failures have the smaller absolute score.
+Scored children stayed near \(115\) per episode.
+That is the control.
+The formula, the window, and the anomaly score can all be present while \(Y\) does not recover.
+The increment on the offer search appears when the next episode's ranking consumes the sign.
+It does not appear from printing \(H\).
+
+\end{document}

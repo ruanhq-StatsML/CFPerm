@@ -1,0 +1,316 @@
+{
+  "ref_episodes": 12,
+  "min_post": 5,
+  "fsds_step": {
+    "fit": "after an episode appends Y, before the next episode starts. Needs at least 12 reference episodes and 5 later episodes.",
+    "apply": "the greedy choice of every step in the next episode: score = w_judge * judge + w_stable * stable.",
+    "not_used": "inside the current episode's chain. That chain has not returned Y, so the SSE comparison cannot be fit there."
+  },
+  "tasks": {
+    "game24": {
+      "judge": {
+        "task": "game24",
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "post_w_judge": 1.0,
+        "post_w_stable": 0.0,
+        "concept_top_counts": {
+          "none": 23
+        },
+        "last": {
+          "t": 39,
+          "w_judge": 1.0,
+          "w_stable": 0.0,
+          "concept_top": null,
+          "covariate_top": null,
+          "fit_on_n": 0,
+          "y": 0.0
+        },
+        "trace_tail": [
+          {
+            "t": 34,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 35,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 1.0
+          },
+          {
+            "t": 36,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 37,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 38,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 39,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          }
+        ]
+      },
+      "fsds": {
+        "task": "game24",
+        "pre_success": 1.0,
+        "post_success": 0.3333333333333333,
+        "post_w_judge": 0.6898757371753129,
+        "post_w_stable": 0.3101242628246871,
+        "concept_top_counts": {
+          "stable": 5,
+          "progress": 18
+        },
+        "last": {
+          "t": 39,
+          "w_judge": 0.7800942034109675,
+          "w_stable": 0.21990579658903253,
+          "concept_top": "progress",
+          "covariate_top": "stable",
+          "fit_on_n": 39,
+          "y": 0.0
+        },
+        "trace_tail": [
+          {
+            "t": 34,
+            "w_judge": 0.733933776525814,
+            "w_stable": 0.26606622347418596,
+            "concept_top": "progress",
+            "covariate_top": "spurious",
+            "fit_on_n": 34,
+            "y": 0.0
+          },
+          {
+            "t": 35,
+            "w_judge": 0.7589730115239192,
+            "w_stable": 0.2410269884760808,
+            "concept_top": "progress",
+            "covariate_top": "judge",
+            "fit_on_n": 35,
+            "y": 1.0
+          },
+          {
+            "t": 36,
+            "w_judge": 0.7534703473714012,
+            "w_stable": 0.24652965262859883,
+            "concept_top": "progress",
+            "covariate_top": "stable",
+            "fit_on_n": 36,
+            "y": 0.0
+          },
+          {
+            "t": 37,
+            "w_judge": 0.7744987311658642,
+            "w_stable": 0.2255012688341358,
+            "concept_top": "progress",
+            "covariate_top": "progress",
+            "fit_on_n": 37,
+            "y": 0.0
+          },
+          {
+            "t": 38,
+            "w_judge": 0.7828330261651661,
+            "w_stable": 0.2171669738348339,
+            "concept_top": "progress",
+            "covariate_top": "stable",
+            "fit_on_n": 38,
+            "y": 0.0
+          },
+          {
+            "t": 39,
+            "w_judge": 0.7800942034109675,
+            "w_stable": 0.21990579658903253,
+            "concept_top": "progress",
+            "covariate_top": "stable",
+            "fit_on_n": 39,
+            "y": 0.0
+          }
+        ]
+      }
+    },
+    "hotpot_twohop": {
+      "judge": {
+        "task": "hotpot_twohop",
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "post_w_judge": 1.0,
+        "post_w_stable": 0.0,
+        "concept_top_counts": {
+          "none": 23
+        },
+        "last": {
+          "t": 39,
+          "w_judge": 1.0,
+          "w_stable": 0.0,
+          "concept_top": null,
+          "covariate_top": null,
+          "fit_on_n": 0,
+          "y": 1.0
+        },
+        "trace_tail": [
+          {
+            "t": 34,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 35,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 36,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 37,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 38,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 0.0
+          },
+          {
+            "t": 39,
+            "w_judge": 1.0,
+            "w_stable": 0.0,
+            "concept_top": null,
+            "covariate_top": null,
+            "fit_on_n": 0,
+            "y": 1.0
+          }
+        ]
+      },
+      "fsds": {
+        "task": "hotpot_twohop",
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "post_w_judge": 0.5725016491428834,
+        "post_w_stable": 0.42749835085711657,
+        "concept_top_counts": {
+          "progress": 23
+        },
+        "last": {
+          "t": 39,
+          "w_judge": 0.586638490053486,
+          "w_stable": 0.41336150994651394,
+          "concept_top": "progress",
+          "covariate_top": "judge",
+          "fit_on_n": 39,
+          "y": 1.0
+        },
+        "trace_tail": [
+          {
+            "t": 34,
+            "w_judge": 0.5815376145099429,
+            "w_stable": 0.41846238549005704,
+            "concept_top": "progress",
+            "covariate_top": "judge",
+            "fit_on_n": 34,
+            "y": 0.0
+          },
+          {
+            "t": 35,
+            "w_judge": 0.5826023980814071,
+            "w_stable": 0.4173976019185929,
+            "concept_top": "progress",
+            "covariate_top": "judge",
+            "fit_on_n": 35,
+            "y": 0.0
+          },
+          {
+            "t": 36,
+            "w_judge": 0.5849959908132996,
+            "w_stable": 0.4150040091867005,
+            "concept_top": "progress",
+            "covariate_top": "judge",
+            "fit_on_n": 36,
+            "y": 0.0
+          },
+          {
+            "t": 37,
+            "w_judge": 0.5858327613751636,
+            "w_stable": 0.4141672386248364,
+            "concept_top": "progress",
+            "covariate_top": "judge",
+            "fit_on_n": 37,
+            "y": 0.0
+          },
+          {
+            "t": 38,
+            "w_judge": 0.5878036590190991,
+            "w_stable": 0.41219634098090085,
+            "concept_top": "progress",
+            "covariate_top": "judge",
+            "fit_on_n": 38,
+            "y": 0.0
+          },
+          {
+            "t": 39,
+            "w_judge": 0.586638490053486,
+            "w_stable": 0.41336150994651394,
+            "concept_top": "progress",
+            "covariate_top": "judge",
+            "fit_on_n": 39,
+            "y": 1.0
+          }
+        ]
+      }
+    }
+  }
+}

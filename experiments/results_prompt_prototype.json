@@ -1,0 +1,511 @@
+{
+  "doorkey": {
+    "task": "minigrid_doorkey",
+    "T": "one committed search step. The prompt index t is that beat. T is not a column of X.",
+    "X": [
+      "judge",
+      "stable",
+      "spurious",
+      "progress",
+      "gap",
+      "depth_frac"
+    ],
+    "Y": "episode success, 1 if the search returns a solved state else 0. Written onto every step of that episode only after the episode ends. The query beat does not contain Y.",
+    "feature_selection": {
+      "vimp": {
+        "judge": 0.0,
+        "stable": 0.0,
+        "spurious": 0.0,
+        "progress": 0.0,
+        "gap": 0.0,
+        "depth_frac": 0.0
+      },
+      "rf_columns": [
+        "judge",
+        "stable",
+        "spurious",
+        "progress",
+        "gap",
+        "depth_frac"
+      ],
+      "residual_columns": [],
+      "note": "reference Y does not vary, so every column has vimp 0 and no column is sent to the residual"
+    },
+    "w_stack": 0.0,
+    "sigma_med": 1e-08,
+    "oob_mse": 0.0,
+    "trail_mse": 0.5357142857142857,
+    "pval_vs_oob_batches": [
+      1.0,
+      0.08333333333333333,
+      1.0,
+      0.08333333333333333
+    ],
+    "hop_rate_post": 0.20833333333333334,
+    "post_abs_err_last_step": 0.625,
+    "prompt_example": "X columns: judge,stable,spurious,progress,gap,depth_frac\nhigh_vimp=judge,stable,spurious,progress,gap,depth_frac low_vimp=\nTask: predict the residual e = Y - RF(X). Do not predict Y.\nY is 1 if this episode's search returned a solved state, else 0.\nY is written onto every committed step only after the episode returns.\nClock: one beat is one committed step. The window holds only beats whose Y is already known.\nThe query beat has X and the action prior. It does not have Y.\nAfter Y is written, H=(Y-e)/(e(1-e)). Online anomaly score = |H|.\nH>0.5 aggressive, H<-0.5 conservative, else keep.\nThe forest is frozen. w_stack and sigma_med are frozen.\nw_stack=0.0000 sigma_med=0.0000\nSliding window, oldest to newest:\nt=1006 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.9012, 0.625, 0.15, 0.95, 0.2762, 0.5]\n  A=1.0000 prior=0.6250 H=1.6000 online_anomaly=1.6000 adjustment=aggressive\nt=1100 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.59, 0.25, 0.5, 0.65, 0.34, 0.0]\n  A=1.0000 prior=0.2500 H=4.0000 online_anomaly=4.0000 adjustment=aggressive\nt=1101 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.6387, 0.2917, 0.55, 0.7, 0.3471, 0.0833]\n  A=1.0000 prior=0.2917 H=3.4286 online_anomaly=3.4286 adjustment=aggressive\nt=1102 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.6875, 0.3333, 0.6, 0.75, 0.3542, 0.1667]\n  A=1.0000 prior=0.3333 H=3.0000 online_anomaly=3.0000 adjustment=aggressive\nt=1103 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.7612, 0.5417, 0.6, 0.8, 0.2196, 0.25]\n  A=1.0000 prior=0.5417 H=1.8462 online_anomaly=1.8462 adjustment=aggressive\nt=1104 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8038, 0.5417, 0.6, 0.85, 0.2621, 0.3333]\n  A=1.0000 prior=0.5417 H=1.8462 online_anomaly=1.8462 adjustment=aggressive\nt=1105 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8525, 0.5833, 0.15, 0.9, 0.2692, 0.4167]\n  A=1.0000 prior=0.5833 H=1.7143 online_anomaly=1.7143 adjustment=aggressive\nt=1106 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.9012, 0.625, 0.15, 0.95, 0.2762, 0.5]\n  A=1.0000 prior=0.6250 H=1.6000 online_anomaly=1.6000 adjustment=aggressive\nquery_x=[0.59,0.25,0.5 ,0.65,0.34,0.  ]\nquery_prior=0.2500\nquery_A=withheld until the episode returns R\noutput: residual",
+    "n_prompts": 271,
+    "online_anomaly": {
+      "score": "|H|",
+      "formula": "H=(Y-e)/(e(1-e)), e=stable score of the committed step",
+      "other_scores_not_this_one": [
+        "residual |Y-RF(X)|",
+        "successive MSE hop ratio",
+        "mid-depth |judge-stable| versus frozen gaps",
+        "path agreement with the first visit"
+      ],
+      "all_steps": {
+        "n_steps": 355,
+        "mean_prior": 0.46596244131455394,
+        "min_prior": 0.25,
+        "mean_abs_H_when_Y1": 2.490737833594977,
+        "mean_abs_H_when_Y0": 1.9901218062982766,
+        "sign_matches_outcome": 1.0,
+        "frac_aggressive_given_Y1": 1.0,
+        "frac_conservative_given_Y0": 1.0
+      },
+      "post_drift": {
+        "n_steps": 243,
+        "mean_prior": 0.4722222222222222,
+        "min_prior": 0.25,
+        "mean_abs_H_when_Y1": 2.490737833594976,
+        "mean_abs_H_when_Y0": 1.9901218062982766,
+        "sign_matches_outcome": 1.0,
+        "frac_aggressive_given_Y1": 1.0,
+        "frac_conservative_given_Y0": 1.0
+      }
+    },
+    "roi": {
+      "rule": "post mean above pre mean is \u7528\u589e. Terminal Y below its pre-drift mean is \u633d\u635f. Children, window length, and column count are costs.",
+      "channels": [
+        {
+          "name": "terminal_Y",
+          "role": "outcome",
+          "pre": 1.0,
+          "post": 0.25925925925925924,
+          "delta": -0.7407407407407407,
+          "kind": "\u633d\u635f"
+        },
+        {
+          "name": "abs_residual",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.7407407407407407,
+          "delta": 0.7407407407407407,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "online_anomaly_|H|",
+          "role": "monitor",
+          "pre": 2.490737833594977,
+          "post": 2.1199111467085316,
+          "delta": -0.37082668688644516,
+          "kind": "\u4f4e\u4e8e\u53c2\u8003"
+        },
+        {
+          "name": "prior_e",
+          "role": "monitor",
+          "pre": 0.45238095238095244,
+          "post": 0.4722222222222222,
+          "delta": 0.01984126984126977,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "conservative_share",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.7407407407407407,
+          "delta": 0.7407407407407407,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "hop_rate",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.20833333333333334,
+          "delta": 0.20833333333333334,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "abs_error_last_step",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.625,
+          "delta": 0.625,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "children_scored",
+          "role": "cost",
+          "pre": 64.3125,
+          "post": 98.33333333333333,
+          "delta": 34.02083333333333,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_window_rows",
+          "role": "cost",
+          "pre": 8.0,
+          "post": 8.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_columns",
+          "role": "cost",
+          "pre": 6.0,
+          "post": 6.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        }
+      ],
+      "yongzeng_channels": [
+        "abs_residual",
+        "prior_e",
+        "conservative_share",
+        "hop_rate",
+        "abs_error_last_step"
+      ],
+      "delta_children": 34.02083333333333
+    }
+  },
+  "hotpot": {
+    "task": "hotpot_twohop",
+    "T": "one committed search step. The prompt index t is that beat. T is not a column of X.",
+    "X": [
+      "judge",
+      "stable",
+      "spurious",
+      "progress",
+      "gap",
+      "depth_frac"
+    ],
+    "Y": "episode success, 1 if the search returns a solved state else 0. Written onto every step of that episode only after the episode ends. The query beat does not contain Y.",
+    "feature_selection": {
+      "vimp": {
+        "judge": 0.0,
+        "stable": 0.0,
+        "spurious": 0.0,
+        "progress": 0.0,
+        "gap": 0.0,
+        "depth_frac": 0.0
+      },
+      "rf_columns": [
+        "judge",
+        "stable",
+        "spurious",
+        "progress",
+        "gap",
+        "depth_frac"
+      ],
+      "residual_columns": [],
+      "note": "reference Y does not vary, so every column has vimp 0 and no column is sent to the residual"
+    },
+    "w_stack": 0.0,
+    "sigma_med": 1e-08,
+    "oob_mse": 0.0,
+    "trail_mse": 0.5357142857142857,
+    "pval_vs_oob_batches": [
+      1.0,
+      0.25,
+      0.25,
+      1.0
+    ],
+    "hop_rate_post": 0.125,
+    "post_abs_err_last_step": 0.625,
+    "prompt_example": "X columns: judge,stable,spurious,progress,gap,depth_frac\nhigh_vimp=judge,stable,spurious,progress,gap,depth_frac low_vimp=\nTask: predict the residual e = Y - RF(X). Do not predict Y.\nY is 1 if this episode's search returned a solved state, else 0.\nY is written onto every committed step only after the episode returns.\nClock: one beat is one committed step. The window holds only beats whose Y is already known.\nThe query beat has X and the action prior. It does not have Y.\nAfter Y is written, H=(Y-e)/(e(1-e)). Online anomaly score = |H|.\nH>0.5 aggressive, H<-0.5 conservative, else keep.\nThe forest is frozen. w_stack and sigma_med are frozen.\nw_stack=0.0000 sigma_med=0.0000\nSliding window, oldest to newest:\nt=800 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.5, 0.5, 0.5833, 0.5, 0.0, 0.0]\n  A=1.0000 prior=0.5000 H=2.0000 online_anomaly=2.0000 adjustment=aggressive\nt=801 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8125, 0.25, 0.75, 1.0, 0.5625, 0.5]\n  A=1.0000 prior=0.2500 H=4.0000 online_anomaly=4.0000 adjustment=aggressive\nt=900 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.4464, 0.2857, 0.5833, 0.5, 0.1607, 0.0]\n  A=1.0000 prior=0.2857 H=3.5000 online_anomaly=3.5000 adjustment=aggressive\nt=901 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8036, 0.2143, 0.5, 1.0, 0.5893, 0.5]\n  A=1.0000 prior=0.2143 H=4.6667 online_anomaly=4.6667 adjustment=aggressive\nt=1000 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.5, 0.5, 0.5, 0.5, 0.0, 0.0]\n  A=1.0000 prior=0.5000 H=2.0000 online_anomaly=2.0000 adjustment=aggressive\nt=1001 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8594, 0.4375, 0.4583, 1.0, 0.4219, 0.5]\n  A=1.0000 prior=0.4375 H=2.2857 online_anomaly=2.2857 adjustment=aggressive\nt=1100 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.5179, 0.5714, 0.5, 0.5, 0.0536, 0.0]\n  A=1.0000 prior=0.5714 H=1.7500 online_anomaly=1.7500 adjustment=aggressive\nt=1101 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8571, 0.4286, 0.4167, 1.0, 0.4286, 0.5]\n  A=1.0000 prior=0.4286 H=2.3333 online_anomaly=2.3333 adjustment=aggressive\nquery_x=[0.5,0.5,0.5,0.5,0. ,0. ]\nquery_prior=0.5000\nquery_A=withheld until the episode returns R\noutput: residual",
+    "n_prompts": 56,
+    "online_anomaly": {
+      "score": "|H|",
+      "formula": "H=(Y-e)/(e(1-e)), e=stable score of the committed step",
+      "other_scores_not_this_one": [
+        "residual |Y-RF(X)|",
+        "successive MSE hop ratio",
+        "mid-depth |judge-stable| versus frozen gaps",
+        "path agreement with the first visit"
+      ],
+      "all_steps": {
+        "n_steps": 80,
+        "mean_prior": 0.3331848214285714,
+        "min_prior": 0.001,
+        "mean_abs_H_when_Y1": 63.384190476190476,
+        "mean_abs_H_when_Y0": 1.5964102564102567,
+        "sign_matches_outcome": 1.0,
+        "frac_aggressive_given_Y1": 1.0,
+        "frac_conservative_given_Y0": 1.0
+      },
+      "post_drift": {
+        "n_steps": 48,
+        "mean_prior": 0.29124553571428574,
+        "min_prior": 0.001,
+        "mean_abs_H_when_Y1": 170.94444444444446,
+        "mean_abs_H_when_Y0": 1.5964102564102567,
+        "sign_matches_outcome": 1.0,
+        "frac_aggressive_given_Y1": 1.0,
+        "frac_conservative_given_Y0": 1.0
+      }
+    },
+    "roi": {
+      "rule": "post mean above pre mean is \u7528\u589e. Terminal Y below its pre-drift mean is \u633d\u635f. Children, window length, and column count are costs.",
+      "channels": [
+        {
+          "name": "terminal_Y",
+          "role": "outcome",
+          "pre": 1.0,
+          "post": 0.375,
+          "delta": -0.625,
+          "kind": "\u633d\u635f"
+        },
+        {
+          "name": "abs_residual",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.625,
+          "delta": 0.625,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "online_anomaly_|H|",
+          "role": "monitor",
+          "pre": 2.881547619047619,
+          "post": 65.10192307692307,
+          "delta": 62.220375457875456,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "prior_e",
+          "role": "monitor",
+          "pre": 0.39609375,
+          "post": 0.29124553571428574,
+          "delta": -0.10484821428571428,
+          "kind": "\u4f4e\u4e8e\u53c2\u8003"
+        },
+        {
+          "name": "conservative_share",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.625,
+          "delta": 0.625,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "hop_rate",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.125,
+          "delta": 0.125,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "abs_error_last_step",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.625,
+          "delta": 0.625,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "children_scored",
+          "role": "cost",
+          "pre": 77.0,
+          "post": 77.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_window_rows",
+          "role": "cost",
+          "pre": 8.0,
+          "post": 8.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_columns",
+          "role": "cost",
+          "pre": 6.0,
+          "post": 6.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        }
+      ],
+      "yongzeng_channels": [
+        "abs_residual",
+        "online_anomaly_|H|",
+        "conservative_share",
+        "hop_rate",
+        "abs_error_last_step"
+      ],
+      "delta_children": 0.0
+    }
+  },
+  "game24": {
+    "task": "game_of_24",
+    "T": "one committed search step. The prompt index t is that beat. T is not a column of X.",
+    "X": [
+      "judge",
+      "stable",
+      "spurious",
+      "progress",
+      "gap",
+      "depth_frac"
+    ],
+    "Y": "episode success, 1 if the search returns a solved state else 0. Written onto every step of that episode only after the episode ends. The query beat does not contain Y.",
+    "feature_selection": {
+      "vimp": {
+        "judge": 0.0,
+        "stable": 0.0,
+        "spurious": 0.0,
+        "progress": 0.0,
+        "gap": 0.0,
+        "depth_frac": 0.0
+      },
+      "rf_columns": [
+        "judge",
+        "stable",
+        "spurious",
+        "progress",
+        "gap",
+        "depth_frac"
+      ],
+      "residual_columns": [],
+      "note": "reference Y does not vary, so every column has vimp 0 and no column is sent to the residual"
+    },
+    "w_stack": 0.0,
+    "sigma_med": 1e-08,
+    "oob_mse": 0.0,
+    "trail_mse": 0.6428571428571429,
+    "pval_vs_oob_batches": [
+      1.0,
+      0.16666666666666666,
+      0.16666666666666666,
+      0.16666666666666666
+    ],
+    "hop_rate_post": 0.25,
+    "post_abs_err_last_step": 0.75,
+    "prompt_example": "X columns: judge,stable,spurious,progress,gap,depth_frac\nhigh_vimp=judge,stable,spurious,progress,gap,depth_frac low_vimp=\nTask: predict the residual e = Y - RF(X). Do not predict Y.\nY is 1 if this episode's search returned a solved state, else 0.\nY is written onto every committed step only after the episode returns.\nClock: one beat is one committed step. The window holds only beats whose Y is already known.\nThe query beat has X and the action prior. It does not have Y.\nAfter Y is written, H=(Y-e)/(e(1-e)). Online anomaly score = |H|.\nH>0.5 aggressive, H<-0.5 conservative, else keep.\nThe forest is frozen. w_stack and sigma_med are frozen.\nw_stack=0.0000 sigma_med=0.0000\nSliding window, oldest to newest:\nt=901 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.9321, 0.5471, 0.9231, 1.0, 0.3849, 0.3333]\n  A=1.0000 prior=0.5471 H=1.8277 online_anomaly=1.8277 adjustment=aggressive\nt=902 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[1.0, 1.0, 1.8462, 1.0, 0.0, 0.6667]\n  A=1.0000 prior=0.9990 H=1.0010 online_anomaly=1.0010 adjustment=aggressive\nt=1000 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8944, 0.2961, 0.5897, 1.0, 0.5983, 0.0]\n  A=1.0000 prior=0.2961 H=3.3773 online_anomaly=3.3773 adjustment=aggressive\nt=1001 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.9044, 0.3626, 1.3846, 1.0, 0.5418, 0.3333]\n  A=1.0000 prior=0.3626 H=2.7581 online_anomaly=2.7581 adjustment=aggressive\nt=1002 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[1.0, 1.0, 1.8462, 1.0, 0.0, 0.6667]\n  A=1.0000 prior=0.9990 H=1.0010 online_anomaly=1.0010 adjustment=aggressive\nt=1100 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8973, 0.3155, 0.6667, 1.0, 0.5818, 0.0]\n  A=1.0000 prior=0.3155 H=3.1691 online_anomaly=3.1691 adjustment=aggressive\nt=1101 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[0.8973, 0.3155, 1.5385, 1.0, 0.5818, 0.3333]\n  A=1.0000 prior=0.3155 H=3.1691 online_anomaly=3.1691 adjustment=aggressive\nt=1102 y=1.0000 rf=1.0000 residual=0.0000 w=0.000 x=[1.0, 1.0, 1.8462, 1.0, 0.0, 0.6667]\n  A=1.0000 prior=0.9990 H=1.0010 online_anomaly=1.0010 adjustment=aggressive\nquery_x=[0.8973,0.3155,0.7436,1.    ,0.5818,0.    ]\nquery_prior=0.3155\nquery_A=withheld until the episode returns R\noutput: residual",
+    "n_prompts": 84,
+    "online_anomaly": {
+      "score": "|H|",
+      "formula": "H=(Y-e)/(e(1-e)), e=stable score of the committed step",
+      "other_scores_not_this_one": [
+        "residual |Y-RF(X)|",
+        "successive MSE hop ratio",
+        "mid-depth |judge-stable| versus frozen gaps",
+        "path agreement with the first visit"
+      ],
+      "all_steps": {
+        "n_steps": 120,
+        "mean_prior": 0.3836631847600383,
+        "min_prior": 0.001,
+        "mean_abs_H_when_Y1": 2.502287345155286,
+        "mean_abs_H_when_Y0": 1.2355578624322168,
+        "sign_matches_outcome": 1.0,
+        "frac_aggressive_given_Y1": 1.0,
+        "frac_conservative_given_Y0": 1.0
+      },
+      "post_drift": {
+        "n_steps": 72,
+        "mean_prior": 0.25693907449339803,
+        "min_prior": 0.001,
+        "mean_abs_H_when_Y1": 2.8187616579160495,
+        "mean_abs_H_when_Y0": 1.2355578624322168,
+        "sign_matches_outcome": 1.0,
+        "frac_aggressive_given_Y1": 1.0,
+        "frac_conservative_given_Y0": 1.0
+      }
+    },
+    "roi": {
+      "rule": "post mean above pre mean is \u7528\u589e. Terminal Y below its pre-drift mean is \u633d\u635f. Children, window length, and column count are costs.",
+      "channels": [
+        {
+          "name": "terminal_Y",
+          "role": "outcome",
+          "pre": 1.0,
+          "post": 0.25,
+          "delta": -0.75,
+          "kind": "\u633d\u635f"
+        },
+        {
+          "name": "abs_residual",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.75,
+          "delta": 0.75,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "online_anomaly_|H|",
+          "role": "monitor",
+          "pre": 2.3836094778699994,
+          "post": 1.6313588113031752,
+          "delta": -0.7522506665668243,
+          "kind": "\u4f4e\u4e8e\u53c2\u8003"
+        },
+        {
+          "name": "prior_e",
+          "role": "monitor",
+          "pre": 0.5737493501599985,
+          "post": 0.25693907449339803,
+          "delta": -0.31681027566660047,
+          "kind": "\u4f4e\u4e8e\u53c2\u8003"
+        },
+        {
+          "name": "conservative_share",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.75,
+          "delta": 0.75,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "hop_rate",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.25,
+          "delta": 0.25,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "abs_error_last_step",
+          "role": "monitor",
+          "pre": 0.0,
+          "post": 0.75,
+          "delta": 0.75,
+          "kind": "\u7528\u589e"
+        },
+        {
+          "name": "children_scored",
+          "role": "cost",
+          "pre": 114.875,
+          "post": 115.16666666666667,
+          "delta": 0.2916666666666714,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_window_rows",
+          "role": "cost",
+          "pre": 8.0,
+          "post": 8.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        },
+        {
+          "name": "prompt_columns",
+          "role": "cost",
+          "pre": 6.0,
+          "post": 6.0,
+          "delta": 0.0,
+          "kind": "\u6210\u672c"
+        }
+      ],
+      "yongzeng_channels": [
+        "abs_residual",
+        "conservative_share",
+        "hop_rate",
+        "abs_error_last_step"
+      ],
+      "delta_children": 0.2916666666666714
+    }
+  }
+}

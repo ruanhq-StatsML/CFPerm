@@ -1,0 +1,94 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,booktabs,geometry}
+\geometry{margin=2.3cm}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0em}
+\title{A large graph-feature dictionary,\\
+one column at a time}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The attribution is univariate.
+Each graph feature is one column, scored by the same concept-drift SSE drop and the same mean shift.
+A dictionary of ten million columns is therefore the same procedure as the dictionary of twenty-three columns already run.
+On this machine a screen of \(2\times 10^{4}\) noise columns costs \(14.8\,\mu\mathrm{s}\) each, which extrapolates to about \(150\) seconds for \(10^{7}\) columns.
+Eighty permutations on every one of those columns is a few hours, so the permutations belong on the columns the screen ranks first.
+The measured searches show why the dictionary can be large: most columns stay silent, and the outcome drop sits on a few of them.
+\end{abstract}
+
+\section{The column}
+An episode is one finished search.
+\(Y\in\{0,1\}\) is whether that search returned a solved state.
+A graph feature is any number attached to the committed path: depth, children, siblings, a centrality, a path-score moment, a state coordinate.
+Write \(x\) for one such number across \(n\) episodes, and write \(\mathrm{batch}\) for the indicator of episodes after the frozen reference.
+The concept contribution of that column is
+\[
+\Delta(x)
+=
+\mathrm{SSE}(Y\sim 1+\mathrm{batch})
+-
+\mathrm{SSE}(Y\sim 1+\mathrm{batch}+x+\mathrm{batch}\cdot x).
+\]
+The covariate contribution is the absolute change in the mean of \(x\) across the drift.
+Neither statistic looks at any other column.
+A dictionary \(x_1,\ldots,x_p\) is \(p\) repetitions of this pair.
+No joint model of the ten million columns is required to rank them.
+
+\section{What a small dictionary already did}
+Two searches, forty episodes, drift at episode 16.
+The dictionary had twenty-three columns in six layers.
+Shares are sums of positive \(\Delta(x)\) inside the layer.
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Layer & Game of 24 & One-step offer \\
+\midrule
+Statistics & 0.354 & 0.000 \\
+History & 0.294 & 0.732 \\
+Interaction & 0.164 & 0.136 \\
+State encoding, four numbers & 0.095 & 0.132 \\
+Graph & 0.094 & 0.000 \\
+Context & 0.000 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+On Game of 24, \(Y\) falls from \(1.00\) to \(0.25\).
+Score entropy, the rolling mean, and score times path length each have permutation \(p=0.012\).
+Sibling count, the best graph column, moves by \(0.88\) and has \(p=0.074\).
+Beam width and maximum depth contribute \(\Delta=0\).
+On the one-step offer search the tree shape is constant, so every graph column has \(\Delta=0\) and mean shift \(0\).
+\(Y\) falls from \(0.50\) to \(0.167\).
+The previous outcome takes share \(0.732\), with \(p=0.012\).
+The offer-identity coordinate shifts by \(1\) and has concept \(p=0.42\): it restates the batch bit, and the interaction does not add a separate piece of \(Y\).
+
+Those zeros are the reason to admit a large dictionary.
+Columns that do not move, and columns that only rename the batch, fall out.
+The ranking does not need a weight assigned to ``graph'' in advance.
+
+\section{Cost of ten million columns}
+The screen below is one least-squares fit of four coefficients per column, on \(n=40\), with no permutation.
+Twenty thousand standard-normal columns took \(0.296\) seconds on this machine, \(14.8\,\mu\mathrm{s}\) per column.
+At that rate, \(10^{7}\) columns take about \(150\) seconds.
+The same microbenchmark with \(80\) permutations on \(50\) columns cost \(2.3\,\mathrm{ms}\) per column, which extrapolates to a few hours for every one of \(10^{7}\) columns.
+The permutations were counted with two fits inside the shuffle loop, so the figure is an upper envelope rather than a tuned kernel.
+
+The practical order is the one the statistic suggests.
+Screen all \(p\) columns by \(\Delta(x)\).
+Permute the top of that list, or permute until the \(p\)-values separate.
+A million copies of one step function will tie with each other and with the batch; they do not become a million discoveries.
+Sibling count is a discovery only if its own \(\Delta\) and its own shuffle still stand after the copies are added.
+
+\section{What is not in the dictionary}
+This run did not build \(10^{7}\) graph features, and it did not fit a 768-dimensional encoder.
+The state encoding is four numbers.
+The current episode's residual is not a column, because that residual contains \(Y\).
+Unit prices and AUC coefficients are not inputs.
+The claim that does follow from the runs is narrower:
+the attribution is a sort of columns, the sort is cheap relative to opening a budget on a tied column, and a fixed tree contributes a block of exact zeros that a larger graph dictionary is free to contain.
+
+\end{document}
