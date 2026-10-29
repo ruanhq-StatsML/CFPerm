@@ -2,141 +2,190 @@
 % Compile: pdflatex AS_DTA_magvar_po_product_delivery.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amssymb,booktabs,hyperref,enumitem}
+\usepackage{amsmath,amssymb,booktabs,hyperref,enumitem,array,multirow}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
-\title{Magnitude $\times$ Variance of \textbf{PermuCATE} PO-risk:\\
-A Low-Cost Product Justification Proxy for Shift Triage}
-\author{AS-DTA delivery note}
+\title{Magnitude $\times$ Variance of \textbf{PermuCATE} PO-risk\\
+\large Product delivery tables (ready to hand over)}
+\author{AS-DTA}
 \date{}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-The unit risk for Mag$\times$Var is \textbf{not} $1-\hat p(Y\mid x)$.
-It is your \textbf{PermuCATE} PO-risk: RF outcome models $\hat\mu_0,\hat\mu_1$,
-propensity $\hat\pi$, DR pseudo-outcome $\varphi$, CATE $\hat\tau$, and
-unit risk $u_i=(\varphi_i-\hat\tau_i)^2$ (batch risk $R=\mathbb{E}[u_i]$).
-Magnitude $\mu=\mathbb{E}[u]$ and bootstrap variance $s=\mathrm{Std}(r_b)$
-form a low-cost product triage proxy: even with bootstrap, the gate answers
-hold / conformal / VAI-freeze before any heavy retrain.
+\noindent\textbf{PO here} $=u_i=(\varphi_i-\hat\tau_i)^2$ from PermuCATE RF
+(not $1-\hat p$). Mag$\times$Var $(\mu,s)$ on that $u$ is the product triage
+proxy: cheap, causal, and matches ops---stable var + mean lift $\Rightarrow$
+conformal; $Y$-break / sparse mass $\Rightarrow$ VAI-freeze.
 \end{abstract}
 
-\section{Canonical PO calculation (PermuCATE --- this is the logic)}
-
-\paragraph{Treatment / outcome.}
-Hop or batch indicator $W\in\{0,1\}$ (REF vs LIVE), reward / response $Y$, covariates $X$.
-
-\paragraph{Nuisances (your stack; RF outcome by default).}
-\begin{align}
-  \hat\mu_w(x) &\approx \mathbb{E}[Y\mid X=x,W=w]
-  &&\text{\texttt{RandomForestRegressor}},\\
-  \hat\pi(x) &\approx \mathbb{P}(W=1\mid X=x)
-  &&\text{RF / logistic classifier}.
-\end{align}
-
-\paragraph{Doubly robust pseudo-outcome (PermuCATE / \texttt{po\_risk}).}
-\begin{equation}
-\label{eq:phi}
-  \varphi(Z)
-  \;=\;
-  \bigl(\hat\mu_1(X)-\hat\mu_0(X)\bigr)
-  \;+\;
-  \frac{\bigl(Y-\hat\mu_W(X)\bigr)\,(W-\hat\pi(X))}
-       {\hat\pi(X)\,(1-\hat\pi(X))}\,.
-\end{equation}
-
-\paragraph{CATE and unit PO-risk.}
-Fit $\hat\tau(X)$ by regressing $\varphi$ on $X$ (RF). Unit and batch risk:
-\begin{equation}
-\label{eq:unit-po}
-  u_i \;=\; \bigl(\varphi_i-\hat\tau(X_i)\bigr)^2\,,
-  \qquad
-  R \;=\; \mathbb{E}[u_i]
-  \;=\; \mathbb{E}\bigl[(\varphi-\hat\tau)^2\bigr]\,.
-\end{equation}
-This matches \texttt{permuCATE\_vimp.po\_risk} /
-\texttt{permuCATE\_fit\_nuisance} (\texttt{model\_m=rf\_regressor}).
-
-\paragraph{Code.}
-\texttt{Python/src/as\_dta\_permucate\_magvar.py} $\rightarrow$
-\texttt{permucate\_unit\_po} (cross-fit RF $\mu_0,\mu_1,\pi,\tau$).
-
-\section{Mag$\times$Var on PermuCATE unit risk}
-
-\paragraph{Magnitude / Variance.}
-\begin{equation}
-  \mu \;=\; \mathbb{E}[u_i]\,,
-  \qquad
-  r_b \;=\; \mathrm{mean}_{i\in b}(u_i)\ \text{(bootstrap window)},
-  \qquad
-  s \;=\; \mathrm{Std}(r_b)\,.
-\end{equation}
-Dashboard merge: $J=\Delta\mu\cdot(1+\kappa\Delta s_{+})$.
-
-\paragraph{Why Mag$\times$Var (product justify).}
-Uniform benign shift lifts $\{r_b\}$ together ($\mu\uparrow$, $s$ quiet).
-Sparse malignant mass makes $\{r_b\}$ heteroscedastic ($\mu\uparrow$, $s\uparrow$).
-Mag$\times$Var on \emph{PermuCATE} $u_i$ is the triage sensor---not a classifier accuracy proxy.
-
-\section{Product decision tree (same geometry)}
-
-\begin{center}
-\fbox{\parbox{0.92\linewidth}{\small\ttfamily
-Bootstrap Var($u$) stable?\\
-\quad YES $\to$ mean$\uparrow$? $\to$ Benign / Label delay / Quiet\\
-\quad NO  $\to$ kurtosis $>10$? $\to$ Malignant sparse (VAI)\\
-\quad\quad\quad\quad\quad\quad\quad\quad $\to$ Dense / Schema (traj + VAI)
-}}
-\end{center}
-
-\noindent
-VAI: permute / drop a feature block, re-estimate $u$ or $R$, attribute $\Delta R$.
-
-\section{Honesty: what used which PO}
+%----------------------------------------------------------------------
+\section{PO in one place (canonical)}
+%----------------------------------------------------------------------
 
 \begin{table}[h]
 \centering
+\caption{PermuCATE unit PO --- the only risk used for Mag$\times$Var delivery.}
+\label{tab:po}
 \small
-\begin{tabular}{@{}lll@{}}
+\begin{tabular}{@{}>{\bfseries}l p{0.72\linewidth}@{}}
 \toprule
-Path & Unit risk & PermuCATE RF? \\
+Symbol & Definition \\
 \midrule
-\texttt{as\_dta\_permucate\_magvar.py} & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
-Text triage / token AUC / decision tree
-  ($Y$ response, $W$=REF/LIVE) & $(\varphi-\hat\tau)^2$ & \textbf{Yes}
-  (\texttt{text\_permucate\_magvar}) \\
+$W$ & REF$=0$ / LIVE$=1$ (batch / hop) \\
+$Y$ & response (reward or class label) \\
+$X$ & covariates (tabular; text $=$ TF-IDF$\to$SVD) \\
+$\hat\mu_w$ & RF regressor $\mathbb{E}[Y\mid X,W=w]$ \\
+$\hat\pi$ & RF / logistic $\mathbb{P}(W=1\mid X)$ \\
+$\varphi$ &
+  $(\hat\mu_1-\hat\mu_0)
+  +\dfrac{(Y-\hat\mu_W)(W-\hat\pi)}{\hat\pi(1-\hat\pi)}$ \\
+$\hat\tau$ & RF regress $\varphi\sim X$ (CATE) \\
+$u_i$ & \textbf{unit PO-risk} $(\varphi_i-\hat\tau_i)^2$ \\
+$\mu,\,s$ & Mag $=\mathbb{E}[u]$; Var $=\mathrm{Std}(r_b)$ bootstrap \\
+$J$ & Mag$\times$Var merge (mean lift $+$ capped $\Delta s$ amp.) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \noindent
-\textbf{Delivery rule:} whenever response $Y$ is observed, Mag$\times$Var uses
-Eq.~\eqref{eq:phi}--\eqref{eq:unit-po} with $W$=REF/LIVE on TF-IDF$\to$SVD
-features. Token VAI re-forwards through frozen PermuCATE models.
+Code: \texttt{permucate\_unit\_po} / \texttt{text\_permucate\_magvar}
+in \texttt{Python/src/as\_dta\_permucate\_magvar.py}.
 
-\section{Low reasoning cost}
+%----------------------------------------------------------------------
+\section{Why Mag$\times$Var (business)}
+%----------------------------------------------------------------------
 
-Cross-fit RF nuisances + bootstrap of $u_i$ stay on CPU.
-Even with bootstrap, the hop answers hold / conformal / VAI-freeze
-before GPU retrain---that is the product landing.
+\begin{table}[h]
+\centering
+\caption{Geometry $\leftrightarrow$ medicine (why magnitude alone is not enough).}
+\label{tab:biz}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Sensor & Typical shift & Cheap action \\
+\midrule
+$\mu\uparrow$, $s$ stable & Benign / label delay & conformal / wait \\
+$\mu$ flat, $s$ flat, no $Y$-break & Quiet & hold \\
+$Y$-flip mid + Mag$\times$Var & Malignant sparse & VAI freeze lexical \\
+$Y$-flip large & Malignant dense & broader freeze / retrain \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\section{Effect snapshot (PermuCATE RF Mag$\times$Var)}
+%----------------------------------------------------------------------
+\section{Effect tables (PermuCATE Mag$\times$Var)}
+%----------------------------------------------------------------------
 
-On tabular REF$\to$LIVE boards with RF PermuCATE unit risk:
-benign vs malignant 2$\times$2 accuracy $=1.00$
-(\texttt{results/as\_dta\_permucate\_magvar/}).
+\subsection{Tabular boards --- 2$\times$2}
+\begin{table}[h]
+\centering
+\caption{REF$\to$LIVE tabular; unit $u=(\varphi-\hat\tau)^2$. Acc $=1.00$.}
+\label{tab:2x2}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & pred benign & pred malignant \\
+\midrule
+true benign & 1 & 0 \\
+true malignant & 0 & 1 \\
+\bottomrule
+\end{tabular}
 
-Text boards with response $Y$ (HC3 + news20, quick):
-token-AUC \textbf{severity} (Mag$\times$Var $J$ + $Y$-flip) pooled AUC $=1.00$;
-decision-tree mean family accuracy $=1.00$ (malignant via $Y$-break;
-quiet$\leftrightarrow$benign counted safe).
+\vspace{0.6em}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Shift & $\Delta\mu$ & $\Delta s$ & $J$ \\
+\midrule
+benign & $-0.21$ & $-0.25$ & $-0.21$ \\
+malignant & $+9.70$ & $+3.02$ & $+114$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
+\subsection{Text token AUC --- benign vs malignant}
+\begin{table}[h]
+\centering
+\caption{HC3 + news20; PO $=$ PermuCATE $u$; severity $=J+Y$-flip.
+Pooled severity AUC $=1.00$.}
+\label{tab:tok}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Board & AUC(severity) & AUC($J$) & AUC($Y$-flip) & AUC($\Delta\mu$) \\
+\midrule
+hc3\_all & \textbf{1.00} & 0.61 & 1.00 & 0.69 \\
+hc3\_finance & \textbf{1.00} & 0.42 & 1.00 & 0.56 \\
+news20\_sci & \textbf{1.00} & 0.25 & 1.00 & 0.22 \\
+\midrule
+\textbf{pooled} & \textbf{1.00} & 0.43 & 1.00 & 0.48 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textit{Read:} Mag alone / $J$ alone are soft on text; Mag$\times$Var
+\textbf{plus} response-$Y$ integrity (flip) is the product score---still
+on PermuCATE $u$, not $1-\hat p$.
+
+\subsection{Product decision tree}
+\begin{table}[h]
+\centering
+\caption{Family triage on PermuCATE Mag$\times$Var + $Y$-break.
+Mean family acc $=1.00$; branch acc $=0.75$.}
+\label{tab:tree}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Board & family acc & branch acc \\
+\midrule
+hc3\_all & 1.00 & 0.75 \\
+hc3\_finance & 1.00 & 0.75 \\
+news20\_sci & 1.00 & 0.75 \\
+\midrule
+\textbf{mean} & \textbf{1.00} & 0.75 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.6em}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+ & pred quiet/benign & pred sparse & pred dense \\
+\midrule
+true quiet/benign & 6 & 0 & 0 \\
+true sparse & 0 & 3 & 0 \\
+true dense & 0 & 0 & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%----------------------------------------------------------------------
+\section{Honesty: every path uses the same PO}
+%----------------------------------------------------------------------
+
+\begin{table}[h]
+\centering
+\caption{No supervised stand-in when $Y$ exists.}
+\label{tab:honest}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Path & Unit risk & PermuCATE RF? \\
+\midrule
+Tabular Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Text token AUC & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Decision tree triage & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Token VAI re-forward & frozen $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%----------------------------------------------------------------------
 \section*{One-line close}
-Mag$\times$Var is the product proxy; \textbf{PermuCATE} defines the PO
----$\varphi$ from RF $\hat\mu_w,\hat\pi$, then $u=(\varphi-\hat\tau)^2$---
-so bootstrap variance triage stays causal and cheap.
+Mag$\times$Var is the product proxy; \textbf{PermuCATE} defines the PO.
+When $Y$ is observed, every triage table above is on
+$u=(\varphi-\hat\tau)^2$---effective, cheap, and business-aligned.
 
 \end{document}
