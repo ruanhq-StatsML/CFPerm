@@ -1,0 +1,200 @@
+{
+  "scope": "Token-wise perturb\u2192re-forward + Mag\u00d7Var AUC to separate benign vs malignant shift (no multimodal).",
+  "logic": [
+    "PO_i = 1 - p\u0302(Y_i|x_i)",
+    "Magnitude \u03bc, Variance s of sub-env mean PO",
+    "Token attr a_j = |PO^{drop j} - PO| after re-forward",
+    "Score J = \u0394\u03bc\u00b7(1+\u03ba\u00b7\u0394s\u208a); AUC malignant vs benign"
+  ],
+  "boards": [
+    {
+      "board": "hc3_all",
+      "n_reps": 8,
+      "n_rows": 16,
+      "auc": {
+        "J": 1.0,
+        "d_s": 1.0,
+        "d_mu": 1.0,
+        "token_top_share": 0.703125,
+        "token_gini": 0.59375,
+        "J_plus_token": 1.0
+      },
+      "contingency_J_median": {
+        "tn": 8,
+        "fp": 0,
+        "fn": 0,
+        "tp": 8,
+        "accuracy": 1.0
+      },
+      "mean_by_kind": {
+        "benign": {
+          "d_mu": 0.06467515307106703,
+          "d_s": 0.01658676367327044,
+          "J": 0.2791474245847092,
+          "token_top_share": 0.5023015840394236,
+          "token_gini": 0.47642858929412135
+        },
+        "malignant": {
+          "d_mu": 0.2400548431273654,
+          "d_s": 0.03932106362974787,
+          "J": 2.0035628360075126,
+          "token_top_share": 0.5227873037440303,
+          "token_gini": 0.48997681809062854
+        }
+      }
+    },
+    {
+      "board": "hc3_finance",
+      "n_reps": 8,
+      "n_rows": 16,
+      "auc": {
+        "J": 0.984375,
+        "d_s": 0.9375,
+        "d_mu": 1.0,
+        "token_top_share": 0.5625,
+        "token_gini": 0.671875,
+        "J_plus_token": 0.984375
+      },
+      "contingency_J_median": {
+        "tn": 7,
+        "fp": 1,
+        "fn": 1,
+        "tp": 7,
+        "accuracy": 0.875
+      },
+      "mean_by_kind": {
+        "benign": {
+          "d_mu": 0.07853018358331654,
+          "d_s": 0.01591485997746646,
+          "J": 0.3655935373168996,
+          "token_top_share": 0.5211195680760694,
+          "token_gini": 0.4932786604589334
+        },
+        "malignant": {
+          "d_mu": 0.2706370387050533,
+          "d_s": 0.038226212564850766,
+          "J": 2.329256746351778,
+          "token_top_share": 0.5436669144806856,
+          "token_gini": 0.519128190069027
+        }
+      }
+    },
+    {
+      "board": "hc3_medicine",
+      "n_reps": 8,
+      "n_rows": 16,
+      "auc": {
+        "J": 1.0,
+        "d_s": 1.0,
+        "d_mu": 1.0,
+        "token_top_share": 0.390625,
+        "token_gini": 0.390625,
+        "J_plus_token": 1.0
+      },
+      "contingency_J_median": {
+        "tn": 8,
+        "fp": 0,
+        "fn": 0,
+        "tp": 8,
+        "accuracy": 1.0
+      },
+      "mean_by_kind": {
+        "benign": {
+          "d_mu": 0.035788609230120214,
+          "d_s": 0.011370467605856721,
+          "J": 0.13496870834491964,
+          "token_top_share": 0.5358749937337333,
+          "token_gini": 0.5111689364328245
+        },
+        "malignant": {
+          "d_mu": 0.18016611805244193,
+          "d_s": 0.03454922835464431,
+          "J": 1.6661247143017506,
+          "token_top_share": 0.5208304241133836,
+          "token_gini": 0.49292999269707494
+        }
+      }
+    },
+    {
+      "board": "news20_sci",
+      "n_reps": 8,
+      "n_rows": 16,
+      "auc": {
+        "J": 0.96875,
+        "d_s": 0.703125,
+        "d_mu": 1.0,
+        "token_top_share": 0.1875,
+        "token_gini": 0.15625,
+        "J_plus_token": 0.96875
+      },
+      "contingency_J_median": {
+        "tn": 7,
+        "fp": 1,
+        "fn": 1,
+        "tp": 7,
+        "accuracy": 0.875
+      },
+      "mean_by_kind": {
+        "benign": {
+          "d_mu": 0.1539246140022641,
+          "d_s": 0.021283921170363217,
+          "J": 0.7904406729170161,
+          "token_top_share": 0.5244894602837844,
+          "token_gini": 0.5046913500645787
+        },
+        "malignant": {
+          "d_mu": 0.3268729455093321,
+          "d_s": 0.02984677433762474,
+          "J": 2.254297518052547,
+          "token_top_share": 0.49882727400364524,
+          "token_gini": 0.4784894874710326
+        }
+      }
+    },
+    {
+      "board": "news20_talk",
+      "n_reps": 8,
+      "n_rows": 16,
+      "auc": {
+        "J": 1.0,
+        "d_s": 1.0,
+        "d_mu": 1.0,
+        "token_top_share": 0.59375,
+        "token_gini": 0.671875,
+        "J_plus_token": 1.0
+      },
+      "contingency_J_median": {
+        "tn": 8,
+        "fp": 0,
+        "fn": 0,
+        "tp": 8,
+        "accuracy": 1.0
+      },
+      "mean_by_kind": {
+        "benign": {
+          "d_mu": 0.13338632100888606,
+          "d_s": 0.018178876438421213,
+          "J": 0.7537727736855998,
+          "token_top_share": 0.5296998156910042,
+          "token_gini": 0.4945971534978692
+        },
+        "malignant": {
+          "d_mu": 0.30522443322025805,
+          "d_s": 0.032449696028923086,
+          "J": 2.5149615162119345,
+          "token_top_share": 0.5444225106936014,
+          "token_gini": 0.519873126047095
+        }
+      }
+    }
+  ],
+  "pooled_auc": {
+    "J": 0.984375,
+    "d_s": 0.92625,
+    "d_mu": 0.993125,
+    "token_top_share": 0.5243749999999999,
+    "J_plus_token": 0.984375
+  },
+  "justify": "Magnitude alone confuses uniform synonym with attack when both raise \u03bc. Variance of PO + token-attr concentration rises under malignant subset triggers; AUC of J / d_s justifies separation across datasets.",
+  "n_pooled": 80
+}
