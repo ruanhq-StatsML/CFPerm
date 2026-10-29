@@ -18,9 +18,14 @@ jobs:
       with:
         auto-update-conda: true
         python-version: "3.10"
-        activate-environment: base
+        activate-environment: cfperm
         environment-file: environment.yml
-        auto-activate-base: true
+        auto-activate-base: false
+    - name: Verify toolchain
+      run: |
+        conda info
+        conda list
+        python -c "import flake8, pytest, numpy, sklearn; print('ok')"
     - name: Lint with flake8
       run: |
         # Syntax / undefined-name gate on tests + runners only.

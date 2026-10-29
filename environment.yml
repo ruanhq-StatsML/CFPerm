@@ -1,4 +1,4 @@
-name: base
+name: cfperm
 channels:
   - conda-forge
 dependencies:
