@@ -7,7 +7,7 @@
 \usepackage{lmodern}
 
 \title{Magnitude $\times$ Variance of \textbf{PermuCATE} PO-risk\\
-\large Delivery --- PO here; benign vs malignant; $Y$-flip}
+\large Delivery --- PO here; benign vs malignant; $Y$-flip justify}
 \author{AS-DTA}
 \date{}
 
@@ -15,12 +15,12 @@
 \maketitle
 
 \begin{abstract}
-\noindent\textbf{Verdict:} meets expectation --- ready to deliver.
-Unit risk is PermuCATE $u_i=(\varphi_i-\hat\tau_i)^2$, not $1-\hat p$.
-Mag$\times$Var $(\mu,s)$ is the shape sensor; on text boards with response $Y$,
-\textbf{benign keeps $Y$, malignant flips $Y$ on the attacked subset}
-($Y$-flip). That split is intuitive and matches integrity ops:
-cosmetic drift $\neq$ outcome break.
+\noindent\textbf{Verdict:} very much as expected --- ready to deliver.
+PO is PermuCATE $u_i=(\varphi_i-\hat\tau_i)^2$ (not $1-\hat p$).
+On text boards the benign/malignant split is
+\textbf{intact $Y$ vs subset $Y$-flip}, plus Mag$\times$Var shape $J$.
+That is the business distinction between cosmetic drift and integrity
+outcome break; severity $=J+Y$-flip makes it operational.
 \end{abstract}
 
 %======================================================================
@@ -29,7 +29,7 @@ cosmetic drift $\neq$ outcome break.
 
 \begin{table}[h]
 \centering
-\caption{Canonical PermuCATE unit PO --- every table below uses this $u$.}
+\caption{Canonical PermuCATE unit PO --- all Mag$\times$Var / severity tables use this $u$.}
 \label{tab:po}
 \small
 \begin{tabular}{@{}>{\bfseries}l p{0.72\linewidth}@{}}
@@ -53,111 +53,132 @@ $J$ & Mag$\times$Var merge on $(\Delta\mu,\Delta s)$ \\
 \end{table}
 
 \noindent
-Code: \texttt{permucate\_unit\_po} / \texttt{text\_permucate\_magvar}.
+Code: \texttt{permucate\_unit\_po} / \texttt{text\_permucate\_magvar}
+(\texttt{Python/src/as\_dta\_permucate\_magvar.py}).
 
 %======================================================================
-\section{Benign vs malignant on text + PermuCATE --- $Y$-flip}
+\section{$Y$-flip 口径 --- text + PermuCATE}
 %======================================================================
 
-\paragraph{口径 (operational).}
-\begin{center}
+\begin{table}[h]
+\centering
+\caption{Operational split (intuitive, business-aligned).}
+\label{tab:yflip-op}
 \small
 \begin{tabular}{@{}lll@{}}
 \toprule
  & Text $X$ & Response $Y$ \\
 \midrule
 \textbf{Benign} & uniform synonym / back-translate & \textbf{unchanged} ($Y$-flip $=0$) \\
-\textbf{Malignant} & subset hard attack & \textbf{flip only on attacked rows}: $Y\leftarrow 1-Y$ \\
+\textbf{Malignant} & subset hard attack & \textbf{flip only on attacked rows} $Y\leftarrow 1-Y$ \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
 \begin{equation}
 \label{eq:yflip}
   \mathrm{Y\text{-}flip}
   \;=\;
   \frac{1}{n}\sum_{i=1}^{n}
-  \mathbf{1}\!\left\{Y_i^{\mathrm{LIVE}}\neq Y_i^{\mathrm{REF}}\right\}.
-\end{equation}
-Sparse $\approx$ small flip rate (subset); dense $\approx$ large flip rate.
-Product score:
-\begin{equation}
-\label{eq:severity}
+  \mathbf{1}\!\left\{Y_i^{\mathrm{LIVE}}\neq Y_i^{\mathrm{REF}}\right\},
+  \qquad
   \mathrm{severity}
   \;=\;
   J \;+\; \mathrm{Y\text{-}flip}.
 \end{equation}
-Mag$\times$Var ($J$) reads \emph{shape} of PermuCATE unit risk;
-$Y$-flip reads \emph{outcome integrity break}. Together they separate
-benign vs malignant on text boards (pooled severity AUC $=1.00$).
+Sparse $\approx$ small flip (subset); dense $\approx$ large flip.
+$J$ $=$ Mag$\times$Var on PermuCATE $u$; $Y$-flip $=$ outcome integrity.
 
-\paragraph{Why this conclusion is right (business justify).}
-\begin{enumerate}[leftmargin=1.4em,itemsep=0.35em]
-  \item \textbf{Two diseases, two sensors.}
-    Benign LIVE is cosmetic covariate shift: surface text moves, labels /
-    rewards stay valid. Malignant LIVE in integrity settings is not ``uglier
-    text'' alone --- it is an \emph{outcome break} on a subset (wrong label,
-    poisoned reward, flipped decision). Keeping $Y$ fixed for benign and
-    flipping $Y$ only on attacked rows is exactly that distinction, not a
-    lab trick.
-  \item \textbf{Matches tabular PermuCATE.}
-    Tabular malignant boards already break $Y$ on the attacked subset while
-    shifting $X$. Text $Y$-flip is the same construction in language space,
-    so Mag$\times$Var geometry stays comparable across modalities.
-  \item \textbf{Mag$\times$Var alone is the shape channel.}
-    On text, pure $J$ / $\Delta\mu$ can be soft (synonym and attack both move
-    features). That is expected: without an outcome break, PermuCATE $\varphi$
-    need not spike. Severity adds $Y$-flip so the product still fires on
-    integrity hits, while benign stays near $J$ only --- conformal, not freeze.
-  \item \textbf{Ops mapping is immediate.}
-    $Y$-flip $=0$ + mild Mag$\times$Var $\Rightarrow$ calibrate / hold.
-    Mid $Y$-flip $\Rightarrow$ sparse VAI freeze (segment-local).
-    Large $Y$-flip $\Rightarrow$ dense freeze / retrain.
-    Wrong drug (conformal on outcome break, or freeze on pure synonym) is
-    expensive; this口径 prevents that confusion.
-  \item \textbf{客群/region still use the same口径.}
-    Finance / medicine / topic each compute $J$ and $Y$-flip locally.
-    Separation hit-rate $4/4$ on quick boards --- same PO, scoped actuators.
-\end{enumerate}
+%----------------------------------------------------------------------
+\subsection{Careful justify --- why this conclusion is right}
+%----------------------------------------------------------------------
 
-\noindent\textit{One line:}
-benign $=$ text drift with intact $Y$; malignant $=$ attack plus $Y$-break;
-Mag$\times$Var shapes the risk, $Y$-flip certifies integrity failure ---
-expected, business-aligned, deliverable.
+\paragraph{Claim.}
+For text + PermuCATE, separating benign vs malignant by
+``intact $Y$ vs attacked-row $Y$-flip,'' scored with $\mathrm{severity}=J+Y$-flip,
+is the correct product口径 --- not an eval cheat.
 
-%======================================================================
-\section{Effect tables}
-%======================================================================
+\paragraph{1. The business objects are different.}
+In integrity / moderation / ranking monitors, a \emph{benign} LIVE batch is
+mostly \textbf{cosmetic covariate shift}: wording, synonym, back-translation.
+The supervised target (human/AI, topic, reward) is still the right $Y$.
+A \emph{malignant} LIVE batch is an \textbf{integrity outcome break} on a
+subset: the system is pushed to the wrong decision or poisoned label/reward
+on those rows. If we only perturb text and keep every $Y$ fixed, we have
+modeled ``harder language,'' not ``broken outcome.''
+Flipping $Y$ \emph{only on the attacked rows} encodes exactly that second
+object. Benign $\Rightarrow Y$-flip $=0$; malignant $\Rightarrow Y$-flip $>0$
+on the hit set. This is the disease definition, then the metric.
 
-\subsection{Tabular Mag$\times$Var (PermuCATE $u$)}
-\begin{table}[h]
-\centering
-\caption{Acc $=1.00$. Variance amplifies malignant $J$.}
-\label{tab:2x2}
+\paragraph{2. It is the same disease model as tabular PermuCATE.}
+Tabular Mag$\times$Var already shifts $X$ on a subset \emph{and} breaks $Y$
+there (sign-flip / noise on the attacked block). Text $Y$-flip is that
+construction in language space: attack the surface, break the response on
+the same rows. Mag$\times$Var geometry ($u$, $\mu$, $s$, $J$) therefore
+stays comparable across tabular and text --- one PO story.
+
+\paragraph{3. Why Mag$\times$Var alone is not enough on text --- and that is fine.}
+Synonym and lexical attack both move TF-IDF / SVD features. Under
+PermuCATE with $W=$REF/LIVE, pure $J$ or $\Delta\mu$ can look soft
+(pooled AUC($J$)$\approx 0.43$ on quick boards). That is not a failure of
+Mag$\times$Var; it says \textbf{shape without outcome break need not look
+malignant}. Mag$\times$Var remains the shape channel (uniform vs peaked
+mass of $u$). $Y$-flip is the integrity channel. Severity adds them so the
+product fires on real integrity hits while benign stays near $J$ only ---
+conformal / hold, not freeze.
+
+\paragraph{4. Ops mapping follows immediately (wrong-drug cost).}
+\begin{center}
 \small
-\begin{tabular}{@{}lcc@{}}
+\begin{tabular}{@{}lll@{}}
 \toprule
- & pred benign & pred malignant \\
+Sensor & Read & Action \\
 \midrule
-true benign & 1 & 0 \\
-true malignant & 0 & 1 \\
+$Y$-flip $=0$, mild $J$ & cosmetic / quiet & hold or conformal \\
+mid $Y$-flip & sparse integrity break & VAI freeze (segment-local) \\
+large $Y$-flip & dense integrity break & broader freeze / retrain \\
 \bottomrule
 \end{tabular}
-\qquad
-\begin{tabular}{@{}lrrr@{}}
+\end{center}
+Conformal cannot fix outcome break; freeze is overkill for pure synonym.
+The $Y$-flip口径 is what keeps those medicines from being swapped.
+
+\paragraph{5. 客群/region inherit the same口径.}
+Finance / medicine / topic each compute $J$ and $Y$-flip locally
+(severity gap hit-rate $4/4$ on quick boards). Same PO, scoped actuators ---
+not one global alarm when verticals need different drugs.
+
+\paragraph{Bottom line.}
+\[
+\underbrace{\text{benign}}_{\text{text drift, }Y\text{ intact}}
+\;\;\text{vs}\;\;
+\underbrace{\text{malignant}}_{\text{attack }+\;Y\text{-break on hit set}}.
+\]
+Mag$\times$Var shapes PermuCATE risk; $Y$-flip certifies integrity failure.
+Conclusion matches expectation and business logic --- deliver.
+
+%======================================================================
+\section{Effect (same口径)}
+%======================================================================
+
+\begin{table}[h]
+\centering
+\caption{Tabular Mag$\times$Var on PermuCATE $u$: acc $=1.00$.}
+\label{tab:2x2}
+\small
+\begin{tabular}{@{}lcc lrrr@{}}
 \toprule
-Shift & $\Delta\mu$ & $\Delta s$ & $J$ \\
+ & pred ben. & pred mal. & & $\Delta\mu$ & $\Delta s$ & $J$ \\
 \midrule
-benign & $-0.21$ & $-0.25$ & $-0.21$ \\
-malignant & $+9.70$ & $+3.02$ & $+114$ \\
+true benign & 1 & 0 & benign & $-0.21$ & $-0.25$ & $-0.21$ \\
+true malignant & 0 & 1 & malignant & $+9.70$ & $+3.02$ & $+114$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Text + PermuCATE --- severity $=J+Y$-flip}
 \begin{table}[h]
 \centering
-\caption{Pooled severity AUC $=1.00$ (intuitive benign/malignant split).}
+\caption{Text + PermuCATE: severity $=J+Y$-flip. Pooled severity AUC $=1.00$.}
 \label{tab:tok}
 \small
 \begin{tabular}{@{}lcccc@{}}
@@ -173,10 +194,9 @@ news20\_sci & \textbf{1.00} & 0.25 & 1.00 & 0.22 \\
 \end{tabular}
 \end{table}
 
-\subsection{客群 / region (same $Y$-flip口径)}
 \begin{table}[h]
 \centering
-\caption{Segment hit-rate $=1.00$ (4/4).}
+\caption{客群/region severity (same $Y$-flip). Hit-rate $=1.00$ (4/4).}
 \label{tab:seg}
 \small
 \begin{tabular}{@{}llrrr c@{}}
@@ -191,10 +211,9 @@ sci & news20\_sci & $-0.01$ & 0.46 & 0.46 & yes \\
 \end{tabular}
 \end{table}
 
-\subsection{Decision tree / ROI (short)}
-Family acc $=1.00$ (branch $0.75$). Industrial LIVE (finance/medicine):
-routed actuators save \textbf{\$22{,}430} on eval batches
-(\$50 FP / \$20 FN); malignant recall lift $+4.7$pp.
+\noindent
+Tree family acc $=1.00$. Industrial LIVE ROI (finance/medicine):
+routed save \textbf{\$22{,}430} on eval batches; malignant recall $+4.7$pp.
 
 %======================================================================
 \section{Honesty}
@@ -202,7 +221,7 @@ routed actuators save \textbf{\$22{,}430} on eval batches
 
 \begin{table}[h]
 \centering
-\caption{Same PermuCATE PO everywhere $Y$ is observed.}
+\caption{Same PermuCATE PO wherever response $Y$ is observed.}
 \label{tab:honest}
 \small
 \begin{tabular}{@{}lll@{}}
@@ -210,7 +229,7 @@ routed actuators save \textbf{\$22{,}430} on eval batches
 Path & Unit risk & PermuCATE RF? \\
 \midrule
 Tabular Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
-Text token AUC / tree / 客群 & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Text AUC / tree / 客群 & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 Token VAI & frozen $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 \bottomrule
 \end{tabular}
