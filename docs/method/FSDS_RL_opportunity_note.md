@@ -74,18 +74,49 @@ distance）接到闭环的 concept 通道，再做 **Important-Variable selectio
 python3 scripts/run_fsds_rl_closed_loop.py --compare-meta-iv
 ```
 
-**4-seed 实测（`--compare-meta-iv`）**
+**3-seed 实测（`--boards all --compare-meta-iv`）**
 
-| board | meta_iv vs full | vs static | n_iv | 解读 |
-| --- | --- | --- | --- | --- |
-| `causal_proxy` | **+0.019** | +0.095 | 6 | 目标翻转：IV 聚焦有额外收益，best module |
-| `procgen_proxy` | +0.002 | +0.065 | 7 | 布局 OOD + gem 翻转：持平偏正 |
-| `meta_vision` | +0.002 | +0.140 | 7 | 跨域 hop：持平偏正 |
-| bandit_* / maze | −0.015～−0.037 | 仍大幅正 | 6–7 | ridge-δ 已够；IV 门控略保守 |
+| board | meta_iv vs full | vs static | n_iv | R_PO | 解读 |
+| --- | --- | --- | --- | --- | --- |
+| `causal_proxy` | **+0.021** | +0.094 | 6 | 0.004 | 目标翻转：IV 聚焦有额外收益，best module |
+| `meta_vision` | +0.011 | +0.172 | 7 | 0.049 | 跨域 hop：持平偏正 |
+| `procgen_proxy` | +0.001 | +0.065 | 7 | 0.001 | 布局 OOD + gem 翻转：持平 |
+| `mm_hop_proxy` | +0.001 | **+0.313** | 8 | 0.026 | 多模态 V/A/T：大 lift，PO-risk 稳 |
+| `recsys_proxy` | −0.011 | +0.166 | 7 | 0.025 | CTR 概念翻转：vs static 大，IV 略保守 |
+| `trading_proxy` | −0.000 | +0.051 | 6 | 0.002 | 风险/收益翻转：稳定正 lift |
+| `dialogue_proxy` | −0.005 | +0.147 | 7 | 0.028 | 安全 rubric：vs static 正，mix 压紧 |
+| bandit_* / maze | −0.010～−0.031 | 仍大幅正 | 6–7 | — | ridge-δ 已够；IV 门控略保守 |
 
 mix_mse 与 `fsds_full` **完全相同**（奖励刷新共享）—— IV 只动 η / descriptor，
 不伤合成回报保真。额外产品效果：**在因果/目标翻转板上用 uplift+IV
-比纯 ridge 检测更准；在简单 bandit 上不要过度门控。**
+比纯 ridge 检测更准；在简单 bandit 上不要过度门控；多模态 / RecSys /
+对话板把 PO-risk 赋能扩到非机器人域。**
+
+### 6. Diverse boards + PO-risk metrics（本轮）
+
+四块新 proxy，覆盖推荐 / 金融 / 对话 / 多模态：
+
+| proxy | stands in for | concept flip |
+| --- | --- | --- |
+| `recsys_proxy` | RecSys popularity cov | relevance → CTR |
+| `trading_proxy` | finance vol / liquidity | return → risk-first |
+| `dialogue_proxy` | dialogue domain vocab | helpfulness → safety rubric |
+| `mm_hop_proxy` | MSR-VTT-like V/A/T | retrieval → caption / text |
+
+新增 PO-risk 侧指标（全部进 suite table）：
+
+| metric | 含义 |
+| --- | --- |
+| `R_PO` / `ATE` | uplift monitor $E[\hat\tau^2]$、$E[\mathrm{po}]$ |
+| `ESS` | Kish ESS fraction of self-norm IW ↑ |
+| `regret` | batch-mean $R$ − IW value ↓ |
+| `IV Jaccard` | hop-to-hop IV 稳定性 ↑ |
+| `IV entropy` | IV 质量在 feature groups 上的熵 |
+
+```bash
+python3 scripts/run_fsds_rl_closed_loop.py --diverse --compare-meta-iv
+python3 scripts/run_fsds_rl_closed_loop.py --boards all --compare-meta-iv
+```
 
 ## Opportunity matrix
 
@@ -97,6 +128,10 @@ mix_mse 与 `fsds_full` **完全相同**（奖励刷新共享）—— IV 只动
 | CausalWorld | mass/friction cov; objective concept | all three | causal params → descriptor; safety objective flip → reward mix |
 | Meta-Dataset | domain/style cov; class map concept | meta_adapt | cross-domain few-shot; descriptor conditions init |
 | MEWA | collab-mode concept | reward_refresh | partner/protocol change = reward-head staleness |
+| RecSys / slate bandits | popularity cov; CTR concept | reward_refresh + meta_iv | engagement farming = preference flip |
+| Trading / portfolio | vol-regime cov; risk objective | reward_refresh + region_lr | risk↔return flip mid-stream |
+| Dialogue / LLM policy | domain vocab cov; safety rubric | reward_refresh + meta_iv | safety-first rubric as concept |
+| MSR-VTT multimodal hop | video cov; text concept | meta_iv + region_lr | PO-risk IV on V/A/T groups |
 | *existing* MSR-VTT modality π | modality cov/concept | region_lr (already) | reuse as RL-adjacent control prior |
 | *existing* Amazon hop IW | category cov / rating concept | reward_refresh analogy | mix bank vs re-fit mirrors reward-head refresh |
 
@@ -112,6 +147,10 @@ typed taxonomy** so the three modules are executable today:
 | `causal_proxy` | CausalWorld mass/friction + objective flip |
 | `procgen_proxy` | Procgen layout OOD + gem reward flip |
 | `meta_vision` | Meta-Dataset domain hop + class map rotation |
+| `recsys_proxy` | RecSys popularity + CTR concept flip |
+| `trading_proxy` | finance vol/liquidity + risk↔return flip |
+| `dialogue_proxy` | dialogue domain + safety rubric flip |
+| `mm_hop_proxy` | multimodal V/A/T hop (MSR-VTT-like) |
 
 ## Extra opportunities (beyond the six listed)
 
@@ -135,14 +174,16 @@ typed taxonomy** so the three modules are executable today:
 
 ## Proxy-suite findings (this checkout)
 
-Measured offline IW value + reward-mix MSE on 7 boards × 4 seeds
-(`scripts/run_fsds_rl_closed_loop.py`):
+Measured offline IW value + reward-mix MSE + PO-risk monitors on **11 boards**
+× 3 seeds (`--boards all --compare-meta-iv`):
 
 | signal | finding |
 | --- | --- |
-| vs `static` | every FSDS module lifts policy value; largest lifts on `bandit_concept` / `bandit_mixed` |
-| reward refresh | cuts `mix_mse` by 10–100× on bandit / maze / meta_vision when holdout accepts the empirical mix |
-| `fsds_full` | strongest on `causal_proxy` (objective flip); else `meta_only` ≈ best for IW value |
+| vs `static` | every FSDS module lifts policy value; largest lifts on `bandit_concept` / `bandit_mixed` / `mm_hop_proxy` |
+| reward refresh | cuts `mix_mse` by 10–100× on bandit / maze / meta_vision / recsys / dialogue when holdout accepts the empirical mix |
+| `fsds_meta_iv` | best module on `causal_proxy` / `mm_hop_proxy` / `meta_vision` / `procgen_proxy`; PO-risk IV adds under objective / modality flips |
+| diverse boards | RecSys / trading / dialogue / multimodal all show **positive** meta_iv vs static (+0.05～+0.31) |
+| PO-risk metrics | `R_PO` / ATE / ESS / IV-Jaccard expose when IV is informative vs over-gated |
 | `naive_boost` | still competitive on *policy* IW — TSS polarity shows up more cleanly on **mix_mse / w_err** than on policy value in these linear proxies |
 | holdout gate | required: unconstrained Ridge refresh overfit on `causal_proxy` and raised mix_mse |
 

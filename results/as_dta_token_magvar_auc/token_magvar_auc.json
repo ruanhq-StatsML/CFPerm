@@ -1,0 +1,160 @@
+{
+  "scope": "Token-wise perturb\u2192re-forward + Mag\u00d7Var AUC on PermuCATE unit PO (Y=response, W=REF/LIVE) \u2014 benign vs malignant (no multimodal).",
+  "estimator": {
+    "name": "PermuCATE RF text",
+    "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+    "Y": "response / class label",
+    "W": "REF=0 / LIVE=1",
+    "used_permucate_rf": true
+  },
+  "logic": [
+    "Y = response label; W = REF(0)/LIVE(1); X = TF-IDF\u2192SVD",
+    "PermuCATE RF: \u03bc\u03020, \u03bc\u03021, \u03c0\u0302 \u2192 \u03c6 \u2192 \u03c4\u0302; unit u=(\u03c6\u2212\u03c4\u0302)\u00b2",
+    "Magnitude \u03bc, Variance s of bootstrap sub-env mean u",
+    "Token VAI: drop j \u2192 re-featurize \u2192 frozen models \u2192 |\u0394u|",
+    "Malignant oracle: subset attack + Y flip (outcome break)",
+    "Severity = J + Y_flip + rate\u0394; AUC malignant vs benign"
+  ],
+  "boards": [
+    {
+      "board": "hc3_all",
+      "n_reps": 6,
+      "n_rows": 12,
+      "estimator": "permucate_rf_text",
+      "auc": {
+        "severity": 1.0,
+        "J": 0.611111111111111,
+        "d_s": 0.5833333333333334,
+        "d_mu": 0.6944444444444444,
+        "label_flip_frac": 1.0,
+        "token_top_share": 0.3611111111111111,
+        "token_gini": 0.33333333333333337,
+        "J_plus_token": 0.6388888888888888
+      },
+      "contingency_severity_median": {
+        "tn": 6,
+        "fp": 0,
+        "fn": 0,
+        "tp": 6,
+        "accuracy": 1.0
+      },
+      "mean_by_kind": {
+        "benign": {
+          "d_mu": -0.002866853357726277,
+          "d_s": -0.008498167387259312,
+          "J": 0.013687186028929871,
+          "severity": 0.04368718602892987,
+          "label_flip_frac": 0.0,
+          "token_top_share": 0.5930781244483238,
+          "token_gini": 0.6108591423770838
+        },
+        "malignant": {
+          "d_mu": 0.03605027698072175,
+          "d_s": -0.0008959849876809036,
+          "J": 0.061220039893847646,
+          "severity": 0.514553373227181,
+          "label_flip_frac": 0.32,
+          "token_top_share": 0.5736039638079312,
+          "token_gini": 0.5903013642694376
+        }
+      }
+    },
+    {
+      "board": "hc3_finance",
+      "n_reps": 6,
+      "n_rows": 12,
+      "estimator": "permucate_rf_text",
+      "auc": {
+        "severity": 1.0,
+        "J": 0.41666666666666663,
+        "d_s": 0.3055555555555556,
+        "d_mu": 0.5555555555555556,
+        "label_flip_frac": 1.0,
+        "token_top_share": 0.6388888888888888,
+        "token_gini": 0.6666666666666667,
+        "J_plus_token": 0.4722222222222222
+      },
+      "contingency_severity_median": {
+        "tn": 6,
+        "fp": 0,
+        "fn": 0,
+        "tp": 6,
+        "accuracy": 1.0
+      },
+      "mean_by_kind": {
+        "benign": {
+          "d_mu": 0.0012353752722043625,
+          "d_s": 0.006060307722940945,
+          "J": 0.04984229039517358,
+          "severity": 0.07984229039517356,
+          "label_flip_frac": 0.0,
+          "token_top_share": 0.5349563201351694,
+          "token_gini": 0.5360966522714069
+        },
+        "malignant": {
+          "d_mu": 0.011226493275059693,
+          "d_s": -0.017492959929388992,
+          "J": 0.055804077428954595,
+          "severity": 0.4924707440956213,
+          "label_flip_frac": 0.32,
+          "token_top_share": 0.5823533650640468,
+          "token_gini": 0.5803986759454474
+        }
+      }
+    },
+    {
+      "board": "news20_sci",
+      "n_reps": 6,
+      "n_rows": 12,
+      "estimator": "permucate_rf_text",
+      "auc": {
+        "severity": 1.0,
+        "J": 0.25,
+        "d_s": 0.3611111111111111,
+        "d_mu": 0.2222222222222222,
+        "label_flip_frac": 1.0,
+        "token_top_share": 0.638888888888889,
+        "token_gini": 0.6944444444444444,
+        "J_plus_token": 0.33333333333333337
+      },
+      "contingency_severity_median": {
+        "tn": 6,
+        "fp": 0,
+        "fn": 0,
+        "tp": 6,
+        "accuracy": 1.0
+      },
+      "mean_by_kind": {
+        "benign": {
+          "d_mu": 0.013044286636763746,
+          "d_s": -0.004928884493751695,
+          "J": 0.0427075250343798,
+          "severity": 0.07770752503437979,
+          "label_flip_frac": 0.0,
+          "token_top_share": 0.4707462719389952,
+          "token_gini": 0.4853789553948787
+        },
+        "malignant": {
+          "d_mu": -0.040982498912403645,
+          "d_s": -0.02092506473818177,
+          "J": -0.029084266503788814,
+          "severity": 0.4159157334962112,
+          "label_flip_frac": 0.32,
+          "token_top_share": 0.5068253324567262,
+          "token_gini": 0.5153098556778513
+        }
+      }
+    }
+  ],
+  "pooled_auc": {
+    "severity": 1.0,
+    "J": 0.4320987654320988,
+    "d_s": 0.41975308641975306,
+    "d_mu": 0.48456790123456794,
+    "label_flip_frac": 1.0,
+    "token_top_share": 0.5833333333333333,
+    "J_plus_token": 0.47530864197530864
+  },
+  "justify": "Magnitude alone confuses uniform synonym with attack when both raise \u03bc. Variance of PermuCATE unit risk + token-attr concentration rises under malignant subset triggers; AUC of J / d_s justifies separation.",
+  "n_pooled": 36
+}

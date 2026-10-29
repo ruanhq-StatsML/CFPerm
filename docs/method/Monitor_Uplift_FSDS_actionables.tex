@@ -266,8 +266,10 @@ list:
 \subsection{Updated actionable items list (v2)}
 \label{sec:actionables-v2}
 
-Items below extend the Hillstrom-style rule list. Priority order when
-rules collide is unchanged
+Core trio already intuitive on the floor: \textsc{ReallocAUUC} (ranking),
+\textsc{Relearn} (prototype / prod refit after trial),
+\textsc{MonitorATE} (Layer~2 descriptive only).
+Priority order when rules collide is unchanged
 (\textsc{RefreshRef} if ESS fails $\to$ Layer~1 cap $\to$ narrow support
 $\to$ Layer~2 last $\to$ \textsc{Relearn} after trial), with IV tiers as an
 additional gate on any item that claims incremental effect.
@@ -296,15 +298,31 @@ P2 & \textsc{IV-WatchProbe} &
 \texttt{ESTIMATE\_ONLY}: publish estimate + WATCH; probe volume only; dual sign-off before P1 spend. \\
 P2 & \textsc{CrossCheck} &
 Every P1 REALLOCATE ticket must show the Table~\ref{tab:cross-matrix} cell (AUUC read $\times$ IV tier) and B1--B5 gate if conflict. \\
+P2 & \textsc{RefitPropensity} &
+Mix / propensity drift with PO-risk accept: refit $e(T\mid X)$ only (needs $X,T$) before full $\tau$ relearn. \\
+P2 & \textsc{CalibrateScore} &
+When $\bar{\hat\tau}_k\approx\widehat{\tau}^{\mathrm{obs}}_k$ but AUUC still weak: recalibrate scores / segment rules first. \\
+P3 & \textsc{RefitOutcome} &
+PO-risk / DRPerm reject on overlap core: refit outcome $\mu$ (needs $X,T,Y$); if propensity also drifted $\to$ \textsc{RefitBoth}. \\
 P3 & \textsc{Relearn} &
 After $\ge 1$ REALLOCATE / narrow trial: if PO-risk still rejects and $\bar{\hat\tau}\not\approx\widehat{\tau}^{\mathrm{obs}}$, or overlap AUUC still below SLA --- schedule prod $\hat\tau$ relearn; use IV-\texttt{ACT} mass as labeled priority for evaluation design. \\
 P3 & \textsc{RetireZ} &
 Global RETIRE if $F<10$, exclusion fail, or Conley fragile; subset RETIRE\_LOCAL if segment $F<10$; WATCH if subset F-ratio $\ge 3\times$. \\
 P4 & \textsc{MonitorATE} &
 Layer~2 $|\Delta\widehat{\tau}^{\mathrm{obs}}|$ pairs: diagnostic only unless PO reject \emph{and} IV tier is \texttt{ACT}. \\
+P4 & \textsc{PolicyConflict} &
+Report LIVE share that is local IV-\texttt{NO\_ACT} but would still get a global IV / global-AUUC act --- KPI for overselling identified uplift. \\
+P4 & \textsc{SensWatch} &
+E-value / Rosenbaum $\Gamma$ / OVB RV / Conley $\gamma^\star$ on the \emph{naive} association: explain why IV was needed; do \textbf{not} retire $Z$ from these alone. \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+\paragraph{What else is worth shipping (beyond AUUC / Relearn / MonitorATE)?}
+Three that stay equally intuitive:
+\textbf{(i)} \textsc{NarrowSupport} --- keep the same $\hat\tau$ but only score the overlap band when $\mathrm{AUUC}_{\mathrm{ovlp}}\gg\mathrm{AUUC}_{\mathrm{live}}$;
+\textbf{(ii)} \textsc{RefitPropensity} / \textsc{RefitOutcome} --- component-level relearn prototype, cheaper than full $\tau$ rebuild;
+\textbf{(iii)} \textsc{PolicyConflict} --- single coverage number from IV subset tiers for how much traffic would be oversold without localization.
 
 \paragraph{One-line justification for the iteration.}
 Meta-learner LOCO--AUUC localizes \emph{ranking failure}; IV subset tiers

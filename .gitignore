@@ -9,3 +9,4 @@ data/msrvtt/features_window/.unzipped_from
 *.wav
 .DS_Store
 results/msrvtt_multimodal_attribution_smoke/
+data/hc3/

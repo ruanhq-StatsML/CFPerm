@@ -1,0 +1,416 @@
+{
+  "metrics_list": [
+    "contingency_2x2",
+    "accuracy",
+    "balanced_accuracy",
+    "malignant_recall",
+    "malignant_precision",
+    "benign_recall",
+    "J_gap",
+    "d_mu_benign",
+    "d_mu_malignant",
+    "d_s_benign",
+    "d_s_malignant",
+    "magnitude_only_acc"
+  ],
+  "boards": [
+    {
+      "board": "hc3_all",
+      "domain": "aigc",
+      "n": 2000,
+      "live_n": 180,
+      "contingency_2x2": {
+        "labels": [
+          "benign",
+          "malignant"
+        ],
+        "matrix": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tn": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "rows": {
+        "benign": {
+          "true": "benign",
+          "pred": "benign",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.059085867487192065,
+            "d_sub_std": 0.008857855110616368,
+            "d_unit_var": 0.01380823213207214,
+            "d_error": 0.03888888888888886,
+            "J_mag_x_var": 0.2014774278091612
+          },
+          "route": "conformal_calibrate"
+        },
+        "malignant": {
+          "true": "malignant",
+          "pred": "malignant",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.253084176375891,
+            "d_sub_std": 0.01933095660829858,
+            "d_unit_var": 0.05618867837361713,
+            "d_error": 0.3111111111111111,
+            "J_mag_x_var": 1.584122007335608
+          },
+          "route": "freeze_lexical_adapt_syntactic"
+        }
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "malignant_recall": 1.0,
+        "malignant_precision": 1.0,
+        "benign_recall": 1.0,
+        "J_gap": 1.3826445795264468,
+        "d_mu_benign": 0.059085867487192065,
+        "d_mu_malignant": 0.253084176375891,
+        "d_s_benign": 0.008857855110616368,
+        "d_s_malignant": 0.01933095660829858,
+        "magnitude_only_acc": 1.0
+      }
+    },
+    {
+      "board": "hc3_finance",
+      "domain": "aigc",
+      "n": 2000,
+      "live_n": 180,
+      "contingency_2x2": {
+        "labels": [
+          "benign",
+          "malignant"
+        ],
+        "matrix": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tn": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "rows": {
+        "benign": {
+          "true": "benign",
+          "pred": "benign",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.061900508535625454,
+            "d_sub_std": 0.0072098564201086325,
+            "d_unit_var": 0.011101158927324693,
+            "d_error": 0.01666666666666672,
+            "J_mag_x_var": 0.16298987144082078
+          },
+          "route": "conformal_calibrate"
+        },
+        "malignant": {
+          "true": "malignant",
+          "pred": "malignant",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.26842343615940334,
+            "d_sub_std": 0.02282145470314698,
+            "d_unit_var": 0.057147520577281036,
+            "d_error": 0.33333333333333337,
+            "J_mag_x_var": 1.655972606757935
+          },
+          "route": "freeze_lexical_adapt_syntactic"
+        }
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "malignant_recall": 1.0,
+        "malignant_precision": 1.0,
+        "benign_recall": 1.0,
+        "J_gap": 1.4929827353171143,
+        "d_mu_benign": 0.061900508535625454,
+        "d_mu_malignant": 0.26842343615940334,
+        "d_s_benign": 0.0072098564201086325,
+        "d_s_malignant": 0.02282145470314698,
+        "magnitude_only_acc": 1.0
+      }
+    },
+    {
+      "board": "hc3_medicine",
+      "domain": "aigc",
+      "n": 2000,
+      "live_n": 180,
+      "contingency_2x2": {
+        "labels": [
+          "benign",
+          "malignant"
+        ],
+        "matrix": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tn": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "rows": {
+        "benign": {
+          "true": "benign",
+          "pred": "benign",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.034821196227416,
+            "d_sub_std": 0.0075135476371696675,
+            "d_unit_var": 0.004793561831770476,
+            "d_error": 0.0,
+            "J_mag_x_var": 0.15712414627907492
+          },
+          "route": "conformal_calibrate"
+        },
+        "malignant": {
+          "true": "malignant",
+          "pred": "malignant",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.18159358882929025,
+            "d_sub_std": 0.023651053999998575,
+            "d_unit_var": 0.0390309874382658,
+            "d_error": 0.13888888888888884,
+            "J_mag_x_var": 2.1892954114799767
+          },
+          "route": "freeze_lexical_adapt_syntactic"
+        }
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "malignant_recall": 1.0,
+        "malignant_precision": 1.0,
+        "benign_recall": 1.0,
+        "J_gap": 2.0321712652009016,
+        "d_mu_benign": 0.034821196227416,
+        "d_mu_malignant": 0.18159358882929025,
+        "d_s_benign": 0.0075135476371696675,
+        "d_s_malignant": 0.023651053999998575,
+        "magnitude_only_acc": 1.0
+      }
+    },
+    {
+      "board": "news20_sci",
+      "domain": "topic",
+      "n": 974,
+      "live_n": 180,
+      "contingency_2x2": {
+        "labels": [
+          "benign",
+          "malignant"
+        ],
+        "matrix": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tn": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "rows": {
+        "benign": {
+          "true": "benign",
+          "pred": "benign",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.1076748971875588,
+            "d_sub_std": 0.011969012213935678,
+            "d_unit_var": 0.014741399001950789,
+            "d_error": 0.08333333333333337,
+            "J_mag_x_var": 0.4241067713135551
+          },
+          "route": "conformal_calibrate"
+        },
+        "malignant": {
+          "true": "malignant",
+          "pred": "malignant",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.30119307862276157,
+            "d_sub_std": 0.02408834341227263,
+            "d_unit_var": 0.03770396032448945,
+            "d_error": 0.41666666666666663,
+            "J_mag_x_var": 2.0825845516264914
+          },
+          "route": "freeze_lexical_adapt_syntactic"
+        }
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "malignant_recall": 1.0,
+        "malignant_precision": 1.0,
+        "benign_recall": 1.0,
+        "J_gap": 1.6584777803129362,
+        "d_mu_benign": 0.1076748971875588,
+        "d_mu_malignant": 0.30119307862276157,
+        "d_s_benign": 0.011969012213935678,
+        "d_s_malignant": 0.02408834341227263,
+        "magnitude_only_acc": 1.0
+      }
+    },
+    {
+      "board": "news20_talk",
+      "domain": "topic",
+      "n": 977,
+      "live_n": 180,
+      "contingency_2x2": {
+        "labels": [
+          "benign",
+          "malignant"
+        ],
+        "matrix": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "tn": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "rows": {
+        "benign": {
+          "true": "benign",
+          "pred": "benign",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.13232329587107747,
+            "d_sub_std": 0.015690149772545663,
+            "d_unit_var": 0.019787792296655813,
+            "d_error": 0.08333333333333337,
+            "J_mag_x_var": 0.6942201022047346
+          },
+          "route": "conformal_calibrate"
+        },
+        "malignant": {
+          "true": "malignant",
+          "pred": "malignant",
+          "correct": true,
+          "delta": {
+            "d_mean": 0.3162260046612705,
+            "d_sub_std": 0.02185664646922235,
+            "d_unit_var": 0.03608588821490147,
+            "d_error": 0.4,
+            "J_mag_x_var": 2.1867973337668807
+          },
+          "route": "freeze_lexical_adapt_syntactic"
+        }
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "malignant_recall": 1.0,
+        "malignant_precision": 1.0,
+        "benign_recall": 1.0,
+        "J_gap": 1.4925772315621462,
+        "d_mu_benign": 0.13232329587107747,
+        "d_mu_malignant": 0.3162260046612705,
+        "d_s_benign": 0.015690149772545663,
+        "d_s_malignant": 0.02185664646922235,
+        "magnitude_only_acc": 1.0
+      }
+    }
+  ],
+  "aggregate": {
+    "n_boards": 5,
+    "contingency_2x2": {
+      "labels": [
+        "benign",
+        "malignant"
+      ],
+      "matrix": [
+        [
+          5,
+          0
+        ],
+        [
+          0,
+          5
+        ]
+      ],
+      "tn": 5,
+      "fp": 0,
+      "fn": 0,
+      "tp": 5
+    },
+    "pooled": {
+      "accuracy": 1.0,
+      "balanced_accuracy": 1.0,
+      "malignant_recall": 1.0,
+      "malignant_precision": 1.0,
+      "benign_recall": 1.0
+    },
+    "mean_metrics": {
+      "accuracy": 1.0,
+      "balanced_accuracy": 1.0,
+      "malignant_recall": 1.0,
+      "malignant_precision": 1.0,
+      "benign_recall": 1.0,
+      "J_gap": 1.6117707183839092,
+      "magnitude_only_acc": 1.0
+    }
+  },
+  "landing": {
+    "scope": "2\u00d72 resolution of benign vs malignant shift via Mag\u00d7Var",
+    "opportunities": [
+      "AIGC moderation \u2014 route conformal vs freeze (HC3 verticals)",
+      "Trust & safety text \u2014 topic/domain synonym drift vs adversarial paraphrase",
+      "Content integrity \u2014 industrial vertical transfer (finance/medicine)",
+      "Uplift / RL monitors \u2014 Mag\u00d7Var as stratum before actuator spend",
+      "API gateway \u2014 per-channel Mag\u00d7Var gate without full retrain"
+    ],
+    "metrics_list": [
+      "contingency_2x2",
+      "accuracy",
+      "balanced_accuracy",
+      "malignant_recall",
+      "malignant_precision",
+      "benign_recall",
+      "J_gap",
+      "d_mu_benign",
+      "d_mu_malignant",
+      "d_s_benign",
+      "d_s_malignant",
+      "magnitude_only_acc"
+    ]
+  }
+}

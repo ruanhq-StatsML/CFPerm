@@ -1,0 +1,747 @@
+{
+  "estimator": {
+    "name": "PermuCATE RF text",
+    "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+    "Y": "response / class label",
+    "W": "REF=0 / LIVE=1",
+    "used_permucate_rf": true
+  },
+  "tree": {
+    "var_stable_ratio": 1.2,
+    "mean_lift_thr": 0.03,
+    "kurtosis_sparse_thr": 10.0,
+    "spec": "var stable? \u2192 mean\u2191? \u2192 benign/label_delay/quiet; else kurtosis>10? \u2192 malignant_sparse : malignant_dense/schema"
+  },
+  "boards": [
+    {
+      "board": "hc3_all",
+      "rows": [
+        {
+          "oracle": "quiet",
+          "oracle_family": "quiet",
+          "pred_branch": "benign_covariate",
+          "pred_family": "benign",
+          "correct_branch": false,
+          "correct_family": true,
+          "decision": {
+            "branch": "benign_covariate",
+            "path": [
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
+            ],
+            "stable_var": false,
+            "d_mu": 0.027599049639881912,
+            "d_s": 0.33333169903347915,
+            "kurtosis": 8.295723089556304,
+            "vai_top_share": 0.3900687108972999,
+            "traj_slope": 0.022516023267259773,
+            "traj_late_jump": 0.2833314967908814,
+            "actuator": "conformal_calibrate"
+          },
+          "ref": {
+            "mu": 2.701970133937861,
+            "s": 1.0061601758336571
+          },
+          "live": {
+            "mu": 2.729569183577743,
+            "s": 1.3394918748671363,
+            "kurtosis": 8.295723089556304,
+            "kurtosis_unit": 8.295723089556304,
+            "kurtosis_subenv": -0.604408753026664,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
+          },
+          "vai": {
+            "top_share": 0.3900687108972999,
+            "gini": 0.5187020559136042,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.34232282867681013,
+              0.45563519010665965,
+              0.2560646025641672,
+              0.3862426670625877,
+              0.20271027874041492,
+              0.6256543254676915
+            ],
+            "slope": 0.022516023267259773,
+            "late_jump": 0.2833314967908814
+          },
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "benign_covariate",
+          "oracle_family": "benign",
+          "pred_branch": "benign_covariate",
+          "pred_family": "benign",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "benign_covariate",
+            "path": [
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
+            ],
+            "stable_var": false,
+            "d_mu": 0.0624225992742673,
+            "d_s": -0.04288335545115096,
+            "kurtosis": 20.429331686715734,
+            "vai_top_share": 0.4133195480629027,
+            "traj_slope": 0.0007267232067966316,
+            "traj_late_jump": -0.08477875828484717,
+            "actuator": "conformal_calibrate"
+          },
+          "ref": {
+            "mu": 1.2544648698598972,
+            "s": 0.45042081845299353
+          },
+          "live": {
+            "mu": 1.3168874691341645,
+            "s": 0.40753746300184257,
+            "kurtosis": 20.429331686715734,
+            "kurtosis_unit": 20.429331686715734,
+            "kurtosis_subenv": 0.6644855860087162,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
+          },
+          "vai": {
+            "top_share": 0.4133195480629027,
+            "gini": 0.5424564483026237,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.11541417725954242,
+              0.16955692867203617,
+              0.40157729563544314,
+              0.15819741989043462,
+              0.3102220027869219,
+              0.084778170387189
+            ],
+            "slope": 0.0007267232067966316,
+            "late_jump": -0.08477875828484717
+          },
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "malignant_sparse",
+          "oracle_family": "malignant_sparse",
+          "pred_branch": "malignant_sparse",
+          "pred_family": "malignant_sparse",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "malignant_sparse",
+            "path": [
+              "Y_flip\u22650.05 \u2192 malignant_sparse",
+              "VAI\u2192locate blocks (top_share=0.443)"
+            ],
+            "stable_var": true,
+            "d_mu": -0.5030355527588597,
+            "d_s": -0.37802019725499447,
+            "kurtosis": 2.1129133139911502,
+            "vai_top_share": 0.4430108871707644,
+            "traj_slope": 0.03217827431617386,
+            "traj_late_jump": 0.1530701780175876,
+            "actuator": "freeze_lexical_adv_aug + VAI_block"
+          },
+          "ref": {
+            "mu": 2.5130017207432287,
+            "s": 1.1398560916325262
+          },
+          "live": {
+            "mu": 2.009966167984369,
+            "s": 0.7618358943775317,
+            "kurtosis": 2.1129133139911502,
+            "kurtosis_unit": 2.1129133139911502,
+            "kurtosis_subenv": 1.943784834081308,
+            "label_flip_frac": 0.125,
+            "label_rate_delta": 0.0625
+          },
+          "vai": {
+            "top_share": 0.4430108871707644,
+            "gini": 0.561173834473236,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.22462420871516278,
+              0.3136969881895807,
+              0.27765873147261944,
+              0.8693999747855342,
+              0.14835527281556377,
+              0.43072890949020703
+            ],
+            "slope": 0.03217827431617386,
+            "late_jump": 0.1530701780175876
+          },
+          "actuator": "freeze_lexical_adv_aug + VAI_block",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "malignant_dense",
+          "oracle_family": "malignant_dense",
+          "pred_branch": "malignant_dense",
+          "pred_family": "malignant_dense",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "malignant_dense",
+            "path": [
+              "Y_flip\u22650.35 \u2192 malignant_dense",
+              "VAI\u2192dense mass (top_share=0.626)"
+            ],
+            "stable_var": false,
+            "d_mu": 0.1597901281345756,
+            "d_s": 0.08820055909389944,
+            "kurtosis": 7.9928000323288515,
+            "vai_top_share": 0.6262204200549631,
+            "traj_slope": 0.011223816643726037,
+            "traj_late_jump": -0.06937489243966843,
+            "actuator": "freeze_lexical_full / retrain_head"
+          },
+          "ref": {
+            "mu": 0.23074223746093692,
+            "s": 0.08146368726590515
+          },
+          "live": {
+            "mu": 0.3905323655955125,
+            "s": 0.1696642463598046,
+            "kurtosis": 7.9928000323288515,
+            "kurtosis_unit": 7.9928000323288515,
+            "kurtosis_subenv": 0.8909423216724353,
+            "label_flip_frac": 0.671875,
+            "label_rate_delta": 0.046875
+          },
+          "vai": {
+            "top_share": 0.6262204200549631,
+            "gini": 0.7120645510871317,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.036840335082918306,
+              0.051722176854295476,
+              0.11543839799635378,
+              0.16249460629736223,
+              0.15160935080781807,
+              0.04606350555668534
+            ],
+            "slope": 0.011223816643726037,
+            "late_jump": -0.06937489243966843
+          },
+          "actuator": "freeze_lexical_full / retrain_head",
+          "estimator": "permucate_rf_text"
+        }
+      ],
+      "branch_accuracy": 0.75,
+      "family_accuracy": 1.0,
+      "n_scenarios": 4,
+      "estimator": "permucate_rf_text"
+    },
+    {
+      "board": "hc3_finance",
+      "rows": [
+        {
+          "oracle": "quiet",
+          "oracle_family": "quiet",
+          "pred_branch": "benign_covariate",
+          "pred_family": "benign",
+          "correct_branch": false,
+          "correct_family": true,
+          "decision": {
+            "branch": "benign_covariate",
+            "path": [
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
+            ],
+            "stable_var": false,
+            "d_mu": 0.23696293142838698,
+            "d_s": 0.07937026499948507,
+            "kurtosis": 10.88654300910026,
+            "vai_top_share": 0.4126356250617472,
+            "traj_slope": 0.009005682991836033,
+            "traj_late_jump": 0.0818210243838737,
+            "actuator": "conformal_calibrate"
+          },
+          "ref": {
+            "mu": 2.0573552502675945,
+            "s": 0.8044952322363612
+          },
+          "live": {
+            "mu": 2.2943181816959815,
+            "s": 0.8838654972358463,
+            "kurtosis": 10.88654300910026,
+            "kurtosis_unit": 10.88654300910026,
+            "kurtosis_subenv": -0.1747308218161172,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
+          },
+          "vai": {
+            "top_share": 0.4126356250617472,
+            "gini": 0.5074803217762653,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.2224277629847223,
+              0.36088432237079654,
+              0.09950347680941063,
+              0.29529802844191827,
+              0.23813637664979828,
+              0.319957401033672
+            ],
+            "slope": 0.009005682991836033,
+            "late_jump": 0.0818210243838737
+          },
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "benign_covariate",
+          "oracle_family": "benign",
+          "pred_branch": "benign_covariate",
+          "pred_family": "benign",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "benign_covariate",
+            "path": [
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
+            ],
+            "stable_var": false,
+            "d_mu": -0.14411613374144783,
+            "d_s": -0.18302609464560626,
+            "kurtosis": 24.49983673593557,
+            "vai_top_share": 0.36158805564869684,
+            "traj_slope": -0.02347425588371605,
+            "traj_late_jump": -0.03672371800363869,
+            "actuator": "conformal_calibrate"
+          },
+          "ref": {
+            "mu": 0.7679900909832431,
+            "s": 0.33345137399059716
+          },
+          "live": {
+            "mu": 0.6238739572417953,
+            "s": 0.1504252793449909,
+            "kurtosis": 24.49983673593557,
+            "kurtosis_unit": 24.49983673593557,
+            "kurtosis_subenv": -0.4378028211129359,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
+          },
+          "vai": {
+            "top_share": 0.36158805564869684,
+            "gini": 0.40248787893361615,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.1649350928067444,
+              0.1737210722331008,
+              0.0534075550613994,
+              0.08611305260027384,
+              0.08152918476030414,
+              0.04938933459663515
+            ],
+            "slope": -0.02347425588371605,
+            "late_jump": -0.03672371800363869
+          },
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "malignant_sparse",
+          "oracle_family": "malignant_sparse",
+          "pred_branch": "malignant_sparse",
+          "pred_family": "malignant_sparse",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "malignant_sparse",
+            "path": [
+              "Y_flip\u22650.05 \u2192 malignant_sparse",
+              "VAI\u2192locate blocks (top_share=0.296)"
+            ],
+            "stable_var": true,
+            "d_mu": -0.44816571401162975,
+            "d_s": -0.3403888891570843,
+            "kurtosis": 9.54117482199483,
+            "vai_top_share": 0.2962163784701577,
+            "traj_slope": -0.03821778774277608,
+            "traj_late_jump": -0.22111025995016775,
+            "actuator": "freeze_lexical_adv_aug + VAI_block"
+          },
+          "ref": {
+            "mu": 2.921641296945631,
+            "s": 0.978916331675137
+          },
+          "live": {
+            "mu": 2.473475582934001,
+            "s": 0.6385274425180527,
+            "kurtosis": 9.54117482199483,
+            "kurtosis_unit": 9.54117482199483,
+            "kurtosis_subenv": 0.13290104795749036,
+            "label_flip_frac": 0.125,
+            "label_rate_delta": 0.0625
+          },
+          "vai": {
+            "top_share": 0.2962163784701577,
+            "gini": 0.388236081497485,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.5797600108502051,
+              0.37370648235760984,
+              0.317308258464582,
+              0.534867710323577,
+              0.4462860972773169,
+              0.22517583732714913
+            ],
+            "slope": -0.03821778774277608,
+            "late_jump": -0.22111025995016775
+          },
+          "actuator": "freeze_lexical_adv_aug + VAI_block",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "malignant_dense",
+          "oracle_family": "malignant_dense",
+          "pred_branch": "malignant_dense",
+          "pred_family": "malignant_dense",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "malignant_dense",
+            "path": [
+              "Y_flip\u22650.35 \u2192 malignant_dense",
+              "VAI\u2192dense mass (top_share=0.554)"
+            ],
+            "stable_var": true,
+            "d_mu": 0.031626228740208207,
+            "d_s": -0.010999281299071018,
+            "kurtosis": 2.3256907067529626,
+            "vai_top_share": 0.5541391029992845,
+            "traj_slope": 0.010606444016476285,
+            "traj_late_jump": -0.018955269245467504,
+            "actuator": "freeze_lexical_full / retrain_head"
+          },
+          "ref": {
+            "mu": 0.2445590222581494,
+            "s": 0.08844344265340441
+          },
+          "live": {
+            "mu": 0.2761852509983576,
+            "s": 0.0774441613543334,
+            "kurtosis": 2.3256907067529626,
+            "kurtosis_unit": 2.3256907067529626,
+            "kurtosis_subenv": -0.30921690155623516,
+            "label_flip_frac": 0.671875,
+            "label_rate_delta": 0.046875
+          },
+          "vai": {
+            "top_share": 0.5541391029992845,
+            "gini": 0.6019353102438867,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.07486209679854913,
+              0.060935515498449964,
+              0.32028676688126134,
+              0.11512057537774259,
+              0.21756074396896974,
+              0.09616530613227509
+            ],
+            "slope": 0.010606444016476285,
+            "late_jump": -0.018955269245467504
+          },
+          "actuator": "freeze_lexical_full / retrain_head",
+          "estimator": "permucate_rf_text"
+        }
+      ],
+      "branch_accuracy": 0.75,
+      "family_accuracy": 1.0,
+      "n_scenarios": 4,
+      "estimator": "permucate_rf_text"
+    },
+    {
+      "board": "news20_sci",
+      "rows": [
+        {
+          "oracle": "quiet",
+          "oracle_family": "quiet",
+          "pred_branch": "benign_covariate",
+          "pred_family": "benign",
+          "correct_branch": false,
+          "correct_family": true,
+          "decision": {
+            "branch": "benign_covariate",
+            "path": [
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
+            ],
+            "stable_var": false,
+            "d_mu": 0.35116159586132323,
+            "d_s": 0.3323236931393603,
+            "kurtosis": 40.37012271411878,
+            "vai_top_share": 0.3803926774023769,
+            "traj_slope": 0.024026868657905286,
+            "traj_late_jump": -0.10746821558604736,
+            "actuator": "conformal_calibrate"
+          },
+          "ref": {
+            "mu": 2.9584489029261345,
+            "s": 0.8338355281571361
+          },
+          "live": {
+            "mu": 3.3096104987874577,
+            "s": 1.1661592212964964,
+            "kurtosis": 40.37012271411878,
+            "kurtosis_unit": 40.37012271411878,
+            "kurtosis_subenv": 1.8832092801384244,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
+          },
+          "vai": {
+            "top_share": 0.3803926774023769,
+            "gini": 0.4844064270318612,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.23315431442234308,
+              0.9916075271062847,
+              0.37256851021260795,
+              1.2381905331546967,
+              0.5816567014306756,
+              0.47418848584462825
+            ],
+            "slope": 0.024026868657905286,
+            "late_jump": -0.10746821558604736
+          },
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "benign_covariate",
+          "oracle_family": "benign",
+          "pred_branch": "benign_covariate",
+          "pred_family": "benign",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "benign_covariate",
+            "path": [
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
+            ],
+            "stable_var": false,
+            "d_mu": 0.024399478360788374,
+            "d_s": 0.07042910122787974,
+            "kurtosis": 8.320619242485506,
+            "vai_top_share": 0.430522092993555,
+            "traj_slope": -0.007313333322905548,
+            "traj_late_jump": -0.05069822993582564,
+            "actuator": "conformal_calibrate"
+          },
+          "ref": {
+            "mu": 1.1314983408640964,
+            "s": 0.21748885880879518
+          },
+          "live": {
+            "mu": 1.1558978192248848,
+            "s": 0.2879179600366749,
+            "kurtosis": 8.320619242485506,
+            "kurtosis_unit": 8.320619242485506,
+            "kurtosis_subenv": -0.6611826460712651,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
+          },
+          "vai": {
+            "top_share": 0.430522092993555,
+            "gini": 0.48726349183461903,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.15888379118132726,
+              0.06709338796226463,
+              0.22137803919135696,
+              0.14789683781607715,
+              0.10907353848858606,
+              0.09719860788025152
+            ],
+            "slope": -0.007313333322905548,
+            "late_jump": -0.05069822993582564
+          },
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "malignant_sparse",
+          "oracle_family": "malignant_sparse",
+          "pred_branch": "malignant_sparse",
+          "pred_family": "malignant_sparse",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "malignant_sparse",
+            "path": [
+              "Y_flip\u22650.05 \u2192 malignant_sparse",
+              "VAI\u2192locate blocks (top_share=0.356)"
+            ],
+            "stable_var": false,
+            "d_mu": -0.6568643266452519,
+            "d_s": -0.5816679496069441,
+            "kurtosis": 11.867612853543518,
+            "vai_top_share": 0.35600836102536043,
+            "traj_slope": 0.10100114637509958,
+            "traj_late_jump": 0.7622558042583817,
+            "actuator": "freeze_lexical_adv_aug + VAI_block"
+          },
+          "ref": {
+            "mu": 4.143886653453327,
+            "s": 1.5706074879974585
+          },
+          "live": {
+            "mu": 3.4870223268080753,
+            "s": 0.9889395383905144,
+            "kurtosis": 11.867612853543518,
+            "kurtosis_unit": 11.867612853543518,
+            "kurtosis_subenv": -0.3204391011534411,
+            "label_flip_frac": 0.125,
+            "label_rate_delta": 0.03125
+          },
+          "vai": {
+            "top_share": 0.35600836102536043,
+            "gini": 0.4037038271910496,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.659192735675371,
+              0.4535983101094626,
+              0.2742386289963761,
+              0.33233221193750684,
+              0.6848115256844588,
+              1.2158541143678443
+            ],
+            "slope": 0.10100114637509958,
+            "late_jump": 0.7622558042583817
+          },
+          "actuator": "freeze_lexical_adv_aug + VAI_block",
+          "estimator": "permucate_rf_text"
+        },
+        {
+          "oracle": "malignant_dense",
+          "oracle_family": "malignant_dense",
+          "pred_branch": "malignant_dense",
+          "pred_family": "malignant_dense",
+          "correct_branch": true,
+          "correct_family": true,
+          "decision": {
+            "branch": "malignant_dense",
+            "path": [
+              "Y_flip\u22650.35 \u2192 malignant_dense",
+              "VAI\u2192dense mass (top_share=0.375)"
+            ],
+            "stable_var": false,
+            "d_mu": 0.1078497705392838,
+            "d_s": 0.04234049934913787,
+            "kurtosis": 5.762506230919698,
+            "vai_top_share": 0.37549464358016327,
+            "traj_slope": 0.01673561294452479,
+            "traj_late_jump": -0.0503684120243051,
+            "actuator": "freeze_lexical_full / retrain_head"
+          },
+          "ref": {
+            "mu": 0.1705700556523887,
+            "s": 0.060106608535388205
+          },
+          "live": {
+            "mu": 0.2784198261916725,
+            "s": 0.10244710788452607,
+            "kurtosis": 5.762506230919698,
+            "kurtosis_unit": 5.762506230919698,
+            "kurtosis_subenv": -0.6080766639525059,
+            "label_flip_frac": 0.671875,
+            "label_rate_delta": 0.109375
+          },
+          "vai": {
+            "top_share": 0.37549464358016327,
+            "gini": 0.4216071066844654,
+            "n_docs": 4
+          },
+          "traj": {
+            "mu_hops": [
+              0.02570764941059636,
+              0.08815333975970494,
+              0.12223226725832836,
+              0.06453758420438073,
+              0.2825049212558043,
+              0.037784927735399834
+            ],
+            "slope": 0.01673561294452479,
+            "late_jump": -0.0503684120243051
+          },
+          "actuator": "freeze_lexical_full / retrain_head",
+          "estimator": "permucate_rf_text"
+        }
+      ],
+      "branch_accuracy": 0.75,
+      "family_accuracy": 1.0,
+      "n_scenarios": 4,
+      "estimator": "permucate_rf_text"
+    }
+  ],
+  "family_labels": [
+    "quiet",
+    "benign",
+    "malignant_sparse",
+    "malignant_dense"
+  ],
+  "family_confusion": [
+    [
+      0,
+      3,
+      0,
+      0
+    ],
+    [
+      0,
+      3,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      3,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      3
+    ]
+  ],
+  "mean_branch_acc": 0.75,
+  "mean_family_acc": 1.0,
+  "product_usecase": {
+    "name": "Shift triage gate for integrity / moderation / ranking monitors",
+    "value": "One bootstrap Mag\u00d7Var panel on PermuCATE unit risk replaces 'OOD high \u21d2 retrain'. Stable-var mean lifts get cheap conformal; kurtotic sparse attacks get VAI-guided freeze; dense/schema get heavier review.",
+    "kpi": [
+      "family_accuracy of tree vs oracle shifts",
+      "wrong-drug rate (benign mistreated as malignant & reverse)",
+      "VAI top-share on sparse branch (localization)"
+    ]
+  }
+}
