@@ -220,8 +220,10 @@ P1 & \textsc{ModalityMass} &
 Publish $\pi_m$ every hop; flag structural nulls. \\
 P1 & \textsc{ContamEdge} &
 Compute $C_{m\to m'}$ on the deployed head. \\
+P1 & \textsc{IntermCF} &
+$\mathrm{Attr}_m=R(h^{\mathrm{obs}})-R(\mathrm{do}(h_m=\mu_{t-1}^m))$; PO-mask inside $h_m$ for mechanism signature. \\
 P1 & \textsc{CrossCheckMM} &
-Require L1$\times$L3 cell on every reweight / mask ticket. \\
+Require L1$\times$L3$\times$IntermCF cell on every reweight / mask ticket. \\
 P2 & \textsc{PiHop} &
 Modality-$\pi$ hop when L1 moves and L3 mild. \\
 P2 & \textsc{PoMask} &

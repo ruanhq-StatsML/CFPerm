@@ -321,7 +321,8 @@ varies with $W$, fusion models with attention soak).
 | P0 | GateHop | No L1–L4 tickets if L0 quiet (MMD flat, domain AUC≈0.5, PO accept) |
 | P1 | ModalityMass | Publish $\pi_m$ (RF / MMD / PO) every hop; flag structural nulls |
 | P1 | ContamEdge | Compute $C_{m\to m'}$ for each donor→target edge on the deployed head |
-| P1 | CrossCheckMM | Require L1×L3 matrix cell on every reweight / mask ticket |
+| P1 | IntermCF | Intermediate CF: $\mathrm{Attr}_m=R(h^{\mathrm{obs}})-R(\mathrm{do}(h_m=\mu_{t-1}^m))$; also PO-mask inside $h_m$ for mechanism signature |
+| P1 | CrossCheckMM | Require L1×L3×IntermCF cell on every reweight / mask ticket |
 | P2 | PiHop | Apply modality-π hop weights when L1 mass moves and L3 mild |
 | P2 | PoMask | Mask top-PO patches when L3 mask ΔMSE large; do not VIMP-reweight train |
 | P2 | PerVideo | If Friedman / per-video dominant flips, ticket per video — not global π |
