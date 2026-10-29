@@ -20,10 +20,62 @@ and route different medicine.
 \textbf{How:} Mag$\times$Var on PermuCATE unit PO
 $u=(\varphi-\hat\tau)^2$, plus $Y$-flip on text integrity boards.
 \textbf{Verdict:} meets expectation --- deliver.
+This note is the \textbf{MVP business logic} plus a short PO-centred
+literature place for the product.
 \end{abstract}
 
 %======================================================================
-\section{Business objective}
+\section{Literature review (PO-centred)}
+%======================================================================
+
+\paragraph{Potential outcomes and DR / CATE.}
+The unit we monitor is not classifier confidence.
+It sits in the potential-outcome / uplift stack:
+outcome regressions $\hat\mu_w$, propensity $\hat\pi$, and a doubly robust
+pseudo-outcome $\varphi$ whose regression $\hat\tau$ estimates CATE
+\cite{rubin1974,robins1994,chernozhukov2018,kennedy2023,athey2019}.
+PermuCATE-style RF nuisances instantiate that stack; unit PO-risk
+$u=(\varphi-\hat\tau)^2$ is the natural residual risk for
+``how unstable is the treatment effect fit on this row?''
+
+\paragraph{Monitoring uplift / PO-risk under batch shift.}
+Deployed uplift and targeting models need LIVE checks beyond holdout AUUC:
+covariate shift on $X$, concept / outcome drift on $Y\mid X$, and
+batch--outcome interaction when REF and LIVE are stacked with $W$
+\cite{gama2014,quionero2009}.
+FSDS-style monitors already couple domain signals on $X$ with
+pseudo-outcome / PO-risk on stacked batches
+\cite{monitorupliftfsds}.
+Our MVP keeps that PO object and asks a narrower product question:
+when mean risk rises, is the shift \emph{benign} or \emph{malignant}?
+
+\paragraph{Why mean OOD / mean risk is not enough.}
+Classical concept-drift and OOD detectors often collapse to a single
+severity score (confidence, energy, MMD, domain AUC)
+\cite{hendrycks2017,liu2020}.
+Both cosmetic synonym drift and sparse integrity attacks can raise that
+score --- so ``OOD$\uparrow\Rightarrow$retrain'' mixes two diseases and
+two medicines (conformal vs freeze).
+Magnitude alone inherits the same ambiguity.
+
+\paragraph{Gap this MVP fills.}
+We read \textbf{shape} of PermuCATE unit risk via Mag$\times$Var
+($\mu=\mathbb{E}[u]$, $s=\mathrm{Std}(r_b)$ over bootstrap sub-envs):
+uniform mass $\Rightarrow$ benign-like; heteroscedastic / mixture mass
+$\Rightarrow$ malignant-like --- aligning with sparse-contamination
+intuition in robust statistics and mixture shift.
+On text boards with observed $Y$, we add \textbf{$Y$-flip on the attacked
+subset} so integrity outcome break is explicit (same disease model as
+tabular boards that break $Y$ on the hit set).
+Product score $\mathrm{severity}=J+Y$-flip; actuators stay typed
+(hold / conformal / VAI-freeze), optionally per 客群/region.
+
+\noindent\textit{Positioning:}
+not a new CATE estimator --- a \textbf{triage layer} on PermuCATE PO-risk
+for benign vs malignant LIVE shift.
+
+%======================================================================
+\section{Business objective (MVP logic)}
 %======================================================================
 
 Two LIVE diseases look similar if you only watch ``risk went up'':
@@ -191,7 +243,68 @@ Decision-tree family & acc \textbf{1.00} \\
 
 \section*{Close}
 PO is here: $u=(\varphi-\hat\tau)^2$.
-Separate benign (intact $Y$) from malignant (attack + $Y$-break) with
-Mag$\times$Var $+\,Y$-flip --- meets expectation.
+MVP logic: separate benign (intact $Y$) from malignant (attack + $Y$-break)
+with Mag$\times$Var $+\,Y$-flip --- meets expectation.
+
+\begin{thebibliography}{99}
+
+\bibitem{rubin1974}
+D.~B.~Rubin.
+\newblock Estimating causal effects of treatments in randomized and
+nonrandomized studies.
+\newblock {\em J.\ Educational Psychology}, 66(5):688--701, 1974.
+
+\bibitem{robins1994}
+J.~M.~Robins, A.~Rotnitzky, and L.~P.~Zhao.
+\newblock Estimation of regression coefficients when some regressors are not
+always observed.
+\newblock {\em JASA}, 89(427):846--866, 1994.
+
+\bibitem{chernozhukov2018}
+V.~Chernozhukov et~al.
+\newblock Double/debiased machine learning for treatment and structural
+parameters.
+\newblock {\em Econometrics Journal}, 21(1):C1--C68, 2018.
+
+\bibitem{kennedy2023}
+E.~H.~Kennedy.
+\newblock Towards optimal doubly robust estimation of heterogeneous causal
+effects.
+\newblock {\em Electronic Journal of Statistics}, 17(2):3008--3049, 2023.
+
+\bibitem{athey2019}
+S.~Athey, J.~Tibshirani, and S.~Wager.
+\newblock Generalized random forests.
+\newblock {\em Annals of Statistics}, 47(2):1148--1178, 2019.
+
+\bibitem{quionero2009}
+J.~Qui{\~n}onero-Candela, M.~Sugiyama, A.~Schwaighofer, and N.~D.~Lawrence
+(eds.).
+\newblock {\em Dataset Shift in Machine Learning}.
+\newblock MIT Press, 2009.
+
+\bibitem{gama2014}
+J.~Gama et~al.
+\newblock A survey on concept drift adaptation.
+\newblock {\em ACM Computing Surveys}, 46(4):1--37, 2014.
+
+\bibitem{hendrycks2017}
+D.~Hendrycks and K.~Gimpel.
+\newblock A baseline for detecting misclassified and out-of-distribution
+examples in neural networks.
+\newblock In {\em ICLR}, 2017.
+
+\bibitem{liu2020}
+W.~Liu, X.~Wang, J.~Owens, and Y.~Li.
+\newblock Energy-based out-of-distribution detection.
+\newblock In {\em NeurIPS}, 2020.
+
+\bibitem{monitorupliftfsds}
+H.~Ruan.
+\newblock Minimal viable prototype: FSDS for monitoring the uplift model
+(PO-risk / batch $W$).
+\newblock Internal note / {\ttfamily Monitor\_Uplift\_FSDS.tex}, 2026.
+
+\end{thebibliography}
 
 \end{document}

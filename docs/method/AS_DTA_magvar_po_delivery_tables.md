@@ -1,7 +1,16 @@
 # Mag×Var PermuCATE PO — separate benign vs malignant
 
 **Objective:** distinguish benign vs malignant shift → different medicine.  
-**Verdict:** meets expectation — deliver.
+**Verdict:** meets expectation — deliver. MVP business logic + short PO lit place.
+
+## Literature (PO-centred, short)
+
+| Thread | Takeaway for this MVP |
+| --- | --- |
+| PO / DR / CATE (Rubin, Robins, Chernozhukov, Kennedy, Athey–Wager) | Monitor $u=(\varphi-\hat\tau)^2$, not $1-\hat p$ |
+| Uplift / batch PO-risk monitors (FSDS uplift note) | LIVE needs $X$-shift + PO-risk, not holdout AUUC alone |
+| Concept drift / OOD (Gama, Quiñonero-Candela, Hendrycks, energy OOD) | Mean risk↑ mixes cosmetic drift and attacks → wrong drug |
+| **This MVP** | Mag×Var = shape of $u$; $Y$-flip = integrity break; severity $=J+Y$-flip |
 
 ## PO is here
 
