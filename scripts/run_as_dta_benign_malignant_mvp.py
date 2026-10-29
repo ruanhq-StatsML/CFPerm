@@ -61,24 +61,29 @@ def main():
 
     DOCS.mkdir(parents=True, exist_ok=True)
     shutil.copy(OUT / "README.md", DOCS / "AS_DTA_benign_vs_malignant_ood.md")
-    # richer method note
     note = DOCS / "AS_DTA_benign_vs_malignant_ood.md"
     extra = """
+
+## Scope
+
+Resolve **benign vs malignant shift** (higher resolution than a single OOD score).
+Headline axes: **Magnitude × Variance** — not Peak-first.
+
+See `docs/method/AS_DTA_magnitude_variance_logic.md`.
 
 ## Hard filter & pseudo-label (why not)
 
 | Anti-pattern | What it does | Failure mode |
 | --- | --- | --- |
-| Hard filter | Drop top-PO / high-OOD rows | Selection bias; deletes malignant tail used for Peak/CVaR |
-| Pseudo-label | Flip Y on high PO | Label noise; benign OOD looks "fixed"; fake uplift |
+| Hard filter | Drop top-PO / high-OOD rows | Selection bias; deletes malignant *variance* signal |
+| Pseudo-label | Flip Y on high PO | Label noise; benign shift looks "fixed"; fake uplift |
 
-## Separability
+## Separability (merge)
 
-Use **Magnitude × Variance** of PO-risk (with Y):
-
-1. ΔMean quiet → `hold`
-2. ΔMean↑ + sub-env Std / Peak / CVaR flat → **benign OOD** → `conformal_calibrate`
-3. ΔMean↑ + Std / Peak / CVaR / top-20% spike → **malignant** → `freeze_lexical_adv_aug`
+1. Δμ quiet → `hold`
+2. Δμ↑ & Δs flat → **benign shift** → `conformal_calibrate`
+3. Δμ↑ & Δs↑ → **malignant shift** → `freeze_lexical_adv_aug`
+4. Optional ops scalar: $J=\Delta\mu\cdot(1+\kappa\Delta s_{+})$
 
 See also `results/as_dta_benign_malignant_mvp/`.
 """

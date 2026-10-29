@@ -3,8 +3,10 @@
 Cost model (industrial AIGC moderation):  
 $C = 50\cdot\mathrm{FP} + 20\cdot\mathrm{FN}$ USD per item batch, reported as **cost / 1k**.
 
-PO-variance routing (Magnitude → Std/Peak/CVaR/Error) does not invent a new detector —
-it **picks the right cheap drug** and **avoids the wrong expensive one**.
+PO-variance routing (Magnitude × Variance of PO sub-envs; Peak is not the
+headline) does not invent a new detector — it **picks the right cheap drug**
+and **avoids the wrong expensive one**. Scope: resolve benign vs malignant
+*shift* when both raise mean OOD.
 
 ## 1. Measured dollar lift (HC3 finance / medicine LIVE)
 

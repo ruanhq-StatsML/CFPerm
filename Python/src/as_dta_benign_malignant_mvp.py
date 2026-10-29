@@ -1,22 +1,20 @@
-"""MVP: Benign OOD vs Malignant OOD — PO mean + variance, not hard-filter/pseudo-Y.
+"""MVP: Magnitude x Variance — resolve benign vs malignant *shift*.
 
-Justify
--------
-Both benign synonym/paraphrase and malignant TextFooler-lite can raise
-**mean** OOD / PO-risk. They differ in **shape**:
+Scope
+-----
+Not generic OOD alarm. Raise resolution between two shifts that share
+"mean OOD / PO up":
 
-  * Benign  — uniform PO inflation → ΔMean↑, Var/Peak/CVaR quiet, top-share flat
-  * Malignant — concentrated PO on attacked minority → ΔVar/Peak/CVaR↑, FN↑
+  * Benign shift  — uniform synonym/domain → d_mu up, d_s flat → conformal
+  * Malignant shift — concentrated evasion subset → d_mu up, d_s up → freeze-lexical
 
-Anti-patterns this MVP visualizes as *failure*:
+Merge (justify): Magnitude alone conflates them; Variance alone false-alarms.
+Joint (d_mu, d_s) or J = d_mu * (1 + kappa * d_s_pos) separates.
 
-  * Hard filter  — drop high-PO / high-OOD rows from uplift/monitor pool
-                   (selection bias; removes the signal you need)
-  * Pseudo-label — map high PO → flip Y (or "washed ⇒ human")
-                   (label noise; confuses benign OOD with attack)
+Peak/CVaR are optional derived views of the same bootstrap draws — not the
+headline axis (Peak-first misleads).
 
-Correct path: Magnitude first → Variance/Peak second → actuator
-  (conformal for benign, freeze-lexical for malignant).
+Anti-patterns: hard-filter top-PO; pseudo-label flip from high PO.
 """
 from __future__ import annotations
 
@@ -45,19 +43,23 @@ from as_dta_aigc import (
 OUT_DEFAULT = ROOT / "results" / "as_dta_benign_malignant_mvp"
 
 
-def _shape_first_route(delta: dict, d_error: float = 0.0) -> str:
-    """Magnitude gate → variance / error shape (PO-risk roadmap).
+def _merge_J(delta: dict, ref_sub_std: float, kappa: float = 3.0) -> float:
+    """Scalar merge of Magnitude × Variance for dashboards."""
+    d_mu = float(delta.get("d_mean", 0.0))
+    d_s = float(delta.get("d_sub_std", 0.0))
+    s_ref = max(float(ref_sub_std), 1e-6)
+    d_s_pos = max(d_s, 0.0) / s_ref
+    return float(d_mu * (1.0 + float(kappa) * d_s_pos))
 
-    Absolute Peak alone is noisy under TF-IDF synonym; the durable separators
-    are sub-env Std, unit Var, and (with Y) error/FN lift.
-    """
+
+def _shape_first_route(delta: dict, d_error: float = 0.0) -> str:
+    """Magnitude × Variance gate (Peak is not the decision headline)."""
     if delta["d_mean"] < 0.015 and float(d_error) < 0.02:
         return "hold"
     malignant = (
         float(d_error) >= 0.12
         or delta["d_sub_std"] >= 0.018
         or delta.get("d_unit_var", 0.0) >= 0.03
-        or (delta["d_cvar"] >= 0.18 and float(d_error) >= 0.08)
     )
     if malignant:
         return "freeze_lexical_adapt_syntactic"
@@ -280,9 +282,12 @@ def run_mvp(
         panel[name]["delta"] = delta
         d_err = float(panel[name]["disc"]["delta"].get("d_error", 0.0))
         panel[name]["delta"]["d_error"] = d_err
+        panel[name]["delta"]["J_mag_x_var"] = _merge_J(
+            delta, ref_sub_std=panel["ref"]["stats"]["sub_std"], kappa=3.0
+        )
         # Legacy mean-first router (can over-call malignant when ΔMean is large)
         panel[name]["route_legacy"] = route_action(panel[name]["diag"], ref=ref_diag)
-        # Shape-first: Magnitude → Variance/error (subStd, unitVar, FN/error with Y)
+        # Magnitude × Variance (subStd / unitVar; Error confirmatory with Y)
         panel[name]["route"] = _shape_first_route(delta, d_error=d_err)
         panel[name]["verdict_shape"] = _shape_verdict(delta, d_error=d_err)
 
@@ -348,20 +353,25 @@ def run_mvp(
         }
 
     payload = {
-        "mvp": "benign_vs_malignant_ood_po_variance",
+        "mvp": "magnitude_x_variance_benign_vs_malignant_shift",
+        "scope": (
+            "Raise resolution between benign vs malignant *shift* when both "
+            "raise mean OOD/PO. Not a generic OOD detector; Peak is not the headline."
+        ),
         "justify": {
             "rule": (
-                "Magnitude (ΔMean PO) first; if quiet → hold. "
-                "If Mean↑, check Variance/Peak/CVaR/top-share: "
-                "flat → benign OOD → conformal; spiked → malignant → freeze-lexical."
+                "Merge Magnitude × Variance: Δμ quiet → hold; "
+                "Δμ↑ & Δs flat → benign shift → conformal; "
+                "Δμ↑ & Δs↑ → malignant shift → freeze-lexical. "
+                "J=Δμ·(1+κ·Δs₊) amplifies variance-resolved malignant."
             ),
             "separable": True,
             "anti_patterns": [
-                "hard_filter_drop_top_po — selection bias, kills malignant signal",
+                "hard_filter_drop_top_po — selection bias, kills malignant variance signal",
                 "pseudo_label_flip_high_po — label noise; fake metric lifts",
             ],
-            "same": "Both can raise mean PO / OOD score",
-            "diff": "Benign = uniform; Malignant = heavy-tail / high subenv variance",
+            "same": "Both shifts can raise Magnitude (mean PO / OOD)",
+            "diff": "Only malignant raises sub-env Variance enough to resolve the two",
         },
         "batches": {k: _pack(k) for k in ("ref", "benign_ood", "malignant_ood")},
         "anti_patterns": anti,
@@ -415,17 +425,24 @@ def plot_mvp(payload: dict, path: Path):
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7.5)
 
-    # 2) Peak + CVaR
+    # 2) Variance panel + merged J
     ax = fig.add_subplot(gs[0, 1])
     x = np.arange(len(keys))
-    peaks = [payload["batches"][k]["diag"]["peak_gap"] for k in keys]
-    cvars = [payload["batches"][k]["diag"]["cvar"] for k in keys]
-    ax.bar(x - 0.18, peaks, width=0.36, color=[colors[k] for k in keys], label="Peak Gap")
-    ax.bar(x + 0.18, cvars, width=0.36, color=[colors[k] for k in keys], alpha=0.45, label="CVaR95")
+    sub_stds = [payload["batches"][k]["po_subenv"]["sub_std"] for k in keys]
+    unit_vars = [payload["batches"][k]["po_unit"]["var"] for k in keys]
+    ax.bar(x - 0.18, sub_stds, width=0.36, color=[colors[k] for k in keys], label="Sub-env Std")
+    ax.bar(
+        x + 0.18,
+        unit_vars,
+        width=0.36,
+        color=[colors[k] for k in keys],
+        alpha=0.45,
+        label="Unit PO Var",
+    )
     ax.set_xticks(x)
     ax.set_xticklabels([labels[k] for k in keys], fontsize=8)
-    ax.set_ylabel("PO shape")
-    ax.set_title("Peaks: Peak Gap & CVaR", loc="left", fontweight="bold")
+    ax.set_ylabel("Variance")
+    ax.set_title("OOD / PO variance (primary 2nd axis)", loc="left", fontweight="bold")
     ax.legend(fontsize=7)
     ax.grid(True, axis="y", alpha=0.3)
 
@@ -453,34 +470,33 @@ def plot_mvp(payload: dict, path: Path):
     ax.set_title("Sub-environment spread (OOD variance)", loc="left", fontweight="bold")
     ax.grid(True, axis="y", alpha=0.3)
 
-    # 5) Grouped Δ metrics — the justify panel
+    # 5) Merged J + components — justify Magnitude × Variance
     ax = fig.add_subplot(gs[1, 1])
-    metrics = ["d_mean", "d_sub_std", "d_unit_var", "d_error"]
-    metric_labs = ["ΔMean", "ΔSubStd", "ΔUnitVar", "ΔError"]
-    xb = np.arange(len(metrics))
-    w = 0.36
     ben_d = payload["batches"]["benign_ood"]["delta_vs_ref"]
     mal_d = payload["batches"]["malignant_ood"]["delta_vs_ref"]
-    # scale sub_std / unit_var for visibility beside mean/error
-    scale = {"d_mean": 1.0, "d_sub_std": 8.0, "d_unit_var": 4.0, "d_error": 1.0}
+    metrics = ["d_mean", "d_sub_std", "J_mag_x_var"]
+    metric_labs = ["Δμ (Mag)", "Δs (Var)", "J=μ×Var"]
+    xb = np.arange(len(metrics))
+    w = 0.36
+    scale = {"d_mean": 1.0, "d_sub_std": 8.0, "J_mag_x_var": 0.35}
     ax.bar(
         xb - w / 2,
         [ben_d.get(m, 0.0) * scale[m] for m in metrics],
         width=w,
         color=colors["benign_ood"],
-        label="Benign",
+        label="Benign shift",
     )
     ax.bar(
         xb + w / 2,
         [mal_d.get(m, 0.0) * scale[m] for m in metrics],
         width=w,
         color=colors["malignant_ood"],
-        label="Malignant",
+        label="Malignant shift",
     )
     ax.set_xticks(xb)
     ax.set_xticklabels(metric_labs, fontsize=8)
-    ax.set_ylabel("Δ vs REF (SubStd×8, UnitVar×4)")
-    ax.set_title("Justify separators (Mean alone is not enough)", loc="left", fontweight="bold")
+    ax.set_ylabel("Δ vs REF (Δs×8, J×0.35)")
+    ax.set_title("Merge justify: Mag × Var raises malignant resolution", loc="left", fontweight="bold")
     ax.legend(fontsize=7)
     ax.grid(True, axis="y", alpha=0.3)
 
@@ -527,15 +543,15 @@ def plot_mvp(payload: dict, path: Path):
     )
 
     fig.suptitle(
-        "Benign vs Malignant OOD MVP — PO magnitude + variance (not hard-filter / pseudo-Y)",
-        fontsize=12.5,
+        "Scope: resolve benign vs malignant shift — Magnitude × Variance merge (not Peak-first)",
+        fontsize=12.2,
         fontweight="bold",
         y=0.995,
     )
     fig.text(
         0.5,
         0.004,
-        "Same: Mean PO can rise. Diff: sub-env variance / Peak / CVaR / top-share spike only under malignant injection.",
+        "Same Magnitude band can hide two diseases. Variance resolves them; J=Δμ·(1+κ·Δs₊) merges for ops.",
         ha="center",
         fontsize=8,
         style="italic",
@@ -549,9 +565,13 @@ def plot_mvp(payload: dict, path: Path):
 def _write_readme(path: Path, payload: dict, png_name: str):
     b = payload["batches"]
     lines = [
-        "# Benign vs Malignant OOD MVP (PO mean + variance)",
+        "# Magnitude × Variance — benign vs malignant shift",
         "",
-        "## Justify",
+        "## Scope",
+        "",
+        payload.get("scope", ""),
+        "",
+        "## Justify (merge)",
         "",
         payload["justify"]["rule"],
         "",
@@ -560,19 +580,20 @@ def _write_readme(path: Path, payload: dict, png_name: str):
         "",
         "## Separation panel",
         "",
-        "| batch | mean PO | subStd | peak | CVaR | verdict | route |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| batch | magnitude μ | variance s | J (merge) | verdict | route |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for k in ("ref", "benign_ood", "malignant_ood"):
         x = b[k]
+        d = x.get("delta_vs_ref") or {}
+        j = d.get("J_mag_x_var", 0.0) if d else 0.0
         lines.append(
-            "| %s | %.4f | %.4f | %.4f | %.4f | %s | %s |"
+            "| %s | %.4f | %.4f | %.4f | %s | %s |"
             % (
                 k,
                 x["diag"]["mean"],
                 x["po_subenv"]["sub_std"],
-                x["diag"]["peak_gap"],
-                x["diag"]["cvar"],
+                float(j) if j == j else 0.0,
                 x["verdict"],
                 x["route"],
             )
@@ -583,7 +604,7 @@ def _write_readme(path: Path, payload: dict, png_name: str):
             "## Anti-patterns",
             "",
             "Do **not** hard-filter high-PO rows or pseudo-label flips from PO.",
-            "See dashboard right panel for selection-bias / label-noise numbers.",
+            "See also `docs/method/AS_DTA_magnitude_variance_logic.md`.",
             "",
             f"![]({png_name})",
             "",
