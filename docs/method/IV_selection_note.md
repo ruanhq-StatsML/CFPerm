@@ -42,13 +42,26 @@ Selection quality (`iv_auto` vs true valid set): **P=0.94, R=0.96, F1=0.94**.
 
 Confounding sweep: as `α` goes 0→2, naive error 0.06→0.63; `iv_auto` stays ~0.02–0.08.
 
-## Sensitivity + subset localization (8 seeds, n=2000, α=1)
+## Sensitivity toolkit (complementary scales)
 
-| tool | question | synthetic result |
+| tool | scale | asks |
 | --- | --- | --- |
-| **E-value** | how strong must U be (RR scale) to explain away the *naive* association? | point ≈ **5.1**, CI ≈ **5.0** |
-| **Rosenbaum Γ\*** | odds-ratio bias at which matched high-vs-low contrast loses significance | Γ\* ≈ **10** (fairly robust) |
-| **Subset localization** | does first-stage F vary across segments (X0 quartiles)? | Q1 F≈375 → Q4 F≈940 (**2.5×**) |
+| **E-value** | RR | how strong must U be to kill the *naive* association? |
+| **Rosenbaum Γ** + high/low-T sign | odds ratio | how unbalanced can treatment assignment get before the matched contrast dies? |
+| **Γ → ρ** | correlation-like | Imbens amplification: ρ=(Γ−1)/(Γ+1) |
+| **OVB / RV** (Cinelli–Hazlett) | partial R² | how much residual variance must U explain on *both* T and Y to nullify OLS? |
+| **Conley exclusion** | direct Z→Y (γ) | how large can an exclusion break be before 2SLS crosses 0? |
+| **Subset localization** | first-stage F by segment | is IV strength heterogeneous across customer groups? |
+
+### Synthetic snapshot (8 seeds, n=2000, α=1)
+
+| metric | value |
+| --- | --- |
+| E-value (point) | ≈ 5.1 |
+| Rosenbaum Γ\* / ρ\* | ≈ 10–20 / ≈ 0.9 |
+| OVB RV (nullify) | ≈ 0.90 (≈ 8–9× max observed partial R²) |
+| Conley γ\* | large — strong valid Z tolerates sizable exclusion slack |
+| Subset F Q4/Q1 | **≈ 2.5×** |
 
 Designed heterogeneity: valid first stage scaled by `1 + het·σ(X0)` → Q4 stronger than Q1.
 ATÊ stays near τ=1.5 in every quartile; **strength** is what moves, not the point estimate.

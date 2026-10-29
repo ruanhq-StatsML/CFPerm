@@ -42,14 +42,19 @@ exclusion excess screen.
 | E-value (point) | 5.067 (0.442) |
 | E-value (CI) | 4.977 (0.431) |
 | approx RR | 2.811 (0.218) |
-| Rosenbaum Γ* (p-bound > 0.05) | 10.00 (0.00) |
+| Rosenbaum Γ* (p-bound > 0.05) | 20.00 (6.55) |
+| Γ* → ρ amplification | 0.898 (0.027) |
+| OVB robustness value RV | 0.900 (0.011) |
+| OVB RV (halve effect) | 0.831 (0.016) |
+| OVB × vs max observed partial R² | 8.6 (6.4) |
+| Conley γ* (IV crosses 0) | 6.663 (0.380) |
 | naive ATÊ | 1.657 (0.041) |
 | iv ATÊ | 1.506 (0.010) |
 
-E-value: min strength of an unmeasured confounder (on the RR scale)
-needed to explain away the naive effect. Rosenbaum Γ*: odds-ratio
-bias in treatment assignment at which the matched-pair sign test
-upper-bounds to insignificance.
+E-value: RR-scale confounder strength to kill the naive effect.
+Rosenbaum Γ*: matched high/low-T sign-test odds bias; ρ=(Γ−1)/(Γ+1).
+OVB RV (Cinelli–Hazlett): partial-R² both sides needed to nullify OLS.
+Conley γ*: how large a direct Z→Y path can be before 2SLS crosses 0.
 
 ## Subset localization — IV strength heterogeneity
 

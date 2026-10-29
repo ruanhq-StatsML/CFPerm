@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -16,6 +15,7 @@ sys.path.insert(0, str(ROOT / "Python" / "src"))
 
 from iv_selection_synth import (  # noqa: E402
     conf_sweep,
+    plot_sensitivity_extra,
     plot_suite,
     run_sensitivity_suite,
     run_suite,
@@ -58,7 +58,9 @@ def main():
         "suite": {k: v for k, v in suite.items() if k != "score_book"},
         "sweep": sweep,
         "sensitivity": {
-            k: v for k, v in sens["sensitivity"].items() if k != "rows"
+            k: v
+            for k, v in sens["sensitivity"].items()
+            if k not in ("rows",)
         },
         "subset": {
             k: v for k, v in sens["subset"].items() if k != "rows"
@@ -67,6 +69,7 @@ def main():
     payload["suite"]["score_example"] = suite["score_book"][0]["scores"]
     write_json(OUT / "iv_selection_synth.json", payload)
     plot_suite(suite, sweep, OUT / "iv_selection_synth.png", sens=sens)
+    plot_sensitivity_extra(sens, OUT / "iv_sensitivity_extra.png")
     write_readme(suite, sweep, OUT / "README.md", sens=sens)
     write_readme(suite, sweep, DOCS / "IV_selection_synth.md", sens=sens)
 
@@ -97,14 +100,16 @@ def main():
         )
     S = sens["sensitivity"]
     print(
-        "E-value point=%.3f  CI=%.3f  Γ*=%.2f  robust_beyond_frac=%.2f  naive=%.3f  iv=%.3f"
+        "E-value=%.3f  Γ*=%.2f  ρ*=%.3f  OVB_RV=%.3f (×obs=%.1f)  "
+        "Conley_γ*/σ=%.2f  crossed_null_frac=%.2f"
         % (
             S["evalue_point"]["mean"],
-            S["evalue_ci"]["mean"],
             S["gamma_star"]["mean"],
-            S.get("robust_beyond_frac", 0.0),
-            S["naive_ate"]["mean"],
-            S["iv_ate"]["mean"],
+            S.get("rho_star", {}).get("mean", float("nan")),
+            S.get("ovb_rv", {}).get("mean", float("nan")),
+            S.get("ovb_times_obs", {}).get("mean", float("nan")),
+            S.get("conley_gamma_null_over_sigma", {}).get("mean", float("nan")),
+            S.get("conley_crossed_frac", 0.0),
         ),
         flush=True,
     )

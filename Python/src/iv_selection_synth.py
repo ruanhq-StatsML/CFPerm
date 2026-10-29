@@ -490,21 +490,250 @@ def rosenbaum_analysis(Y, T, X, gammas=None, n_pairs=400, seed=SEED, alpha=0.05)
     }
 
 
+# ---------------------------------------------------------------------------
+# Extra sensitivity: Cinelli–Hazlett OVB (partial R²) + Conley exclusion
+# ---------------------------------------------------------------------------
+
+
+def robustness_value(t_stat, dof, q=1.0):
+    """Cinelli & Hazlett robustness value RV_q.
+
+    RV is the partial R² that an unobserved confounder would need *with both*
+    treatment and outcome to explain away a fraction ``q`` of the observed
+    effect (q=1 → bring estimate to 0). Intuitive sibling of the E-value, but
+    on the partial-R² scale instead of RR.
+    """
+    t_stat = float(abs(t_stat))
+    dof = max(float(dof), 1.0)
+    q = float(np.clip(q, 1e-6, 1.0))
+    fh = (t_stat ** 2) / dof
+    a = q * fh
+    return float(0.5 * (np.sqrt(a * a + 4.0 * a) - a))
+
+
+def partial_r2_treatment_outcome(Y, T, X):
+    """Partial R² of T with Y after X, plus t-stat / dof for RV."""
+    Y = np.asarray(Y, dtype=float).reshape(-1)
+    T = np.asarray(T, dtype=float).reshape(-1)
+    X = np.asarray(X, dtype=float)
+    design = np.hstack([T.reshape(-1, 1), X])
+    reg = LinearRegression().fit(design, Y)
+    resid = Y - reg.predict(design)
+    n, k = design.shape
+    dof = max(n - k - 1, 1)
+    sigma = float(np.sqrt(np.sum(resid ** 2) / dof))
+    XtX_inv = np.linalg.pinv(design.T @ design)
+    se = float(sigma * np.sqrt(max(XtX_inv[0, 0], 0.0)))
+    beta = float(reg.coef_[0])
+    t_stat = beta / max(se, 1e-12)
+    r2_partial = float((t_stat ** 2) / (t_stat ** 2 + dof))
+    return {
+        "beta": beta,
+        "se": se,
+        "t_stat": float(t_stat),
+        "dof": int(dof),
+        "partial_r2_ty": r2_partial,
+        "sigma": sigma,
+    }
+
+
+def ovb_adjusted_beta(beta, se, r2_t_u, r2_y_u, dof):
+    """OVB-adjusted estimate (Cinelli–Hazlett / Frank bounding form).
+
+    ``r2_t_u`` = partial R²(U → T | X), ``r2_y_u`` = partial R²(U → Y | X,T).
+    Bias ≈ se · sqrt(dof) · sqrt(r2_t_u * r2_y_u / max(1-r2_t_u, ε)).
+    """
+    r2_t_u = float(np.clip(r2_t_u, 0.0, 0.999))
+    r2_y_u = float(np.clip(r2_y_u, 0.0, 0.999))
+    bf = np.sqrt(r2_t_u * r2_y_u / max(1.0 - r2_t_u, 1e-8))
+    bias = float(se) * np.sqrt(max(float(dof), 1.0)) * bf
+    # move estimate toward zero
+    if beta >= 0:
+        return float(beta - bias)
+    return float(beta + bias)
+
+
+def ovb_contour_analysis(Y, T, X, grid=None):
+    """Partial-R² sensitivity grid + robustness value for the naive OLS effect.
+
+    Contours answer: if confounder explains r_T of residual T and r_Y of
+    residual Y, where does β̂ move? RV = how large both must be to nullify.
+    """
+    meta = partial_r2_treatment_outcome(Y, T, X)
+    grid = list(grid or [0.0, 0.01, 0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50])
+    rv = robustness_value(meta["t_stat"], meta["dof"], q=1.0)
+    rv_q05 = robustness_value(meta["t_stat"], meta["dof"], q=0.5)  # halve the effect
+    cells = []
+    nullify_r = None
+    for rt in grid:
+        for ry in grid:
+            adj = ovb_adjusted_beta(meta["beta"], meta["se"], rt, ry, meta["dof"])
+            cells.append(
+                {
+                    "r2_t_u": float(rt),
+                    "r2_y_u": float(ry),
+                    "ate_adj": float(adj),
+                    "crosses_zero": bool(meta["beta"] * adj <= 0 and abs(adj) < abs(meta["beta"])),
+                }
+            )
+            if nullify_r is None and abs(adj) <= abs(meta["se"]) * 1.96 and abs(adj) < 0.05 * abs(meta["beta"] + 1e-12):
+                # first grid cell that essentially nullifies
+                if rt == ry:
+                    nullify_r = float(rt)
+    # benchmark: strongest observed covariate's partial R² with T and Y
+    benchmarks = []
+    X = np.asarray(X, dtype=float)
+    T1 = np.asarray(T, dtype=float).reshape(-1)
+    Y1 = np.asarray(Y, dtype=float).reshape(-1)
+    for j in range(X.shape[1]):
+        # partial R2 of Xj with T | X_{-j}
+        others = np.delete(X, j, axis=1) if X.shape[1] > 1 else None
+        Tr = _resid(T1, others)
+        Xr = _resid(X[:, j], others)
+        r2_t = float(np.corrcoef(Tr, Xr)[0, 1] ** 2) if np.std(Xr) > 1e-12 else 0.0
+        # partial R2 of Xj with Y | T, X_{-j}
+        if others is None:
+            ctrl = T1.reshape(-1, 1)
+        else:
+            ctrl = np.hstack([T1.reshape(-1, 1), others])
+        Yr = _resid(Y1, ctrl)
+        Xry = _resid(X[:, j], ctrl)
+        r2_y = float(np.corrcoef(Yr, Xry)[0, 1] ** 2) if np.std(Xry) > 1e-12 else 0.0
+        benchmarks.append({"j": int(j), "r2_t": r2_t, "r2_y": r2_y})
+    # times-stronger: RV / max observed partial r2 (rough)
+    max_obs = max(max(b["r2_t"], b["r2_y"]) for b in benchmarks) if benchmarks else 0.0
+    return {
+        "beta": meta["beta"],
+        "se": meta["se"],
+        "t_stat": meta["t_stat"],
+        "partial_r2_ty": meta["partial_r2_ty"],
+        "robustness_value": float(rv),
+        "robustness_value_halve": float(rv_q05),
+        "nullify_diag_r2": nullify_r,
+        "times_vs_max_obs_r2": float(rv / max(max_obs, 1e-8)),
+        "max_obs_partial_r2": float(max_obs),
+        "benchmarks": benchmarks,
+        "contour": cells,
+        "grid": grid,
+    }
+
+
+def conley_exclusion_curve(Y, T, X, Z, gamma_grid=None, true_ate=None):
+    """Conley et al. local-to-zero / exclusion-violation sensitivity for IV.
+
+    Assume a direct path Y ← Z with coef γ (exclusion slack). For each γ,
+    set Y* = Y − Zγ (scalar γ shared / first selected Z column mean effect)
+    and re-run 2SLS. Intuitive: how large can the exclusion break be before
+    IV ATÊ crosses 0 (or leaves a band around true τ)?
+    """
+    Y = np.asarray(Y, dtype=float).reshape(-1)
+    T = np.asarray(T, dtype=float).reshape(-1)
+    X = np.asarray(X, dtype=float)
+    Z = np.asarray(Z, dtype=float)
+    if Z.ndim == 1:
+        Z = Z[:, None]
+    if Z.shape[1] == 0:
+        return {"curve": [], "gamma_star_null": float("nan"), "gamma_star_truth": float("nan")}
+    # use the strongest first-stage column as the exclusion slack direction
+    best_j, best_f = 0, -1.0
+    for j in range(Z.shape[1]):
+        f, _ = partial_f_stat(T, Z[:, j], X)
+        if f > best_f:
+            best_f, best_j = f, j
+    z1 = Z[:, best_j]
+    z1s = (z1 - z1.mean()) / (z1.std() + 1e-12)
+    sig = float(np.std(_resid(Y, X)))
+    if gamma_grid is None:
+        # γ in units of residual sd of Y (standardized Z)
+        gamma_grid = sig * np.array(
+            [0.0, 0.05, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50, 0.75, 1.0, 1.5, 2.0]
+        )
+    gamma_grid = np.asarray(gamma_grid, dtype=float)
+    gammas = np.unique(np.concatenate([-gamma_grid[::-1], gamma_grid]))
+    curve = []
+    ate0, _ = iv_2sls_ate(Y, T, X, Z)
+    g_null = None
+    g_truth = None
+    crossed = False
+    for g in gammas:
+        Y_adj = Y - float(g) * z1s
+        ate, info = iv_2sls_ate(Y_adj, T, X, Z)
+        curve.append(
+            {
+                "gamma": float(g),
+                "gamma_over_sigma": float(g / max(sig, 1e-8)),
+                "ate_hat": float(ate),
+                "stage1_f": float(info.get("stage1_f", float("nan"))),
+            }
+        )
+        if (not crossed) and g != 0 and ate0 * ate <= 0:
+            g_null = float(g)
+            crossed = True
+        if (
+            true_ate is not None
+            and g_truth is None
+            and g != 0
+            and abs(ate - float(true_ate)) > abs(ate0 - float(true_ate)) + 0.25 * abs(float(true_ate))
+        ):
+            g_truth = float(g)
+    if not crossed and curve:
+        # never crossed 0 within grid — report farthest tried on the
+        # direction that moves toward zero
+        side = [
+            c for c in curve
+            if (ate0 >= 0 and c["ate_hat"] <= ate0) or (ate0 < 0 and c["ate_hat"] >= ate0)
+        ]
+        if side:
+            g_null = float(max(side, key=lambda c: abs(c["gamma"]))["gamma"])
+    return {
+        "ate_at_zero": float(ate0),
+        "sigma_y": float(sig),
+        "best_z_index": int(best_j),
+        "best_z_f": float(best_f),
+        "gamma_star_null": float(g_null) if g_null is not None else float("nan"),
+        "gamma_star_null_over_sigma": (
+            float(g_null / max(sig, 1e-8)) if g_null is not None else float("nan")
+        ),
+        "crossed_null": bool(crossed),
+        "gamma_star_truth_band": float(g_truth) if g_truth is not None else float("nan"),
+        "curve": curve,
+    }
+
+
+def gamma_to_correlation(gamma):
+    """Imbens amplification: map Rosenbaum Γ → max treatment-odds correlation bound.
+
+    ρ ≈ (Γ−1)/(Γ+1) — intuitive translation of Γ into a correlation-like scale.
+    """
+    g = float(gamma)
+    return float((g - 1.0) / (g + 1.0))
+
+
 def sensitivity_bundle(bundle, z_mode="auto", seed=SEED):
-    """E-value on naive association + Rosenbaum Γ + IV point for contrast."""
+    """E-value + Rosenbaum + OVB/RV + Conley exclusion + IV point."""
     scores = score_instruments(bundle)
     naive = ols_ate(bundle.Y, bundle.T, bundle.X)
     ev = evalue_analysis(bundle.Y, bundle.T, bundle.X, ate_hat=naive)
     rb = rosenbaum_analysis(bundle.Y, bundle.T, bundle.X, seed=seed)
+    ovb = ovb_contour_analysis(bundle.Y, bundle.T, bundle.X)
     idx = select_instruments(scores, mode=z_mode)
     Zs = bundle.Z[:, idx] if idx else np.zeros((len(bundle.T), 0))
     iv_hat, iv_info = iv_2sls_ate(bundle.Y, bundle.T, bundle.X, Zs)
+    conley = conley_exclusion_curve(
+        bundle.Y, bundle.T, bundle.X, Zs, true_ate=bundle.true_ate
+    )
     return {
         "naive_ate": float(naive),
         "iv_ate": float(iv_hat),
         "true_ate": float(bundle.true_ate),
         "evalue": ev,
         "rosenbaum": rb,
+        "ovb": ovb,
+        "conley": conley,
+        "gamma_amplification": {
+            "gamma_star": rb["gamma_star"],
+            "rho_star": gamma_to_correlation(rb["gamma_star"]),
+        },
         "iv_info": iv_info,
         "selected": idx,
     }
@@ -597,12 +826,26 @@ def run_sensitivity_suite(seeds=None, n=2000, conf_strength=1.0):
                 "evalue_ci": sens["evalue"]["evalue_ci"],
                 "approx_rr": sens["evalue"]["approx_rr"],
                 "gamma_star": sens["rosenbaum"]["gamma_star"],
+                "rho_star": sens["gamma_amplification"]["rho_star"],
                 "robust_beyond_max_gamma": int(
                     sens["rosenbaum"]["robust_beyond_max_gamma"]
                 ),
                 "rosenbaum_p_gamma1": sens["rosenbaum"]["p_at_gamma1"],
                 "rosenbaum_p_max": sens["rosenbaum"]["p_at_max_gamma"],
                 "rosenbaum_curve": sens["rosenbaum"]["curve"],
+                "ovb_rv": sens["ovb"]["robustness_value"],
+                "ovb_rv_halve": sens["ovb"]["robustness_value_halve"],
+                "ovb_partial_r2_ty": sens["ovb"]["partial_r2_ty"],
+                "ovb_times_obs": sens["ovb"]["times_vs_max_obs_r2"],
+                "ovb_contour": sens["ovb"]["contour"],
+                "ovb_grid": sens["ovb"]["grid"],
+                "conley_gamma_null": sens["conley"]["gamma_star_null"],
+                "conley_gamma_null_over_sigma": sens["conley"][
+                    "gamma_star_null_over_sigma"
+                ],
+                "conley_crossed_null": int(sens["conley"]["crossed_null"]),
+                "conley_ate0": sens["conley"]["ate_at_zero"],
+                "conley_curve": sens["conley"]["curve"],
             }
         )
         loc = subset_iv_localization(bundle, z_mode="oracle")
@@ -645,13 +888,26 @@ def run_sensitivity_suite(seeds=None, n=2000, conf_strength=1.0):
             "evalue_ci": _agg("evalue_ci"),
             "approx_rr": _agg("approx_rr"),
             "gamma_star": _agg("gamma_star"),
+            "rho_star": _agg("rho_star"),
             "robust_beyond_frac": float(
                 np.mean([r["robust_beyond_max_gamma"] for r in sens_rows])
             ),
             "rosenbaum_p_max": _agg("rosenbaum_p_max"),
+            "ovb_rv": _agg("ovb_rv"),
+            "ovb_rv_halve": _agg("ovb_rv_halve"),
+            "ovb_partial_r2_ty": _agg("ovb_partial_r2_ty"),
+            "ovb_times_obs": _agg("ovb_times_obs"),
+            "conley_gamma_null": _agg("conley_gamma_null"),
+            "conley_gamma_null_over_sigma": _agg("conley_gamma_null_over_sigma"),
+            "conley_crossed_frac": float(
+                np.mean([r["conley_crossed_null"] for r in sens_rows])
+            ),
+            "conley_ate0": _agg("conley_ate0"),
             "naive_ate": _agg("naive_ate"),
             "iv_ate": _agg("iv_ate"),
             "rosenbaum_curve_mean": mean_curve,
+            "ovb_contour_mean": _mean_ovb_contour(sens_rows),
+            "conley_curve_mean": _mean_conley_curve(sens_rows),
             "rows": sens_rows,
         },
         "subset": {
@@ -670,6 +926,50 @@ def _mstd(vals):
         "mean": float(np.nanmean(v)),
         "sd": float(np.nanstd(v, ddof=1) if np.sum(np.isfinite(v)) > 1 else 0.0),
     }
+
+
+def _mean_ovb_contour(sens_rows):
+    """Average adjusted ATE on the (r2_t, r2_y) grid across seeds."""
+    if not sens_rows or not sens_rows[0].get("ovb_contour"):
+        return []
+    grid = sens_rows[0]["ovb_grid"]
+    out = []
+    for rt in grid:
+        for ry in grid:
+            vals = [
+                c["ate_adj"]
+                for r in sens_rows
+                for c in r["ovb_contour"]
+                if abs(c["r2_t_u"] - rt) < 1e-12 and abs(c["r2_y_u"] - ry) < 1e-12
+            ]
+            out.append(
+                {
+                    "r2_t_u": float(rt),
+                    "r2_y_u": float(ry),
+                    "ate_adj": float(np.mean(vals)) if vals else float("nan"),
+                }
+            )
+    return out
+
+
+def _mean_conley_curve(sens_rows):
+    if not sens_rows or not sens_rows[0].get("conley_curve"):
+        return []
+    # align on gamma values from first seed
+    gammas = [c["gamma"] for c in sens_rows[0]["conley_curve"]]
+    out = []
+    for i, g in enumerate(gammas):
+        ates = []
+        for r in sens_rows:
+            # nearest gamma if grids differ slightly
+            curve = r["conley_curve"]
+            if i < len(curve) and abs(curve[i]["gamma"] - g) < 1e-9:
+                ates.append(curve[i]["ate_hat"])
+            else:
+                j = int(np.argmin([abs(c["gamma"] - g) for c in curve]))
+                ates.append(curve[j]["ate_hat"])
+        out.append({"gamma": float(g), "ate_hat": float(np.mean(ates))})
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -919,12 +1219,79 @@ def plot_suite(suite, sweep, path, sens=None):
     tau = suite["true_ate"]
     ev = ""
     if sens is not None:
-        ev = "  |  E-value≈%.2f  Γ*≈%.1f" % (
+        ev = "  |  E-value≈%.2f  Γ*≈%.1f  RV≈%.2f" % (
             sens["sensitivity"]["evalue_point"]["mean"],
             sens["sensitivity"]["gamma_star"]["mean"],
+            sens["sensitivity"].get("ovb_rv", {}).get("mean", float("nan")),
         )
     fig.suptitle(
         "Instrumental-variable selection + sensitivity (τ=%.2f)%s" % (tau, ev),
+        fontsize=12, fontweight="bold", y=0.98,
+    )
+    fig.tight_layout(rect=[0, 0.02, 1, 0.94])
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=140, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
+def plot_sensitivity_extra(sens, path):
+    """OVB partial-R² heatmap + Conley exclusion curve (companion figure)."""
+    import matplotlib.pyplot as plt
+
+    S = sens["sensitivity"]
+    fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.2))
+
+    # --- OVB contour heatmap ---
+    ax = axes[0]
+    contour = S.get("ovb_contour_mean") or []
+    grid = sorted({c["r2_t_u"] for c in contour})
+    if grid and contour:
+        mat = np.full((len(grid), len(grid)), np.nan)
+        idx = {v: i for i, v in enumerate(grid)}
+        for c in contour:
+            mat[idx[c["r2_y_u"]], idx[c["r2_t_u"]]] = c["ate_adj"]
+        im = ax.imshow(
+            mat, origin="lower", aspect="auto", cmap="coolwarm",
+            extent=[grid[0], grid[-1], grid[0], grid[-1]],
+        )
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="adjusted ATÊ")
+        rv = S["ovb_rv"]["mean"]
+        ax.plot([rv], [rv], marker="*", color="#111", markersize=14, label="RV≈%.2f" % rv)
+        ax.set_xlabel(r"partial $R^2_{T\sim U\mid X}$")
+        ax.set_ylabel(r"partial $R^2_{Y\sim U\mid X,T}$")
+        ax.set_title("Cinelli–Hazlett OVB contours", loc="left", fontsize=10, fontweight="bold")
+        ax.legend(fontsize=7.5, frameon=False, loc="upper left")
+    else:
+        ax.text(0.5, 0.5, "no OVB grid", ha="center", transform=ax.transAxes)
+
+    # --- Conley exclusion ---
+    ax = axes[1]
+    curve = S.get("conley_curve_mean") or []
+    if curve:
+        ax.plot(
+            [c["gamma"] for c in curve],
+            [c["ate_hat"] for c in curve],
+            "-", color="#C45C26", lw=1.8,
+        )
+        ax.axhline(0.0, color="#555", ls="--", lw=0.8)
+        ax.axhline(S["iv_ate"]["mean"], color="#2F6B4F", ls=":", lw=1.0, label="IV@γ=0")
+        ax.axvline(0.0, color="#aaa", lw=0.6)
+        gnull = S["conley_gamma_null"]["mean"]
+        if np.isfinite(gnull):
+            ax.axvline(gnull, color="#A33B24", ls="--", lw=1.0, label="γ* null≈%.2f" % gnull)
+        ax.set_xlabel(r"exclusion slack γ  ($Y \leftarrow Z$)")
+        ax.set_ylabel("2SLS ATÊ")
+        ax.set_title("Conley exclusion sensitivity", loc="left", fontsize=10, fontweight="bold")
+        ax.legend(fontsize=7.5, frameon=False)
+        ax.grid(True, alpha=0.35)
+    else:
+        ax.text(0.5, 0.5, "no Conley curve", ha="center", transform=ax.transAxes)
+
+    fig.suptitle(
+        "Extra sensitivity: OVB partial-R²  ·  Conley exclusion  ·  Γ→ρ≈%.2f"
+        % S.get("rho_star", {}).get("mean", float("nan")),
         fontsize=12, fontweight="bold", y=0.98,
     )
     fig.tight_layout(rect=[0, 0.02, 1, 0.94])
@@ -1010,15 +1377,30 @@ def write_readme(suite, sweep, path, sens=None):
                 % (S["approx_rr"]["mean"], S["approx_rr"]["sd"]),
                 "| Rosenbaum Γ* (p-bound > 0.05) | %.2f (%.2f) |"
                 % (S["gamma_star"]["mean"], S["gamma_star"]["sd"]),
+                "| Γ* → ρ amplification | %.3f (%.3f) |"
+                % (S.get("rho_star", {}).get("mean", float("nan")),
+                   S.get("rho_star", {}).get("sd", 0.0)),
+                "| OVB robustness value RV | %.3f (%.3f) |"
+                % (S.get("ovb_rv", {}).get("mean", float("nan")),
+                   S.get("ovb_rv", {}).get("sd", 0.0)),
+                "| OVB RV (halve effect) | %.3f (%.3f) |"
+                % (S.get("ovb_rv_halve", {}).get("mean", float("nan")),
+                   S.get("ovb_rv_halve", {}).get("sd", 0.0)),
+                "| OVB × vs max observed partial R² | %.1f (%.1f) |"
+                % (S.get("ovb_times_obs", {}).get("mean", float("nan")),
+                   S.get("ovb_times_obs", {}).get("sd", 0.0)),
+                "| Conley γ* (IV crosses 0) | %.3f (%.3f) |"
+                % (S.get("conley_gamma_null", {}).get("mean", float("nan")),
+                   S.get("conley_gamma_null", {}).get("sd", 0.0)),
                 "| naive ATÊ | %.3f (%.3f) |"
                 % (S["naive_ate"]["mean"], S["naive_ate"]["sd"]),
                 "| iv ATÊ | %.3f (%.3f) |"
                 % (S["iv_ate"]["mean"], S["iv_ate"]["sd"]),
                 "",
-                "E-value: min strength of an unmeasured confounder (on the RR scale)",
-                "needed to explain away the naive effect. Rosenbaum Γ*: odds-ratio",
-                "bias in treatment assignment at which the matched-pair sign test",
-                "upper-bounds to insignificance.",
+                "E-value: RR-scale confounder strength to kill the naive effect.",
+                "Rosenbaum Γ*: matched high/low-T sign-test odds bias; ρ=(Γ−1)/(Γ+1).",
+                "OVB RV (Cinelli–Hazlett): partial-R² both sides needed to nullify OLS.",
+                "Conley γ*: how large a direct Z→Y path can be before 2SLS crosses 0.",
                 "",
                 "## Subset localization — IV strength heterogeneity",
                 "",
