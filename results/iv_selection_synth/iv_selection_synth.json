@@ -1936,5 +1936,27 @@
       }
     },
     "f_heterogeneity_ratio": 2.508274059666203
+  },
+  "retire": {
+    "confusion": {
+      "valid": {
+        "KEEP": 17,
+        "WATCH": 7,
+        "RETIRE": 0
+      },
+      "invalid": {
+        "KEEP": 0,
+        "WATCH": 0,
+        "RETIRE": 24
+      },
+      "weak": {
+        "KEEP": 0,
+        "WATCH": 0,
+        "RETIRE": 16
+      }
+    },
+    "valid_keep_rate": 0.7083333333333334,
+    "invalid_retire_rate": 1.0,
+    "weak_retire_rate": 1.0
   }
 }

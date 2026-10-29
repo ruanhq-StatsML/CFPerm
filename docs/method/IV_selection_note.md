@@ -66,6 +66,27 @@ Confounding sweep: as `α` goes 0→2, naive error 0.06→0.63; `iv_auto` stays 
 Designed heterogeneity: valid first stage scaled by `1 + het·σ(X0)` → Q4 stronger than Q1.
 ATÊ stays near τ=1.5 in every quartile; **strength** is what moves, not the point estimate.
 
+## When to retire an IV (tell the room)
+
+Sensitivity on the **naive** association (E-value / Rosenbaum / OVB) answers
+*why you need an IV*. It does **not** decide whether a given Z is usable.
+
+IV retirement is about **Z quality**. Hard kills (any one → `RETIRE`):
+
+| # | rule | meaning |
+| --- | --- | --- |
+| 1 | partial **F < 10** | weak instrument — Staiger–Stock |
+| 2 | exclusion screen fail | direct Z→Y too large (invalid IV) |
+| 3 | Conley: sign flips for \|γ\|/σ_Y < 0.25 | exclusion too fragile |
+| 4 | subset F < 10 | retire *in that customer segment* even if global KEEP |
+
+Soft `WATCH` (stack, don't kill alone): marginal F∈[10,20), exclusion near cutoff,
+subset F ratio ≥ 3× (strength not portable across客群).
+
+`KEEP` only if strength + exclusion pass and Conley is not fragile.
+
+On synthetic roles this rule recovers: valid→KEEP, invalid/weak→RETIRE.
+
 ```bash
 python3 scripts/run_iv_selection_synth.py
 ```

@@ -284,6 +284,187 @@ def select_instruments(scores, mode="auto"):
 
 
 # ---------------------------------------------------------------------------
+# When to RETIRE an IV — product kill criteria
+# ---------------------------------------------------------------------------
+
+# Hard kill (any one fires → RETIRE)
+RETIRE_F_MIN = F_WEAK          # Staiger–Stock: F < 10 → weak IV
+RETIRE_EXCL_RATIO = 1.0        # exclusion_score > excl_max → broken exclusion
+# Soft watch (not kill alone, but stack toward WATCH / RETIRE)
+WATCH_F_MIN = 20.0             # 10 ≤ F < 20 → marginal strength
+WATCH_CONLEY_SIGMA = 0.25      # exclusion slack < 0.25 σ_Y flips 2SLS → fragile
+WATCH_SUBSET_F_RATIO = 3.0     # max/min segment F — if this Z is only strong in one corner
+RETIRE_SUBSET_F_MIN = 10.0     # segment-local F < 10 → do not use IV in that segment
+
+
+def iv_retire_verdict(
+    score_row,
+    conley_gamma_over_sigma=None,
+    conley_crossed=None,
+    subset_f_by_segment=None,
+):
+    """Per-instrument KEEP / WATCH / RETIRE with explicit reasons.
+
+    Product rule of thumb (tell the room when to kill an IV):
+
+      RETIRE (hard):
+        1. Weak first stage: partial F < 10
+        2. Exclusion screen fail: exclusion_score > adaptive excl_max
+        3. Conley fragility: 2SLS sign flips under tiny direct Z→Y
+           (|γ|/σ_Y < 0.25 and crossed null)
+        4. Segment-local weakness: in a customer subset, F < 10
+           → retire *for that subset* (global may still KEEP)
+
+      WATCH (soft):
+        1. Marginal F: 10 ≤ F < 20
+        2. Exclusion score near the cutoff
+        3. Large subset F heterogeneity (ratio ≥ 3) — strength not portable
+
+      KEEP:
+        passes strength + exclusion, Conley not fragile, no subset collapse
+
+    Sensitivity tools (E-value / Rosenbaum / OVB) diagnose the *naive*
+    association's confounding — they do **not** by themselves retire an IV.
+    They tell you why you needed IV. IV retirement is about Z quality.
+    """
+    reasons = []
+    verdict = "KEEP"
+    f = float(score_row["partial_F"])
+    excl = float(score_row["exclusion_score"])
+    excl_max = float(score_row.get("excl_max", 0.15))
+
+    # --- hard kills ---
+    if f < RETIRE_F_MIN:
+        verdict = "RETIRE"
+        reasons.append("weak_first_stage_F=%.1f<10" % f)
+    if not score_row.get("pass_exclusion", True):
+        verdict = "RETIRE"
+        reasons.append("exclusion_fail_score=%.3f>%.3f" % (excl, excl_max))
+    if (
+        conley_crossed
+        and conley_gamma_over_sigma is not None
+        and abs(float(conley_gamma_over_sigma)) < WATCH_CONLEY_SIGMA
+    ):
+        verdict = "RETIRE"
+        reasons.append(
+            "conley_fragile_|γ|/σ=%.2f<%.2f" % (abs(float(conley_gamma_over_sigma)), WATCH_CONLEY_SIGMA)
+        )
+
+    # --- soft watches (upgrade KEEP→WATCH; never downgrade RETIRE) ---
+    if verdict != "RETIRE":
+        if RETIRE_F_MIN <= f < WATCH_F_MIN:
+            verdict = "WATCH"
+            reasons.append("marginal_F=%.1f_in_[10,20)" % f)
+        if excl_max > 0 and excl > 0.75 * excl_max and score_row.get("pass_exclusion", True):
+            verdict = "WATCH" if verdict == "KEEP" else verdict
+            reasons.append("exclusion_near_cutoff")
+        if subset_f_by_segment:
+            fs = [float(v) for v in subset_f_by_segment.values() if np.isfinite(v)]
+            if len(fs) >= 2:
+                ratio = max(fs) / max(min(fs), 1e-8)
+                if ratio >= WATCH_SUBSET_F_RATIO:
+                    verdict = "WATCH" if verdict == "KEEP" else verdict
+                    reasons.append("subset_F_het_ratio=%.1f" % ratio)
+
+    if not reasons and verdict == "KEEP":
+        reasons.append("pass_strength_and_exclusion")
+
+    # segment-local retire list
+    segment_retire = []
+    if subset_f_by_segment:
+        for seg, fv in subset_f_by_segment.items():
+            if np.isfinite(fv) and float(fv) < RETIRE_SUBSET_F_MIN:
+                segment_retire.append({"segment": seg, "F": float(fv), "verdict": "RETIRE_LOCAL"})
+
+    return {
+        "j": int(score_row["j"]),
+        "name": score_row.get("name"),
+        "role": score_row.get("role"),
+        "verdict": verdict,
+        "reasons": reasons,
+        "partial_F": f,
+        "exclusion_score": excl,
+        "segment_retire": segment_retire,
+    }
+
+
+def retire_report(bundle, scores=None, seed=SEED):
+    """Score every candidate Z and emit KEEP/WATCH/RETIRE for the room."""
+    scores = scores if scores is not None else score_instruments(bundle)
+    # Conley on auto-selected set (shared fragility signal)
+    idx_auto = select_instruments(scores, mode="auto")
+    Z_auto = bundle.Z[:, idx_auto] if idx_auto else np.zeros((len(bundle.T), 0))
+    conley = conley_exclusion_curve(
+        bundle.Y, bundle.T, bundle.X, Z_auto, true_ate=bundle.true_ate
+    )
+    # per-segment F for oracle-valid block (strength portability)
+    loc = subset_iv_localization(bundle, z_mode="oracle")
+    subset_f = {r["name"]: r["stage1_f"] for r in loc["segments"]}
+
+    verdicts = []
+    for row in scores:
+        # single-Z Conley for exclusion-fragile instruments
+        Zj = bundle.Z[:, [row["j"]]]
+        cj = conley_exclusion_curve(
+            bundle.Y, bundle.T, bundle.X, Zj, true_ate=bundle.true_ate
+        )
+        v = iv_retire_verdict(
+            row,
+            conley_gamma_over_sigma=cj.get("gamma_star_null_over_sigma"),
+            conley_crossed=cj.get("crossed_null"),
+            subset_f_by_segment=subset_f if row["role"] == "valid" else None,
+        )
+        v["conley_gamma_over_sigma"] = cj.get("gamma_star_null_over_sigma")
+        v["conley_crossed"] = cj.get("crossed_null")
+        verdicts.append(v)
+
+    summary = {
+        "n_keep": int(sum(v["verdict"] == "KEEP" for v in verdicts)),
+        "n_watch": int(sum(v["verdict"] == "WATCH" for v in verdicts)),
+        "n_retire": int(sum(v["verdict"] == "RETIRE" for v in verdicts)),
+        "auto_selected": idx_auto,
+        "conley_auto": {
+            "gamma_over_sigma": conley.get("gamma_star_null_over_sigma"),
+            "crossed_null": conley.get("crossed_null"),
+        },
+        "subset_f": subset_f,
+    }
+    return {"verdicts": verdicts, "summary": summary, "seed": int(seed)}
+
+
+def retire_suite(seeds=None, n=2000, conf_strength=1.0):
+    """Aggregate retire verdicts; check alignment with true roles on synthetic."""
+    seeds = list(seeds if seeds is not None else range(SEED, SEED + 8))
+    rows = []
+    for s in seeds:
+        bundle = make_iv_dgp(n=n, conf_strength=conf_strength, seed=int(s))
+        rep = retire_report(bundle, seed=int(s))
+        for v in rep["verdicts"]:
+            rows.append({"seed": int(s), **v})
+    # role × verdict confusion
+    roles = ("valid", "invalid", "weak")
+    verdicts = ("KEEP", "WATCH", "RETIRE")
+    confusion = {
+        r: {v: 0 for v in verdicts} for r in roles
+    }
+    for row in rows:
+        confusion[row["role"]][row["verdict"]] += 1
+    # rates: valid should KEEP; invalid/weak should RETIRE
+    def _rate(role, verdict):
+        tot = sum(confusion[role].values())
+        return float(confusion[role][verdict] / max(tot, 1))
+
+    return {
+        "seeds": seeds,
+        "confusion": confusion,
+        "valid_keep_rate": _rate("valid", "KEEP"),
+        "invalid_retire_rate": _rate("invalid", "RETIRE"),
+        "weak_retire_rate": _rate("weak", "RETIRE"),
+        "rows": rows,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Estimators
 # ---------------------------------------------------------------------------
 

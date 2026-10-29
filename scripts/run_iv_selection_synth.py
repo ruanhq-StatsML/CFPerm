@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from iv_selection_synth import (  # noqa: E402
     conf_sweep,
     plot_sensitivity_extra,
     plot_suite,
+    retire_suite,
     run_sensitivity_suite,
     run_suite,
     write_json,
@@ -130,6 +132,26 @@ def main():
             ),
             flush=True,
         )
+
+    print("IV retire verdicts…", flush=True)
+    retired = retire_suite(seeds=seeds, n=n, conf_strength=float(args.conf))
+    payload["retire"] = {
+        "confusion": retired["confusion"],
+        "valid_keep_rate": retired["valid_keep_rate"],
+        "invalid_retire_rate": retired["invalid_retire_rate"],
+        "weak_retire_rate": retired["weak_retire_rate"],
+    }
+    write_json(OUT / "iv_selection_synth.json", payload)
+    print(
+        "retire rates  valid_KEEP=%.2f  invalid_RETIRE=%.2f  weak_RETIRE=%.2f"
+        % (
+            retired["valid_keep_rate"],
+            retired["invalid_retire_rate"],
+            retired["weak_retire_rate"],
+        ),
+        flush=True,
+    )
+    print("confusion", json.dumps(retired["confusion"]), flush=True)
     print("wrote", OUT, flush=True)
 
 
