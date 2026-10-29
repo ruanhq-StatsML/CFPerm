@@ -17,12 +17,15 @@ sys.path.insert(0, str(ROOT / "Python" / "src"))
 from iv_selection_synth import (  # noqa: E402
     conf_sweep,
     plot_sensitivity_extra,
+    plot_strategy,
     plot_suite,
     retire_suite,
     run_sensitivity_suite,
     run_suite,
+    strategy_suite,
     write_json,
     write_readme,
+    write_strategy_readme,
 )
 
 OUT = ROOT / "results" / "iv_selection_synth"
@@ -54,6 +57,14 @@ def main():
         seeds=seeds, n=n, conf_strength=float(args.conf)
     )
 
+    print("subset-adaptive strategy…", flush=True)
+    strategy = strategy_suite(
+        seeds=seeds, n=n, conf_strength=float(args.conf), het_strength=1.2
+    )
+    sens["strategy"] = {
+        k: v for k, v in strategy.items() if k != "rows"
+    }
+
     OUT.mkdir(parents=True, exist_ok=True)
     DOCS.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -67,13 +78,19 @@ def main():
         "subset": {
             k: v for k, v in sens["subset"].items() if k != "rows"
         },
+        "strategy": {
+            k: v for k, v in strategy.items() if k != "rows"
+        },
     }
     payload["suite"]["score_example"] = suite["score_book"][0]["scores"]
     write_json(OUT / "iv_selection_synth.json", payload)
     plot_suite(suite, sweep, OUT / "iv_selection_synth.png", sens=sens)
     plot_sensitivity_extra(sens, OUT / "iv_sensitivity_extra.png")
+    plot_strategy(strategy, OUT / "iv_subset_strategy.png")
     write_readme(suite, sweep, OUT / "README.md", sens=sens)
     write_readme(suite, sweep, DOCS / "IV_selection_synth.md", sens=sens)
+    write_strategy_readme(strategy, OUT / "STRATEGY.md")
+    write_strategy_readme(strategy, DOCS / "IV_subset_strategy.md")
 
     print("true_ate", suite["true_ate"], flush=True)
     print(
@@ -132,6 +149,33 @@ def main():
             ),
             flush=True,
         )
+
+    print(
+        "strategy  ID=%.0f%%  ACT=%.0f%%  conflict=%.0f%%  F-het=%.1f×"
+        % (
+            100 * strategy["identification_coverage"]["mean"],
+            100 * strategy["action_coverage"]["mean"],
+            100 * strategy["policy_conflict_rate"]["mean"],
+            strategy["f_heterogeneity_ratio"]["mean"],
+        ),
+        flush=True,
+    )
+    for k in (
+        "naive_ols",
+        "global_iv",
+        "equal_pool_all",
+        "f_weighted",
+        "precision_wt",
+        "adaptive_act",
+    ):
+        cell = strategy["abs_err"][k]
+        print(
+            "  agg %-14s  |err|=%.3f (%.3f)"
+            % (k, cell["mean"], cell["sd"]),
+            flush=True,
+        )
+    for tip in strategy.get("example_insights", [])[:4]:
+        print("  insight:", tip, flush=True)
 
     print("IV retire verdicts…", flush=True)
     retired = retire_suite(seeds=seeds, n=n, conf_strength=float(args.conf))

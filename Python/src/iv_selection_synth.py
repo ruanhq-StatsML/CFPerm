@@ -71,8 +71,9 @@ def make_iv_dgp(
     T = X β_t + s(X0)·Z_valid γ_v + Z_weak γ_w + Z_invalid γ_i + α U + ε_t
     Y = τ T + X β_y + Z_invalid δ + α U + ε_y
 
-    ``s(X0) = 1 + het_strength·σ(X0)`` scales the valid first stage so high-X0
-    segments have stronger instruments (subset localization target).
+    ``s(X0) = ε + het_strength · σ(X0)^p`` scales the valid first stage so
+    Q1 can fall below F=10 (NO_ACT), mid quartiles land ESTIMATE_ONLY/ACT,
+    and Q4 stays strong — where subset-adaptive strategy differs from global IV.
 
     Valid Z: affect T, excluded from Y.
     Invalid Z: appear in Y directly (exclusion violated) and may weakly enter T.
@@ -93,8 +94,9 @@ def make_iv_dgp(
     gamma_i = 0.15 * rng.normal(size=n_invalid)
     delta_i = invalid_y * (0.5 + 0.5 * rng.random(n_invalid))
 
-    # segment scaler on valid first stage (logistic in X0)
-    seg_scale = 1.0 + float(het_strength) / (1.0 + np.exp(-X[:, 0]))
+    # extreme segment scaler: Q1 NO_ACT (F<10), Q2 marginal, Q4 strong
+    sigma = 1.0 / (1.0 + np.exp(-2.0 * X[:, 0]))
+    seg_scale = 0.015 + float(het_strength) * 2.4 * (sigma ** 2.5)
     eps_t = rng.normal(scale=0.5, size=n)
     eps_y = rng.normal(scale=0.5, size=n)
     T = (
@@ -497,7 +499,7 @@ def iv_2sls_ate(Y, T, X, Z):
     if Z.ndim == 1:
         Z = Z[:, None]
     if Z.shape[1] == 0:
-        return float("nan"), {"stage1_f": 0.0, "n_z": 0}
+        return float("nan"), {"stage1_f": 0.0, "n_z": 0, "se": float("nan")}
     # stage 1: T ~ X + Z
     stage1_X = np.hstack([X, Z])
     m1 = LinearRegression().fit(stage1_X, T)
@@ -510,11 +512,17 @@ def iv_2sls_ate(Y, T, X, Z):
     df_u = max(n - X.shape[1] - q - 1, 1)
     stage1_f = ((ssr_r - ssr_u) / max(q, 1)) / (ssr_u / df_u + 1e-12)
     # stage 2: Y ~ T_hat + X
-    m2 = LinearRegression().fit(np.hstack([T_hat.reshape(-1, 1), X]), Y)
+    design2 = np.hstack([T_hat.reshape(-1, 1), X])
+    m2 = LinearRegression().fit(design2, Y)
+    resid2 = Y - m2.predict(design2)
+    dof2 = max(n - design2.shape[1] - 1, 1)
+    sigma2 = float(np.sqrt(np.sum(resid2 ** 2) / dof2))
+    se = float(sigma2 * np.sqrt(max(np.linalg.pinv(design2.T @ design2)[0, 0], 0.0)))
     return float(m2.coef_[0]), {
         "stage1_f": float(max(stage1_f, 0.0)),
         "n_z": int(q),
         "stage1_r2": float(max(1.0 - ssr_u / (ssr_r + 1e-12), 0.0)),
+        "se": se,
     }
 
 
@@ -991,6 +999,260 @@ def subset_iv_localization(bundle, z_mode="oracle", min_n=80):
     }
 
 
+# ---------------------------------------------------------------------------
+# After subset localization — how to adjust strategy (statistical insights)
+# ---------------------------------------------------------------------------
+
+# Action tiers from local first-stage strength
+F_NO_ACT = 10.0     # below → retire IV locally; do not act on IV ATE
+F_ACT = 20.0        # above → ACT (scale decisions); between → ESTIMATE_ONLY
+
+
+def _tier_from_f(f):
+    if not np.isfinite(f) or f < F_NO_ACT:
+        return "NO_ACT"
+    if f < F_ACT:
+        return "ESTIMATE_ONLY"
+    return "ACT"
+
+
+def subset_adaptive_strategy(bundle, z_mode="oracle", min_n=80):
+    """Turn subset localization into an actionable policy map.
+
+    Statistical playbook (feeds ROI later; here we only claim ID / error):
+
+      localization → tier per segment by first-stage F
+        NO_ACT         F < 10   : local-retire IV; hold policy; OLS is descriptive only
+        ESTIMATE_ONLY  10–20    : publish local IV ATE with WATCH; do not scale spend
+        ACT            F ≥ 20   : use local IV ATE; eligible for portfolio weight
+
+      aggregation strategies compared to global 2SLS:
+        global_iv      one ATE applied to every segment (ignores het)
+        equal_pool     unweighted mean of segment ATEs (incl. weak — bad)
+        f_weighted     weight segment ATEs by stage-1 F among F≥10 only
+        precision_wt   weight by 1/se² among F≥10
+        adaptive_act   population ATE using only ACT segments' local IV
+                       (NO_ACT mass contributes 0 action / held out of ID set)
+
+    Insights we report (not dollar ROI):
+      - identification_coverage = n-share with F≥10
+      - action_coverage         = n-share with F≥20
+      - mse of each aggregator vs true τ
+      - policy_conflict_rate    = share where global_iv tier ≠ local tier
+    """
+    loc = subset_iv_localization(bundle, z_mode=z_mode, min_n=min_n)
+    scores = score_instruments(bundle)
+    idx = select_instruments(scores, mode=z_mode)
+    if not idx:
+        idx = select_instruments(scores, mode="oracle")
+    Zg = bundle.Z[:, idx] if idx else np.zeros((len(bundle.T), 0))
+    global_ate, ginfo = iv_2sls_ate(bundle.Y, bundle.T, bundle.X, Zg)
+    naive = ols_ate(bundle.Y, bundle.T, bundle.X)
+
+    segments = []
+    total_n = 0
+    for r in loc["segments"]:
+        f = r["stage1_f"]
+        # local SE via re-fit for weighting
+        mask = np.asarray(bundle.z_meta["segment"], dtype=int) == int(r["segment"])
+        se = float("nan")
+        if mask.sum() >= min_n and idx:
+            _, info = iv_2sls_ate(
+                bundle.Y[mask], bundle.T[mask], bundle.X[mask], bundle.Z[mask][:, idx]
+            )
+            se = float(info.get("se", float("nan")))
+        tier = _tier_from_f(f)
+        total_n += int(r["n"])
+        segments.append(
+            {
+                **r,
+                "se": se,
+                "tier": tier,
+                "global_ate": float(global_ate),
+                "naive_ate": float(naive),
+                # conflict: global would ACT everywhere; local says no
+                "policy_conflict": bool(
+                    tier == "NO_ACT"  # global IV would still quote an ATE here
+                ),
+            }
+        )
+
+    def _wavg(rows, key_w):
+        num, den = 0.0, 0.0
+        for r in rows:
+            w = key_w(r)
+            if not np.isfinite(w) or w <= 0 or not np.isfinite(r["ate_hat"]):
+                continue
+            num += w * float(r["ate_hat"])
+            den += w
+        return float(num / den) if den > 0 else float("nan")
+
+    id_rows = [r for r in segments if r["tier"] in ("ESTIMATE_ONLY", "ACT")]
+    act_rows = [r for r in segments if r["tier"] == "ACT"]
+
+    aggregators = {
+        "global_iv": float(global_ate),
+        "naive_ols": float(naive),
+        "equal_pool_all": _wavg(segments, lambda r: 1.0),
+        "equal_pool_id": _wavg(id_rows, lambda r: 1.0),
+        "f_weighted": _wavg(id_rows, lambda r: max(r["stage1_f"], 0.0)),
+        "precision_wt": _wavg(
+            id_rows, lambda r: 1.0 / max(r["se"] ** 2, 1e-8) if np.isfinite(r["se"]) else 0.0
+        ),
+        "adaptive_act": _wavg(act_rows, lambda r: max(r["stage1_f"], 0.0)),
+    }
+    true = float(bundle.true_ate)
+    errors = {k: float(abs(v - true)) if np.isfinite(v) else float("nan") for k, v in aggregators.items()}
+
+    id_n = sum(r["n"] for r in id_rows)
+    act_n = sum(r["n"] for r in act_rows)
+    conflict_n = sum(r["n"] for r in segments if r["policy_conflict"])
+
+    # insight strings for the room
+    insights = []
+    if segments:
+        weakest = min(segments, key=lambda r: r["stage1_f"] if np.isfinite(r["stage1_f"]) else np.inf)
+        strongest = max(segments, key=lambda r: r["stage1_f"] if np.isfinite(r["stage1_f"]) else -np.inf)
+        insights.append(
+            "strength_gap: %s F=%.1f (%s) vs %s F=%.1f (%s)"
+            % (
+                weakest["name"], weakest["stage1_f"], weakest["tier"],
+                strongest["name"], strongest["stage1_f"], strongest["tier"],
+            )
+        )
+    insights.append(
+        "coverage: identify=%.0f%%  act=%.0f%%  hold_out=%.0f%%"
+        % (
+            100.0 * id_n / max(total_n, 1),
+            100.0 * act_n / max(total_n, 1),
+            100.0 * (total_n - id_n) / max(total_n, 1),
+        )
+    )
+    cand = {
+        k: errors[k]
+        for k in ("f_weighted", "precision_wt", "adaptive_act", "global_iv")
+        if np.isfinite(errors.get(k, float("nan")))
+    }
+    if cand:
+        best = min(cand, key=cand.get)
+        if best != "global_iv" and cand[best] < cand.get("global_iv", np.inf):
+            insights.append(
+                "%s beats global_iv on |ATE−τ| (%.3f < %.3f) — don't pool flat across weak segments"
+                % (best, cand[best], cand["global_iv"])
+            )
+        else:
+            insights.append(
+                "global_iv competitive on point error; still report tiers so NO_ACT mass is not oversold"
+            )
+    if conflict_n:
+        insights.append(
+            "policy_conflict: %.0f%% of population is NO_ACT locally but would get a global IV quote"
+            % (100.0 * conflict_n / max(total_n, 1))
+        )
+
+    return {
+        "segments": segments,
+        "aggregators": aggregators,
+        "abs_err": errors,
+        "identification_coverage": float(id_n / max(total_n, 1)),
+        "action_coverage": float(act_n / max(total_n, 1)),
+        "policy_conflict_rate": float(conflict_n / max(total_n, 1)),
+        "f_heterogeneity_ratio": loc["f_heterogeneity_ratio"],
+        "insights": insights,
+        "true_ate": true,
+        "global_stage1_f": float(ginfo.get("stage1_f", float("nan"))),
+    }
+
+
+def strategy_suite(seeds=None, n=2000, conf_strength=1.0, het_strength=1.2):
+    """Average subset-adaptive strategy metrics across seeds."""
+    seeds = list(seeds if seeds is not None else range(SEED, SEED + 8))
+    rows = []
+    insight_book = []
+    for s in seeds:
+        bundle = make_iv_dgp(
+            n=n, conf_strength=conf_strength, het_strength=het_strength, seed=int(s)
+        )
+        pol = subset_adaptive_strategy(bundle, z_mode="oracle")
+        insight_book.extend(pol["insights"])
+        rows.append(
+            {
+                "seed": int(s),
+                "identification_coverage": pol["identification_coverage"],
+                "action_coverage": pol["action_coverage"],
+                "policy_conflict_rate": pol["policy_conflict_rate"],
+                "f_heterogeneity_ratio": pol["f_heterogeneity_ratio"],
+                **{"err_" + k: v for k, v in pol["abs_err"].items()},
+                **{"ate_" + k: v for k, v in pol["aggregators"].items()},
+                "segments": pol["segments"],
+            }
+        )
+    def _agg_key(key):
+        v = np.array([r[key] for r in rows], dtype=float)
+        return {
+            "mean": float(np.nanmean(v)),
+            "sd": float(np.nanstd(v, ddof=1) if len(v) > 1 else 0.0),
+        }
+
+    err_keys = [k for k in rows[0] if k.startswith("err_")]
+    table = {k[4:]: _agg_key(k) for k in err_keys}
+    tier = _tier_share(rows)
+    # suite-level insights from averaged metrics (more stable than per-seed tips)
+    ranked = sorted(
+        ((k, v["mean"]) for k, v in table.items() if np.isfinite(v["mean"])),
+        key=lambda kv: kv[1],
+    )
+    suite_insights = []
+    if ranked:
+        best_k, best_e = ranked[0]
+        g_e = table.get("global_iv", {}).get("mean", float("nan"))
+        suite_insights.append(
+            "best_aggregator=%s (|err|=%.3f) vs global_iv=%.3f — weight by local F/precision, don't flat-pool NO_ACT"
+            % (best_k, best_e, g_e)
+        )
+    suite_insights.append(
+        "tier_mix: NO_ACT=%.0f%% ESTIMATE_ONLY=%.0f%% ACT=%.0f%%"
+        % (100 * tier["NO_ACT"], 100 * tier["ESTIMATE_ONLY"], 100 * tier["ACT"])
+    )
+    id_c = _agg_key("identification_coverage")
+    act_c = _agg_key("action_coverage")
+    conf_c = _agg_key("policy_conflict_rate")
+    suite_insights.append(
+        "coverage mean: identify=%.0f%% act=%.0f%%; policy_conflict=%.0f%% of mass would get a global IV quote while local F<10"
+        % (100 * id_c["mean"], 100 * act_c["mean"], 100 * conf_c["mean"])
+    )
+    if table.get("equal_pool_all") and table.get("f_weighted"):
+        suite_insights.append(
+            "equal_pool_all |err|=%.3f vs f_weighted=%.3f — including weak segments pollutes the pooled ATE"
+            % (table["equal_pool_all"]["mean"], table["f_weighted"]["mean"])
+        )
+    # keep a few per-seed color tips after the suite summary
+    suite_insights.extend(insight_book[:4])
+    return {
+        "seeds": seeds,
+        "identification_coverage": id_c,
+        "action_coverage": act_c,
+        "policy_conflict_rate": conf_c,
+        "f_heterogeneity_ratio": _agg_key("f_heterogeneity_ratio"),
+        "abs_err": table,
+        "ate": {k[4:]: _agg_key(k) for k in rows[0] if k.startswith("ate_")},
+        "tier_share": tier,
+        "example_insights": suite_insights,
+        "rows": rows,
+    }
+
+
+def _tier_share(rows):
+    names = ("NO_ACT", "ESTIMATE_ONLY", "ACT")
+    counts = {t: 0 for t in names}
+    total = 0
+    for r in rows:
+        for seg in r["segments"]:
+            counts[seg["tier"]] += int(seg["n"])
+            total += int(seg["n"])
+    return {t: float(counts[t] / max(total, 1)) for t in names}
+
+
 def run_sensitivity_suite(seeds=None, n=2000, conf_strength=1.0):
     seeds = list(seeds if seeds is not None else range(SEED, SEED + 8))
     sens_rows, subset_rows = [], []
@@ -1417,6 +1679,62 @@ def plot_suite(suite, sweep, path, sens=None):
     return path
 
 
+def plot_strategy(strategy, path):
+    """Subset tiers + aggregator |ATE−τ| after localization."""
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.2, 4.2))
+    ax = axes[0]
+    shares = strategy["tier_share"]
+    labels = ["NO_ACT", "ESTIMATE_ONLY", "ACT"]
+    colors = ["#A33B24", "#C4892A", "#2F6B4F"]
+    vals = [shares[k] for k in labels]
+    ax.bar(labels, vals, color=colors, width=0.66)
+    ax.set_ylim(0, 1)
+    ax.set_ylabel("population share")
+    ax.set_title(
+        "Subset tiers (conflict=%.0f%%)"
+        % (100 * strategy["policy_conflict_rate"]["mean"]),
+        loc="left", fontsize=10, fontweight="bold",
+    )
+    ax.grid(True, axis="y", alpha=0.35)
+
+    ax = axes[1]
+    order = [
+        "naive_ols", "global_iv", "equal_pool_all", "equal_pool_id",
+        "f_weighted", "precision_wt", "adaptive_act",
+    ]
+    means = [strategy["abs_err"][k]["mean"] for k in order]
+    sds = [strategy["abs_err"][k]["sd"] for k in order]
+    ypos = np.arange(len(order))[::-1]
+    ax.barh(ypos, means, xerr=sds, color="#1F6F8B", height=0.62,
+            error_kw={"ecolor": "#555", "lw": 0.9, "capsize": 2})
+    ax.set_yticks(ypos)
+    ax.set_yticklabels(order, fontsize=8)
+    ax.set_xlabel("|ATÊ − τ| ↓")
+    ax.set_title(
+        "After localization: how to aggregate",
+        loc="left", fontsize=10, fontweight="bold",
+    )
+    ax.grid(True, axis="x", alpha=0.35)
+
+    fig.suptitle(
+        "Subset-adaptive IV strategy  ·  ID=%.0f%%  ACT=%.0f%%  F-het=%.1f×"
+        % (
+            100 * strategy["identification_coverage"]["mean"],
+            100 * strategy["action_coverage"]["mean"],
+            strategy["f_heterogeneity_ratio"]["mean"],
+        ),
+        fontsize=12, fontweight="bold", y=0.98,
+    )
+    fig.tight_layout(rect=[0, 0.02, 1, 0.94])
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=140, bbox_inches="tight")
+    plt.close(fig)
+    return path
+
+
 def plot_sensitivity_extra(sens, path):
     """OVB partial-R² heatmap + Conley exclusion curve (companion figure)."""
     import matplotlib.pyplot as plt
@@ -1611,6 +1929,41 @@ def write_readme(suite, sweep, path, sens=None):
             "**F heterogeneity ratio** (max/min across segments): **%.2f×**."
             % sens["subset"]["f_heterogeneity_ratio"]
         )
+        strat = sens.get("strategy")
+        if strat is not None:
+            lines.extend(
+                [
+                    "",
+                    "## After localization — strategy adjustment",
+                    "",
+                    "Map local first-stage F → tiers, then change aggregation / where you act.",
+                    "",
+                    "| tier | share | rule |",
+                    "| --- | --- | --- |",
+                    "| NO_ACT | %.1f%% | F < 10 → hold; do not quote IV ATE |"
+                    % (100 * strat["tier_share"]["NO_ACT"]),
+                    "| ESTIMATE_ONLY | %.1f%% | 10 ≤ F < 20 → publish + WATCH |"
+                    % (100 * strat["tier_share"]["ESTIMATE_ONLY"]),
+                    "| ACT | %.1f%% | F ≥ 20 → eligible for F-/precision weights |"
+                    % (100 * strat["tier_share"]["ACT"]),
+                    "",
+                    "ID coverage=%.0f%% · ACT coverage=%.0f%% · policy conflict=%.0f%%."
+                    % (
+                        100 * strat["identification_coverage"]["mean"],
+                        100 * strat["action_coverage"]["mean"],
+                        100 * strat["policy_conflict_rate"]["mean"],
+                    ),
+                    "",
+                    "| aggregator | |ATÊ − τ| |",
+                    "| --- | --- |",
+                ]
+            )
+            for k, cell in strat["abs_err"].items():
+                lines.append("| %s | %.3f (%.3f) |" % (k, cell["mean"], cell["sd"]))
+            if strat.get("example_insights"):
+                lines.extend(["", "Insights:", ""])
+                for tip in strat["example_insights"][:6]:
+                    lines.append("- " + tip)
     lines.extend(
         [
             "",
@@ -1622,6 +1975,74 @@ def write_readme(suite, sweep, path, sens=None):
             "```",
             "",
             "Code: `Python/src/iv_selection_synth.py`",
+            "",
+        ]
+    )
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines))
+    return path
+
+
+def write_strategy_readme(strategy, path):
+    lines = [
+        "# After subset localization — strategy adjustment",
+        "",
+        "Localization alone is not enough: map first-stage F → **tiers**, then",
+        "change how you aggregate and where you act.",
+        "",
+        "| tier | rule | statistical action |",
+        "| --- | --- | --- |",
+        "| `NO_ACT` | F < 10 | local-retire IV; hold; do not quote IV ATE for decisions |",
+        "| `ESTIMATE_ONLY` | 10 ≤ F < 20 | publish local IV with WATCH; do not scale |",
+        "| `ACT` | F ≥ 20 | use local IV ATE; eligible for F- or precision-weights |",
+        "",
+        "## Population shares",
+        "",
+        "| tier | share |",
+        "| --- | --- |",
+    ]
+    for t, s in strategy["tier_share"].items():
+        lines.append("| %s | %.1f%% |" % (t, 100 * s))
+    lines.extend(
+        [
+            "",
+            "| coverage | mean |",
+            "| --- | --- |",
+            "| identification (F≥10) | %.1f%% |"
+            % (100 * strategy["identification_coverage"]["mean"]),
+            "| action (F≥20) | %.1f%% |"
+            % (100 * strategy["action_coverage"]["mean"]),
+            "| policy conflict (local NO_ACT vs global IV quote) | %.1f%% |"
+            % (100 * strategy["policy_conflict_rate"]["mean"]),
+            "| F heterogeneity ratio | %.2f× |"
+            % strategy["f_heterogeneity_ratio"]["mean"],
+            "",
+            "## Aggregator |ATÊ − τ| (lower better)",
+            "",
+            "| strategy | abs_err |",
+            "| --- | --- |",
+        ]
+    )
+    for k, cell in strategy["abs_err"].items():
+        lines.append("| %s | %.3f (%.3f) |" % (k, cell["mean"], cell["sd"]))
+    lines.extend(["", "## Insights", ""])
+    for tip in strategy.get("example_insights", [])[:8]:
+        lines.append("- " + tip)
+    lines.extend(
+        [
+            "",
+            "ROI mapping (outside pure stats): ACT mass → scalable bets;",
+            "ESTIMATE_ONLY → learn more / small probes; NO_ACT → do not spend",
+            "on an IV-identified uplift claim.",
+            "",
+            "## Run",
+            "",
+            "```bash",
+            "python3 scripts/run_iv_selection_synth.py",
+            "```",
+            "",
+            "Code: `Python/src/iv_selection_synth.py` (`subset_adaptive_strategy`, `strategy_suite`)",
             "",
         ]
     )
