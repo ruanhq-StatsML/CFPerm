@@ -47,7 +47,19 @@ from sklearn.model_selection import train_test_split
 SEED = 2026
 ROOT = Path(__file__).resolve().parents[2]
 HC3_DEFAULT = ROOT / "data" / "hc3" / "all.jsonl"
+HC3_DIR = ROOT / "data" / "hc3"
+HC3_INDUSTRIAL = {
+    "finance": HC3_DIR / "finance.jsonl",
+    "medicine": HC3_DIR / "medicine.jsonl",
+    "all": HC3_DIR / "all.jsonl",
+}
 WORD_RE = re.compile(r"[A-Za-z']+")
+
+# Default industrial cost model (USD per decision error on a moderated item).
+# FP = human wrongly flagged as AI (complaint / trust / legal) — priced higher.
+# FN = AI slipped through (integrity / compliance miss).
+COST_FP_DEFAULT = 50.0
+COST_FN_DEFAULT = 20.0
 
 LIVE_KINDS = (
     "ref",
@@ -63,17 +75,18 @@ LIVE_KINDS = (
 
 
 def ensure_hc3(path: Path = HC3_DEFAULT) -> Path:
-    """Download HC3 ``all.jsonl`` if missing."""
+    """Download HC3 jsonl (``all`` / ``finance`` / ``medicine``) if missing."""
     path = Path(path)
     if path.exists() and path.stat().st_size > 0:
         return path
     path.parent.mkdir(parents=True, exist_ok=True)
+    filename = path.name if path.suffix == ".jsonl" else "all.jsonl"
     try:
         from huggingface_hub import hf_hub_download
 
         downloaded = hf_hub_download(
             repo_id="Hello-SimpleAI/HC3",
-            filename="all.jsonl",
+            filename=filename,
             repo_type="dataset",
             local_dir=str(path.parent),
         )
@@ -439,6 +452,138 @@ def evaluate_detector(det, texts: Sequence[str], labels: np.ndarray) -> Detector
     )
 
 
+def classification_counts(y_true, y_hat):
+    y_true = np.asarray(y_true, dtype=int)
+    y_hat = np.asarray(y_hat, dtype=int)
+    tp = int(((y_true == 1) & (y_hat == 1)).sum())
+    fp = int(((y_true == 0) & (y_hat == 1)).sum())
+    tn = int(((y_true == 0) & (y_hat == 0)).sum())
+    fn = int(((y_true == 1) & (y_hat == 0)).sum())
+    return {"tp": tp, "fp": fp, "tn": tn, "fn": fn}
+
+
+def business_pr_metrics(
+    det,
+    texts: Sequence[str],
+    labels: np.ndarray,
+    cost_fp: float = COST_FP_DEFAULT,
+    cost_fn: float = COST_FN_DEFAULT,
+    target_fpr: float = 0.05,
+    target_recall: float = 0.90,
+) -> dict:
+    """Precision / recall / FPR + operating-point & expected-cost business KPIs.
+
+    Positive class = AI (label 1). FP = human flagged as AI (trust / legal).
+    FN = AI missed (integrity). Expected cost = c_fp·FP + c_fn·FN on the batch.
+    """
+    from sklearn.metrics import (
+        average_precision_score,
+        precision_recall_curve,
+        precision_score,
+        recall_score,
+    )
+
+    labels = np.asarray(labels, dtype=int)
+    texts = list(texts)
+    p = np.asarray(det.predict_proba(texts), dtype=float)
+    thr = float(getattr(det, "threshold", 0.5))
+    yhat = (p >= thr).astype(int)
+    counts = classification_counts(labels, yhat)
+    prec = float(precision_score(labels, yhat, zero_division=0))
+    rec = float(recall_score(labels, yhat, zero_division=0))
+    hum = labels == 0
+    fpr = float((yhat[hum] == 1).mean()) if hum.any() else float("nan")
+    n = int(len(labels))
+    expected_cost = float(cost_fp * counts["fp"] + cost_fn * counts["fn"])
+    cost_per_1k = expected_cost / max(n, 1) * 1000.0
+
+    # PR curve + operating points
+    precision_c, recall_c, thr_c = precision_recall_curve(labels, p)
+    ap = float(average_precision_score(labels, p)) if len(np.unique(labels)) > 1 else float("nan")
+
+    # recall @ target FPR (scan thresholds high→low)
+    order = np.argsort(-p)
+    y_ord = labels[order]
+    # for each possible threshold = score, compute FPR/recall on humans/AI
+    best_rec_at_fpr = 0.0
+    thr_at_fpr = 1.0
+    n_hum = int(hum.sum())
+    n_ai = int((labels == 1).sum())
+    fp_run = 0
+    tp_run = 0
+    for i, idx in enumerate(order):
+        if labels[idx] == 0:
+            fp_run += 1
+        else:
+            tp_run += 1
+        fpr_i = fp_run / max(n_hum, 1)
+        rec_i = tp_run / max(n_ai, 1)
+        if fpr_i <= target_fpr and rec_i >= best_rec_at_fpr:
+            best_rec_at_fpr = float(rec_i)
+            thr_at_fpr = float(p[idx])
+
+    # precision @ target recall
+    prec_at_rec = 0.0
+    thr_at_rec = 0.0
+    for pr, rc, t in zip(precision_c[:-1], recall_c[:-1], thr_c):
+        if rc >= target_recall and pr >= prec_at_rec:
+            prec_at_rec = float(pr)
+            thr_at_rec = float(t)
+
+    # downsample curve for JSON
+    step = max(1, len(precision_c) // 40)
+    curve = {
+        "precision": precision_c[::step].tolist(),
+        "recall": recall_c[::step].tolist(),
+    }
+
+    return {
+        "threshold": thr,
+        "precision": prec,
+        "recall": rec,
+        "fpr": fpr,
+        "f1": float(f1_score(labels, yhat, zero_division=0)),
+        "accuracy": float(accuracy_score(labels, yhat)),
+        "auc": float(roc_auc_score(labels, p)) if len(np.unique(labels)) > 1 else float("nan"),
+        "average_precision": ap,
+        "counts": counts,
+        "n": n,
+        "expected_cost_usd": expected_cost,
+        "cost_per_1k_usd": cost_per_1k,
+        "cost_fp": float(cost_fp),
+        "cost_fn": float(cost_fn),
+        "recall_at_fpr_%g" % target_fpr: best_rec_at_fpr,
+        "thr_at_fpr_%g" % target_fpr: thr_at_fpr,
+        "precision_at_recall_%g" % target_recall: prec_at_rec,
+        "thr_at_recall_%g" % target_recall: thr_at_rec,
+        "pr_curve": curve,
+    }
+
+
+def shape_detection_score(diag: Diagnosis, ref: Diagnosis) -> dict:
+    """Can drift *shape* separate benign vs malignant? Continuous scores + label."""
+    d_mean = float(diag.mean - ref.mean)
+    d_peak = float(diag.peak_gap - ref.peak_gap)
+    d_cvar = float(diag.cvar - ref.cvar)
+    action = route_action(diag, ref=ref)
+    if action == "freeze_lexical_adapt_syntactic":
+        shape = "malignant"
+    elif action == "conformal_calibrate":
+        shape = "benign"
+    elif action == "hold":
+        shape = "quiet"
+    else:
+        shape = "monitor"
+    return {
+        "d_mean": d_mean,
+        "d_peak": d_peak,
+        "d_cvar": d_cvar,
+        "shape": shape,
+        "action": action,
+        "malignant_score": d_mean * 0.5 + d_peak * 8.0 + max(d_cvar, 0.0) * 0.5,
+    }
+
+
 def conformal_calibrate(
     det,
     texts: Sequence[str],
@@ -733,20 +878,34 @@ def route_action(
     ref: Optional[Diagnosis] = None,
     mean_lift_thr: float = 0.004,
     peak_lift_thr: float = 0.008,
+    cvar_lift_thr: float = 0.015,
+    mean_malignant_thr: float = 0.04,
 ) -> str:
-    """Map diagnosis quadrant → actuator (relative to REF when available)."""
+    """Map diagnosis quadrant → actuator (relative to REF when available).
+
+    Malignant if Peak/CVaR lifts **or** mean lifts hard (feature-collision /
+    industrial mixture can raise mean more than Peak Gap). Benign if mean
+    lifts mildly with Peak/CVaR quiet.
+    """
     if ref is None:
         mean_thr, peak_thr = 0.25, 0.04
         mean_ok = diag.mean < mean_thr
         peak_ok = diag.peak_gap < peak_thr
+        cvar_ok = diag.cvar < mean_thr + 0.05
+        d_mean = diag.mean
     else:
-        mean_ok = diag.mean <= ref.mean + mean_lift_thr
-        peak_ok = diag.peak_gap <= ref.peak_gap + peak_lift_thr
-    if mean_ok and peak_ok:
+        d_mean = diag.mean - ref.mean
+        d_peak = diag.peak_gap - ref.peak_gap
+        d_cvar = diag.cvar - ref.cvar
+        mean_ok = d_mean <= mean_lift_thr
+        peak_ok = d_peak <= peak_lift_thr
+        cvar_ok = d_cvar <= cvar_lift_thr
+    if mean_ok and peak_ok and cvar_ok:
         return "hold"
-    if (not peak_ok) and (diag.mean >= (ref.mean if ref else 0.2)):
-        return "freeze_lexical_adapt_syntactic"  # malignant peaks
-    if (not mean_ok) and peak_ok:
+    # hard mean shock or peak/cvar spike → malignant actuator
+    if (not peak_ok) or (not cvar_ok) or (d_mean >= mean_malignant_thr):
+        return "freeze_lexical_adapt_syntactic"
+    if (not mean_ok) and peak_ok and cvar_ok:
         return "conformal_calibrate"  # benign uniform inflation
     return "monitor"
 
