@@ -1,0 +1,42 @@
+% Infer-bench dataset note: four 300-example exports + OnlineRFPerm results.
+% Build from this directory:
+%   pdflatex Infer_Bench_Datasets.tex && bibtex Infer_Bench_Datasets && pdflatex Infer_Bench_Datasets.tex && pdflatex Infer_Bench_Datasets.tex
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,xcolor}
+\usepackage[round,authoryear]{natbib}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black,citecolor=blue!50!black}
+
+\title{\textbf{Infer-bench datasets}\\[0.3em]
+\large HaluEval, SQuAD, HotpotQA, TruthfulQA\\
+300-example exports, citations, and shipped OnlineRFPerm numbers}
+\author{CFPerm / OnlineRFPerm landing note}
+\date{2026-09-16}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+Four public NLP benchmarks are frozen as $n=300$ local JSONL slices for inference-side landing work:
+HaluEval~\citep{li-etal-2023-halueval},
+SQuAD~\citep{rajpurkar-etal-2016-squad},
+HotpotQA~\citep{yang-etal-2018-hotpotqa},
+and TruthfulQA~\citep{lin-etal-2022-truthfulqa}.
+This note posts the slice inventory, characterization of those 300-row exports, and the OnlineRFPerm numbers already run on HaluEval QA (plus HH-RLHF~\citep{bai2022hh-rlhf} as the alignment counterpart, not a fifth export).
+These tools detect / localize / rank under shift; they are not fact checkers.
+\end{abstract}
+
+\section{Scope}
+The four exports live at \texttt{data/hf\_cache/infer\_bench\_export/*.jsonl}.
+BibTeX is in the same folder (\texttt{infer\_bench.bib} comprehensive; \texttt{recommended.bib} venue keys only).
+Related follow-ups kept in the comprehensive file: SQuAD~2.0~\citep{rajpurkar-etal-2018-know} and HaluEval~2.0~\citep{li-etal-2024-dawn}.
+HaluEval QA is itself derived in part from HotpotQA, so both citations are appropriate when using that slice.
+
+\input{Infer_Bench_tables_only}
+
+\section{What is not claimed}
+\texttt{po\_risk0} ranks audit candidates after a regime fire.
+It is residual strength versus the previous probe, not a factuality score and not unique causal attribution to a single feature.
+
+\bibliographystyle{plainnat}
+\bibliography{../../data/hf_cache/infer_bench_export/infer_bench}
+\end{document}

@@ -1,0 +1,147 @@
+{
+  "n_per_dataset": 300,
+  "sampling": "deterministic head/mid/tail windows of 100 over the source split",
+  "datasets": [
+    {
+      "name": "HaluEval",
+      "stem": "halueval",
+      "hub": "pminervini/HaluEval",
+      "config": "qa_samples",
+      "split": "data",
+      "cite": "li-etal-2023-halueval",
+      "task": "hallucination recognition (QA)",
+      "license": "see RUCAIBox/HaluEval",
+      "n_source_split": 10000,
+      "n_export": 300,
+      "jsonl": "data/hf_cache/infer_bench_export/halueval.jsonl",
+      "bytes": 168398,
+      "stats": {
+        "n": 300,
+        "question_words_mean": 17.29,
+        "question_words_p50": 15,
+        "hallucination_yes": 154,
+        "hallucination_yes_rate": 0.5133,
+        "answer_words_mean": 6.68,
+        "knowledge_words_mean": 55.18
+      }
+    },
+    {
+      "name": "SQuAD",
+      "stem": "squad",
+      "hub": "rajpurkar/squad",
+      "config": "plain_text",
+      "split": "validation",
+      "cite": "rajpurkar-etal-2016-squad",
+      "task": "extractive reading comprehension",
+      "license": "CC BY-SA 4.0",
+      "n_source_split": 10570,
+      "n_export": 300,
+      "jsonl": "data/hf_cache/infer_bench_export/squad.jsonl",
+      "bytes": 250306,
+      "stats": {
+        "n": 300,
+        "question_words_mean": 9.59,
+        "question_words_p50": 9,
+        "n_titles": 3,
+        "context_words_mean": 105.84,
+        "answer_words_mean": 1.98
+      }
+    },
+    {
+      "name": "HotpotQA",
+      "stem": "hotpotqa",
+      "hub": "hotpotqa/hotpot_qa",
+      "config": "distractor",
+      "split": "validation",
+      "cite": "yang-etal-2018-hotpotqa",
+      "task": "multi-hop QA + supporting facts",
+      "license": "CC BY-SA 4.0",
+      "n_source_split": 7405,
+      "n_export": 300,
+      "jsonl": "data/hf_cache/infer_bench_export/hotpotqa.jsonl",
+      "bytes": 1889219,
+      "stats": {
+        "n": 300,
+        "question_words_mean": 15.64,
+        "question_words_p50": 15,
+        "type_counts": {
+          "comparison": 66,
+          "bridge": 234
+        },
+        "level_counts": {
+          "hard": 300
+        },
+        "n_context_titles_mean": 9.94,
+        "answer_words_mean": 2.38
+      }
+    },
+    {
+      "name": "TruthfulQA",
+      "stem": "truthfulqa",
+      "hub": "truthfulqa/truthful_qa",
+      "config": "generation",
+      "split": "validation",
+      "cite": "lin-etal-2022-truthfulqa",
+      "task": "truthfulness / imitative falsehoods",
+      "license": "Apache-2.0",
+      "n_source_split": 817,
+      "n_export": 300,
+      "jsonl": "data/hf_cache/infer_bench_export/truthfulqa.jsonl",
+      "bytes": 92012,
+      "stats": {
+        "n": 300,
+        "question_words_mean": 10.56,
+        "question_words_p50": 9,
+        "type_counts": {
+          "Adversarial": 179,
+          "Non-Adversarial": 121
+        },
+        "n_categories": 27,
+        "top_categories": {
+          "Misconceptions": 51,
+          "Law": 42,
+          "Fiction": 28,
+          "Myths and Fairytales": 20,
+          "Language": 20,
+          "Confusion: People": 18,
+          "Superstitions": 14,
+          "Conspiracies": 13
+        },
+        "best_answer_words_mean": 9.08
+      }
+    }
+  ],
+  "online_rfperm": {
+    "source": "results/agod/hf_landing on cursor/hf-llm-landing-protos-92f8",
+    "note": "Existing OnlineRFPerm prototype numbers. HaluEval uses qa_samples, not the 300-export slice.",
+    "halueval": {
+      "dataset": "pminervini/HaluEval@qa_samples",
+      "n": 2400,
+      "n_batches": 24,
+      "n_per": 100,
+      "cut_batch": 4,
+      "gate": 1.25,
+      "halluc_rate_before": 0.08,
+      "halluc_rate_after": 0.942,
+      "fire_rate": 0.0909,
+      "first_fire_t": 4,
+      "cut_ratio": 11.714,
+      "auroc_po_risk0_at_cut": 1.0,
+      "precision_at_10_at_cut": 1.0,
+      "instance_probe_auroc_post": 1.0,
+      "domain_auc_pre_post": 0.811
+    },
+    "hh_rlhf": {
+      "dataset": "Anthropic/hh-rlhf@helpful-base",
+      "n": 4000,
+      "cite": "bai2022traininghelpfulharmlessassistant",
+      "judge_err_pre": 0.147,
+      "judge_err_post": 0.539,
+      "judge_err_ratio": 3.671,
+      "style_domain_auc": 0.999,
+      "text_domain_auc": 0.494,
+      "fire_rate": 0.104,
+      "first_fire_t": 4
+    }
+  }
+}

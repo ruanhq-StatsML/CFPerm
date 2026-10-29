@@ -1,0 +1,46 @@
+% LLM audit-logic hop note.
+% pdflatex LLM_Judge_Audit_Hop.tex && bibtex LLM_Judge_Audit_Hop && pdflatex LLM_Judge_Audit_Hop.tex && pdflatex LLM_Judge_Audit_Hop.tex
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,xcolor}
+\usepackage[round,authoryear]{natbib}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!60!black,citecolor=blue!50!black}
+
+\title{\textbf{LLM audit-logic hop}\\[0.3em]
+\large Detecting a sudden change in the reviewer map \(P(Y\mid X)\)}
+\author{OnlineRFPerm landing note (RFPerm-as-Judge)}
+\date{2026-09-16}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+The LLM \textbf{audit / moderation / preference-judge} stream is the alignment counterpart of hallucination regime detection.
+Here \(Y\) is the reviewer decision, not a factuality bit.
+The \textbf{objective} is whether the audit map hopped: RFPerm / PO as a distributional distance, a permutation test of predictive degradation.
+The consecutive error \emph{ratio} is only an engineering gate. Domain AUC and \(\texttt{po\_risk0}\) AUROC are sidecars---they score separability, which is not that objective.
+Quiet vs.\ fire is the reading. HH-RLHF~\citep{bai2022hh-rlhf}: quiet \(t=2\) silent, cut \(t=4\) fires with delay 0.
+\end{abstract}
+
+\section{What is being tested}
+Each batch is \((X_t,Y_t)\): content to review, and the current auditor's label.
+The previous-window probe \(\mu_0\) \emph{is} yesterday's audit logic.
+Fire is a yes/no hop of that map. A ratio threshold \(\gamma\) is how the trigger is implemented, not the quantity we claim.
+High reject rate is not a hop. A stable-strict auditor is still smooth.
+AUC of a domain discriminator does not match this objective.
+
+\input{LLM_Judge_Audit_Hop_tables_only}
+
+\section{Two layers}
+\textbf{Smoothness} (last-two): did the rubric break between \(t-1\) and \(t\)?
+\textbf{Trustworthiness} (frozen launch probe): even a silky week-by-week tightening can be rejected versus the original gold before the auditor is unusable.
+Keeping only last-two would miss the boiling-frog. Keeping only the launch probe would call every slow tightening a crash.
+The robust serving rule uses both.
+
+\section{What fire is allowed to mean}
+On fire: the current judge is not gold; open a human contrast window on Top-\(k\) \(\texttt{po\_risk0}\); cap or refuse DPO/RLHF merges from that window.
+On quiet: standard path, \(w=1\).
+\(\texttt{po\_risk0}\) ranks rows after a hop. It is not the objective, not a violation score, not AUC.
+
+\bibliographystyle{plainnat}
+\bibliography{../../data/hf_cache/infer_bench_export/recommended}
+\end{document}

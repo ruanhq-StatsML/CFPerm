@@ -1,0 +1,69 @@
+% =============================================================================
+% TruthfulQA  —  local export: data/hf_cache/infer_bench_export/truthfulqa.jsonl (n=300)
+%
+% Recommended citation (published venue):
+%   \cite{lin-etal-2022-truthfulqa}
+%
+% Hugging Face dataset cards often cite the arXiv key lin2021truthfulqa;
+% both keys are provided.
+% =============================================================================
+
+% --- primary: ACL 2022 ------------------------------------------------------
+@inproceedings{lin-etal-2022-truthfulqa,
+  title         = {{TruthfulQA}: Measuring How Models Mimic Human Falsehoods},
+  author        = {Lin, Stephanie and Hilton, Jacob and Evans, Owain},
+  editor        = {Muresan, Smaranda and Nakov, Preslav and Villavicencio, Aline},
+  booktitle     = {Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  month         = may,
+  year          = {2022},
+  address       = {Dublin, Ireland},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {3214--3252},
+  isbn          = {978-1-955917-21-6},
+  doi           = {10.18653/v1/2022.acl-long.229},
+  url           = {https://aclanthology.org/2022.acl-long.229/},
+  eprint        = {2109.07958},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  eprinttype    = {arxiv},
+  eprintclass   = {cs.CL},
+  pdf           = {https://aclanthology.org/2022.acl-long.229.pdf},
+  software      = {https://aclanthology.org/2022.acl-long.229.software.zip},
+  anthology     = {2022.acl-long.229},
+  dblp          = {https://dblp.org/rec/conf/acl/LinHE22},
+  keywords      = {truthfulness, large language models, misconceptions, evaluation, TruthfulQA},
+  abstract      = {We propose a benchmark to measure whether a language model is truthful in generating answers to questions. The benchmark comprises 817 questions that span 38 categories, including health, law, finance and politics. We crafted questions that some humans would answer falsely due to a false belief or misconception. To perform well, models must avoid generating false answers learned from imitating human texts. We tested GPT-3, GPT-Neo/J, GPT-2 and a T5-based model. The best model was truthful on 58\% of questions, while human performance was 94\%. Models generated many false answers that mimic popular misconceptions and have the potential to deceive humans. The largest models were generally the least truthful. This contrasts with other NLP tasks, where performance improves with model size. However, this result is expected if false answers are learned from the training distribution. We suggest that scaling up models alone is less promising for improving truthfulness than fine-tuning using training objectives other than imitation of text from the web.},
+  note          = {Official code: \url{https://github.com/sylinrl/TruthfulQA}. Hugging Face: \url{https://huggingface.co/datasets/truthfulqa/truthful\_qa}. License: Apache-2.0. Local 300-example export: \texttt{data/hf\_cache/infer\_bench\_export/truthfulqa.jsonl}.}
+}
+
+% --- Hugging Face / arXiv key -----------------------------------------------
+@misc{lin2021truthfulqa,
+  title         = {{TruthfulQA}: Measuring How Models Mimic Human Falsehoods},
+  author        = {Stephanie Lin and Jacob Hilton and Owain Evans},
+  year          = {2021},
+  eprint        = {2109.07958},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2109.07958},
+  doi           = {10.48550/arXiv.2109.07958},
+  note          = {arXiv preprint (posted 2021; ACL 2022 camera-ready). Dataset-card citation key. Prefer \texttt{lin-etal-2022-truthfulqa} for papers.}
+}
+
+% --- resources --------------------------------------------------------------
+@misc{truthfulqa-github,
+  title        = {{TruthfulQA}},
+  author       = {Lin, Stephanie and Hilton, Jacob and Evans, Owain},
+  year         = {2021},
+  howpublished = {\url{https://github.com/sylinrl/TruthfulQA}},
+  url          = {https://github.com/sylinrl/TruthfulQA},
+  note         = {Official benchmark code, questions, and scoring. Generation and multiple-choice (MC1/MC2) tracks.}
+}
+
+@misc{truthfulqa-hf,
+  title        = {{TruthfulQA} ({Hugging Face} Datasets)},
+  author       = {Lin, Stephanie and Hilton, Jacob and Evans, Owain},
+  year         = {2022},
+  howpublished = {\url{https://huggingface.co/datasets/truthfulqa/truthful_qa}},
+  url          = {https://huggingface.co/datasets/truthfulqa/truthful_qa},
+  note         = {Configs: \texttt{generation} and \texttt{multiple\_choice}, each with 817 validation questions across 38 categories. License: Apache-2.0.}
+}

@@ -1,0 +1,105 @@
+% =============================================================================
+% HaluEval  —  local export: data/hf_cache/infer_bench_export/halueval.jsonl (n=300)
+%
+% Recommended citation (published venue):
+%   \cite{li-etal-2023-halueval}
+%
+% Also included:
+%   arXiv preprint, official GitHub, HaluEval 2.0 (ACL 2024)
+% =============================================================================
+
+% --- primary: EMNLP 2023 (ACL Anthology) ------------------------------------
+@inproceedings{li-etal-2023-halueval,
+  title         = {{HaluEval}: A Large-Scale Hallucination Evaluation Benchmark for Large Language Models},
+  author        = {Li, Junyi and Cheng, Xiaoxue and Zhao, Xin and Nie, Jian-Yun and Wen, Ji-Rong},
+  editor        = {Bouamor, Houda and Pino, Juan and Bali, Kalika},
+  booktitle     = {Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing},
+  month         = dec,
+  year          = {2023},
+  address       = {Singapore},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {6449--6464},
+  isbn          = {979-8-89176-060-8},
+  doi           = {10.18653/v1/2023.emnlp-main.397},
+  url           = {https://aclanthology.org/2023.emnlp-main.397/},
+  eprint        = {2305.11747},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  eprinttype    = {arxiv},
+  eprintclass   = {cs.CL},
+  pdf           = {https://aclanthology.org/2023.emnlp-main.397.pdf},
+  video         = {https://aclanthology.org/2023.emnlp-main.397.mp4},
+  anthology     = {2023.emnlp-main.397},
+  dblp          = {https://dblp.org/rec/conf/emnlp/LiCZNW23},
+  keywords      = {hallucination, large language models, evaluation, benchmark, ChatGPT},
+  abstract      = {Large language models (LLMs), such as ChatGPT, are prone to generate hallucinations, i.e., content that conflicts with the source or cannot be verified by the factual knowledge. To understand what types of content and to which extent LLMs are apt to hallucinate, we introduce the Hallucination Evaluation benchmark for Large Language Models (HaluEval), a large collection of generated and human-annotated hallucinated samples for evaluating the performance of LLMs in recognizing hallucination. To generate these samples, we propose a ChatGPT-based two-step framework, i.e., sampling-then-filtering. Besides, we also hire some human labelers to annotate the hallucinations in ChatGPT responses. The empirical results suggest that ChatGPT is likely to generate hallucinated content in specific topics by fabricating unverifiable information (i.e., about 19.5\% responses). Moreover, existing LLMs face great challenges in recognizing the hallucinations in texts. However, our experiments also prove that providing external knowledge or adding reasoning steps can help LLMs recognize hallucinations.},
+  note          = {Official code and data: \url{https://github.com/RUCAIBox/HaluEval}. QA subset is derived in part from HotpotQA. Local 300-example export: \texttt{data/hf\_cache/infer\_bench\_export/halueval.jsonl}.}
+}
+
+% --- arXiv preprint (use only if you specifically cite the preprint) ---------
+@misc{li2023halueval-arxiv,
+  title         = {{HaluEval}: A Large-Scale Hallucination Evaluation Benchmark for Large Language Models},
+  author        = {Junyi Li and Xiaoxue Cheng and Wayne Xin Zhao and Jian-Yun Nie and Ji-Rong Wen},
+  year          = {2023},
+  eprint        = {2305.11747},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2305.11747},
+  doi           = {10.48550/arXiv.2305.11747},
+  note          = {Preprint of li-etal-2023-halueval. Prefer the EMNLP 2023 venue citation.}
+}
+
+% --- official GitHub / dataset release --------------------------------------
+@misc{halueval-github,
+  title        = {{HaluEval}: A Hallucination Evaluation Benchmark for {LLMs}},
+  author       = {Li, Junyi and Cheng, Xiaoxue and Zhao, Wayne Xin and Nie, Jian-Yun and Wen, Ji-Rong},
+  year         = {2023},
+  howpublished = {\url{https://github.com/RUCAIBox/HaluEval}},
+  url          = {https://github.com/RUCAIBox/HaluEval},
+  note         = {Official code and data release accompanying li-etal-2023-halueval. License: see repository.}
+}
+
+% --- related: HaluEval 2.0 (ACL 2024) ---------------------------------------
+@inproceedings{li-etal-2024-dawn,
+  title         = {The Dawn After the Dark: An Empirical Study on Factuality Hallucination in Large Language Models},
+  author        = {Li, Junyi and Chen, Jie and Ren, Ruiyang and Cheng, Xiaoxue and Zhao, Xin and Nie, Jian-Yun and Wen, Ji-Rong},
+  editor        = {Ku, Lun-Wei and Martins, Andre and Srikumar, Vivek},
+  booktitle     = {Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  month         = aug,
+  year          = {2024},
+  address       = {Bangkok, Thailand},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {10879--10899},
+  isbn          = {979-8-89176-094-3},
+  doi           = {10.18653/v1/2024.acl-long.586},
+  url           = {https://aclanthology.org/2024.acl-long.586/},
+  eprint        = {2401.03205},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  pdf           = {https://aclanthology.org/2024.acl-long.586.pdf},
+  anthology     = {2024.acl-long.586},
+  keywords      = {hallucination, factuality, HaluEval 2.0, large language models},
+  abstract      = {In the era of large language models (LLMs), hallucination (i.e., the tendency to generate factually incorrect content) poses great challenge to trustworthy and reliable deployment of LLMs in real-world applications. To tackle the LLM hallucination, three key questions should be well studied: how to detect hallucinations (detection), why do LLMs hallucinate (source), and what can be done to mitigate them (mitigation). To address these challenges, this work presents a systematic empirical study on LLM hallucination, focused on the three aspects of hallucination detection, source and mitigation. Specially, we construct a new hallucination benchmark HaluEval 2.0, and design a simple yet effective detection method for LLM hallucination. Furthermore, we zoom into the different training or utilization stages of LLMs and extensively analyze the potential factors that lead to the LLM hallucination. Finally, we implement and examine a series of widely used techniques to mitigate the hallucinations in LLMs.},
+  note          = {Introduces {HaluEval} 2.0. Code and data: \url{https://github.com/RUCAIBox/HaluEval-2.0}.}
+}
+
+@misc{li2024dawn-arxiv,
+  title         = {The Dawn After the Dark: An Empirical Study on Factuality Hallucination in Large Language Models},
+  author        = {Junyi Li and Jie Chen and Ruiyang Ren and Xiaoxue Cheng and Wayne Xin Zhao and Jian-Yun Nie and Ji-Rong Wen},
+  year          = {2024},
+  eprint        = {2401.03205},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2401.03205},
+  doi           = {10.48550/arXiv.2401.03205},
+  note          = {Preprint of li-etal-2024-dawn; introduces {HaluEval} 2.0.}
+}
+
+@misc{halueval2-github,
+  title        = {{HaluEval} 2.0},
+  author       = {Li, Junyi and Chen, Jie and Ren, Ruiyang and Cheng, Xiaoxue and Zhao, Wayne Xin and Nie, Jian-Yun and Wen, Ji-Rong},
+  year         = {2024},
+  howpublished = {\url{https://github.com/RUCAIBox/HaluEval-2.0}},
+  url          = {https://github.com/RUCAIBox/HaluEval-2.0},
+  note         = {Official code and data for {HaluEval} 2.0.}
+}
