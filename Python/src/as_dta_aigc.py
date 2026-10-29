@@ -11,8 +11,10 @@ Pipeline (HC3 Human vs ChatGPT):
        - benign    → conformal threshold calibration (FPR target)
   5. Emit diagnosis dashboard (scatter Mean × Peak Gap).
 
-PO-risk proxy (fast, no full meta-learner):
+PO-risk *proxy* (fast MVP; not full PermuCATE):
   PO_i = 1 - p̂(Y_i | X_i)   or   (Y_i - p̂_i)^2
+  Causal upgrade: swap unit field for PermuCATE φ / R-risk
+  (see docs/method/AS_DTA_MVP_po_permucate_mm.md).
 Feature blocks (detector-agnostic):
   lexical   — surface / embedding-like (char+unigram mass)
   syntactic — longer-range / CLS-like (bigram + function-word pattern)
