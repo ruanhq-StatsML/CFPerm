@@ -73,6 +73,131 @@ relearn).
 
 ---
 
+## 2b. How contamination arises · how to characterize it · intermediate CF
+
+This is the methodological core: **contamination is a counterfactual claim
+about an intermediate representation**, not a gradient highlight on pixels.
+
+### How contamination arises (mechanisms)
+
+Write a hop $t{-}1\to t$ with modality encoders $h_m=\phi_m(X_m)$ and a
+fusion / head $f(h_v,h_a,h_t)$ (or cross-modal Ridge $h_t \approx A[h_v;h_a]$
+on the MSR-VTT board). Contamination appears when a change that *lives in*
+$h_m$ changes the risk of a head that is *supposed* to read $m'$ (or the
+joint), through one of four paths:
+
+| Mechanism | Path | Intermediate object that moved |
+| --- | --- | --- |
+| **Encoder drift** | $P(X_m)$ or $\phi_m$ shifts ⇒ $h_m$ moves | block embedding / patch tokens of $m$ |
+| **Correlation proxy** | $h_m$ correlated with $h_{m'}$; domain RF attributes mass to $m'$ | wrong-block VIMP; true driver is still $h_m$ |
+| **Fusion soak** | attention / late concat lets $\|h_m\|$ dominate $f$ | fusion hidden $z=F([h_v;h_a;h_t])$ |
+| **Head map drift** | $f(\cdot\mid h_{m'})$ changes while $h_{m'}$ looks stable | head weights / PO surface on $z$ |
+
+Input-only LOGO (drop raw $X_m$) **confounds** these: dropping $X_v$ also
+kills every downstream $h_v$ *and* anything that was proxying through $h_v$.
+That is why the use-case insists on **intermediate counterfactuals**.
+
+### How to characterize contamination
+
+Three complementary characterizations (use together):
+
+1. **Mass (associational).** L1 shares $\pi_m$ from RF / MMD / PO VIMP —
+   “where does the hop *look* active?” Necessary, not sufficient.
+2. **Risk delta (interventional).** Change one intermediate, hold the rest,
+   remeasure target risk — “what *would* the head do without that path?”
+3. **Edge signature.** Compare LOGO-at-input vs CF-at-intermediate vs
+   PO-mask-at-coords; the pattern diagnoses mechanism (table below).
+
+Operational contamination on an edge $m\to m'$:
+
+\[
+  C_{m\to m'}
+  \;=\;
+  R\!\bigl(f(h^{\mathrm{obs}})\bigr)
+  \;-\;
+  R\!\bigl(f(h^{\mathrm{cf}}_{m\leftarrow \mathrm{ref}})\bigr)
+\]
+
+with $h^{\mathrm{cf}}_{m\leftarrow\mathrm{ref}}$ the counterfactual intermediate
+(defined next). Positive $C$ ⇒ donor $m$’s observed intermediate *hurts*
+the target relative to the reference world.
+
+### Intermediate counterfactual attribution (the right do-operator)
+
+**Claim.** Attribute contamination by intervening on $h_m$ (or on fusion
+$z$), not only on raw coordinates of $X_m$.
+
+Fix a hop and a target risk $R$ (MSE of cross-modal Ridge, retrieval loss,
+AUUC of a monitor head — same geometry). Let $h^{\mathrm{obs}}$ be the
+observed intermediates on the evaluation slice. Choose a **reference
+world** for donor $m$ (pick one; report which):
+
+| CF world | do-operator on intermediate | Intuition | Repo analogue |
+| --- | --- | --- | --- |
+| **Past block mean** | $h_m \leftarrow \mu_{t-1}^m$ (keep other $h_{m'}$) | “as if modality $m$ had not hopped” | `block_means` + modality-π cosines |
+| **Zero / noise / missing** | $h_m \leftarrow 0$ or noise on top-PO coords *inside* $h_m$ | “kill localized donor concept” | `apply_mask` / `run_msrvtt_patch_mask` |
+| **LOGO block** | drop $h_m$ entirely from $f$ | “no path from $m$” | LOGO / leave-one-group-out |
+| **Fusion splice** | $z\leftarrow F([h_v^{\mathrm{obs}}; h_a^{\mathrm{cf}}; h_t^{\mathrm{obs}}])$ | intervene *after* encoders | fusion-adapter EWMA target |
+
+Then the **intermediate CF attribution** for donor $m$ on target $m'$ is
+
+\[
+  \mathrm{Attr}_m
+  =
+  R(f(h^{\mathrm{obs}})) - R\!\bigl(f(\mathrm{do}(h_m=h_m^{\mathrm{ref}}))\bigr).
+\]
+
+Summing $\mathrm{Attr}_m$ over donors does **not** have to recover total
+risk (interactions / non-additive fusion). Report the vector
+$(\mathrm{Attr}_v,\mathrm{Attr}_a,\mathrm{Attr}_t)$ and the pairwise
+$C_{m\to m'}$, not a forced simplex unless you L1-normalize for display.
+
+**Why this is better than input Grad-CAM / raw LOGO alone**
+
+- Grad-CAM is local linearization inside one forward; hop contamination is
+  a **batch-counterfactual** across $W$.
+- Raw-input LOGO mixes encoder drift with fusion soak; intervening on
+  $h_m$ *after* $\phi_m$ isolates fusion/head paths.
+- Past-mean CF (`$h_m\leftarrow\mu_{t-1}^m$`) matches the locked hop
+  geometry already used for IW: the causal reference is always the last
+  observed batch, never the future.
+
+### Mechanism signature (read the CF table)
+
+| Input LOGO $\Delta R^{(-X_m)}$ | Intermediate CF $\mathrm{Attr}_m$ (past-mean) | PO-mask $\Delta R$ inside $h_m$ | Diagnosis |
+| --- | --- | --- | --- |
+| large | large | small | **fusion soak** — whole block pollutes $f$; use π / fuse-gate |
+| large | large | large | **localized concept in donor** — PO-mask / refresh $\phi_m$ |
+| large | small | small | **correlation proxy** — mass on $m$ is spurious; check $m'$ |
+| small | large | * | **head/fusion path** without raw-coord mass — audit $F$ |
+| ~0 on text | ~0 | ~0 | **structural null** — report, do not conclude “unused” |
+
+MSR-VTT anchors: video dominates L1 mass; hop+π_m moves MSE
+$0.0898\to 0.0896$; video patch mask $\Delta$MSE $+0.0009$ vs audio
+$-0.0004$. That signature is closer to **mild fusion/π** than to a raging
+localized audio concept — exactly the kind of intermediate-CF read the
+board is for. Harder hops (injected audio concept, varying text) are
+where $\mathrm{Attr}_a$ and mask Δ separate.
+
+### Minimal recipe to compute on a hop (ops)
+
+1. Encode $h_m^{\mathrm{obs}}=\phi_m(X_m)$ on eval batch $t$ (or use the
+   stored block features as $h_m$ when $\phi_m$ is frozen).
+2. Build $h_m^{\mathrm{ref}}=\mu_{t-1}^m$ from `block_means`.
+3. Score $R^{\mathrm{obs}}=R(f(h^{\mathrm{obs}}))$ and
+   $R_m^{\mathrm{cf}}=R(f(\mathrm{do}(h_m=\mu_{t-1}^m)))$.
+4. $\mathrm{Attr}_m = R^{\mathrm{obs}}-R_m^{\mathrm{cf}}$; also run PO-mask
+   inside $h_m$ for the mechanism table.
+5. Emit L1 $\pi_m$ × intermediate $\mathrm{Attr}_m$ cross-check → actuator
+   (π-hop / PoMask / EwmaFusion / RelearnHead).
+
+**Product line.** Intermediate CF attribution is how you say
+“audio contaminated the text head on this hop” in a way that is
+*falsifiable* (swap the do-world, rerun) and *actionable* (mask vs π vs
+relearn), without inventing a new multimodal loss.
+
+---
+
 ## 3. Opportunity (where the product value is)
 
 ### O1 · Stop blaming the wrong modality
