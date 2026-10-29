@@ -1,7 +1,14 @@
 {
+  "estimator": {
+    "name": "PermuCATE RF text",
+    "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+    "Y": "response / class label",
+    "W": "REF=0 / LIVE=1",
+    "used_permucate_rf": true
+  },
   "tree": {
-    "var_stable_ratio": 1.25,
-    "mean_lift_thr": 0.005,
+    "var_stable_ratio": 1.2,
+    "mean_lift_thr": 0.03,
     "kurtosis_sparse_thr": 10.0,
     "spec": "var stable? \u2192 mean\u2191? \u2192 benign/label_delay/quiet; else kurtosis>10? \u2192 malignant_sparse : malignant_dense/schema"
   },
@@ -12,163 +19,112 @@
         {
           "oracle": "quiet",
           "oracle_family": "quiet",
-          "pred_branch": "quiet",
-          "pred_family": "quiet",
-          "correct_branch": true,
-          "correct_family": true,
-          "decision": {
-            "branch": "quiet",
-            "path": [
-              "var_stable=yes",
-              "mean_up=no"
-            ],
-            "stable_var": true,
-            "d_mu": 0.0,
-            "d_s": 0.00047913760972529557,
-            "kurtosis": 4.53692029331114,
-            "vai_top_share": 0.5027168701607894,
-            "traj_slope": 0.012766442869602435,
-            "traj_late_jump": 0.043253152173722054,
-            "actuator": "hold"
-          },
-          "ref": {
-            "mu": 0.1967119848676586,
-            "s": 0.024783594796802033
-          },
-          "live": {
-            "mu": 0.1967119848676586,
-            "s": 0.02526273240652733,
-            "kurtosis": 4.53692029331114,
-            "kurtosis_unit": 4.53692029331114,
-            "kurtosis_subenv": -0.27609145051011774
-          },
-          "vai": {
-            "top_share": 0.5027168701607894,
-            "gini": 0.4899362317094441,
-            "mean_abs_delta": 0.006449510453897929,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.21747987547511927,
-              0.115145906241331,
-              0.18438007192637418,
-              0.210758235321394,
-              0.20462733403400554,
-              0.2478804862077276
-            ],
-            "slope": 0.012766442869602435,
-            "late_jump": 0.043253152173722054
-          },
-          "actuator": "hold"
-        },
-        {
-          "oracle": "benign_covariate",
-          "oracle_family": "benign",
-          "pred_branch": "label_delay",
+          "pred_branch": "benign_covariate",
           "pred_family": "benign",
           "correct_branch": false,
           "correct_family": true,
           "decision": {
-            "branch": "label_delay",
+            "branch": "benign_covariate",
             "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "time_traj\u2192label_delay"
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
             ],
-            "stable_var": true,
-            "d_mu": 0.009099450211193016,
-            "d_s": 0.0026348868090698974,
-            "kurtosis": 3.921268100384358,
-            "vai_top_share": 0.4819321602416588,
-            "traj_slope": 0.01313224167057745,
-            "traj_late_jump": 0.03748729602571951,
-            "actuator": "hold_then_conformal_on_lag"
+            "stable_var": false,
+            "d_mu": 0.027599049639881912,
+            "d_s": 0.33333169903347915,
+            "kurtosis": 8.295723089556304,
+            "vai_top_share": 0.3900687108972999,
+            "traj_slope": 0.022516023267259773,
+            "traj_late_jump": 0.2833314967908814,
+            "actuator": "conformal_calibrate"
           },
           "ref": {
-            "mu": 0.1967119848676586,
-            "s": 0.024783594796802033
+            "mu": 2.701970133937861,
+            "s": 1.0061601758336571
           },
           "live": {
-            "mu": 0.2058114350788516,
-            "s": 0.02741848160587193,
-            "kurtosis": 3.921268100384358,
-            "kurtosis_unit": 3.921268100384358,
-            "kurtosis_subenv": -0.29312414693828304
+            "mu": 2.729569183577743,
+            "s": 1.3394918748671363,
+            "kurtosis": 8.295723089556304,
+            "kurtosis_unit": 8.295723089556304,
+            "kurtosis_subenv": -0.604408753026664,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
           },
           "vai": {
-            "top_share": 0.4819321602416588,
-            "gini": 0.47948943633199825,
-            "mean_abs_delta": 0.006039568807054976,
-            "n_docs": 10
+            "top_share": 0.3900687108972999,
+            "gini": 0.5187020559136042,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.21941297211668448,
-              0.12876651670198233,
-              0.18862017062891223,
-              0.23271668677978305,
-              0.213932484110014,
-              0.2514197801357335
+              0.34232282867681013,
+              0.45563519010665965,
+              0.2560646025641672,
+              0.3862426670625877,
+              0.20271027874041492,
+              0.6256543254676915
             ],
-            "slope": 0.01313224167057745,
-            "late_jump": 0.03748729602571951
+            "slope": 0.022516023267259773,
+            "late_jump": 0.2833314967908814
           },
-          "actuator": "hold_then_conformal_on_lag"
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
         },
         {
-          "oracle": "label_delay",
+          "oracle": "benign_covariate",
           "oracle_family": "benign",
-          "pred_branch": "label_delay",
+          "pred_branch": "benign_covariate",
           "pred_family": "benign",
           "correct_branch": true,
           "correct_family": true,
           "decision": {
-            "branch": "label_delay",
+            "branch": "benign_covariate",
             "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "time_traj\u2192label_delay"
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
             ],
-            "stable_var": true,
-            "d_mu": 0.006704677619928934,
-            "d_s": 0.0025520021571349243,
-            "kurtosis": 3.9342203604726436,
-            "vai_top_share": 0.5073164900550658,
-            "traj_slope": 0.016620244702942977,
-            "traj_late_jump": 0.04422168439043303,
-            "actuator": "hold_then_conformal_on_lag"
+            "stable_var": false,
+            "d_mu": 0.0624225992742673,
+            "d_s": -0.04288335545115096,
+            "kurtosis": 20.429331686715734,
+            "vai_top_share": 0.4133195480629027,
+            "traj_slope": 0.0007267232067966316,
+            "traj_late_jump": -0.08477875828484717,
+            "actuator": "conformal_calibrate"
           },
           "ref": {
-            "mu": 0.1967119848676586,
-            "s": 0.024783594796802033
+            "mu": 1.2544648698598972,
+            "s": 0.45042081845299353
           },
           "live": {
-            "mu": 0.20341666248758752,
-            "s": 0.027335596953936957,
-            "kurtosis": 3.9342203604726436,
-            "kurtosis_unit": 3.9342203604726436,
-            "kurtosis_subenv": 0.026497845547745147
+            "mu": 1.3168874691341645,
+            "s": 0.40753746300184257,
+            "kurtosis": 20.429331686715734,
+            "kurtosis_unit": 20.429331686715734,
+            "kurtosis_subenv": 0.6644855860087162,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
           },
           "vai": {
-            "top_share": 0.5073164900550658,
-            "gini": 0.4978898334124057,
-            "mean_abs_delta": 0.006348298322505591,
-            "n_docs": 10
+            "top_share": 0.4133195480629027,
+            "gini": 0.5424564483026237,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.21747987547511927,
-              0.115145906241331,
-              0.18438007192637418,
-              0.21651720872796174,
-              0.2262380194363442,
-              0.26073889311839477
+              0.11541417725954242,
+              0.16955692867203617,
+              0.40157729563544314,
+              0.15819741989043462,
+              0.3102220027869219,
+              0.084778170387189
             ],
-            "slope": 0.016620244702942977,
-            "late_jump": 0.04422168439043303
+            "slope": 0.0007267232067966316,
+            "late_jump": -0.08477875828484717
           },
-          "actuator": "hold_then_conformal_on_lag"
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
         },
         {
           "oracle": "malignant_sparse",
@@ -180,49 +136,50 @@
           "decision": {
             "branch": "malignant_sparse",
             "path": [
-              "var_stable=no",
-              "unstable_var+mid_\u03bc \u2192 malignant_sparse",
-              "VAI\u2192locate blocks (top_share=0.510)"
+              "Y_flip\u22650.05 \u2192 malignant_sparse",
+              "VAI\u2192locate blocks (top_share=0.443)"
             ],
-            "stable_var": false,
-            "d_mu": 0.1270254265542585,
-            "d_s": 0.020124969123614132,
-            "kurtosis": 0.1468048233330781,
-            "vai_top_share": 0.5099713180763843,
-            "traj_slope": -0.013631214167099639,
-            "traj_late_jump": -0.06128832714729621,
+            "stable_var": true,
+            "d_mu": -0.5030355527588597,
+            "d_s": -0.37802019725499447,
+            "kurtosis": 2.1129133139911502,
+            "vai_top_share": 0.4430108871707644,
+            "traj_slope": 0.03217827431617386,
+            "traj_late_jump": 0.1530701780175876,
             "actuator": "freeze_lexical_adv_aug + VAI_block"
           },
           "ref": {
-            "mu": 0.1967119848676586,
-            "s": 0.024783594796802033
+            "mu": 2.5130017207432287,
+            "s": 1.1398560916325262
           },
           "live": {
-            "mu": 0.3237374114219171,
-            "s": 0.044908563920416165,
-            "kurtosis": 0.1468048233330781,
-            "kurtosis_unit": 0.1468048233330781,
-            "kurtosis_subenv": -0.5651745179090883
+            "mu": 2.009966167984369,
+            "s": 0.7618358943775317,
+            "kurtosis": 2.1129133139911502,
+            "kurtosis_unit": 2.1129133139911502,
+            "kurtosis_subenv": 1.943784834081308,
+            "label_flip_frac": 0.125,
+            "label_rate_delta": 0.0625
           },
           "vai": {
-            "top_share": 0.5099713180763843,
-            "gini": 0.49533594970422035,
-            "mean_abs_delta": 0.006826627034148713,
-            "n_docs": 10
+            "top_share": 0.4430108871707644,
+            "gini": 0.561173834473236,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.3294121942714899,
-              0.3382965633635565,
-              0.3791780781987861,
-              0.3359814704717225,
-              0.2848630189015212,
-              0.2746931433244263
+              0.22462420871516278,
+              0.3136969881895807,
+              0.27765873147261944,
+              0.8693999747855342,
+              0.14835527281556377,
+              0.43072890949020703
             ],
-            "slope": -0.013631214167099639,
-            "late_jump": -0.06128832714729621
+            "slope": 0.03217827431617386,
+            "late_jump": 0.1530701780175876
           },
-          "actuator": "freeze_lexical_adv_aug + VAI_block"
+          "actuator": "freeze_lexical_adv_aug + VAI_block",
+          "estimator": "permucate_rf_text"
         },
         {
           "oracle": "malignant_dense",
@@ -234,108 +191,56 @@
           "decision": {
             "branch": "malignant_dense",
             "path": [
-              "var_stable=no",
-              "unstable_var+large_\u03bc \u2192 malignant_dense",
-              "VAI\u2192dense mass (top_share=0.485)"
+              "Y_flip\u22650.35 \u2192 malignant_dense",
+              "VAI\u2192dense mass (top_share=0.626)"
             ],
             "stable_var": false,
-            "d_mu": 0.42715109260595774,
-            "d_s": 0.01060914492964634,
-            "kurtosis": -0.8682172990125707,
-            "vai_top_share": 0.4851512147104586,
-            "traj_slope": 0.02626603645867382,
-            "traj_late_jump": 0.08450466448164629,
+            "d_mu": 0.1597901281345756,
+            "d_s": 0.08820055909389944,
+            "kurtosis": 7.9928000323288515,
+            "vai_top_share": 0.6262204200549631,
+            "traj_slope": 0.011223816643726037,
+            "traj_late_jump": -0.06937489243966843,
             "actuator": "freeze_lexical_full / retrain_head"
           },
           "ref": {
-            "mu": 0.1967119848676586,
-            "s": 0.024783594796802033
+            "mu": 0.23074223746093692,
+            "s": 0.08146368726590515
           },
           "live": {
-            "mu": 0.6238630774736164,
-            "s": 0.03539273972644837,
-            "kurtosis": -0.8682172990125707,
-            "kurtosis_unit": -0.8682172990125707,
-            "kurtosis_subenv": 0.18468854800426593
+            "mu": 0.3905323655955125,
+            "s": 0.1696642463598046,
+            "kurtosis": 7.9928000323288515,
+            "kurtosis_unit": 7.9928000323288515,
+            "kurtosis_subenv": 0.8909423216724353,
+            "label_flip_frac": 0.671875,
+            "label_rate_delta": 0.046875
           },
           "vai": {
-            "top_share": 0.4851512147104586,
-            "gini": 0.4757110929674927,
-            "mean_abs_delta": 0.006897389174354981,
-            "n_docs": 10
+            "top_share": 0.6262204200549631,
+            "gini": 0.7120645510871317,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.6491030401508632,
-              0.47164264046742604,
-              0.5999769773170283,
-              0.6648655055266528,
-              0.6365428184490404,
-              0.7210474829306867
+              0.036840335082918306,
+              0.051722176854295476,
+              0.11543839799635378,
+              0.16249460629736223,
+              0.15160935080781807,
+              0.04606350555668534
             ],
-            "slope": 0.02626603645867382,
-            "late_jump": 0.08450466448164629
+            "slope": 0.011223816643726037,
+            "late_jump": -0.06937489243966843
           },
-          "actuator": "freeze_lexical_full / retrain_head"
-        },
-        {
-          "oracle": "schema_change",
-          "oracle_family": "schema",
-          "pred_branch": "malignant_sparse",
-          "pred_family": "malignant_sparse",
-          "correct_branch": false,
-          "correct_family": false,
-          "decision": {
-            "branch": "malignant_sparse",
-            "path": [
-              "var_stable=no",
-              "unstable_var+mid_\u03bc \u2192 malignant_sparse",
-              "VAI\u2192locate blocks (top_share=0.487)"
-            ],
-            "stable_var": false,
-            "d_mu": 0.07082713647303515,
-            "d_s": 0.01530240446069888,
-            "kurtosis": 0.2287038809922981,
-            "vai_top_share": 0.48689760074618416,
-            "traj_slope": 0.05806651176752668,
-            "traj_late_jump": 0.19242922834269185,
-            "actuator": "freeze_lexical_adv_aug + VAI_block"
-          },
-          "ref": {
-            "mu": 0.1967119848676586,
-            "s": 0.024783594796802033
-          },
-          "live": {
-            "mu": 0.26753912134069374,
-            "s": 0.040085999257500914,
-            "kurtosis": 0.2287038809922981,
-            "kurtosis_unit": 0.2287038809922981,
-            "kurtosis_subenv": -0.9316168356114276
-          },
-          "vai": {
-            "top_share": 0.48689760074618416,
-            "gini": 0.5097055779860079,
-            "mean_abs_delta": 0.005878471184805484,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.21747987547511927,
-              0.115145906241331,
-              0.18438007192637418,
-              0.210758235321394,
-              0.47428317541585796,
-              0.40318746366408587
-            ],
-            "slope": 0.05806651176752668,
-            "late_jump": 0.19242922834269185
-          },
-          "actuator": "freeze_lexical_adv_aug + VAI_block"
+          "actuator": "freeze_lexical_full / retrain_head",
+          "estimator": "permucate_rf_text"
         }
       ],
-      "branch_accuracy": 0.6666666666666666,
-      "family_accuracy": 0.8333333333333334,
-      "n_scenarios": 6
+      "branch_accuracy": 0.75,
+      "family_accuracy": 1.0,
+      "n_scenarios": 4,
+      "estimator": "permucate_rf_text"
     },
     {
       "board": "hc3_finance",
@@ -343,55 +248,57 @@
         {
           "oracle": "quiet",
           "oracle_family": "quiet",
-          "pred_branch": "quiet",
-          "pred_family": "quiet",
-          "correct_branch": true,
+          "pred_branch": "benign_covariate",
+          "pred_family": "benign",
+          "correct_branch": false,
           "correct_family": true,
           "decision": {
-            "branch": "quiet",
+            "branch": "benign_covariate",
             "path": [
-              "var_stable=yes",
-              "mean_up=no"
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
             ],
-            "stable_var": true,
-            "d_mu": 0.0,
-            "d_s": 0.006731040511189067,
-            "kurtosis": 0.9772827056951607,
-            "vai_top_share": 0.4834627317065955,
-            "traj_slope": -0.018088549680836643,
-            "traj_late_jump": -0.02155635288334956,
-            "actuator": "hold"
+            "stable_var": false,
+            "d_mu": 0.23696293142838698,
+            "d_s": 0.07937026499948507,
+            "kurtosis": 10.88654300910026,
+            "vai_top_share": 0.4126356250617472,
+            "traj_slope": 0.009005682991836033,
+            "traj_late_jump": 0.0818210243838737,
+            "actuator": "conformal_calibrate"
           },
           "ref": {
-            "mu": 0.18719622641789377,
-            "s": 0.02417056339326018
+            "mu": 2.0573552502675945,
+            "s": 0.8044952322363612
           },
           "live": {
-            "mu": 0.18719622641789377,
-            "s": 0.030901603904449248,
-            "kurtosis": 0.9772827056951607,
-            "kurtosis_unit": 0.9772827056951607,
-            "kurtosis_subenv": 1.958893873164783
+            "mu": 2.2943181816959815,
+            "s": 0.8838654972358463,
+            "kurtosis": 10.88654300910026,
+            "kurtosis_unit": 10.88654300910026,
+            "kurtosis_subenv": -0.1747308218161172,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
           },
           "vai": {
-            "top_share": 0.4834627317065955,
-            "gini": 0.48305704088935136,
-            "mean_abs_delta": 0.00463712581609335,
-            "n_docs": 10
+            "top_share": 0.4126356250617472,
+            "gini": 0.5074803217762653,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.24715189848952948,
-              0.2247957118753746,
-              0.17687942130115064,
-              0.14063938131208092,
-              0.17763364920628827,
-              0.1560772963229387
+              0.2224277629847223,
+              0.36088432237079654,
+              0.09950347680941063,
+              0.29529802844191827,
+              0.23813637664979828,
+              0.319957401033672
             ],
-            "slope": -0.018088549680836643,
-            "late_jump": -0.02155635288334956
+            "slope": 0.009005682991836033,
+            "late_jump": 0.0818210243838737
           },
-          "actuator": "hold"
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
         },
         {
           "oracle": "benign_covariate",
@@ -403,103 +310,50 @@
           "decision": {
             "branch": "benign_covariate",
             "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "\u2192benign_covariate"
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
             ],
-            "stable_var": true,
-            "d_mu": 0.017306944366366567,
-            "d_s": 0.004512198467831709,
-            "kurtosis": 0.8098326353045433,
-            "vai_top_share": 0.5424816337207531,
-            "traj_slope": -0.018244200893319854,
-            "traj_late_jump": -0.03666728776717604,
+            "stable_var": false,
+            "d_mu": -0.14411613374144783,
+            "d_s": -0.18302609464560626,
+            "kurtosis": 24.49983673593557,
+            "vai_top_share": 0.36158805564869684,
+            "traj_slope": -0.02347425588371605,
+            "traj_late_jump": -0.03672371800363869,
             "actuator": "conformal_calibrate"
           },
           "ref": {
-            "mu": 0.18719622641789377,
-            "s": 0.02417056339326018
+            "mu": 0.7679900909832431,
+            "s": 0.33345137399059716
           },
           "live": {
-            "mu": 0.20450317078426034,
-            "s": 0.02868276186109189,
-            "kurtosis": 0.8098326353045433,
-            "kurtosis_unit": 0.8098326353045433,
-            "kurtosis_subenv": 2.927897386249196
+            "mu": 0.6238739572417953,
+            "s": 0.1504252793449909,
+            "kurtosis": 24.49983673593557,
+            "kurtosis_unit": 24.49983673593557,
+            "kurtosis_subenv": -0.4378028211129359,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
           },
           "vai": {
-            "top_share": 0.5424816337207531,
-            "gini": 0.5240140079712613,
-            "mean_abs_delta": 0.005296035122797428,
-            "n_docs": 10
+            "top_share": 0.36158805564869684,
+            "gini": 0.40248787893361615,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.26244683877545566,
-              0.23704908250080914,
-              0.19934001187388356,
-              0.16396355215569486,
-              0.20044341358344742,
-              0.16377612581627138
+              0.1649350928067444,
+              0.1737210722331008,
+              0.0534075550613994,
+              0.08611305260027384,
+              0.08152918476030414,
+              0.04938933459663515
             ],
-            "slope": -0.018244200893319854,
-            "late_jump": -0.03666728776717604
+            "slope": -0.02347425588371605,
+            "late_jump": -0.03672371800363869
           },
-          "actuator": "conformal_calibrate"
-        },
-        {
-          "oracle": "label_delay",
-          "oracle_family": "benign",
-          "pred_branch": "benign_covariate",
-          "pred_family": "benign",
-          "correct_branch": false,
-          "correct_family": true,
-          "decision": {
-            "branch": "benign_covariate",
-            "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "\u2192benign_covariate"
-            ],
-            "stable_var": true,
-            "d_mu": 0.009021058550879368,
-            "d_s": 0.007691973811288687,
-            "kurtosis": 0.8289814108215392,
-            "vai_top_share": 0.5123069518195675,
-            "traj_slope": -0.014144480352073096,
-            "traj_late_jump": -0.0338769300959563,
-            "actuator": "conformal_calibrate"
-          },
-          "ref": {
-            "mu": 0.18719622641789377,
-            "s": 0.02417056339326018
-          },
-          "live": {
-            "mu": 0.19621728496877314,
-            "s": 0.03186253720454887,
-            "kurtosis": 0.8289814108215392,
-            "kurtosis_unit": 0.8289814108215392,
-            "kurtosis_subenv": 2.569836188694893
-          },
-          "vai": {
-            "top_share": 0.5123069518195675,
-            "gini": 0.49647926875939213,
-            "mean_abs_delta": 0.00518469867480938,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.24715189848952948,
-              0.2247957118753746,
-              0.17687942130115064,
-              0.16268684847933876,
-              0.19983337988160074,
-              0.16595644978564444
-            ],
-            "slope": -0.014144480352073096,
-            "late_jump": -0.0338769300959563
-          },
-          "actuator": "conformal_calibrate"
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
         },
         {
           "oracle": "malignant_sparse",
@@ -511,49 +365,50 @@
           "decision": {
             "branch": "malignant_sparse",
             "path": [
-              "var_stable=no",
-              "PO_tail_ratio_sparse \u2192 malignant_sparse",
-              "VAI\u2192locate blocks (top_share=0.472)"
+              "Y_flip\u22650.05 \u2192 malignant_sparse",
+              "VAI\u2192locate blocks (top_share=0.296)"
             ],
-            "stable_var": false,
-            "d_mu": 0.14232085244548795,
-            "d_s": 0.0344895900301428,
-            "kurtosis": -0.01848346184547678,
-            "vai_top_share": 0.47219762689711897,
-            "traj_slope": 0.00898964888754492,
-            "traj_late_jump": 0.06294700205886011,
+            "stable_var": true,
+            "d_mu": -0.44816571401162975,
+            "d_s": -0.3403888891570843,
+            "kurtosis": 9.54117482199483,
+            "vai_top_share": 0.2962163784701577,
+            "traj_slope": -0.03821778774277608,
+            "traj_late_jump": -0.22111025995016775,
             "actuator": "freeze_lexical_adv_aug + VAI_block"
           },
           "ref": {
-            "mu": 0.18719622641789377,
-            "s": 0.02417056339326018
+            "mu": 2.921641296945631,
+            "s": 0.978916331675137
           },
           "live": {
-            "mu": 0.3295170788633817,
-            "s": 0.05866015342340298,
-            "kurtosis": -0.01848346184547678,
-            "kurtosis_unit": -0.01848346184547678,
-            "kurtosis_subenv": -0.7131562623581083
+            "mu": 2.473475582934001,
+            "s": 0.6385274425180527,
+            "kurtosis": 9.54117482199483,
+            "kurtosis_unit": 9.54117482199483,
+            "kurtosis_subenv": 0.13290104795749036,
+            "label_flip_frac": 0.125,
+            "label_rate_delta": 0.0625
           },
           "vai": {
-            "top_share": 0.47219762689711897,
-            "gini": 0.4766282626634971,
-            "mean_abs_delta": 0.00451324118035915,
-            "n_docs": 10
+            "top_share": 0.2962163784701577,
+            "gini": 0.388236081497485,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.2924375917512087,
-              0.3896932536062646,
-              0.3048903058044812,
-              0.22756142266915008,
-              0.39468259148584484,
-              0.3678373078633413
+              0.5797600108502051,
+              0.37370648235760984,
+              0.317308258464582,
+              0.534867710323577,
+              0.4462860972773169,
+              0.22517583732714913
             ],
-            "slope": 0.00898964888754492,
-            "late_jump": 0.06294700205886011
+            "slope": -0.03821778774277608,
+            "late_jump": -0.22111025995016775
           },
-          "actuator": "freeze_lexical_adv_aug + VAI_block"
+          "actuator": "freeze_lexical_adv_aug + VAI_block",
+          "estimator": "permucate_rf_text"
         },
         {
           "oracle": "malignant_dense",
@@ -565,439 +420,56 @@
           "decision": {
             "branch": "malignant_dense",
             "path": [
-              "var_stable=no",
-              "unstable_var+large_\u03bc \u2192 malignant_dense",
-              "VAI\u2192dense mass (top_share=0.528)"
+              "Y_flip\u22650.35 \u2192 malignant_dense",
+              "VAI\u2192dense mass (top_share=0.554)"
             ],
-            "stable_var": false,
-            "d_mu": 0.4788478146145265,
-            "d_s": 0.013439423700987142,
-            "kurtosis": -0.5924024521644271,
-            "vai_top_share": 0.528409372452123,
-            "traj_slope": -0.003887882437203194,
-            "traj_late_jump": 0.01332294380614385,
+            "stable_var": true,
+            "d_mu": 0.031626228740208207,
+            "d_s": -0.010999281299071018,
+            "kurtosis": 2.3256907067529626,
+            "vai_top_share": 0.5541391029992845,
+            "traj_slope": 0.010606444016476285,
+            "traj_late_jump": -0.018955269245467504,
             "actuator": "freeze_lexical_full / retrain_head"
           },
           "ref": {
-            "mu": 0.18719622641789377,
-            "s": 0.02417056339326018
+            "mu": 0.2445590222581494,
+            "s": 0.08844344265340441
           },
           "live": {
-            "mu": 0.6660440410324203,
-            "s": 0.03760998709424732,
-            "kurtosis": -0.5924024521644271,
-            "kurtosis_unit": -0.5924024521644271,
-            "kurtosis_subenv": -0.7893357201209534
+            "mu": 0.2761852509983576,
+            "s": 0.0774441613543334,
+            "kurtosis": 2.3256907067529626,
+            "kurtosis_unit": 2.3256907067529626,
+            "kurtosis_subenv": -0.30921690155623516,
+            "label_flip_frac": 0.671875,
+            "label_rate_delta": 0.046875
           },
           "vai": {
-            "top_share": 0.528409372452123,
-            "gini": 0.5164655410823457,
-            "mean_abs_delta": 0.0110140334301887,
-            "n_docs": 10
+            "top_share": 0.5541391029992845,
+            "gini": 0.6019353102438867,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.7166327853448359,
-              0.6200925020196124,
-              0.6744743041554015,
-              0.6742239325680205,
-              0.623293845732488,
-              0.6875468763741643
+              0.07486209679854913,
+              0.060935515498449964,
+              0.32028676688126134,
+              0.11512057537774259,
+              0.21756074396896974,
+              0.09616530613227509
             ],
-            "slope": -0.003887882437203194,
-            "late_jump": 0.01332294380614385
+            "slope": 0.010606444016476285,
+            "late_jump": -0.018955269245467504
           },
-          "actuator": "freeze_lexical_full / retrain_head"
-        },
-        {
-          "oracle": "schema_change",
-          "oracle_family": "schema",
-          "pred_branch": "malignant_sparse",
-          "pred_family": "malignant_sparse",
-          "correct_branch": false,
-          "correct_family": false,
-          "decision": {
-            "branch": "malignant_sparse",
-            "path": [
-              "var_stable=no",
-              "unstable_var+mid_\u03bc \u2192 malignant_sparse",
-              "VAI\u2192locate blocks (top_share=0.492)"
-            ],
-            "stable_var": false,
-            "d_mu": 0.0835646042938055,
-            "d_s": 0.008422725002132508,
-            "kurtosis": -0.7096761260345739,
-            "vai_top_share": 0.4918449789057314,
-            "traj_slope": 0.03950396856055635,
-            "traj_late_jump": 0.187069215027692,
-            "actuator": "freeze_lexical_adv_aug + VAI_block"
-          },
-          "ref": {
-            "mu": 0.18719622641789377,
-            "s": 0.02417056339326018
-          },
-          "live": {
-            "mu": 0.27076083071169926,
-            "s": 0.03259328839539269,
-            "kurtosis": -0.7096761260345739,
-            "kurtosis_unit": -0.7096761260345739,
-            "kurtosis_subenv": 0.5548399919021603
-          },
-          "vai": {
-            "top_share": 0.4918449789057314,
-            "gini": 0.5070166101582984,
-            "mean_abs_delta": 0.006246369676665443,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.24715189848952948,
-              0.2247957118753746,
-              0.17687942130115064,
-              0.14063938131208092,
-              0.42323364438899364,
-              0.4118649269030666
-            ],
-            "slope": 0.03950396856055635,
-            "late_jump": 0.187069215027692
-          },
-          "actuator": "freeze_lexical_adv_aug + VAI_block"
+          "actuator": "freeze_lexical_full / retrain_head",
+          "estimator": "permucate_rf_text"
         }
       ],
-      "branch_accuracy": 0.6666666666666666,
-      "family_accuracy": 0.8333333333333334,
-      "n_scenarios": 6
-    },
-    {
-      "board": "hc3_medicine",
-      "rows": [
-        {
-          "oracle": "quiet",
-          "oracle_family": "quiet",
-          "pred_branch": "quiet",
-          "pred_family": "quiet",
-          "correct_branch": true,
-          "correct_family": true,
-          "decision": {
-            "branch": "quiet",
-            "path": [
-              "var_stable=yes",
-              "mean_up=no"
-            ],
-            "stable_var": true,
-            "d_mu": 0.0,
-            "d_s": -0.0017481957683108153,
-            "kurtosis": 3.883480197150181,
-            "vai_top_share": 0.49057011880413465,
-            "traj_slope": -0.007878804166879824,
-            "traj_late_jump": -0.000926253132167959,
-            "actuator": "hold"
-          },
-          "ref": {
-            "mu": 0.08942909158204776,
-            "s": 0.01842269207788785
-          },
-          "live": {
-            "mu": 0.08942909158204776,
-            "s": 0.016674496309577035,
-            "kurtosis": 3.883480197150181,
-            "kurtosis_unit": 3.883480197150181,
-            "kurtosis_subenv": -1.0086007739079115
-          },
-          "vai": {
-            "top_share": 0.49057011880413465,
-            "gini": 0.4867993583911131,
-            "mean_abs_delta": 0.0033000119218807474,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.13780139179981807,
-              0.08193099495250308,
-              0.08094182869141997,
-              0.06486342953954033,
-              0.09003216268866995,
-              0.08100474182033512
-            ],
-            "slope": -0.007878804166879824,
-            "late_jump": -0.000926253132167959
-          },
-          "actuator": "hold"
-        },
-        {
-          "oracle": "benign_covariate",
-          "oracle_family": "benign",
-          "pred_branch": "benign_covariate",
-          "pred_family": "benign",
-          "correct_branch": true,
-          "correct_family": true,
-          "decision": {
-            "branch": "benign_covariate",
-            "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "\u2192benign_covariate"
-            ],
-            "stable_var": true,
-            "d_mu": 0.01707780615372151,
-            "d_s": -0.0006813828561706599,
-            "kurtosis": 2.161120014039229,
-            "vai_top_share": 0.5132487713105287,
-            "traj_slope": -0.009280287191988344,
-            "traj_late_jump": -0.0065112100324137,
-            "actuator": "conformal_calibrate"
-          },
-          "ref": {
-            "mu": 0.08942909158204776,
-            "s": 0.01842269207788785
-          },
-          "live": {
-            "mu": 0.10650689773576927,
-            "s": 0.01774130922171719,
-            "kurtosis": 2.161120014039229,
-            "kurtosis_unit": 2.161120014039229,
-            "kurtosis_subenv": -0.9487437881387262
-          },
-          "vai": {
-            "top_share": 0.5132487713105287,
-            "gini": 0.5003748624380182,
-            "mean_abs_delta": 0.0038257681399963737,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.16254619271637105,
-              0.09667476675615565,
-              0.09658871401392673,
-              0.07774416304365687,
-              0.11532399316076339,
-              0.09016355672374195
-            ],
-            "slope": -0.009280287191988344,
-            "late_jump": -0.0065112100324137
-          },
-          "actuator": "conformal_calibrate"
-        },
-        {
-          "oracle": "label_delay",
-          "oracle_family": "benign",
-          "pred_branch": "benign_covariate",
-          "pred_family": "benign",
-          "correct_branch": false,
-          "correct_family": true,
-          "decision": {
-            "branch": "benign_covariate",
-            "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "\u2192benign_covariate"
-            ],
-            "stable_var": true,
-            "d_mu": 0.00790436884479373,
-            "d_s": -0.0006861463899098356,
-            "kurtosis": 3.1218767084749546,
-            "vai_top_share": 0.4803036572750421,
-            "traj_slope": -0.00378687527571298,
-            "traj_late_jump": 0.00995669062544885,
-            "actuator": "conformal_calibrate"
-          },
-          "ref": {
-            "mu": 0.08942909158204776,
-            "s": 0.01842269207788785
-          },
-          "live": {
-            "mu": 0.09733346042684149,
-            "s": 0.017736545687978014,
-            "kurtosis": 3.1218767084749546,
-            "kurtosis_unit": 3.1218767084749546,
-            "kurtosis_subenv": -1.0642035121354723
-          },
-          "vai": {
-            "top_share": 0.4803036572750421,
-            "gini": 0.47704398414294785,
-            "mean_abs_delta": 0.0037669794180626263,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.13780139179981807,
-              0.08193099495250308,
-              0.08094182869141997,
-              0.07527693730488103,
-              0.1161619242344748,
-              0.09188768557795193
-            ],
-            "slope": -0.00378687527571298,
-            "late_jump": 0.00995669062544885
-          },
-          "actuator": "conformal_calibrate"
-        },
-        {
-          "oracle": "malignant_sparse",
-          "oracle_family": "malignant_sparse",
-          "pred_branch": "malignant_sparse",
-          "pred_family": "malignant_sparse",
-          "correct_branch": true,
-          "correct_family": true,
-          "decision": {
-            "branch": "malignant_sparse",
-            "path": [
-              "var_stable=no",
-              "PO_tail_ratio_sparse \u2192 malignant_sparse",
-              "VAI\u2192locate blocks (top_share=0.491)"
-            ],
-            "stable_var": false,
-            "d_mu": 0.13338085439594038,
-            "d_s": 0.04596489481673857,
-            "kurtosis": 0.7877926541834004,
-            "vai_top_share": 0.49057011880413465,
-            "traj_slope": -0.009947993120130573,
-            "traj_late_jump": -0.054256194269850566,
-            "actuator": "freeze_lexical_adv_aug + VAI_block"
-          },
-          "ref": {
-            "mu": 0.08942909158204776,
-            "s": 0.01842269207788785
-          },
-          "live": {
-            "mu": 0.22280994597798814,
-            "s": 0.06438758689462643,
-            "kurtosis": 0.7877926541834004,
-            "kurtosis_unit": 0.7877926541834004,
-            "kurtosis_subenv": -0.43620675363268635
-          },
-          "vai": {
-            "top_share": 0.49057011880413465,
-            "gini": 0.4867993583911131,
-            "mean_abs_delta": 0.0033000119218807474,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.17359543307950803,
-              0.24982472439768233,
-              0.35877265193268626,
-              0.17878901341455186,
-              0.21506702365667563,
-              0.16081082938682506
-            ],
-            "slope": -0.009947993120130573,
-            "late_jump": -0.054256194269850566
-          },
-          "actuator": "freeze_lexical_adv_aug + VAI_block"
-        },
-        {
-          "oracle": "malignant_dense",
-          "oracle_family": "malignant_dense",
-          "pred_branch": "malignant_dense",
-          "pred_family": "malignant_dense",
-          "correct_branch": true,
-          "correct_family": true,
-          "decision": {
-            "branch": "malignant_dense",
-            "path": [
-              "var_stable=no",
-              "unstable_var+large_\u03bc \u2192 malignant_dense",
-              "VAI\u2192dense mass (top_share=0.523)"
-            ],
-            "stable_var": false,
-            "d_mu": 0.40671359822901176,
-            "d_s": 0.03195776048627018,
-            "kurtosis": -1.0462049338680814,
-            "vai_top_share": 0.5231311066913981,
-            "traj_slope": -0.005360002144896019,
-            "traj_late_jump": 0.027972997354903495,
-            "actuator": "freeze_lexical_full / retrain_head"
-          },
-          "ref": {
-            "mu": 0.08942909158204776,
-            "s": 0.01842269207788785
-          },
-          "live": {
-            "mu": 0.4961426898110595,
-            "s": 0.05038045256415803,
-            "kurtosis": -1.0462049338680814,
-            "kurtosis_unit": -1.0462049338680814,
-            "kurtosis_subenv": 1.0429769884789968
-          },
-          "vai": {
-            "top_share": 0.5231311066913981,
-            "gini": 0.5153444457612317,
-            "mean_abs_delta": 0.011753895585196659,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.5732661923092158,
-              0.45601040859869163,
-              0.4535405496551895,
-              0.5012754295473204,
-              0.4823952807005181,
-              0.5103682780554216
-            ],
-            "slope": -0.005360002144896019,
-            "late_jump": 0.027972997354903495
-          },
-          "actuator": "freeze_lexical_full / retrain_head"
-        },
-        {
-          "oracle": "schema_change",
-          "oracle_family": "schema",
-          "pred_branch": "malignant_sparse",
-          "pred_family": "malignant_sparse",
-          "correct_branch": false,
-          "correct_family": false,
-          "decision": {
-            "branch": "malignant_sparse",
-            "path": [
-              "var_stable=no",
-              "PO_tail_ratio_sparse \u2192 malignant_sparse",
-              "VAI\u2192locate blocks (top_share=0.513)"
-            ],
-            "stable_var": false,
-            "d_mu": 0.08511105330872476,
-            "d_s": 0.01704428433005314,
-            "kurtosis": 1.0793769807058187,
-            "vai_top_share": 0.5128342921760856,
-            "traj_slope": 0.04956009234086883,
-            "traj_late_jump": 0.23825495597491073,
-            "actuator": "freeze_lexical_adv_aug + VAI_block"
-          },
-          "ref": {
-            "mu": 0.08942909158204776,
-            "s": 0.01842269207788785
-          },
-          "live": {
-            "mu": 0.17454014489077252,
-            "s": 0.03546697640794099,
-            "kurtosis": 1.0793769807058187,
-            "kurtosis_unit": 1.0793769807058187,
-            "kurtosis_subenv": 0.061177923235368414
-          },
-          "vai": {
-            "top_share": 0.5128342921760856,
-            "gini": 0.5055628254143321,
-            "mean_abs_delta": 0.003403484494358704,
-            "n_docs": 10
-          },
-          "traj": {
-            "mu_hops": [
-              0.13780139179981807,
-              0.08193099495250308,
-              0.08094182869141997,
-              0.06486342953954033,
-              0.3615172734339399,
-              0.3201859509274138
-            ],
-            "slope": 0.04956009234086883,
-            "late_jump": 0.23825495597491073
-          },
-          "actuator": "freeze_lexical_adv_aug + VAI_block"
-        }
-      ],
-      "branch_accuracy": 0.6666666666666666,
-      "family_accuracy": 0.8333333333333334,
-      "n_scenarios": 6
+      "branch_accuracy": 0.75,
+      "family_accuracy": 1.0,
+      "n_scenarios": 4,
+      "estimator": "permucate_rf_text"
     },
     {
       "board": "news20_sci",
@@ -1005,55 +477,57 @@
         {
           "oracle": "quiet",
           "oracle_family": "quiet",
-          "pred_branch": "quiet",
-          "pred_family": "quiet",
-          "correct_branch": true,
+          "pred_branch": "benign_covariate",
+          "pred_family": "benign",
+          "correct_branch": false,
           "correct_family": true,
           "decision": {
-            "branch": "quiet",
+            "branch": "benign_covariate",
             "path": [
-              "var_stable=yes",
-              "mean_up=no"
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
             ],
-            "stable_var": true,
-            "d_mu": 0.0,
-            "d_s": -0.00020663514598458915,
-            "kurtosis": 1.2662387531866122,
-            "vai_top_share": 0.4747988613454919,
-            "traj_slope": -0.0025320190898555106,
-            "traj_late_jump": -0.00575127780920609,
-            "actuator": "hold"
+            "stable_var": false,
+            "d_mu": 0.35116159586132323,
+            "d_s": 0.3323236931393603,
+            "kurtosis": 40.37012271411878,
+            "vai_top_share": 0.3803926774023769,
+            "traj_slope": 0.024026868657905286,
+            "traj_late_jump": -0.10746821558604736,
+            "actuator": "conformal_calibrate"
           },
           "ref": {
-            "mu": 0.31352450834003043,
-            "s": 0.027064292660729867
+            "mu": 2.9584489029261345,
+            "s": 0.8338355281571361
           },
           "live": {
-            "mu": 0.31352450834003043,
-            "s": 0.026857657514745278,
-            "kurtosis": 1.2662387531866122,
-            "kurtosis_unit": 1.2662387531866122,
-            "kurtosis_subenv": 0.3802542735591441
+            "mu": 3.3096104987874577,
+            "s": 1.1661592212964964,
+            "kurtosis": 40.37012271411878,
+            "kurtosis_unit": 40.37012271411878,
+            "kurtosis_subenv": 1.8832092801384244,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
           },
           "vai": {
-            "top_share": 0.4747988613454919,
-            "gini": 0.4735139808301714,
-            "mean_abs_delta": 0.006494516090085146,
-            "n_docs": 9
+            "top_share": 0.3803926774023769,
+            "gini": 0.4844064270318612,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.33539860503676594,
-              0.2927255003504778,
-              0.3092147022879242,
-              0.3312940078371175,
-              0.30905081004917884,
-              0.3034634244787181
+              0.23315431442234308,
+              0.9916075271062847,
+              0.37256851021260795,
+              1.2381905331546967,
+              0.5816567014306756,
+              0.47418848584462825
             ],
-            "slope": -0.0025320190898555106,
-            "late_jump": -0.00575127780920609
+            "slope": 0.024026868657905286,
+            "late_jump": -0.10746821558604736
           },
-          "actuator": "hold"
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
         },
         {
           "oracle": "benign_covariate",
@@ -1065,102 +539,50 @@
           "decision": {
             "branch": "benign_covariate",
             "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "\u2192benign_covariate"
+              "var_stable=no",
+              "unstable_var_no_Y_break \u2192 benign_covariate"
             ],
-            "stable_var": true,
-            "d_mu": 0.00949773960116429,
-            "d_s": -0.0008846280313639932,
-            "kurtosis": 0.7166775272184154,
-            "vai_top_share": 0.4877223509246075,
-            "traj_slope": -2.022857796690625e-05,
-            "traj_late_jump": 7.919587241839166e-05,
+            "stable_var": false,
+            "d_mu": 0.024399478360788374,
+            "d_s": 0.07042910122787974,
+            "kurtosis": 8.320619242485506,
+            "vai_top_share": 0.430522092993555,
+            "traj_slope": -0.007313333322905548,
+            "traj_late_jump": -0.05069822993582564,
             "actuator": "conformal_calibrate"
           },
           "ref": {
-            "mu": 0.31352450834003043,
-            "s": 0.027064292660729867
+            "mu": 1.1314983408640964,
+            "s": 0.21748885880879518
           },
           "live": {
-            "mu": 0.3230222479411947,
-            "s": 0.026179664629365874,
-            "kurtosis": 0.7166775272184154,
-            "kurtosis_unit": 0.7166775272184154,
-            "kurtosis_subenv": 1.0993702381030666
+            "mu": 1.1558978192248848,
+            "s": 0.2879179600366749,
+            "kurtosis": 8.320619242485506,
+            "kurtosis_unit": 8.320619242485506,
+            "kurtosis_subenv": -0.6611826460712651,
+            "label_flip_frac": 0.0,
+            "label_rate_delta": 0.0
           },
           "vai": {
-            "top_share": 0.4877223509246075,
-            "gini": 0.4844205355375094,
-            "mean_abs_delta": 0.006898833087168555,
-            "n_docs": 9
+            "top_share": 0.430522092993555,
+            "gini": 0.48726349183461903,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.3436681695028023,
-              0.29699523200050215,
-              0.310028171025691,
-              0.34373338067758136,
-              0.3218146692840867,
-              0.3218938651565051
+              0.15888379118132726,
+              0.06709338796226463,
+              0.22137803919135696,
+              0.14789683781607715,
+              0.10907353848858606,
+              0.09719860788025152
             ],
-            "slope": -2.022857796690625e-05,
-            "late_jump": 7.919587241839166e-05
+            "slope": -0.007313333322905548,
+            "late_jump": -0.05069822993582564
           },
-          "actuator": "conformal_calibrate"
-        },
-        {
-          "oracle": "label_delay",
-          "oracle_family": "benign",
-          "pred_branch": "quiet",
-          "pred_family": "quiet",
-          "correct_branch": false,
-          "correct_family": false,
-          "decision": {
-            "branch": "quiet",
-            "path": [
-              "var_stable=yes",
-              "mean_up=no"
-            ],
-            "stable_var": true,
-            "d_mu": 0.002995883180924086,
-            "d_s": 0.000489524563757681,
-            "kurtosis": 1.252679738866723,
-            "vai_top_share": 0.4433374158239713,
-            "traj_slope": -0.0008417471090989312,
-            "traj_late_jump": -0.011398958393486591,
-            "actuator": "hold"
-          },
-          "ref": {
-            "mu": 0.31352450834003043,
-            "s": 0.027064292660729867
-          },
-          "live": {
-            "mu": 0.3165203915209545,
-            "s": 0.027553817224487548,
-            "kurtosis": 1.252679738866723,
-            "kurtosis_unit": 1.252679738866723,
-            "kurtosis_subenv": 0.02513853146595535
-          },
-          "vai": {
-            "top_share": 0.4433374158239713,
-            "gini": 0.4410350794084127,
-            "mean_abs_delta": 0.007380231824418497,
-            "n_docs": 9
-          },
-          "traj": {
-            "mu_hops": [
-              0.33539860503676594,
-              0.2927255003504778,
-              0.3092147022879242,
-              0.33360404256800863,
-              0.31978922863801856,
-              0.30839027024453197
-            ],
-            "slope": -0.0008417471090989312,
-            "late_jump": -0.011398958393486591
-          },
-          "actuator": "hold"
+          "actuator": "conformal_calibrate",
+          "estimator": "permucate_rf_text"
         },
         {
           "oracle": "malignant_sparse",
@@ -1172,49 +594,50 @@
           "decision": {
             "branch": "malignant_sparse",
             "path": [
-              "var_stable=no",
-              "PO_tail_ratio_sparse \u2192 malignant_sparse",
-              "VAI\u2192locate blocks (top_share=0.515)"
+              "Y_flip\u22650.05 \u2192 malignant_sparse",
+              "VAI\u2192locate blocks (top_share=0.356)"
             ],
             "stable_var": false,
-            "d_mu": 0.12101778667737711,
-            "d_s": 0.009437546575263928,
-            "kurtosis": -0.11012036840867667,
-            "vai_top_share": 0.5147367557415747,
-            "traj_slope": 0.004055197579524398,
-            "traj_late_jump": -0.03393623838775639,
+            "d_mu": -0.6568643266452519,
+            "d_s": -0.5816679496069441,
+            "kurtosis": 11.867612853543518,
+            "vai_top_share": 0.35600836102536043,
+            "traj_slope": 0.10100114637509958,
+            "traj_late_jump": 0.7622558042583817,
             "actuator": "freeze_lexical_adv_aug + VAI_block"
           },
           "ref": {
-            "mu": 0.31352450834003043,
-            "s": 0.027064292660729867
+            "mu": 4.143886653453327,
+            "s": 1.5706074879974585
           },
           "live": {
-            "mu": 0.43454229501740754,
-            "s": 0.036501839235993795,
-            "kurtosis": -0.11012036840867667,
-            "kurtosis_unit": -0.11012036840867667,
-            "kurtosis_subenv": -0.2304736817377977
+            "mu": 3.4870223268080753,
+            "s": 0.9889395383905144,
+            "kurtosis": 11.867612853543518,
+            "kurtosis_unit": 11.867612853543518,
+            "kurtosis_subenv": -0.3204391011534411,
+            "label_flip_frac": 0.125,
+            "label_rate_delta": 0.03125
           },
           "vai": {
-            "top_share": 0.5147367557415747,
-            "gini": 0.5149208336051115,
-            "mean_abs_delta": 0.006771180970218909,
-            "n_docs": 9
+            "top_share": 0.35600836102536043,
+            "gini": 0.4037038271910496,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.44569582923510326,
-              0.39715270638989475,
-              0.37722776458566537,
-              0.5229773230809103,
-              0.4524405559655249,
-              0.41175959084734687
+              0.659192735675371,
+              0.4535983101094626,
+              0.2742386289963761,
+              0.33233221193750684,
+              0.6848115256844588,
+              1.2158541143678443
             ],
-            "slope": 0.004055197579524398,
-            "late_jump": -0.03393623838775639
+            "slope": 0.10100114637509958,
+            "late_jump": 0.7622558042583817
           },
-          "actuator": "freeze_lexical_adv_aug + VAI_block"
+          "actuator": "freeze_lexical_adv_aug + VAI_block",
+          "estimator": "permucate_rf_text"
         },
         {
           "oracle": "malignant_dense",
@@ -1226,159 +649,95 @@
           "decision": {
             "branch": "malignant_dense",
             "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "\u03bc\u2191\u2191 with stable var \u2192 dense (not benign)"
+              "Y_flip\u22650.35 \u2192 malignant_dense",
+              "VAI\u2192dense mass (top_share=0.375)"
             ],
-            "stable_var": true,
-            "d_mu": 0.41353353437940177,
-            "d_s": 0.0023819360267823345,
-            "kurtosis": -0.17935480781072188,
-            "vai_top_share": 0.47204997199418364,
-            "traj_slope": 0.0056812723556495595,
-            "traj_late_jump": 0.002845226096239495,
+            "stable_var": false,
+            "d_mu": 0.1078497705392838,
+            "d_s": 0.04234049934913787,
+            "kurtosis": 5.762506230919698,
+            "vai_top_share": 0.37549464358016327,
+            "traj_slope": 0.01673561294452479,
+            "traj_late_jump": -0.0503684120243051,
             "actuator": "freeze_lexical_full / retrain_head"
           },
           "ref": {
-            "mu": 0.31352450834003043,
-            "s": 0.027064292660729867
+            "mu": 0.1705700556523887,
+            "s": 0.060106608535388205
           },
           "live": {
-            "mu": 0.7270580427194322,
-            "s": 0.0294462286875122,
-            "kurtosis": -0.17935480781072188,
-            "kurtosis_unit": -0.17935480781072188,
-            "kurtosis_subenv": 0.5606379453611101
+            "mu": 0.2784198261916725,
+            "s": 0.10244710788452607,
+            "kurtosis": 5.762506230919698,
+            "kurtosis_unit": 5.762506230919698,
+            "kurtosis_subenv": -0.6080766639525059,
+            "label_flip_frac": 0.671875,
+            "label_rate_delta": 0.109375
           },
           "vai": {
-            "top_share": 0.47204997199418364,
-            "gini": 0.4829065318885412,
-            "mean_abs_delta": 0.007542374478229356,
-            "n_docs": 10
+            "top_share": 0.37549464358016327,
+            "gini": 0.4216071066844654,
+            "n_docs": 4
           },
           "traj": {
             "mu_hops": [
-              0.7390979042303569,
-              0.6595083670700149,
-              0.7435340847812102,
-              0.7640583608837254,
-              0.7142064090246889,
-              0.7419431303265964
+              0.02570764941059636,
+              0.08815333975970494,
+              0.12223226725832836,
+              0.06453758420438073,
+              0.2825049212558043,
+              0.037784927735399834
             ],
-            "slope": 0.0056812723556495595,
-            "late_jump": 0.002845226096239495
+            "slope": 0.01673561294452479,
+            "late_jump": -0.0503684120243051
           },
-          "actuator": "freeze_lexical_full / retrain_head"
-        },
-        {
-          "oracle": "schema_change",
-          "oracle_family": "schema",
-          "pred_branch": "label_delay",
-          "pred_family": "benign",
-          "correct_branch": false,
-          "correct_family": false,
-          "decision": {
-            "branch": "label_delay",
-            "path": [
-              "var_stable=yes",
-              "mean_up=yes",
-              "time_traj\u2192label_delay"
-            ],
-            "stable_var": true,
-            "d_mu": 0.04871360808745795,
-            "d_s": -0.0008887865766625709,
-            "kurtosis": 0.19660981111391163,
-            "vai_top_share": 0.45461214465316796,
-            "traj_slope": 0.03187055866278991,
-            "traj_late_jump": 0.13579205452577375,
-            "actuator": "hold_then_conformal_on_lag"
-          },
-          "ref": {
-            "mu": 0.31352450834003043,
-            "s": 0.027064292660729867
-          },
-          "live": {
-            "mu": 0.3622381164274884,
-            "s": 0.026175506084067296,
-            "kurtosis": 0.19660981111391163,
-            "kurtosis_unit": 0.19660981111391163,
-            "kurtosis_subenv": -0.7874652975615639
-          },
-          "vai": {
-            "top_share": 0.45461214465316796,
-            "gini": 0.4490078174460596,
-            "mean_abs_delta": 0.0069201283170090035,
-            "n_docs": 9
-          },
-          "traj": {
-            "mu_hops": [
-              0.33539860503676594,
-              0.2927255003504778,
-              0.3092147022879242,
-              0.3312940078371175,
-              0.43770982068975356,
-              0.46708606236289124
-            ],
-            "slope": 0.03187055866278991,
-            "late_jump": 0.13579205452577375
-          },
-          "actuator": "hold_then_conformal_on_lag"
+          "actuator": "freeze_lexical_full / retrain_head",
+          "estimator": "permucate_rf_text"
         }
       ],
-      "branch_accuracy": 0.6666666666666666,
-      "family_accuracy": 0.6666666666666666,
-      "n_scenarios": 6
+      "branch_accuracy": 0.75,
+      "family_accuracy": 1.0,
+      "n_scenarios": 4,
+      "estimator": "permucate_rf_text"
     }
   ],
   "family_labels": [
     "quiet",
     "benign",
     "malignant_sparse",
-    "malignant_dense",
-    "schema"
+    "malignant_dense"
   ],
   "family_confusion": [
     [
-      4,
       0,
-      0,
-      0,
-      0
-    ],
-    [
-      1,
-      7,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      4,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      4,
-      0
-    ],
-    [
-      0,
-      1,
       3,
       0,
       0
+    ],
+    [
+      0,
+      3,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      3,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      3
     ]
   ],
-  "mean_branch_acc": 0.6666666666666666,
-  "mean_family_acc": 0.7916666666666666,
+  "mean_branch_acc": 0.75,
+  "mean_family_acc": 1.0,
   "product_usecase": {
     "name": "Shift triage gate for integrity / moderation / ranking monitors",
-    "value": "One bootstrap Mag\u00d7Var panel replaces 'OOD high \u21d2 retrain'. Stable-var mean lifts get cheap conformal; kurtotic sparse attacks get VAI-guided freeze; dense/schema get heavier review.",
+    "value": "One bootstrap Mag\u00d7Var panel on PermuCATE unit risk replaces 'OOD high \u21d2 retrain'. Stable-var mean lifts get cheap conformal; kurtotic sparse attacks get VAI-guided freeze; dense/schema get heavier review.",
     "kpi": [
       "family_accuracy of tree vs oracle shifts",
       "wrong-drug rate (benign mistreated as malignant & reverse)",

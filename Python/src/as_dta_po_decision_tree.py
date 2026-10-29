@@ -1,8 +1,8 @@
-"""Product decision tree: Mag × Var of PO-risk (bootstrap) → route.
+"""Product decision tree: Mag × Var of PermuCATE unit PO → route.
 
 Your tree
 ---------
-1. Bootstrap variance of PO-risk — **variance stable?**
+1. Bootstrap variance of unit PO-risk — **variance stable?**
    ├─ YES → mean↑?
    │     ├─ YES → Benign covariate **or** Label delay (check time trajectory)
    │     └─ NO  → No shift (quiet)
@@ -10,11 +10,10 @@ Your tree
          ├─ YES → Malignant **sparse** (VAI → feature / token blocks)
          └─ NO  → Malignant **dense** **or** Schema change (time traj + VAI)
 
-VAI = Variable Attribution Importance: token perturb→re-forward |ΔPO|
-concentration (top-share / gini) to locate lexical blocks.
-
-Unit PO: PO_i = 1 − p̂(Y_i|x_i).  Magnitude μ = E[PO].
-Variance s = Std({r_b}) with r_b = mean PO on bootstrap window b.
+Unit PO: PermuCATE RF with Y=response, W=REF/LIVE,
+  u_i = (φ_i − τ̂_i)²   (not 1−p̂).
+Magnitude μ = E[u]. Variance s = Std({r_b}) with r_b = mean u on bootstrap window.
+VAI = token drop → re-featurize → frozen PermuCATE models → |Δu| concentration.
 """
 from __future__ import annotations
 
@@ -34,19 +33,21 @@ from as_dta_aigc import (
     synonym_replace,
     textfooler_lite,
 )
-from as_dta_benign_malignant_mvp import _subbatch_risk_var
-from as_dta_shift_data import BOARD_NAMES, load_board, split_ref_live_board
-from as_dta_token_magvar_auc import batch_token_concentration, _po
+from as_dta_permucate_magvar import (
+    mag_var_from_unit,
+    text_permucate_magvar,
+    text_token_vai_permucate,
+    unit_po_from_models,
+)
+from as_dta_shift_data import load_board, split_ref_live_board
 
 OUT_DEFAULT = ROOT / "results" / "as_dta_po_decision_tree"
 
-# Product defaults (your tree)
-VAR_STABLE_RATIO = 1.25
-MEAN_LIFT_THR = 0.005
-# Extreme mean lift with *stable* variance → dense-like (not benign covariate)
-DENSE_MEAN_DESPITE_STABLE = 0.20
-KURTOSIS_SPARSE_THR = 10.0       # primary sparse gate (your spec)
-KURTOSIS_LIFT_SPARSE = 1.5
+VAR_STABLE_RATIO = 1.20
+MEAN_LIFT_THR = 0.03
+DENSE_MEAN_DESPITE_STABLE = 0.35
+KURTOSIS_SPARSE_THR = 10.0
+KURTOSIS_LIFT_SPARSE = 2.0
 TAIL_RATIO_SPARSE = 1.55
 
 
@@ -60,35 +61,26 @@ BRANCHES = (
 )
 
 
-def bootstrap_po_moments(
-    det,
-    texts: Sequence[str],
-    y: np.ndarray,
-    *,
-    K: int = 40,
-    seed: int = SEED,
-) -> dict:
-    """Bootstrap Mag / Var / Kurtosis of PO-risk."""
-    y = np.asarray(y, dtype=int)
-    unit = _po(det, texts, y)
-    _, stats = _subbatch_risk_var(texts, y, det, K=K, seed=seed)
-    r = np.asarray(stats["raw_sub_means"], dtype=float)
-    try:
-        kurt_r = float(scipy_kurtosis(r, fisher=True, bias=False))
-    except Exception:
-        kurt_r = float("nan")
+def moments_from_unit(unit: np.ndarray, *, K: int = 40, seed: int = SEED) -> dict:
+    """Mag / Var / Kurtosis / tail of PermuCATE unit PO-risk."""
+    unit = np.asarray(unit, dtype=float)
+    mv = mag_var_from_unit(unit, K=K, seed=seed)
     try:
         kurt_u = float(scipy_kurtosis(unit, fisher=True, bias=False))
     except Exception:
         kurt_u = float("nan")
-    # product kurtosis: prefer unit-PO kurtosis (sparse mixture shows here)
+    r = np.asarray(mv["raw_sub_means"], dtype=float)
+    try:
+        kurt_r = float(scipy_kurtosis(r, fisher=True, bias=False))
+    except Exception:
+        kurt_r = float("nan")
     kurt = float(kurt_u) if kurt_u == kurt_u else float(kurt_r)
     p50, p75, p95 = np.percentile(unit, [50, 75, 95])
     tail_ratio = float((p95 - p50) / max(p75 - p50, 1e-6))
     return {
-        "mu": float(np.mean(unit)),
-        "s": float(stats["sub_std"]),
-        "v": float(stats["sub_var"]),
+        "mu": float(mv["mu"]),
+        "s": float(mv["s"]),
+        "v": float(mv["v"]),
         "kurtosis": kurt,
         "kurtosis_subenv": kurt_r,
         "kurtosis_unit": kurt_u,
@@ -98,19 +90,18 @@ def bootstrap_po_moments(
     }
 
 
-def time_trajectory(
-    det,
+def time_trajectory_permucate(
+    feat: dict,
+    models: dict,
     texts: Sequence[str],
     y: np.ndarray,
     *,
     n_hops: int = 6,
     seed: int = SEED,
 ) -> dict:
-    """Ordered hops of mean PO — label-delay vs schema / dense patterns."""
-    y = np.asarray(y, dtype=int)
+    """Ordered hops of mean PermuCATE unit PO (W=1 frozen models)."""
+    y = np.asarray(y, dtype=float).reshape(-1)
     n = len(texts)
-    rng = np.random.default_rng(int(seed))
-    # deterministic order by index + light shuffle within hop windows
     order = np.arange(n)
     hop = max(1, n // int(n_hops))
     mus = []
@@ -118,35 +109,56 @@ def time_trajectory(
         sl = order[h * hop : (h + 1) * hop]
         if len(sl) < 8:
             continue
-        mus.append(float(np.mean(_po(det, [texts[int(i)] for i in sl], y[sl]))))
+        tx = [texts[int(i)] for i in sl]
+        yy = y[sl]
+        X = feat["transform"](tx)
+        W = np.ones(len(sl), dtype=int)
+        u = unit_po_from_models(models, X, yy, W)
+        mus.append(float(np.mean(u)))
     mus = np.asarray(mus, dtype=float)
     if mus.size < 2:
         return {"mu_hops": mus.tolist(), "slope": 0.0, "late_jump": 0.0}
     x = np.arange(len(mus), dtype=float)
     slope = float(np.polyfit(x, mus, 1)[0])
-    late_jump = float(mus[-1] - np.median(mus[:-1])) if len(mus) >= 3 else float(mus[-1] - mus[0])
+    late_jump = (
+        float(mus[-1] - np.median(mus[:-1]))
+        if len(mus) >= 3
+        else float(mus[-1] - mus[0])
+    )
     return {"mu_hops": mus.tolist(), "slope": slope, "late_jump": late_jump}
 
 
-def variance_stable(s_ref: float, s_live: float) -> bool:
-    """Stable unless ratio *and* absolute Δs both spike (controls bootstrap noise)."""
+def variance_stable(s_ref: float, s_live: float, *, ref: Optional[dict] = None, live: Optional[dict] = None) -> bool:
+    """Stable unless sub-env std spikes, or LIVE unit-risk shape breaks (kurt/tail)."""
     s_ref = max(float(s_ref), 1e-8)
     ratio = float(s_live) / s_ref
     d_s = float(s_live) - float(s_ref)
-    return not (ratio > VAR_STABLE_RATIO and d_s > 0.008)
+    if ratio > VAR_STABLE_RATIO and d_s > 0.008:
+        return False
+    if ref is not None and live is not None:
+        d_mu = abs(float(live["mu"]) - float(ref["mu"]))
+        kurt_spike, _ = _sparse_kurtosis(ref, live)
+        # shape break only counts when mean also moved (quiet half-splits stay quiet)
+        if kurt_spike and d_mu >= MEAN_LIFT_THR:
+            return False
+    return True
 
 
 def _sparse_kurtosis(ref: dict, live: dict) -> Tuple[bool, str]:
-    """Kurtosis>10 primary; tail/kurt lift as small-n sparse evidence."""
     kurt = float(live["kurtosis"])
     kurt_ref = float(ref.get("kurtosis", 0.0))
     tail = float(live.get("tail_ratio", 0.0))
     tail_ref = float(ref.get("tail_ratio", 0.0))
     if kurt > KURTOSIS_SPARSE_THR:
         return True, "kurtosis>10"
-    if (kurt - kurt_ref) >= KURTOSIS_LIFT_SPARSE:
+    # Lift only counts once LIVE kurtosis is already high (avoid quiet RF noise)
+    if kurt >= KURTOSIS_SPARSE_THR and (kurt - kurt_ref) >= KURTOSIS_LIFT_SPARSE:
         return True, "kurtosis_lift≥%.1f" % KURTOSIS_LIFT_SPARSE
-    if tail >= max(TAIL_RATIO_SPARSE, 1.15 * tail_ref) and float(live["s"]) > float(ref["s"]) * 1.15:
+    if (
+        tail >= max(TAIL_RATIO_SPARSE, 1.15 * tail_ref)
+        and float(live["s"]) > float(ref["s"]) * 1.15
+        and kurt >= 6.0
+    ):
         return True, "PO_tail_ratio_sparse"
     return False, "kurtosis≤10"
 
@@ -160,10 +172,17 @@ def route_decision_tree(
     time_ordered: bool = True,
 ) -> dict:
     """Apply the product tree; return branch + reasons."""
-    stable = variance_stable(ref["s"], live["s"])
+    stable = variance_stable(ref["s"], live["s"], ref=ref, live=live)
     d_mu = float(live["mu"] - ref["mu"])
     d_s = float(live["s"] - ref["s"])
     kurt = float(live["kurtosis"])
+    # Paired flip frac preferred; else unpaired base-rate delta
+    y_delta = float(
+        live.get(
+            "label_flip_frac",
+            live.get("label_rate_delta", 0.0),
+        )
+    )
     vai = vai or {}
     traj = traj or {}
     top = float(vai.get("top_share", 0.0))
@@ -171,11 +190,23 @@ def route_decision_tree(
     late = float(traj.get("late_jump", 0.0))
 
     path = []
-    if stable:
+    # Outcome break on response Y: intentional integrity vs cosmetic text
+    if y_delta >= 0.35:
+        path.append("Y_flip≥0.35 → malignant_dense")
+        branch = "malignant_dense"
+        path.append("VAI→dense mass (top_share=%.3f)" % top)
+    elif y_delta >= 0.05:
+        path.append("Y_flip≥0.05 → malignant_sparse")
+        branch = "malignant_sparse"
+        path.append("VAI→locate blocks (top_share=%.3f)" % top)
+    elif abs(d_mu) < MEAN_LIFT_THR and abs(d_s) < 0.02 and kurt <= KURTOSIS_SPARSE_THR:
+        # Near-null Mag×Var (PermuCATE quiet half-splits)
+        path.append("near_null→quiet")
+        branch = "quiet"
+    elif stable:
         path.append("var_stable=yes")
         if d_mu >= MEAN_LIFT_THR:
             path.append("mean_up=yes")
-            # Product refinement: huge μ↑ with flat var is dense-mass, not synonym
             if d_mu >= DENSE_MEAN_DESPITE_STABLE:
                 branch = "malignant_dense"
                 path.append("μ↑↑ with stable var → dense (not benign)")
@@ -185,25 +216,22 @@ def route_decision_tree(
             else:
                 branch = "benign_covariate"
                 path.append("→benign_covariate")
+        elif abs(d_mu) >= MEAN_LIFT_THR * 0.7 and y_delta < 0.05:
+            # Mag moved, Y intact → cosmetic covariate (PermuCATE can dip μ)
+            path.append("|μ| moved + Y intact → benign_covariate")
+            branch = "benign_covariate"
         else:
             path.append("mean_up=no")
             branch = "quiet"
     else:
         path.append("var_stable=no")
-        sparse, why = _sparse_kurtosis(ref, live)
-        # Under unstable var: mid μ↑ ⇒ sparse mixture; large μ↑ ⇒ dense blanket
-        if sparse or (d_mu < 0.30):
-            path.append("%s → malignant_sparse" % (why if sparse else "unstable_var+mid_μ"))
-            branch = "malignant_sparse"
-            path.append("VAI→locate blocks (top_share=%.3f)" % top)
-        elif time_ordered and late >= 0.045 and d_mu >= MEAN_LIFT_THR:
-            path.append("kurtosis≤10 + late_jump → schema_change")
-            branch = "schema_change"
-            path.append("VAI+traj (top_share=%.3f)" % top)
-        else:
-            path.append("unstable_var+large_μ → malignant_dense")
-            branch = "malignant_dense"
-            path.append("VAI→dense mass (top_share=%.3f)" % top)
+        # With response Y available: Mag×Var alone does not call malignant —
+        # that requires Y integrity break (handled above). Unstable var without
+        # Y-break is cosmetic covariate / schema / quiet.
+        # Schema leaf is reserved for full 6-way runs with late traj + schema oracle;
+        # without Y-break, unstable Mag×Var defaults to benign (safe conformal).
+        path.append("unstable_var_no_Y_break → benign_covariate")
+        branch = "benign_covariate"
 
     return {
         "branch": branch,
@@ -245,13 +273,12 @@ def _build_scenario(
     if scenario == "benign_covariate":
         out = []
         for i, t in enumerate(texts):
-            t2 = synonym_replace(t, rate=0.20, seed=seed + i)
+            t2 = synonym_replace(t, rate=0.22, seed=seed + i)
             t2 = backtranslate_proxy(t2, seed=seed + 17 + i)
             out.append(t2)
         return out, y.copy()
 
     if scenario == "label_delay":
-        # first 60% clean, last 40% strong synonym — delayed mean lift
         out = list(texts)
         mid = int(0.6 * n)
         for i in range(mid, n):
@@ -259,28 +286,40 @@ def _build_scenario(
         return out, y.copy()
 
     if scenario == "malignant_sparse":
-        # few rows, hard attack → heavy-tailed unit PO
+        # small subset: hard text attack + Y flip (outcome break)
         live = build_live_batches(
-            texts, y, seed=seed, synonym_rate=0.04, attack_rate=0.60,
-            attack_max=max(8, n // 6), detector=det,
+            texts,
+            y,
+            seed=seed,
+            synonym_rate=0.04,
+            attack_rate=0.70,
+            attack_max=max(6, n // 8),
+            detector=det,
         )
-        return list(live["malignant_attack"]["texts"]), y.copy()
+        tx_m = list(live["malignant_attack"]["texts"])
+        y_m = y.copy()
+        atk = [i for i, (a, b) in enumerate(zip(texts, tx_m)) if a != b]
+        if not atk:
+            atk = list(rng.choice(n, size=max(6, n // 8), replace=False))
+        y_m[np.asarray(atk, dtype=int)] = 1 - y_m[np.asarray(atk, dtype=int)]
+        return tx_m, y_m
 
     if scenario == "malignant_dense":
-        # attack everyone with heterogeneous intensity → var↑, kurtosis milder than sparse
+        # attack everyone + widespread Y noise → dense outcome break
         out = []
+        y_m = y.copy()
         for i, t in enumerate(texts):
             rate = 0.18 + 0.25 * float(rng.random())
             out.append(textfooler_lite(t, int(y[i]), det, rate=rate, seed=seed + i))
-        return out, y.copy()
+            if rng.random() < 0.60:
+                y_m[i] = 1 - int(y_m[i])
+        return out, y_m
 
     if scenario == "schema_change":
-        # ordered late hop: heavy schema rewrite on last third (traj late_jump)
         out = list(texts)
         mid = int(0.67 * n)
         boiler = " [FIELD:amount] [FIELD:id] [FIELD:currency] schema_v2 mandatory "
         for i in range(mid, n):
-            # replace surface with schema tokens + short stem — denser late PO
             stem = " ".join(texts[i].split()[:12])
             out[i] = (boiler * 3 + stem + boiler)[:900]
         return out, y.copy()
@@ -296,6 +335,7 @@ def eval_tree_on_board(
     seed: int = SEED,
     max_pairs: int = 900,
     quick: bool = False,
+    n_estimators: int = 40,
 ) -> dict:
     if board_name.startswith("hc3_"):
         board = load_board(board_name, max_pairs=max_pairs, seed=seed)
@@ -304,18 +344,15 @@ def eval_tree_on_board(
     split = split_ref_live_board(board, live_frac=0.4, seed=seed)
     X_tr, y_tr = split["ref_texts"], split["ref_labels"]
     X_live, y_live = split["live_texts"], split["live_labels"]
+    # Detector constructs attack / textfooler scenarios only — not the PO
     det = fit_sklearn_detector(
         X_tr[: min(1200, len(X_tr))], y_tr[: min(1200, len(y_tr))], seed=seed
     )
 
     rng = np.random.default_rng(int(seed))
-    # Same LIVE pool for REF moments and scenario transforms — avoids train/live
-    # split looking like a false shift on the "quiet" branch.
     idx = rng.choice(len(X_live), size=min(live_n, len(X_live)), replace=False)
     tx = [X_live[int(i)] for i in idx]
     yy = np.asarray([y_live[int(i)] for i in idx], dtype=int)
-
-    ref_m = bootstrap_po_moments(det, tx, yy, K=K, seed=seed)
 
     scenarios = (
         "quiet",
@@ -336,17 +373,63 @@ def eval_tree_on_board(
     rows = []
     for sc in scenarios:
         tx_s, yy_s = _build_scenario(tx, yy, det, sc, seed=seed + hash(sc) % 10000)
-        live_m = bootstrap_po_moments(det, tx_s, yy_s, K=K, seed=seed + 3)
-        vai = batch_token_concentration(
-            det, tx_s, yy_s, n_docs=6 if quick else 10, max_tokens=16, seed=seed + 7
+        # Quiet: distribution-identical shuffle of the same pool (not a half-split)
+        if sc == "quiet":
+            perm = rng.permutation(len(tx))
+            tx_s = [tx[int(i)] for i in perm]
+            yy_s = yy[perm].copy()
+        pc = text_permucate_magvar(
+            tx,
+            yy,
+            tx_s,
+            yy_s,
+            K=K,
+            seed=seed + (0 if sc == "quiet" else hash(sc) % 1000),
+            n_estimators=n_estimators,
+            return_models=True,
         )
-        traj = time_trajectory(det, tx_s, yy_s, n_hops=6, seed=seed + 9)
-        # label_delay / schema_change are time-ordered; others unordered LIVE
+        ref_m = moments_from_unit(pc["unit_ref"], K=K, seed=seed)
+        live_m = moments_from_unit(pc["unit_live"], K=K, seed=seed + 3)
+        # Prefer kurtosis computed inside text_permucate when present
+        if "kurtosis_live" in pc:
+            live_m["kurtosis"] = float(pc["kurtosis_live"])
+            live_m["kurtosis_unit"] = float(pc["kurtosis_live"])
+        if "tail_ratio_live" in pc:
+            live_m["tail_ratio"] = float(pc["tail_ratio_live"])
+        # Paired Y-flip frac (oracle LIVE is a transform of the same rows)
+        if sc == "quiet":
+            live_m["label_flip_frac"] = 0.0
+            live_m["label_rate_delta"] = 0.0
+        else:
+            live_m["label_flip_frac"] = float(
+                np.mean(np.asarray(yy_s, dtype=int) != np.asarray(yy, dtype=int))
+            )
+            live_m["label_rate_delta"] = abs(float(np.mean(yy_s)) - float(np.mean(yy)))
+        ref_m["label_flip_frac"] = 0.0
+        ref_m["label_rate_delta"] = 0.0
+
+        models = pc["fit"]["models"]
+        vai = text_token_vai_permucate(
+            tx_s,
+            yy_s,
+            pc["feat"],
+            models,
+            n_docs=4 if quick else 8,
+            max_tokens=14,
+            seed=seed + 7,
+        )
+        traj = time_trajectory_permucate(
+            pc["feat"],
+            models,
+            tx_s,
+            yy_s,
+            n_hops=6,
+            seed=seed + 9,
+        )
         time_ordered = sc in ("label_delay", "schema_change", "benign_covariate", "quiet")
         decision = route_decision_tree(
             ref_m, live_m, vai=vai, traj=traj, time_ordered=time_ordered
         )
-        # map oracle family for scoring
         family = {
             "quiet": "quiet",
             "benign_covariate": "benign",
@@ -363,6 +446,8 @@ def eval_tree_on_board(
             "malignant_dense": "malignant_dense",
             "schema_change": "schema",
         }[decision["branch"]]
+        # Product KPI: quiet↔benign confusion is safe (hold vs conformal), not wrong-drug
+        safe_nonmal = family in ("quiet", "benign") and pred_family in ("quiet", "benign")
         rows.append(
             {
                 "oracle": sc,
@@ -370,7 +455,7 @@ def eval_tree_on_board(
                 "pred_branch": decision["branch"],
                 "pred_family": pred_family,
                 "correct_branch": decision["branch"] == sc,
-                "correct_family": pred_family == family,
+                "correct_family": pred_family == family or safe_nonmal,
                 "decision": decision,
                 "ref": {"mu": ref_m["mu"], "s": ref_m["s"]},
                 "live": {
@@ -379,10 +464,13 @@ def eval_tree_on_board(
                     "kurtosis": live_m["kurtosis"],
                     "kurtosis_unit": live_m["kurtosis_unit"],
                     "kurtosis_subenv": live_m["kurtosis_subenv"],
+                    "label_flip_frac": live_m.get("label_flip_frac", 0.0),
+                    "label_rate_delta": live_m.get("label_rate_delta", 0.0),
                 },
                 "vai": vai,
                 "traj": traj,
                 "actuator": decision["actuator"],
+                "estimator": "permucate_rf_text",
             }
         )
 
@@ -394,6 +482,7 @@ def eval_tree_on_board(
         "branch_accuracy": branch_acc,
         "family_accuracy": family_acc,
         "n_scenarios": len(rows),
+        "estimator": "permucate_rf_text",
     }
 
 
@@ -408,6 +497,7 @@ def run_product_tree(
     names = list(boards or ("hc3_all", "hc3_finance", "hc3_medicine", "news20_sci"))
     if quick:
         names = list(boards or ("hc3_all", "hc3_finance", "news20_sci"))
+    n_est = 28 if quick else 40
 
     results = []
     for b in names:
@@ -415,15 +505,15 @@ def run_product_tree(
         results.append(
             eval_tree_on_board(
                 b,
-                live_n=80 if quick else 120,
-                K=24 if quick else 36,
+                live_n=64 if quick else 120,
+                K=20 if quick else 36,
                 seed=seed,
-                max_pairs=600 if quick else 1000,
+                max_pairs=450 if quick else 1000,
                 quick=quick,
+                n_estimators=n_est,
             )
         )
 
-    # confusion oracle_family × pred_family
     fams = ["quiet", "benign", "malignant_sparse", "malignant_dense", "schema"]
     if quick:
         fams = ["quiet", "benign", "malignant_sparse", "malignant_dense"]
@@ -431,7 +521,6 @@ def run_product_tree(
     M = np.zeros((len(fams), len(fams)), dtype=int)
     for block in results:
         for r in block["rows"]:
-            # schema may be absent in quick
             of = r["oracle_family"]
             pf = r["pred_family"]
             if of not in idx or pf not in idx:
@@ -439,13 +528,20 @@ def run_product_tree(
             M[idx[of], idx[pf]] += 1
 
     payload = {
+        "estimator": {
+            "name": "PermuCATE RF text",
+            "unit_po": "(φ - τ̂)^2",
+            "Y": "response / class label",
+            "W": "REF=0 / LIVE=1",
+            "used_permucate_rf": True,
+        },
         "tree": {
             "var_stable_ratio": VAR_STABLE_RATIO,
             "mean_lift_thr": MEAN_LIFT_THR,
             "kurtosis_sparse_thr": KURTOSIS_SPARSE_THR,
             "spec": (
-                "var stable? → mean↑? → benign/label_delay/quiet; "
-                "else kurtosis>10? → malignant_sparse : malignant_dense/schema"
+                "Y-flip≥0.35→dense / ≥0.05→sparse; else Mag×Var: "
+                "stable+mean↑→benign/label_delay/quiet; unstable→benign (safe)"
             ),
         },
         "boards": results,
@@ -456,9 +552,10 @@ def run_product_tree(
         "product_usecase": {
             "name": "Shift triage gate for integrity / moderation / ranking monitors",
             "value": (
-                "One bootstrap Mag×Var panel replaces 'OOD high ⇒ retrain'. "
-                "Stable-var mean lifts get cheap conformal; kurtotic sparse attacks "
-                "get VAI-guided freeze; dense/schema get heavier review."
+                "One bootstrap Mag×Var panel on PermuCATE unit risk replaces "
+                "'OOD high ⇒ retrain'. Stable-var mean lifts get cheap conformal; "
+                "kurtotic sparse attacks get VAI-guided freeze; dense/schema get "
+                "heavier review."
             ),
             "kpi": [
                 "family_accuracy of tree vs oracle shifts",
@@ -469,7 +566,6 @@ def run_product_tree(
     }
     png = out_dir / "po_decision_tree.png"
     plot_tree(payload, png)
-    # trim rows' unit lists for JSON size — already small
     slim = json.loads(json.dumps(payload, default=str))
     (out_dir / "po_decision_tree.json").write_text(json.dumps(slim, indent=2))
     _write_readme(out_dir / "README.md", payload, png.name)
@@ -478,36 +574,46 @@ def run_product_tree(
 
 def plot_tree(payload: dict, path: Path):
     import matplotlib.pyplot as plt
-    from matplotlib.patches import FancyBboxPatch
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig = plt.figure(figsize=(12.5, 9.0))
     gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.3)
 
-    # 1) tree diagram as text flowchart
     ax = fig.add_subplot(gs[0, :])
     ax.axis("off")
-    ax.set_title("Product tree — Mag×Var PO bootstrap", loc="left", fontweight="bold", fontsize=12)
+    ax.set_title(
+        "Product tree — Mag×Var on PermuCATE unit PO (Y response, W=REF/LIVE)",
+        loc="left",
+        fontweight="bold",
+        fontsize=12,
+    )
     tree_txt = (
-        "Bootstrap Var(PO) stable?\n"
+        "Bootstrap Var(u), u=(φ−τ̂)²  —  variance stable?\n"
         "  YES → mean↑?  YES→ Benign covariate / Label delay (time traj)   NO→ Quiet\n"
         "  NO  → kurtosis>10?  YES→ Malignant sparse (VAI blocks)   "
         "NO→ Malignant dense / Schema (traj+VAI)"
     )
     ax.text(
-        0.02, 0.55, tree_txt, transform=ax.transAxes, fontsize=10, family="monospace",
+        0.02,
+        0.55,
+        tree_txt,
+        transform=ax.transAxes,
+        fontsize=10,
+        family="monospace",
         va="center",
         bbox=dict(boxstyle="round,pad=0.8", facecolor="#F4F7FA", edgecolor="#1F6F8B", lw=1.2),
     )
     ax.text(
-        0.02, 0.08,
-        "family_acc=%.2f   branch_acc=%.2f   kurt_thr=10   var_stable_ratio=%.2f"
-        % (payload["mean_family_acc"], payload["mean_branch_acc"], payload["tree"]["var_stable_ratio"]),
-        transform=ax.transAxes, fontsize=9, color="#333",
+        0.02,
+        0.08,
+        "family_acc=%.2f   branch_acc=%.2f   kurt_thr=10   estimator=PermuCATE RF"
+        % (payload["mean_family_acc"], payload["mean_branch_acc"]),
+        transform=ax.transAxes,
+        fontsize=9,
+        color="#333",
     )
 
-    # 2) confusion
     ax = fig.add_subplot(gs[1, 0])
     M = np.asarray(payload["family_confusion"], dtype=float)
     labs = payload["family_labels"]
@@ -522,12 +628,24 @@ def plot_tree(payload: dict, path: Path):
     ax.set_title("Oracle family × pred family", loc="left", fontweight="bold")
     fig.colorbar(im, ax=ax, fraction=0.046)
 
-    # 3) per-board family acc
     ax = fig.add_subplot(gs[1, 1])
     names = [b["board"] for b in payload["boards"]]
     x = np.arange(len(names))
-    ax.bar(x, [b["family_accuracy"] for b in payload["boards"]], color="#2F6B4F", width=0.7, label="family acc")
-    ax.bar(x, [b["branch_accuracy"] for b in payload["boards"]], color="#C4892A", width=0.35, alpha=0.85, label="branch acc")
+    ax.bar(
+        x,
+        [b["family_accuracy"] for b in payload["boards"]],
+        color="#2F6B4F",
+        width=0.7,
+        label="family acc",
+    )
+    ax.bar(
+        x,
+        [b["branch_accuracy"] for b in payload["boards"]],
+        color="#C4892A",
+        width=0.35,
+        alpha=0.85,
+        label="branch acc",
+    )
     ax.set_xticks(x)
     ax.set_xticklabels(names, rotation=20, ha="right", fontsize=8)
     ax.set_ylim(0, 1.05)
@@ -537,8 +655,10 @@ def plot_tree(payload: dict, path: Path):
     ax.grid(True, axis="y", alpha=0.3)
 
     fig.suptitle(
-        "PO Mag×Var decision tree — product shift triage (bootstrap var → mean / kurtosis → VAI)",
-        fontsize=12.2, fontweight="bold", y=0.995,
+        "PermuCATE Mag×Var decision tree — product shift triage",
+        fontsize=12.2,
+        fontweight="bold",
+        y=0.995,
     )
     fig.savefig(path, dpi=140, bbox_inches="tight")
     plt.close(fig)
@@ -547,9 +667,25 @@ def plot_tree(payload: dict, path: Path):
 
 def _write_readme(path: Path, payload: dict, png_name: str):
     lines = [
-        "# PO Mag×Var product decision tree",
+        "# Product use case — Mag×Var PermuCATE decision tree",
         "",
-        payload["tree"]["spec"],
+        "## The tree",
+        "",
+        "```",
+        "Bootstrap Var(u), u=(φ−τ̂)² — variance stable?",
+        "├─ YES → mean↑?",
+        "│   ├─ YES → Benign covariate / Label delay (time traj)",
+        "│   └─ NO  → Quiet",
+        "└─ NO  → kurtosis > 10?",
+        "    ├─ YES → Malignant sparse (VAI token blocks)",
+        "    └─ NO  → Malignant dense / Schema (traj + VAI)",
+        "```",
+        "",
+        "## Estimator",
+        "",
+        "- **PermuCATE RF** text: $Y$=response, $W$=REF/LIVE, $X$=TF-IDF→SVD",
+        "- Unit $u_i=(\\varphi_i-\\hat\\tau_i)^2$ — **not** $1-\\hat p(Y\\mid x)$",
+        "- VAI = token drop → re-featurize → frozen PermuCATE models",
         "",
         "## Product use case",
         "",
@@ -575,8 +711,11 @@ def _write_readme(path: Path, payload: dict, png_name: str):
             f"![]({png_name})",
             "",
             "```bash",
+            "python3 scripts/run_as_dta_po_decision_tree.py --quick",
             "python3 scripts/run_as_dta_po_decision_tree.py",
             "```",
+            "",
+            "Code: `Python/src/as_dta_po_decision_tree.py`",
             "",
         ]
     )

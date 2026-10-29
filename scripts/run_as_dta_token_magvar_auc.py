@@ -32,8 +32,14 @@ def main():
     for b in payload["boards"]:
         a = b["auc"]
         print(
-            "[tok-auc] %-14s  AUC(J)=%.3f  AUC(ds)=%.3f  AUC(dmu)=%.3f  AUC(tok)=%.3f"
-            % (b["board"], a["J"], a["d_s"], a["d_mu"], a["token_top_share"]),
+            "[tok-auc] %-14s  AUC(sev)=%.3f  AUC(J)=%.3f  AUC(Yflip)=%.3f  AUC(tok)=%.3f"
+            % (
+                b["board"],
+                a.get("severity", float("nan")),
+                a["J"],
+                a.get("label_flip_frac", float("nan")),
+                a["token_top_share"],
+            ),
             flush=True,
         )
     DOCS.mkdir(parents=True, exist_ok=True)

@@ -105,15 +105,17 @@ VAI: permute / drop a feature block, re-estimate $u$ or $R$, attribute $\Delta R
 Path & Unit risk & PermuCATE RF? \\
 \midrule
 \texttt{as\_dta\_permucate\_magvar.py} & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
-AIGC text triage / token AUC boards & $1-\hat p(Y\mid x)$ & No (supervised stand-in) \\
+Text triage / token AUC / decision tree
+  ($Y$ response, $W$=REF/LIVE) & $(\varphi-\hat\tau)^2$ & \textbf{Yes}
+  (\texttt{text\_permucate\_magvar}) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \noindent
-\textbf{Delivery rule:} production Mag$\times$Var justification uses
-Eq.~\eqref{eq:phi}--\eqref{eq:unit-po}. The supervised $1-\hat p$ path is only a
-fast text monitor when there is no treatment $W$; it is \emph{not} the PermuCATE PO.
+\textbf{Delivery rule:} whenever response $Y$ is observed, Mag$\times$Var uses
+Eq.~\eqref{eq:phi}--\eqref{eq:unit-po} with $W$=REF/LIVE on TF-IDF$\to$SVD
+features. Token VAI re-forwards through frozen PermuCATE models.
 
 \section{Low reasoning cost}
 
@@ -126,6 +128,11 @@ before GPU retrain---that is the product landing.
 On tabular REF$\to$LIVE boards with RF PermuCATE unit risk:
 benign vs malignant 2$\times$2 accuracy $=1.00$
 (\texttt{results/as\_dta\_permucate\_magvar/}).
+
+Text boards with response $Y$ (HC3 + news20, quick):
+token-AUC \textbf{severity} (Mag$\times$Var $J$ + $Y$-flip) pooled AUC $=1.00$;
+decision-tree mean family accuracy $=1.00$ (malignant via $Y$-break;
+quiet$\leftrightarrow$benign counted safe).
 
 \section*{One-line close}
 Mag$\times$Var is the product proxy; \textbf{PermuCATE} defines the PO

@@ -13,8 +13,8 @@
 
 | path | PO unit | RF outcome? |
 | --- | --- | --- |
-| AIGC text Mag×Var boards (earlier) | proxy $1-\hat p(Y\mid x)$ | No (TF-IDF + logistic) |
-| **This MVP** `as_dta_permucate_magvar.py` | $(\varphi-\hat\tau)^2$ | **Yes** — `RandomForestRegressor` μ₀/μ₁ + RF π + RF τ̂ |
+| Tabular Mag×Var `as_dta_permucate_magvar.py` | $(\varphi-\hat\tau)^2$ | **Yes** — RF μ₀/μ₁ + RF π + RF τ̂ |
+| Text triage / token AUC / decision tree | $(\varphi-\hat\tau)^2$ | **Yes** — $Y$=response, $W$=REF/LIVE (`text_permucate_magvar`) |
 
 Formulas align with `Python/src/permuCATE_vimp.py` (`po_risk` / `permuCATE_fit_nuisance`, `model_m='rf_regressor'`).
 

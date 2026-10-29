@@ -12,8 +12,8 @@ Magnitude μ = E[u], Variance s = Std(r_b) over bootstrap sub-envs.
 
 Honest note
 -----------
-Earlier AIGC Mag×Var boards used supervised proxy PO=1-p̂(Y|x).
-This module is the **causal** MVP: same Mag×Var geometry on PermuCATE φ-risk.
+Production Mag×Var uses PermuCATE unit risk u=(φ−τ̂)² whenever response Y
+exists (tabular boards, text triage, token AUC). Supervised 1−p̂ is legacy only.
 
 Multimodal attribution
 ----------------------
@@ -72,6 +72,7 @@ def permucate_unit_po(
     n_estimators: int = 80,
     n_splits: int = 3,
     clip: float = CLIP,
+    return_models: bool = False,
 ) -> dict:
     """Cross-fit RF outcome + propensity → φ, τ̂, unit risk u=(φ-τ̂)^2.
 
@@ -89,6 +90,7 @@ def permucate_unit_po(
     # Cross-fit outcome models by W and propensity
     splits = max(2, min(int(n_splits), int(np.min(np.bincount(W)))))
     cv = StratifiedKFold(n_splits=splits, shuffle=True, random_state=int(seed))
+    last_m0 = last_m1 = last_e = None
     for fold, (tr, te) in enumerate(cv.split(X, W)):
         tr0 = tr[W[tr] == 0]
         tr1 = tr[W[tr] == 1]
@@ -97,16 +99,19 @@ def permucate_unit_po(
         if len(tr0) >= 8:
             m0.fit(X[tr0], Y[tr0])
             mu0[te] = m0.predict(X[te])
+            last_m0 = m0
         else:
             mu0[te] = float(np.mean(Y[W == 0])) if (W == 0).any() else 0.0
         if len(tr1) >= 8:
             m1.fit(X[tr1], Y[tr1])
             mu1[te] = m1.predict(X[te])
+            last_m1 = m1
         else:
             mu1[te] = float(np.mean(Y[W == 1])) if (W == 1).any() else 0.0
         e = _rf_clf(len(tr), seed + 40 + fold, n_estimators)
         e.fit(X[tr], W[tr])
         pi[te] = e.predict_proba(X[te])[:, 1]
+        last_e = e
 
     pi = np.clip(pi, clip, 1.0 - clip)
     mu_w = np.where(W == 1, mu1, mu0)
@@ -122,7 +127,21 @@ def permucate_unit_po(
     else:
         vimp = vimp / vimp.sum()
 
-    return {
+    # Full-data nuisances for token re-forward (VAI) without re-crossfit
+    m0_full = _rf_reg(int((W == 0).sum()), seed + 101, n_estimators)
+    m1_full = _rf_reg(int((W == 1).sum()), seed + 102, n_estimators)
+    e_full = _rf_clf(n, seed + 103, n_estimators)
+    if (W == 0).sum() >= 8:
+        m0_full.fit(X[W == 0], Y[W == 0])
+    else:
+        m0_full = last_m0
+    if (W == 1).sum() >= 8:
+        m1_full.fit(X[W == 1], Y[W == 1])
+    else:
+        m1_full = last_m1
+    e_full.fit(X, W)
+
+    out = {
         "phi": phi,
         "tau": tau,
         "unit_po": unit,
@@ -136,6 +155,208 @@ def permucate_unit_po(
         "model_m": "RandomForestRegressor",
         "model_e": "RandomForestClassifier",
         "model_tau": "RandomForestRegressor",
+    }
+    if return_models:
+        out["models"] = {
+            "m0": m0_full,
+            "m1": m1_full,
+            "e": e_full,
+            "tau": tau_m,
+            "clip": float(clip),
+        }
+    return out
+
+
+def unit_po_from_models(models: dict, X: np.ndarray, Y: np.ndarray, W: np.ndarray) -> np.ndarray:
+    """Recompute u=(φ-τ̂)² with frozen PermuCATE models (token re-forward)."""
+    X = np.asarray(X, dtype=float)
+    Y = np.asarray(Y, dtype=float).reshape(-1)
+    W = np.asarray(W, dtype=int).reshape(-1)
+    clip = float(models.get("clip", CLIP))
+    mu0 = models["m0"].predict(X)
+    mu1 = models["m1"].predict(X)
+    pi = np.clip(models["e"].predict_proba(X)[:, 1], clip, 1.0 - clip)
+    mu_w = np.where(W == 1, mu1, mu0)
+    phi = (mu1 - mu0) + (Y - mu_w) * (W - pi) / (pi * (1.0 - pi))
+    tau = models["tau"].predict(X)
+    return (phi - tau) ** 2
+
+
+def featurize_texts(
+    texts_ref: Sequence[str],
+    texts_live: Sequence[str],
+    *,
+    max_features: int = 500,
+    n_components: int = 64,
+    seed: int = SEED,
+):
+    """Word+char TF-IDF → TruncatedSVD dense X for PermuCATE RF on text."""
+    from scipy import sparse
+    from sklearn.decomposition import TruncatedSVD
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    texts_ref = list(texts_ref)
+    texts_live = list(texts_live)
+    all_texts = texts_ref + texts_live
+    word = TfidfVectorizer(
+        analyzer="word",
+        ngram_range=(1, 2),
+        min_df=2,
+        max_features=int(max_features),
+        sublinear_tf=True,
+    )
+    char = TfidfVectorizer(
+        analyzer="char_wb",
+        ngram_range=(3, 5),
+        min_df=2,
+        max_features=int(max_features),
+        sublinear_tf=True,
+    )
+    X_all = sparse.hstack([word.fit_transform(all_texts), char.fit_transform(all_texts)]).tocsr()
+    n_comp = int(min(n_components, max(8, X_all.shape[1] - 1)))
+    svd = TruncatedSVD(n_components=n_comp, random_state=int(seed))
+    Z = svd.fit_transform(X_all)
+    n0 = len(texts_ref)
+
+    def _transform(texts):
+        texts = list(texts)
+        return svd.transform(
+            sparse.hstack([word.transform(texts), char.transform(texts)]).tocsr()
+        )
+
+    return {
+        "X_ref": Z[:n0],
+        "X_live": Z[n0:],
+        "vectorizer": word,
+        "char_vectorizer": char,
+        "svd": svd,
+        "transform": _transform,
+    }
+
+
+def text_permucate_magvar(
+    texts_ref: Sequence[str],
+    y_ref: np.ndarray,
+    texts_live: Sequence[str],
+    y_live: np.ndarray,
+    *,
+    K: int = 28,
+    seed: int = SEED,
+    n_estimators: int = 50,
+    max_features: int = 400,
+    n_components: int = 64,
+    return_models: bool = False,
+) -> dict:
+    """PermuCATE Mag×Var on text: Y=response label, W=REF(0)/LIVE(1)."""
+    y_ref = np.asarray(y_ref, dtype=float).reshape(-1)
+    y_live = np.asarray(y_live, dtype=float).reshape(-1)
+    feat = featurize_texts(
+        texts_ref,
+        texts_live,
+        max_features=max_features,
+        n_components=n_components,
+        seed=seed,
+    )
+    X = np.vstack([feat["X_ref"], feat["X_live"]])
+    Y = np.concatenate([y_ref, y_live])
+    W = np.concatenate(
+        [np.zeros(len(y_ref), dtype=int), np.ones(len(y_live), dtype=int)]
+    )
+    fit = permucate_unit_po(
+        X, Y, W, seed=seed, n_estimators=n_estimators, return_models=return_models
+    )
+    unit_ref = fit["unit_po"][W == 0]
+    unit_live = fit["unit_po"][W == 1]
+    mv_ref = mag_var_from_unit(unit_ref, K=K, seed=seed)
+    mv_live = mag_var_from_unit(unit_live, K=K + 1, seed=seed + 3)
+    d_mu = float(mv_live["mu"] - mv_ref["mu"])
+    d_s = float(mv_live["s"] - mv_ref["s"])
+    J = merge_J(d_mu, d_s, mv_ref["s"])
+    out = {
+        "estimator": "permucate_rf_text",
+        "d_mu": d_mu,
+        "d_s": d_s,
+        "J": J,
+        "mu_ref": mv_ref["mu"],
+        "mu_live": mv_live["mu"],
+        "s_ref": mv_ref["s"],
+        "s_live": mv_live["s"],
+        "kurtosis_live": float(
+            __import__("scipy.stats", fromlist=["kurtosis"]).kurtosis(
+                unit_live, fisher=True, bias=False
+            )
+        ),
+        "tail_ratio_live": _tail_ratio(unit_live),
+        "r_po": fit["r_po"],
+        "unit_live": unit_live,
+        "unit_ref": unit_ref,
+        "feat": feat,
+        "fit": fit,
+    }
+    return out
+
+
+def _tail_ratio(unit: np.ndarray) -> float:
+    unit = np.asarray(unit, dtype=float)
+    p50, p75, p95 = np.percentile(unit, [50, 75, 95])
+    return float((p95 - p50) / max(p75 - p50, 1e-6))
+
+
+def text_token_vai_permucate(
+    texts_live: Sequence[str],
+    y_live: np.ndarray,
+    feat: dict,
+    models: dict,
+    *,
+    n_docs: int = 8,
+    max_tokens: int = 16,
+    seed: int = SEED,
+) -> dict:
+    """Token drop → re-featurize → recompute PermuCATE u (frozen models)."""
+    import re
+
+    word_re = re.compile(r"[A-Za-z']+")
+    y_live = np.asarray(y_live, dtype=float).reshape(-1)
+    rng = np.random.default_rng(int(seed))
+    n = len(texts_live)
+    pick = rng.choice(n, size=min(n_docs, n), replace=False)
+    tops, ginis = [], []
+    for k, i in enumerate(pick):
+        text = texts_live[int(i)]
+        y = float(y_live[int(i)])
+        toks = text.split()
+        cand = [j for j, t in enumerate(toks) if word_re.fullmatch(t) and len(t) > 2]
+        if not cand:
+            continue
+        if len(cand) > max_tokens:
+            cand = list(rng.choice(cand, size=max_tokens, replace=False))
+        X0 = feat["transform"]([text])
+        u0 = float(unit_po_from_models(models, X0, np.array([y]), np.array([1]))[0])
+        attrs = []
+        for j in cand:
+            trial = list(toks)
+            trial[j] = ""
+            new_t = " ".join(w for w in trial if w)
+            if not new_t.strip():
+                continue
+            Xp = feat["transform"]([new_t])
+            uj = float(unit_po_from_models(models, Xp, np.array([y]), np.array([1]))[0])
+            attrs.append(abs(uj - u0))
+        if not attrs:
+            continue
+        a = np.asarray(attrs, dtype=float)
+        s = float(a.sum()) + 1e-12
+        top_n = max(1, int(0.2 * len(a)))
+        tops.append(float(np.sort(a)[::-1][:top_n].sum() / s))
+        xs = np.sort(a)
+        m = len(xs)
+        ginis.append(float((2.0 * np.arange(1, m + 1) - m - 1) @ xs / (m * s)))
+    if not tops:
+        return {"top_share": 0.0, "gini": 0.0, "n_docs": 0}
+    return {
+        "top_share": float(np.mean(tops)),
+        "gini": float(np.mean(ginis)),
+        "n_docs": int(len(tops)),
     }
 
 
@@ -160,8 +381,14 @@ def mag_var_from_unit(unit: np.ndarray, K: int = 36, seed: int = SEED) -> dict:
 
 
 def merge_J(d_mu: float, d_s: float, s_ref: float, kappa: float = 3.0) -> float:
-    s_ref = max(float(s_ref), 1e-9)
-    return float(d_mu * (1.0 + kappa * max(d_s, 0.0) / s_ref))
+    """Mag×Var severity: mean lift + capped variance amplification.
+
+    Additive in Δs so negative ``d_mu`` does not erase a variance spike.
+    Cap ``Δs/s_ref`` so tiny ``s_ref`` cannot explode J on quiet splits.
+    """
+    s_ref = max(float(s_ref), 1e-4)
+    amp = min(max(float(d_s), 0.0) / s_ref, 3.0)
+    return float(d_mu + kappa * amp * max(s_ref, 0.05))
 
 
 def pred_shift(d_mu: float, d_s: float, J: float = 0.0, d_err: float = 0.0) -> str:
@@ -302,7 +529,11 @@ def eval_magvar_permucate(
             "model_tau": "RandomForestRegressor (τ̂ on φ)",
             "unit_po": "(φ - τ̂)^2",
             "used_permucate_rf": True,
-            "note": "Same DR φ as permuCATE_vimp.po_risk; AIGC text MVP still uses supervised proxy.",
+            "note": (
+                "Same DR φ as permuCATE_vimp.po_risk. "
+                "Text triage / token AUC also use PermuCATE when response Y exists "
+                "(text_permucate_magvar)."
+            ),
         },
         "ref_magvar": ref_pack,
         "classified": classified,
@@ -542,7 +773,7 @@ def _write_readme(path: Path, payload: dict, png_name: str):
         "",
         "- **Yes — RandomForest outcome models** (μ̂₀, μ̂₁), RF propensity, RF τ̂ on DR φ.",
         "- Unit PO-risk $u_i=(\\varphi_i-\\hat\\tau_i)^2$ (same family as `permuCATE_vimp.po_risk`).",
-        "- Earlier AIGC text boards used supervised proxy $1-\\hat p(Y\\mid x)$ — different path.",
+        "- Text triage / token AUC / decision tree also use PermuCATE when response $Y$ exists.",
         "",
         "## 2×2",
         "",
