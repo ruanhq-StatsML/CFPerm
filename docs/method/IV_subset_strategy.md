@@ -51,6 +51,16 @@ ROI mapping (outside pure stats): ACT mass → scalable bets;
 ESTIMATE_ONLY → learn more / small probes; NO_ACT → do not spend
 on an IV-identified uplift claim.
 
+## Integration with uplift monitoring
+
+Cross-check meta-learner LOCO--AUUC / LIVE quintiles against these IV tiers
+before REALLOCATE that claims identified uplift. Full actionable-items
+iteration (tables + business gates B1--B5):
+
+- `docs/method/Monitor_Uplift_FSDS_actionables.tex` (paste after Overall Recommendation)
+- `docs/method/Monitor_Uplift_FSDS.tex` (full MVP writeup with section appended)
+- `docs/method/Monitor_Uplift_FSDS_actionables.md`
+
 ## Run
 
 ```bash
