@@ -1,0 +1,192 @@
+% =============================================================================
+% Multi-Modal Attribution use-case: cross-modal contamination, layer by layer.
+% Paste into the MVP writeup (no \begin{document} / \end{document}).
+% Anchors: MSR-VTT modality shares + PO-hop cross-modal Ridge numbers in-repo.
+% =============================================================================
+
+\section{Multi-Modal Attribution use-case: cross-modal contamination}
+\label{sec:cross-modal-contamination}
+
+\paragraph{Opportunity.}
+Multimodal systems fail when one modality's shift \emph{leaks into} another's
+scores or into the joint predictor---not only when a single block's marginal
+$P(X_m)$ moves.
+The FSDS stack already measures modality shares (RF-Domain / MMD / PO-risk)
+and hop actuators (modality-$\pi$, PO masks).
+The missing product story is \textbf{contamination}: attribute \emph{which
+layer} the leak lives at, then pick the cheapest actuator.
+
+\subsection{Definition}
+Write $X=(X_v,X_a,X_t)$ and learner $f$.
+\textbf{Contamination} covers support leak (shift in $m$ read through
+correlated $m'$), concept leak ($Y\mid X$ or cross-modal map drifts with
+quiet marginals), fusion soak (late fusion lets a noisy block dominate),
+and structural nulls (window-invariant blocks---e.g.\ clip-level text on the
+MSR-VTT extract).
+Batch $W$ on that board is the early vs.\ late window split
+\emph{inside} each video.
+
+\subsection{Layer stack}
+Attribute outside-in; each layer gates the next.
+Do \textbf{not} jump to patch masks before modality shares; do \textbf{not}
+reweight training features by PO VIMP (lost to \texttt{hop\_ridge} on Amazon).
+
+\begin{center}
+\small
+\begin{tabular}{@{}clp{0.55\linewidth}@{}}
+\toprule
+Layer & Probe & Question / output \\
+\midrule
+L0 Global hop & MMD$^2$, domain AUC, PO-risk / DRPerm & Did anything move? typed $(c,\delta)$ \\
+L1 Modality mass & RF / MMD / PO VIMP $\to\pi_m$ & Which block carries the shift? simplex shares \\
+L2 Within-block & region $\|d\|$, Holm, per-video Friedman & Where inside the dominant block? \\
+L3 Coupling & cross-modal Ridge; LOGO; PO-mask $\Delta$MSE & Does $m$ contaminate target $m'$? score $C_{m\to m'}$ \\
+L4 Actuator & $\pi$-hop, mask, EWMA $\lambda$, RefreshRef, relearn & Cheapest fix for the diagnosed layer \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Contamination score.}
+On hop $t{-}1\to t$, donor $m$, target head $m'$ (or joint $Y$):
+\[
+  C_{m\to m'}
+  =
+  \Delta\mathrm{MSE}^{(-m)}
+  -
+  \Delta\mathrm{MSE}^{(\mathrm{mask}\,m)}.
+\]
+Large LOGO + small mask $\Rightarrow$ fusion soak ($\pi$ / fusion gate);
+large mask + stable $\pi$ $\Rightarrow$ localized donor concept (mask);
+both large $\Rightarrow$ compound (escalate).
+
+\subsection{Where the opportunity is}
+\begin{enumerate}\itemsep2pt
+  \item[\textbf{O1.}] \textbf{Stop blaming the wrong modality.}
+        Single-share pies over-credit the tallest block.
+        MSR-VTT RF shares video$/\!$audio$/\!$text $\approx 0.77/0.19/0.04$,
+        but text's near-zero is \emph{structural} on this extract---not
+        ``language unused.''
+        L1$\times$L3 tickets name donor$\to$target edges.
+  \item[\textbf{O2.}] \textbf{Cheapest actuator before retrain.}
+        Locked recipe: Amazon $\to$ heatmap \texttt{hop\_ridge};
+        multimodal $\to$ modality-$\pi$;
+        PO-risk $\to$ \textbf{mask only}.
+        Mild L3 $\Rightarrow$ $\pi$-hop; large mask $\Delta$MSE $\Rightarrow$ PO mask;
+        concept L0 with flat L1 $\Rightarrow$ raise EWMA $\lambda$;
+        never VIMP-reweight the train features.
+        Live MSR-VTT cross-modal: hop $0.0898\to 0.0896$ with $\pi_m$
+        (video$\approx 0.71$, audio$\approx 0.26$)---signed gain, no new loss.
+  \item[\textbf{O3.}] \textbf{Compound vs pure shift (uplift-monitor geometry).}
+        Same cross-check pattern as AUUC$\times$IV tiers:
+        L1 mass $\times$ L3 coupling $\to$ pure donor / contaminating donor /
+        fusion soak / structural null, each with a default actuator.
+  \item[\textbf{O4.}] \textbf{Online EWMA from attribution.}
+        $(\hat c,\hat\delta,\Delta\pi)\to\texttt{attribution\_ewma\_rate}\to\lambda_{\mathrm{new}}$;
+        optional $\Delta C$ spike alone raises $\lambda$ on the
+        \emph{fusion adapter}, not every backbone.
+  \item[\textbf{O5.}] \textbf{Eval surface still scarce.}
+        Batch-hop causal geometry (domain RF + MMD + PO + LOGO/mask), not
+        only Grad-CAM.
+        Tables-only contamination board (shares + $C_{m\to m'}$ + actuator)
+        sits next to existing MSR-VTT attribution tables.
+\end{enumerate}
+
+\subsection{Empirical anchors}
+\begin{table}[H]
+\centering
+\small
+\caption{MSR-VTT modality mass on $P(X\mid W)$ (window extract; L1-normalized shares).}
+\label{tab:contam-modality-mass}
+\begin{tabular}{@{}lccc l@{}}
+\toprule
+Modality & RF-Domain & MMD & PO-risk & Role in $W$-shift \\
+\midrule
+Video ($768$-d) & $0.772$ & $0.897$ & $0.813$ & primary \\
+Audio ($512$-d) & $0.191$ & $0.101$ & $0.174$ & secondary \\
+Text ($768$-d)  & $0.037$ & $0.002$ & $0.013$ & structural null$^{\dagger}$ \\
+\bottomrule
+\end{tabular}\\[0.35em]
+{\footnotesize $^{\dagger}$Clip-level caption (window-invariant on this extract).}
+}
+\end{table}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Cross-modal hop and PO-mask probes (video+audio $\to$ text; Amazon top-PO mask for scale).}
+\label{tab:contam-hop-mask}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Probe & Value \\
+\midrule
+MSR-VTT hop / hop+$\pi_m$ MSE & $0.0898$ / $0.0896$ \\
+mask video patches (zero) $\Delta$MSE & $+0.0009$ \\
+mask audio patches (zero) $\Delta$MSE & $-0.0004$ \\
+Amazon top-PO mask zero / noise $\Delta$MSE & $+0.126$ / $+0.144$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{L1 $\times$ L3 cross-check}
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.22\linewidth}p{0.22\linewidth}p{0.24\linewidth}p{0.24\linewidth}@{}}
+\toprule
+L1 mass & L3 coupling $C$ & Read & Default actuator \\
+\midrule
+$m$ dominates & small & pure donor shift & $\pi$ on $m$; hold $m'$ \\
+$m$ dominates & large & contaminating donor & $\pi$ + PO-mask / fuse-gate \\
+flat shares & large on one edge & fusion soak & fusion audit; NarrowSupport \\
+structural null (text) & any & do not conclude unused & report structural zero \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Actionable items (contamination v1)}
+\begin{center}
+\small
+\begin{tabular}{@{}clp{0.72\linewidth}@{}}
+\toprule
+Pri. & Code & Item \\
+\midrule
+P0 & \textsc{GateHop} &
+No L1--L4 tickets if L0 quiet. \\
+P1 & \textsc{ModalityMass} &
+Publish $\pi_m$ every hop; flag structural nulls. \\
+P1 & \textsc{ContamEdge} &
+Compute $C_{m\to m'}$ on the deployed head. \\
+P1 & \textsc{CrossCheckMM} &
+Require L1$\times$L3 cell on every reweight / mask ticket. \\
+P2 & \textsc{PiHop} &
+Modality-$\pi$ hop when L1 moves and L3 mild. \\
+P2 & \textsc{PoMask} &
+Mask top-PO patches when L3 mask $\Delta$MSE large; never VIMP-reweight train. \\
+P2 & \textsc{PerVideo} &
+If per-video dominant flips, ticket per video---not global $\pi$. \\
+P3 & \textsc{EwmaFusion} &
+Feed $(\hat c,\hat\delta,\Delta\pi,\Delta C)$ into EWMA rate; $\Delta C$-only spike $\to$ fusion adapter $\lambda$. \\
+P3 & \textsc{NarrowSupportMM} &
+Under mix shift, score only overlap support across modalities. \\
+P4 & \textsc{RelearnHead} &
+After $\pi$+mask trial fails under PO reject---relearn contaminated head only. \\
+P4 & \textsc{StructNull} &
+Report structural zeros explicitly; never ``language unused.'' \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{One-line product claim.}
+Cross-modal contamination attribution turns FSDS modality shares and PO masks
+into a \emph{layer$\to$actuator} router: blame the right edge, spend the
+cheapest hop fix, escalate relearn only when $\pi$+mask fail under concept
+reject.
+
+\paragraph{Run.}
+\begin{verbatim}
+PYTHONPATH=Python/src python3 scripts/run_msrvtt_multimodal_attribution.py
+PYTHONPATH=Python/src python3 scripts/run_po_hop_attribution.py
+PYTHONPATH=Python/src python3 scripts/run_attribution_adapter.py
+\end{verbatim}
+Code: \texttt{msrvtt\_multimodal\_attribution.py},
+\texttt{po\_hop\_attribution.py},
+\texttt{attribution\_adapter.py}.
