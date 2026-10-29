@@ -127,10 +127,27 @@ the target relative to the reference world.
 **Claim.** Attribute contamination by intervening on $h_m$ (or on fusion
 $z$), not only on raw coordinates of $X_m$.
 
-Fix a hop and a target risk $R$ (MSE of cross-modal Ridge, retrieval loss,
-AUUC of a monitor head — same geometry). Let $h^{\mathrm{obs}}$ be the
-observed intermediates on the evaluation slice. Choose a **reference
-world** for donor $m$ (pick one; report which):
+Fix a hop and a target risk $R$. **R-risk** (prediction / residual MSE of
+the head) and **PO-risk** (pseudo-outcome risk for concept / $Y\mid X$)
+are the two defaults — same $\mathrm{Attr}_m$ algebra, different physics.
+Other interchangeable $R$ that keep the geometry (swap one column, keep
+edge-signature logic):
+
+| Risk $R$ | Physics | When to prefer |
+| --- | --- | --- |
+| **R-risk / MSE** | $f$ prediction error on target | cross-modal Ridge, rating, reconstruction |
+| **PO-risk** $n^{-1}\sum\hat\tau_Y(X)^2$ | concept / batch–outcome | L0 concept reject; uplift-style heads |
+| **Domain risk** (1−AUC or CE of RF on $W$) | covariate $P(h\mid W)$ | “did the intermediate *mix* move?” |
+| **MMD$^2(h^{t-1},h^t)$** | distribution discrepancy | support leak without labels |
+| **AUUC / uplift ranking** | targeting quality | monitor heads shared with uplift use-case |
+| **Retrieval / InfoNCE** | cross-modal match | retrieval / CLIP-style $f$ |
+| **Calibration (Brier / ECE)** | score honesty | fusion soak that preserves MSE but breaks probs |
+
+Gate (not a risk): ESS overlap — if support collapses, defer $\mathrm{Attr}_m$
+interpretation (same rule as uplift LOCO gates).
+
+Let $h^{\mathrm{obs}}$ be the observed intermediates on the evaluation
+slice. Choose a **reference world** for donor $m$ (pick one; report which):
 
 | CF world | do-operator on intermediate | Intuition | Repo analogue |
 | --- | --- | --- | --- |
