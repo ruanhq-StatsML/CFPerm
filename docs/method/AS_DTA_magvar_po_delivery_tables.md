@@ -1,55 +1,78 @@
-# Mag×Var PermuCATE PO — separate benign vs malignant
+# Mag×Var PermuCATE PO — MVP + lit + fused results
 
-**Objective:** distinguish benign vs malignant shift → different medicine.  
-**Verdict:** meets expectation — deliver. MVP business logic + short PO lit place.
+**Objective:** separate benign vs malignant. **Verdict:** meets expectation.
 
-## Literature (PO-centred, short)
+## Literature (short)
 
-| Thread | Takeaway for this MVP |
+| Thread | Takeaway |
 | --- | --- |
-| PO / DR / CATE (Rubin, Robins, Chernozhukov, Kennedy, Athey–Wager) | Monitor $u=(\varphi-\hat\tau)^2$, not $1-\hat p$ |
-| Uplift / batch PO-risk monitors (FSDS uplift note) | LIVE needs $X$-shift + PO-risk, not holdout AUUC alone |
-| Concept drift / OOD (Gama, Quiñonero-Candela, Hendrycks, energy OOD) | Mean risk↑ mixes cosmetic drift and attacks → wrong drug |
-| **This MVP** | Mag×Var = shape of $u$; $Y$-flip = integrity break; severity $=J+Y$-flip |
+| PO / DR / CATE | Monitor $u=(\varphi-\hat\tau)^2$ |
+| Uplift / batch PO-risk | LIVE needs PO-risk, not holdout alone |
+| OOD / mean risk | Mean↑ mixes two diseases |
+| **This MVP** | Mag×Var shape + $Y$-flip integrity |
 
 ## PO is here
 
-| Symbol | Definition |
+$u=(\varphi-\hat\tau)^2$; severity $=J+Y$-flip. Benign keeps $Y$; malignant flips $Y$ on attacked rows.
+
+## Results (fused)
+
+### Headline
+
+| Suite | Metric |
 | --- | --- |
-| $W$ | REF=0 / LIVE=1 |
-| $Y$ | response |
-| $\varphi$ | PermuCATE DR pseudo-outcome |
-| $\hat\tau$ | CATE RF |
-| **$u$** | $(\varphi-\hat\tau)^2$ |
-| $J$ | Mag×Var merge |
-| severity | $J + Y$-flip |
+| Tabular Mag×Var 2×2 | acc **1.00** |
+| Text severity AUC | pooled **1.00** |
+| 客群/region | hit-rate **1.00** (4/4) |
+| Decision-tree family | **1.00** (branch 0.75) |
 
-## How to separate
+### Tabular 2×2 + $J$
 
-| | Text $X$ | Response $Y$ |
+|  | pred benign | pred malignant |
 | --- | --- | --- |
-| **Benign** | synonym / back-translate | unchanged (flip $=0$) |
-| **Malignant** | subset attack | flip only on attacked rows $Y\leftarrow 1-Y$ |
+| true benign | 1 | 0 |
+| true malignant | 0 | 1 |
 
-- **Mag×Var on $u$:** shape (uniform vs mixture mass)
-- **$Y$-flip:** integrity outcome break
-- **severity** $= J + Y$-flip  
-  flip$=0$ + mild $J$ → conformal; mid flip → sparse freeze; large flip → dense freeze
+| Shift | $\Delta\mu$ | $\Delta s$ | $J$ |
+| --- | --- | --- | --- |
+| benign | −0.21 | −0.25 | −0.21 |
+| malignant | +9.70 | +3.02 | +114 |
 
-## Justify
+### Text severity AUC
 
-1. **Disease = objective.** Benign = cosmetic $X$ + valid $Y$; malignant = attack + outcome break. $Y$-flip on attacked rows measures that.
-2. **Same as tabular PermuCATE** (malignant already breaks $Y$ on the hit set).
-3. **Mag×Var = shape;** soft $J$ on text is OK without outcome break. Severity adds $Y$-flip.
-4. **Wrong-drug KPI:** conformal≠freeze; two sensors prevent the swap.
+| Board | AUC(severity) | AUC($J$) | AUC($Y$-flip) | AUC($\Delta\mu$) |
+| --- | --- | --- | --- | --- |
+| hc3_all | **1.00** | 0.61 | 1.00 | 0.69 |
+| hc3_finance | **1.00** | 0.42 | 1.00 | 0.56 |
+| news20_sci | **1.00** | 0.25 | 1.00 | 0.22 |
+| **pooled** | **1.00** | 0.43 | 1.00 | 0.48 |
 
-## Effect
+| Board | sev(ben) | sev(mal) | $J$(ben) | $J$(mal) |
+| --- | --- | --- | --- | --- |
+| hc3_all | 0.04 | 0.51 | 0.01 | 0.06 |
+| hc3_finance | 0.08 | 0.49 | 0.05 | 0.06 |
+| news20_sci | 0.08 | 0.42 | 0.04 | −0.03 |
 
-| Suite | Value |
-| --- | --- |
-| Tabular 2×2 | **1.00** |
-| Text severity AUC | **1.00** |
-| 客群 hit-rate | **1.00** |
-| Tree family | **1.00** |
+### 客群 / region
+
+| Segment | Region | sev(ben) | sev(mal) | gap | OK? |
+| --- | --- | --- | --- | --- | --- |
+| general | hc3_all | 0.04 | 0.41 | 0.37 | yes |
+| finance | hc3_finance | 0.09 | 0.45 | 0.36 | yes |
+| medicine | hc3_medicine | 0.01 | 0.48 | 0.47 | yes |
+| sci | news20_sci | −0.01 | 0.46 | 0.46 | yes |
+
+### Decision tree
+
+| Board | family | branch |
+| --- | --- | --- |
+| hc3_all / finance / news20 | 1.00 | 0.75 |
+| **mean** | **1.00** | 0.75 |
+
+|  | quiet/benign | sparse | dense |
+| --- | --- | --- | --- |
+| true quiet/benign | 6 | 0 | 0 |
+| true sparse | 0 | 3 | 0 |
+| true dense | 0 | 0 | 3 |
 
 LaTeX: `docs/method/AS_DTA_magvar_po_product_delivery.tex`

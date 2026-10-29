@@ -221,13 +221,16 @@ method $=$ Mag$\times$Var on PermuCATE $u$ plus $Y$-flip;
 justify $=$ cosmetic drift $\neq$ outcome break.
 
 %======================================================================
-\section{Effect (short)}
+\section{Results (fused)}
 %======================================================================
+
+\noindent\textbf{Headline:} effects meet expectation --- benign vs malignant
+separates under the Mag$\times$Var + $Y$-flip口径 on PermuCATE $u$.
 
 \begin{table}[h]
 \centering
-\caption{Separation works under this口径.}
-\label{tab:eff}
+\caption{Headline results (all on PermuCATE $u$).}
+\label{tab:headline}
 \small
 \begin{tabular}{@{}lc@{}}
 \toprule
@@ -236,7 +239,133 @@ Suite & Metric \\
 Tabular Mag$\times$Var 2$\times$2 & acc \textbf{1.00} \\
 Text severity AUC ($J+Y$-flip) & pooled \textbf{1.00} \\
 客群/region severity gap & hit-rate \textbf{1.00} (4/4) \\
-Decision-tree family & acc \textbf{1.00} \\
+Decision-tree family & acc \textbf{1.00} (branch $0.75$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Tabular Mag$\times$Var --- 2$\times$2 + $J$}
+\begin{table}[h]
+\centering
+\caption{REF$\to$LIVE tabular; unit $u=(\varphi-\hat\tau)^2$.
+Variance amplifies malignant $J$.}
+\label{tab:tab2x2}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & pred benign & pred malignant \\
+\midrule
+true benign & 1 & 0 \\
+true malignant & 0 & 1 \\
+\bottomrule
+\end{tabular}
+\qquad
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Shift & $\Delta\mu$ & $\Delta s$ & $J$ \\
+\midrule
+benign & $-0.21$ & $-0.25$ & $-0.21$ \\
+malignant & $+9.70$ & $+3.02$ & $+114$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Text + PermuCATE --- severity $=J+Y$-flip}
+\begin{table}[h]
+\centering
+\caption{Per-board AUC. Severity separates; pure $J$ is soft (as justified).}
+\label{tab:tokauc}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Board & AUC(severity) & AUC($J$) & AUC($Y$-flip) & AUC($\Delta\mu$) \\
+\midrule
+hc3\_all & \textbf{1.00} & 0.61 & 1.00 & 0.69 \\
+hc3\_finance & \textbf{1.00} & 0.42 & 1.00 & 0.56 \\
+news20\_sci & \textbf{1.00} & 0.25 & 1.00 & 0.22 \\
+\midrule
+\textbf{pooled} & \textbf{1.00} & 0.43 & 1.00 & 0.48 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Mean severity by kind (text boards).}
+\label{tab:tokmean}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Board & sev(ben) & sev(mal) & $J$(ben) & $J$(mal) \\
+\midrule
+hc3\_all & 0.04 & 0.51 & 0.01 & 0.06 \\
+hc3\_finance & 0.08 & 0.49 & 0.05 & 0.06 \\
+news20\_sci & 0.08 & 0.42 & 0.04 & $-0.03$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{客群 / region Mag$\times$Var}
+\begin{table}[h]
+\centering
+\caption{Same $Y$-flip口径 per segment. Hit-rate $4/4$.}
+\label{tab:seg}
+\small
+\begin{tabular}{@{}llrrr c@{}}
+\toprule
+Segment & Region & sev(ben) & sev(mal) & gap & OK? \\
+\midrule
+general & hc3\_all & 0.04 & 0.41 & 0.37 & yes \\
+finance & hc3\_finance & 0.09 & 0.45 & 0.36 & yes \\
+medicine & hc3\_medicine & 0.01 & 0.48 & 0.47 & yes \\
+sci & news20\_sci & $-0.01$ & 0.46 & 0.46 & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Decision tree (family triage)}
+\begin{table}[h]
+\centering
+\caption{Family acc $=1.00$; branch $=0.75$. Quiet$\leftrightarrow$benign counted safe.}
+\label{tab:tree}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Board & family acc & branch acc \\
+\midrule
+hc3\_all & 1.00 & 0.75 \\
+hc3\_finance & 1.00 & 0.75 \\
+news20\_sci & 1.00 & 0.75 \\
+\midrule
+\textbf{mean} & \textbf{1.00} & 0.75 \\
+\bottomrule
+\end{tabular}
+\qquad
+\begin{tabular}{@{}lccc@{}}
+\toprule
+ & quiet/benign & sparse & dense \\
+\midrule
+true quiet/benign & 6 & 0 & 0 \\
+true sparse & 0 & 3 & 0 \\
+true dense & 0 & 0 & 3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Honesty (results use the same PO)}
+\begin{table}[h]
+\centering
+\caption{Every result table above is on PermuCATE $u$, not $1-\hat p$.}
+\label{tab:honest}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Path & Unit risk & PermuCATE RF? \\
+\midrule
+Tabular Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Text token AUC & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+客群/region Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Decision tree & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -244,7 +373,7 @@ Decision-tree family & acc \textbf{1.00} \\
 \section*{Close}
 PO is here: $u=(\varphi-\hat\tau)^2$.
 MVP logic: separate benign (intact $Y$) from malignant (attack + $Y$-break)
-with Mag$\times$Var $+\,Y$-flip --- meets expectation.
+with Mag$\times$Var $+\,Y$-flip --- results meet expectation.
 
 \begin{thebibliography}{99}
 
