@@ -47,15 +47,9 @@ def main():
     print("[pc-mvp] multimodal shares vimp:", mm["modality_shares_vimp"], flush=True)
 
     DOCS.mkdir(parents=True, exist_ok=True)
-    shutil.copy(OUT / "README.md", DOCS / "AS_DTA_MVP_po_permucate_mm.md")
-    # append professor bridge
-    note = DOCS / "AS_DTA_MVP_po_permucate_mm.md"
-    note.write_text(
-        note.read_text()
-        + "\n\n## Run (PermuCATE RF path)\n\n```bash\n"
-        + "python3 scripts/run_as_dta_permucate_magvar.py\n```\n"
-        + "\nCode: `Python/src/as_dta_permucate_magvar.py` "
-        + "(RF μ₀/μ₁ + π + τ̂; Mag×Var on (φ−τ̂)²; V/A/T group-permute).\n"
+    # keep professor doc stable; only refresh results README pointer file
+    (DOCS / "AS_DTA_permucate_magvar_results.md").write_text(
+        (OUT / "README.md").read_text()
     )
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     shutil.copy(OUT / "permucate_magvar_mm.png", ARTIFACTS / "as_dta_permucate_magvar_mm.png")

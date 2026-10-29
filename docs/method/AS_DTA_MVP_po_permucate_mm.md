@@ -1,41 +1,52 @@
-# PermuCATE RF Mag×Var + multimodal attribution MVP
+# Professor MVP — Mag×Var on PermuCATE RF + multimodal attribution
 
-## Estimator (important)
+## Pitch (one screen)
 
-- **Yes — RandomForest outcome models** (μ̂₀, μ̂₁), RF propensity, RF τ̂ on DR φ.
-- Unit PO-risk $u_i=(\varphi_i-\hat\tau_i)^2$ (same family as `permuCATE_vimp.po_risk`).
-- Earlier AIGC text boards used supervised proxy $1-\hat p(Y\mid x)$ — different path.
+> When mean PO-risk rises, **Magnitude × Variance** of unit PO across bootstrap
+> sub-environments resolves **benign vs malignant shift** (2×2).  
+> This causal MVP estimates unit risk with **your PermuCATE stack**:  
+> **RF outcome models** $\hat\mu_0,\hat\mu_1$, RF propensity $\hat\pi$, RF $\hat\tau$ on DR $\varphi$,  
+> $u_i=(\varphi_i-\hat\tau_i)^2$.  
+> Multimodal attribution = group-permute / τ̂-VIMP mass on V/A/T — same “where is the PO mass” intuition.
 
-## 2×2
+## Estimator honesty
+
+| path | PO unit | RF outcome? |
+| --- | --- | --- |
+| AIGC text Mag×Var boards (earlier) | proxy $1-\hat p(Y\mid x)$ | No (TF-IDF + logistic) |
+| **This MVP** `as_dta_permucate_magvar.py` | $(\varphi-\hat\tau)^2$ | **Yes** — `RandomForestRegressor` μ₀/μ₁ + RF π + RF τ̂ |
+
+Formulas align with `Python/src/permuCATE_vimp.py` (`po_risk` / `permuCATE_fit_nuisance`, `model_m='rf_regressor'`).
+
+$$
+\varphi=\hat\mu_1-\hat\mu_0+\frac{(Y-\hat\mu_W)(W-\hat\pi)}{\hat\pi(1-\hat\pi)},\quad
+u=(\varphi-\hat\tau)^2,\quad
+\mu=\mathbb{E}[u],\quad
+s=\mathrm{Std}(r_b).
+$$
+
+## 2×2 (this run)
 
 |  | pred benign | pred malignant |
 | --- | --- | --- |
 | true benign | 1 | 0 |
 | true malignant | 0 | 1 |
 
-accuracy = 1.00
+acc = 1.0 · malignant $J$ strongly amplified by variance merge.
 
-## Multimodal shares
+## Multimodal attribution — justify
 
-| modality | group-permute | VIMP |
-| --- | --- | --- |
-| video | 0.000 | 0.492 |
-| audio | 0.000 | 0.225 |
-| text | 1.000 | 0.283 |
+1. Mag×Var answers **shift type** (uniform vs concentrated PO mass over sub-envs).  
+2. Modality shares answer **channel** (which of V/A/T carries that mass):
+   - **τ̂ VIMP mass** by feature group (stable primary)
+   - **group-permute** Δ$R_{\mathrm{PO}}$ (destroy one modality among LIVE rows)
 
-Mag×Var on PermuCATE RF unit risk (φ−τ̂)² resolves benign vs malignant shift (2×2); multimodal group-permute attributes the channel.
+Same story as Mag×Var: risk concentrates on a structured subset — here a **modality block** instead of a row subset. Actuator: freeze the high-share modality; conformal the rest.
 
-![](permucate_magvar_mm.png)
-
-```bash
-python3 scripts/run_as_dta_permucate_magvar.py
-```
-
-
-## Run (PermuCATE RF path)
+## Run
 
 ```bash
 python3 scripts/run_as_dta_permucate_magvar.py
 ```
 
-Code: `Python/src/as_dta_permucate_magvar.py` (RF μ₀/μ₁ + π + τ̂; Mag×Var on (φ−τ̂)²; V/A/T group-permute).
+Artifacts: `results/as_dta_permucate_magvar/`
