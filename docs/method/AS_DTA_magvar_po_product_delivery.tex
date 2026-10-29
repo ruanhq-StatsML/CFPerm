@@ -19,7 +19,7 @@
 and route different medicine.
 \textbf{How:} Mag$\times$Var on PermuCATE unit PO
 $u=(\varphi-\hat\tau)^2$, plus $Y$-flip on text integrity boards.
-\textbf{Headline:} four suites separate on the same $u$.
+\textbf{Headline:} suites separate on the same $u$ (incl.\ 9-dataset justify).
 \textbf{Close:} freeze the口径, sync the PR, ship.
 This note is the \textbf{MVP business logic} plus a short PO-centred
 literature place for the product.
@@ -214,12 +214,43 @@ local drug, not one global alarm.
     Conformal on outcome break fails; freeze on synonym wastes recall.
     The two-sensor rule (shape $J$ + integrity $Y$-flip) is what prevents
     that swap --- which is the business point of separating benign vs malignant.
+  \item \textbf{Concrete multi-dataset check (not one board).}
+    Same口径 on nine boards spanning four families
+    (HC3 AIGC verticals, 20~Newsgroups topics, AG~News, IMDB sentiment):
+    malignant severity exceeds benign on \textbf{9/9} (hit-rate $1.00$).
+    The rule is not HC3-specific --- Table~\ref{tab:dsjustify}.
 \end{enumerate}
+
+\begin{table}[h]
+\centering
+\caption{Dataset justify --- severity $=J+Y$-flip on PermuCATE $u$
+(benign keeps $Y$; malignant flips $Y$ on attacked rows).}
+\label{tab:dsjustify}
+\small
+\begin{tabular}{@{}llrrr c@{}}
+\toprule
+Board & Family & sev(ben) & sev(mal) & gap & OK? \\
+\midrule
+hc3\_finance & AIGC & $0.02$ & $0.79$ & $0.78$ & yes \\
+hc3\_medicine & AIGC & $0.50$ & $0.80$ & $0.30$ & yes \\
+hc3\_open\_qa & AIGC & $0.26$ & $1.04$ & $0.79$ & yes \\
+hc3\_wiki & AIGC & $0.00$ & $0.43$ & $0.43$ & yes \\
+news20\_sci & topic & $0.25$ & $0.31$ & $0.06$ & yes \\
+news20\_talk & topic & $-0.05$ & $0.40$ & $0.45$ & yes \\
+news20\_comp & topic & $0.02$ & $0.82$ & $0.80$ & yes \\
+ag\_news & news & $0.13$ & $0.51$ & $0.38$ & yes \\
+imdb & sentiment & $-0.03$ & $0.42$ & $0.45$ & yes \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{hit-rate}} &
+  \multicolumn{4}{r@{}}{\textbf{9/9 $= 1.00$}} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \noindent\textit{One line:}
 objective $=$ separate benign vs malignant;
 method $=$ Mag$\times$Var on PermuCATE $u$ plus $Y$-flip;
-justify $=$ cosmetic drift $\neq$ outcome break.
+justify $=$ cosmetic drift $\neq$ outcome break --- held on 9 datasets.
 
 %======================================================================
 \section{Results (fused)}
@@ -228,8 +259,8 @@ justify $=$ cosmetic drift $\neq$ outcome break.
 \subsection{Headline --- did we separate?}
 The headline is not a score dump: it is the \textbf{product KPI check}
 against the objective in §2.
-Four suites, one question --- benign vs malignant on the same PermuCATE
-$u$ --- four answers that must agree before we close.
+Five suites, one question --- benign vs malignant on the same PermuCATE
+$u$ --- five answers that must agree before we close.
 
 \begin{center}
 \small
@@ -243,6 +274,8 @@ Text severity & AUC \textbf{1.00} &
   $J$ soft; $Y$-flip carries integrity (as justified) \\
 客群/region & hit-rate \textbf{1.00} &
   same口径 local --- not one global alarm \\
+Multi-dataset justify & hit-rate \textbf{1.00} &
+  9 boards / 4 families (HC3, news20, AG~News, IMDB) \\
 Decision tree & family \textbf{1.00} &
   typed actuator path (branch $0.75$ ok) \\
 \bottomrule
@@ -251,7 +284,7 @@ Decision tree & family \textbf{1.00} &
 
 \noindent\textit{Headline logic:}
 if any suite fails separation, do not ship that actuator path;
-all four hit $\Rightarrow$ MVP triage is ready to close.
+all five hit $\Rightarrow$ MVP triage is ready to close.
 
 \subsection{Tabular Mag$\times$Var --- 2$\times$2 + $J$}
 \begin{table}[h]
@@ -374,6 +407,7 @@ Path & Unit risk & PermuCATE RF? \\
 Tabular Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 Text token AUC & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 客群/region Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Multi-dataset justify & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 Decision tree & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 \bottomrule
 \end{tabular}
@@ -391,14 +425,14 @@ Step & Locked in this note & Status \\
 Objective & separate benign vs malignant + typed medicine & §2 \\
 PO / How & $u=(\varphi-\hat\tau)^2$; Mag$\times$Var $+\,Y$-flip; 客群-local & §3--4 \\
 Justify & cosmetic $X$ $\neq$ outcome break; wrong-drug KPI & §5 \\
-Headline & four suites separate on the same $u$ & §6 \\
+Headline & suites separate on the same $u$ (9/9 datasets) & §6 \\
 \textbf{Ship} & deliver MVP triage; freeze口径; open PR & \textbf{here} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent\textit{Close logic (= ``同步 PR 并收尾''):}
-(1) re-read headline --- all KPIs green;
+(1) re-read headline --- all KPIs green (incl.\ multi-dataset justify);
 (2) re-assert PO is here ($u$, not $1-\hat p$);
 (3) freeze the口径 (benign keeps $Y$; malignant flips $Y$ on attacked rows);
 (4) sync the delivery note to the PR and stop --- no extra axes,

@@ -14,7 +14,7 @@ import numpy as np
 
 from as_dta_aigc import ROOT, SEED, build_live_batches, fit_sklearn_detector, synonym_replace
 from as_dta_permucate_magvar import text_permucate_magvar
-from as_dta_shift_data import load_board, split_ref_live_board
+from as_dta_shift_data import JUSTIFY_DATASETS, load_board, split_ref_live_board
 
 OUT_DEFAULT = ROOT / "results" / "as_dta_segment_magvar"
 
@@ -23,8 +23,14 @@ SEGMENT_MAP = {
     "hc3_all": {"segment": "general", "region": "hc3_all", "vertical": "AIGC integrity"},
     "hc3_finance": {"segment": "finance", "region": "hc3_finance", "vertical": "AIGC integrity"},
     "hc3_medicine": {"segment": "medicine", "region": "hc3_medicine", "vertical": "AIGC integrity"},
+    "hc3_open_qa": {"segment": "open_qa", "region": "hc3_open_qa", "vertical": "AIGC integrity"},
+    "hc3_wiki": {"segment": "wiki", "region": "hc3_wiki", "vertical": "AIGC integrity"},
     "news20_sci": {"segment": "sci", "region": "news20_sci", "vertical": "topic monitor"},
     "news20_talk": {"segment": "talk", "region": "news20_talk", "vertical": "topic monitor"},
+    "news20_comp": {"segment": "comp", "region": "news20_comp", "vertical": "topic monitor"},
+    "news20_rec": {"segment": "rec", "region": "news20_rec", "vertical": "topic monitor"},
+    "ag_news": {"segment": "ag_news", "region": "ag_news", "vertical": "news topic"},
+    "imdb": {"segment": "imdb", "region": "imdb", "vertical": "sentiment"},
 }
 
 DEFAULT_SEGMENTS = ("hc3_all", "hc3_finance", "hc3_medicine", "news20_sci")
@@ -65,10 +71,12 @@ def eval_segment(
         board_name,
         {"segment": board_name, "region": board_name, "vertical": "custom"},
     )
-    if board_name.startswith("hc3_"):
-        board = load_board(board_name, max_pairs=max_pairs, seed=seed)
-    else:
-        board = load_board(board_name, max_per_class=min(300, max_pairs // 2), seed=seed)
+    board = load_board(
+        board_name,
+        max_pairs=max_pairs,
+        max_per_class=min(300, max_pairs // 2),
+        seed=seed,
+    )
     split = split_ref_live_board(board, live_frac=0.4, seed=seed)
     X_tr, y_tr = split["ref_texts"], split["ref_labels"]
     X_live, y_live = split["live_texts"], split["live_labels"]
