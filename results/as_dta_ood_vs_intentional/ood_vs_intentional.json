@@ -1,0 +1,329 @@
+{
+  "n_train": 2816,
+  "conformal": {
+    "ok": true,
+    "threshold": 0.5878675821629562,
+    "target_fpr": 0.15,
+    "realized_fpr": 0.151,
+    "recall": 0.965
+  },
+  "cases": {
+    "ref_clean": {
+      "discriminate": {
+        "label": "ref_clean",
+        "verdict": "quiet",
+        "actuator": "hold",
+        "with_Y": true,
+        "delta": {
+          "d_mean_po": 0.0,
+          "d_cvar": -0.0033288670037783796,
+          "d_peak": -0.0012676452239657743,
+          "d_top20_po_share": 0.0,
+          "d_gini_po": 0.0,
+          "d_error": 0.0
+        },
+        "y_metrics_live": {
+          "error": 0.14349999999999996,
+          "fn_rate": 0.018,
+          "fp_rate": 0.269,
+          "counts": {
+            "tp": 982,
+            "fp": 269,
+            "tn": 731,
+            "fn": 18
+          },
+          "mean_po": 0.25752985068538453,
+          "concentration": {
+            "top_share": 0.4515509400187334,
+            "gini": 0.4306141728309217,
+            "p90": 0.5545772159709544,
+            "p50": 0.2028070670151263
+          }
+        },
+        "y_metrics_ref": {
+          "error": 0.14349999999999996,
+          "mean_po": 0.25752985068538453,
+          "concentration": {
+            "top_share": 0.4515509400187334,
+            "gini": 0.4306141728309217,
+            "p90": 0.5545772159709544,
+            "p50": 0.2028070670151263
+          }
+        },
+        "shape": {
+          "d_mean": 0.0,
+          "d_peak": -0.0012676452239657743,
+          "d_cvar": -0.0033288670037783796,
+          "shape": "quiet",
+          "action": "hold",
+          "malignant_score": -0.010141161791726194
+        },
+        "why_informative": "With Y, PO_i=1-p\u0302(Y_i|x_i) is a true-label risk. Uniform \u0394Mean + flat concentration \u21d2 natural OOD; rising top-20% PO share / CVaR + error/FN lift \u21d2 intentional injection. Y also unlocks direct effectiveness checks (\u0394error, \u0394FN, \u0394cost) after the actuator."
+      },
+      "truth": "quiet",
+      "verdict_match": true
+    },
+    "ood_uniform": {
+      "discriminate": {
+        "label": "ood_uniform",
+        "verdict": "ood_uniform",
+        "actuator": "conformal_domain_calibrated",
+        "with_Y": true,
+        "delta": {
+          "d_mean_po": 0.0042558305386624085,
+          "d_cvar": -0.0011763819395494979,
+          "d_peak": -0.0028647772933310667,
+          "d_top20_po_share": -0.009979298500891742,
+          "d_gini_po": -0.014125175373059295,
+          "d_error": -0.006000000000000005
+        },
+        "y_metrics_live": {
+          "error": 0.13749999999999996,
+          "fn_rate": 0.022,
+          "fp_rate": 0.253,
+          "counts": {
+            "tp": 978,
+            "fp": 253,
+            "tn": 747,
+            "fn": 22
+          },
+          "mean_po": 0.26178568122404694,
+          "concentration": {
+            "top_share": 0.4415716415178417,
+            "gini": 0.4164889974578624,
+            "p90": 0.5544124559586541,
+            "p50": 0.21195302494943657
+          }
+        },
+        "y_metrics_ref": {
+          "error": 0.14349999999999996,
+          "mean_po": 0.25752985068538453,
+          "concentration": {
+            "top_share": 0.4515509400187334,
+            "gini": 0.4306141728309217,
+            "p90": 0.5545772159709544,
+            "p50": 0.2028070670151263
+          }
+        },
+        "shape": {
+          "d_mean": 0.0042558305386624085,
+          "d_peak": -0.0028647772933310667,
+          "d_cvar": -0.0011763819395494979,
+          "shape": "benign",
+          "action": "conformal_calibrate",
+          "malignant_score": -0.02079030307731733
+        },
+        "why_informative": "With Y, PO_i=1-p\u0302(Y_i|x_i) is a true-label risk. Uniform \u0394Mean + flat concentration \u21d2 natural OOD; rising top-20% PO share / CVaR + error/FN lift \u21d2 intentional injection. Y also unlocks direct effectiveness checks (\u0394error, \u0394FN, \u0394cost) after the actuator."
+      },
+      "truth": "ood_uniform",
+      "verdict_match": true
+    },
+    "intentional_injection": {
+      "discriminate": {
+        "label": "intentional_injection",
+        "verdict": "intentional_injection",
+        "actuator": "freeze_lexical_adv_aug",
+        "with_Y": true,
+        "delta": {
+          "d_mean_po": 0.04983426716306799,
+          "d_cvar": 0.042115184675810935,
+          "d_peak": -0.007015035561121541,
+          "d_top20_po_share": -0.047835290823658616,
+          "d_gini_po": -0.05880729999085749,
+          "d_error": 0.057499999999999996
+        },
+        "y_metrics_live": {
+          "error": 0.20099999999999996,
+          "fn_rate": 0.131,
+          "fp_rate": 0.271,
+          "counts": {
+            "tp": 869,
+            "fp": 271,
+            "tn": 729,
+            "fn": 131
+          },
+          "mean_po": 0.3073641178484525,
+          "concentration": {
+            "top_share": 0.4037156491950748,
+            "gini": 0.3718068728400642,
+            "p90": 0.598224327785455,
+            "p50": 0.2694587892238481
+          }
+        },
+        "y_metrics_ref": {
+          "error": 0.14349999999999996,
+          "mean_po": 0.25752985068538453,
+          "concentration": {
+            "top_share": 0.4515509400187334,
+            "gini": 0.4306141728309217,
+            "p90": 0.5545772159709544,
+            "p50": 0.2028070670151263
+          }
+        },
+        "shape": {
+          "d_mean": 0.04983426716306799,
+          "d_peak": -0.007015035561121541,
+          "d_cvar": 0.042115184675810935,
+          "shape": "malignant",
+          "action": "freeze_lexical_adapt_syntactic",
+          "malignant_score": -0.010145558569532864
+        },
+        "why_informative": "With Y, PO_i=1-p\u0302(Y_i|x_i) is a true-label risk. Uniform \u0394Mean + flat concentration \u21d2 natural OOD; rising top-20% PO share / CVaR + error/FN lift \u21d2 intentional injection. Y also unlocks direct effectiveness checks (\u0394error, \u0394FN, \u0394cost) after the actuator."
+      },
+      "truth": "intentional_injection",
+      "verdict_match": true
+    },
+    "cross_domain_ood": {
+      "discriminate": {
+        "label": "cross_domain_ood",
+        "verdict": "quiet",
+        "actuator": "hold",
+        "with_Y": true,
+        "delta": {
+          "d_mean_po": -0.08486892224320633,
+          "d_cvar": -0.0905958950797432,
+          "d_peak": -0.0026571072504724957,
+          "d_top20_po_share": 0.10102942624119204,
+          "d_gini_po": 0.10797024343362677,
+          "d_error": -0.06662499999999993
+        },
+        "y_metrics_live": {
+          "error": 0.07687500000000003,
+          "fn_rate": 0.02375,
+          "fp_rate": 0.13,
+          "counts": {
+            "tp": 781,
+            "fp": 104,
+            "tn": 696,
+            "fn": 19
+          },
+          "mean_po": 0.1726609284421782,
+          "concentration": {
+            "top_share": 0.5525803662599255,
+            "gini": 0.5385844162645484,
+            "p90": 0.45081865120171355,
+            "p50": 0.10140507991223491
+          }
+        },
+        "y_metrics_ref": {
+          "error": 0.14349999999999996,
+          "mean_po": 0.25752985068538453,
+          "concentration": {
+            "top_share": 0.4515509400187334,
+            "gini": 0.4306141728309217,
+            "p90": 0.5545772159709544,
+            "p50": 0.2028070670151263
+          }
+        },
+        "shape": {
+          "d_mean": -0.08486892224320633,
+          "d_peak": -0.0026571072504724957,
+          "d_cvar": -0.0905958950797432,
+          "shape": "quiet",
+          "action": "hold",
+          "malignant_score": -0.06369131912538313
+        },
+        "why_informative": "With Y, PO_i=1-p\u0302(Y_i|x_i) is a true-label risk. Uniform \u0394Mean + flat concentration \u21d2 natural OOD; rising top-20% PO share / CVaR + error/FN lift \u21d2 intentional injection. Y also unlocks direct effectiveness checks (\u0394error, \u0394FN, \u0394cost) after the actuator."
+      },
+      "truth": "quiet",
+      "verdict_match": true
+    }
+  },
+  "effectiveness": {
+    "intentional_injection": {
+      "before": {
+        "error": 0.20099999999999996,
+        "recall": 0.869,
+        "precision": 0.762280701754386,
+        "fpr": 0.271,
+        "fn": 131,
+        "fp": 271,
+        "cost_per_1k_usd": 8085.000000000001,
+        "mean_po": 0.3073641178484525
+      },
+      "after": {
+        "error": 0.08050000000000002,
+        "recall": 0.969,
+        "precision": 0.8817106460418562,
+        "fpr": 0.13,
+        "fn": 31,
+        "fp": 130,
+        "cost_per_1k_usd": 3560.0,
+        "mean_po": 0.28430610039024073
+      },
+      "lifts": {
+        "d_error": -0.12049999999999994,
+        "d_recall": 0.09999999999999998,
+        "d_precision": 0.11942994428747022,
+        "d_fn": -100,
+        "d_fp": -141,
+        "d_cost_per_1k_pct": -55.96784168212741
+      },
+      "worked": true
+    },
+    "ood_uniform": {
+      "before": {
+        "error": 0.13749999999999996,
+        "recall": 0.978,
+        "precision": 0.7944760357432982,
+        "fpr": 0.253,
+        "fn": 22,
+        "fp": 253,
+        "cost_per_1k_usd": 6545.0,
+        "mean_po": 0.26178568122404694
+      },
+      "after": {
+        "error": 0.09550000000000003,
+        "recall": 0.959,
+        "precision": 0.8647430117222723,
+        "fpr": 0.15,
+        "fn": 41,
+        "fp": 150,
+        "cost_per_1k_usd": 4160.0,
+        "mean_po": 0.26178568122404694
+      },
+      "lifts": {
+        "d_error": -0.041999999999999926,
+        "d_recall": -0.019000000000000017,
+        "d_precision": 0.07026697597897413,
+        "d_fn": 19,
+        "d_fp": -103,
+        "d_cost_per_1k_pct": -36.440030557677616
+      },
+      "worked": true
+    },
+    "cross_domain_ood": {
+      "before": {
+        "error": 0.07687500000000003,
+        "recall": 0.97625,
+        "precision": 0.8824858757062147,
+        "fpr": 0.13,
+        "fn": 19,
+        "fp": 104,
+        "cost_per_1k_usd": 3487.5,
+        "mean_po": 0.1726609284421782
+      },
+      "after": {
+        "error": 0.05437499999999995,
+        "recall": 0.975,
+        "precision": 0.9208972845336482,
+        "fpr": 0.08375,
+        "fn": 20,
+        "fp": 67,
+        "cost_per_1k_usd": 2343.75,
+        "mean_po": 0.1726609284421782
+      },
+      "lifts": {
+        "d_error": -0.022500000000000075,
+        "d_recall": -0.0012499999999999734,
+        "d_precision": 0.038411408827433435,
+        "d_fn": 1,
+        "d_fp": -37,
+        "d_cost_per_1k_pct": -32.795698924731184
+      },
+      "worked": true
+    }
+  },
+  "verdict_accuracy": 1.0,
+  "rule": "With Y: PO_i=1-p\u0302(Y_i|x_i). Uniform \u0394Mean + flat concentration \u2192 natural OOD; rising top-20% PO share / CVaR + error/FN \u2192 intentional injection. Effectiveness = \u0394error/\u0394FN/\u0394recall/\u0394cost after actuator."
+}

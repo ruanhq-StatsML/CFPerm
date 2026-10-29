@@ -584,6 +584,214 @@ def shape_detection_score(diag: Diagnosis, ref: Diagnosis) -> dict:
     }
 
 
+def _po_concentration(unit_po: np.ndarray, top_frac: float = 0.2) -> dict:
+    """How much total PO mass sits in the worst top-frac rows (injection signature)."""
+    u = np.sort(np.asarray(unit_po, dtype=float))[::-1]
+    n = len(u)
+    if n == 0 or float(u.sum()) <= 0:
+        return {"top_share": 0.0, "gini": 0.0, "p90": 0.0, "p50": 0.0}
+    k = max(1, int(math.ceil(n * float(top_frac))))
+    top_share = float(u[:k].sum() / (u.sum() + 1e-12))
+    # Gini of PO mass
+    cs = np.cumsum(np.sort(u))
+    gini = float((n + 1 - 2 * np.sum(cs) / (cs[-1] + 1e-12)) / n)
+    return {
+        "top_share": top_share,
+        "gini": gini,
+        "p90": float(np.percentile(u, 90)),
+        "p50": float(np.median(u)),
+    }
+
+
+def discriminate_ood_vs_intentional(
+    det,
+    texts_ref: Sequence[str],
+    y_ref: np.ndarray,
+    texts_live: Sequence[str],
+    y_live: np.ndarray,
+    *,
+    K_subbatches: int = 28,
+    seed: int = SEED,
+    label: str = "live",
+) -> dict:
+    """With labels Y: separate natural OOD vs intentional adversarial injection.
+
+    Why Y makes this informative
+    ----------------------------
+    Unit risk ``PO_i = 1 - p̂(Y_i | x_i)`` is the detector's *true-label* loss
+    proxy. Natural OOD tends to lift PO **uniformly**; intentional injection
+    concentrates PO on a attacked minority (high top-share / CVaR / error tail)
+    while Y stays the ground truth — so FN/FP structure tells you if the attack
+    worked, and before/after Y-metrics tell you if the remedy worked.
+
+    Returns a verdict in {quiet, ood_uniform, intentional_injection, mixed}
+    plus Y-conditioned effectiveness hooks (error, FN, concentration).
+    """
+    y_ref = np.asarray(y_ref, dtype=int)
+    y_live = np.asarray(y_live, dtype=int)
+    texts_ref, texts_live = list(texts_ref), list(texts_live)
+
+    po_ref = det.po_proxy(texts_ref, y_ref)
+    po_live = det.po_proxy(texts_live, y_live)
+    conc_ref = _po_concentration(po_ref)
+    conc_live = _po_concentration(po_live)
+
+    diag_ref = diagnose_batch(
+        texts_ref, y_ref, det, K_subbatches=K_subbatches, seed=seed, kind="ref"
+    )
+    diag_live = diagnose_batch(
+        texts_live, y_live, det, K_subbatches=K_subbatches, seed=seed + 3, kind=label
+    )
+    shape = shape_detection_score(diag_live, diag_ref)
+
+    # Y-conditioned errors on LIVE
+    thr = float(getattr(det, "threshold", 0.5))
+    p_live = det.predict_proba(texts_live)
+    yhat = (p_live >= thr).astype(int)
+    counts = classification_counts(y_live, yhat)
+    n = max(len(y_live), 1)
+    err = 1.0 - float((yhat == y_live).mean())
+    fn_rate = float(counts["fn"] / max(int((y_live == 1).sum()), 1))
+    fp_rate = float(counts["fp"] / max(int((y_live == 0).sum()), 1))
+
+    # REF accuracy for comparison (same detector)
+    p_ref = det.predict_proba(texts_ref)
+    yhat_ref = (p_ref >= thr).astype(int)
+    err_ref = 1.0 - float((yhat_ref == y_ref).mean())
+
+    d_mean = shape["d_mean"]
+    d_cvar = shape["d_cvar"]
+    d_peak = shape["d_peak"]
+    d_top = float(conc_live["top_share"] - conc_ref["top_share"])
+    d_gini = float(conc_live["gini"] - conc_ref["gini"])
+    d_err = float(err - err_ref)
+
+    # Decision with Y (transparent rules)
+    # intentional: concentrated PO mass OR (cvar/peak spike with error lift)
+    intentional = (
+        (d_top >= 0.03 and d_mean >= 0.01)
+        or (d_cvar >= 0.015 and d_err >= 0.02)
+        or (d_peak >= 0.008 and d_err >= 0.02)
+        or (d_gini >= 0.03 and fn_rate >= err_ref + 0.03)
+    )
+    ood_uniform = (
+        d_mean >= 0.004
+        and d_top < 0.03
+        and d_cvar < 0.015
+        and d_peak < 0.008
+    )
+    quiet = d_mean < 0.004 and d_cvar < 0.01 and d_err < 0.01
+
+    if quiet:
+        verdict = "quiet"
+    elif intentional and ood_uniform:
+        verdict = "mixed"
+    elif intentional:
+        verdict = "intentional_injection"
+    elif ood_uniform or (d_mean >= 0.004 and not intentional):
+        verdict = "ood_uniform"
+    else:
+        verdict = "monitor"
+
+    # Recommended actuator (same family as AS-DTA)
+    if verdict == "quiet":
+        actuator = "hold"
+    elif verdict == "ood_uniform":
+        actuator = "conformal_domain_calibrated"
+    elif verdict in ("intentional_injection", "mixed"):
+        actuator = "freeze_lexical_adv_aug"
+    else:
+        actuator = "human_review"
+
+    return {
+        "label": label,
+        "verdict": verdict,
+        "actuator": actuator,
+        "with_Y": True,
+        "delta": {
+            "d_mean_po": d_mean,
+            "d_cvar": d_cvar,
+            "d_peak": d_peak,
+            "d_top20_po_share": d_top,
+            "d_gini_po": d_gini,
+            "d_error": d_err,
+        },
+        "y_metrics_live": {
+            "error": err,
+            "fn_rate": fn_rate,
+            "fp_rate": fp_rate,
+            "counts": counts,
+            "mean_po": float(np.mean(po_live)),
+            "concentration": conc_live,
+        },
+        "y_metrics_ref": {
+            "error": err_ref,
+            "mean_po": float(np.mean(po_ref)),
+            "concentration": conc_ref,
+        },
+        "shape": shape,
+        "why_informative": (
+            "With Y, PO_i=1-p̂(Y_i|x_i) is a true-label risk. Uniform ΔMean "
+            "+ flat concentration ⇒ natural OOD; rising top-20% PO share / "
+            "CVaR + error/FN lift ⇒ intentional injection. Y also unlocks "
+            "direct effectiveness checks (Δerror, ΔFN, Δcost) after the actuator."
+        ),
+    }
+
+
+def effectiveness_with_Y(
+    before_det,
+    after_det,
+    texts: Sequence[str],
+    labels: np.ndarray,
+    cost_fp: float = COST_FP_DEFAULT,
+    cost_fn: float = COST_FN_DEFAULT,
+) -> dict:
+    """Y-supervised before/after panel — the clean 'did the medicine work?' read."""
+    b = business_pr_metrics(before_det, texts, labels, cost_fp=cost_fp, cost_fn=cost_fn)
+    a = business_pr_metrics(after_det, texts, labels, cost_fp=cost_fp, cost_fn=cost_fn)
+    return {
+        "before": {
+            "error": 1.0 - b["accuracy"],
+            "recall": b["recall"],
+            "precision": b["precision"],
+            "fpr": b["fpr"],
+            "fn": b["counts"]["fn"],
+            "fp": b["counts"]["fp"],
+            "cost_per_1k_usd": b["cost_per_1k_usd"],
+            "mean_po": float(
+                np.mean(before_det.po_proxy(texts, np.asarray(labels, dtype=int)))
+            ),
+        },
+        "after": {
+            "error": 1.0 - a["accuracy"],
+            "recall": a["recall"],
+            "precision": a["precision"],
+            "fpr": a["fpr"],
+            "fn": a["counts"]["fn"],
+            "fp": a["counts"]["fp"],
+            "cost_per_1k_usd": a["cost_per_1k_usd"],
+            "mean_po": float(
+                np.mean(after_det.po_proxy(texts, np.asarray(labels, dtype=int)))
+            ),
+        },
+        "lifts": {
+            "d_error": (1.0 - a["accuracy"]) - (1.0 - b["accuracy"]),
+            "d_recall": a["recall"] - b["recall"],
+            "d_precision": a["precision"] - b["precision"],
+            "d_fn": a["counts"]["fn"] - b["counts"]["fn"],
+            "d_fp": a["counts"]["fp"] - b["counts"]["fp"],
+            "d_cost_per_1k_pct": 100.0
+            * (a["cost_per_1k_usd"] - b["cost_per_1k_usd"])
+            / max(b["cost_per_1k_usd"], 1e-6),
+        },
+        "worked": bool(
+            (a["counts"]["fn"] <= b["counts"]["fn"] and a["recall"] >= b["recall"] - 1e-9)
+            or (a["cost_per_1k_usd"] < b["cost_per_1k_usd"])
+        ),
+    }
+
+
 def conformal_calibrate(
     det,
     texts: Sequence[str],
