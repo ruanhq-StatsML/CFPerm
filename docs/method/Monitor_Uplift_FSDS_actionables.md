@@ -47,6 +47,8 @@ Coverage: identify 68.8% · act 53.1% · **policy conflict 31.2%** (local `NO_AC
 
 ## Actionable items list (v2)
 
+Core trio already intuitive on the floor: **ReallocAUUC** (ranking), **Relearn** (prototype / prod refit after trial), **MonitorATE** (Layer-2 descriptive only). Below is the full ladder; the extra rows are the ones ops usually ask for next.
+
 | Pri | Code | Item |
 | --- | --- | --- |
 | P0 | GateSRM | Fail closed if SRM on \(T\) breaks |
@@ -58,12 +60,26 @@ Coverage: identify 68.8% · act 53.1% · **policy conflict 31.2%** (local `NO_AC
 | P2 | IV-ActWeight | On `ACT`, F-/precision-weight (not equal-pool) |
 | P2 | IV-WatchProbe | `ESTIMATE_ONLY`: probe only; dual sign-off before P1 |
 | P2 | CrossCheck | Every P1 REALLOCATE shows matrix cell + B-gate if conflict |
+| P2 | RefitPropensity | If Layer-1 says mix/propensity drift (`e(T\|X)` / domain score) but PO-risk accepts — refit propensity only (needs \(X,T\)), before full \(\tau\) relearn |
+| P2 | CalibrateScore | When \(\bar{\hat\tau}_k\approx\widehat{\tau}^{\mathrm{obs}}_k\) but AUUC still weak — recalibrate scores / segment rules first; do not jump to neural relearn |
+| P3 | RefitOutcome | PO-risk / DRPerm reject on overlap core — refit outcome \(\mu\) (needs \(X,T,Y\)); if propensity also drifted → RefitBoth |
 | P3 | Relearn | After trial failure under PO / ovlp SLA; prioritize IV-`ACT` mass for eval |
 | P3 | RetireZ | Global/local RETIRE screens; WATCH if subset F-ratio ≥3× |
 | P4 | MonitorATE | Layer-2 ATE pairs diagnostic unless PO reject **and** IV `ACT` |
+| P4 | PolicyConflict | Report share of LIVE mass that is local IV-`NO_ACT` but would still get a global IV / global-AUUC act — KPI for overselling identified uplift |
+| P4 | SensWatch | E-value / Rosenbaum \(\Gamma\) / OVB RV / Conley \(\gamma^\star\) on the *naive* association — explain why IV was needed; do **not** retire \(Z\) from these alone |
+
+### What else is worth shipping (beyond AUUC / Relearn / MonitorATE)?
+
+Yes — three that stay equally intuitive:
+
+1. **NarrowSupport** — when \(\mathrm{AUUC}_{ovlp}\gg\mathrm{AUUC}_{live}\), keep the same \(\hat\tau\) but only score the overlap band. Fixes many covariate-shift alerts without Relearn.
+2. **RefitPropensity / RefitOutcome** — component-level relearn prototype: cheaper than full \(\tau\) rebuild; matches the writeup’s “refit only the broken piece.”
+3. **PolicyConflict** — single coverage number from IV subset tiers; tells the room how much traffic would be oversold if you ignored localization.
+
+Optional later (not required for v2): LOCO→HoldFeature automation tickets; Conley/OVB dashboards under SensWatch; federated node-local Refit* aggregation.
 
 **Justification.** Meta LOCO–AUUC localizes ranking failure; IV tiers localize identification failure; business gates resolve objective and instrument legitimacy. Either alone over-claims.
-
 ```bash
 python3 scripts/run_iv_selection_synth.py
 python3 scripts/run_fsds_rl_closed_loop.py --compare-meta-iv
