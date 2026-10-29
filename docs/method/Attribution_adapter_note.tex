@@ -22,6 +22,21 @@ the density-ratio surrogate on category means).
 On Amazon Reviews 2023 this hop-weighted ridge is the strongest online MSE
 cut we measure against plateau RidgeSGD and the Wu instance bank.
 
+\emph{DGA when density-ratio IW is the weak link.}
+Fan--Grangier--Ablin (2024) \emph{Dynamic Gradient Alignment} replaces the
+$p_{\mathrm{te}}/p_{\mathrm{tr}}$ (or embedding-IS) weight by a mirror-descent
+simplex over domains, driven by gradient alignment
+$a_i=\langle\nabla\ell(\theta,D_i),\nabla\ell(\theta,D_{\mathrm{spe}})\rangle$
+with EMA smoothing --- see \texttt{docs/method/DGA\_hop\_note.tex}.
+On our board: domains $=$ past categories, $D_{\mathrm{spe}}=B_{t-1}$,
+broadcast $\alpha_{\mathrm{EMA}}$ as Ridge sample weights
+(\texttt{dga\_ridge}). Same adapter slot as hop IW; no new loss.
+Quick Amazon check: DGA beats bank/plateau but does not yet beat
+\texttt{hop\_ridge} --- hop cosine remains the locked Amazon champion;
+DGA is the drop-in when IS/density-ratio weights misbehave
+(4-seed Amazon: \texttt{hop\_ridge} $1.378$, \texttt{dga\_ridge} $1.417$,
+bank $1.566$).
+
 \emph{Typed mix.}
 The Wu bank (cosine Nadaraya--Watson on stored $(x,y)$) is the right
 predictor when $P(Y\mid X)$ is stable and $P(X)$ moved.
@@ -68,5 +83,24 @@ text-driven. PO-risk VIMP is \emph{not} used to reweight coordinates for
 prediction (that raises Amazon MSE); it is used to form $\pi_m$ and to
 choose tokens/patches for zero/noise/missing mask attribution
 (Table~\ref{tab:po-hop-ridge}).
-Amazon remains the scalar-text MSE board for the weight logic;
+\emph{Attribution-guided ensemble EWMA.}
+The bank$\oplus$hop mix keeps a rolling EWMA of each predictor's online MSE.
+Instead of a fixed rate, set
+\[
+  \lambda_{\mathrm{new}}
+  =
+  \mathrm{clip}_{[0.15,0.75]}
+  \Bigl(
+    0.15 + 0.6\cdot
+    \frac{1+4\hat\delta}{1+2\hat c+4\hat\delta}
+    + 0.5\,\Delta\pi
+  \Bigr),
+\]
+then $\mathrm{EWMA}\leftarrow (1-\lambda_{\mathrm{new}})\,\mathrm{EWMA}+\lambda_{\mathrm{new}}\,\mathrm{MSE}_t$.
+Large $\hat c$ / quiet $\hat\delta$ (covariate hop) $\Rightarrow$ small $\lambda_{\mathrm{new}}$
+(keep the past ensemble). Large $\hat\delta$ or a jump in modality shares
+$\Delta\pi$ $\Rightarrow$ large $\lambda_{\mathrm{new}}$ (refresh the mix).
+The same rate drives $\pi_m$ persistence on MSR-VTT (`ewma_pi=auto`).
+Locked TSS signs only; no new loss.
+Amazon remains the scalar-text MSE board;
 Table~\ref{tab:attr-adapter-amazon} is the Amazon score.

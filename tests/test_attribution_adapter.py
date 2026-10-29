@@ -45,6 +45,30 @@ def test_hop_ridge_beats_uniform_on_covariate_stream():
     assert hop["online_mse"] < 5.0
 
 
+def test_dga_mirror_upweights_aligned_domain():
+    from attribution_adapter import dga_mirror_step
+
+    alpha0 = np.ones(3) / 3.0
+    a = np.array([-1.0, 0.0, 2.0])
+    alpha1 = dga_mirror_step(alpha0, a, eta=2.0)
+    assert alpha1.argmax() == 2
+    assert alpha1[2] > alpha1[0]
+    assert abs(alpha1.sum() - 1.0) < 1e-8
+
+
+def test_dga_ridge_runs_and_peaks_on_spe():
+    from attribution_adapter import run_dga_ridge
+
+    stream = make_amazon_like_stream(n_batches=5, n_per=40, p=16, seed=0, cov=0.5)
+    rec = run_dga_ridge(stream, eta=1.0, ema_beta=0.5, align="cosine")
+    assert rec["method"] == "dga_ridge"
+    assert len(rec["online_path"]) == 4
+    assert rec["online_mse"] == rec["online_mse"]
+    # last hop: spe = batch 3 should receive non-trivial mass
+    last_alpha = np.asarray(rec["history"][-1]["alpha_inst"], dtype=float)
+    assert last_alpha.argmax() == len(last_alpha) - 1 or last_alpha[-1] >= 1.0 / len(last_alpha)
+
+
 def test_attr_adapter_returns_path():
     stream = make_amazon_like_stream(n_batches=5, n_per=40, p=20, seed=3, cov=0.4)
     rec = run_attr_adapter(stream)
@@ -54,6 +78,6 @@ def test_attr_adapter_returns_path():
 
 def test_run_adapter_method_dispatch():
     stream = make_amazon_like_stream(n_batches=4, n_per=30, p=16, seed=2, cov=0.3)
-    for method in ("ridge_past", "hop_ridge", "attr_adapter", "bank"):
+    for method in ("ridge_past", "hop_ridge", "dga_ridge", "attr_adapter", "bank"):
         rec = run_adapter_method(stream, method, seed=2)
         assert rec["online_mse"] == rec["online_mse"]

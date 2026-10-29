@@ -51,6 +51,7 @@ METHODS = (
     "bank",
     "ridge_past",
     "hop_ridge",
+    "dga_ridge",
     "attr_adapter",
     "river_pa",
 )
@@ -177,6 +178,195 @@ def _ridge_predict(Xtr, ytr, Xte, sample_weight=None, alpha=3.0):
     else:
         clf.fit(Xtr, ytr, sample_weight=sample_weight)
     return np.clip(clf.predict(Xte), 1.0, 5.0)
+
+
+def _ridge_fit(Xtr, ytr, sample_weight=None, alpha=3.0):
+    clf = Ridge(alpha=float(alpha))
+    if sample_weight is None:
+        clf.fit(Xtr, ytr)
+    else:
+        clf.fit(Xtr, ytr, sample_weight=sample_weight)
+    return clf
+
+
+def _linear_mse_grad(clf, X, y):
+    """∇_θ of mean squared error for a fitted linear model (coef ‖ intercept).
+
+    Used by DGA (Fan, Grangier, Ablin 2024): domain weight ∝ gradient alignment
+    with the specialized set, not a density ratio.
+    """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float)
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    n = max(int(X.shape[0]), 1)
+    pred = clf.predict(X)
+    resid = pred - y
+    g_coef = (X.T @ resid) / float(n)
+    g_int = float(np.mean(resid))
+    return np.concatenate([np.asarray(g_coef, dtype=float).ravel(), [g_int]])
+
+
+def dga_alignments(clf, X, y, batch, domains, spe_domain, align="dot"):
+    """Per-domain gradient alignment a_i = ⟨∇ℓ(θ, D_i), ∇ℓ(θ, D_spe)⟩.
+
+    ``align='cosine'`` uses cosine of the two gradients (scale-stable surrogate
+    still in the DGA/DoGE family). ``align='dot'`` is the paper inner product.
+    """
+    batch = np.asarray(batch, dtype=int)
+    is_spe = batch == int(spe_domain)
+    if not np.any(is_spe):
+        return np.zeros(len(domains), dtype=float)
+    g_spe = _linear_mse_grad(clf, X[is_spe], y[is_spe])
+    n_spe = float(np.linalg.norm(g_spe) + 1e-12)
+    out = np.zeros(len(domains), dtype=float)
+    for j, s in enumerate(domains):
+        idx = batch == int(s)
+        if not np.any(idx):
+            continue
+        g = _linear_mse_grad(clf, X[idx], y[idx])
+        if align == "cosine":
+            out[j] = float(np.dot(g, g_spe) / ((np.linalg.norm(g) + 1e-12) * n_spe))
+        else:
+            out[j] = float(np.dot(g, g_spe))
+    return out
+
+
+def dga_mirror_step(alpha, alignments, eta=1.0):
+    """Simplex mirror descent: α ← normalize(α ⊙ exp(η a)).
+
+    Upweights domains whose gradient *aligns* with D_spe (Fan et al. 2024 §2.4
+    Taylor argument). Note: their Algorithm 1 prints ``exp(-η a)``; that sign
+    contradicts the surrounding derivation that maximizes alignment — we follow
+    the derivation / Eq. for increasing α on large ⟨∇L_i, ∇L_spe⟩.
+    """
+    a = np.asarray(alignments, dtype=float).copy()
+    alpha = np.asarray(alpha, dtype=float)
+    if alpha.shape != a.shape:
+        raise ValueError("alpha/alignments shape mismatch")
+    if a.size == 0:
+        return alpha
+    # center + scale so η stays O(1); single-domain / flat a → no-op
+    a = a - float(np.mean(a))
+    scale = float(np.max(np.abs(a)))
+    if scale < 1e-12:
+        return alpha / alpha.sum()
+    a = a / scale
+    # clip exponent to avoid overflow when η is large
+    log_hat = np.log(np.maximum(alpha, 1e-12)) + float(eta) * a
+    log_hat = log_hat - float(np.max(log_hat))
+    hat = np.exp(np.clip(log_hat, -60.0, 0.0))
+    hat = np.maximum(hat, 1e-12)
+    return hat / hat.sum()
+
+
+def dga_sample_weights(alpha, batch, domains):
+    """Broadcast domain simplex weights onto rows."""
+    batch = np.asarray(batch, dtype=int)
+    w = np.ones(batch.shape[0], dtype=float)
+    for j, s in enumerate(domains):
+        w[batch == int(s)] = float(alpha[j])
+    return np.maximum(w, 1e-6)
+
+
+def run_dga_ridge(
+    stream,
+    alpha=3.0,
+    eta=1.0,
+    ema_beta=0.35,
+    align="cosine",
+    ridge_alpha=None,
+):
+    """DGA domain reweighting + closed-form Ridge (Fan, Grangier, Ablin 2024).
+
+    Mapping onto the Amazon hop board (existing method, not a new loss):
+      generic domains D_i  = past rating categories / batches
+      specialized set D_spe = last observed batch (causal proxy for the next hop)
+      α_i via gradient alignment + mirror descent + EMA
+      train = sample-weighted Ridge with w_row = α_{batch(row)}
+
+    Why this instead of density-ratio IW: DGA never estimates p_te/p_tr. It
+    upweights domains whose *training gradient* currently aligns with the
+    specialized set — the same reason IS/embedding hop weights fail when the
+    specialized pocket is tiny or a domain is overfit (Fan et al. §1, §3.1).
+
+    Streaming note: the paper uses a *fixed* domain simplex. Here the number of
+    past batches grows, so each hop takes one mirror step from the uniform
+    prior on the current simplex (≡ softmax of tempered alignments). EMA
+    carries temporal memory of α without freezing mass on early batches.
+    """
+    X = np.asarray(stream.X, dtype=float)
+    y = np.asarray(stream.y, dtype=float)
+    batch = np.asarray(stream.batch, dtype=int)
+    k = int(batch.max()) + 1
+    ra = float(alpha if ridge_alpha is None else ridge_alpha)
+    history = []
+    alpha_ema = None
+    for t in range(1, k):
+        tr = batch < t
+        ic = batch == t
+        domains = list(range(t))
+        spe = t - 1
+        if alpha_ema is None:
+            probe_w = None
+        else:
+            prev = np.asarray(alpha_ema, dtype=float)
+            if prev.size == t:
+                mix = prev
+            elif prev.size == t - 1:
+                # new domain: give it the mean mass of existing domains
+                mean_m = float(prev.mean()) if prev.size else 1.0
+                mix = np.concatenate([prev, [mean_m]])
+                mix = mix / mix.sum()
+            else:
+                mix = np.ones(t, dtype=float) / float(t)
+            probe_w = dga_sample_weights(mix, batch, domains)[tr]
+        clf = _ridge_fit(X[tr], y[tr], sample_weight=probe_w, alpha=ra)
+        a = dga_alignments(clf, X[tr], y[tr], batch[tr], domains, spe, align=align)
+        # one MD step from uniform on the *current* simplex (avoids sticky early mass)
+        alpha_inst = dga_mirror_step(np.ones(t, dtype=float) / float(t), a, eta=eta)
+        if alpha_ema is None:
+            alpha_ema = alpha_inst.copy()
+        else:
+            b = float(np.clip(ema_beta, 0.0, 1.0))
+            prev = np.asarray(alpha_ema, dtype=float)
+            if prev.size == t - 1:
+                mean_m = float(prev.mean()) if prev.size else 1.0
+                prev = np.concatenate([prev, [mean_m]])
+                prev = prev / prev.sum()
+            elif prev.size != t:
+                prev = np.ones(t, dtype=float) / float(t)
+            alpha_ema = (1.0 - b) * prev + b * alpha_inst
+            alpha_ema = alpha_ema / alpha_ema.sum()
+        w = dga_sample_weights(alpha_ema, batch, domains)
+        pred = _ridge_predict(X[tr], y[tr], X[ic], sample_weight=w[tr], alpha=ra)
+        history.append(
+            {
+                "round": int(t),
+                "online_mse": _mse(pred, y[ic]),
+                "alpha_ema": alpha_ema.tolist(),
+                "alpha_inst": alpha_inst.tolist(),
+                "alignments": a.tolist(),
+                "w_mean": float(w[tr].mean()),
+                "w_max": float(w[tr].max()),
+                "spe_domain": int(spe),
+                "n": int(ic.sum()),
+            }
+        )
+    online = np.array([h["online_mse"] for h in history], dtype=float)
+    return _summary(
+        "dga_ridge",
+        online,
+        history,
+        stream,
+        extras={
+            "eta": float(eta),
+            "ema_beta": float(ema_beta),
+            "align": align,
+            "alpha": ra,
+            "method_ref": "Fan, Grangier, Ablin 2024 — Dynamic Gradient Alignment (arXiv:2410.02498)",
+        },
+    )
 
 
 def run_ridge_past(stream, alpha=3.0):
@@ -400,6 +590,8 @@ def run_adapter_method(stream, method, seed=SEED, **kw):
         return run_ridge_past(stream)
     if method == "hop_ridge":
         return run_hop_ridge(stream)
+    if method == "dga_ridge":
+        return run_dga_ridge(stream)
     if method == "attr_adapter":
         return run_attr_adapter(stream)
     if method == "river_pa":
@@ -505,6 +697,7 @@ def plot_adapter_suite(suite, path):
         "bank": "#2F6B4F",
         "ridge_past": "#6B7C8A",
         "hop_ridge": "#C45C26",
+        "dga_ridge": "#5B3A8C",
         "attr_adapter": "#2C4A6E",
         "river_pa": "#9AA3AE",
     }
@@ -513,6 +706,7 @@ def plot_adapter_suite(suite, path):
         "bank": "instance bank",
         "ridge_past": "Ridge on past",
         "hop_ridge": "hop-weighted Ridge",
+        "dga_ridge": "DGA-weighted Ridge",
         "attr_adapter": "attr adapter (bank⊕hop)",
         "river_pa": "river PA",
     }
@@ -554,6 +748,7 @@ def plot_adapter_suite(suite, path):
         0.04,
         0.01,
         "hop-weighted Ridge uses heatmap cos(μ_s, μ_{t−1}) as sample weights. "
+        "DGA-weighted Ridge uses Fan et al. 2024 gradient alignment (+EMA) instead of density-ratio IW. "
         "attr adapter mixes Wu bank and hop Ridge with TSS signs on (ĉ, δ̂).",
         fontsize=8.0,
         color=MUTED,
@@ -568,6 +763,7 @@ def write_adapter_tex(suite, path):
         "bank": "instance bank (Wu NW)",
         "ridge_past": "Ridge on all past",
         "hop_ridge": "hop-weighted Ridge",
+        "dga_ridge": "DGA-weighted Ridge",
         "attr_adapter": "attr.\\ adapter (bank$\\oplus$hop)",
         "river_pa": "river PARegressor",
     }
@@ -577,6 +773,8 @@ def write_adapter_tex(suite, path):
         r"\caption{Multimodal / batch attribution as a next-batch training adapter on Amazon Reviews 2023.",
         r"Online rating MSE (predict the arriving category, then update). Hop-weighted Ridge reuses the",
         r"batch-relationship heatmap as sample weights $w_s=\exp(\gamma(\cos(\bar x_s,\bar x_{t-1})-1))$.",
+        r"DGA-weighted Ridge (Fan--Grangier--Ablin 2024) replaces that density-ratio surrogate by",
+        r"mirror-descent domain weights from gradient alignment with $D_{\mathrm{spe}}=B_{t-1}$.",
         r"The typed adapter mixes the Wu instance bank with hop Ridge using the locked TSS signs on $(\hat c,\hat\delta)$.}",
         r"\label{tab:attr-adapter-amazon}",
         r"\small",
