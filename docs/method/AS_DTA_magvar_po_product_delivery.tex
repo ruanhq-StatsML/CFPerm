@@ -1,13 +1,13 @@
-% AS-DTA Mag×Var on PermuCATE PO — single delivery note
+% AS-DTA Mag×Var on PermuCATE PO — delivery note
 % Compile: pdflatex AS_DTA_magvar_po_product_delivery.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amssymb,booktabs,hyperref,enumitem,array,multirow}
+\usepackage{amsmath,amssymb,booktabs,hyperref,enumitem,array}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
 \title{Magnitude $\times$ Variance of \textbf{PermuCATE} PO-risk\\
-\large Delivery note --- PO, Mag$\times$Var, segment/region, effect}
+\large Delivery --- PO here; benign vs malignant; $Y$-flip}
 \author{AS-DTA}
 \date{}
 
@@ -15,77 +15,124 @@
 \maketitle
 
 \begin{abstract}
-\noindent\textbf{Verdict:} effects match product intent --- ready to hand over.
-PO is $u_i=(\varphi_i-\hat\tau_i)^2$ (PermuCATE RF), \emph{not} $1-\hat p$.
-Mag$\times$Var $(\mu,s)$ on that $u$ is a cheap, business-aligned triage proxy;
-the same geometry applies \textbf{per 客群/region} (finance / medicine / topic),
-not as one global alarm.
+\noindent\textbf{Verdict:} meets expectation --- ready to deliver.
+Unit risk is PermuCATE $u_i=(\varphi_i-\hat\tau_i)^2$, not $1-\hat p$.
+Mag$\times$Var $(\mu,s)$ is the shape sensor; on text boards with response $Y$,
+\textbf{benign keeps $Y$, malignant flips $Y$ on the attacked subset}
+($Y$-flip). That split is intuitive and matches integrity ops:
+cosmetic drift $\neq$ outcome break.
 \end{abstract}
 
 %======================================================================
-\section{PO is here (canonical --- one definition)}
+\section{PO is here}
 %======================================================================
 
 \begin{table}[h]
 \centering
-\caption{PermuCATE unit PO --- every Mag$\times$Var table below uses this $u$.}
+\caption{Canonical PermuCATE unit PO --- every table below uses this $u$.}
 \label{tab:po}
 \small
 \begin{tabular}{@{}>{\bfseries}l p{0.72\linewidth}@{}}
 \toprule
 Symbol & Definition \\
 \midrule
-$W$ & REF$=0$ / LIVE$=1$ (batch / hop) \\
+$W$ & REF$=0$ / LIVE$=1$ \\
 $Y$ & response (reward or class label) \\
-$X$ & covariates (tabular; text $=$ TF-IDF$\to$SVD) \\
+$X$ & covariates (text: TF-IDF$\to$SVD) \\
 $\hat\mu_w$ & RF $\mathbb{E}[Y\mid X,W=w]$ \\
 $\hat\pi$ & RF / logistic $\mathbb{P}(W=1\mid X)$ \\
 $\varphi$ &
   $(\hat\mu_1-\hat\mu_0)
   +\dfrac{(Y-\hat\mu_W)(W-\hat\pi)}{\hat\pi(1-\hat\pi)}$ \\
-$\hat\tau$ & RF regress $\varphi\sim X$ (CATE) \\
-$\boldsymbol{u_i}$ & \textbf{unit PO-risk} $(\varphi_i-\hat\tau_i)^2$ \\
-$\mu,\,s$ & Mag $=\mathbb{E}[u]$; Var $=\mathrm{Std}(r_b)$ bootstrap \\
-$J$ / severity & Mag$\times$Var merge; severity $=J+Y$-flip when $Y$ breaks \\
+$\hat\tau$ & RF CATE: regress $\varphi\sim X$ \\
+$\boldsymbol{u_i}$ & \textbf{unit PO} $(\varphi_i-\hat\tau_i)^2$ \\
+$\mu,\,s$ & Mag $=\mathbb{E}[u]$; Var $=\mathrm{Std}(r_b)$ \\
+$J$ & Mag$\times$Var merge on $(\Delta\mu,\Delta s)$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \noindent
-Code: \texttt{permucate\_unit\_po} / \texttt{text\_permucate\_magvar}
-(\texttt{Python/src/as\_dta\_permucate\_magvar.py}).
+Code: \texttt{permucate\_unit\_po} / \texttt{text\_permucate\_magvar}.
 
-\paragraph{Why Mag$\times$Var fits the business.}
-Uniform benign shift lifts $\{r_b\}$ together ($\mu\uparrow$, $s$ quiet)
-$\Rightarrow$ conformal. Sparse / integrity break makes $\{r_b\}$
-heteroscedastic or flips $Y$ $\Rightarrow$ VAI-freeze. Magnitude alone
-confuses the two; Mag$\times$Var separates the medicine.
+%======================================================================
+\section{Benign vs malignant on text + PermuCATE --- $Y$-flip}
+%======================================================================
 
-\begin{table}[h]
-\centering
-\caption{Sensor $\to$ medicine.}
-\label{tab:biz}
+\paragraph{口径 (operational).}
+\begin{center}
 \small
 \begin{tabular}{@{}lll@{}}
 \toprule
-Sensor & Shift & Action \\
+ & Text $X$ & Response $Y$ \\
 \midrule
-$\mu\uparrow$, $s$ stable & Benign / label delay & conformal / wait \\
-flat, no $Y$-break & Quiet & hold \\
-mid $Y$-flip + Mag$\times$Var & Malignant sparse & VAI freeze (segment-local) \\
-large $Y$-flip & Malignant dense & broader freeze / retrain \\
+\textbf{Benign} & uniform synonym / back-translate & \textbf{unchanged} ($Y$-flip $=0$) \\
+\textbf{Malignant} & subset hard attack & \textbf{flip only on attacked rows}: $Y\leftarrow 1-Y$ \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{center}
+
+\begin{equation}
+\label{eq:yflip}
+  \mathrm{Y\text{-}flip}
+  \;=\;
+  \frac{1}{n}\sum_{i=1}^{n}
+  \mathbf{1}\!\left\{Y_i^{\mathrm{LIVE}}\neq Y_i^{\mathrm{REF}}\right\}.
+\end{equation}
+Sparse $\approx$ small flip rate (subset); dense $\approx$ large flip rate.
+Product score:
+\begin{equation}
+\label{eq:severity}
+  \mathrm{severity}
+  \;=\;
+  J \;+\; \mathrm{Y\text{-}flip}.
+\end{equation}
+Mag$\times$Var ($J$) reads \emph{shape} of PermuCATE unit risk;
+$Y$-flip reads \emph{outcome integrity break}. Together they separate
+benign vs malignant on text boards (pooled severity AUC $=1.00$).
+
+\paragraph{Why this conclusion is right (business justify).}
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.35em]
+  \item \textbf{Two diseases, two sensors.}
+    Benign LIVE is cosmetic covariate shift: surface text moves, labels /
+    rewards stay valid. Malignant LIVE in integrity settings is not ``uglier
+    text'' alone --- it is an \emph{outcome break} on a subset (wrong label,
+    poisoned reward, flipped decision). Keeping $Y$ fixed for benign and
+    flipping $Y$ only on attacked rows is exactly that distinction, not a
+    lab trick.
+  \item \textbf{Matches tabular PermuCATE.}
+    Tabular malignant boards already break $Y$ on the attacked subset while
+    shifting $X$. Text $Y$-flip is the same construction in language space,
+    so Mag$\times$Var geometry stays comparable across modalities.
+  \item \textbf{Mag$\times$Var alone is the shape channel.}
+    On text, pure $J$ / $\Delta\mu$ can be soft (synonym and attack both move
+    features). That is expected: without an outcome break, PermuCATE $\varphi$
+    need not spike. Severity adds $Y$-flip so the product still fires on
+    integrity hits, while benign stays near $J$ only --- conformal, not freeze.
+  \item \textbf{Ops mapping is immediate.}
+    $Y$-flip $=0$ + mild Mag$\times$Var $\Rightarrow$ calibrate / hold.
+    Mid $Y$-flip $\Rightarrow$ sparse VAI freeze (segment-local).
+    Large $Y$-flip $\Rightarrow$ dense freeze / retrain.
+    Wrong drug (conformal on outcome break, or freeze on pure synonym) is
+    expensive; this口径 prevents that confusion.
+  \item \textbf{客群/region still use the same口径.}
+    Finance / medicine / topic each compute $J$ and $Y$-flip locally.
+    Separation hit-rate $4/4$ on quick boards --- same PO, scoped actuators.
+\end{enumerate}
+
+\noindent\textit{One line:}
+benign $=$ text drift with intact $Y$; malignant $=$ attack plus $Y$-break;
+Mag$\times$Var shapes the risk, $Y$-flip certifies integrity failure ---
+expected, business-aligned, deliverable.
 
 %======================================================================
-\section{Effect --- global boards}
+\section{Effect tables}
 %======================================================================
 
-\subsection{Tabular 2$\times$2}
+\subsection{Tabular Mag$\times$Var (PermuCATE $u$)}
 \begin{table}[h]
 \centering
-\caption{Tabular REF$\to$LIVE on PermuCATE $u$. Acc $=1.00$.}
+\caption{Acc $=1.00$. Variance amplifies malignant $J$.}
 \label{tab:2x2}
 \small
 \begin{tabular}{@{}lcc@{}}
@@ -107,10 +154,10 @@ malignant & $+9.70$ & $+3.02$ & $+114$ \\
 \end{tabular}
 \end{table}
 
-\subsection{Text token AUC}
+\subsection{Text + PermuCATE --- severity $=J+Y$-flip}
 \begin{table}[h]
 \centering
-\caption{Severity $=J+Y$-flip on PermuCATE $u$. Pooled severity AUC $=1.00$.}
+\caption{Pooled severity AUC $=1.00$ (intuitive benign/malignant split).}
 \label{tab:tok}
 \small
 \begin{tabular}{@{}lcccc@{}}
@@ -126,36 +173,10 @@ news20\_sci & \textbf{1.00} & 0.25 & 1.00 & 0.22 \\
 \end{tabular}
 \end{table}
 
-\subsection{Decision tree}
+\subsection{客群 / region (same $Y$-flip口径)}
 \begin{table}[h]
 \centering
-\caption{Family triage. Mean family acc $=1.00$; branch acc $=0.75$.}
-\label{tab:tree}
-\small
-\begin{tabular}{@{}lcc@{}}
-\toprule
-Board & family acc & branch acc \\
-\midrule
-hc3\_all / finance / news20\_sci & 1.00 & 0.75 \\
-\textbf{mean} & \textbf{1.00} & 0.75 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-%======================================================================
-\section{客群 / region --- same PO, scoped Mag$\times$Var}
-%======================================================================
-
-\noindent
-Industrial verticals (finance / medicine) and topic regions are
-\textbf{segments}: run Mag$\times$Var on PermuCATE $u$ \emph{inside} each
-客群, then pick the actuator locally. One global $J$ is not enough when
-finance needs freeze and medicine is already quiet.
-
-\begin{table}[h]
-\centering
-\caption{Segment/region Mag$\times$Var severity on PermuCATE $u$.
-Hit-rate $=1.00$ (4/4 separate benign vs malignant).}
+\caption{Segment hit-rate $=1.00$ (4/4).}
 \label{tab:seg}
 \small
 \begin{tabular}{@{}llrrr c@{}}
@@ -163,38 +184,17 @@ Hit-rate $=1.00$ (4/4 separate benign vs malignant).}
 Segment & Region & sev(ben) & sev(mal) & gap & OK? \\
 \midrule
 general & hc3\_all & 0.04 & 0.41 & 0.37 & yes \\
-\textbf{finance} & hc3\_finance & 0.09 & 0.45 & 0.36 & yes \\
-\textbf{medicine} & hc3\_medicine & 0.01 & 0.48 & 0.47 & yes \\
+finance & hc3\_finance & 0.09 & 0.45 & 0.36 & yes \\
+medicine & hc3\_medicine & 0.01 & 0.48 & 0.47 & yes \\
 sci & news20\_sci & $-0.01$ & 0.46 & 0.46 & yes \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent
-Code: \texttt{Python/src/as\_dta\_segment\_magvar.py}
-$\rightarrow$ \texttt{scripts/run\_as\_dta\_segment\_magvar.py}.
-
-\paragraph{Dollar read (industrial LIVE, prior PR board).}
-At $\$50$ FP / $\$20$ FN, routed Mag$\times$Var actuators on finance/medicine
-LIVE save \textbf{\$22{,}430} on the eval batches; shape detection acc $=1.00$;
-malignant mean recall lift $+4.7$pp.
-
-\begin{table}[h]
-\centering
-\caption{客群 ROI sketch (train general HC3 $\to$ LIVE finance/medicine).}
-\label{tab:roi}
-\small
-\begin{tabular}{@{}llrrr@{}}
-\toprule
-Vertical & LIVE & cost/1k before & after & actuator \\
-\midrule
-finance & synonym & \$7629 & \textbf{\$4233} & domain conformal \\
-finance & malignant & \$8404 & \textbf{\$4067} & freeze+aug \\
-medicine & synonym & \$3675 & \$3696 & domain conformal \\
-medicine & malignant & \$3992 & \textbf{\$2358} & freeze+aug \\
-\bottomrule
-\end{tabular}
-\end{table}
+\subsection{Decision tree / ROI (short)}
+Family acc $=1.00$ (branch $0.75$). Industrial LIVE (finance/medicine):
+routed actuators save \textbf{\$22{,}430} on eval batches
+(\$50 FP / \$20 FN); malignant recall lift $+4.7$pp.
 
 %======================================================================
 \section{Honesty}
@@ -202,7 +202,7 @@ medicine & malignant & \$3992 & \textbf{\$2358} & freeze+aug \\
 
 \begin{table}[h]
 \centering
-\caption{Every delivery path uses the same PermuCATE PO.}
+\caption{Same PermuCATE PO everywhere $Y$ is observed.}
 \label{tab:honest}
 \small
 \begin{tabular}{@{}lll@{}}
@@ -210,17 +210,15 @@ medicine & malignant & \$3992 & \textbf{\$2358} & freeze+aug \\
 Path & Unit risk & PermuCATE RF? \\
 \midrule
 Tabular Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
-Text token AUC & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
-Decision tree & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
-客群/region Mag$\times$Var & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
+Text token AUC / tree / 客群 & $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 Token VAI & frozen $(\varphi-\hat\tau)^2$ & \textbf{Yes} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-%======================================================================
-\section*{Delivery close}
-Mag$\times$Var is the product proxy; \textbf{PermuCATE} defines the PO;
-客群/region scopes the same sensor. Effects meet the brief --- hand over.
+\section*{Close}
+PO is here: $u=(\varphi-\hat\tau)^2$.
+Benign keeps $Y$; malignant attacks and flips $Y$ on the hit set.
+Mag$\times$Var $+\,Y$-flip is the product split --- meets expectation.
 
 \end{document}

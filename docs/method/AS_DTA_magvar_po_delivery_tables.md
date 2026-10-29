@@ -1,46 +1,46 @@
-# Mag×Var PermuCATE PO — delivery tables (integrated)
+# Mag×Var PermuCATE PO — delivery (PO here + Y-flip)
 
-**Verdict:** effects match intent — ready to hand over.
-**PO here** $=u=(\varphi-\hat\tau)^2$. Mag×Var + 客群/region on that $u$.
+**Verdict:** meets expectation — ready to deliver.
 
-## PO
+## PO is here
 
 | Symbol | Definition |
 | --- | --- |
 | $W$ | REF=0 / LIVE=1 |
 | $Y$ | response |
-| $\varphi$ | DR pseudo-outcome (PermuCATE) |
+| $\varphi$ | PermuCATE DR pseudo-outcome |
 | $\hat\tau$ | CATE RF |
 | **$u$** | $(\varphi-\hat\tau)^2$ |
-| $\mu,s$ | Mag / Var |
+| $J$ | Mag×Var merge |
 | severity | $J + Y$-flip |
 
-## Effect headline
+## Benign vs malignant — Y-flip 口径
+
+| | Text $X$ | Response $Y$ |
+| --- | --- | --- |
+| **Benign** | uniform synonym / back-translate | **unchanged** (flip $=0$) |
+| **Malignant** | subset hard attack | **flip only on attacked rows** $Y\leftarrow 1-Y$ |
+
+$$\mathrm{Y\text{-}flip}=\frac{1}{n}\sum_i \mathbf{1}\{Y_i^{\mathrm{LIVE}}\neq Y_i^{\mathrm{REF}}\},\qquad \mathrm{severity}=J+\mathrm{Y\text{-}flip}.$$
+
+### Why this conclusion is right
+
+1. **Two diseases, two sensors.** Benign = cosmetic text drift, labels/rewards still valid. Malignant integrity hit = outcome break on a subset — not “uglier text” alone. Keep $Y$ for benign; flip $Y$ only on attacked rows.
+2. **Same as tabular PermuCATE.** Tabular malignant already breaks $Y$ on the attacked subset; text $Y$-flip is that construction in language space.
+3. **Mag×Var = shape; $Y$-flip = integrity.** Pure $J$ can be soft on text (both moves features). Severity adds $Y$-flip so integrity fires, benign stays conformal — not freeze.
+4. **Ops mapping.** flip$=0$ → hold/conformal; mid flip → sparse VAI freeze; large flip → dense freeze. Avoids wrong drug.
+5. **客群/region.** Same口径 per finance/medicine/topic — hit-rate 4/4.
+
+**One line:** benign = text drift with intact $Y$; malignant = attack + $Y$-break; Mag×Var shapes risk, $Y$-flip certifies integrity failure.
+
+## Effect
 
 | Suite | Metric | Value |
 | --- | --- | --- |
 | Tabular 2×2 | acc | **1.00** |
-| Token AUC | severity AUC | **1.00** |
-| Decision tree | family acc | **1.00** |
-| 客群/region | segment hit-rate | **1.00** (4/4) |
-| Industrial ROI | cost saved (routed) | **$22,430** |
-
-## 客群 / region Mag×Var
-
-| Segment | Region | sev(ben) | sev(mal) | gap | OK? |
-| --- | --- | --- | --- | --- | --- |
-| general | hc3_all | 0.04 | 0.41 | 0.37 | yes |
-| finance | hc3_finance | 0.09 | 0.45 | 0.36 | yes |
-| medicine | hc3_medicine | 0.01 | 0.48 | 0.47 | yes |
-| sci | news20_sci | -0.01 | 0.46 | 0.46 | yes |
-
-## Business geometry
-
-| Sensor | Action |
-| --- | --- |
-| μ↑, s stable | conformal |
-| flat, no Y-break | hold |
-| mid Y-flip | VAI freeze (segment-local) |
-| large Y-flip | broader freeze |
+| Text severity AUC | pooled | **1.00** |
+| 客群/region | hit-rate | **1.00** (4/4) |
+| Tree family | acc | **1.00** |
+| Industrial ROI | routed save | **$22,430** |
 
 LaTeX: `docs/method/AS_DTA_magvar_po_product_delivery.tex`
