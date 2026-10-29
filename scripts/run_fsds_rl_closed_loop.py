@@ -18,6 +18,8 @@ sys.path.insert(0, str(ROOT / "Python" / "src"))
 
 from fsds_rl_closed_loop import (  # noqa: E402
     BOARDS,
+    CORE_BOARDS,
+    DIVERSE_BOARDS,
     METHODS,
     plot_suite,
     run_suite,
@@ -67,6 +69,18 @@ def _opportunity_lifts(suite):
                 cell["full_mix_mse"] = float(tab["fsds_full"]["mean_mix_mse"]["mean"])
                 cell["meta_iv_n_iv"] = float(tab["fsds_meta_iv"]["mean_n_iv"]["mean"])
                 cell["meta_iv_r_po"] = float(tab["fsds_meta_iv"]["mean_uplift_r_po"]["mean"])
+                cell["meta_iv_ate"] = float(
+                    tab["fsds_meta_iv"].get("mean_uplift_ate", {}).get("mean", float("nan"))
+                )
+                cell["meta_iv_ess"] = float(
+                    tab["fsds_meta_iv"].get("mean_ess_frac", {}).get("mean", float("nan"))
+                )
+                cell["meta_iv_regret"] = float(
+                    tab["fsds_meta_iv"].get("mean_regret", {}).get("mean", float("nan"))
+                )
+                cell["meta_iv_jaccard"] = float(
+                    tab["fsds_meta_iv"].get("mean_iv_jaccard", {}).get("mean", float("nan"))
+                )
         lifts[board] = cell
     ranked = sorted(lifts.items(), key=lambda kv: kv[1]["vs_static"], reverse=True)
     ranked_meta = sorted(
@@ -87,8 +101,18 @@ def main():
     ap.add_argument("--seeds", type=int, default=4)
     ap.add_argument("--n-per", type=int, default=200)
     ap.add_argument("--n-batches", type=int, default=8)
-    ap.add_argument("--boards", type=str, default=None, help="comma-separated subset")
+    ap.add_argument(
+        "--boards",
+        type=str,
+        default=None,
+        help="comma-separated subset, or 'all' / 'core' / 'diverse'",
+    )
     ap.add_argument("--methods", type=str, default=None, help="comma-separated subset")
+    ap.add_argument(
+        "--diverse",
+        action="store_true",
+        help="run RecSys / trading / dialogue / multimodal boards",
+    )
     ap.add_argument(
         "--compare-meta-iv",
         action="store_true",
@@ -99,7 +123,20 @@ def main():
     n_per = 80 if args.quick else int(args.n_per)
     n_batches = 6 if args.quick else int(args.n_batches)
     n_seeds = 2 if args.quick else int(args.seeds)
-    boards = [b.strip() for b in args.boards.split(",")] if args.boards else list(BOARDS)
+    if args.boards:
+        key = args.boards.strip().lower()
+        if key == "all":
+            boards = list(BOARDS)
+        elif key == "core":
+            boards = list(CORE_BOARDS)
+        elif key == "diverse":
+            boards = list(DIVERSE_BOARDS)
+        else:
+            boards = [b.strip() for b in args.boards.split(",")]
+    elif args.diverse:
+        boards = list(DIVERSE_BOARDS)
+    else:
+        boards = list(BOARDS)
     if args.methods:
         methods = [m.strip() for m in args.methods.split(",")]
     elif args.compare_meta_iv:
@@ -131,7 +168,8 @@ def main():
         for method in methods:
             cell = suite["table"][board][method]
             print(
-                "  %s  value=%.4f (%.4f)  w_err=%.4f  mix_mse=%.4f  n_iv=%.1f  R_PO=%.4f"
+                "  %s  value=%.4f (%.4f)  w_err=%.4f  mix_mse=%.4f  "
+                "n_iv=%.1f  R_PO=%.4f  ATE=%.4f  ESS=%.3f  regret=%.4f  IV-J=%.3f"
                 % (
                     method,
                     cell["online_value"]["mean"],
@@ -140,6 +178,10 @@ def main():
                     cell["mean_mix_mse"]["mean"],
                     cell.get("mean_n_iv", {}).get("mean", float("nan")),
                     cell.get("mean_uplift_r_po", {}).get("mean", float("nan")),
+                    cell.get("mean_uplift_ate", {}).get("mean", float("nan")),
+                    cell.get("mean_ess_frac", {}).get("mean", float("nan")),
+                    cell.get("mean_regret", {}).get("mean", float("nan")),
+                    cell.get("mean_iv_jaccard", {}).get("mean", float("nan")),
                 ),
                 flush=True,
             )
