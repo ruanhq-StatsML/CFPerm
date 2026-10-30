@@ -1,2 +1,0 @@
-[console_scripts]
-po-risk-var = po_risk_var.cli:main

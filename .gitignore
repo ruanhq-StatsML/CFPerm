@@ -10,3 +10,4 @@ data/msrvtt/features_window/.unzipped_from
 .DS_Store
 results/msrvtt_multimodal_attribution_smoke/
 data/hc3/
+Python/po_risk_var/*.egg-info/
