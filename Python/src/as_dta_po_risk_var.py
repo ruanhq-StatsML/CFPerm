@@ -601,57 +601,38 @@ def bootstrap_var_u(
     B: int = 40,
     n_estimators: int = 40,
     seed: int = SEED,
-    winsor_q: float = 0.99,
 ) -> dict:
-    """Bootstrap refit of PermuCATE RF τ̂ → Var(u). Fallback / sanity check."""
-    X = np.asarray(X, dtype=float)
-    Y = np.asarray(Y, dtype=float).ravel()
-    W = np.asarray(W, dtype=int).ravel()
+    """φ once; bootstrap RF(φ~X) → u=(φ-τ̂)² → Var across boots."""
+    X = np.asarray(X, float)
+    Y = np.asarray(Y, float).ravel()
+    W = np.asarray(W, int).ravel()
     n = len(Y)
+    phi = permucate_unit_po(X, Y, W, seed=seed, n_estimators=n_estimators)["phi"]
     rng = np.random.default_rng(int(seed))
-    # base φ from one full fit
-    base = permucate_unit_po(X, Y, W, seed=seed, n_estimators=n_estimators)
-    phi = base["phi"]
-    u_draws = np.zeros((int(B), n), dtype=float)
+    kw = dict(
+        n_estimators=max(20, n_estimators // 2),
+        max_depth=4,
+        min_samples_leaf=max(3, n // 50),
+        n_jobs=1,
+    )
+    u_draws = np.empty((int(B), n))
     for b in range(int(B)):
-        idx = rng.choice(n, size=n, replace=True)
-        # need both W classes in bootstrap
-        if len(np.unique(W[idx])) < 2:
-            idx = np.concatenate([idx, np.where(W == 0)[0][:2], np.where(W == 1)[0][:2]])
-        try:
-            fit = permucate_unit_po(
-                X[idx], Y[idx], W[idx], seed=seed + b, n_estimators=max(20, n_estimators // 2)
-            )
-            # predict τ on full X via refit on φ_boot ~ X_boot — use in-sample map:
-            # approximate τ̂^{(b)}(X) by RF fit on bootstrap φ
-            rf = RandomForestRegressor(
-                n_estimators=max(20, n_estimators // 2),
-                max_depth=4,
-                min_samples_leaf=max(3, n // 50),
-                random_state=int(seed) + b,
-                n_jobs=1,
-            )
-            rf.fit(X[idx], fit["phi"])
-            tau_b = rf.predict(X)
-            u_draws[b] = (phi - tau_b) ** 2
-        except Exception:  # noqa: BLE001
-            u_draws[b] = base["unit_po"]
-    # winsorize each draw's u
-    if winsor_q is not None and 0 < winsor_q < 1:
-        for b in range(u_draws.shape[0]):
-            hi = np.quantile(u_draws[b], winsor_q)
-            u_draws[b] = np.minimum(u_draws[b], hi)
+        idx = rng.integers(0, n, n)
+        if W[idx].min() == W[idx].max():  # keep both arms
+            idx[0], idx[1] = np.flatnonzero(W == 0)[0], np.flatnonzero(W == 1)[0]
+        tau_b = RandomForestRegressor(random_state=int(seed) + b, **kw).fit(
+            X[idx], phi[idx]
+        ).predict(X)
+        u_draws[b] = (phi - tau_b) ** 2
     Var_u = u_draws.var(axis=0, ddof=1)
-    u_hat = u_draws.mean(axis=0)
     return {
         "estimator": "bootstrap",
         "B": int(B),
-        "winsor_q": winsor_q,
-        "u_hat": u_hat,
+        "u_hat": u_draws.mean(axis=0),
         "Var_u_boot": Var_u,
         "u_draws": u_draws,
-        "mean_Var_u": float(np.mean(Var_u)),
-        "mean_u": float(np.mean(u_hat)),
+        "mean_Var_u": float(Var_u.mean()),
+        "mean_u": float(u_draws.mean()),
     }
 
 
