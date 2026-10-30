@@ -1,0 +1,141 @@
+{
+  "scope": "PO-risk Var(u) estimators on PermuCATE \u03c6: Causal Forest leaf-size-debiased (+ leaf merge), BCF posterior, bootstrap fallback.",
+  "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+  "ref_magvar": {
+    "mu": 7.320524221626332,
+    "s": 1.8968313598318602,
+    "v": 3.597969207641584,
+    "unit_var": 196.41236562654947,
+    "raw_sub_means": [
+      10.74364714266725,
+      6.216887668981681,
+      9.093786477483748,
+      6.789909009916835,
+      7.109211390615468,
+      3.750139195697999,
+      10.54056174779777,
+      7.595302274301092,
+      7.426724667599767,
+      6.561637983176388,
+      11.764169248171967,
+      5.724807176656323,
+      9.378675136098654,
+      5.76593071385707,
+      8.164630135511892,
+      8.157991394401083,
+      9.213281188701913,
+      8.96981182297493,
+      9.41874449834959,
+      8.142077789906624
+    ]
+  },
+  "shifts": {
+    "benign": {
+      "kind": "benign",
+      "n_live": 180,
+      "subenv_mu": 5.563274207056245,
+      "subenv_s": 0.8724296276835464,
+      "emp_var_u": 62.448498918728504,
+      "cf_mean_V_naive": 0.0028215022555130825,
+      "cf_mean_V_debiased": 0.0,
+      "cf_bias_ratio": 7.334570489213392,
+      "cf_mean_Var_u_tree": 3.9917941456340134,
+      "cf_mean_Var_u_delta": 0.0,
+      "cf_mean_u_leaf": 7.6627298722905355,
+      "bcf_backend": "python_bagged_bcf",
+      "bcf_mean_Var_u": 31.99680800369607,
+      "bcf_mean_u": 6.594303036955798,
+      "boot_mean_Var_u": 24.423075896271104,
+      "boot_mean_u": 7.129769642575229,
+      "J_subenv": -1.7572500145700873,
+      "d_mu": -1.7572500145700873,
+      "d_s": -1.0244017321483139,
+      "pred_subenv": "quiet"
+    },
+    "malignant": {
+      "kind": "malignant",
+      "n_live": 180,
+      "subenv_mu": 14.809293710019139,
+      "subenv_s": 4.895724888513787,
+      "emp_var_u": 1480.3869147623973,
+      "cf_mean_V_naive": 16.87620557123091,
+      "cf_mean_V_debiased": 16.372506717410733,
+      "cf_bias_ratio": 0.03621273391679222,
+      "cf_mean_Var_u_tree": 8101245.57877913,
+      "cf_mean_Var_u_delta": 45211.93871180558,
+      "cf_mean_u_leaf": 201.02688412634032,
+      "bcf_backend": "python_bagged_bcf",
+      "bcf_mean_Var_u": 938.0549975001026,
+      "bcf_mean_u": 17.354419115526866,
+      "boot_mean_Var_u": 364.7358675378863,
+      "boot_mean_u": 20.12245233574183,
+      "J_subenv": 16.48545007443859,
+      "d_mu": 7.488769488392807,
+      "d_s": 2.9988935286819274,
+      "pred_subenv": "malignant"
+    }
+  },
+  "separation": {
+    "subenv_s": {
+      "benign": 0.8724296276835464,
+      "malignant": 4.895724888513787,
+      "gap": 4.023295260830241,
+      "ratio": 5.611598612844907,
+      "separates": true
+    },
+    "emp_var_u": {
+      "benign": 62.448498918728504,
+      "malignant": 1480.3869147623973,
+      "gap": 1417.9384158436687,
+      "ratio": 23.70572456335575,
+      "separates": true
+    },
+    "cf_V_naive": {
+      "benign": 0.0028215022555130825,
+      "malignant": 16.87620557123091,
+      "gap": 16.873384068975394,
+      "ratio": 5981.283742820194,
+      "separates": true
+    },
+    "cf_V_debiased": {
+      "benign": 0.0,
+      "malignant": 16.372506717410733,
+      "gap": 16.372506717410733,
+      "ratio": Infinity,
+      "separates": true
+    },
+    "cf_Var_u_tree": {
+      "benign": 3.9917941456340134,
+      "malignant": 8101245.57877913,
+      "gap": 8101241.586984985,
+      "ratio": 2029474.788332908,
+      "separates": true
+    },
+    "cf_Var_u_delta": {
+      "benign": 0.0,
+      "malignant": 45211.93871180558,
+      "gap": 45211.93871180558,
+      "ratio": Infinity,
+      "separates": true
+    },
+    "bcf_Var_u": {
+      "benign": 31.99680800369607,
+      "malignant": 938.0549975001026,
+      "gap": 906.0581894964065,
+      "ratio": 29.317143053511597,
+      "separates": true
+    },
+    "boot_Var_u": {
+      "benign": 24.423075896271104,
+      "malignant": 364.7358675378863,
+      "gap": 340.3127916416152,
+      "ratio": 14.93406764516397,
+      "separates": true
+    }
+  },
+  "n_estimators_separating": 8,
+  "n_estimators_total": 8,
+  "hit_rate": 1.0,
+  "recommend": "Default: Causal Forest leaf-size-debiased + leaf-wise merge (cf_Var_u_tree / cf_V_debiased). BCF when Bayesian pipeline exists. Bootstrap only as fallback.",
+  "bcf_backend_used": "python_bagged_bcf"
+}

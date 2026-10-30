@@ -1,0 +1,215 @@
+{
+  "scope": "Incremental business value of PO-risk Var(u) methods (CF / BCF / bootstrap) and five product applications",
+  "industrial_anchor_usd": 22430.0,
+  "industrial_source": "results/as_dta_business_pr (HC3 finance/medicine LIVE)",
+  "estimators": [
+    {
+      "method": "causal_forest_leaf_debiased",
+      "role": "product_default",
+      "baseline": "empirical Var(u) or CF V_naive (leaf-size biased)",
+      "what_it_adds": "Debias leaf-size inflation in Var(tau) so quiet/benign LIVE does not look malignant; leaf-merge floor min n=30/50 keeps segment monitors stable.",
+      "incremental_value": [
+        {
+          "ledger": "false_freeze_avoidance",
+          "claim": "Stops leaf-bias masquerading as integrity break \u2192 avoid wrong-drug freeze/retrain on synonym / mild covariate boards.",
+          "evidence": "Synth justify 5/5 + real 4/4 with CF-debiased; honesty bias_ratio flags when debias mattered.",
+          "dollar_proxy": "Wrong freeze on a benign finance synonym cell alone leaves ~$3.4k/1k on the table (business PR: conformal was the right cheap drug)."
+        },
+        {
+          "ledger": "confirmed_malignant_routing",
+          "claim": "Relative V_debiased\u2191 confirms Mag\u00d7Var / Y-flip \u2192 spend freeze+aug dollars only when shape+outcome agree.",
+          "evidence": "Estimator separation suite: cf_V_debiased / cf_Var_u_tree separate malignant vs benign (hit-rate 1.0).",
+          "dollar_proxy": "Finance malignant cell: cost/1k $8404\u2192$4067 (~$4.3k) when freeze+aug is correctly selected."
+        }
+      ],
+      "when_not_enough": "Need posterior intervals / Bayesian stack \u2192 escalate to BCF; need a 30-second sanity check \u2192 bootstrap.",
+      "ship_as": "default LIVE monitor"
+    },
+    {
+      "method": "bcf_posterior_rpy2",
+      "role": "bayesian_path",
+      "baseline": "CF point/debiased Var(u) without posterior draws",
+      "what_it_adds": "Full posterior draws of tau via R bcf (rpy2 + pihat) \u2192 Var(u) as posterior spread; audit-grade uncertainty for regulated pipelines.",
+      "incremental_value": [
+        {
+          "ledger": "compliance_uncertainty",
+          "claim": "Credible bands on unit risk for auditors: not only 'V is high' but 'posterior mass on integrity break'.",
+          "evidence": "bcf_Var_u separates malignant/benign (suite ratio ~29\u00d7); backend rpy2_bcf with pihat.",
+          "dollar_proxy": "Pays for itself when a single avoided AI-Act / escalation dispute exceeds MCMC cost (minutes of CPU vs legal/ops review)."
+        },
+        {
+          "ledger": "bayesian_product_fit",
+          "claim": "Drop-in when the org already ships BART/BCF; no second uncertainty language for risk teams.",
+          "evidence": "Same triage actuators; only Var(u) backend swaps.",
+          "dollar_proxy": "Integration cost \u2193 vs inventing a fourth estimator."
+        }
+      ],
+      "when_not_enough": "Latency-critical LIVE default \u2192 stay on CF; tiny n without pihat quality \u2192 prefer CF + bootstrap sanity.",
+      "ship_as": "Bayesian / audit lane"
+    },
+    {
+      "method": "bootstrap",
+      "role": "fallback_sanity",
+      "baseline": "ship CF/BCF with no cross-check",
+      "what_it_adds": "Intuitive refit of PermuCATE tau \u2192 Winsorized Var(u); catches gross misspecification cheaply.",
+      "incremental_value": [
+        {
+          "ledger": "engineering_confidence",
+          "claim": "A/B against CF before a freeze: if boot and CF disagree wildly, hold + investigate instead of auto-escalate.",
+          "evidence": "boot_Var_u still separates (suite ratio ~15\u00d7) but is heavier-tailed \u2014 never the product default.",
+          "dollar_proxy": "One blocked false escalation (GPU retrain / human on-call) typically dwarfs bootstrap CPU."
+        }
+      ],
+      "when_not_enough": "Do not use as sole freeze sensor (fourth-moment noise).",
+      "ship_as": "fallback / CI sanity"
+    }
+  ],
+  "product_apps": {
+    "1_dynamic_routing": {
+      "app": "dynamic_routing_cost_optimization",
+      "baseline_anti_patterns": [
+        "always_heavy_model (pay GPU on every request)",
+        "always_light_or_cache (miss integrity breaks \u2192 FN ledger)",
+        "OOD_high_implies_retrain (wrong-drug tax)"
+      ],
+      "what_po_risk_adds": "Var(u) + Mag\u00d7Var + Y-flip as a *confidence / disease* proxy: quiet/benign \u2192 light/cache/conformal; malignant \u2192 escalate.",
+      "incremental_vs_always_heavy": {
+        "sim_usd_per_100k_req": 2660.0,
+        "industrial_live_usd": 22430.0,
+        "narrative": "Industrial HC3 LIVE (business PR): routed actuators saved $22430 vs static \u2014 100% shape hit-rate, so detection was not the bottleneck; right-drug selection was."
+      },
+      "incremental_vs_always_light": {
+        "ledger": "FN_integrity",
+        "narrative": "Always-light would keep paying ~$20\u00d7FN on malignant cells; finance malignant alone drops cost/1k $8404\u2192$4067 when escalated to freeze+aug."
+      },
+      "unit_econ": {
+        "cost_fp_usd": 50,
+        "cost_fn_usd": 20,
+        "source": "docs/method/AS_DTA_business_PR_ROI.md"
+      },
+      "headline_incremental_usd": 22430.0
+    },
+    "2_canary_rollback": {
+      "app": "granular_canary_release_rollback",
+      "baseline_anti_patterns": [
+        "global_rollback_on_any_alert (burn healthy segments)",
+        "global_accuracy_only_monitor (miss segment integrity breaks)"
+      ],
+      "what_po_risk_adds": "Segment Severity=J+Y-flip + CF Var(u): rollback only sick segments; keep canary elsewhere (micro-loss iteration).",
+      "demo_panel": {
+        "n_segments": 5,
+        "n_rolled_back": 2,
+        "n_kept_canary": 3,
+        "kept_share": 0.6
+      },
+      "incremental_vs_global_rollback": {
+        "sim_usd_canary_uplift_retained": 600.0,
+        "assumptions": "100k req, $0.01 canary uplift/req, equal segment share; global rollback zeros uplift; segment rollback zeros only sick share.",
+        "narrative": "Demo panel keeps 3/5 segments on canary \u2192 retain ~$600 uplift that a global rollback would incinerate."
+      },
+      "incremental_vs_global_metrics_only": {
+        "narrative": "medicine + sci show Y-flip / high J while general/finance/talk stay quiet \u2014 global accuracy can look fine while verticals bleed; segment gate is the incremental sensor."
+      },
+      "headline_incremental_usd": 600.0
+    },
+    "3_data_flywheel": {
+      "app": "data_flywheel_active_learning",
+      "baseline_anti_patterns": [
+        "ingest_all_online_feedback (data poisoning)",
+        "drop_all_high_PO (throws away hard benign / synonym gold)"
+      ],
+      "what_po_risk_adds": "Y-flip gate kills integrity poison; Y-flip=0 + mild J kept as distribution-expanding gold.",
+      "demo_panel": {
+        "n_in": 40,
+        "drop_rate": 0.55,
+        "gold_rate": 0.45,
+        "n_quarantine": 0
+      },
+      "incremental_vs_ingest_all": {
+        "sim_usd_poison_avoided": 550.0,
+        "assumptions": "$25 expected remediation per poison sample ingested",
+        "narrative": "Drop rate 55% on demo panel \u2192 ~$550 avoided remediation vs ingest-all."
+      },
+      "incremental_vs_drop_all_high_po": {
+        "sim_usd_gold_retained_extra": 72.0,
+        "assumptions": "$8 robustness value per gold sample; crude high-PO filter throws away ~half of mild-J gold.",
+        "narrative": "Mag\u00d7Var distinguishes hard-but-clean from poison \u2192 keep gold rate 45% instead of scrubbing benign hard cases."
+      },
+      "headline_incremental_usd": 694.0
+    },
+    "4_compliance": {
+      "app": "explainable_compliance_guardrails",
+      "baseline_anti_patterns": [
+        "black_box_deny_or_silent_pass",
+        "global_accuracy_dashboard_only"
+      ],
+      "what_po_risk_adds": "Segment risk-event narratives: window \u00d7 segment \u00d7 Y-break \u00d7 J \u00d7 V_debiased \u2192 local freeze \u2014 AI-Act-readable, not opaque.",
+      "demo_panel": {
+        "n_events": 2,
+        "events": [
+          {
+            "window": "2026-W44",
+            "segment": "medicine",
+            "integrity_break": true,
+            "y_break": 0.32,
+            "severity": 1.22,
+            "J": 0.9,
+            "V_debiased": 0.08,
+            "level": "dense",
+            "action_taken": "local_VAI_freeze",
+            "narrative": "In 2026-W44, segment=medicine detected integrity break (Y-flip=0.32, J=0.90, V_debiased=0.08) \u2192 local freeze."
+          },
+          {
+            "window": "2026-W44",
+            "segment": "sci",
+            "integrity_break": true,
+            "y_break": 0.28,
+            "severity": 0.98,
+            "J": 0.7,
+            "V_debiased": 0.05,
+            "level": "dense",
+            "action_taken": "local_VAI_freeze",
+            "narrative": "In 2026-W44, segment=sci detected integrity break (Y-flip=0.28, J=0.70, V_debiased=0.05) \u2192 local freeze."
+          }
+        ]
+      },
+      "incremental_vs_black_box": {
+        "sim_usd_review_cost_delta": 9200.0,
+        "assumptions": "$5k unexplained incident review vs $0.4k auditable local-freeze note",
+        "narrative": "2 integrity-break events become auditable freezes \u2192 ~$9200 review-cost delta on the demo window."
+      },
+      "product_distinction": "Separates watermark-scrubbed / synonym cosmetic from true outcome integrity break \u2014 the compliance incremental story.",
+      "headline_incremental_usd": 9200.0
+    },
+    "5_agent_cascade": {
+      "app": "agentic_cascade_error_blocking",
+      "baseline_anti_patterns": [
+        "run_workflow_to_end",
+        "only_check_final_answer"
+      ],
+      "what_po_risk_adds": "Per-step Mag\u00d7Var / Var(u): abort + self-correct / human when a step's residual variance spikes \u2014 stop cascade amplification.",
+      "demo_panel": {
+        "aborted_at_step": 3,
+        "cascade_blocked": true,
+        "n_steps_executed": 3
+      },
+      "incremental_vs_run_to_end": {
+        "sim_usd_per_bad_workflow": 40.15,
+        "assumptions": "$0.15/step tool waste after poison; $40 task-failure risk if cascade reaches synthesize",
+        "narrative": "Demo aborts at step 3 \u2192 avoid ~$40 expected cascade loss vs run-to-end."
+      },
+      "headline_incremental_usd": 40.15
+    }
+  },
+  "rollup": {
+    "industrial_routing_usd": 22430.0,
+    "sim_other_apps_usd": 10534.15,
+    "note": "Do not sum industrial + sim into one ROI \u2014 different ledgers. Pitch industrial $22430 as measured LIVE save; sim stack ($10534) as transparent unit-econ for canary/flywheel/compliance/agent on the demo panel.",
+    "pitch_one_liner": "PO-risk Var(u) is an allocation rule: CF-debiased honesty for LIVE, BCF when auditors need posteriors, bootstrap as sanity \u2014 and the five apps turn that sensor into routing dollars ($22430 industrial), micro-loss canaries, clean flywheels, auditable freezes, and aborted agent cascades."
+  },
+  "justify_hit_rates": {
+    "synth": "5/5",
+    "real": "4/4",
+    "note": "from po-risk-var justify \u2014 sensor reliability before $ claims"
+  }
+}
