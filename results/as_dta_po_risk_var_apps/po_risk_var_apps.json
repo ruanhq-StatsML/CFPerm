@@ -1,0 +1,264 @@
+{
+  "scope": "Product landing justify: CF-debiased Var(u) + Mag\u00d7Var triage on synthetic DGPs and real-world text boards.",
+  "product_logic": {
+    "steps": [
+      "fit \u03c6, \u03c4\u0302",
+      "u=(\u03c6\u2212\u03c4\u0302)\u00b2",
+      "Mag\u00d7Var (\u03bc, s)",
+      "Var(u) CF-debiased (default)",
+      "Y-flip if text integrity",
+      "actuator via triage()",
+      "honesty: bias_ratio"
+    ],
+    "estimator_priority": [
+      {
+        "name": "causal_forest_leaf_debiased",
+        "role": "default",
+        "when": "LIVE monitoring; leaf merge min n=30 (50 if n\u2265200)"
+      },
+      {
+        "name": "bcf_posterior_rpy2",
+        "role": "bayesian",
+        "when": "use rpy2 + R package bcf when Bayesian path is required"
+      },
+      {
+        "name": "bootstrap",
+        "role": "fallback",
+        "when": "intuitive sanity check; small B + Winsorize u"
+      }
+    ]
+  },
+  "synthetic": {
+    "scope": "Synthetic DGPs \u2014 product triage with CF-debiased Var(u)",
+    "method": "cf",
+    "boards": [
+      {
+        "board": "quiet",
+        "oracle": "quiet",
+        "pred": "quiet",
+        "actuator": "hold",
+        "correct": true,
+        "y_flip": 0.0,
+        "d_mu": -0.18452127453151235,
+        "d_s": -0.6553352968016537,
+        "J": -0.18452127453151235,
+        "V_debiased": 0.0,
+        "V_naive": 0.00025851473616971416,
+        "bias_ratio": 1.0,
+        "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
+      },
+      {
+        "board": "benign_covariate",
+        "oracle": "benign",
+        "pred": "benign",
+        "actuator": "conformal_calibrate",
+        "correct": true,
+        "y_flip": 0.0,
+        "d_mu": 0.3157824690148052,
+        "d_s": -0.1588036250695759,
+        "J": 0.3157824690148052,
+        "V_debiased": 0.0,
+        "V_naive": 0.00018416947352003604,
+        "bias_ratio": 1.0,
+        "reason": "benign: mild \u03bc, no Y-flip, Mag\u00d7Var not spiked; honesty: leaf bias_ratio=1.00 (debias mattered)"
+      },
+      {
+        "board": "malignant_sparse",
+        "oracle": "malignant",
+        "pred": "malignant",
+        "actuator": "VAI_freeze",
+        "correct": true,
+        "y_flip": 0.25,
+        "d_mu": 9.8114766269929,
+        "d_s": 2.6820579202685195,
+        "J": 17.857650387798458,
+        "V_debiased": 0.0,
+        "V_naive": 0.00395032712503026,
+        "bias_ratio": 1.0,
+        "reason": "malignant: Y-flip+s\u2191+J\u2191+\u03bc\u2191\u2191"
+      },
+      {
+        "board": "malignant_dense",
+        "oracle": "malignant",
+        "pred": "malignant",
+        "actuator": "VAI_freeze",
+        "correct": true,
+        "y_flip": 0.5,
+        "d_mu": 12.748427805525925,
+        "d_s": 3.799875582354474,
+        "J": 24.14805455258935,
+        "V_debiased": 0.0,
+        "V_naive": 0.0032020943984825455,
+        "bias_ratio": 1.0,
+        "reason": "malignant: Y-flip+s\u2191+J\u2191+\u03bc\u2191\u2191"
+      },
+      {
+        "board": "label_delay",
+        "oracle": "malignant",
+        "pred": "malignant",
+        "actuator": "VAI_freeze",
+        "correct": true,
+        "y_flip": 1.0,
+        "d_mu": 0.14927219041300388,
+        "d_s": -0.6498133650032425,
+        "J": 0.14927219041300388,
+        "V_debiased": 0.0,
+        "V_naive": 0.0050967900259316894,
+        "bias_ratio": 1.0,
+        "reason": "malignant: Y-flip"
+      }
+    ],
+    "n_boards": 5,
+    "n_correct": 5,
+    "hit_rate": 1.0
+  },
+  "realworld": {
+    "scope": "Real-world boards \u2014 same Mag\u00d7Var + Y-flip\u53e3\u5f84 + CF-debiased Var(u) product triage (AIGC / topic / news / sentiment).",
+    "method": "cf",
+    "boards": [
+      {
+        "board": "hc3_finance",
+        "benign": {
+          "oracle": "benign",
+          "pred": "quiet",
+          "actuator": "hold",
+          "correct": true,
+          "y_flip": 0.0,
+          "d_mu": -0.03742545136906175,
+          "d_s": -0.030455962448418084,
+          "J": -0.03742545136906175,
+          "V_debiased": 0.0,
+          "V_naive": 0.0004314014381109009,
+          "bias_ratio": 1.0,
+          "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
+        },
+        "malignant": {
+          "oracle": "malignant",
+          "pred": "malignant",
+          "actuator": "VAI_freeze",
+          "correct": true,
+          "y_flip": 0.32142857142857145,
+          "d_mu": 0.019998231930868526,
+          "d_s": -0.029592976453696483,
+          "J": 0.019998231930868526,
+          "V_debiased": 0.0,
+          "V_naive": 0.0008625080501176044,
+          "bias_ratio": 1.0,
+          "reason": "malignant: Y-flip"
+        },
+        "pair_ok": true,
+        "V_gap": 0.0
+      },
+      {
+        "board": "news20_sci",
+        "benign": {
+          "oracle": "benign",
+          "pred": "quiet",
+          "actuator": "hold",
+          "correct": true,
+          "y_flip": 0.0,
+          "d_mu": -0.009685523293213733,
+          "d_s": 0.0036693187600097266,
+          "J": 0.0013224329868154472,
+          "V_debiased": 0.0,
+          "V_naive": 0.0004594419945287233,
+          "bias_ratio": 1.0,
+          "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
+        },
+        "malignant": {
+          "oracle": "malignant",
+          "pred": "malignant",
+          "actuator": "VAI_freeze",
+          "correct": true,
+          "y_flip": 0.32142857142857145,
+          "d_mu": 0.09304010087883621,
+          "d_s": 0.09579402455655922,
+          "J": 0.38794887380114684,
+          "V_debiased": 0.0,
+          "V_naive": 0.0008641470392748734,
+          "bias_ratio": 1.0,
+          "reason": "malignant: Y-flip+s\u2191"
+        },
+        "pair_ok": true,
+        "V_gap": 0.0
+      },
+      {
+        "board": "ag_news",
+        "benign": {
+          "oracle": "benign",
+          "pred": "quiet",
+          "actuator": "hold",
+          "correct": true,
+          "y_flip": 0.0,
+          "d_mu": 0.04527958699953635,
+          "d_s": 0.023835716793406608,
+          "J": 0.1987632666514224,
+          "V_debiased": 0.0,
+          "V_naive": 0.0005186480962835493,
+          "bias_ratio": 1.0,
+          "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
+        },
+        "malignant": {
+          "oracle": "malignant",
+          "pred": "malignant",
+          "actuator": "VAI_freeze",
+          "correct": true,
+          "y_flip": 0.32142857142857145,
+          "d_mu": -0.002904661052885754,
+          "d_s": 0.002869110827569618,
+          "J": 0.0069895619450126845,
+          "V_debiased": 0.0,
+          "V_naive": 0.000788591175991481,
+          "bias_ratio": 1.0,
+          "reason": "malignant: Y-flip"
+        },
+        "pair_ok": true,
+        "V_gap": 0.0
+      },
+      {
+        "board": "imdb",
+        "benign": {
+          "oracle": "benign",
+          "pred": "quiet",
+          "actuator": "hold",
+          "correct": true,
+          "y_flip": 0.0,
+          "d_mu": -0.005101591082673551,
+          "d_s": 0.005437117007429597,
+          "J": 0.01120975993961524,
+          "V_debiased": 0.0,
+          "V_naive": 0.0006739141711538433,
+          "bias_ratio": 1.0,
+          "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
+        },
+        "malignant": {
+          "oracle": "malignant",
+          "pred": "malignant",
+          "actuator": "VAI_freeze",
+          "correct": true,
+          "y_flip": 0.32142857142857145,
+          "d_mu": 0.003914519274121037,
+          "d_s": -0.023080530769151078,
+          "J": 0.003914519274121037,
+          "V_debiased": 0.0,
+          "V_naive": 0.0005759679838227925,
+          "bias_ratio": 1.0,
+          "reason": "malignant: Y-flip"
+        },
+        "pair_ok": true,
+        "V_gap": 0.0
+      }
+    ],
+    "n_boards": 4,
+    "n_pair_ok": 4,
+    "hit_rate": 1.0
+  },
+  "headline": {
+    "synth_hit_rate": 1.0,
+    "real_hit_rate": 1.0,
+    "synth_n": "5/5",
+    "real_n": "4/4",
+    "meets_expectation": true
+  },
+  "recommend": "Ship CF leaf-size-debiased + leaf merge as default Var(u); gate with Mag\u00d7Var + Y-flip; BCF optional; bootstrap fallback."
+}
