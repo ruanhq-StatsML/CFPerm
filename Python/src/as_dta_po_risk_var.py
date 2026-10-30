@@ -11,14 +11,12 @@ This module keeps the CF / BCF / bootstrap implementations used by the package.
 Defaults
 --------
   CF leaf merge: min n=30 (n<200) or 50 (n>=200)
-  BCF: rpy2 -> R package bcf with pihat (Rscript bridge fallback)
-  Bootstrap: intuitive sanity check
+  BCF: rpy2 + bcf::bcf → tau (n_sim, n) → Var across draws
+  Bootstrap: resample RF(φ~X) → Var(u)
 """
 from __future__ import annotations
 
 import json
-import subprocess
-import tempfile
 import warnings
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -279,277 +277,6 @@ def causal_forest_var_u(
 # ---------------------------------------------------------------------------
 
 
-def _estimate_pihat(X: np.ndarray, W: np.ndarray, seed: int = SEED) -> np.ndarray:
-    """Length-n propensity scores for BCF (clipped away from 0/1)."""
-    X = np.asarray(X, dtype=float)
-    W = np.asarray(W, dtype=int).ravel()
-    try:
-        lr = LogisticRegression(max_iter=200, random_state=int(seed))
-        lr.fit(X, W)
-        pi = lr.predict_proba(X)[:, 1]
-    except Exception:  # noqa: BLE001
-        pi = np.full(len(W), float(np.mean(W)))
-    return np.clip(np.asarray(pi, dtype=float), 0.05, 0.95)
-
-
-def _ensure_r_user_lib() -> None:
-    """Prefer ~/R/library so rpy2 / Rscript see user-installed bcf."""
-    import os
-
-    user_lib = str(Path.home() / "R" / "library")
-    if Path(user_lib).is_dir():
-        cur = os.environ.get("R_LIBS_USER", "")
-        if user_lib not in cur.split(os.pathsep):
-            os.environ["R_LIBS_USER"] = (
-                user_lib if not cur else user_lib + os.pathsep + cur
-            )
-        # also prepend for this process's R session if already started
-        try:
-            import rpy2.robjects as ro
-
-            paths = [str(p) for p in ro.r(".libPaths()")]
-            if user_lib not in paths:
-                ro.r(".libPaths")(ro.StrVector([user_lib] + paths))
-        except Exception:  # noqa: BLE001
-            pass
-
-
-def _bcf_via_rpy2(
-    X, Y, W, phi, n_burn=50, n_sim=80, seed=SEED, pihat: Optional[np.ndarray] = None
-) -> Optional[dict]:
-    """BCF via rpy2 + R package bcf (requires pihat)."""
-    try:
-        import rpy2.robjects as ro
-        from rpy2.robjects.packages import importr
-
-        _ensure_r_user_lib()
-        # requireNamespace via ro.r can return None under some rpy2 builds;
-        # importr is the reliable probe.
-        try:
-            bcf = importr("bcf")
-        except Exception:
-            return None
-        X = np.asarray(X, dtype=float)
-        Y = np.asarray(Y, dtype=float).ravel()
-        W = np.asarray(W, dtype=float).ravel()
-        if pihat is None:
-            pihat = _estimate_pihat(X, W.astype(int), seed=seed)
-        pihat = np.asarray(pihat, dtype=float).ravel()
-        n, p = X.shape
-        x_r = ro.r.matrix(
-            ro.FloatVector(X.ravel().tolist()), nrow=n, ncol=p, byrow=True
-        )
-        # Mute BCF progress bar (binary bytes break rpy2 utf-8 console callback)
-        try:
-            from rpy2.rinterface_lib import callbacks as rpy_cb
-
-            _prev_write = rpy_cb.consolewrite_print
-
-            def _quiet_console(x):  # noqa: ANN001
-                return None
-
-            rpy_cb.consolewrite_print = _quiet_console
-        except Exception:  # noqa: BLE001
-            _prev_write = None
-        try:
-            # Keep MCMC light for product smoke; n_chains=1 avoids thread storms
-            fit = bcf.bcf(
-                y=ro.FloatVector(Y.tolist()),
-                z=ro.FloatVector(W.tolist()),
-                x_control=x_r,
-                pihat=ro.FloatVector(pihat.tolist()),
-                nburn=int(n_burn),
-                nsim=int(n_sim),
-                n_chains=1,
-                n_threads=1,
-                ntree_control=min(50, max(20, 2 * p)),
-                ntree_moderate=min(20, max(10, p)),
-                include_pi="control",
-                verbose=False,
-                no_output=True,
-                random_seed=int(seed),
-            )
-        finally:
-            if _prev_write is not None:
-                try:
-                    rpy_cb.consolewrite_print = _prev_write
-                except Exception:  # noqa: BLE001
-                    pass
-        tau_draws = None
-        names = list(fit.names) if getattr(fit, "names", None) is not None else []
-        for key in ("tau", "tau_post", "tauhat"):
-            if key in names:
-                tau_draws = np.asarray(fit.rx2(key))
-                break
-        if tau_draws is None:
-            # last resort: positional / attribute
-            try:
-                tau_draws = np.asarray(fit.rx2("tau"))
-            except Exception:  # noqa: BLE001
-                return {"_error": "rpy2_bcf: no tau draws in fit"}
-        if tau_draws.ndim == 1:
-            tau_draws = tau_draws.reshape(1, -1)
-        if tau_draws.shape[0] == len(Y) and tau_draws.shape[1] != len(Y):
-            tau_draws = tau_draws.T
-        return _posterior_var_from_tau_draws(phi, tau_draws, backend="rpy2_bcf")
-    except Exception as exc:  # noqa: BLE001
-        return {"_error": "rpy2_bcf: %s" % exc}
-
-
-def _bcf_via_rscript(
-    X, Y, W, phi, n_burn=40, n_sim=60, seed=SEED, pihat: Optional[np.ndarray] = None
-) -> Optional[dict]:
-    """Call R bcf via Rscript CSV bridge when rpy2 path fails."""
-    import os
-
-    _ensure_r_user_lib()
-    env = os.environ.copy()
-    user_lib = str(Path.home() / "R" / "library")
-    env["R_LIBS_USER"] = user_lib
-    try:
-        chk = subprocess.run(
-            ["Rscript", "-e", 'cat(requireNamespace("bcf", quietly=TRUE))'],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=30,
-            env=env,
-        )
-        if "TRUE" not in (chk.stdout or ""):
-            return None
-    except Exception:  # noqa: BLE001
-        return None
-
-    X = np.asarray(X, dtype=float)
-    Y = np.asarray(Y, dtype=float).ravel()
-    W = np.asarray(W, dtype=int).ravel()
-    if pihat is None:
-        pihat = _estimate_pihat(X, W, seed=seed)
-    pihat = np.asarray(pihat, dtype=float).ravel()
-
-    with tempfile.TemporaryDirectory() as td:
-        td = Path(td)
-        data = td / "data.csv"
-        out = td / "tau.csv"
-        import pandas as pd
-
-        cols = ["Y", "W", "pihat"] + ["x%d" % j for j in range(X.shape[1])]
-        pd.DataFrame(
-            np.column_stack([Y, W, pihat, X]),
-            columns=cols,
-        ).to_csv(data, index=False)
-        ntree_c = min(50, max(20, 2 * X.shape[1]))
-        ntree_m = min(20, max(10, X.shape[1]))
-        rcode = f"""
-        .libPaths(c("{user_lib}", .libPaths()))
-        library(bcf)
-        d <- read.csv("{data}")
-        y <- d$Y; z <- as.numeric(d$W); pihat <- d$pihat
-        x <- as.matrix(d[, -(1:3), drop=FALSE])
-        fit <- bcf(y=y, z=z, x_control=x, pihat=pihat,
-                   nburn={int(n_burn)}, nsim={int(n_sim)},
-                   n_chains=1, n_threads=1,
-                   ntree_control={ntree_c}, ntree_moderate={ntree_m},
-                   include_pi="control", verbose=FALSE,
-                   random_seed={int(seed)})
-        tau <- fit$tau
-        write.csv(tau, "{out}", row.names=FALSE)
-        """
-        try:
-            proc = subprocess.run(
-                ["Rscript", "-e", rcode],
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=300,
-                cwd=str(td),
-                env=env,
-            )
-            if proc.returncode != 0 and not out.exists():
-                return {
-                    "_error": "rscript_bcf: rc=%s %s"
-                    % (proc.returncode, (proc.stderr or "")[-400:])
-                }
-        except Exception as exc:  # noqa: BLE001
-            return {"_error": "rscript_bcf: %s" % exc}
-        if not out.exists():
-            return None
-        tau_draws = np.loadtxt(out, delimiter=",", skiprows=1)
-        if tau_draws.ndim == 1:
-            tau_draws = tau_draws.reshape(1, -1)
-        if tau_draws.shape[1] == len(Y):
-            pass
-        elif tau_draws.shape[0] == len(Y):
-            tau_draws = tau_draws.T
-        else:
-            return {"_error": "rscript_bcf: bad tau shape %s" % (tau_draws.shape,)}
-        return _posterior_var_from_tau_draws(phi, tau_draws, backend="rscript_bcf")
-
-
-def _bcf_python_bagged(
-    X: np.ndarray,
-    phi: np.ndarray,
-    *,
-    n_draws: int = 60,
-    n_estimators: int = 40,
-    seed: int = SEED,
-) -> dict:
-    """Python BCF-style posterior: bagged honest RF on φ ~ X (regularized τ̂ draws).
-
-    Not full BCF MCMC, but same *pathway*: draws of τ̂ → u^{(s)} → Var(u).
-    Priors / honesty via min_samples_leaf + bootstrap subsample of rows.
-    """
-    X = np.asarray(X, dtype=float)
-    phi = np.asarray(phi, dtype=float).ravel()
-    n = len(phi)
-    rng = np.random.default_rng(int(seed))
-    tau_draws = np.zeros((n_draws, n), dtype=float)
-    for s in range(int(n_draws)):
-        idx = rng.choice(n, size=n, replace=True)
-        oob = np.ones(n, dtype=bool)
-        oob[idx] = False
-        rf = RandomForestRegressor(
-            n_estimators=max(20, int(n_estimators) // 2),
-            max_depth=4,
-            min_samples_leaf=max(5, n // 40),
-            random_state=int(seed) + s,
-            n_jobs=1,
-        )
-        rf.fit(X[idx], phi[idx])
-        tau_draws[s] = rf.predict(X)
-    return _posterior_var_from_tau_draws(phi, tau_draws, backend="python_bagged_bcf")
-
-
-def _posterior_var_from_tau_draws(phi: np.ndarray, tau_draws: np.ndarray, backend: str) -> dict:
-    phi = np.asarray(phi, dtype=float).ravel()
-    tau_draws = np.asarray(tau_draws, dtype=float)
-    if tau_draws.ndim != 2:
-        raise ValueError("tau_draws must be 2d")
-    if tau_draws.shape[1] != len(phi):
-        if tau_draws.shape[0] == len(phi):
-            tau_draws = tau_draws.T
-        else:
-            raise ValueError("tau_draws shape mismatch")
-    u_draws = (phi[None, :] - tau_draws) ** 2
-    Var_u = u_draws.var(axis=0, ddof=1)
-    tau_bar = tau_draws.mean(axis=0)
-    u_hat = (phi - tau_bar) ** 2
-    return {
-        "estimator": "bcf_posterior",
-        "backend": backend,
-        "n_draws": int(tau_draws.shape[0]),
-        "tau_bar": tau_bar,
-        "u_hat": u_hat,
-        "Var_u_posterior": Var_u,
-        "u_draws": u_draws,
-        "mean_Var_u": float(np.mean(Var_u)),
-        "mean_u": float(np.mean(u_hat)),
-        "u_draws_std": float(np.std(u_draws)),
-    }
-
-
 def bcf_var_u(
     X: np.ndarray,
     Y: np.ndarray,
@@ -559,33 +286,74 @@ def bcf_var_u(
     n_burn: int = 40,
     n_sim: int = 60,
     seed: int = SEED,
-    prefer_python: bool = False,
     pihat: Optional[np.ndarray] = None,
 ) -> dict:
-    """BCF posterior Var(u). Tries rpy2 (with pihat) -> Rscript -> Python bagged."""
-    X = np.asarray(X, dtype=float)
-    Y = np.asarray(Y, dtype=float).ravel()
-    W = np.asarray(W, dtype=int).ravel()
-    phi = np.asarray(phi, dtype=float).ravel()
+    """rpy2 + bcf::bcf → tau (n_sim, n) → Var_u = var_s (φ - τ_s)²."""
+    import rpy2.robjects as ro
+    from rpy2.rinterface_lib import callbacks as rpy_cb
+    from rpy2.robjects.packages import importr
+
+    X = np.asarray(X, float)
+    Y = np.asarray(Y, float).ravel()
+    W = np.asarray(W, float).ravel()
+    phi = np.asarray(phi, float).ravel()
+    n, p = X.shape
     if pihat is None:
-        pihat = _estimate_pihat(X, W, seed=seed)
-    errors = []
-    if not prefer_python:
-        for fn in (_bcf_via_rpy2, _bcf_via_rscript):
-            out = fn(
-                X, Y, W, phi, n_burn=n_burn, n_sim=n_sim, seed=seed, pihat=pihat
-            )
-            if out is None:
-                continue
-            if "_error" in out and "Var_u_posterior" not in out:
-                errors.append(out["_error"])
-                continue
-            if "Var_u_posterior" in out:
-                out["fallback_errors"] = errors
-                return out
-    out = _bcf_python_bagged(X, phi, n_draws=n_sim, seed=seed)
-    out["fallback_errors"] = errors
-    return out
+        pihat = np.clip(
+            LogisticRegression(max_iter=200, random_state=int(seed))
+            .fit(X, W.astype(int))
+            .predict_proba(X)[:, 1],
+            0.05,
+            0.95,
+        )
+    pihat = np.asarray(pihat, float).ravel()
+
+    user = str(Path.home() / "R" / "library")
+    if Path(user).is_dir():
+        ro.r(".libPaths")(ro.StrVector([user] + [str(x) for x in ro.r(".libPaths()")]))
+
+    prev = rpy_cb.consolewrite_print
+    rpy_cb.consolewrite_print = lambda *_: None  # mute MCMC progress bar
+    try:
+        bcf = importr("bcf")
+        x_r = ro.r.matrix(ro.FloatVector(X.ravel().tolist()), nrow=n, ncol=p, byrow=True)
+        fit = bcf.bcf(
+            y=ro.FloatVector(Y.tolist()),
+            z=ro.FloatVector(W.tolist()),
+            x_control=x_r,
+            pihat=ro.FloatVector(pihat.tolist()),
+            nburn=int(n_burn),
+            nsim=int(n_sim),
+            n_chains=1,
+            n_threads=1,
+            include_pi="control",
+            verbose=False,
+            no_output=True,
+            random_seed=int(seed),
+        )
+        tau = np.asarray(fit.rx2("tau"), float)  # (n_sim, n) after burn-in
+    finally:
+        rpy_cb.consolewrite_print = prev
+
+    if tau.ndim != 2:
+        raise ValueError("bcf tau must be 2d, got %s" % (tau.shape,))
+    if tau.shape[1] != n:
+        tau = tau.T
+    u_draws = (phi[None, :] - tau) ** 2
+    Var_u = u_draws.var(axis=0, ddof=1)
+    tau_bar = tau.mean(axis=0)
+    u_hat = (phi - tau_bar) ** 2
+    return {
+        "estimator": "bcf_posterior",
+        "backend": "rpy2_bcf",
+        "n_draws": int(tau.shape[0]),
+        "tau_bar": tau_bar,
+        "u_hat": u_hat,
+        "Var_u_posterior": Var_u,
+        "u_draws": u_draws,
+        "mean_Var_u": float(Var_u.mean()),
+        "mean_u": float(u_hat.mean()),
+    }
 
 
 # ---------------------------------------------------------------------------
