@@ -51,15 +51,17 @@ def resolve_min_leaf_merge_n(n: int, override: Optional[int] = None) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Leaf merge — sklearn/econml Tree has children_*, no parent_; build once.
+# Leaf merge helpers. econml/sklearn Tree only stores children_*; parent_
+# is not kept. We build parent once: parent[root] = -1 (null).
 # ---------------------------------------------------------------------------
 
 
 def tree_parents(tree) -> np.ndarray:
-    """parent[node] from children_left/right. Root = -1."""
+    """parent[v] for every node; parent[root] = -1."""
     tr = tree.tree_ if hasattr(tree, "tree_") else tree
-    left, right = np.asarray(tr.children_left), np.asarray(tr.children_right)
-    parent = np.full(len(left), -1, dtype=int)
+    left = np.asarray(tr.children_left)
+    right = np.asarray(tr.children_right)
+    parent = np.full(len(left), -1, dtype=int)  # root stays -1
     for p in range(len(left)):
         if left[p] >= 0:
             parent[left[p]] = p
@@ -69,7 +71,7 @@ def tree_parents(tree) -> np.ndarray:
 
 
 def merge_leaf_u(tree, u: np.ndarray, leaf_ids: np.ndarray, min_n: int = 30):
-    """One tree: leaf → climb parent until n_node>=min_n → mean(u) in cluster.
+    """Climb parent until n_node >= min_n (stop at root), then mean(u) in cluster.
 
     Returns (u_merged, merge_ids), both shape (n,).
     """
@@ -83,7 +85,7 @@ def merge_leaf_u(tree, u: np.ndarray, leaf_ids: np.ndarray, min_n: int = 30):
     merge_ids = np.empty(len(leaf_ids), dtype=int)
     for i, lid in enumerate(leaf_ids):
         v = int(lid)
-        while parent[v] >= 0 and n_node[v] < min_n:
+        while parent[v] >= 0 and n_node[v] < min_n:  # root parent==-1 → stop
             v = int(parent[v])
         merge_ids[i] = v
 
@@ -92,66 +94,6 @@ def merge_leaf_u(tree, u: np.ndarray, leaf_ids: np.ndarray, min_n: int = 30):
         m = merge_ids == gid
         u_merged[m] = u[m].mean()
     return u_merged, merge_ids
-
-
-# thin aliases (old call sites)
-def leaf_wise_merge_u(u, leaf_ids, children_left=None, children_right=None, level="leaf", min_n=0, n_node_samples=None):
-    class _T:
-        pass
-
-    t = _T()
-    t.tree_ = _T()
-    if children_left is None:
-        return np.asarray(u, float).ravel()  # no tree → no merge
-    t.tree_.children_left = np.asarray(children_left)
-    t.tree_.children_right = np.asarray(children_right)
-    t.tree_.n_node_samples = (
-        np.asarray(n_node_samples)
-        if n_node_samples is not None
-        else np.ones(len(children_left))
-    )
-    um, _ = merge_leaf_u(t, u, leaf_ids, min_n=int(min_n) if min_n else 1)
-    return um
-
-
-def merge_leaves_one_tree(tree, u, *, X=None, leaf_ids=None, min_n=30, return_assignment=False):
-    if leaf_ids is None:
-        leaf_ids = np.asarray(tree.apply(X), dtype=int).ravel()
-    um, mid = merge_leaf_u(tree, u, leaf_ids, min_n=min_n)
-    if return_assignment:
-        return {"u_merged": um, "leaf_ids": np.asarray(leaf_ids, int).ravel(), "merge_ids": mid}
-    return um
-
-
-def merge_leaves_forest(forest, u_trees, *, X=None, leaves=None, min_n=30, return_assignment=False):
-    u_trees = np.asarray(u_trees, float)
-    if leaves is None:
-        leaves = np.asarray(forest.apply(X), dtype=int)
-    u_merged = np.zeros_like(u_trees)
-    merge_ids = np.zeros_like(leaves)
-    for b, tree in enumerate(forest.estimators_):
-        u_merged[:, b], merge_ids[:, b] = merge_leaf_u(
-            tree, u_trees[:, b], leaves[:, b], min_n=min_n
-        )
-    if return_assignment:
-        return {
-            "u_merged": u_merged,
-            "leaf_assignment": leaves,
-            "leaf_assignment_merged": merge_ids,
-        }
-    return u_merged
-
-
-def leaf_assignment_forest(forest, X):
-    return np.asarray(forest.apply(np.asarray(X, float)), dtype=int)
-
-
-def leaf_assignment_one_tree(tree, X):
-    return np.asarray(tree.apply(np.asarray(X, float)), dtype=int).ravel()
-
-
-def var_u_from_leaf_merged(u_merged):
-    return np.asarray(u_merged, float).var(axis=1, ddof=1)
 
 
 # ---------------------------------------------------------------------------
