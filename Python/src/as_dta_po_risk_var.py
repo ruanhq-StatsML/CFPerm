@@ -277,131 +277,57 @@ def causal_forest_var_u(
 # ---------------------------------------------------------------------------
 
 
-def bcf_var_u(
-    X: np.ndarray,
-    Y: np.ndarray,
-    W: np.ndarray,
-    phi: np.ndarray,
-    *,
-    n_burn: int = 40,
-    n_sim: int = 60,
-    seed: int = SEED,
-    pihat: Optional[np.ndarray] = None,
-) -> dict:
-    """rpy2 + bcf::bcf → tau (n_sim, n) → Var_u = var_s (φ - τ_s)²."""
+def bcf_var_u(X, Y, W, phi, *, n_burn=40, n_sim=60, seed=SEED, pihat=None):
+    """rpy2 bcf::bcf → tau (n_sim, n) → Var_s (φ - τ_s)²."""
     import rpy2.robjects as ro
     from rpy2.rinterface_lib import callbacks as rpy_cb
     from rpy2.robjects.packages import importr
 
-    X = np.asarray(X, float)
-    Y = np.asarray(Y, float).ravel()
-    W = np.asarray(W, float).ravel()
-    phi = np.asarray(phi, float).ravel()
+    X, Y, W, phi = np.asarray(X, float), np.asarray(Y, float).ravel(), np.asarray(W, float).ravel(), np.asarray(phi, float).ravel()
     n, p = X.shape
     if pihat is None:
-        pihat = np.clip(
-            LogisticRegression(max_iter=200, random_state=int(seed))
-            .fit(X, W.astype(int))
-            .predict_proba(X)[:, 1],
-            0.05,
-            0.95,
-        )
-    pihat = np.asarray(pihat, float).ravel()
-
+        pihat = np.clip(LogisticRegression(max_iter=200, random_state=int(seed)).fit(X, W.astype(int)).predict_proba(X)[:, 1], 0.05, 0.95)
     user = str(Path.home() / "R" / "library")
     if Path(user).is_dir():
         ro.r(".libPaths")(ro.StrVector([user] + [str(x) for x in ro.r(".libPaths()")]))
-
-    prev = rpy_cb.consolewrite_print
-    rpy_cb.consolewrite_print = lambda *_: None  # mute MCMC progress bar
+    prev, rpy_cb.consolewrite_print = rpy_cb.consolewrite_print, (lambda *_: None)
     try:
-        bcf = importr("bcf")
-        x_r = ro.r.matrix(ro.FloatVector(X.ravel().tolist()), nrow=n, ncol=p, byrow=True)
-        fit = bcf.bcf(
-            y=ro.FloatVector(Y.tolist()),
-            z=ro.FloatVector(W.tolist()),
-            x_control=x_r,
-            pihat=ro.FloatVector(pihat.tolist()),
-            nburn=int(n_burn),
-            nsim=int(n_sim),
-            n_chains=1,
-            n_threads=1,
-            include_pi="control",
-            verbose=False,
-            no_output=True,
-            random_seed=int(seed),
+        fit = importr("bcf").bcf(
+            y=ro.FloatVector(Y.tolist()), z=ro.FloatVector(W.tolist()),
+            x_control=ro.r.matrix(ro.FloatVector(X.ravel().tolist()), nrow=n, ncol=p, byrow=True),
+            pihat=ro.FloatVector(np.asarray(pihat, float).ravel().tolist()),
+            nburn=int(n_burn), nsim=int(n_sim), n_chains=1, n_threads=1,
+            include_pi="control", verbose=False, no_output=True, random_seed=int(seed),
         )
-        tau = np.asarray(fit.rx2("tau"), float)  # (n_sim, n) after burn-in
+        tau = np.asarray(fit.rx2("tau"), float)
     finally:
         rpy_cb.consolewrite_print = prev
-
-    if tau.ndim != 2:
-        raise ValueError("bcf tau must be 2d, got %s" % (tau.shape,))
     if tau.shape[1] != n:
         tau = tau.T
-    u_draws = (phi[None, :] - tau) ** 2
-    Var_u = u_draws.var(axis=0, ddof=1)
-    tau_bar = tau.mean(axis=0)
-    u_hat = (phi - tau_bar) ** 2
-    return {
-        "estimator": "bcf_posterior",
-        "backend": "rpy2_bcf",
-        "n_draws": int(tau.shape[0]),
-        "tau_bar": tau_bar,
-        "u_hat": u_hat,
-        "Var_u_posterior": Var_u,
-        "u_draws": u_draws,
-        "mean_Var_u": float(Var_u.mean()),
-        "mean_u": float(u_hat.mean()),
-    }
+    u, tb = (phi - tau) ** 2, tau.mean(0)
+    V, uh = u.var(0, ddof=1), (phi - tb) ** 2
+    return {"estimator": "bcf_posterior", "backend": "rpy2_bcf", "n_draws": int(tau.shape[0]),
+            "tau_bar": tb, "u_hat": uh, "Var_u_posterior": V, "u_draws": u,
+            "mean_Var_u": float(V.mean()), "mean_u": float(uh.mean())}
 
 
-# ---------------------------------------------------------------------------
-# Bootstrap fallback
-# ---------------------------------------------------------------------------
-
-
-def bootstrap_var_u(
-    X: np.ndarray,
-    Y: np.ndarray,
-    W: np.ndarray,
-    *,
-    B: int = 40,
-    n_estimators: int = 40,
-    seed: int = SEED,
-) -> dict:
-    """φ once; bootstrap RF(φ~X) → u=(φ-τ̂)² → Var across boots."""
-    X = np.asarray(X, float)
-    Y = np.asarray(Y, float).ravel()
-    W = np.asarray(W, int).ravel()
-    n = len(Y)
-    phi = permucate_unit_po(X, Y, W, seed=seed, n_estimators=n_estimators)["phi"]
-    rng = np.random.default_rng(int(seed))
-    kw = dict(
-        n_estimators=max(20, n_estimators // 2),
-        max_depth=4,
-        min_samples_leaf=max(3, n // 50),
-        n_jobs=1,
-    )
-    u_draws = np.empty((int(B), n))
+def bootstrap_var_u(X, Y, W, *, B=40, n_estimators=40, seed=SEED):
+    """φ once; boot RF(φ~X) → u=(φ-τ̂)² → Var across boots."""
+    X, Y, W = np.asarray(X, float), np.asarray(Y, float).ravel(), np.asarray(W, int).ravel()
+    n, phi, rng = len(Y), permucate_unit_po(X, Y, W, seed=seed, n_estimators=n_estimators)["phi"], np.random.default_rng(int(seed))
+    u = np.empty((int(B), n))
     for b in range(int(B)):
         idx = rng.integers(0, n, n)
-        if W[idx].min() == W[idx].max():  # keep both arms
+        if W[idx].min() == W[idx].max():
             idx[0], idx[1] = np.flatnonzero(W == 0)[0], np.flatnonzero(W == 1)[0]
-        tau_b = RandomForestRegressor(random_state=int(seed) + b, **kw).fit(
-            X[idx], phi[idx]
-        ).predict(X)
-        u_draws[b] = (phi - tau_b) ** 2
-    Var_u = u_draws.var(axis=0, ddof=1)
-    return {
-        "estimator": "bootstrap",
-        "B": int(B),
-        "u_hat": u_draws.mean(axis=0),
-        "Var_u_boot": Var_u,
-        "u_draws": u_draws,
-        "mean_Var_u": float(Var_u.mean()),
-        "mean_u": float(u_draws.mean()),
-    }
+        tau = RandomForestRegressor(
+            n_estimators=max(20, n_estimators // 2), max_depth=4, min_samples_leaf=max(3, n // 50),
+            random_state=int(seed) + b, n_jobs=1,
+        ).fit(X[idx], phi[idx]).predict(X)
+        u[b] = (phi - tau) ** 2
+    V = u.var(0, ddof=1)
+    return {"estimator": "bootstrap", "B": int(B), "u_hat": u.mean(0), "Var_u_boot": V, "u_draws": u,
+            "mean_Var_u": float(V.mean()), "mean_u": float(u.mean())}
 
 
 # ---------------------------------------------------------------------------
