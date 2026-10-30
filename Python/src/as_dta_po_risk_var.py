@@ -105,7 +105,7 @@ def leaf_wise_merge_u(
     min_n: int = 0,
     n_node_samples: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Average u within each leaf / merge-cluster.
+    """Average u within each leaf / merge-cluster (low-level primitive).
 
     level='leaf'   - mean u over samples sharing the leaf id
     level='parent' - if children_* given, average one level up
@@ -117,7 +117,6 @@ def leaf_wise_merge_u(
     merged = np.zeros_like(u)
 
     group_ids = leaf_ids
-    parent = None
     if children_left is not None and children_right is not None:
         parent = _parent_map(np.asarray(children_left), np.asarray(children_right))
         if min_n and int(min_n) > 0 and n_node_samples is not None:
@@ -129,7 +128,10 @@ def leaf_wise_merge_u(
             )
         elif level == "parent":
             group_ids = np.array(
-                [int(parent[int(lid)]) if parent[int(lid)] >= 0 else int(lid) for lid in leaf_ids],
+                [
+                    int(parent[int(lid)]) if parent[int(lid)] >= 0 else int(lid)
+                    for lid in leaf_ids
+                ],
                 dtype=int,
             )
 
@@ -140,6 +142,97 @@ def leaf_wise_merge_u(
     for i, gid in enumerate(group_ids):
         merged[i] = group_mean[int(gid)]
     return merged
+
+
+def merge_leaves_one_tree(
+    tree,
+    u: np.ndarray,
+    *,
+    X: Optional[np.ndarray] = None,
+    leaf_ids: Optional[np.ndarray] = None,
+    min_n: int = 30,
+) -> np.ndarray:
+    """Merge unit risk u on *one* CausalForestDML tree (the intuitive helper).
+
+    For a single econml / sklearn tree ``t`` in ``forest.estimators_``:
+
+      1. drop each sample into its leaf (``t.apply(X)`` or precomputed leaf_ids)
+      2. if the leaf has < min_n training samples, climb to an ancestor until
+         ``n_node_samples >= min_n`` (default 30; use 50 when n>=200)
+      3. replace each sample's u by the mean u inside that merge cluster
+
+    Returns merged u of shape (n,). This is the per-tree step that makes
+    tree-to-tree Var(u) stable enough for product variance estimation.
+    """
+    u = np.asarray(u, dtype=float).ravel()
+    tr = tree.tree_ if hasattr(tree, "tree_") else tree
+    if leaf_ids is None:
+        if X is None:
+            raise ValueError("merge_leaves_one_tree needs X= or leaf_ids=")
+        leaf_ids = np.asarray(tree.apply(X), dtype=int).ravel()
+    else:
+        leaf_ids = np.asarray(leaf_ids, dtype=int).ravel()
+    if len(leaf_ids) != len(u):
+        raise ValueError("u and leaf_ids length mismatch")
+    return leaf_wise_merge_u(
+        u,
+        leaf_ids,
+        children_left=np.asarray(tr.children_left),
+        children_right=np.asarray(tr.children_right),
+        level="leaf",
+        min_n=int(min_n),
+        n_node_samples=np.asarray(tr.n_node_samples, dtype=float),
+    )
+
+
+def merge_leaves_forest(
+    forest,
+    u_trees: np.ndarray,
+    *,
+    X: Optional[np.ndarray] = None,
+    leaves: Optional[np.ndarray] = None,
+    min_n: int = 30,
+) -> np.ndarray:
+    """Apply ``merge_leaves_one_tree`` to every tree in a CausalForestDML forest.
+
+    Parameters
+    ----------
+    forest : fitted MultiOutputGRF / CausalForest final estimator
+        ``cf.model_final_.estimators_[0]`` after CausalForestDML.fit.
+    u_trees : array (n, B)
+        Per-tree unit risk u_i^{(b)} = (phi_i - tau_b(X_i))^2.
+    X, leaves : optional
+        ``leaves = forest.apply(X)`` with shape (n, B); computed if omitted.
+    min_n : int
+        Merge floor (30 or 50).
+
+    Returns
+    -------
+    u_merged : array (n, B)
+        Leaf-merged unit risk; Var across axis=1 is the CF Var(u) estimator.
+    """
+    u_trees = np.asarray(u_trees, dtype=float)
+    if u_trees.ndim != 2:
+        raise ValueError("u_trees must be (n, B)")
+    trees = list(forest.estimators_)
+    B = len(trees)
+    if u_trees.shape[1] != B:
+        raise ValueError("u_trees.shape[1] must equal n_estimators=%d" % B)
+    if leaves is None:
+        if X is None:
+            raise ValueError("merge_leaves_forest needs X= or leaves=")
+        leaves = np.asarray(forest.apply(X), dtype=int)
+    else:
+        leaves = np.asarray(leaves, dtype=int)
+    u_merged = np.zeros_like(u_trees)
+    for b, tree in enumerate(trees):
+        u_merged[:, b] = merge_leaves_one_tree(
+            tree,
+            u_trees[:, b],
+            leaf_ids=leaves[:, b],
+            min_n=min_n,
+        )
+    return u_merged
 
 
 # ---------------------------------------------------------------------------
@@ -261,25 +354,16 @@ def causal_forest_var_u(
 
     V_debiased = np.maximum(V_naive - B_leaf, 0.0)
 
-    # tree-wise unit risk
+    # tree-wise unit risk → per-tree leaf merge (helper) → Var across trees
     u_trees = (phi[:, None] - tau_trees) ** 2  # (n, B)
     if leaf_merge:
-        u_merged = np.zeros_like(u_trees)
-        for b, tree in enumerate(trees):
-            tr = tree.tree_
-            u_merged[:, b] = leaf_wise_merge_u(
-                u_trees[:, b],
-                leaves[:, b],
-                children_left=np.asarray(tr.children_left),
-                children_right=np.asarray(tr.children_right),
-                level="leaf",
-                min_n=merge_n,
-                n_node_samples=np.asarray(tr.n_node_samples, dtype=float),
-            )
-        u_for_var = u_merged
+        # CausalForestDML: for each tree b, merge leaves with min_n, then
+        # Var_u_tree = Var_b( u_merged^{(b)} )
+        u_for_var = merge_leaves_forest(
+            forest, u_trees, leaves=leaves, min_n=merge_n
+        )
     else:
         u_for_var = u_trees
-        u_merged = u_trees
 
     # Var across trees of u^{(b)}; use sample var (not /B) as posterior-style spread of u
     Var_u_tree = u_for_var.var(axis=1, ddof=1)
@@ -289,17 +373,11 @@ def causal_forest_var_u(
     r_hat = phi - tau_bar
     Var_u_delta = 4.0 * V_debiased * (r_hat ** 2)
 
-    # point estimate of u from forest mean tau
+    # point estimate of u from forest mean tau (merge on tree 0 for a leaf view)
     u_hat = r_hat ** 2
     if leaf_merge:
-        tr0 = trees[0].tree_
-        u_leaf = leaf_wise_merge_u(
-            u_hat,
-            leaves[:, 0],
-            children_left=np.asarray(tr0.children_left),
-            children_right=np.asarray(tr0.children_right),
-            min_n=merge_n,
-            n_node_samples=np.asarray(tr0.n_node_samples, dtype=float),
+        u_leaf = merge_leaves_one_tree(
+            trees[0], u_hat, leaf_ids=leaves[:, 0], min_n=merge_n
         )
     else:
         u_leaf = u_hat

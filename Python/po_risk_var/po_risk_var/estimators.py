@@ -26,6 +26,8 @@ from as_dta_po_risk_var import (  # noqa: E402
     bootstrap_var_u,
     causal_forest_var_u,
     leaf_wise_merge_u,
+    merge_leaves_forest,
+    merge_leaves_one_tree,
     resolve_min_leaf_merge_n,
 )
 
@@ -207,6 +209,8 @@ __all__ = [
     "bcf_var_u",
     "bootstrap_var_u",
     "leaf_wise_merge_u",
+    "merge_leaves_one_tree",
+    "merge_leaves_forest",
     "resolve_min_leaf_merge_n",
     "triage",
     "TriageDecision",
