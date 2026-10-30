@@ -51,247 +51,88 @@ def resolve_min_leaf_merge_n(n: int, override: Optional[int] = None) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Leaf helpers (econml GRFTree / Tree)
+# Leaf merge — sklearn/econml Tree has children_*, no parent_; build once.
 # ---------------------------------------------------------------------------
 
 
-def _parent_map(children_left: np.ndarray, children_right: np.ndarray) -> np.ndarray:
-    n = len(children_left)
-    parent = np.full(n, -1, dtype=int)
-    for p in range(n):
-        L, R = int(children_left[p]), int(children_right[p])
-        if L >= 0:
-            parent[L] = p
-        if R >= 0:
-            parent[R] = p
+def tree_parents(tree) -> np.ndarray:
+    """parent[node] from children_left/right. Root = -1."""
+    tr = tree.tree_ if hasattr(tree, "tree_") else tree
+    left, right = np.asarray(tr.children_left), np.asarray(tr.children_right)
+    parent = np.full(len(left), -1, dtype=int)
+    for p in range(len(left)):
+        if left[p] >= 0:
+            parent[left[p]] = p
+        if right[p] >= 0:
+            parent[right[p]] = p
     return parent
 
 
-def _ancestors(node: int, parent: np.ndarray, max_depth: int = 64) -> List[int]:
-    out = [int(node)]
-    v = int(node)
-    for _ in range(max_depth):
-        p = int(parent[v])
-        if p < 0:
-            break
-        out.append(p)
-        v = p
-    return out
+def merge_leaf_u(tree, u: np.ndarray, leaf_ids: np.ndarray, min_n: int = 30):
+    """One tree: leaf → climb parent until n_node>=min_n → mean(u) in cluster.
 
-
-def _merge_node_ids_min_n(
-    leaf_ids: np.ndarray,
-    parent: np.ndarray,
-    n_node: np.ndarray,
-    min_n: int,
-) -> np.ndarray:
-    """Climb each leaf to an ancestor with n_node >= min_n (or root)."""
-    merge_id = np.empty(len(leaf_ids), dtype=int)
-    min_n = int(max(1, min_n))
-    for i, lid in enumerate(leaf_ids):
-        v = int(lid)
-        while parent[v] >= 0 and float(n_node[v]) < min_n:
-            v = int(parent[v])
-        merge_id[i] = v
-    return merge_id
-
-
-def leaf_wise_merge_u(
-    u: np.ndarray,
-    leaf_ids: np.ndarray,
-    children_left: Optional[np.ndarray] = None,
-    children_right: Optional[np.ndarray] = None,
-    level: str = "leaf",
-    min_n: int = 0,
-    n_node_samples: Optional[np.ndarray] = None,
-) -> np.ndarray:
-    """Average u within each leaf / merge-cluster (low-level primitive).
-
-    level='leaf'   - mean u over samples sharing the leaf id
-    level='parent' - if children_* given, average one level up
-    min_n>0        - climb ancestors until n_node_samples >= min_n (30/50)
+    Returns (u_merged, merge_ids), both shape (n,).
     """
     u = np.asarray(u, dtype=float).ravel()
-    leaf_ids = np.asarray(leaf_ids, dtype=int).ravel()
-    assert len(u) == len(leaf_ids)
-    merged = np.zeros_like(u)
-
-    group_ids = leaf_ids
-    if children_left is not None and children_right is not None:
-        parent = _parent_map(np.asarray(children_left), np.asarray(children_right))
-        if min_n and int(min_n) > 0 and n_node_samples is not None:
-            group_ids = _merge_node_ids_min_n(
-                leaf_ids,
-                parent,
-                np.asarray(n_node_samples, dtype=float),
-                int(min_n),
-            )
-        elif level == "parent":
-            group_ids = np.array(
-                [
-                    int(parent[int(lid)]) if parent[int(lid)] >= 0 else int(lid)
-                    for lid in leaf_ids
-                ],
-                dtype=int,
-            )
-
-    group_mean: Dict[int, float] = {}
-    for gid in np.unique(group_ids):
-        m = u[group_ids == gid]
-        group_mean[int(gid)] = float(np.mean(m)) if len(m) else 0.0
-    for i, gid in enumerate(group_ids):
-        merged[i] = group_mean[int(gid)]
-    return merged
-
-
-def leaf_assignment_one_tree(tree, X: np.ndarray) -> np.ndarray:
-    """Per-sample leaf id on one CausalForestDML tree — shape (n,).
-
-    This is the first thing you output: which leaf each sample falls into.
-    """
-    return np.asarray(tree.apply(np.asarray(X, dtype=float)), dtype=int).ravel()
-
-
-def leaf_assignment_forest(forest, X: np.ndarray) -> np.ndarray:
-    """Per-sample leaf id on every tree — shape (n, B).
-
-    ``leaves[i, b]`` = leaf of sample i in tree b (CausalForestDML forest).
-    """
-    return np.asarray(forest.apply(np.asarray(X, dtype=float)), dtype=int)
-
-
-def merged_leaf_assignment_one_tree(
-    tree,
-    leaf_ids: np.ndarray,
-    *,
-    min_n: int = 30,
-) -> np.ndarray:
-    """Climb small leaves to ancestors with n_node >= min_n — shape (n,).
-
-    Input: raw per-sample leaf assignment.
-    Output: per-sample *merge-cluster* id used for averaging u.
-    """
     leaf_ids = np.asarray(leaf_ids, dtype=int).ravel()
     tr = tree.tree_ if hasattr(tree, "tree_") else tree
-    parent = _parent_map(
-        np.asarray(tr.children_left), np.asarray(tr.children_right)
+    parent = tree_parents(tree)
+    n_node = np.asarray(tr.n_node_samples, dtype=float)
+    min_n = int(max(1, min_n))
+
+    merge_ids = np.empty(len(leaf_ids), dtype=int)
+    for i, lid in enumerate(leaf_ids):
+        v = int(lid)
+        while parent[v] >= 0 and n_node[v] < min_n:
+            v = int(parent[v])
+        merge_ids[i] = v
+
+    u_merged = np.empty_like(u)
+    for gid in np.unique(merge_ids):
+        m = merge_ids == gid
+        u_merged[m] = u[m].mean()
+    return u_merged, merge_ids
+
+
+# thin aliases (old call sites)
+def leaf_wise_merge_u(u, leaf_ids, children_left=None, children_right=None, level="leaf", min_n=0, n_node_samples=None):
+    class _T:
+        pass
+
+    t = _T()
+    t.tree_ = _T()
+    if children_left is None:
+        return np.asarray(u, float).ravel()  # no tree → no merge
+    t.tree_.children_left = np.asarray(children_left)
+    t.tree_.children_right = np.asarray(children_right)
+    t.tree_.n_node_samples = (
+        np.asarray(n_node_samples)
+        if n_node_samples is not None
+        else np.ones(len(children_left))
     )
-    return _merge_node_ids_min_n(
-        leaf_ids,
-        parent,
-        np.asarray(tr.n_node_samples, dtype=float),
-        int(min_n),
-    )
+    um, _ = merge_leaf_u(t, u, leaf_ids, min_n=int(min_n) if min_n else 1)
+    return um
 
 
-def average_u_by_assignment(u: np.ndarray, assignment: np.ndarray) -> np.ndarray:
-    """Replace each sample's u by the mean u inside its assignment cluster."""
-    u = np.asarray(u, dtype=float).ravel()
-    assignment = np.asarray(assignment, dtype=int).ravel()
-    if len(u) != len(assignment):
-        raise ValueError("u and assignment length mismatch")
-    out = np.zeros_like(u)
-    means: Dict[int, float] = {}
-    for gid in np.unique(assignment):
-        m = u[assignment == gid]
-        means[int(gid)] = float(np.mean(m)) if len(m) else 0.0
-    for i, gid in enumerate(assignment):
-        out[i] = means[int(gid)]
-    return out
-
-
-def merge_leaves_one_tree(
-    tree,
-    u: np.ndarray,
-    *,
-    X: Optional[np.ndarray] = None,
-    leaf_ids: Optional[np.ndarray] = None,
-    min_n: int = 30,
-    return_assignment: bool = False,
-):
-    """Merge unit risk u on *one* CausalForestDML tree (intuitive helper).
-
-    Pipeline (per sample, one tree)::
-
-      leaf_ids  = leaf_assignment_one_tree(tree, X)   # each sample → leaf
-      merge_ids = merged_leaf_assignment_one_tree(...) # climb if n < min_n
-      u_merged  = average_u_by_assignment(u, merge_ids)
-
-    Returns
-    -------
-    u_merged : (n,) by default
-    or dict with keys ``u_merged``, ``leaf_ids``, ``merge_ids`` if
-    ``return_assignment=True``.
-    """
-    u = np.asarray(u, dtype=float).ravel()
+def merge_leaves_one_tree(tree, u, *, X=None, leaf_ids=None, min_n=30, return_assignment=False):
     if leaf_ids is None:
-        if X is None:
-            raise ValueError("merge_leaves_one_tree needs X= or leaf_ids=")
-        leaf_ids = leaf_assignment_one_tree(tree, X)
-    else:
-        leaf_ids = np.asarray(leaf_ids, dtype=int).ravel()
-    if len(leaf_ids) != len(u):
-        raise ValueError("u and leaf_ids length mismatch")
-    merge_ids = merged_leaf_assignment_one_tree(tree, leaf_ids, min_n=min_n)
-    u_merged = average_u_by_assignment(u, merge_ids)
+        leaf_ids = np.asarray(tree.apply(X), dtype=int).ravel()
+    um, mid = merge_leaf_u(tree, u, leaf_ids, min_n=min_n)
     if return_assignment:
-        return {
-            "u_merged": u_merged,
-            "leaf_ids": leaf_ids,
-            "merge_ids": merge_ids,
-        }
-    return u_merged
+        return {"u_merged": um, "leaf_ids": np.asarray(leaf_ids, int).ravel(), "merge_ids": mid}
+    return um
 
 
-def merge_leaves_forest(
-    forest,
-    u_trees: np.ndarray,
-    *,
-    X: Optional[np.ndarray] = None,
-    leaves: Optional[np.ndarray] = None,
-    min_n: int = 30,
-    return_assignment: bool = False,
-):
-    """Per-tree leaf assignment → merge → average u (CausalForestDML forest).
-
-    Intuitive variance path::
-
-      leaves     = leaf_assignment_forest(forest, X)          # (n, B)
-      u_merged   = merge each tree's column via merge_leaves_one_tree
-      Var_u[i]   = Var_b( u_merged[i, b] )                   # per-sample
-
-    Returns
-    -------
-    u_merged : (n, B) by default
-    or dict with ``u_merged``, ``leaf_assignment``, ``leaf_assignment_merged``
-    if ``return_assignment=True``.
-    """
-    u_trees = np.asarray(u_trees, dtype=float)
-    if u_trees.ndim != 2:
-        raise ValueError("u_trees must be (n, B)")
-    trees = list(forest.estimators_)
-    B = len(trees)
-    if u_trees.shape[1] != B:
-        raise ValueError("u_trees.shape[1] must equal n_estimators=%d" % B)
+def merge_leaves_forest(forest, u_trees, *, X=None, leaves=None, min_n=30, return_assignment=False):
+    u_trees = np.asarray(u_trees, float)
     if leaves is None:
-        if X is None:
-            raise ValueError("merge_leaves_forest needs X= or leaves=")
-        leaves = leaf_assignment_forest(forest, X)
-    else:
-        leaves = np.asarray(leaves, dtype=int)
-    n = u_trees.shape[0]
+        leaves = np.asarray(forest.apply(X), dtype=int)
     u_merged = np.zeros_like(u_trees)
-    merge_ids = np.zeros((n, B), dtype=int)
-    for b, tree in enumerate(trees):
-        packed = merge_leaves_one_tree(
-            tree,
-            u_trees[:, b],
-            leaf_ids=leaves[:, b],
-            min_n=min_n,
-            return_assignment=True,
+    merge_ids = np.zeros_like(leaves)
+    for b, tree in enumerate(forest.estimators_):
+        u_merged[:, b], merge_ids[:, b] = merge_leaf_u(
+            tree, u_trees[:, b], leaves[:, b], min_n=min_n
         )
-        u_merged[:, b] = packed["u_merged"]
-        merge_ids[:, b] = packed["merge_ids"]
     if return_assignment:
         return {
             "u_merged": u_merged,
@@ -301,15 +142,16 @@ def merge_leaves_forest(
     return u_merged
 
 
-def var_u_from_leaf_merged(u_merged: np.ndarray) -> np.ndarray:
-    """Per-sample Var(u) across trees — the variance estimation step.
+def leaf_assignment_forest(forest, X):
+    return np.asarray(forest.apply(np.asarray(X, float)), dtype=int)
 
-    ``u_merged`` is (n, B) from ``merge_leaves_forest``; returns (n,).
-    """
-    u_merged = np.asarray(u_merged, dtype=float)
-    if u_merged.ndim != 2 or u_merged.shape[1] < 2:
-        raise ValueError("u_merged must be (n, B) with B>=2")
-    return u_merged.var(axis=1, ddof=1)
+
+def leaf_assignment_one_tree(tree, X):
+    return np.asarray(tree.apply(np.asarray(X, float)), dtype=int).ravel()
+
+
+def var_u_from_leaf_merged(u_merged):
+    return np.asarray(u_merged, float).var(axis=1, ddof=1)
 
 
 # ---------------------------------------------------------------------------
@@ -328,7 +170,6 @@ def _fit_causal_forest(
     seed: int = SEED,
 ):
     from econml.dml import CausalForestDML
-
     # n_estimators must be divisible by subforest_size (default 4)
     n_estimators = int(max(4, n_estimators))
     n_estimators -= n_estimators % 4
@@ -431,38 +272,25 @@ def causal_forest_var_u(
 
     V_debiased = np.maximum(V_naive - B_leaf, 0.0)
 
-    # --- intuitive path ---
-    # 1) leaf assignment per sample per tree
-    # 2) merge small leaves (min_n)
-    # 3) average u in cluster → per-sample Var across trees
+    # leaf assignment → merge_leaf_u per tree → per-sample Var across trees
     u_trees = (phi[:, None] - tau_trees) ** 2  # (n, B)
+    leaf_assignment = leaves
+    leaf_assignment_merged = leaves.copy()
+    u_for_var = u_trees.copy()
     if leaf_merge:
-        packed = merge_leaves_forest(
-            forest,
-            u_trees,
-            leaves=leaves,
-            min_n=merge_n,
-            return_assignment=True,
-        )
-        u_for_var = packed["u_merged"]
-        leaf_assignment = packed["leaf_assignment"]
-        leaf_assignment_merged = packed["leaf_assignment_merged"]
-    else:
-        u_for_var = u_trees
-        leaf_assignment = leaves
-        leaf_assignment_merged = leaves
+        for b, tree in enumerate(trees):
+            u_for_var[:, b], leaf_assignment_merged[:, b] = merge_leaf_u(
+                tree, u_trees[:, b], leaves[:, b], min_n=merge_n
+            )
 
-    # per-sample variance estimation from leaf-merged u^{(b)}
-    Var_u_tree = var_u_from_leaf_merged(u_for_var)
-    u_draws = u_for_var.T.copy()  # (B, n) for coverage / CIs
+    Var_u_tree = u_for_var.var(axis=1, ddof=1)
+    u_draws = u_for_var.T.copy()
     r_hat = phi - tau_bar
     Var_u_delta = 4.0 * V_debiased * (r_hat ** 2)
 
     u_hat = r_hat ** 2
     if leaf_merge:
-        u_leaf = merge_leaves_one_tree(
-            trees[0], u_hat, leaf_ids=leaves[:, 0], min_n=merge_n
-        )
+        u_leaf, _ = merge_leaf_u(trees[0], u_hat, leaves[:, 0], min_n=merge_n)
     else:
         u_leaf = u_hat
 
