@@ -312,21 +312,17 @@ def bcf_var_u(X, Y, W, phi, *, n_burn=40, n_sim=60, seed=SEED, pihat=None):
 
 
 def bootstrap_var_u(X, Y, W, *, B=40, n_estimators=40, seed=SEED):
-    """φ once; boot RF(φ~X) → u=(φ-τ̂)² → Var across boots."""
+    """permucate φ → boot RF(φ~X) → Var_b (φ-τ̂_b)²."""
     X, Y, W = np.asarray(X, float), np.asarray(Y, float).ravel(), np.asarray(W, int).ravel()
-    n, phi, rng = len(Y), permucate_unit_po(X, Y, W, seed=seed, n_estimators=n_estimators)["phi"], np.random.default_rng(int(seed))
-    u = np.empty((int(B), n))
-    for b in range(int(B)):
+    n = len(Y)
+    phi = permucate_unit_po(X, Y, W, seed=seed, n_estimators=n_estimators)["phi"]
+    rng, u = np.random.default_rng(int(seed)), np.empty((B, n))
+    rf = lambda b: RandomForestRegressor(n_estimators=max(20, n_estimators // 2), max_depth=4, random_state=seed + b, n_jobs=1)
+    for b in range(B):
         idx = rng.integers(0, n, n)
-        if W[idx].min() == W[idx].max():
-            idx[0], idx[1] = np.flatnonzero(W == 0)[0], np.flatnonzero(W == 1)[0]
-        tau = RandomForestRegressor(
-            n_estimators=max(20, n_estimators // 2), max_depth=4, min_samples_leaf=max(3, n // 50),
-            random_state=int(seed) + b, n_jobs=1,
-        ).fit(X[idx], phi[idx]).predict(X)
-        u[b] = (phi - tau) ** 2
+        u[b] = (phi - rf(b).fit(X[idx], phi[idx]).predict(X)) ** 2
     V = u.var(0, ddof=1)
-    return {"estimator": "bootstrap", "B": int(B), "u_hat": u.mean(0), "Var_u_boot": V, "u_draws": u,
+    return {"estimator": "bootstrap", "B": B, "u_hat": u.mean(0), "Var_u_boot": V, "u_draws": u,
             "mean_Var_u": float(V.mean()), "mean_u": float(u.mean())}
 
 
