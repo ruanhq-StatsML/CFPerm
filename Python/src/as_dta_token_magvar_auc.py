@@ -139,10 +139,12 @@ def eval_board_auc(
     n_estimators: int = 40,
 ) -> dict:
     """Many LIVE replicates → PermuCATE Mag×Var / token scores → AUC."""
-    if board_name.startswith("hc3_"):
-        board = load_board(board_name, max_pairs=max_pairs, seed=seed)
-    else:
-        board = load_board(board_name, max_per_class=min(450, max_pairs // 2), seed=seed)
+    board = load_board(
+        board_name,
+        max_pairs=max_pairs,
+        max_per_class=min(450, max_pairs // 2),
+        seed=seed,
+    )
     split = split_ref_live_board(board, live_frac=0.4, seed=seed)
     X_tr, y_tr = split["ref_texts"], split["ref_labels"]
     X_live, y_live = split["live_texts"], split["live_labels"]

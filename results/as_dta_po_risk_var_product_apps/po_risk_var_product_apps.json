@@ -1,0 +1,419 @@
+{
+  "scope": "Five PO-risk product applications on Mag\u00d7Var + Y-flip + CF-debiased Var(u)",
+  "sensors": "severity=J+Y-flip; Var(u)=CF leaf-debiased (min leaf merge n=30/50); BCF via rpy2; bootstrap fallback",
+  "apps": {
+    "1_dynamic_routing": {
+      "app": "dynamic_routing_cost_optimization",
+      "routes": [
+        {
+          "segment": "general",
+          "call": "quiet",
+          "route": "light_model_or_cache_or_conformal",
+          "severity": 0.04,
+          "unit_cost_usd": 0.002,
+          "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
+        },
+        {
+          "segment": "finance",
+          "call": "benign",
+          "route": "light_model_or_cache_or_conformal",
+          "severity": 0.09,
+          "unit_cost_usd": 0.002,
+          "reason": "benign: mild \u03bc + V\u2191_rel but no Y-flip / Mag\u00d7Var spike; honesty: leaf bias_ratio=0.95 (debias mattered)"
+        },
+        {
+          "segment": "medicine",
+          "call": "malignant",
+          "route": "escalate_heavy_or_adversarial_or_block",
+          "severity": 1.22,
+          "unit_cost_usd": 0.04,
+          "reason": "malignant: Y-flip+s\u2191+J\u2191+V\u2191_rel"
+        },
+        {
+          "segment": "sci",
+          "call": "malignant",
+          "route": "escalate_heavy_or_adversarial_or_block",
+          "severity": 0.98,
+          "unit_cost_usd": 0.04,
+          "reason": "malignant: Y-flip+s\u2191+J\u2191+V\u2191_rel"
+        },
+        {
+          "segment": "talk",
+          "call": "benign",
+          "route": "light_model_or_cache_or_conformal",
+          "severity": 0.05,
+          "unit_cost_usd": 0.002,
+          "reason": "benign: mild \u03bc, no Y-flip, Mag\u00d7Var not spiked; honesty: leaf bias_ratio=1.00 (debias mattered)"
+        }
+      ],
+      "n_requests": 100000,
+      "p_benign_share": 0.7,
+      "cost_all_heavy_usd": 4000.0,
+      "cost_routed_usd": 1340.0000000000002,
+      "cost_saved_sim_usd": 2660.0,
+      "cost_saved_industrial_live_usd": 22430.0,
+      "value": "PO-risk variance as confidence proxy: benign \u2192 cheap path; malignant \u2192 escalate. Industrial LIVE boards saved $22430."
+    },
+    "2_canary_rollback": {
+      "app": "granular_canary_release_rollback",
+      "canary_model": "model_v_next",
+      "stable_model": "model_v_stable",
+      "segments": [
+        {
+          "segment": "general",
+          "severity": 0.04,
+          "y_flip": 0.0,
+          "V_debiased": 0.0,
+          "call": "quiet",
+          "action": "keep_canary",
+          "serving_model": "model_v_next",
+          "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
+        },
+        {
+          "segment": "finance",
+          "severity": 0.09,
+          "y_flip": 0.0,
+          "V_debiased": 0.001,
+          "call": "benign",
+          "action": "keep_canary",
+          "serving_model": "model_v_next",
+          "reason": "benign: mild \u03bc + V\u2191_rel but no Y-flip / Mag\u00d7Var spike; honesty: leaf bias_ratio=0.95 (debias mattered)"
+        },
+        {
+          "segment": "medicine",
+          "severity": 1.22,
+          "y_flip": 0.32,
+          "V_debiased": 0.08,
+          "call": "malignant",
+          "action": "rollback_segment_to_stable",
+          "serving_model": "model_v_stable",
+          "reason": "malignant: Y-flip+s\u2191+J\u2191+V\u2191_rel"
+        },
+        {
+          "segment": "sci",
+          "severity": 0.98,
+          "y_flip": 0.28,
+          "V_debiased": 0.05,
+          "call": "malignant",
+          "action": "rollback_segment_to_stable",
+          "serving_model": "model_v_stable",
+          "reason": "malignant: Y-flip+s\u2191+J\u2191+V\u2191_rel"
+        },
+        {
+          "segment": "talk",
+          "severity": 0.05,
+          "y_flip": 0.0,
+          "V_debiased": 0.0,
+          "call": "benign",
+          "action": "keep_canary",
+          "serving_model": "model_v_next",
+          "reason": "benign: mild \u03bc, no Y-flip, Mag\u00d7Var not spiked; honesty: leaf bias_ratio=1.00 (debias mattered)"
+        }
+      ],
+      "n_segments": 5,
+      "n_rolled_back": 2,
+      "n_kept_canary": 3,
+      "micro_loss": true,
+      "value": "Segment-level Severity=J+Y-flip + Var(u): rollback only the sick segment; other segments keep canary (micro-loss iteration)."
+    },
+    "3_data_flywheel": {
+      "app": "data_flywheel_active_learning",
+      "n_in": 40,
+      "n_gold": 18,
+      "n_drop": 22,
+      "n_quarantine": 0,
+      "gold_rate": 0.45,
+      "drop_rate": 0.55,
+      "examples_gold": [
+        {
+          "id": "s1",
+          "J": 0.14820021084321922,
+          "y_flip": 0.0,
+          "V": 0.03549173343096512,
+          "curate": "keep_gold_benign_hard"
+        },
+        {
+          "id": "s4",
+          "J": 0.3679400642149113,
+          "y_flip": 0.0,
+          "V": 0.06358708041446513,
+          "curate": "keep_gold_benign_hard"
+        },
+        {
+          "id": "s9",
+          "J": 0.005136192946722629,
+          "y_flip": 0.0,
+          "V": 0.04477019015387208,
+          "curate": "keep_gold_benign_hard"
+        },
+        {
+          "id": "s11",
+          "J": 0.17412526238025783,
+          "y_flip": 0.0,
+          "V": 0.029999150374514984,
+          "curate": "keep_gold_benign_hard"
+        },
+        {
+          "id": "s13",
+          "J": 0.2426838706739916,
+          "y_flip": 0.0,
+          "V": 0.03451005786672922,
+          "curate": "keep_gold_benign_hard"
+        }
+      ],
+      "examples_drop": [
+        {
+          "id": "s0",
+          "J": 0.7678957988581855,
+          "y_flip": 0.4,
+          "V": 0.046726840114348515,
+          "curate": "drop_poison_or_integrity_break"
+        },
+        {
+          "id": "s2",
+          "J": 1.0861726040126087,
+          "y_flip": 0.4,
+          "V": 0.017735319182304865,
+          "curate": "drop_poison_or_integrity_break"
+        },
+        {
+          "id": "s3",
+          "J": 0.7833417632221583,
+          "y_flip": 0.25,
+          "V": 0.029830276735556927,
+          "curate": "drop_poison_or_integrity_break"
+        },
+        {
+          "id": "s5",
+          "J": 0.9032785164949039,
+          "y_flip": 0.4,
+          "V": 0.05151536963223518,
+          "curate": "drop_poison_or_integrity_break"
+        },
+        {
+          "id": "s6",
+          "J": 0.5380566544801239,
+          "y_flip": 0.25,
+          "V": 0.03388124533137619,
+          "curate": "drop_poison_or_integrity_break"
+        }
+      ],
+      "value": "Gatekeeper for fine-tune/RLHF: filter high Y-flip poison; keep Y-flip=0 + mild J as distribution-expanding gold data."
+    },
+    "4_compliance": {
+      "app": "explainable_compliance_guardrails",
+      "window": "2026-W44",
+      "n_events": 2,
+      "events": [
+        {
+          "window": "2026-W44",
+          "segment": "medicine",
+          "integrity_break": true,
+          "y_break": 0.32,
+          "severity": 1.22,
+          "J": 0.9,
+          "V_debiased": 0.08,
+          "level": "dense",
+          "action_taken": "local_VAI_freeze",
+          "narrative": "In 2026-W44, segment=medicine detected integrity break (Y-flip=0.32, J=0.90, V_debiased=0.08) \u2192 local freeze."
+        },
+        {
+          "window": "2026-W44",
+          "segment": "sci",
+          "integrity_break": true,
+          "y_break": 0.28,
+          "severity": 0.98,
+          "J": 0.7,
+          "V_debiased": 0.05,
+          "level": "dense",
+          "action_taken": "local_VAI_freeze",
+          "narrative": "In 2026-W44, segment=sci detected integrity break (Y-flip=0.28, J=0.70, V_debiased=0.05) \u2192 local freeze."
+        }
+      ],
+      "distinguishes": "PO-risk separates cosmetic synonym / watermark scrub vs true outcome integrity break \u2014 auditable, not a black-box deny.",
+      "value": "Turn Mag\u00d7Var + Y-flip + Var(u) into segment risk-event reports readable by compliance (EU AI Act style)."
+    },
+    "5_agent_cascade": {
+      "app": "agentic_cascade_error_blocking",
+      "trace": [
+        {
+          "step": 1,
+          "name": "retrieve",
+          "call": "benign",
+          "actuator": "conformal_calibrate",
+          "severity": 0.05,
+          "reason": "benign: mild \u03bc, no Y-flip, Mag\u00d7Var not spiked; honesty: leaf bias_ratio=1.00 (debias mattered)",
+          "action": "continue"
+        },
+        {
+          "step": 2,
+          "name": "plan",
+          "call": "benign",
+          "actuator": "conformal_calibrate",
+          "severity": 0.08,
+          "reason": "benign: mild \u03bc + V\u2191_rel but no Y-flip / Mag\u00d7Var spike; honesty: leaf bias_ratio=0.80 (debias mattered)",
+          "action": "continue"
+        },
+        {
+          "step": 3,
+          "name": "tool_call",
+          "call": "malignant",
+          "actuator": "VAI_freeze",
+          "severity": 1.05,
+          "reason": "malignant: Y-flip+s\u2191+J\u2191+\u03bc\u2191\u2191+V\u2191_rel",
+          "action": "abort_workflow_self_correct_or_human"
+        }
+      ],
+      "aborted_at_step": 3,
+      "cascade_blocked": true,
+      "value": "Embed Var(u)/Mag\u00d7Var at each agent step; abort + self-correct before early hallucination / attack cascades to the final act."
+    }
+  },
+  "industrial_cost_saved_usd": 22430.0,
+  "headline": {
+    "routing_saves_industrial_usd": 22430.0,
+    "canary_micro_loss": true,
+    "flywheel_drops_poison": true,
+    "compliance_events": true,
+    "agent_cascade_blocked": true,
+    "flywheel_drop_rate": 0.55,
+    "compliance_n_events": 2
+  },
+  "incremental_value": {
+    "1_dynamic_routing": {
+      "app": "dynamic_routing_cost_optimization",
+      "baseline_anti_patterns": [
+        "always_heavy_model (pay GPU on every request)",
+        "always_light_or_cache (miss integrity breaks \u2192 FN ledger)",
+        "OOD_high_implies_retrain (wrong-drug tax)"
+      ],
+      "what_po_risk_adds": "Var(u) + Mag\u00d7Var + Y-flip as a *confidence / disease* proxy: quiet/benign \u2192 light/cache/conformal; malignant \u2192 escalate.",
+      "incremental_vs_always_heavy": {
+        "sim_usd_per_100k_req": 2660.0,
+        "industrial_live_usd": 22430.0,
+        "narrative": "Industrial HC3 LIVE (business PR): routed actuators saved $22430 vs static \u2014 100% shape hit-rate, so detection was not the bottleneck; right-drug selection was."
+      },
+      "incremental_vs_always_light": {
+        "ledger": "FN_integrity",
+        "narrative": "Always-light would keep paying ~$20\u00d7FN on malignant cells; finance malignant alone drops cost/1k $8404\u2192$4067 when escalated to freeze+aug."
+      },
+      "unit_econ": {
+        "cost_fp_usd": 50,
+        "cost_fn_usd": 20,
+        "source": "docs/method/AS_DTA_business_PR_ROI.md"
+      },
+      "headline_incremental_usd": 22430.0
+    },
+    "2_canary_rollback": {
+      "app": "granular_canary_release_rollback",
+      "baseline_anti_patterns": [
+        "global_rollback_on_any_alert (burn healthy segments)",
+        "global_accuracy_only_monitor (miss segment integrity breaks)"
+      ],
+      "what_po_risk_adds": "Segment Severity=J+Y-flip + CF Var(u): rollback only sick segments; keep canary elsewhere (micro-loss iteration).",
+      "demo_panel": {
+        "n_segments": 5,
+        "n_rolled_back": 2,
+        "n_kept_canary": 3,
+        "kept_share": 0.6
+      },
+      "incremental_vs_global_rollback": {
+        "sim_usd_canary_uplift_retained": 600.0,
+        "assumptions": "100k req, $0.01 canary uplift/req, equal segment share; global rollback zeros uplift; segment rollback zeros only sick share.",
+        "narrative": "Demo panel keeps 3/5 segments on canary \u2192 retain ~$600 uplift that a global rollback would incinerate."
+      },
+      "incremental_vs_global_metrics_only": {
+        "narrative": "medicine + sci show Y-flip / high J while general/finance/talk stay quiet \u2014 global accuracy can look fine while verticals bleed; segment gate is the incremental sensor."
+      },
+      "headline_incremental_usd": 600.0
+    },
+    "3_data_flywheel": {
+      "app": "data_flywheel_active_learning",
+      "baseline_anti_patterns": [
+        "ingest_all_online_feedback (data poisoning)",
+        "drop_all_high_PO (throws away hard benign / synonym gold)"
+      ],
+      "what_po_risk_adds": "Y-flip gate kills integrity poison; Y-flip=0 + mild J kept as distribution-expanding gold.",
+      "demo_panel": {
+        "n_in": 40,
+        "drop_rate": 0.55,
+        "gold_rate": 0.45,
+        "n_quarantine": 0
+      },
+      "incremental_vs_ingest_all": {
+        "sim_usd_poison_avoided": 550.0,
+        "assumptions": "$25 expected remediation per poison sample ingested",
+        "narrative": "Drop rate 55% on demo panel \u2192 ~$550 avoided remediation vs ingest-all."
+      },
+      "incremental_vs_drop_all_high_po": {
+        "sim_usd_gold_retained_extra": 72.0,
+        "assumptions": "$8 robustness value per gold sample; crude high-PO filter throws away ~half of mild-J gold.",
+        "narrative": "Mag\u00d7Var distinguishes hard-but-clean from poison \u2192 keep gold rate 45% instead of scrubbing benign hard cases."
+      },
+      "headline_incremental_usd": 694.0
+    },
+    "4_compliance": {
+      "app": "explainable_compliance_guardrails",
+      "baseline_anti_patterns": [
+        "black_box_deny_or_silent_pass",
+        "global_accuracy_dashboard_only"
+      ],
+      "what_po_risk_adds": "Segment risk-event narratives: window \u00d7 segment \u00d7 Y-break \u00d7 J \u00d7 V_debiased \u2192 local freeze \u2014 AI-Act-readable, not opaque.",
+      "demo_panel": {
+        "n_events": 2,
+        "events": [
+          {
+            "window": "2026-W44",
+            "segment": "medicine",
+            "integrity_break": true,
+            "y_break": 0.32,
+            "severity": 1.22,
+            "J": 0.9,
+            "V_debiased": 0.08,
+            "level": "dense",
+            "action_taken": "local_VAI_freeze",
+            "narrative": "In 2026-W44, segment=medicine detected integrity break (Y-flip=0.32, J=0.90, V_debiased=0.08) \u2192 local freeze."
+          },
+          {
+            "window": "2026-W44",
+            "segment": "sci",
+            "integrity_break": true,
+            "y_break": 0.28,
+            "severity": 0.98,
+            "J": 0.7,
+            "V_debiased": 0.05,
+            "level": "dense",
+            "action_taken": "local_VAI_freeze",
+            "narrative": "In 2026-W44, segment=sci detected integrity break (Y-flip=0.28, J=0.70, V_debiased=0.05) \u2192 local freeze."
+          }
+        ]
+      },
+      "incremental_vs_black_box": {
+        "sim_usd_review_cost_delta": 9200.0,
+        "assumptions": "$5k unexplained incident review vs $0.4k auditable local-freeze note",
+        "narrative": "2 integrity-break events become auditable freezes \u2192 ~$9200 review-cost delta on the demo window."
+      },
+      "product_distinction": "Separates watermark-scrubbed / synonym cosmetic from true outcome integrity break \u2014 the compliance incremental story.",
+      "headline_incremental_usd": 9200.0
+    },
+    "5_agent_cascade": {
+      "app": "agentic_cascade_error_blocking",
+      "baseline_anti_patterns": [
+        "run_workflow_to_end",
+        "only_check_final_answer"
+      ],
+      "what_po_risk_adds": "Per-step Mag\u00d7Var / Var(u): abort + self-correct / human when a step's residual variance spikes \u2014 stop cascade amplification.",
+      "demo_panel": {
+        "aborted_at_step": 3,
+        "cascade_blocked": true,
+        "n_steps_executed": 3
+      },
+      "incremental_vs_run_to_end": {
+        "sim_usd_per_bad_workflow": 40.15,
+        "assumptions": "$0.15/step tool waste after poison; $40 task-failure risk if cascade reaches synthesize",
+        "narrative": "Demo aborts at step 3 \u2192 avoid ~$40 expected cascade loss vs run-to-end."
+      },
+      "headline_incremental_usd": 40.15
+    }
+  }
+}

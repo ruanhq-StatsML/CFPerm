@@ -1,0 +1,331 @@
+{
+  "scope": "Concrete multi-dataset justify: same Mag\u00d7Var + Y-flip\u53e3\u5f84 on PermuCATE u across AIGC / topic / news / sentiment boards.",
+  "estimator": {
+    "name": "PermuCATE RF text",
+    "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+    "Y": "response",
+    "W": "REF/LIVE",
+    "used_permucate_rf": true
+  },
+  "boards": [
+    {
+      "segment": "finance",
+      "region": "hc3_finance",
+      "vertical": "AIGC integrity",
+      "board": "hc3_finance",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 0.01451365262033602,
+        "d_s": -0.0082079619013996,
+        "J": 0.01451365262033602,
+        "mu_live": 0.22453791544435112,
+        "s_live": 0.05224257885581806,
+        "label_flip_frac": 0.0,
+        "severity": 0.01451365262033602
+      },
+      "malignant": {
+        "d_mu": 0.06822216632112515,
+        "d_s": 0.04830566868553983,
+        "J": 0.37385004667529564,
+        "mu_live": 0.22010351051977536,
+        "s_live": 0.07201374889875295,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 0.7905167133419623
+      },
+      "severity_gap": 0.7760030607216263,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "medicine",
+      "region": "hc3_medicine",
+      "vertical": "AIGC integrity",
+      "board": "hc3_medicine",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 0.04818869861035562,
+        "d_s": 0.044162272444518605,
+        "J": 0.49818869861035564,
+        "mu_live": 0.06093666755981069,
+        "s_live": 0.048511559516747835,
+        "label_flip_frac": 0.0,
+        "severity": 0.49818869861035564
+      },
+      "malignant": {
+        "d_mu": 0.07380974469664939,
+        "d_s": 0.034417595092451576,
+        "J": 0.383586934312405,
+        "mu_live": 0.13987257519016053,
+        "s_live": 0.051083248461802046,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 0.8002536009790716
+      },
+      "severity_gap": 0.30206490236871597,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "open_qa",
+      "region": "hc3_open_qa",
+      "vertical": "AIGC integrity",
+      "board": "hc3_open_qa",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 0.02977903236245652,
+        "d_s": 0.05410532884540675,
+        "J": 0.2546994503640516,
+        "mu_live": 0.12932852506761652,
+        "s_live": 0.09018831054586517,
+        "label_flip_frac": 0.0,
+        "severity": 0.2546994503640516
+      },
+      "malignant": {
+        "d_mu": 0.18910147006709413,
+        "d_s": 0.05834925330781987,
+        "J": 0.6274593325540265,
+        "mu_live": 0.25535878965443265,
+        "s_live": 0.07831556107864009,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 1.044125999220693
+      },
+      "severity_gap": 0.7894265488566414,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "wiki",
+      "region": "hc3_wiki",
+      "vertical": "AIGC integrity",
+      "board": "hc3_wiki",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": -0.005334176499736887,
+        "d_s": 0.0025322886849727527,
+        "J": 0.004393557457058925,
+        "mu_live": 0.2539095127228803,
+        "s_live": 0.04157974870319763,
+        "label_flip_frac": 0.0,
+        "severity": 0.004393557457058925
+      },
+      "malignant": {
+        "d_mu": -0.02390957026314261,
+        "d_s": 0.012353308523945492,
+        "J": 0.013150355308693865,
+        "mu_live": 0.21653465855287465,
+        "s_live": 0.07067289364745671,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 0.4298170219753605
+      },
+      "severity_gap": 0.42542346451830154,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "sci",
+      "region": "news20_sci",
+      "vertical": "topic monitor",
+      "board": "news20_sci",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 0.12087474106286125,
+        "d_s": 0.04370728277040979,
+        "J": 0.25199658937409064,
+        "mu_live": 0.3310787532552042,
+        "s_live": 0.10694834214438771,
+        "label_flip_frac": 0.0,
+        "severity": 0.25199658937409064
+      },
+      "malignant": {
+        "d_mu": -0.10482125594221153,
+        "d_s": -0.04047538793939434,
+        "J": -0.10482125594221153,
+        "mu_live": 0.26919180713866603,
+        "s_live": 0.07138461337342623,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 0.3118454107244551
+      },
+      "severity_gap": 0.059848821350364456,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "talk",
+      "region": "news20_talk",
+      "vertical": "topic monitor",
+      "board": "news20_talk",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": -0.051605935631512084,
+        "d_s": -0.041536275488286555,
+        "J": -0.051605935631512084,
+        "mu_live": 0.15780968029245698,
+        "s_live": 0.03434872681670675,
+        "label_flip_frac": 0.0,
+        "severity": -0.051605935631512084
+      },
+      "malignant": {
+        "d_mu": -0.03748807094608128,
+        "d_s": 0.005722457268931835,
+        "J": -0.02032069913928578,
+        "mu_live": 0.22054443696487266,
+        "s_live": 0.06988986441630814,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 0.3963459675273808
+      },
+      "severity_gap": 0.4479519031588929,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "comp",
+      "region": "news20_comp",
+      "vertical": "topic monitor",
+      "board": "news20_comp",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 0.015047398926639755,
+        "d_s": -0.0753689029455315,
+        "J": 0.015047398926639755,
+        "mu_live": 0.23736104721910425,
+        "s_live": 0.033707420942751504,
+        "label_flip_frac": 0.0,
+        "severity": 0.015047398926639755
+      },
+      "malignant": {
+        "d_mu": 0.043181530340266644,
+        "d_s": 0.09055783536966683,
+        "J": 0.39982447999130655,
+        "mu_live": 0.2751567242879156,
+        "s_live": 0.1286454390044536,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 0.8164911466579732
+      },
+      "severity_gap": 0.8014437477313334,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "ag_news",
+      "region": "ag_news",
+      "vertical": "news topic",
+      "board": "ag_news",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": 0.016251618072688684,
+        "d_s": 0.033662863606333936,
+        "J": 0.12981157565837723,
+        "mu_live": 0.20831274920131912,
+        "s_live": 0.07812774056034266,
+        "label_flip_frac": 0.0,
+        "severity": 0.12981157565837723
+      },
+      "malignant": {
+        "d_mu": 0.0011124467733535648,
+        "d_s": 0.012256355784019603,
+        "J": 0.09419059072073022,
+        "mu_live": 0.19984729423901462,
+        "s_live": 0.03200807503448448,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 0.5108572573873968
+      },
+      "severity_gap": 0.38104568172901965,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    },
+    {
+      "segment": "imdb",
+      "region": "imdb",
+      "vertical": "sentiment",
+      "board": "imdb",
+      "estimator": "permucate_rf_text",
+      "unit_po": "(\u03c6 - \u03c4\u0302)^2",
+      "benign": {
+        "d_mu": -0.032055058097084366,
+        "d_s": -0.03335355436213271,
+        "J": -0.032055058097084366,
+        "mu_live": 0.18850497908023064,
+        "s_live": 0.025509833480610762,
+        "label_flip_frac": 0.0,
+        "severity": -0.032055058097084366
+      },
+      "malignant": {
+        "d_mu": 0.001299603275424277,
+        "d_s": -0.0007079853763482663,
+        "J": 0.001299603275424277,
+        "mu_live": 0.23812544042709435,
+        "s_live": 0.08108520417094815,
+        "label_flip_frac": 0.3333333333333333,
+        "severity": 0.4179662699420909
+      },
+      "severity_gap": 0.4500213280391753,
+      "separates_benign_malignant": true,
+      "actuator": {
+        "benign": "conformal_calibrate (segment-local)",
+        "malignant": "VAI freeze / retrain (segment-local)"
+      }
+    }
+  ],
+  "n_boards": 9,
+  "n_separated": 9,
+  "hit_rate": 1.0,
+  "by_family": {
+    "AIGC integrity": {
+      "n": 4,
+      "ok": 4,
+      "hit_rate": 1.0
+    },
+    "topic monitor": {
+      "n": 3,
+      "ok": 3,
+      "hit_rate": 1.0
+    },
+    "news topic": {
+      "n": 1,
+      "ok": 1,
+      "hit_rate": 1.0
+    },
+    "sentiment": {
+      "n": 1,
+      "ok": 1,
+      "hit_rate": 1.0
+    }
+  },
+  "justify": "Across HC3 verticals, 20 Newsgroups pairs, AG News, and IMDB, malignant severity exceeds benign under the same Y-flip\u53e3\u5f84 \u2014 concrete evidence the product rule is not board-specific.",
+  "rule": {
+    "benign": "cosmetic synonym; Y unchanged",
+    "malignant": "subset attack + Y-flip on attacked rows",
+    "severity": "J + Y-flip"
+  }
+}

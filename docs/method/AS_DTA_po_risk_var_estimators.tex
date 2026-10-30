@@ -1,0 +1,179 @@
+% How to estimate Var(u) for PermuCATE PO-risk — product package
+% Compile: pdflatex AS_DTA_po_risk_var_estimators.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,enumitem,array}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\title{How to Estimate the Variance of the PO-Risk\\
+\large Product logic + software package + justify}
+\author{AS-DTA / \texttt{po-risk-var}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+\textbf{Next step after Mag$\times$Var:} estimate model-uncertainty
+$\mathrm{Var}(u)$ for $u=(\varphi-\hat\tau)^2$, then triage.
+\textbf{Default:} Causal Forest leaf-size-debiased + leaf-wise merge.
+\textbf{Software:} \texttt{pip install -e Python/po\_risk\_var} $\to$
+\texttt{po-risk-var}.
+\textbf{Justify:} synthetic $5/5$ + real-world $4/4$ (HC3, news20, AG~News, IMDB).
+\end{abstract}
+
+%----------------------------------------------------------------------
+\section{Product next-step logic (straightforward)}
+%----------------------------------------------------------------------
+
+\begin{enumerate}[leftmargin=1.3em,itemsep=0.35em]
+  \item Fit $\varphi$, $\hat\tau$ (PermuCATE RF or CausalForestDML).
+  \item Unit risk $u=(\varphi-\hat\tau)^2$.
+  \item Mag$\times$Var: $\mu=\mathbb{E}[u]$, $s=\mathrm{Std}$(sub-env mean $u$).
+  \item $\mathrm{Var}(u)$: \textbf{CF leaf-size-debiased + leaf merge}
+        (min $n{=}30$ if $n{<}200$, else $50$; product default).
+  \item $Y$-flip on text integrity boards (attacked rows only).
+  \item \texttt{triage()} $\to$ hold / conformal / VAI\_freeze.
+  \item Honesty: $\mathrm{bias\_ratio}=B_{\mathrm{leaf}}/\widehat V_{\mathrm{naive}}$.
+\end{enumerate}
+
+\paragraph{Gate (who freezes).}
+Primary sensors $=$ Mag$\times$Var $(\mu,s,J)$ + $Y$-flip.
+$\mathrm{Var}(u)$ is \emph{confirmation / honesty}, not a solo absolute
+threshold (that false-froze benign covariate / synonym boards).
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Read & Actuator \\
+\midrule
+no $Y$-flip, Mag$\times$Var quiet, mild/no $\mu$ & hold / conformal \\
+$Y$-flip $>0$ \textbf{or} Mag$\times$Var malignant
+  ($J$$\uparrow$ / $\mu$$\uparrow$$\uparrow$ / $s$$\uparrow$ with $\mu$) & VAI freeze \\
+relative $V$$\uparrow$ vs REF & confirms freeze only with shape/outcome \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Estimator priority.}
+CF-debiased + leaf merge (min $n{=}30/50$) $=$ default;
+BCF via \texttt{rpy2} + \texttt{pihat} (R \texttt{bcf}) $=$ Bayesian path;
+bootstrap $=$ intuitive fallback / sanity check.
+
+%----------------------------------------------------------------------
+\section{Why Var(u) (statistical insight)}
+%----------------------------------------------------------------------
+
+$u_i=r_i^2$ with $r_i=\varphi_i-\hat\tau(X_i)$ is heavy-tailed;
+$\mathrm{Var}(u)=m_4-m_2^2$ is unstable if taken as a raw residual moment.
+Obtain $\mathrm{Var}(u)$ from the forest / Bayesian uncertainty of
+$\hat\tau$, and \textbf{debias leaf-size heterogeneity} in
+$\mathrm{Var}(\hat\tau)$ --- otherwise upward bias masquerades as malignant.
+
+\[
+\widehat V_{\mathrm{debiased}}
+=\widehat V_{\mathrm{naive}}-\widehat B_{\mathrm{leaf}},
+\quad
+\widehat B_{\mathrm{leaf}}
+=\frac{B-1}{B^2}\sum_b\frac{\hat\sigma^2_{b,i}}{n_{b,i}}.
+\]
+Leaf-wise merge of $u$ climbs ancestors until the merge cluster has at least
+$\min n\in\{30,50\}$ training samples, then averages $u$ inside the cluster.
+
+%----------------------------------------------------------------------
+\section{Software package}
+%----------------------------------------------------------------------
+
+\begin{verbatim}
+pip install -e Python/po_risk_var
+po-risk-var logic
+po-risk-var justify --quick
+po-risk-var products
+\end{verbatim}
+
+\noindent
+API: \texttt{from po\_risk\_var import monitor\_batch, triage,
+run\_justify\_suite, run\_product\_apps\_suite}.
+Layout: \texttt{Python/po\_risk\_var/po\_risk\_var/}
+(\texttt{product.py}, \texttt{estimators.py}, \texttt{apps\_*}, \texttt{cli.py}).
+
+%----------------------------------------------------------------------
+\section{Five product applications}
+%----------------------------------------------------------------------
+
+Sensors: severity $=J+Y$-flip; $\mathrm{Var}(u)=$ CF-debiased (min leaf $30/50$).
+\texttt{po-risk-var products} writes
+\texttt{results/as\_dta\_po\_risk\_var\_product\_apps/}.
+
+\begin{enumerate}[leftmargin=1.3em,itemsep=0.25em]
+  \item \textbf{Dynamic routing / cost:} benign $\to$ light/cache/conformal;
+        malignant $\to$ escalate. Industrial LIVE boards saved \$22{,}430.
+  \item \textbf{Granular canary:} roll back only the sick segment
+        (Severity$=J+Y$-flip).
+  \item \textbf{Data flywheel:} drop high $Y$-flip poison; keep $Y$-flip$=0$
+        + mild $J$ as gold.
+  \item \textbf{Compliance guardrails:} segment risk-event reports
+        (AI~Act style).
+  \item \textbf{Agent cascade block:} abort a step when Mag$\times$Var /
+        $\mathrm{Var}(u)$ spikes.
+\end{enumerate}
+
+%----------------------------------------------------------------------
+\section{Justify --- synthetic + real-world}
+%----------------------------------------------------------------------
+
+\subsection{Synthetic DGPs (5/5)}
+quiet / benign\_covariate / malignant\_sparse / malignant\_dense / label\_delay.
+Product call matches oracle family on all five.
+
+\subsection{Real-world applications (4/4 pairs)}
+Same $Y$-flip口径; CF-debiased default.
+
+\begin{table}[h]
+\centering
+\caption{Real-world pair triage (benign synonym vs malignant attack+$Y$-flip).}
+\label{tab:realapps}
+\small
+\begin{tabular}{@{}llllc@{}}
+\toprule
+Board & Family & ben pred & mal pred & OK? \\
+\midrule
+hc3\_finance & AIGC & quiet/benign & malignant & yes \\
+news20\_sci & topic & quiet/benign & malignant & yes \\
+ag\_news & news & quiet/benign & malignant & yes \\
+imdb & sentiment & quiet/benign & malignant & yes \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{pair hit-rate}} &
+  \multicolumn{3}{r@{}}{\textbf{4/4 $= 1.00$}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textit{Headline:} synth $5/5$ + real $4/4$ --- meets expectation;
+ship CF-debiased as the packaged default.
+
+%----------------------------------------------------------------------
+\section{Business incremental value (per method)}
+%----------------------------------------------------------------------
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.25em]
+  \item \textbf{CF-debiased:} incremental vs naive residual
+        $\mathrm{Var}(u)$ --- kill leaf-bias false freezes; confirm
+        Mag$\times$Var$/Y$-flip routing (industrial LIVE \$22{,}430).
+  \item \textbf{BCF (rpy2):} incremental vs point $V$ --- posterior
+        bands for audit / AI-Act when legal review needs more than a score.
+  \item \textbf{Bootstrap:} incremental vs blind ship --- cheap sanity;
+        never the freeze sensor.
+\end{itemize}
+\noindent
+Full ledger write-up: \texttt{po-risk-var biz} $\to$
+\texttt{AS\_DTA\_po\_risk\_var\_biz\_incremental.md}.
+
+\section*{Close}
+Logic is the seven-step list above.
+Software is \texttt{po-risk-var}.
+Justify is synthetic + real-world + incremental \$ ledgers --- not a single board.
+
+\end{document}
