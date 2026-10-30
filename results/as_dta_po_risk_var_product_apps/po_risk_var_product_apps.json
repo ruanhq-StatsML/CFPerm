@@ -278,5 +278,142 @@
     "agent_cascade_blocked": true,
     "flywheel_drop_rate": 0.55,
     "compliance_n_events": 2
+  },
+  "incremental_value": {
+    "1_dynamic_routing": {
+      "app": "dynamic_routing_cost_optimization",
+      "baseline_anti_patterns": [
+        "always_heavy_model (pay GPU on every request)",
+        "always_light_or_cache (miss integrity breaks \u2192 FN ledger)",
+        "OOD_high_implies_retrain (wrong-drug tax)"
+      ],
+      "what_po_risk_adds": "Var(u) + Mag\u00d7Var + Y-flip as a *confidence / disease* proxy: quiet/benign \u2192 light/cache/conformal; malignant \u2192 escalate.",
+      "incremental_vs_always_heavy": {
+        "sim_usd_per_100k_req": 2660.0,
+        "industrial_live_usd": 22430.0,
+        "narrative": "Industrial HC3 LIVE (business PR): routed actuators saved $22430 vs static \u2014 100% shape hit-rate, so detection was not the bottleneck; right-drug selection was."
+      },
+      "incremental_vs_always_light": {
+        "ledger": "FN_integrity",
+        "narrative": "Always-light would keep paying ~$20\u00d7FN on malignant cells; finance malignant alone drops cost/1k $8404\u2192$4067 when escalated to freeze+aug."
+      },
+      "unit_econ": {
+        "cost_fp_usd": 50,
+        "cost_fn_usd": 20,
+        "source": "docs/method/AS_DTA_business_PR_ROI.md"
+      },
+      "headline_incremental_usd": 22430.0
+    },
+    "2_canary_rollback": {
+      "app": "granular_canary_release_rollback",
+      "baseline_anti_patterns": [
+        "global_rollback_on_any_alert (burn healthy segments)",
+        "global_accuracy_only_monitor (miss segment integrity breaks)"
+      ],
+      "what_po_risk_adds": "Segment Severity=J+Y-flip + CF Var(u): rollback only sick segments; keep canary elsewhere (micro-loss iteration).",
+      "demo_panel": {
+        "n_segments": 5,
+        "n_rolled_back": 2,
+        "n_kept_canary": 3,
+        "kept_share": 0.6
+      },
+      "incremental_vs_global_rollback": {
+        "sim_usd_canary_uplift_retained": 600.0,
+        "assumptions": "100k req, $0.01 canary uplift/req, equal segment share; global rollback zeros uplift; segment rollback zeros only sick share.",
+        "narrative": "Demo panel keeps 3/5 segments on canary \u2192 retain ~$600 uplift that a global rollback would incinerate."
+      },
+      "incremental_vs_global_metrics_only": {
+        "narrative": "medicine + sci show Y-flip / high J while general/finance/talk stay quiet \u2014 global accuracy can look fine while verticals bleed; segment gate is the incremental sensor."
+      },
+      "headline_incremental_usd": 600.0
+    },
+    "3_data_flywheel": {
+      "app": "data_flywheel_active_learning",
+      "baseline_anti_patterns": [
+        "ingest_all_online_feedback (data poisoning)",
+        "drop_all_high_PO (throws away hard benign / synonym gold)"
+      ],
+      "what_po_risk_adds": "Y-flip gate kills integrity poison; Y-flip=0 + mild J kept as distribution-expanding gold.",
+      "demo_panel": {
+        "n_in": 40,
+        "drop_rate": 0.55,
+        "gold_rate": 0.45,
+        "n_quarantine": 0
+      },
+      "incremental_vs_ingest_all": {
+        "sim_usd_poison_avoided": 550.0,
+        "assumptions": "$25 expected remediation per poison sample ingested",
+        "narrative": "Drop rate 55% on demo panel \u2192 ~$550 avoided remediation vs ingest-all."
+      },
+      "incremental_vs_drop_all_high_po": {
+        "sim_usd_gold_retained_extra": 72.0,
+        "assumptions": "$8 robustness value per gold sample; crude high-PO filter throws away ~half of mild-J gold.",
+        "narrative": "Mag\u00d7Var distinguishes hard-but-clean from poison \u2192 keep gold rate 45% instead of scrubbing benign hard cases."
+      },
+      "headline_incremental_usd": 694.0
+    },
+    "4_compliance": {
+      "app": "explainable_compliance_guardrails",
+      "baseline_anti_patterns": [
+        "black_box_deny_or_silent_pass",
+        "global_accuracy_dashboard_only"
+      ],
+      "what_po_risk_adds": "Segment risk-event narratives: window \u00d7 segment \u00d7 Y-break \u00d7 J \u00d7 V_debiased \u2192 local freeze \u2014 AI-Act-readable, not opaque.",
+      "demo_panel": {
+        "n_events": 2,
+        "events": [
+          {
+            "window": "2026-W44",
+            "segment": "medicine",
+            "integrity_break": true,
+            "y_break": 0.32,
+            "severity": 1.22,
+            "J": 0.9,
+            "V_debiased": 0.08,
+            "level": "dense",
+            "action_taken": "local_VAI_freeze",
+            "narrative": "In 2026-W44, segment=medicine detected integrity break (Y-flip=0.32, J=0.90, V_debiased=0.08) \u2192 local freeze."
+          },
+          {
+            "window": "2026-W44",
+            "segment": "sci",
+            "integrity_break": true,
+            "y_break": 0.28,
+            "severity": 0.98,
+            "J": 0.7,
+            "V_debiased": 0.05,
+            "level": "dense",
+            "action_taken": "local_VAI_freeze",
+            "narrative": "In 2026-W44, segment=sci detected integrity break (Y-flip=0.28, J=0.70, V_debiased=0.05) \u2192 local freeze."
+          }
+        ]
+      },
+      "incremental_vs_black_box": {
+        "sim_usd_review_cost_delta": 9200.0,
+        "assumptions": "$5k unexplained incident review vs $0.4k auditable local-freeze note",
+        "narrative": "2 integrity-break events become auditable freezes \u2192 ~$9200 review-cost delta on the demo window."
+      },
+      "product_distinction": "Separates watermark-scrubbed / synonym cosmetic from true outcome integrity break \u2014 the compliance incremental story.",
+      "headline_incremental_usd": 9200.0
+    },
+    "5_agent_cascade": {
+      "app": "agentic_cascade_error_blocking",
+      "baseline_anti_patterns": [
+        "run_workflow_to_end",
+        "only_check_final_answer"
+      ],
+      "what_po_risk_adds": "Per-step Mag\u00d7Var / Var(u): abort + self-correct / human when a step's residual variance spikes \u2014 stop cascade amplification.",
+      "demo_panel": {
+        "aborted_at_step": 3,
+        "cascade_blocked": true,
+        "n_steps_executed": 3
+      },
+      "incremental_vs_run_to_end": {
+        "sim_usd_per_bad_workflow": 40.15,
+        "assumptions": "$0.15/step tool waste after poison; $40 task-failure risk if cascade reaches synthesize",
+        "narrative": "Demo aborts at step 3 \u2192 avoid ~$40 expected cascade loss vs run-to-end."
+      },
+      "headline_incremental_usd": 40.15
+    }
   }
 }

@@ -25,6 +25,7 @@ pip install -e Python/po_risk_var
 po-risk-var logic
 po-risk-var justify --quick
 po-risk-var products
+po-risk-var biz          # incremental business value per method / app
 ```
 
 Or without install:
@@ -32,6 +33,7 @@ Or without install:
 ```bash
 PYTHONPATH=Python/po_risk_var:Python/src python3 -m po_risk_var justify --quick
 PYTHONPATH=Python/po_risk_var:Python/src python3 -m po_risk_var products
+PYTHONPATH=Python/po_risk_var:Python/src python3 -m po_risk_var biz
 ```
 
 ## API
@@ -62,3 +64,20 @@ Results: `results/as_dta_po_risk_var_apps/`
 3. **Data flywheel / active learning** — drop high Y-flip poison; keep Y-flip=0 + mild J as gold.
 4. **Explainable compliance guardrails** — segment risk-event reports (AI Act style).
 5. **Agentic cascade-error blocking** — abort multi-step agent when a step’s Mag×Var / Var(u) spikes.
+
+## Business incremental value
+
+`po-risk-var biz` elaborates **what each method adds vs its anti-pattern**:
+
+| Layer | Method | Incremental job |
+| --- | --- | --- |
+| Estimator | CF leaf-debiased (default) | Avoid leaf-bias false freezes; confirm routing |
+| Estimator | BCF rpy2 | Posterior Var(u) for audit / Bayesian stacks |
+| Estimator | Bootstrap | Cheap sanity — not a freeze sensor |
+| App | Routing | Right-drug $ vs always-heavy / always-light |
+| App | Canary | Keep healthy-segment uplift vs global rollback |
+| App | Flywheel | Drop poison + keep gold vs ingest-all / drop-all-PO |
+| App | Compliance | Auditable freeze vs black-box deny |
+| App | Agent | Abort cascade vs run-to-end |
+
+Docs: `docs/method/AS_DTA_po_risk_var_biz_incremental.md`

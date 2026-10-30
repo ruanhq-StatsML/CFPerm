@@ -156,21 +156,35 @@ def triage(
 
 
 def estimator_priority() -> list:
-    """Product default order — do not invent a fourth route."""
+    """Product default order — do not invent a fourth route.
+
+    ``incremental_job`` is the commercial delta vs the naive residual Var(u).
+    """
     return [
         {
             "name": "causal_forest_leaf_debiased",
             "role": "default",
             "when": "LIVE monitoring; leaf merge min n=30 (50 if n≥200)",
+            "incremental_job": (
+                "Debias leaf-size false freezes + confirm Mag×Var/Y-flip "
+                "routing (industrial LIVE $22,430 right-drug allocation)"
+            ),
         },
         {
             "name": "bcf_posterior_rpy2",
             "role": "bayesian",
             "when": "use rpy2 + R package bcf when Bayesian path is required",
+            "incremental_job": (
+                "Posterior Var(u) for audit / AI-Act narratives when point "
+                "V_debiased is not enough for legal review"
+            ),
         },
         {
             "name": "bootstrap",
             "role": "fallback",
             "when": "intuitive sanity check; small B + Winsorize u",
+            "incremental_job": (
+                "Cheap cross-check before escalation; never sole freeze sensor"
+            ),
         },
     ]

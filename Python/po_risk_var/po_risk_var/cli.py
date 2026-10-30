@@ -32,6 +32,10 @@ def main(argv=None):
     p_jus.add_argument("--seed", type=int, default=2026)
     p_jus.add_argument("--method", default="cf", choices=("cf", "bcf", "boot"))
     sub.add_parser("products", help="five product applications suite")
+    sub.add_parser(
+        "biz",
+        help="incremental business value (estimators + five apps)",
+    )
 
     args = ap.parse_args(argv)
 
@@ -52,16 +56,48 @@ def main(argv=None):
         print("----------------------------------------")
         for s in steps:
             print(s)
-        print("\nEstimator priority:")
+        print("\nEstimator priority (+ incremental job):")
         for e in estimator_priority():
             print(f"  - {e['name']}  [{e['role']}]  {e['when']}")
+            print(f"      Δbiz: {e.get('incremental_job', '')}")
+        return 0
+
+    if args.cmd == "biz":
+        from po_risk_var.biz_value import run_biz_value_suite
+
+        out = REPO_ROOT / "results" / "as_dta_po_risk_var_biz"
+        payload = run_biz_value_suite(out_dir=out)
+        docs = REPO_ROOT / "docs" / "method"
+        docs.mkdir(parents=True, exist_ok=True)
+        shutil.copy(out / "README.md", docs / "AS_DTA_po_risk_var_biz_incremental.md")
+        art = Path("/opt/cursor/artifacts")
+        art.mkdir(parents=True, exist_ok=True)
+        if (out / "po_risk_var_biz_incremental.png").exists():
+            shutil.copy(
+                out / "po_risk_var_biz_incremental.png",
+                art / "as_dta_po_risk_var_biz_incremental.png",
+            )
+        r = payload["rollup"]
+        print(
+            "[biz] industrial_routing=$%.0f  sim_stack=$%.0f"
+            % (r["industrial_routing_usd"], r["sim_other_apps_usd"]),
+            flush=True,
+        )
+        print("[biz]", r["pitch_one_liner"], flush=True)
+        print("[biz] wrote", out, flush=True)
         return 0
 
     if args.cmd == "products":
         from po_risk_var.apps_product import run_product_apps_suite
+        from po_risk_var.biz_value import product_apps_incremental_value
 
         out = REPO_ROOT / "results" / "as_dta_po_risk_var_product_apps"
         payload = run_product_apps_suite(out_dir=out)
+        # attach incremental value block into JSON for polish
+        payload["incremental_value"] = product_apps_incremental_value(payload["apps"])
+        (out / "po_risk_var_product_apps.json").write_text(
+            __import__("json").dumps(payload, indent=2, default=str)
+        )
         docs = REPO_ROOT / "docs" / "method"
         docs.mkdir(parents=True, exist_ok=True)
         shutil.copy(out / "README.md", docs / "AS_DTA_po_risk_var_product_apps.md")
