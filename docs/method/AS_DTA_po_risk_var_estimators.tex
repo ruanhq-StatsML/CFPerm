@@ -1,0 +1,175 @@
+% How to estimate Var(u) for PermuCATE PO-risk
+% Compile: pdflatex AS_DTA_po_risk_var_estimators.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,enumitem,array}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\title{How to Estimate the Variance of the PO-Risk\\
+\large Causal Forest (debiased) / BCF / bootstrap}
+\author{AS-DTA method note}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Unit PO-risk $u=(\varphi-\hat\tau)^2$ is heavy-tailed; $\mathrm{Var}(u)$ is
+fourth-moment driven. Default estimator:
+\textbf{Causal Forest leaf-size-debiased tree-to-tree variance + leaf-wise
+merging}. BCF posterior when a Bayesian pipeline exists; bootstrap only as
+fallback. Tabular benign/malignant board: all estimators separate
+(hit-rate $8/8$); leaf-size debias removes the upward bias on benign that
+would otherwise masquerade as malignant.
+\end{abstract}
+
+\section{Why a variance estimator for PO-risk}
+
+From the Mag$\times$Var delivery notes, $\mathrm{Var}(u)$ is the critical
+statistical quantity for separating benign from malignant shifts, where
+\[
+u_i = (\varphi_i - \hat\tau(X_i))^2,\qquad
+r_i=\varphi_i-\hat\tau(X_i),\qquad
+\mathrm{Var}(u)=m_4-m_2^2.
+\]
+$u_i$ is squared, right-skewed, heavy-tailed: its variance is driven by
+$m_4$, unstable in finite samples. An adequate estimator must be
+(i)~efficient with valid uncertainty, (ii)~robust to heavy tails in finite
+samples, (iii)~integrated with the causal pipeline that produced
+$\hat\tau$ (BCF or Causal Forest).
+
+\textit{Key insight:} do not estimate $\mathrm{Var}(u)$ as a separate
+post-hoc residual moment alone --- obtain it from the uncertainty
+machinery already in the forest / Bayesian model, which regularizes
+$\hat\tau$ and prevents a handful of extreme residuals from dominating
+$m_4$ through $u=r^2$. Equally, $\mathrm{Var}(\hat\tau)$ itself must be
+\textbf{debiased for leaf-size heterogeneity}; otherwise $\mathrm{Var}(u)$
+inherits an upward bias that can masquerade as a malignant shift.
+
+\section{Bayesian Causal Forest --- posterior variance}
+
+In BCF, MCMC returns draws $\hat\tau^{(s)}(X_i)$. For each draw
+\[
+u_i^{(s)}=\bigl(\varphi_i-\hat\tau^{(s)}(X_i)\bigr)^2,
+\]
+\[
+\widehat{\mathrm{Var}}(u_i)_{\mathrm{posterior}}
+=\frac1{S-1}\sum_{s=1}^S\bigl(u_i^{(s)}-\bar u_i\bigr)^2.
+\]
+Uncertainty propagates from the posterior of $\hat\tau$; the prior
+regularizes tails; no extra refits. Best when a Bayesian pipeline is
+already in use and $n\sim 10^3$--$10^4$. Limitation: MCMC speed.
+
+\textit{Implementation status:} \texttt{rpy2} is ABI-broken against the
+environment R; R packages \texttt{bcf}/\texttt{grf} are not installed.
+The suite uses a \textbf{Python bagged-forest posterior} with the same
+pathway (draws of $\hat\tau\to u^{(s)}\to\mathrm{Var}(u)$), and keeps
+rpy2 / Rscript bridges for when \texttt{bcf} is available.
+
+\section{Causal Forest --- leaf-size-debiased variance + leaf merge}
+
+Naive tree-to-tree variance
+\[
+\widehat V_{\mathrm{naive}}
+=\frac1{B(B-1)}\sum_{b=1}^B\bigl(\hat\tau_b(X_i)-\bar\tau_i\bigr)^2
+\]
+is \emph{biased upward}: leaf sizes $n_{b,i}$ vary, and
+$\mathrm{Var}(\hat\tau_b\mid X_i)\approx\sigma^2_{\ell_b}/n_{b,i}$.
+\[
+\mathbb{E}[\widehat V_{\mathrm{naive}}]
+=\underbrace{\tfrac1{B^2}\sum_b\tfrac{\sigma^2}{n_{b,i}}}_{\mathrm{Var}(\hat\tau)}
++\underbrace{\tfrac{B-1}{B^2}\sum_b\tfrac{\sigma^2}{n_{b,i}}}_{\text{leaf-size bias}}.
+\]
+Debiased estimator:
+\[
+\boxed{\;
+\widehat V_{\mathrm{debiased}}
+=\widehat V_{\mathrm{naive}}-\widehat B_{\mathrm{leaf}},
+\quad
+\widehat B_{\mathrm{leaf}}
+=\frac{B-1}{B^2}\sum_{b=1}^B\frac{\hat\sigma^2_{b,i}}{n_{b,i}}.
+\;}
+\]
+$O(nB)$ after leaf precompute. Map to $\mathrm{Var}(u)$ by
+(i)~tree-wise $u_i^{(b)}=(\varphi_i-\hat\tau_b)^2$ (optionally
+leaf-merged) then sample variance across $b$, and/or
+(ii)~delta method
+$\mathrm{Var}(u_i)\approx 4\,\mathrm{Var}(\hat\tau(X_i))\,(\varphi_i-\tau)^2$.
+
+\textit{econml wiring:} \texttt{CausalForestDML.model\_final\_} $\to$
+\texttt{CausalForest}; \texttt{forest.apply(X)} gives leaf indices;
+\texttt{tree.tree\_.n\_node\_samples} / \texttt{impurity} supply
+$n_{b,\ell}$ and $\hat\sigma^2_{b,\ell}$;
+\texttt{children\_left/right} build the parent map for leaf-wise merging.
+No off-the-shelf package does this merge for \texttt{CausalForestDML} ---
+a small helper is the reliable route.
+
+\section{Bootstrap --- fallback, not first choice}
+
+Resample, refit, $u_i^{(b)}=(\varphi_i-\hat\tau^{(b)})^2$, variance across
+$b$. Expensive ($B$ refits), unstable for $m_4$, no regularization of
+$\hat\tau$. Use only as fallback / sanity check; if used, $B\le 500$ and
+Winsorize $u$ at a high percentile.
+
+\section{Practical recommendation}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Route & Role & When \\
+\midrule
+\textbf{CF debiased + leaf merge} & \textbf{default} & always for monitoring \\
+BCF posterior & clean Bayesian & pipeline already BCF; moderate $n$ \\
+Bootstrap & fallback & CF/BCF unavailable; small $B$ + Winsor \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Effect on benign vs malignant (tabular)}
+
+Same PermuCATE $\varphi$; LIVE benign (uniform shift, $Y$ intact) vs
+malignant (subset attack + $Y$-break). Estimators that separate:
+\textbf{8/8}. Leaf-size debias drives benign $\widehat V_{\mathrm{debiased}}$
+to $\approx 0$ while malignant stays large --- the bias that would have
+masqueraded as malignant is removed.
+
+\begin{table}[h]
+\centering
+\caption{Var($u$) / Var($\hat\tau$) separation on tabular Mag$\times$Var board
+(\texttt{results/as\_dta\_po\_risk\_var}). BCF backend:
+\texttt{python\_bagged\_bcf}.}
+\label{tab:poriskvar}
+\small
+\begin{tabular}{@{}lrrrrc@{}}
+\toprule
+Estimator & benign & malignant & gap & ratio & OK? \\
+\midrule
+sub-env $s$ (Mag$\times$Var) & $0.87$ & $4.90$ & $4.02$ & $5.6$ & yes \\
+empirical $\mathrm{Var}(u)$ & $62.5$ & $1480$ & $1418$ & $24$ & yes \\
+CF $\widehat V_{\mathrm{naive}}$ & $0.0028$ & $16.9$ & $16.9$ & large & yes \\
+CF $\widehat V_{\mathrm{debiased}}$ & $\approx 0$ & $16.4$ & $16.4$ & --- & yes \\
+CF $\mathrm{Var}(u)$ tree-wise & $4.0$ & large & large & large & yes \\
+CF $\mathrm{Var}(u)$ delta & $\approx 0$ & large & large & --- & yes \\
+BCF $\mathrm{Var}(u)$ posterior & $32$ & $938$ & $906$ & $29$ & yes \\
+Bootstrap $\mathrm{Var}(u)$ & $24$ & $365$ & $340$ & $15$ & yes \\
+\midrule
+\multicolumn{2}{@{}l}{\textbf{hit-rate}} &
+  \multicolumn{4}{r@{}}{\textbf{8/8 $= 1.00$}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textit{One line:}
+default $=$ CF leaf-size-debiased + leaf merge;
+BCF $=$ when Bayesian;
+bootstrap $=$ fallback;
+effect $=$ separates, and debias kills false-malignant leaf bias.
+
+\section*{Code}
+\texttt{Python/src/as\_dta\_po\_risk\_var.py},
+\texttt{scripts/run\_as\_dta\_po\_risk\_var.py --quick}.
+
+\end{document}
