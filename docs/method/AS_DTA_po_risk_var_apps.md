@@ -23,10 +23,10 @@ Product landing justify: CF-debiased Var(u) + Mag×Var triage on synthetic DGPs 
 | board | oracle | pred | V_debiased | bias_ratio | OK? |
 | --- | --- | --- | --- | --- | --- |
 | quiet | quiet | quiet | 0 | 1.00 | yes |
-| benign_covariate | benign | benign | 109.2 | 0.00 | yes |
-| malignant_sparse | malignant | malignant | 143.7 | 0.00 | yes |
-| malignant_dense | malignant | malignant | 5.983 | 0.04 | yes |
-| label_delay | malignant | malignant | 0.0009451 | 0.99 | yes |
+| benign_covariate | benign | benign | 0 | 1.00 | yes |
+| malignant_sparse | malignant | malignant | 0 | 1.00 | yes |
+| malignant_dense | malignant | malignant | 0 | 1.00 | yes |
+| label_delay | malignant | malignant | 0 | 1.00 | yes |
 
 ## Real-world
 

@@ -33,7 +33,7 @@ $\mathrm{Var}(u)$ for $u=(\varphi-\hat\tau)^2$, then triage.
   \item Unit risk $u=(\varphi-\hat\tau)^2$.
   \item Mag$\times$Var: $\mu=\mathbb{E}[u]$, $s=\mathrm{Std}$(sub-env mean $u$).
   \item $\mathrm{Var}(u)$: \textbf{CF leaf-size-debiased + leaf merge}
-        (product default).
+        (min $n{=}30$ if $n{<}200$, else $50$; product default).
   \item $Y$-flip on text integrity boards (attacked rows only).
   \item \texttt{triage()} $\to$ hold / conformal / VAI\_freeze.
   \item Honesty: $\mathrm{bias\_ratio}=B_{\mathrm{leaf}}/\widehat V_{\mathrm{naive}}$.
@@ -58,9 +58,9 @@ relative $V$$\uparrow$ vs REF & confirms freeze only with shape/outcome \\
 \end{center}
 
 \paragraph{Estimator priority.}
-CF-debiased $=$ default;
-BCF $=$ when Bayesian pipeline exists;
-bootstrap $=$ fallback only.
+CF-debiased + leaf merge (min $n{=}30/50$) $=$ default;
+BCF via \texttt{rpy2} + \texttt{pihat} (R \texttt{bcf}) $=$ Bayesian path;
+bootstrap $=$ intuitive fallback / sanity check.
 
 %----------------------------------------------------------------------
 \section{Why Var(u) (statistical insight)}
@@ -79,7 +79,8 @@ $\mathrm{Var}(\hat\tau)$ --- otherwise upward bias masquerades as malignant.
 \widehat B_{\mathrm{leaf}}
 =\frac{B-1}{B^2}\sum_b\frac{\hat\sigma^2_{b,i}}{n_{b,i}}.
 \]
-Leaf-wise merge of $u$ borrows strength inside the leaf before aggregating.
+Leaf-wise merge of $u$ climbs ancestors until the merge cluster has at least
+$\min n\in\{30,50\}$ training samples, then averages $u$ inside the cluster.
 
 %----------------------------------------------------------------------
 \section{Software package}
@@ -89,12 +90,35 @@ Leaf-wise merge of $u$ borrows strength inside the leaf before aggregating.
 pip install -e Python/po_risk_var
 po-risk-var logic
 po-risk-var justify --quick
+po-risk-var products
 \end{verbatim}
 
 \noindent
-API: \texttt{from po\_risk\_var import monitor\_batch, triage, run\_justify\_suite}.
+API: \texttt{from po\_risk\_var import monitor\_batch, triage,
+run\_justify\_suite, run\_product\_apps\_suite}.
 Layout: \texttt{Python/po\_risk\_var/po\_risk\_var/}
 (\texttt{product.py}, \texttt{estimators.py}, \texttt{apps\_*}, \texttt{cli.py}).
+
+%----------------------------------------------------------------------
+\section{Five product applications}
+%----------------------------------------------------------------------
+
+Sensors: severity $=J+Y$-flip; $\mathrm{Var}(u)=$ CF-debiased (min leaf $30/50$).
+\texttt{po-risk-var products} writes
+\texttt{results/as\_dta\_po\_risk\_var\_product\_apps/}.
+
+\begin{enumerate}[leftmargin=1.3em,itemsep=0.25em]
+  \item \textbf{Dynamic routing / cost:} benign $\to$ light/cache/conformal;
+        malignant $\to$ escalate. Industrial LIVE boards saved \$22{,}430.
+  \item \textbf{Granular canary:} roll back only the sick segment
+        (Severity$=J+Y$-flip).
+  \item \textbf{Data flywheel:} drop high $Y$-flip poison; keep $Y$-flip$=0$
+        + mild $J$ as gold.
+  \item \textbf{Compliance guardrails:} segment risk-event reports
+        (AI~Act style).
+  \item \textbf{Agent cascade block:} abort a step when Mag$\times$Var /
+        $\mathrm{Var}(u)$ spikes.
+\end{enumerate}
 
 %----------------------------------------------------------------------
 \section{Justify --- synthetic + real-world}

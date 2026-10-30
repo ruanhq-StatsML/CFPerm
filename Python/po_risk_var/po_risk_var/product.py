@@ -161,16 +161,16 @@ def estimator_priority() -> list:
         {
             "name": "causal_forest_leaf_debiased",
             "role": "default",
-            "when": "always for LIVE monitoring",
+            "when": "LIVE monitoring; leaf merge min n=30 (50 if n≥200)",
         },
         {
-            "name": "bcf_posterior",
+            "name": "bcf_posterior_rpy2",
             "role": "bayesian",
-            "when": "BCF pipeline already in place; moderate n",
+            "when": "use rpy2 + R package bcf when Bayesian path is required",
         },
         {
             "name": "bootstrap",
             "role": "fallback",
-            "when": "CF/BCF unavailable; small B + Winsorize u",
+            "when": "intuitive sanity check; small B + Winsorize u",
         },
     ]

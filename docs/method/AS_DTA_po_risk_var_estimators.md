@@ -2,9 +2,9 @@
 
 PO-risk Var(u) estimators on PermuCATE φ: Causal Forest leaf-size-debiased (+ leaf merge), BCF posterior, bootstrap fallback.
 
-**Recommend:** Default: Causal Forest leaf-size-debiased + leaf-wise merge (cf_Var_u_tree / cf_V_debiased). BCF when Bayesian pipeline exists. Bootstrap only as fallback.
+**Recommend:** Default: Causal Forest leaf-size-debiased + leaf-wise merge (min n=30 if n<200 else 50). BCF via rpy2+pihat when Bayesian path is required. Bootstrap only as fallback / sanity check.
 
-BCF backend: `python_bagged_bcf`
+BCF backend: `rpy2_bcf` (pihat; Rscript / python_bagged fallback)
 
 ## Separation (malignant vs benign)
 

@@ -14,17 +14,17 @@
       {
         "name": "causal_forest_leaf_debiased",
         "role": "default",
-        "when": "always for LIVE monitoring"
+        "when": "LIVE monitoring; leaf merge min n=30 (50 if n\u2265200)"
       },
       {
-        "name": "bcf_posterior",
+        "name": "bcf_posterior_rpy2",
         "role": "bayesian",
-        "when": "BCF pipeline already in place; moderate n"
+        "when": "use rpy2 + R package bcf when Bayesian path is required"
       },
       {
         "name": "bootstrap",
         "role": "fallback",
-        "when": "CF/BCF unavailable; small B + Winsorize u"
+        "when": "intuitive sanity check; small B + Winsorize u"
       }
     ]
   },
@@ -43,7 +43,7 @@
         "d_s": -0.6553352968016537,
         "J": -0.18452127453151235,
         "V_debiased": 0.0,
-        "V_naive": 0.0020152521675155105,
+        "V_naive": 0.00025851473616971416,
         "bias_ratio": 1.0,
         "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
       },
@@ -57,10 +57,10 @@
         "d_mu": 0.3157824690148052,
         "d_s": -0.1588036250695759,
         "J": 0.3157824690148052,
-        "V_debiased": 109.22433793124087,
-        "V_naive": 109.22914253377044,
-        "bias_ratio": 4.398645286526228e-05,
-        "reason": "benign: mild \u03bc, no Y-flip, Mag\u00d7Var not spiked"
+        "V_debiased": 0.0,
+        "V_naive": 0.00018416947352003604,
+        "bias_ratio": 1.0,
+        "reason": "benign: mild \u03bc, no Y-flip, Mag\u00d7Var not spiked; honesty: leaf bias_ratio=1.00 (debias mattered)"
       },
       {
         "board": "malignant_sparse",
@@ -72,10 +72,10 @@
         "d_mu": 9.8114766269929,
         "d_s": 2.6820579202685195,
         "J": 17.857650387798458,
-        "V_debiased": 143.6737401963905,
-        "V_naive": 143.87123440163177,
-        "bias_ratio": 0.0013727150257844044,
-        "reason": "malignant: Y-flip+s\u2191+J\u2191+\u03bc\u2191\u2191+V\u2191_rel"
+        "V_debiased": 0.0,
+        "V_naive": 0.00395032712503026,
+        "bias_ratio": 1.0,
+        "reason": "malignant: Y-flip+s\u2191+J\u2191+\u03bc\u2191\u2191"
       },
       {
         "board": "malignant_dense",
@@ -87,10 +87,10 @@
         "d_mu": 12.748427805525925,
         "d_s": 3.799875582354474,
         "J": 24.14805455258935,
-        "V_debiased": 5.983468968259708,
-        "V_naive": 6.259099681758231,
-        "bias_ratio": 0.044036798822973226,
-        "reason": "malignant: Y-flip+s\u2191+J\u2191+\u03bc\u2191\u2191+V\u2191_rel"
+        "V_debiased": 0.0,
+        "V_naive": 0.0032020943984825455,
+        "bias_ratio": 1.0,
+        "reason": "malignant: Y-flip+s\u2191+J\u2191+\u03bc\u2191\u2191"
       },
       {
         "board": "label_delay",
@@ -102,10 +102,10 @@
         "d_mu": 0.14927219041300388,
         "d_s": -0.6498133650032425,
         "J": 0.14927219041300388,
-        "V_debiased": 0.0009451178774497326,
-        "V_naive": 0.09320630608832657,
-        "bias_ratio": 0.9898599363378472,
-        "reason": "malignant: Y-flip+V\u2191_rel"
+        "V_debiased": 0.0,
+        "V_naive": 0.0050967900259316894,
+        "bias_ratio": 1.0,
+        "reason": "malignant: Y-flip"
       }
     ],
     "n_boards": 5,
@@ -124,11 +124,11 @@
           "actuator": "hold",
           "correct": true,
           "y_flip": 0.0,
-          "d_mu": 0.037339224685021905,
-          "d_s": 0.006809893657830822,
-          "J": 0.05776890565851437,
+          "d_mu": -0.03742545136906175,
+          "d_s": -0.030455962448418084,
+          "J": -0.03742545136906175,
           "V_debiased": 0.0,
-          "V_naive": 0.0021609863805633566,
+          "V_naive": 0.0004314014381109009,
           "bias_ratio": 1.0,
           "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
         },
@@ -142,7 +142,7 @@
           "d_s": -0.029592976453696483,
           "J": 0.019998231930868526,
           "V_debiased": 0.0,
-          "V_naive": 0.0016954758058473954,
+          "V_naive": 0.0008625080501176044,
           "bias_ratio": 1.0,
           "reason": "malignant: Y-flip"
         },
@@ -157,11 +157,11 @@
           "actuator": "hold",
           "correct": true,
           "y_flip": 0.0,
-          "d_mu": -0.0305304056474478,
-          "d_s": -0.011300739258691406,
-          "J": -0.0305304056474478,
+          "d_mu": -0.009685523293213733,
+          "d_s": 0.0036693187600097266,
+          "J": 0.0013224329868154472,
           "V_debiased": 0.0,
-          "V_naive": 0.002661212281614191,
+          "V_naive": 0.0004594419945287233,
           "bias_ratio": 1.0,
           "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
         },
@@ -175,7 +175,7 @@
           "d_s": 0.09579402455655922,
           "J": 0.38794887380114684,
           "V_debiased": 0.0,
-          "V_naive": 0.0024359534531215145,
+          "V_naive": 0.0008641470392748734,
           "bias_ratio": 1.0,
           "reason": "malignant: Y-flip+s\u2191"
         },
@@ -190,11 +190,11 @@
           "actuator": "hold",
           "correct": true,
           "y_flip": 0.0,
-          "d_mu": 0.016807856418013467,
-          "d_s": 0.017983080669000076,
-          "J": 0.09796117912214747,
+          "d_mu": 0.04527958699953635,
+          "d_s": 0.023835716793406608,
+          "J": 0.1987632666514224,
           "V_debiased": 0.0,
-          "V_naive": 0.0011397911126792505,
+          "V_naive": 0.0005186480962835493,
           "bias_ratio": 1.0,
           "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
         },
@@ -208,7 +208,7 @@
           "d_s": 0.002869110827569618,
           "J": 0.0069895619450126845,
           "V_debiased": 0.0,
-          "V_naive": 0.0020424048506474655,
+          "V_naive": 0.000788591175991481,
           "bias_ratio": 1.0,
           "reason": "malignant: Y-flip"
         },
@@ -223,11 +223,11 @@
           "actuator": "hold",
           "correct": true,
           "y_flip": 0.0,
-          "d_mu": -0.11509526780629478,
-          "d_s": -0.007989115987745696,
-          "J": -0.11509526780629478,
+          "d_mu": -0.005101591082673551,
+          "d_s": 0.005437117007429597,
+          "J": 0.01120975993961524,
           "V_debiased": 0.0,
-          "V_naive": 0.0020377637203625363,
+          "V_naive": 0.0006739141711538433,
           "bias_ratio": 1.0,
           "reason": "quiet: \u03bc and Mag\u00d7Var near REF; honesty: leaf bias_ratio=1.00 (debias mattered)"
         },
@@ -241,7 +241,7 @@
           "d_s": -0.023080530769151078,
           "J": 0.003914519274121037,
           "V_debiased": 0.0,
-          "V_naive": 0.0021939350366669,
+          "V_naive": 0.0005759679838227925,
           "bias_ratio": 1.0,
           "reason": "malignant: Y-flip"
         },

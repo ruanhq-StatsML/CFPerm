@@ -4,9 +4,16 @@ Prefer the packaged API:
   pip install -e Python/po_risk_var
   from po_risk_var import monitor_batch, triage, run_justify_suite
   po-risk-var justify --quick
+  po-risk-var products
 
 This module keeps the CF / BCF / bootstrap implementations used by the package.
 
+Defaults
+--------
+  CF leaf merge: min n=30 (n<200) or 50 (n>=200)
+  BCF: rpy2 -> R package bcf with pihat (Rscript bridge fallback)
+  Bootstrap: intuitive sanity check
+"""
 from __future__ import annotations
 
 import json
@@ -18,6 +25,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 
 from as_dta_aigc import ROOT, SEED
 from as_dta_permucate_magvar import (
@@ -30,6 +38,16 @@ from as_dta_permucate_magvar import (
 
 OUT_DEFAULT = ROOT / "results" / "as_dta_po_risk_var"
 CLIP = 1e-2
+MIN_LEAF_MERGE_SMALL = 30
+MIN_LEAF_MERGE_LARGE = 50
+MIN_LEAF_MERGE_N_SWITCH = 200
+
+
+def resolve_min_leaf_merge_n(n: int, override: Optional[int] = None) -> int:
+    """Product leaf-merge floor: 30 if n<200 else 50 (override wins)."""
+    if override is not None:
+        return int(max(2, override))
+    return MIN_LEAF_MERGE_LARGE if int(n) >= MIN_LEAF_MERGE_N_SWITCH else MIN_LEAF_MERGE_SMALL
 
 
 # ---------------------------------------------------------------------------
@@ -61,56 +79,66 @@ def _ancestors(node: int, parent: np.ndarray, max_depth: int = 64) -> List[int]:
     return out
 
 
+def _merge_node_ids_min_n(
+    leaf_ids: np.ndarray,
+    parent: np.ndarray,
+    n_node: np.ndarray,
+    min_n: int,
+) -> np.ndarray:
+    """Climb each leaf to an ancestor with n_node >= min_n (or root)."""
+    merge_id = np.empty(len(leaf_ids), dtype=int)
+    min_n = int(max(1, min_n))
+    for i, lid in enumerate(leaf_ids):
+        v = int(lid)
+        while parent[v] >= 0 and float(n_node[v]) < min_n:
+            v = int(parent[v])
+        merge_id[i] = v
+    return merge_id
+
+
 def leaf_wise_merge_u(
     u: np.ndarray,
     leaf_ids: np.ndarray,
     children_left: Optional[np.ndarray] = None,
     children_right: Optional[np.ndarray] = None,
     level: str = "leaf",
+    min_n: int = 0,
+    n_node_samples: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """Average u within each leaf (optionally push to a parent level).
+    """Average u within each leaf / merge-cluster.
 
-    level='leaf'  — mean u over samples sharing the leaf id
-    level='parent'— if children_* given, average already-merged child
-                    values one level up, then broadcast back to samples
+    level='leaf'   - mean u over samples sharing the leaf id
+    level='parent' - if children_* given, average one level up
+    min_n>0        - climb ancestors until n_node_samples >= min_n (30/50)
     """
     u = np.asarray(u, dtype=float).ravel()
     leaf_ids = np.asarray(leaf_ids, dtype=int).ravel()
     assert len(u) == len(leaf_ids)
     merged = np.zeros_like(u)
-    # leaf means
-    leaf_mean: Dict[int, float] = {}
-    for lid in np.unique(leaf_ids):
-        m = u[leaf_ids == lid]
-        leaf_mean[int(lid)] = float(np.mean(m)) if len(m) else 0.0
-    if (
-        level == "parent"
-        and children_left is not None
-        and children_right is not None
-    ):
+
+    group_ids = leaf_ids
+    parent = None
+    if children_left is not None and children_right is not None:
         parent = _parent_map(np.asarray(children_left), np.asarray(children_right))
-        # value at each node: leaves have leaf_mean; internal = mean of children
-        node_val: Dict[int, float] = dict(leaf_mean)
-        # bottom-up: process nodes by decreasing depth proxy (post-order via parent hops)
-        # simple: iterate leaves → assign parent as avg of known children when both ready
-        pending = set(int(x) for x in np.unique(leaf_ids))
-        for _ in range(len(parent) + 2):
-            progressed = False
-            parents = {int(parent[v]) for v in list(pending) if parent[v] >= 0}
-            for p in parents:
-                L, R = int(children_left[p]), int(children_right[p])
-                if L in node_val and R in node_val:
-                    node_val[p] = 0.5 * (node_val[L] + node_val[R])
-                    pending.add(p)
-                    progressed = True
-            if not progressed:
-                break
-        for i, lid in enumerate(leaf_ids):
-            p = int(parent[int(lid)])
-            merged[i] = node_val.get(p if p >= 0 else int(lid), leaf_mean[int(lid)])
-    else:
-        for i, lid in enumerate(leaf_ids):
-            merged[i] = leaf_mean[int(lid)]
+        if min_n and int(min_n) > 0 and n_node_samples is not None:
+            group_ids = _merge_node_ids_min_n(
+                leaf_ids,
+                parent,
+                np.asarray(n_node_samples, dtype=float),
+                int(min_n),
+            )
+        elif level == "parent":
+            group_ids = np.array(
+                [int(parent[int(lid)]) if parent[int(lid)] >= 0 else int(lid) for lid in leaf_ids],
+                dtype=int,
+            )
+
+    group_mean: Dict[int, float] = {}
+    for gid in np.unique(group_ids):
+        m = u[group_ids == gid]
+        group_mean[int(gid)] = float(np.mean(m)) if len(m) else 0.0
+    for i, gid in enumerate(group_ids):
+        merged[i] = group_mean[int(gid)]
     return merged
 
 
@@ -126,7 +154,7 @@ def _fit_causal_forest(
     *,
     n_estimators: int = 80,
     max_depth: int = 5,
-    min_samples_leaf: int = 8,
+    min_samples_leaf: int = 30,
     seed: int = SEED,
 ):
     from econml.dml import CausalForestDML
@@ -161,28 +189,35 @@ def causal_forest_var_u(
     *,
     n_estimators: int = 80,
     max_depth: int = 5,
-    min_samples_leaf: int = 8,
+    min_samples_leaf: Optional[int] = None,
     seed: int = SEED,
     leaf_merge: bool = True,
+    min_leaf_merge_n: Optional[int] = None,
 ) -> dict:
-    """Leaf-size-debiased tree-to-tree Var(τ̂) + Var(u) via u^{(b)}.
+    """Leaf-size-debiased tree-to-tree Var(tau) + Var(u) via u^{(b)}.
 
     Naive:
-      V_naive = 1/(B(B-1)) Σ_b (τ̂_b - τ̄)²
+      V_naive = 1/(B(B-1)) Sum_b (tau_b - tau_bar)^2
     Debiased:
       V_debiased = V_naive - B_leaf,
-      B_leaf = ((B-1)/B²) Σ_b σ̂²_{b,i} / n_{b,i}
+      B_leaf = ((B-1)/B^2) Sum_b sigma^2_{b,i} / n_{b,i}
 
-    Then for each tree b: u_i^{(b)} = (φ_i - τ̂_b(X_i))²,
+    Leaf merge floor: min_n=30 (n<200) or 50 (n>=200). Climb ancestors until
+    the merge cluster has at least that many training samples.
+
+    Then for each tree b: u_i^{(b)} = (phi_i - tau_b(X_i))^2,
     optionally leaf-merge u^{(b)}, and
       Var(u)_tree = sample var across b of u^{(b)}
-      Var(u)_delta ≈ 4 V_debiased · (φ - τ̄)²
+      Var(u)_delta ~ 4 V_debiased * (phi - tau_bar)^2
     """
     X = np.asarray(X, dtype=float)
     Y = np.asarray(Y, dtype=float).ravel()
     W = np.asarray(W, dtype=int).ravel()
     phi = np.asarray(phi, dtype=float).ravel()
     n = len(phi)
+    merge_n = resolve_min_leaf_merge_n(n, min_leaf_merge_n)
+    if min_samples_leaf is None:
+        min_samples_leaf = merge_n
 
     cf, forest = _fit_causal_forest(
         X,
@@ -201,7 +236,7 @@ def causal_forest_var_u(
         [np.asarray(t.predict(X, check_input=False)).ravel() for t in trees]
     )  # (n, B)
     tau_bar = tau_trees.mean(axis=1)
-    # V_naive = 1/(B(B-1)) Σ (τ_b - τ̄)²  == var(ddof=1)/B
+    # V_naive = 1/(B(B-1)) Sum (tau_b - tau_bar)^2  == var(ddof=1)/B
     sq = (tau_trees - tau_bar[:, None]) ** 2
     V_naive = sq.sum(axis=1) / (B * (B - 1))
 
@@ -212,7 +247,7 @@ def causal_forest_var_u(
     for b, tree in enumerate(trees):
         tr = tree.tree_
         n_node = np.asarray(tr.n_node_samples, dtype=float)
-        # honest estimation-set impurity as σ̂² proxy (bounded)
+        # honest estimation-set impurity as sigma^2 proxy (bounded)
         impurity = np.asarray(tr.impurity, dtype=float)
         lid = leaves[:, b]
         n_b = np.maximum(n_node[lid], 1.0)
@@ -238,6 +273,8 @@ def causal_forest_var_u(
                 children_left=np.asarray(tr.children_left),
                 children_right=np.asarray(tr.children_right),
                 level="leaf",
+                min_n=merge_n,
+                n_node_samples=np.asarray(tr.n_node_samples, dtype=float),
             )
         u_for_var = u_merged
     else:
@@ -250,9 +287,20 @@ def causal_forest_var_u(
     r_hat = phi - tau_bar
     Var_u_delta = 4.0 * V_debiased * (r_hat ** 2)
 
-    # point estimate of u from forest mean τ
+    # point estimate of u from forest mean tau
     u_hat = r_hat ** 2
-    u_leaf = leaf_wise_merge_u(u_hat, leaves[:, 0]) if leaf_merge else u_hat
+    if leaf_merge:
+        tr0 = trees[0].tree_
+        u_leaf = leaf_wise_merge_u(
+            u_hat,
+            leaves[:, 0],
+            children_left=np.asarray(tr0.children_left),
+            children_right=np.asarray(tr0.children_right),
+            min_n=merge_n,
+            n_node_samples=np.asarray(tr0.n_node_samples, dtype=float),
+        )
+    else:
+        u_leaf = u_hat
 
     # also expose econml built-in predict_and_var for comparison
     try:
@@ -264,6 +312,8 @@ def causal_forest_var_u(
     return {
         "estimator": "causal_forest_leaf_debiased",
         "n_estimators": B,
+        "min_samples_leaf": int(min_samples_leaf),
+        "min_leaf_merge_n": int(merge_n),
         "tau_bar": tau_bar,
         "u_hat": u_hat,
         "u_leaf_merged": u_leaf,
@@ -292,56 +342,154 @@ def causal_forest_var_u(
 # ---------------------------------------------------------------------------
 
 
-def _bcf_via_rpy2(X, Y, W, phi, n_burn=50, n_sim=80, seed=SEED) -> Optional[dict]:
+def _estimate_pihat(X: np.ndarray, W: np.ndarray, seed: int = SEED) -> np.ndarray:
+    """Length-n propensity scores for BCF (clipped away from 0/1)."""
+    X = np.asarray(X, dtype=float)
+    W = np.asarray(W, dtype=int).ravel()
+    try:
+        lr = LogisticRegression(max_iter=200, random_state=int(seed))
+        lr.fit(X, W)
+        pi = lr.predict_proba(X)[:, 1]
+    except Exception:  # noqa: BLE001
+        pi = np.full(len(W), float(np.mean(W)))
+    return np.clip(np.asarray(pi, dtype=float), 0.05, 0.95)
+
+
+def _ensure_r_user_lib() -> None:
+    """Prefer ~/R/library so rpy2 / Rscript see user-installed bcf."""
+    import os
+
+    user_lib = str(Path.home() / "R" / "library")
+    if Path(user_lib).is_dir():
+        cur = os.environ.get("R_LIBS_USER", "")
+        if user_lib not in cur.split(os.pathsep):
+            os.environ["R_LIBS_USER"] = (
+                user_lib if not cur else user_lib + os.pathsep + cur
+            )
+        # also prepend for this process's R session if already started
+        try:
+            import rpy2.robjects as ro
+
+            paths = [str(p) for p in ro.r(".libPaths()")]
+            if user_lib not in paths:
+                ro.r(".libPaths")(ro.StrVector([user_lib] + paths))
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _bcf_via_rpy2(
+    X, Y, W, phi, n_burn=50, n_sim=80, seed=SEED, pihat: Optional[np.ndarray] = None
+) -> Optional[dict]:
+    """BCF via rpy2 + R package bcf (requires pihat)."""
     try:
         import rpy2.robjects as ro
-        from rpy2.robjects import numpy2ri
         from rpy2.robjects.packages import importr
 
-        numpy2ri.activate()
-        has = bool(ro.r('requireNamespace("bcf", quietly=TRUE)')[0])
-        if not has:
+        _ensure_r_user_lib()
+        # requireNamespace via ro.r can return None under some rpy2 builds;
+        # importr is the reliable probe.
+        try:
+            bcf = importr("bcf")
+        except Exception:
             return None
-        bcf = importr("bcf")
-        # bcf::bcf(y, z, x_control, ...)
-        fit = bcf.bcf(
-            y=ro.FloatVector(Y.tolist()),
-            z=ro.IntVector(W.tolist()),
-            x_control=ro.r.matrix(ro.FloatVector(X.T.ravel()), nrow=X.shape[1]),
-            nburn=int(n_burn),
-            nsim=int(n_sim),
-            include_pi="control",
-            random_seed=int(seed),
+        X = np.asarray(X, dtype=float)
+        Y = np.asarray(Y, dtype=float).ravel()
+        W = np.asarray(W, dtype=float).ravel()
+        if pihat is None:
+            pihat = _estimate_pihat(X, W.astype(int), seed=seed)
+        pihat = np.asarray(pihat, dtype=float).ravel()
+        n, p = X.shape
+        x_r = ro.r.matrix(
+            ro.FloatVector(X.ravel().tolist()), nrow=n, ncol=p, byrow=True
         )
-        # tau draws: try common slot names
+        # Mute BCF progress bar (binary bytes break rpy2 utf-8 console callback)
+        try:
+            from rpy2.rinterface_lib import callbacks as rpy_cb
+
+            _prev_write = rpy_cb.consolewrite_print
+
+            def _quiet_console(x):  # noqa: ANN001
+                return None
+
+            rpy_cb.consolewrite_print = _quiet_console
+        except Exception:  # noqa: BLE001
+            _prev_write = None
+        try:
+            # Keep MCMC light for product smoke; n_chains=1 avoids thread storms
+            fit = bcf.bcf(
+                y=ro.FloatVector(Y.tolist()),
+                z=ro.FloatVector(W.tolist()),
+                x_control=x_r,
+                pihat=ro.FloatVector(pihat.tolist()),
+                nburn=int(n_burn),
+                nsim=int(n_sim),
+                n_chains=1,
+                n_threads=1,
+                ntree_control=min(50, max(20, 2 * p)),
+                ntree_moderate=min(20, max(10, p)),
+                include_pi="control",
+                verbose=False,
+                no_output=True,
+                random_seed=int(seed),
+            )
+        finally:
+            if _prev_write is not None:
+                try:
+                    rpy_cb.consolewrite_print = _prev_write
+                except Exception:  # noqa: BLE001
+                    pass
         tau_draws = None
+        names = list(fit.names) if getattr(fit, "names", None) is not None else []
         for key in ("tau", "tau_post", "tauhat"):
-            if key in fit.names:
+            if key in names:
                 tau_draws = np.asarray(fit.rx2(key))
                 break
         if tau_draws is None:
-            return None
-        # expect (n_sim, n) or (n, n_sim)
-        if tau_draws.shape[0] == len(Y):
+            # last resort: positional / attribute
+            try:
+                tau_draws = np.asarray(fit.rx2("tau"))
+            except Exception:  # noqa: BLE001
+                return {"_error": "rpy2_bcf: no tau draws in fit"}
+        if tau_draws.ndim == 1:
+            tau_draws = tau_draws.reshape(1, -1)
+        if tau_draws.shape[0] == len(Y) and tau_draws.shape[1] != len(Y):
             tau_draws = tau_draws.T
         return _posterior_var_from_tau_draws(phi, tau_draws, backend="rpy2_bcf")
     except Exception as exc:  # noqa: BLE001
         return {"_error": "rpy2_bcf: %s" % exc}
 
 
-def _bcf_via_rscript(X, Y, W, phi, n_burn=40, n_sim=60, seed=SEED) -> Optional[dict]:
-    """Call R bcf via Rscript CSV bridge when rpy2 is unavailable."""
+def _bcf_via_rscript(
+    X, Y, W, phi, n_burn=40, n_sim=60, seed=SEED, pihat: Optional[np.ndarray] = None
+) -> Optional[dict]:
+    """Call R bcf via Rscript CSV bridge when rpy2 path fails."""
+    import os
+
+    _ensure_r_user_lib()
+    env = os.environ.copy()
+    user_lib = str(Path.home() / "R" / "library")
+    env["R_LIBS_USER"] = user_lib
     try:
         chk = subprocess.run(
             ["Rscript", "-e", 'cat(requireNamespace("bcf", quietly=TRUE))'],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=30,
+            env=env,
         )
         if "TRUE" not in (chk.stdout or ""):
             return None
     except Exception:  # noqa: BLE001
         return None
+
+    X = np.asarray(X, dtype=float)
+    Y = np.asarray(Y, dtype=float).ravel()
+    W = np.asarray(W, dtype=int).ravel()
+    if pihat is None:
+        pihat = _estimate_pihat(X, W, seed=seed)
+    pihat = np.asarray(pihat, dtype=float).ravel()
 
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
@@ -349,28 +497,44 @@ def _bcf_via_rscript(X, Y, W, phi, n_burn=40, n_sim=60, seed=SEED) -> Optional[d
         out = td / "tau.csv"
         import pandas as pd
 
+        cols = ["Y", "W", "pihat"] + ["x%d" % j for j in range(X.shape[1])]
         pd.DataFrame(
-            np.column_stack([Y, W, X]),
-            columns=["Y", "W"] + ["x%d" % j for j in range(X.shape[1])],
+            np.column_stack([Y, W, pihat, X]),
+            columns=cols,
         ).to_csv(data, index=False)
+        ntree_c = min(50, max(20, 2 * X.shape[1]))
+        ntree_m = min(20, max(10, X.shape[1]))
         rcode = f"""
+        .libPaths(c("{user_lib}", .libPaths()))
         library(bcf)
         d <- read.csv("{data}")
-        y <- d$Y; z <- as.integer(d$W)
-        x <- as.matrix(d[, -(1:2), drop=FALSE])
-        fit <- bcf(y=y, z=z, x_control=x, nburn={int(n_burn)}, nsim={int(n_sim)},
-                   include_pi="control", random_seed={int(seed)})
+        y <- d$Y; z <- as.numeric(d$W); pihat <- d$pihat
+        x <- as.matrix(d[, -(1:3), drop=FALSE])
+        fit <- bcf(y=y, z=z, x_control=x, pihat=pihat,
+                   nburn={int(n_burn)}, nsim={int(n_sim)},
+                   n_chains=1, n_threads=1,
+                   ntree_control={ntree_c}, ntree_moderate={ntree_m},
+                   include_pi="control", verbose=FALSE,
+                   random_seed={int(seed)})
         tau <- fit$tau
         write.csv(tau, "{out}", row.names=FALSE)
         """
         try:
-            subprocess.run(
+            proc = subprocess.run(
                 ["Rscript", "-e", rcode],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=300,
-                check=True,
+                cwd=str(td),
+                env=env,
             )
+            if proc.returncode != 0 and not out.exists():
+                return {
+                    "_error": "rscript_bcf: rc=%s %s"
+                    % (proc.returncode, (proc.stderr or "")[-400:])
+                }
         except Exception as exc:  # noqa: BLE001
             return {"_error": "rscript_bcf: %s" % exc}
         if not out.exists():
@@ -458,16 +622,21 @@ def bcf_var_u(
     n_sim: int = 60,
     seed: int = SEED,
     prefer_python: bool = False,
+    pihat: Optional[np.ndarray] = None,
 ) -> dict:
-    """BCF posterior Var(u). Tries rpy2 → Rscript → Python bagged posterior."""
+    """BCF posterior Var(u). Tries rpy2 (with pihat) -> Rscript -> Python bagged."""
     X = np.asarray(X, dtype=float)
     Y = np.asarray(Y, dtype=float).ravel()
     W = np.asarray(W, dtype=int).ravel()
     phi = np.asarray(phi, dtype=float).ravel()
+    if pihat is None:
+        pihat = _estimate_pihat(X, W, seed=seed)
     errors = []
     if not prefer_python:
         for fn in (_bcf_via_rpy2, _bcf_via_rscript):
-            out = fn(X, Y, W, phi, n_burn=n_burn, n_sim=n_sim, seed=seed)
+            out = fn(
+                X, Y, W, phi, n_burn=n_burn, n_sim=n_sim, seed=seed, pihat=pihat
+            )
             if out is None:
                 continue
             if "_error" in out and "Var_u_posterior" not in out:
@@ -711,10 +880,11 @@ def run_po_risk_var_suite(
         "hit_rate": float(n_ok) / max(len(separation), 1),
         "recommend": (
             "Default: Causal Forest leaf-size-debiased + leaf-wise merge "
-            "(cf_Var_u_tree / cf_V_debiased). BCF when Bayesian pipeline exists. "
-            "Bootstrap only as fallback."
+            "(min n=30 if n<200 else 50). BCF via rpy2+pihat when Bayesian "
+            "path is required. Bootstrap only as fallback / sanity check."
         ),
         "bcf_backend_used": rows["benign"].get("bcf_backend"),
+        "min_leaf_merge_n": resolve_min_leaf_merge_n(n),
     }
     (out_dir / "po_risk_var.json").write_text(json.dumps(payload, indent=2, default=str))
     _plot(payload, out_dir / "po_risk_var.png")

@@ -26,6 +26,7 @@ from as_dta_po_risk_var import (  # noqa: E402
     bootstrap_var_u,
     causal_forest_var_u,
     leaf_wise_merge_u,
+    resolve_min_leaf_merge_n,
 )
 
 
@@ -39,15 +40,16 @@ def estimate_var_u(
     n_estimators: int = 60,
     seed: int = 2026,
     leaf_merge: bool = True,
+    min_leaf_merge_n: Optional[int] = None,
     boot_B: int = 24,
     bcf_sim: int = 40,
 ) -> dict:
     """Estimate model-uncertainty Var(u) on stacked REF/LIVE.
 
     method:
-      "cf"   — Causal Forest leaf-size-debiased + leaf merge  (product default)
-      "bcf"  — BCF / bagged posterior pathway
-      "boot" — bootstrap fallback
+      "cf"   - Causal Forest leaf-size-debiased + leaf merge min n=30/50 (default)
+      "bcf"  - BCF via rpy2 + pihat (Rscript / Python bagged fallback)
+      "boot" - bootstrap fallback
     """
     X = np.asarray(X, dtype=float)
     Y = np.asarray(Y, dtype=float).ravel()
@@ -63,14 +65,17 @@ def estimate_var_u(
 
     method = str(method).lower()
     if method in ("cf", "causal_forest", "default"):
+        merge_n = resolve_min_leaf_merge_n(len(phi), min_leaf_merge_n)
         out = causal_forest_var_u(
             X,
             Y,
             W,
             phi,
             n_estimators=n_estimators,
+            min_samples_leaf=merge_n,
             seed=seed,
             leaf_merge=leaf_merge,
+            min_leaf_merge_n=merge_n,
         )
         out["method"] = "cf"
         out["Var_u"] = out["Var_u_tree"]
@@ -186,6 +191,7 @@ __all__ = [
     "bcf_var_u",
     "bootstrap_var_u",
     "leaf_wise_merge_u",
+    "resolve_min_leaf_merge_n",
     "triage",
     "TriageDecision",
     "estimator_priority",
