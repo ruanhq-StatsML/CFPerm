@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "po-risk-var"
+version = "0.1.0"
+description = "PO-risk Var(u) estimators: Causal Forest leaf-size-debiased (default), BCF posterior, bootstrap fallback — Mag×Var product triage."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "AS-DTA / CFPerm" }]
+dependencies = [
+  "numpy>=1.22",
+  "scikit-learn>=1.2",
+  "econml>=0.15",
+  "matplotlib>=3.6",
+]
+
+[project.optional-dependencies]
+text = ["datasets>=2.14"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+po-risk-var = "po_risk_var.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["po_risk_var*"]

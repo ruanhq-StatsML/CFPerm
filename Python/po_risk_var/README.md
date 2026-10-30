@@ -1,0 +1,49 @@
+# po-risk-var
+
+**Product:** estimate $\mathrm{Var}(u)$ for PermuCATE unit PO-risk $u=(\varphi-\hat\tau)^2$, then triage benign vs malignant LIVE shift.
+
+## Next-step logic (straightforward)
+
+1. Fit $\varphi$, $\hat\tau$
+2. $u=(\varphi-\hat\tau)^2$
+3. Mag×Var $(\mu,s)$ — shape
+4. **Var(u) = CF leaf-size-debiased + leaf merge** — default
+5. $Y$-flip on text integrity boards
+6. `triage()` → hold / conformal / VAI_freeze
+7. Honesty: `bias_ratio = B_leaf / V_naive`
+
+| Estimator | Role |
+| --- | --- |
+| Causal Forest debiased | **default** |
+| BCF posterior | when Bayesian pipeline exists |
+| Bootstrap | fallback only |
+
+## Install (inside CFPerm checkout)
+
+```bash
+pip install -e Python/po_risk_var
+po-risk-var logic
+po-risk-var justify --quick
+```
+
+Or without install:
+
+```bash
+PYTHONPATH=Python/po_risk_var:Python/src python3 -m po_risk_var justify --quick
+```
+
+## API
+
+```python
+from po_risk_var import monitor_batch, triage, run_justify_suite
+
+out = monitor_batch(X_ref, Y_ref, X_live, Y_live, method="cf", y_flip=0.0)
+print(out["decision"])  # call / actuator / reason / bias_ratio
+```
+
+## Justify
+
+- **Synthetic:** quiet / benign_covariate / malignant_sparse / malignant_dense / label_delay
+- **Real-world:** HC3 finance·medicine, 20 Newsgroups, AG News, IMDB
+
+Results: `results/as_dta_po_risk_var_apps/`

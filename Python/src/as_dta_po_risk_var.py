@@ -1,30 +1,12 @@
-"""PO-risk variance estimators: Causal Forest (debiased) / BCF / bootstrap.
+"""PO-risk variance estimators (legacy import path).
 
-Unit PO-risk
-------------
-  r_i = φ_i - τ̂(X_i),   u_i = r_i² = (φ_i - τ̂(X_i))²
-  Var(u) is fourth-moment driven (m4 - m2²) and heavy-tailed.
+Prefer the packaged API:
+  pip install -e Python/po_risk_var
+  from po_risk_var import monitor_batch, triage, run_justify_suite
+  po-risk-var justify --quick
 
-Estimators (priority)
----------------------
-1. **Causal Forest (default):** leaf-size-debiased tree-to-tree Var(τ̂)
-   plus leaf-wise merging of u; map to Var(u) via tree-wise u^{(b)}
-   and/or delta method. O(nB) after leaf precompute. Uses econml
-   ``CausalForestDML`` / ``GRFTree`` (``apply``, ``children_*``,
-   ``n_node_samples``).
+This module keeps the CF / BCF / bootstrap implementations used by the package.
 
-2. **BCF:** posterior Var(u_i) across MCMC draws of τ̂.
-   Prefer rpy2 → R ``bcf``; if rpy2/R pkgs unavailable, fall back to a
-   Python bagged-forest posterior (same interface). Rscript bridge is
-   also tried when ``bcf`` / ``grf`` are installed.
-
-3. **Bootstrap:** refit τ̂ on resamples — fallback only (expensive,
-   unstable for m4). Winsorize u at a high percentile when used.
-
-Mag×Var monitoring still uses sub-env Std(r_b) of unit risk; these
-estimators supply a *model-uncertainty* Var(u) that is less dominated
-by a few extreme residuals.
-"""
 from __future__ import annotations
 
 import json
