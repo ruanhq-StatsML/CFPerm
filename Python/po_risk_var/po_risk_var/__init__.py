@@ -9,11 +9,12 @@ from po_risk_var.biz_value import (
     product_apps_incremental_value,
     run_biz_value_suite,
 )
+from po_risk_var.compare_methods import run_compare_suite
 from po_risk_var.estimators import estimate_var_u, monitor_batch
 from po_risk_var.product import TriageDecision, estimator_priority, triage
 from po_risk_var.suite import run_justify_suite
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __all__ = [
     "estimate_var_u",
     "monitor_batch",
@@ -25,5 +26,6 @@ __all__ = [
     "run_justify_suite",
     "run_product_apps_suite",
     "run_biz_value_suite",
+    "run_compare_suite",
     "__version__",
 ]

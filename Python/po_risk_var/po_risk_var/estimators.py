@@ -100,6 +100,10 @@ def estimate_var_u(
     out["phi"] = phi
     out["unit_po"] = unit
     out["priority"] = estimator_priority()
+    # ensure u_draws present for coverage CIs when backend provides them
+    if "u_draws" not in out and "Var_u" in out:
+        # degenerate 1-draw fallback
+        out["u_draws"] = np.asarray(out.get("u_hat", out["Var_u"]))[None, :]
     return out
 
 
@@ -115,6 +119,8 @@ def monitor_batch(
     K: int = 28,
     seed: int = 2026,
     quick: bool = False,
+    bcf_sim: Optional[int] = None,
+    boot_B: Optional[int] = None,
 ) -> Dict:
     """Full product step: Mag×Var + Var(u) + triage decision.
 
@@ -122,6 +128,14 @@ def monitor_batch(
     """
     if quick:
         n_estimators, K = 36, 16
+        if bcf_sim is None:
+            bcf_sim = 24
+        if boot_B is None:
+            boot_B = 12
+    if bcf_sim is None:
+        bcf_sim = 40
+    if boot_B is None:
+        boot_B = 24
     X = np.vstack([np.asarray(X_ref, float), np.asarray(X_live, float)])
     Y = np.concatenate([np.asarray(Y_ref, float).ravel(), np.asarray(Y_live, float).ravel()])
     n0, n1 = len(Y_ref), len(Y_live)
@@ -143,6 +157,8 @@ def monitor_batch(
         phi=phi,
         n_estimators=n_estimators,
         seed=seed,
+        bcf_sim=int(bcf_sim),
+        boot_B=int(boot_B),
     )
     live = W == 1
     V_deb = float(np.mean(np.asarray(var["V_debiased"])[live]))

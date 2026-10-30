@@ -36,6 +36,13 @@ def main(argv=None):
         "biz",
         help="incremental business value (estimators + five apps)",
     )
+    p_cmp = sub.add_parser(
+        "compare",
+        help="CF vs BCF vs bootstrap on existing scenes + coverage",
+    )
+    p_cmp.add_argument("--quick", action="store_true")
+    p_cmp.add_argument("--seed", type=int, default=2026)
+    p_cmp.add_argument("--coverage-reps", type=int, default=10)
 
     args = ap.parse_args(argv)
 
@@ -85,6 +92,32 @@ def main(argv=None):
         )
         print("[biz]", r["pitch_one_liner"], flush=True)
         print("[biz] wrote", out, flush=True)
+        return 0
+
+    if args.cmd == "compare":
+        from po_risk_var.compare_methods import run_compare_suite
+
+        out = REPO_ROOT / "results" / "as_dta_po_risk_var_compare"
+        payload = run_compare_suite(
+            out_dir=out,
+            quick=bool(args.quick),
+            seed=int(args.seed),
+            coverage_reps=int(args.coverage_reps),
+        )
+        docs = REPO_ROOT / "docs" / "method"
+        docs.mkdir(parents=True, exist_ok=True)
+        shutil.copy(out / "README.md", docs / "AS_DTA_po_risk_var_compare.md")
+        art = Path("/opt/cursor/artifacts")
+        art.mkdir(parents=True, exist_ok=True)
+        if (out / "po_risk_var_compare.png").exists():
+            shutil.copy(
+                out / "po_risk_var_compare.png",
+                art / "as_dta_po_risk_var_compare.png",
+            )
+        print("[compare] recommend:", payload["recommend"], flush=True)
+        for b in payload["talk"]["bullets"]:
+            print("[compare]", b, flush=True)
+        print("[compare] wrote", out, flush=True)
         return 0
 
     if args.cmd == "products":

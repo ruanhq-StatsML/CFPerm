@@ -26,6 +26,7 @@ po-risk-var logic
 po-risk-var justify --quick
 po-risk-var products
 po-risk-var biz          # incremental business value per method / app
+po-risk-var compare --quick   # CF vs BCF vs boot on scenes + coverage
 ```
 
 Or without install:
@@ -34,6 +35,7 @@ Or without install:
 PYTHONPATH=Python/po_risk_var:Python/src python3 -m po_risk_var justify --quick
 PYTHONPATH=Python/po_risk_var:Python/src python3 -m po_risk_var products
 PYTHONPATH=Python/po_risk_var:Python/src python3 -m po_risk_var biz
+PYTHONPATH=Python/po_risk_var:Python/src python3 -m po_risk_var compare --quick
 ```
 
 ## API

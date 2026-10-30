@@ -283,6 +283,8 @@ def causal_forest_var_u(
 
     # Var across trees of u^{(b)}; use sample var (not /B) as posterior-style spread of u
     Var_u_tree = u_for_var.var(axis=1, ddof=1)
+    # draws of unit risk: shape (B, n) for coverage / CIs
+    u_draws = u_for_var.T.copy()
     # delta-method map from V_debiased
     r_hat = phi - tau_bar
     Var_u_delta = 4.0 * V_debiased * (r_hat ** 2)
@@ -323,6 +325,7 @@ def causal_forest_var_u(
         "V_builtin_econml": V_builtin,
         "Var_u_tree": Var_u_tree,
         "Var_u_delta": Var_u_delta,
+        "u_draws": u_draws,
         "mean_V_naive": float(np.mean(V_naive)),
         "mean_V_debiased": float(np.mean(V_debiased)),
         "mean_Var_u_tree": float(np.mean(Var_u_tree)),
@@ -606,6 +609,7 @@ def _posterior_var_from_tau_draws(phi: np.ndarray, tau_draws: np.ndarray, backen
         "tau_bar": tau_bar,
         "u_hat": u_hat,
         "Var_u_posterior": Var_u,
+        "u_draws": u_draws,
         "mean_Var_u": float(np.mean(Var_u)),
         "mean_u": float(np.mean(u_hat)),
         "u_draws_std": float(np.std(u_draws)),
@@ -711,6 +715,7 @@ def bootstrap_var_u(
         "winsor_q": winsor_q,
         "u_hat": u_hat,
         "Var_u_boot": Var_u,
+        "u_draws": u_draws,
         "mean_Var_u": float(np.mean(Var_u)),
         "mean_u": float(np.mean(u_hat)),
     }
