@@ -12,19 +12,25 @@ from po_risk_var.biz_value import (
 from po_risk_var.compare_methods import run_compare_suite
 from po_risk_var.estimators import (
     estimate_var_u,
+    leaf_assignment_forest,
+    leaf_assignment_one_tree,
     merge_leaves_forest,
     merge_leaves_one_tree,
     monitor_batch,
+    var_u_from_leaf_merged,
 )
 from po_risk_var.product import TriageDecision, estimator_priority, triage
 from po_risk_var.suite import run_justify_suite
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __all__ = [
     "estimate_var_u",
     "monitor_batch",
+    "leaf_assignment_one_tree",
+    "leaf_assignment_forest",
     "merge_leaves_one_tree",
     "merge_leaves_forest",
+    "var_u_from_leaf_merged",
     "triage",
     "TriageDecision",
     "estimator_priority",
