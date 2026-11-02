@@ -5,12 +5,14 @@
       "known retention / forgetting on pinned REF",
       "attribution: feat_hit + vimp_top_mass",
       "cold-start efficiency n* (budget \u2192 target novel_acc)",
-      "boundary: incomparable rate vs label overlap"
+      "boundary: incomparable rate vs label overlap",
+      "repr-sep: gap_lift on S before head expand"
     ],
     "modes": {
       "weighted": "auto fused/sample + private-live + known replay",
       "membership": "subspace membership only (diagnostic)",
-      "uniform": "flat partial_fit"
+      "uniform": "flat partial_fit",
+      "repr_sep": "attribute \u2192 margin sep on S \u2192 expand head (+ optional TTA)"
     }
   },
   "cgcd_weighted": {
@@ -184,6 +186,83 @@
     "mean_feat_hit": NaN,
     "mean_vimp_top_mass": NaN
   },
+  "cgcd_repr_sep": {
+    "board": "cifar100_cgcd_proxy",
+    "mode": "repr_sep",
+    "stages": [
+      {
+        "stage": 0,
+        "known_acc": 0.4880952380952381,
+        "novel_acc": NaN,
+        "forgetting": 0.5041666666666667,
+        "n_novel_train": 12,
+        "reason": "repr_sep+expand:buffer_ge_N",
+        "phase": "expand",
+        "vimp_top_mass": 0.42000134588361693,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.5440591228110371,
+        "subset_frac": 0.35119047619047616,
+        "membership_conc": 1.0,
+        "weight_mode": "fused",
+        "n_replay": 8,
+        "n_buffered": 12,
+        "buffer_size": 0,
+        "gap_lift": 0.30921098621315757,
+        "expand_fitted": true,
+        "tta_applied": false
+      },
+      {
+        "stage": 1,
+        "known_acc": 0.6125,
+        "novel_acc": 0.75,
+        "forgetting": 0.36250000000000004,
+        "n_novel_train": 8,
+        "reason": "repr_sep+expand:new_private_batch",
+        "phase": "expand",
+        "vimp_top_mass": 0.4352605688300444,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.5385304062334795,
+        "subset_frac": 0.35119047619047616,
+        "membership_conc": 1.0,
+        "weight_mode": "fused",
+        "n_replay": 8,
+        "n_buffered": 8,
+        "buffer_size": 0,
+        "gap_lift": 0.3462821256869324,
+        "expand_fitted": true,
+        "tta_applied": false
+      },
+      {
+        "stage": 2,
+        "known_acc": 0.6363636363636364,
+        "novel_acc": 0.2857142857142857,
+        "forgetting": 0.2875,
+        "n_novel_train": 5,
+        "reason": "repr_sep+expand:new_private_batch",
+        "phase": "expand",
+        "vimp_top_mass": 0.4114622729759748,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.5271948930633211,
+        "subset_frac": 0.35119047619047616,
+        "membership_conc": 1.0,
+        "weight_mode": "fused",
+        "n_replay": 8,
+        "n_buffered": 5,
+        "buffer_size": 0,
+        "gap_lift": 0.3176795965141004,
+        "expand_fitted": true,
+        "tta_applied": false
+      }
+    ],
+    "mean_known_acc": 0.5789862914862915,
+    "mean_novel_acc": 0.5178571428571428,
+    "mean_forgetting": 0.38472222222222224,
+    "mean_feat_hit": 0.125,
+    "mean_vimp_top_mass": 0.4222413958965454
+  },
   "efficiency": {
     "board": "cold_start_efficiency",
     "target": 0.6,
@@ -282,6 +361,37 @@
           {
             "budget": 24,
             "novel_acc": 0.9166666666666666,
+            "n_novel_train": 24
+          }
+        ],
+        "n_star": 16,
+        "target": 0.6
+      },
+      "repr_sep": {
+        "points": [
+          {
+            "budget": 4,
+            "novel_acc": 0.3333333333333333,
+            "n_novel_train": 4
+          },
+          {
+            "budget": 8,
+            "novel_acc": 0.5,
+            "n_novel_train": 8
+          },
+          {
+            "budget": 12,
+            "novel_acc": 0.5833333333333334,
+            "n_novel_train": 12
+          },
+          {
+            "budget": 16,
+            "novel_acc": 0.9166666666666666,
+            "n_novel_train": 16
+          },
+          {
+            "budget": 24,
+            "novel_acc": 1.0,
             "n_novel_train": 24
           }
         ],
@@ -406,21 +516,8 @@
   },
   "delta_novel_acc_vs_uniform": 0.19642857142857142,
   "delta_novel_acc_membership": 0.0,
+  "delta_novel_acc_repr_sep": 0.3214285714285714,
   "delta_forgetting_vs_uniform": 0.005555555555555536,
-  "takeaway": "Cold-start = gate + boundary + auto(fused|sample) weights + known replay. Membership diagnoses; fused sample_w\u00d7subset_w adapts when concentrated.",
-  "multiseed": {
-    "seeds": [
-      2026,
-      2027,
-      2028
-    ],
-    "mean_delta_novel_vs_uniform": 0.0718253968253968,
-    "mean_delta_novel_membership": -0.16507936507936508,
-    "mean_delta_forgetting_vs_uniform": 0.03611111111111113,
-    "efficiency_winners": [
-      "membership",
-      "weighted",
-      "membership"
-    ]
-  }
+  "delta_forgetting_repr_sep": -0.047222222222222276,
+  "takeaway": "Cold-start v3 = detect/attribute \u2192 representation separation on S \u2192 dynamic head expand (buffer\u2265N* or footprint stable) \u2192 optional TTA on S. Weights still fire at expand; sep is the instant-learn step."
 }

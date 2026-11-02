@@ -1,7 +1,7 @@
 """Weighted cold-start under category shift (non-consistent classes).
 
-Cold-start logic (locked)
--------------------------
+Weight channel (still used at head-expand)
+------------------------------------------
   1. Detect error rise (gate).
   2. FSDS RF-domain VIMP → top-K subspace → membership (diagnostic).
   3. Boundary: low label-support Jaccard → incomparable → *no* directed adapt.
@@ -11,6 +11,11 @@ Cold-start logic (locked)
        subset_w  = boost on hard observation subset (membership ≥ q)
        fused_w   = sample_w × subset_w          ← default cold-start channel
   6. partial_fit with fused_w (+ mild amplify of attributed features).
+
+Pipeline v3 (preferred): representation separation *before* head expand.
+See ``repr_sep_cold_start.adapt_batch_repr_sep`` and
+``docs/method/Weighted_cold_start_logic.md``.
+Weights still fire at expand; sep is the instant-learn step.
 
 Pure membership alone is for diagnosis / ablation. Digits/amazon show weights
 are not unconditionally helpful — boundary + sparsity still gate the update.

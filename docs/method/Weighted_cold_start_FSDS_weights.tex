@@ -214,25 +214,62 @@ $s(w)$ vs $\tfrac12$ & cannot approach $\tfrac12$ & ds\_known, then soft \\
 Never random-downsample.
 
 %======================================================================
+\section{Pipeline v3 --- representation before the head}
+%======================================================================
+
+Weights answer \emph{whom to emphasize at expand}.
+When novel is sparse, updating the head first overfits and pulls old
+boundaries. Order matters:
+
+\begin{enumerate}
+  \item \textbf{Detect + attribute.}
+        Error-rise gate; FSDS RF-domain VIMP on $W\in\{0,1\}$
+        $\to$ subspace $\mathcal{S}$ and membership $m_i$.
+        Role $=$ focus, not classify.
+  \item \textbf{Representation separation (instant learn).}
+        Known prototypes $\mu_c$ on $\mathcal{S}$.
+        High-$m_i$ LIVE rows with
+        $d_i=\min_c\|x_i^{\mathcal{S}}-\mu_c\|<\mathrm{margin}$
+        get a margin push away from the nearest old center.
+        Persist a mean $\mathcal{S}$-offset for inference.
+        Sparse samples suffice: we only stop collapse into old centers.
+  \item \textbf{Dynamic head expand (learn completion).}
+        Buffer novel / high-$m$ rows. Expand when
+        $\mathrm{buffer}\ge N^\star$ \emph{or} the attributed footprint
+        stabilizes. Then joint-fit with novel buffer $+$ known replay,
+        using the sample-level channel from Logic~A.
+  \item \textbf{Optional TTA on $\mathcal{S}$.}
+        Entropy-min only on parameters tied to $\mathcal{S}$
+        (tabular: $\mathrm{coef}_{[:,\mathcal{S}]}$); freeze the rest.
+        Revert if entropy rises.
+\end{enumerate}
+
+\paragraph{Rule of thumb.}
+Separate first, classify second.
+Sample-level $w$ and $s(w)$ still audit the expand step;
+they do not replace the geometric preconditioner on $\mathcal{S}$.
+
+%======================================================================
 \section{Takeaway}
 %======================================================================
 
 \begin{enumerate}
   \item \textbf{Weight power} $=$ sample-level soft/hard/fused lift, chosen by
-        complexity. Always needed.
+        complexity. Always needed \emph{at expand}.
   \item \textbf{Novel SGD share} $s(w)$ $=$ mass audit vs 1:1 downsample.
         Needed for the downsample decision; not for channel choice
         ($\mathrm{corr}(s,\Delta\mathrm{novel})\approx 0.05$).
-  \item Together: A picks $w$; B asks if $w$ already owns enough novel mass.
+  \item \textbf{Repr-sep} $=$ instant learn on $\mathcal{S}$ before the head.
+        Expand completes learning once buffer / footprint is ready.
+  \item Together: attribute $\to$ separate $\to$ expand($w$) $\to$ optional TTA.
         Incr of best $w$ over \texttt{ds\_known} $=+0.052$.
-  \item Peaks: soft $+0.25$, hard $+0.32$, fused $+0.33$;
-        best-$w$ mean $+0.178$; ds mean $+0.127$.
 \end{enumerate}
 
 \paragraph{Artifacts.}
 \texttt{weighted\_cold\_start.py},
+\texttt{repr\_sep\_cold\_start.py},
 \texttt{downsample\_vs\_weight\_ablation.py};
-\texttt{results/downsample\_vs\_weight/}
-(incl.\ \texttt{sample\_level\_s\_w\_verified.json}).
+\texttt{results/downsample\_vs\_weight/},
+\texttt{results/repr\_sep\_cold\_start/}.
 
 \end{document}

@@ -1,38 +1,58 @@
-# Cold-start logic (locked): fused sample_w × subset_w
+# Cold-start logic (v3): representation-first
 
 ## One sentence
-Pure **membership** diagnoses *where* the shift lives; cold-start **adapts** with **fused weights** = soft `sample_w` × hard observation `subset_w`, after a boundary gate.
+**Attribute to find subspace \(S\) → separate representations on \(S\) before touching the head → expand the head only when novel mass / footprint is ready → optional TTA restricted to \(S\).**
 
-## Pipeline
-1. **Detect** — LIVE/REF error rise (OnlineRFPerm-style gate).
-2. **Attribute** — FSDS RF-domain VIMP → top-K subspace → membership (diagnostic).
-3. **Boundary** — Jaccard(label supports) low → `incomparable` → skip directed adapt.
-4. **Fuse** — membership ∪ private-live labels (discovered / pseudo ids).
-5. **Weights (`weight_mode=auto` default)**
-   - sharp footprint → **`fused_w = sample_w × subset_w`** (tempered)
-   - diffuse footprint → soft `sample_w` only (digits/amazon guard)
-   - `sample_w = 1 + λ_eff · membership_fused`
-   - `subset_w` boosts hard observation subset `{i : membership ≥ q}`
-6. **Adapt** — mix LIVE (weighted) + known REF replay (weight=1) → `partial_fit`
-   to protect against forgetting while still emphasizing the localized novel set.
+Weights (soft / hard / fused) still matter — they fire at **step 3** (expand). Step 2 is geometry, not importance weighting.
 
-## Why this split
-| channel | role |
-| --- | --- |
-| membership only | diagnosis / ablation — where the footprint is |
-| sample_w | soft emphasis on high-membership rows |
-| subset_w | hard observation subset — concentrate budget on the localized set |
-| fused | cold-start default — soft × hard |
-| incomparable | honesty — do not directed-adapt when label supports barely overlap |
+## Four steps
 
-Digits/amazon show weights are **not** unconditionally helpful: when uniform is already strong or the subset is wrong, fused can over-emphasize sparse novel and hurt known retention. Boundary + sparsity still gate the update.
+### 1. Detect + attribute (RFPerm → FSDS / CFPerm)
+- Gate: LIVE/REF error rise.
+- Attribute: RF-domain VIMP on batch \(W\in\{0,1\}\) → top-\(K\) subspace \(\mathcal{S}\) → membership \(m_i\).
+- Role: **focus**, not classify. On CIFAR-like boards this is a color/texture block; on Office-Home-like boards a domain-style block. Novel already separates in \(\mathcal{S}\); the model just has not used it.
+- Boundary: low label Jaccard → `incomparable` → skip directed adapt.
+
+### 2. Representation separation (**key / "instant learn"**)
+- Sparse novel: **do not** rush the classification head — a few rows overfit and drag old boundaries.
+- On \(\mathcal{S}\), compute known-class prototypes from REF.
+- For high-membership LIVE rows whose distance to the nearest old prototype is \(<\) margin, apply a margin push:
+  \[
+  x_i^{\mathcal{S}} \leftarrow x_i^{\mathcal{S}} + \eta\, m_i\,(\mathrm{margin}-d_i)\,\widehat{(x_i^{\mathcal{S}}-\mu_{\mathrm{nn}})}.
+  \]
+- Persist a mean \(\mathcal{S}\)-offset for inference.
+- This step only needs a few samples: it does **not** teach “what the new class is”, only “stop collapsing into old centers”.
+
+### 3. Dynamic head expand ("learn" completion)
+- Buffer novel / high-mem rows across batches.
+- Expand when `buffer ≥ N*` **or** attributed footprint is stable (VIMP-top mass + membership concentration).
+- Then joint-fit new nodes with **novel buffer + known REF replay**, using the usual weight channel (`auto` → fused if sharp, else soft).
+- This is the completion of learning — it happens **after** separation.
+
+### 4. Optional TTA (cautious)
+- TENT / SHOT-style entropy min is allowed, but **only on parameters tied to \(\mathcal{S}\)** (here: `coef_[:, S]` + light intercept). Freeze the rest.
+- Revert if entropy rises.
+
+## Why this order
+| step | answers | if you skip it |
+| --- | --- | --- |
+| 1 attribute | *where* the shift lives | weights / sep aim at the wrong coords |
+| 2 sep | *stop collapsing* with few rows | head overfits or pulls old boundary |
+| 3 expand | *name* the new class with enough mass | novel_acc stays open-set / rejected |
+| 4 TTA | *fast* BN/head nudge on \(S\) | optional; can drift if global |
+
+## Relation to sample-level weights
+- Feature-level FSDS = subspace picker (\(W\): LIVE vs REF).
+- Sample-level \(w_i\) = SGD share at **expand**.
+- Repr-sep = geometric preconditioner so expand does not fight collapsed features.
+- Downsample vs \(s(w)\) audit still applies at expand time.
 
 ## Code
-- `weighted_cold_start.adapt_batch(..., weight_mode="auto")` — default policy
-- known REF replay mixed into every cold-start step
-- `fsds_cfperm_weight_benchmark` — amazon / digits / news20 / synth_cgcd ablation
+- `Python/src/repr_sep_cold_start.py` — `adapt_batch_repr_sep`, `ColdStartState`
+- `category_shift_boards.run_cgcd(..., mode="repr_sep")`
+- Legacy weight-only path: `weighted_cold_start.adapt_batch` (still default ablation)
 
 ```bash
-python3 scripts/run_weighted_cold_start.py --quick --multiseed
-python3 scripts/run_fsds_cfperm_weight_benchmark.py --quick
+python3 scripts/run_weighted_cold_start.py --quick
+python3 scripts/run_repr_sep_cold_start.py --quick
 ```

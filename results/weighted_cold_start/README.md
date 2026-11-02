@@ -1,6 +1,6 @@
 # Weighted cold-start under category shift (v2)
 
-Cold-start = gate + boundary + auto(fused|sample) weights + known replay. Membership diagnoses; fused sample_w×subset_w adapts when concentrated.
+Cold-start v3 = detect/attribute → representation separation on S → dynamic head expand (buffer≥N* or footprint stable) → optional TTA on S. Weights still fire at expand; sep is the instant-learn step.
 
 ## Protocol (four axes)
 
@@ -9,6 +9,7 @@ Cold-start = gate + boundary + auto(fused|sample) weights + known replay. Member
 - attribution: feat_hit + vimp_top_mass
 - cold-start efficiency n* (budget → target novel_acc)
 - boundary: incomparable rate vs label overlap
+- repr-sep: gap_lift on S before head expand
 
 ### Modes
 
@@ -17,6 +18,7 @@ Cold-start = gate + boundary + auto(fused|sample) weights + known replay. Member
 | weighted | auto fused/sample + private-live + known replay |
 | membership | subspace membership only (diagnostic) |
 | uniform | flat partial_fit |
+| repr_sep | attribute → margin sep on S → expand head (+ optional TTA) |
 
 ## CIFAR-100 C-GCD proxy
 
@@ -39,6 +41,7 @@ Cold-start = gate + boundary + auto(fused|sample) weights + known replay. Member
 | weighted | 16 | 4:0.25, 8:0.33, 12:0.50, 16:0.83, 24:0.75 |
 | membership | 16 | 4:0.25, 8:0.17, 12:0.50, 16:0.92, 24:0.67 |
 | uniform | 16 | 4:0.25, 8:0.33, 12:0.42, 16:0.67, 24:0.92 |
+| repr_sep | 16 | 4:0.33, 8:0.50, 12:0.58, 16:0.92, 24:1.00 |
 
 efficiency winner: **membership**
 
@@ -50,14 +53,10 @@ efficiency winner: **membership**
 | 0.4 | 0.883 | 0.000 | 1.000 |
 | 0.8 | 0.808 | 0.000 | 1.000 |
 
-Directed adapt = detect gate + Jaccard boundary + `w=1+λ·membership` + `partial_fit`.
+Pipeline v3: detect/attribute → repr-sep on S → expand head (weights) → optional TTA on S.
+See `docs/method/Weighted_cold_start_logic.md` and `scripts/run_repr_sep_cold_start.py`.
 
 ```bash
 python3 scripts/run_weighted_cold_start.py --quick
+python3 scripts/run_repr_sep_cold_start.py --quick
 ```
-
-## Multi-seed (2026,2027,2028)
-
-- mean Δnovel (weighted−uniform): **0.072**
-- mean Δforget (uniform−weighted): **0.036**
-- efficiency winners: membership, weighted, membership
