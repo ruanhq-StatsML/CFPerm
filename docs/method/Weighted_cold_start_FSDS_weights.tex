@@ -1,0 +1,170 @@
+% Weighted cold-start under category shift — FSDS/CFPerm sample + subset weights
+% Compile: pdflatex Weighted_cold_start_FSDS_weights.tex
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,array}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\title{Weighted Cold-Start under Category Shift\\
+\large FSDS/CFPerm attribution $\to$ sample weights $\times$ observation-subset weights}
+\author{AS-DTA / CFPerm}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+When a \emph{new category} arrives sparsely in a continuous batch, uniform
+\texttt{partial\_fit} is drowned by known-class recirculation.
+We use FSDS RF-domain VIMP to localize a feature subspace, build soft
+\emph{sample weights} and a hard \emph{observation subset}, and adapt with their
+product after a label-support boundary check.
+On four boards (wine, covertype, 20~Newsgroups-B, breast-cancer), the fused
+channel raises mean novel accuracy by $\Delta\approx{+}0.165$ vs.\ uniform;
+gains concentrate on the new class, which is the product claim.
+\end{abstract}
+
+%----------------------------------------------------------------------
+\section{Problem}
+%----------------------------------------------------------------------
+
+Standard UDA assumes a shared label set.
+\emph{Category shift} breaks that: new classes appear in the stream
+(C-GCD) or source/target supports only partially overlap (PDA).
+The operational question is not only detection, but
+\textbf{cold-start on the new class} without destroying known-class retention.
+
+\paragraph{Claim.}
+Membership from FSDS/CFPerm is a \emph{diagnostic} footprint.
+Cold-start adaptation should use
+\[
+w^{\mathrm{fused}}_i
+= w^{\mathrm{sample}}_i\cdot w^{\mathrm{subset}}_i,
+\]
+gated by support overlap; weights are not unconditionally helpful.
+
+%----------------------------------------------------------------------
+\section{Pipeline}
+%----------------------------------------------------------------------
+
+\begin{enumerate}
+  \item \textbf{Detect:} LIVE/REF error-rise gate (OnlineRFPerm-style).
+  \item \textbf{Attribute:} RF-domain VIMP on batch $W\in\{0,1\}$;
+        top-$K$ subspace $\to$ membership $m_i\in[0,1]$.
+  \item \textbf{Boundary:} Jaccard(label supports)${<}0.2$ $\Rightarrow$
+        \texttt{incomparable} (no directed adapt).
+  \item \textbf{Fuse:} $m_i\leftarrow\max(m_i,\,\mathbf{1}\{y_i\in\mathrm{private\text{-}live}\})$.
+  \item \textbf{Weights:}
+        $w^{\mathrm{sample}}_i=1+\lambda_{\mathrm{eff}} m_i$ (soft);
+        $w^{\mathrm{subset}}_i$ boosts $\{i:m_i\ge q\}$ (hard subset);
+        default $w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$,
+        tempered when $m$ is diffuse.
+  \item \textbf{Adapt:} mix weighted LIVE with known REF replay ($w{=}1$);
+        \texttt{partial\_fit} with $w^{\mathrm{fused}}$ (or soft-only under
+        \texttt{auto} when concentration is low).
+\end{enumerate}
+
+\paragraph{Auto policy.}
+Sharp footprint $\to$ fused; diffuse footprint $\to$ sample-only.
+This guards digits/covertype-style boards where hard subset stacking can
+hurt the novel class.
+
+%----------------------------------------------------------------------
+\section{What to evaluate (novel first)}
+%----------------------------------------------------------------------
+
+\begin{center}
+\small
+\begin{tabular}{@{}lp{0.62\textwidth}@{}}
+\toprule
+Axis & Definition \\
+\midrule
+Novel acc & accuracy on private-live / injected new labels \\
+Known retention & accuracy on recirculated known labels; forgetting on pinned REF \\
+Attribution & top-$K$ VIMP mass; optional feat-hit on synthetic active dims \\
+Efficiency $n^*$ & min novel-sample budget to hit a novel-acc target \\
+Boundary & incomparable rate vs.\ label-overlap (PDA) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The product story is carried by \textbf{novel acc}, not global acc.
+
+%----------------------------------------------------------------------
+\section{Boards}
+%----------------------------------------------------------------------
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Board & Known $\to$ novel & Protocol \\
+\midrule
+wine & $\{0,1\}\to\{2\}$ & UCI wine, sparse inject \\
+covtype & $\{1,2,3\}\to\{4,5\}$ & covertype subsample \\
+news20b & atheism/religion $\to$ med/hardware & TF--IDF, sparse inject \\
+cancer & benign $\to$ malignant & breast-cancer sparse inject \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%----------------------------------------------------------------------
+\section{Results (novel class)}
+%----------------------------------------------------------------------
+
+\paragraph{Absolute novel accuracy (uniform vs.\ both\_fused).}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Dataset & uniform & both\_fused & $\Delta$ novel & known (fused) \\
+\midrule
+wine     & 0.667 & \textbf{1.000} & \textbf{+0.333} & 0.941 \\
+cancer   & 0.800 & \textbf{1.000} & \textbf{+0.200} & 0.778 \\
+news20b  & 0.125 & \textbf{0.250} & \textbf{+0.125} & 0.508 \\
+covtype  & 0.524 & 0.524 & 0.000 & 0.535 \\
+\midrule
+mean $\Delta$ novel (fused) & & & \textbf{+0.165} & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Channel ablation (mean $\Delta$ novel vs.\ uniform).}
+\texttt{sample\_w} alone $\approx{-}0.007$;
+\texttt{subset\_w} alone $\approx{+}0.031$;
+\texttt{sample}$\times$\texttt{subset} $\approx{+}0.117$;
+\texttt{both\_fused} $\approx{+}0.165$.
+Soft $\times$ hard is what moves the new class.
+
+\paragraph{Reading by board.}
+\begin{itemize}
+  \item \textbf{wine:} novel $2/3\to 1$; known flat --- ideal cold-start.
+  \item \textbf{cancer:} novel to $1.0$; known dips slightly --- acceptable tradeoff.
+  \item \textbf{news20b:} novel doubles ($0.125\to0.25$;
+        \texttt{sample\_w\_fused} reaches $0.375$),
+        but known/forgetting pay --- high-d text is expensive.
+  \item \textbf{covtype:} fused does not lift novel; soft
+        \texttt{sample\_w\_fused} reaches $0.619$ ($+0.095$) ---
+        prefer auto/sample when concentration is moderate.
+\end{itemize}
+
+%----------------------------------------------------------------------
+\section{Takeaway}
+%----------------------------------------------------------------------
+
+\begin{enumerate}
+  \item Membership diagnoses \emph{where}; fused weights adapt \emph{on the new class}.
+  \item Product metric $=$ novel acc (+ known retention / boundary honesty).
+  \item Fused is default when the footprint is sharp; otherwise soft sample\_w.
+  \item PDA: low label Jaccard $\Rightarrow$ incomparable, no directed update.
+\end{enumerate}
+
+\paragraph{Code.}
+\texttt{Python/src/weighted\_cold\_start.py},
+\texttt{fsds\_cfperm\_weight\_benchmark.py};
+\texttt{python3 scripts/run\_fsds\_cfperm\_weight\_benchmark.py --quick}.
+
+\end{document}
