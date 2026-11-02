@@ -1,0 +1,197 @@
+{
+  "cgcd_weighted": {
+    "board": "cifar100_cgcd_proxy",
+    "weighted": true,
+    "stages": [
+      {
+        "stage": 0,
+        "known_acc": 0.896551724137931,
+        "novel_acc": 0.9230769230769231,
+        "forgetting": 0.5208333333333333,
+        "reason": "weighted_cold_start",
+        "vimp_top_mass": 0.4823081245488829,
+        "feat_hit": 0.5,
+        "boundary": "comparable"
+      },
+      {
+        "stage": 1,
+        "known_acc": 0.7916666666666666,
+        "novel_acc": 0.9444444444444444,
+        "forgetting": 0.48750000000000004,
+        "reason": "weighted_cold_start",
+        "vimp_top_mass": 0.4837976863241071,
+        "feat_hit": 0.5,
+        "boundary": "comparable"
+      },
+      {
+        "stage": 2,
+        "known_acc": 0.76,
+        "novel_acc": 1.0,
+        "forgetting": 0.37916666666666665,
+        "reason": "weighted_cold_start",
+        "vimp_top_mass": 0.5615778707838477,
+        "feat_hit": 0.625,
+        "boundary": "comparable"
+      }
+    ],
+    "mean_known_acc": 0.8160727969348658,
+    "mean_novel_acc": 0.9558404558404558,
+    "mean_forgetting": 0.46249999999999997,
+    "mean_feat_hit": 0.5416666666666666
+  },
+  "cgcd_uniform": {
+    "board": "cifar100_cgcd_proxy",
+    "weighted": false,
+    "stages": [
+      {
+        "stage": 0,
+        "known_acc": 0.7241379310344828,
+        "novel_acc": 1.0,
+        "forgetting": 0.4625,
+        "reason": "uniform",
+        "vimp_top_mass": null,
+        "feat_hit": null,
+        "boundary": "n/a"
+      },
+      {
+        "stage": 1,
+        "known_acc": 0.7916666666666666,
+        "novel_acc": 0.8888888888888888,
+        "forgetting": 0.43333333333333335,
+        "reason": "uniform",
+        "vimp_top_mass": null,
+        "feat_hit": null,
+        "boundary": "n/a"
+      },
+      {
+        "stage": 2,
+        "known_acc": 0.88,
+        "novel_acc": 0.9411764705882353,
+        "forgetting": 0.4458333333333333,
+        "reason": "uniform",
+        "vimp_top_mass": null,
+        "feat_hit": null,
+        "boundary": "n/a"
+      }
+    ],
+    "mean_known_acc": 0.7986015325670498,
+    "mean_novel_acc": 0.943355119825708,
+    "mean_forgetting": 0.44722222222222224,
+    "mean_feat_hit": NaN
+  },
+  "officehome": {
+    "board": "officehome_pda_proxy",
+    "rows": [
+      {
+        "overlap_frac": 0.1,
+        "target": "Clipart",
+        "jaccard": 0.125,
+        "boundary": "incomparable",
+        "adapted": false,
+        "reason": "incomparable",
+        "shared_acc": 0.675,
+        "vimp_top_mass": 0.6823600629867361
+      },
+      {
+        "overlap_frac": 0.1,
+        "target": "Product",
+        "jaccard": 0.125,
+        "boundary": "incomparable",
+        "adapted": false,
+        "reason": "incomparable",
+        "shared_acc": 0.725,
+        "vimp_top_mass": 0.9024943364031279
+      },
+      {
+        "overlap_frac": 0.1,
+        "target": "Real",
+        "jaccard": 0.125,
+        "boundary": "incomparable",
+        "adapted": false,
+        "reason": "incomparable",
+        "shared_acc": 0.9,
+        "vimp_top_mass": 0.9620817356512652
+      },
+      {
+        "overlap_frac": 0.4,
+        "target": "Clipart",
+        "jaccard": 0.375,
+        "boundary": "comparable",
+        "adapted": true,
+        "reason": "weighted_cold_start",
+        "shared_acc": 0.9833333333333333,
+        "vimp_top_mass": 0.8013490589115017
+      },
+      {
+        "overlap_frac": 0.4,
+        "target": "Product",
+        "jaccard": 0.375,
+        "boundary": "comparable",
+        "adapted": false,
+        "reason": "no_trigger",
+        "shared_acc": 0.9416666666666667,
+        "vimp_top_mass": 0.9490500281765472
+      },
+      {
+        "overlap_frac": 0.4,
+        "target": "Real",
+        "jaccard": 0.375,
+        "boundary": "comparable",
+        "adapted": false,
+        "reason": "no_trigger",
+        "shared_acc": 0.8916666666666667,
+        "vimp_top_mass": 0.9700820995699818
+      },
+      {
+        "overlap_frac": 0.8,
+        "target": "Clipart",
+        "jaccard": 0.8125,
+        "boundary": "comparable",
+        "adapted": true,
+        "reason": "weighted_cold_start",
+        "shared_acc": 0.9038461538461539,
+        "vimp_top_mass": 0.8371630043024777
+      },
+      {
+        "overlap_frac": 0.8,
+        "target": "Product",
+        "jaccard": 0.8125,
+        "boundary": "comparable",
+        "adapted": false,
+        "reason": "no_trigger",
+        "shared_acc": 0.7346153846153847,
+        "vimp_top_mass": 0.957318779945699
+      },
+      {
+        "overlap_frac": 0.8,
+        "target": "Real",
+        "jaccard": 0.8125,
+        "boundary": "comparable",
+        "adapted": true,
+        "reason": "weighted_cold_start",
+        "shared_acc": 0.7730769230769231,
+        "vimp_top_mass": 0.9784461690942702
+      }
+    ],
+    "by_overlap": {
+      "0.1": {
+        "mean_shared_acc": 0.7666666666666666,
+        "incomparable_rate": 1.0,
+        "adapt_rate": 0.0
+      },
+      "0.4": {
+        "mean_shared_acc": 0.9388888888888888,
+        "incomparable_rate": 0.0,
+        "adapt_rate": 0.3333333333333333
+      },
+      "0.8": {
+        "mean_shared_acc": 0.8038461538461538,
+        "incomparable_rate": 0.0,
+        "adapt_rate": 0.6666666666666666
+      }
+    }
+  },
+  "delta_novel_acc": 0.012485336014747883,
+  "delta_forgetting": -0.015277777777777724,
+  "takeaway": "Weighted cold-start (upweight localized subset + selected features) vs uniform partial_fit on C-GCD proxy; Office-Home PDA checks incomparable rate rises as label overlap falls."
+}
