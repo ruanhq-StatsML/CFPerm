@@ -1,6 +1,6 @@
-% Weighted cold-start --- clear incremental-value argument for PO
+% Weighted cold-start --- when the novel-class lift is real (PO)
 % Compile: pdflatex Weighted_cold_start_FSDS_weights.tex
-% Numbers: results/fsds_cfperm_weight_bench/fsds_cfperm_weight_bench.json (v6 boards)
+% Numbers: results/fsds_cfperm_weight_bench (v6) + legacy re-runs
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,booktabs,hyperref,array}
@@ -8,7 +8,7 @@
 \usepackage{lmodern}
 
 \title{Weighted Cold-Start under Category Shift\\
-\large Novel-category predictive lift on non-routine boards (PO)}
+\large When does novel-class prediction improve? (PO)}
 \author{AS-DTA / CFPerm}
 \date{}
 
@@ -17,119 +17,204 @@
 
 \begin{abstract}
 \noindent
-\textbf{Question:} on a \emph{new category}, does FSDS-localized weighting raise
-predictive accuracy vs uniform \texttt{partial\_fit}?
-\textbf{Boards (v6, non-routine):} HAR locomotion$\to$posture, MiceProtein
-control$\to$trisomic, CNAE-9 company docs, JapaneseVowels speakers.
-\textbf{Answer:} yes on 3/4 boards with default fused
-($\overline{\Delta\mathrm{novel}}={+}0.090$); with the right Layer-2 channel
-per board, mean best-channel $\Delta\mathrm{novel}={+}0.194$.
-Largest single lift: HAR posture novel $0.636\to 0.955$ ($+0.318$, hard subset).
+\textbf{Claim:} FSDS-localized weights raise novel-class accuracy only under
+identifiable conditions --- not unconditionally.
+\textbf{Primary evidence:} non-routine boards (HAR / Mice / CNAE-9 / JVowels)
+plus legacy checks (wine / cancer / covtype / news20b / ISOLET).
+\textbf{Rule of thumb:}
+(1)~Layer~1 VIMP must be sharp enough to localize;
+(2)~pick Layer~2 channel by footprint shape (fused / soft / hard);
+(3)~refuse when label supports barely overlap.
+Peak lifts: wine fused $+0.333$, HAR subset $+0.318$, CNAE-9 $+0.188$.
+Diffuse ISOLET (VIMP-top$\approx 0.07$) $\Rightarrow$ no novel lift.
 \end{abstract}
 
 %======================================================================
-\section{Argument in five steps}
+\section{Mechanism (one line)}
 %======================================================================
 
-\paragraph{Step 0 --- Setup.}
-New labels arrive sparsely in LIVE. Uniform \texttt{partial\_fit} is dominated
-by known-class rows. We ask only: \textbf{does novel-class accuracy go up?}
+Layer~1 (FSDS RF-domain VIMP) finds \emph{where} LIVE moved.
+Layer~2 turns membership $m_i$ into observation weights
+(soft \texttt{sample\_w}, hard \texttt{subset\_w}, or
+$w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$).
+Primary metric $=$ novel accuracy on the injected new categories.
 
-\paragraph{Step 1 --- Two layers.}
-Layer~1 (FSDS feature-level VIMP) answers \emph{where}.
-Layer~2 (membership $\to$ soft \texttt{sample\_w} $\times$ hard \texttt{subset\_w})
-answers \emph{whom}. Default $w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$.
+%======================================================================
+\section{When it works --- four conditions}
+%======================================================================
 
-\paragraph{Step 2 --- Metric.}
-Baseline $=$ uniform; treatment $=$ weight channels.
-Primary $=$ \textbf{novel acc} on injected new categories.
-Known/forgetting $=$ cost side-report.
+\subsection*{C1. Layer~1 footprint must be sharp (precondition)}
 
-\paragraph{Step 3 --- Primary novel lifts (v6 boards).}
-\begin{center}
-\small
-\begin{tabular}{@{}llcccc@{}}
-\toprule
-Board & New category story & uniform & fused & $\Delta$fused & best channel ($\Delta$) \\
-\midrule
-har
-  & locomotion $\to$ posture
-  & 0.636 & 0.591 & $-0.045$
-  & \texttt{subset\_w} \textbf{+0.318} ($0.955$) \\
-mice
-  & control $c$-* $\to$ trisomic $t$-*
-  & 0.667 & 0.833 & \textbf{+0.167}
-  & \texttt{both\_fused} \textbf{+0.167} \\
-cnae9
-  & company cats $1$--$5$ $\to$ $6$--$9$
-  & 0.438 & 0.625 & \textbf{+0.188}
-  & any weight \textbf{+0.188} \\
-jvowel
-  & speakers $1$--$5$ $\to$ $6$--$9$
-  & 0.579 & 0.632 & \textbf{+0.053}
-  & \texttt{sample\_w\_fused} \textbf{+0.105} \\
-\midrule
-mean & & & & \textbf{+0.090} & best-channel mean \textbf{+0.194} \\
-\bottomrule
-\end{tabular}
-\end{center}
+If VIMP mass on the top-$K$ features is diffuse, membership is noise and
+\emph{no} Layer~2 channel helps novel acc.
 
-\noindent\textit{Clear read on novel predictive efficacy:}
-\begin{itemize}
-  \item \textbf{cnae9:} new-doc categories $0.438\to 0.625$ ($+0.188$) ---
-        every weight channel lifts novel; fused matches best.
-  \item \textbf{mice:} trisomic classes $0.667\to 0.833$ ($+0.167$) under fused ---
-        biology board where product$+$private-live fuse is exactly right.
-  \item \textbf{jvowel:} novel speakers $0.579\to 0.632$ fused ($+0.053$);
-        soft fused reaches $0.684$ ($+0.105$) --- speaker shift likes soft.
-  \item \textbf{har:} fused alone dips ($-0.045$), but \emph{hard subset}
-        jumps posture novel $0.636\to 0.955$ ($+0.318$) --- largest lift;
-        stacking soft$\times$hard over-concentrates here (auto$\to$subset).
-\end{itemize}
-
-\paragraph{Step 4 --- Why the gain is real (channel story).}
-Mean $\Delta$novel vs uniform on these four boards:
-\texttt{sample\_w} $+0.058$, \texttt{subset\_w} $+0.058$,
-\texttt{both\_fused} $+0.090$,
-best-per-board channel $+0.194$.
-Soft or hard alone already help on average; fused helps more when the
-footprint supports it; picking the sharper of \{fused, sample-fused, subset\}
-nearly doubles the mean novel lift ($0.090\to 0.194$).
-
-\paragraph{Step 5 --- Cost and policy.}
 \begin{center}
 \small
 \begin{tabular}{@{}lccc@{}}
 \toprule
-Board & $\Delta$novel (best) & $\Delta$known @ that channel & Ship \\
+Board & VIMP-top mass & Best $\Delta$novel & Verdict \\
 \midrule
-har    & $+0.318$ (subset) & $-0.049$ & hard subset / auto \\
-mice   & $+0.167$ (fused)  & $-0.196$ & fused (pay known) \\
-cnae9  & $+0.188$ (fused)  & $-0.167$ & fused \\
-jvowel & $+0.105$ (sample fused) & $+0.037$ & soft fused (known also up) \\
+wine    & $0.673$ & fused $+0.333$ & sharp --- works \\
+jvowel  & $0.505$ & soft-fused $+0.105$ & sharp --- works \\
+covtype & $0.587$ & soft $+0.095$ & sharp --- soft path \\
+cnae9   & $0.407$ & $+0.188$ (any wt) & mid-sharp --- works \\
+cancer  & $0.313$ & fused/subset $+0.200$ & mid --- works \\
+news20b & $0.309$ & soft-fused $+0.250$ & mid --- soft path \\
+har     & $0.132$ & \textbf{subset $+0.318$} & weak VIMP, but hard subset OK \\
+\textbf{isolet} & $\mathbf{0.071}$ & $0$ (none beat uniform) & \textbf{diffuse --- fail} \\
 \bottomrule
 \end{tabular}
 \end{center}
-Default fused when sharp; HAR-like boards prefer hard subset; speaker-like
-prefer soft. PDA Jaccard $<0.2$ $\Rightarrow$ refuse adapt.
 
-\paragraph{Negative control.}
-ISOLET (A--M$\to$N--Z) was tried and dropped from the default set:
-VIMP top-mass $\approx 0.07$ (diffuse), no channel beat uniform on novel.
-Confirms Layer~1 must actually localize before Layer~2 can help.
+\noindent\textit{Operational cut.}
+VIMP-top $\gtrsim 0.30$ $\Rightarrow$ weighting is in-play.
+VIMP-top $\lesssim 0.10$ $\Rightarrow$ do \textbf{not} force weights
+(ISOLET negative control).
+Between $0.10$--$0.20$ (HAR): only a \emph{hard} subset may still help;
+fused stacking is risky.
+
+\subsection*{C2. Pick the Layer~2 channel by footprint shape}
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.28\textwidth}p{0.28\textwidth}p{0.34\textwidth}@{}}
+\toprule
+When & Ship & Evidence \\
+\midrule
+Sharp VIMP $+$ clear private-live
+  & \textbf{fused} (\texttt{both\_fused})
+  & wine $+0.333$; mice $+0.167$; cancer $+0.200$; cnae9 $+0.188$ \\
+Moderate / high-d / stacking hurts
+  & \textbf{soft} (\texttt{sample\_w\_fused})
+  & jvowel $+0.105$ ($>$ fused $+0.053$);
+    news20b $+0.250$ ($>$ fused $+0.125$);
+    covtype $+0.095$ (fused $0$) \\
+Novel rows form a tight high-$m$ cluster; soft$\times$hard over-concentrates
+  & \textbf{hard subset} (\texttt{subset\_w})
+  & HAR $0.636\to 0.955$ ($+0.318$); fused dips $-0.045$ \\
+Diffuse VIMP or PDA low Jaccard
+  & \textbf{refuse} (uniform / incomparable)
+  & ISOLET; PDA overlap $0.1$ refuse rate $1.0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Auto policy already encodes the soft-vs-fused fork
+(sharp $\to$ fused; diffuse $\to$ sample).
+HAR shows an extra fork: when hard subset alone dominates, do not multiply
+by soft.
+
+\subsection*{C3. Private-live fuse matters when membership under-covers the new class}
+
+Membership is a geometric score in the VIMP subspace --- it can miss
+true novel rows. Fusing $m_i\leftarrow\max(m_i,\,1\{y_i\in\mathrm{private\text{-}live}\})$
+is what turns diagnosis into cold-start.
+
+\begin{center}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Board & product (no fuse) $\Delta$novel & fused $\Delta$novel & Fuse value \\
+\midrule
+mice    & $-0.389$ & $+0.167$ & \textbf{essential} ($+0.556$ swing) \\
+news20b & $+0.125$ (sample alone $-0.125$)
+        & soft-fused $+0.250$ & fuse rescues soft \\
+wine    & $+0.333$ & $+0.333$ & redundant (already sharp) \\
+cnae9   & $+0.188$ & $+0.188$ & redundant \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textit{When fuse helps most:}
+new class is sparse and membership ranks it only partially
+(mice biology; noisy text). Skip worrying about fuse only when product
+already saturates novel (wine / cnae9).
+
+\subsection*{C4. Boundary honesty --- refuse when supports barely overlap}
+
+PDA proxy (OfficeHome-style):
+overlap $0.1$ $\Rightarrow$ incomparable rate $1.0$, adapt rate $0.0$.
+This is not a ``failed lift''; it is incremental value as
+\textbf{risk avoided} (no poisoned \texttt{partial\_fit}).
+Condition for directed cold-start: label Jaccard $\gtrsim 0.2$.
+
+%======================================================================
+\section{Detailed board map (novel predictive efficacy)}
+%======================================================================
+
+\begin{center}
+\small
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+Board & New-category story & uniform & best channel & $\Delta$novel & Regime \\
+\midrule
+wine
+  & $\{0,1\}\to\{2\}$
+  & 0.667 & fused & $+0.333$ & C1 sharp / C2 fused \\
+har
+  & locomotion $\to$ posture
+  & 0.636 & subset & $+0.318$ & C2 hard subset \\
+news20b
+  & religion $\to$ med/hardware
+  & 0.125 & soft-fused & $+0.250$ & C2 soft / C3 fuse \\
+cancer
+  & benign $\to$ malignant
+  & 0.800 & fused/subset & $+0.200$ & C1 mid / C2 fused \\
+cnae9
+  & docs $1$--$5$ $\to$ $6$--$9$
+  & 0.438 & any weight & $+0.188$ & C1 mid-sharp \\
+mice
+  & control $\to$ trisomic
+  & 0.667 & fused & $+0.167$ & C3 fuse essential \\
+jvowel
+  & speakers $1$--$5$ $\to$ $6$--$9$
+  & 0.579 & soft-fused & $+0.105$ & C2 soft \\
+covtype
+  & $\{1,2,3\}\to\{4,5\}$
+  & 0.524 & soft & $+0.095$ & C2 soft (fused null) \\
+isolet
+  & letters A--M $\to$ N--Z
+  & 0.350 & none & $0$ & C1 fail \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Cost side (when ``good on novel'' still hurts known).}
+mice fused: known $-0.196$ for novel $+0.167$ --- acceptable only if novel
+cold-start is the product KPI.
+cnae9 fused: known $-0.167$ for novel $+0.188$.
+jvowel soft-fused: known \emph{up} $+0.037$ with novel $+0.105$ --- ideal.
+wine fused: known flat --- free lunch.
+HAR subset: known $-0.049$ for novel $+0.318$ --- excellent tradeoff.
+
+%======================================================================
+\section{Decision checklist for PO / ops}
+%======================================================================
+
+\begin{enumerate}
+  \item \textbf{Gate:} LIVE/REF error rise fires?
+  \item \textbf{C1:} VIMP-top mass $\gtrsim 0.30$?
+        If $\lesssim 0.10$ $\to$ hold (uniform). If $0.10$--$0.20$ $\to$ try hard subset only.
+  \item \textbf{C4:} label Jaccard $\ge 0.2$? Else \texttt{incomparable}.
+  \item \textbf{C3:} fuse membership with private-live / discovered ids.
+  \item \textbf{C2:} concentration sharp $\to$ fused;
+        diffuse or high-d text/speaker $\to$ soft;
+        tight high-$m$ cluster with fused regressing $\to$ hard subset.
+  \item \textbf{Readout:} report novel acc first; known/forgetting as cost.
+\end{enumerate}
 
 %======================================================================
 \section{PO bottom line}
 %======================================================================
 
 \begin{enumerate}
-  \item On non-routine boards, \textbf{new-category prediction does improve}
-        under FSDS-localized weights.
-  \item Headline: mean $\Delta$novel(fused)$=\mathbf{+0.090}$;
-        best-channel mean $\mathbf{+0.194}$; peak HAR $+0.318$.
-  \item cnae9 / mice are clean fused wins; jvowel prefers soft;
-        HAR prefers hard subset (fused alone is not enough).
-  \item Diffuse footprint (ISOLET) $\Rightarrow$ no novel lift --- do not force weights.
+  \item Effects match expectation \emph{when} Layer~1 localizes and Layer~2
+        channel matches footprint shape.
+  \item Best regimes: sharp fused (wine/mice/cnae9/cancer), soft
+        (jvowel/news20b/covtype), hard subset (HAR).
+  \item Failure regime: diffuse VIMP (ISOLET) or PDA incomparable --- do not force.
+  \item Numbers to remember: peak $+0.333$ / $+0.318$; v6 fused mean $+0.090$;
+        best-channel mean $+0.194$.
 \end{enumerate}
 
 \paragraph{Artifacts.}
