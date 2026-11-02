@@ -1,11 +1,11 @@
 """Benchmark FSDS/CFPerm → sample weights + observation-subset weights.
 
-Datasets
---------
-  amazon     continuous category hops (real reviews)
-  digits     class-block shift (0-4 → inject 5-9)
-  news20     TF-IDF 3-topic shift (held-out topic influx)
-  synth_cgcd sparse novel-class C-GCD proxy
+Datasets (v5 swap)
+------------------
+  wine       UCI wine; known {0,1} → sparse inject {2}
+  covtype    covertype subsample; known {1,2,3} → sparse {4,5}
+  news20b    TF-IDF 4-topic board (atheism/religion/med/hardware)
+  cancer     breast-cancer; REF class0 + LIVE recirculate + sparse class1
 
 Weight channels (from FSDS RF-domain VIMP + subset localization)
 ---------------------------------------------------------------
@@ -20,11 +20,9 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-from sklearn.datasets import fetch_20newsgroups, load_digits, make_classification
+from sklearn.datasets import fetch_20newsgroups
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from weighted_cold_start import (
@@ -56,62 +54,56 @@ def cfperm_feature_reject(
 # ---------------------------------------------------------------------------
 
 
-def board_amazon(*, n_per: int = 100, max_features: int = 64, seed: int = SEED) -> Dict:
-    from amazon_continuous_batches import (
-        CACHE_DIR,
-        CATEGORIES,
-        featurize_reviews,
-        load_amazon_reviews,
-    )
-
-    raw = load_amazon_reviews(
-        categories=list(CATEGORIES[:4]), n_per=n_per, seed=seed, cache_dir=CACHE_DIR,
-    )
-    st = featurize_reviews(raw, max_features=max_features)
-    X, batch = np.asarray(st.X, float), np.asarray(st.batch, int)
-    # label = category id; REF = cats 0,1; LIVE = recirculate known + sparse novel 2,3
+def _sparse_novel_split(X, y, known, novel, *, seed, n_ref, n_live_k, n_live_n):
     rng = np.random.default_rng(seed)
-    known_idx = np.flatnonzero(batch <= 1)
-    novel_idx = np.flatnonzero(batch >= 2)
-    ref = rng.choice(known_idx, size=min(160, len(known_idx)), replace=False)
-    live_k = rng.choice(known_idx, size=min(120, len(known_idx)), replace=False)
-    live_n = rng.choice(novel_idx, size=min(30, len(novel_idx)), replace=False)
-    live = np.concatenate([live_k, live_n])
-    return {
-        "name": "amazon",
-        "X_ref": X[ref], "y_ref": batch[ref],
-        "X_live": X[live], "y_live": batch[live],
-        "note": "category hop: REF cats{0,1}; LIVE recirculate + sparse cats{2,3}",
-        "known_labels": [0, 1],
-        "novel_labels": [2, 3],
-    }
-
-
-def board_digits(*, seed: int = SEED) -> Dict:
-    X, y = load_digits(return_X_y=True)
-    X = StandardScaler().fit_transform(np.asarray(X, float))
-    y = np.asarray(y, int)
-    # REF: digits 0-4; LIVE: mix 0-4 recirculation + 5-9 novel influx (sparse)
-    rng = np.random.default_rng(seed)
-    known = np.flatnonzero(y <= 4)
-    novel = np.flatnonzero(y >= 5)
-    ref = rng.choice(known, size=min(400, len(known)), replace=False)
-    live_k = rng.choice(known, size=160, replace=False)
-    live_n = rng.choice(novel, size=32, replace=False)  # sparser novel
+    X, y = np.asarray(X, float), np.asarray(y).ravel()
+    k_idx = np.flatnonzero(np.isin(y, known))
+    n_idx = np.flatnonzero(np.isin(y, novel))
+    ref = rng.choice(k_idx, size=min(n_ref, len(k_idx)), replace=False)
+    live_k = rng.choice(k_idx, size=min(n_live_k, len(k_idx)), replace=False)
+    live_n = rng.choice(n_idx, size=min(n_live_n, len(n_idx)), replace=False)
     live = np.concatenate([live_k, live_n])
     rng.shuffle(live)
+    return X[ref], y[ref], X[live], y[live]
+
+
+def board_wine(*, seed: int = SEED) -> Dict:
+    from sklearn.datasets import load_wine
+    X, y = load_wine(return_X_y=True)
+    X = StandardScaler().fit_transform(np.asarray(X, float))
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=[0, 1], novel=[2], seed=seed, n_ref=90, n_live_k=50, n_live_n=12,
+    )
     return {
-        "name": "digits",
-        "X_ref": X[ref], "y_ref": y[ref],
-        "X_live": X[live], "y_live": y[live],
-        "note": "known 0-4 REF; LIVE sparse inject 5-9 (~1:5)",
-        "novel_labels": list(range(5, 10)),
-        "known_labels": list(range(0, 5)),
+        "name": "wine", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "UCI wine; known {0,1} → sparse inject {2}",
+        "known_labels": [0, 1], "novel_labels": [2],
     }
 
 
-def board_news20(*, seed: int = SEED, max_features: int = 128) -> Dict:
-    cats = ["sci.space", "rec.sport.baseball", "comp.graphics"]
+def board_covtype(*, seed: int = SEED, quick: bool = True) -> Dict:
+    from sklearn.datasets import fetch_covtype
+    data = fetch_covtype()
+    X, y = np.asarray(data.data, float), np.asarray(data.target, int)
+    # subsample for speed
+    rng = np.random.default_rng(seed)
+    keep = np.isin(y, [1, 2, 3, 4, 5])
+    idx = np.flatnonzero(keep)
+    idx = rng.choice(idx, size=min(4000 if quick else 8000, len(idx)), replace=False)
+    X, y = StandardScaler().fit_transform(X[idx]), y[idx]
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=[1, 2, 3], novel=[4, 5], seed=seed + 1,
+        n_ref=800 if quick else 1600, n_live_k=300, n_live_n=60,
+    )
+    return {
+        "name": "covtype", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "covertype subsample; known {1,2,3} → sparse {4,5}",
+        "known_labels": [1, 2, 3], "novel_labels": [4, 5],
+    }
+
+
+def board_news20b(*, seed: int = SEED, max_features: int = 96) -> Dict:
+    cats = ["alt.atheism", "talk.religion.misc", "sci.med", "comp.sys.ibm.pc.hardware"]
     bun = fetch_20newsgroups(
         subset="train", categories=cats, remove=("headers", "footers", "quotes"),
         shuffle=True, random_state=seed,
@@ -119,50 +111,39 @@ def board_news20(*, seed: int = SEED, max_features: int = 128) -> Dict:
     vec = TfidfVectorizer(max_features=max_features, stop_words="english")
     X = vec.fit_transform(bun.data).toarray()
     y = np.asarray(bun.target, int)
-    # REF: topics 0,1; LIVE: recirculate + sparse topic 2
-    rng = np.random.default_rng(seed)
-    known = np.flatnonzero(y <= 1)
-    novel = np.flatnonzero(y == 2)
-    ref = rng.choice(known, size=min(500, len(known)), replace=False)
-    live_k = rng.choice(known, size=180, replace=False)
-    live_n = rng.choice(novel, size=36, replace=False)
-    live = np.concatenate([live_k, live_n])
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=[0, 1], novel=[2, 3], seed=seed,
+        n_ref=500, n_live_k=180, n_live_n=40,
+    )
     return {
-        "name": "news20",
-        "X_ref": X[ref], "y_ref": y[ref],
-        "X_live": X[live], "y_live": y[live],
-        "note": "TF-IDF; known sci/rec → sparse inject comp.graphics (~1:5)",
-        "novel_labels": [2],
-        "known_labels": [0, 1],
+        "name": "news20b", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "TF-IDF 4-topic; known atheism/religion → sparse med/hardware",
+        "known_labels": [0, 1], "novel_labels": [2, 3],
     }
 
 
-def board_synth_cgcd(*, seed: int = SEED, quick: bool = True) -> Dict:
-    from category_shift_boards import make_cgcd_stream
-
-    stream = make_cgcd_stream(
-        n_known=8 if quick else 12, n_novel_per_stage=2, n_stages=1,
-        n_per=30 if quick else 40, p=20 if quick else 32, novel_dims=6, seed=seed,
+def board_cancer(*, seed: int = SEED) -> Dict:
+    from sklearn.datasets import load_breast_cancer
+    X, y = load_breast_cancer(return_X_y=True)
+    X = StandardScaler().fit_transform(np.asarray(X, float))
+    # REF on benign(0); LIVE recirculate benign + sparse malignant(1) as "novel"
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=[0], novel=[1], seed=seed, n_ref=220, n_live_k=100, n_live_n=24,
     )
-    st = stream["stages"][0]
     return {
-        "name": "synth_cgcd",
-        "X_ref": stream["X_ref"], "y_ref": stream["y_ref"],
-        "X_live": st["X"], "y_live": st["y"],
-        "note": "synthetic sparse novel C-GCD",
-        "novel_labels": st["novel"],
-        "known_labels": stream["known"],
-        "active_dims": st["active_dims"],
+        "name": "cancer", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "breast-cancer; REF benign → LIVE + sparse malignant",
+        "known_labels": [0], "novel_labels": [1],
     }
 
 
 def load_boards(*, seed: int = SEED, quick: bool = True) -> List[Dict]:
     boards = []
     for fn in (
-        lambda: board_digits(seed=seed),
-        lambda: board_news20(seed=seed, max_features=96 if quick else 128),
-        lambda: board_synth_cgcd(seed=seed, quick=quick),
-        lambda: board_amazon(n_per=60 if quick else 100, max_features=48 if quick else 64, seed=seed),
+        lambda: board_wine(seed=seed),
+        lambda: board_covtype(seed=seed, quick=quick),
+        lambda: board_news20b(seed=seed, max_features=64 if quick else 96),
+        lambda: board_cancer(seed=seed),
     ):
         try:
             boards.append(fn())
