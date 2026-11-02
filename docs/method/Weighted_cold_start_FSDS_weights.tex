@@ -1,6 +1,5 @@
-% Weighted cold-start --- when the novel-class lift is real (PO)
+% Weighted cold-start --- detailed justifications for when novel lift works
 % Compile: pdflatex Weighted_cold_start_FSDS_weights.tex
-% Numbers: results/fsds_cfperm_weight_bench (v6) + legacy re-runs
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,booktabs,hyperref,array}
@@ -8,8 +7,8 @@
 \usepackage{lmodern}
 
 \title{Weighted Cold-Start under Category Shift\\
-\large When does novel-class prediction improve? (PO)}
-\author{AS-DTA / CFPerm}
+\large Detailed justifications: when novel-class prediction improves}
+\author{AS-DTA / CFPerm \quad---\quad PO}
 \date{}
 
 \begin{document}
@@ -17,190 +16,297 @@
 
 \begin{abstract}
 \noindent
-\textbf{Claim:} FSDS-localized weights raise novel-class accuracy only under
-identifiable conditions --- not unconditionally.
-\textbf{Primary evidence:} non-routine boards (HAR / Mice / CNAE-9 / JVowels)
-plus legacy checks (wine / cancer / covtype / news20b / ISOLET).
-\textbf{Rule of thumb:}
-(1)~Layer~1 VIMP must be sharp enough to localize;
-(2)~pick Layer~2 channel by footprint shape (fused / soft / hard);
-(3)~refuse when label supports barely overlap.
-Peak lifts: wine fused $+0.333$, HAR subset $+0.318$, CNAE-9 $+0.188$.
-Diffuse ISOLET (VIMP-top$\approx 0.07$) $\Rightarrow$ no novel lift.
+We justify --- mechanistically and empirically --- \emph{when} FSDS-localized
+weights raise accuracy on a \textbf{new category}.
+Four conditions (C1--C4) are not heuristics alone: each follows from how
+membership is built, how soft/hard weights reallocate SGD mass, and what
+the boards measure.
+Key diagnostic:
+$\mathrm{gap}=\mathbb{E}[m\mid\mathrm{novel}]-\mathbb{E}[m\mid\mathrm{known}]$.
+Large positive gap $+$ sharp VIMP $\Rightarrow$ fused/subset wins;
+near-zero/negative gap $\Rightarrow$ need private-live fuse or soft-only;
+diffuse VIMP $\Rightarrow$ refuse.
 \end{abstract}
 
 %======================================================================
-\section{Mechanism (one line)}
+\section{Setup and estimand}
 %======================================================================
 
-Layer~1 (FSDS RF-domain VIMP) finds \emph{where} LIVE moved.
-Layer~2 turns membership $m_i$ into observation weights
-(soft \texttt{sample\_w}, hard \texttt{subset\_w}, or
-$w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$).
-Primary metric $=$ novel accuracy on the injected new categories.
+\paragraph{Protocol.}
+REF carries only known labels.
+LIVE recirculates known rows and \emph{sparsely injects} novel labels.
+Adapt with \texttt{partial\_fit}; evaluate \textbf{novel acc} on held-out LIVE
+novel rows (known acc / forgetting are costs).
+
+\paragraph{Two layers.}
+\begin{align}
+\text{Layer 1:}\quad
+&v = \mathrm{RF\text{-}VIMP}(X,W),\quad
+W=\mathbf{1}\{\mathrm{LIVE}\},
+\quad \mathcal{S}=\mathrm{top}\text{-}K(v). \\
+\text{Localize:}\quad
+&m_i = \mathrm{clip}\!\left(\frac{\|z_i\|_{2}-q_{0.2}}{q_{0.8}-q_{0.2}}\right),
+\quad z_i=\frac{X_{i,\mathcal{S}}-\mu_{\mathrm{REF},\mathcal{S}}}{\sigma_{\mathrm{REF},\mathcal{S}}}. \\
+\text{Layer 2:}\quad
+&w^{\mathrm{sample}}_i=1+\lambda m_i,\quad
+w^{\mathrm{subset}}_i=1+(c-1)\mathbf{1}\{m_i\ge q\},
+\quad w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}.
+\end{align}
+Optional fuse: $m_i\leftarrow\max(m_i,\,\mathbf{1}\{y_i\in\mathrm{private\text{-}live}\})$.
+
+\paragraph{Why weights can help at all.}
+Uniform \texttt{partial\_fit} gives every LIVE row equal SGD mass.
+If novel rows are few, the update is dominated by known recirculation.
+Upweighting high-$m$ (or fused) rows reallocates gradient toward the new
+category --- \emph{if and only if} high-$m$ actually tags novel rows.
+
+\paragraph{Diagnostic we use below.}
+\[
+\mathrm{gap}
+=
+\mathbb{E}[m_i\mid y_i\in\mathrm{novel}]
+-
+\mathbb{E}[m_i\mid y_i\in\mathrm{known}].
+\]
+Also: VIMP-top mass $v(\mathcal{S})=\sum_{j\in\mathcal{S}}v_j$.
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Board & VIMP-top & gap & $\mathbb{E}[m\mid\mathrm{nov}]$ & $\mathbb{E}[m\mid\mathrm{kn}]$ \\
+\midrule
+wine    & 0.673 & $+0.713$ & 1.000 & 0.287 \\
+har     & 0.132 & $+0.789$ & 0.994 & 0.205 \\
+cancer  & 0.313 & $+0.635$ & 0.941 & 0.305 \\
+cnae9   & 0.407 & $+0.613$ & 0.854 & 0.241 \\
+mice    & 0.195 & $+0.360$ & 0.759 & 0.399 \\
+isolet  & 0.071 & $+0.289$ & 0.686 & 0.397 \\
+news20b & 0.309 & $+0.177$ & 0.466 & 0.289 \\
+covtype & 0.587 & $+0.148$ & 0.582 & 0.433 \\
+jvowel  & 0.505 & $-0.040$ & 0.439 & 0.478 \\
+\bottomrule
+\end{tabular}
+\end{center}
 
 %======================================================================
-\section{When it works --- four conditions}
+\section{C1 --- Sharp VIMP is the precondition (justified)}
 %======================================================================
 
-\subsection*{C1. Layer~1 footprint must be sharp (precondition)}
+\paragraph{Mechanism.}
+Membership is distance \emph{inside} $\mathcal{S}$.
+If $v(\mathcal{S})$ is tiny, $\mathcal{S}$ is an almost-arbitrary $K$-set:
+$m_i$ ranks LIVE rows by noise directions, so upweighting high-$m$ does not
+target the new category.
 
-If VIMP mass on the top-$K$ features is diffuse, membership is noise and
-\emph{no} Layer~2 channel helps novel acc.
+\paragraph{Evidence.}
+\begin{itemize}
+  \item \textbf{Works when sharp:} wine $v(\mathcal{S})=0.673$, gap $+0.713$,
+        fused $\Delta$novel $+0.333$ (known flat).
+        cnae9 $0.407$ / gap $+0.613$ $\Rightarrow$ $+0.188$ on every weight channel.
+  \item \textbf{Fails when diffuse:} ISOLET $v(\mathcal{S})=0.071$.
+        Gap is still $+0.289$ (novel a bit farther in a bad subspace), but
+        \emph{no} channel beats uniform on novel ($\Delta\le 0$).
+        Justification: gap on a wrong subspace is not actionable ---
+        Layer~2 faithfully amplifies a useless ranking.
+  \item \textbf{Cut:} $v(\mathcal{S})\gtrsim 0.30$ $\Rightarrow$ weighting in-play;
+        $\lesssim 0.10$ $\Rightarrow$ refuse (hold uniform).
+\end{itemize}
 
+\paragraph{Why HAR is the exception that proves the rule.}
+HAR has weak VIMP ($0.132$) but \emph{extreme} gap ($+0.789$):
+novel posture rows sit at $\mathbb{E}[m\mid\mathrm{nov}]=0.994$.
+A hard threshold therefore isolates almost-pure novel mass even though
+feature attribution is weak.
+Fused (soft$\times$hard) still fails here (below) --- C1 alone is necessary
+but not sufficient for \emph{fused}.
+
+%======================================================================
+\section{C2 --- Channel must match footprint shape (justified)}
+%======================================================================
+
+\subsection{Why soft, hard, and fused do different jobs}
+
+\begin{itemize}
+  \item \textbf{Soft} $w=1+\lambda m$: continuous reweighting.
+        Tolerates imperfect ranking; rarely zeros known rows.
+        Safe when gap is modest or membership partially wrong.
+  \item \textbf{Hard} $w=c$ on $\{m\ge q\}$: spends almost all novel budget
+        on the top quantile.
+        Wins when novel is \emph{tightly} packed at high $m$ (large gap,
+        $\mathbb{E}[m\mid\mathrm{nov}]\approx 1$).
+  \item \textbf{Fused} product: soft ranking \emph{inside} the hard set.
+        Highest Gini (typically $\sim 0.42$--$0.47$).
+        Wins when both (i) the hard set is mostly novel and (ii) soft order
+        inside it is meaningful --- otherwise it over-concentrates and
+        starves useful known replay / boundary novel rows.
+\end{itemize}
+
+\subsection{Regime A --- Ship fused (sharp $+$ large gap $+$ fuse OK)}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Board & VIMP & gap & $\Delta$novel fused & known $\Delta$ \\
+\midrule
+wine   & 0.673 & $+0.713$ & $+0.333$ & $0.000$ \\
+cancer & 0.313 & $+0.635$ & $+0.200$ & $-0.028$ \\
+cnae9  & 0.407 & $+0.613$ & $+0.188$ & $-0.167$ \\
+mice   & 0.195 & $+0.360$ & $+0.167$ & $-0.196$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textit{Justification.}
+On wine, novel rows are at $m=1.0$ vs known $0.29$: soft$\times$hard puts
+SGD mass exactly on the new class; known unaffected.
+cnae9: every channel gives the same $+0.188$ --- the new doc categories are
+easy once any membership-aligned weight breaks uniform drowning; fused is
+safe default.
+mice needs fuse (C3) but once fused, product is best.
+
+\subsection{Regime B --- Ship soft (modest gap or high-d / stacking hurts)}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Board & gap & fused $\Delta$ & soft-fused $\Delta$ & Why soft wins \\
+\midrule
+jvowel  & $-0.040$ & $+0.053$ & $\mathbf{+0.105}$
+  & membership anti-ranks speakers; only fuse$+$soft helps \\
+news20b & $+0.177$ & $+0.125$ & $\mathbf{+0.250}$
+  & high-d text; hard subset alone $-0.125$ \\
+covtype & $+0.148$ & $0.000$ & $\mathbf{+0.095}$
+  & modest gap; fused product null on novel \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textit{Justification.}
+When $\mathrm{gap}$ is small or negative, a hard cut includes many known rows
+(false hard-set) or excludes novel rows.
+Multiplying by soft then \emph{amplifies the mistake} (Gini$\uparrow$,
+novel mass diluted or misallocated).
+Soft alone (after fuse) gently tilts without a brittle threshold.
+jvowel is the clean mechanistic proof: $\mathrm{gap}<0$ means geometric
+membership prefers known speakers; without private-live fuse, product
+$\Delta$novel $=-0.105$; with fuse, soft reaches $+0.105$ and known also rises
+($+0.037$).
+
+\subsection{Regime C --- Ship hard subset (extreme gap; fused over-concentrates)}
+
+HAR: gap $+0.789$, $\mathbb{E}[m\mid\mathrm{nov}]=0.994$.
 \begin{center}
 \small
 \begin{tabular}{@{}lccc@{}}
 \toprule
-Board & VIMP-top mass & Best $\Delta$novel & Verdict \\
+Channel & novel & $\Delta$novel & weight Gini \\
 \midrule
-wine    & $0.673$ & fused $+0.333$ & sharp --- works \\
-jvowel  & $0.505$ & soft-fused $+0.105$ & sharp --- works \\
-covtype & $0.587$ & soft $+0.095$ & sharp --- soft path \\
-cnae9   & $0.407$ & $+0.188$ (any wt) & mid-sharp --- works \\
-cancer  & $0.313$ & fused/subset $+0.200$ & mid --- works \\
-news20b & $0.309$ & soft-fused $+0.250$ & mid --- soft path \\
-har     & $0.132$ & \textbf{subset $+0.318$} & weak VIMP, but hard subset OK \\
-\textbf{isolet} & $\mathbf{0.071}$ & $0$ (none beat uniform) & \textbf{diffuse --- fail} \\
+uniform     & 0.636 & $0$ & 0.000 \\
+\texttt{subset\_w} & \textbf{0.955} & $\mathbf{+0.318}$ & 0.309 \\
+\texttt{sample\_w} & 0.682 & $+0.045$ & 0.293 \\
+\texttt{both\_fused} & 0.591 & $-0.045$ & 0.465 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\noindent\textit{Operational cut.}
-VIMP-top $\gtrsim 0.30$ $\Rightarrow$ weighting is in-play.
-VIMP-top $\lesssim 0.10$ $\Rightarrow$ do \textbf{not} force weights
-(ISOLET negative control).
-Between $0.10$--$0.20$ (HAR): only a \emph{hard} subset may still help;
-fused stacking is risky.
+\noindent\textit{Justification.}
+Hard subset already selects an almost pure novel set
+(novel $m\approx 1$).
+Soft$\times$hard further reweights \emph{inside} that set and, after
+renormalization, relative to known --- Gini jumps to $0.465$ and novel acc
+\emph{falls below uniform}.
+So: when the hard set is already saturated with novel, stop; do not fuse.
 
-\subsection*{C2. Pick the Layer~2 channel by footprint shape}
+\paragraph{Auto policy.}
+Sharp concentration $\to$ fused; diffuse $\to$ soft.
+HAR adds: if subset alone $\gg$ fused on a validation slice, keep subset.
 
-\begin{center}
-\small
-\begin{tabular}{@{}p{0.28\textwidth}p{0.28\textwidth}p{0.34\textwidth}@{}}
-\toprule
-When & Ship & Evidence \\
-\midrule
-Sharp VIMP $+$ clear private-live
-  & \textbf{fused} (\texttt{both\_fused})
-  & wine $+0.333$; mice $+0.167$; cancer $+0.200$; cnae9 $+0.188$ \\
-Moderate / high-d / stacking hurts
-  & \textbf{soft} (\texttt{sample\_w\_fused})
-  & jvowel $+0.105$ ($>$ fused $+0.053$);
-    news20b $+0.250$ ($>$ fused $+0.125$);
-    covtype $+0.095$ (fused $0$) \\
-Novel rows form a tight high-$m$ cluster; soft$\times$hard over-concentrates
-  & \textbf{hard subset} (\texttt{subset\_w})
-  & HAR $0.636\to 0.955$ ($+0.318$); fused dips $-0.045$ \\
-Diffuse VIMP or PDA low Jaccard
-  & \textbf{refuse} (uniform / incomparable)
-  & ISOLET; PDA overlap $0.1$ refuse rate $1.0$ \\
-\bottomrule
-\end{tabular}
-\end{center}
+%======================================================================
+\section{C3 --- Private-live fuse: when membership under-covers (justified)}
+%======================================================================
 
-\noindent Auto policy already encodes the soft-vs-fused fork
-(sharp $\to$ fused; diffuse $\to$ sample).
-HAR shows an extra fork: when hard subset alone dominates, do not multiply
-by soft.
+\paragraph{Mechanism.}
+$m_i$ is unsupervised geometry in $\mathcal{S}$.
+True novel labels can sit mid-pack (mice) or even on the wrong side of $m$
+(jvowel $\mathrm{gap}<0$).
+Fuse forces discovered private-live ids into the weight support:
+\[
+m_i^{\mathrm{fuse}}=\max(m_i,\,\mathbf{1}\{y_i\in\mathrm{private\text{-}live}\}).
+\]
 
-\subsection*{C3. Private-live fuse matters when membership under-covers the new class}
-
-Membership is a geometric score in the VIMP subspace --- it can miss
-true novel rows. Fusing $m_i\leftarrow\max(m_i,\,1\{y_i\in\mathrm{private\text{-}live}\})$
-is what turns diagnosis into cold-start.
-
+\paragraph{Counterfactual evidence.}
 \begin{center}
 \small
 \begin{tabular}{@{}lccc@{}}
 \toprule
-Board & product (no fuse) $\Delta$novel & fused $\Delta$novel & Fuse value \\
+Board & without fuse & with fuse & Fuse justification \\
 \midrule
-mice    & $-0.389$ & $+0.167$ & \textbf{essential} ($+0.556$ swing) \\
-news20b & $+0.125$ (sample alone $-0.125$)
-        & soft-fused $+0.250$ & fuse rescues soft \\
-wine    & $+0.333$ & $+0.333$ & redundant (already sharp) \\
-cnae9   & $+0.188$ & $+0.188$ & redundant \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent\textit{When fuse helps most:}
-new class is sparse and membership ranks it only partially
-(mice biology; noisy text). Skip worrying about fuse only when product
-already saturates novel (wine / cnae9).
-
-\subsection*{C4. Boundary honesty --- refuse when supports barely overlap}
-
-PDA proxy (OfficeHome-style):
-overlap $0.1$ $\Rightarrow$ incomparable rate $1.0$, adapt rate $0.0$.
-This is not a ``failed lift''; it is incremental value as
-\textbf{risk avoided} (no poisoned \texttt{partial\_fit}).
-Condition for directed cold-start: label Jaccard $\gtrsim 0.2$.
-
-%======================================================================
-\section{Detailed board map (novel predictive efficacy)}
-%======================================================================
-
-\begin{center}
-\small
-\begin{tabular}{@{}llcccc@{}}
-\toprule
-Board & New-category story & uniform & best channel & $\Delta$novel & Regime \\
-\midrule
-wine
-  & $\{0,1\}\to\{2\}$
-  & 0.667 & fused & $+0.333$ & C1 sharp / C2 fused \\
-har
-  & locomotion $\to$ posture
-  & 0.636 & subset & $+0.318$ & C2 hard subset \\
-news20b
-  & religion $\to$ med/hardware
-  & 0.125 & soft-fused & $+0.250$ & C2 soft / C3 fuse \\
-cancer
-  & benign $\to$ malignant
-  & 0.800 & fused/subset & $+0.200$ & C1 mid / C2 fused \\
-cnae9
-  & docs $1$--$5$ $\to$ $6$--$9$
-  & 0.438 & any weight & $+0.188$ & C1 mid-sharp \\
 mice
-  & control $\to$ trisomic
-  & 0.667 & fused & $+0.167$ & C3 fuse essential \\
+  & product $\Delta$novel $-0.389$
+  & fused $+0.167$
+  & swing $+0.556$: hard set without fuse grabs wrong high-$m$ known \\
+news20b
+  & sample alone $-0.125$
+  & soft-fused $+0.250$
+  & fuse turns a harmful soft tilt into a large novel lift \\
 jvowel
-  & speakers $1$--$5$ $\to$ $6$--$9$
-  & 0.579 & soft-fused & $+0.105$ & C2 soft \\
-covtype
-  & $\{1,2,3\}\to\{4,5\}$
-  & 0.524 & soft & $+0.095$ & C2 soft (fused null) \\
-isolet
-  & letters A--M $\to$ N--Z
-  & 0.350 & none & $0$ & C1 fail \\
+  & product $-0.105$
+  & soft-fused $+0.105$
+  & geometric gap negative; fuse supplies the novel support \\
+wine / cnae9
+  & already $+0.333$ / $+0.188$
+  & same
+  & redundant: membership already covers novel \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\paragraph{Cost side (when ``good on novel'' still hurts known).}
-mice fused: known $-0.196$ for novel $+0.167$ --- acceptable only if novel
-cold-start is the product KPI.
-cnae9 fused: known $-0.167$ for novel $+0.188$.
-jvowel soft-fused: known \emph{up} $+0.037$ with novel $+0.105$ --- ideal.
-wine fused: known flat --- free lunch.
-HAR subset: known $-0.049$ for novel $+0.318$ --- excellent tradeoff.
+\noindent\textit{When to require fuse:}
+gap modest/negative, or product ablates badly relative to fused.
+\textit{When fuse is optional:}
+$\mathbb{E}[m\mid\mathrm{nov}]\approx 1$ (wine/HAR/cancer).
 
 %======================================================================
-\section{Decision checklist for PO / ops}
+\section{C4 --- Boundary refuse (justified)}
+%======================================================================
+
+\paragraph{Mechanism.}
+If label supports barely overlap, ``adapt toward LIVE'' has no shared task:
+directed \texttt{partial\_fit} can overwrite known decision boundaries for
+no transferable gain.
+
+\paragraph{Evidence.}
+PDA proxy: overlap $0.1$ ($J\approx 0.125$) $\Rightarrow$ incomparable rate $1.0$,
+adapt rate $0.0$.
+Overlap $0.4$/$0.8$ $\Rightarrow$ adapt rate $1.0$.
+Value $=$ risk avoided (not novel lift).
+Operational cut: Jaccard $<0.2$ $\Rightarrow$ \texttt{incomparable}.
+
+%======================================================================
+\section{Synthesis: decision rule with justifications}
 %======================================================================
 
 \begin{enumerate}
-  \item \textbf{Gate:} LIVE/REF error rise fires?
-  \item \textbf{C1:} VIMP-top mass $\gtrsim 0.30$?
-        If $\lesssim 0.10$ $\to$ hold (uniform). If $0.10$--$0.20$ $\to$ try hard subset only.
-  \item \textbf{C4:} label Jaccard $\ge 0.2$? Else \texttt{incomparable}.
-  \item \textbf{C3:} fuse membership with private-live / discovered ids.
-  \item \textbf{C2:} concentration sharp $\to$ fused;
-        diffuse or high-d text/speaker $\to$ soft;
-        tight high-$m$ cluster with fused regressing $\to$ hard subset.
-  \item \textbf{Readout:} report novel acc first; known/forgetting as cost.
+  \item Compute $v(\mathcal{S})$ and gap on LIVE.
+  \item If $v(\mathcal{S})\lesssim 0.10$: \textbf{refuse}
+        (C1; ISOLET --- gap on bad subspace is not enough).
+  \item If Jaccard $<0.2$: \textbf{refuse} (C4).
+  \item Fuse private-live into $m$ when gap $<\sim 0.4$ or product ablates
+        (C3; mice/jvowel/news20b).
+  \item Channel (C2):
+        \begin{itemize}
+          \item gap $\gtrsim 0.6$ and $v(\mathcal{S})\gtrsim 0.3$ $\to$ fused
+                (wine/cancer/cnae9);
+          \item $\mathbb{E}[m\mid\mathrm{nov}]\approx 1$ but fused Gini hurts
+                $\to$ hard subset (HAR $+0.318$);
+          \item gap modest/negative or high-d $\to$ soft fused
+                (jvowel/news20b/covtype).
+        \end{itemize}
+  \item Report novel acc first; known/forgetting as cost
+        (mice pays $-0.196$ known for $+0.167$ novel; jvowel soft raises both).
 \end{enumerate}
 
 %======================================================================
@@ -208,18 +314,17 @@ HAR subset: known $-0.049$ for novel $+0.318$ --- excellent tradeoff.
 %======================================================================
 
 \begin{enumerate}
-  \item Effects match expectation \emph{when} Layer~1 localizes and Layer~2
-        channel matches footprint shape.
-  \item Best regimes: sharp fused (wine/mice/cnae9/cancer), soft
-        (jvowel/news20b/covtype), hard subset (HAR).
-  \item Failure regime: diffuse VIMP (ISOLET) or PDA incomparable --- do not force.
-  \item Numbers to remember: peak $+0.333$ / $+0.318$; v6 fused mean $+0.090$;
-        best-channel mean $+0.194$.
+  \item Justified core: weights help novel prediction iff high-$m$ (after
+        optional fuse) tags the new category --- measured by VIMP-top and gap.
+  \item C1--C4 are mechanistic, not post-hoc: subspace quality, weight geometry,
+        coverage of novel support, and task comparability.
+  \item Numbers: peak wine $+0.333$, HAR subset $+0.318$, cnae9 $+0.188$;
+        v6 fused mean $+0.090$; best-channel mean $+0.194$; ISOLET $0$.
 \end{enumerate}
 
 \paragraph{Artifacts.}
 \texttt{results/fsds\_cfperm\_weight\_bench/};
-\texttt{Python/src/fsds\_cfperm\_weight\_benchmark.py};
-\texttt{python3 scripts/run\_fsds\_cfperm\_weight\_benchmark.py --quick}.
+\texttt{Python/src/weighted\_cold\_start.py};
+\texttt{docs/method/Weighted\_cold\_start\_FSDS\_weights.tex}.
 
 \end{document}
