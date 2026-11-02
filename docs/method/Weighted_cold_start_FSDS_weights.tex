@@ -1,5 +1,6 @@
-% Weighted cold-start --- detailed justifications for when novel lift works
+% Sample-level weight power + post-FSDS selection vs novel-category complexity
 % Compile: pdflatex Weighted_cold_start_FSDS_weights.tex
+% Numbers: results/fsds_cfperm_weight_bench/complexity_vs_power.json
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,booktabs,hyperref,array}
@@ -7,7 +8,8 @@
 \usepackage{lmodern}
 
 \title{Weighted Cold-Start under Category Shift\\
-\large Detailed justifications: when novel-class prediction improves}
+\large Sample-level weight power \& post-FSDS selection\\
+\large --- justified by novel-category complexity}
 \author{AS-DTA / CFPerm \quad---\quad PO}
 \date{}
 
@@ -16,314 +18,296 @@
 
 \begin{abstract}
 \noindent
-We justify --- mechanistically and empirically --- \emph{when} FSDS-localized
-weights raise accuracy on a \textbf{new category}.
-Four conditions (C1--C4) are not heuristics alone: each follows from how
-membership is built, how soft/hard weights reallocate SGD mass, and what
-the boards measure.
-Key diagnostic:
-$\mathrm{gap}=\mathbb{E}[m\mid\mathrm{novel}]-\mathbb{E}[m\mid\mathrm{known}]$.
-Large positive gap $+$ sharp VIMP $\Rightarrow$ fused/subset wins;
-near-zero/negative gap $\Rightarrow$ need private-live fuse or soft-only;
-diffuse VIMP $\Rightarrow$ refuse.
+Two levers decide novel-class lift:
+(1)~\textbf{sample-level weight power} --- how much soft / hard / fused
+observation weights can move novel acc;
+(2)~\textbf{post-FSDS selection logic} --- which subspace and which weight
+channel to ship after RF-domain VIMP.
+Both are governed by \emph{new-category complexity}
+(number of novel classes, within-novel spread, between/within separation,
+membership--novel alignment, ambient dimension).
+We justify the links with a nine-board diagnostic
+($n_{\mathrm{novel}}$, gap, $b/w$, hard-precision, $\Delta$novel by channel).
 \end{abstract}
 
 %======================================================================
-\section{Setup and estimand}
+\section{What ``new-category complexity'' means here}
 %======================================================================
 
-\paragraph{Protocol.}
-REF carries only known labels.
-LIVE recirculates known rows and \emph{sparsely injects} novel labels.
-Adapt with \texttt{partial\_fit}; evaluate \textbf{novel acc} on held-out LIVE
-novel rows (known acc / forgetting are costs).
+After FSDS picks a top-$K$ subspace $\mathcal{S}$, LIVE rows get membership
+$m_i$ (z-score distance to REF in $\mathcal{S}$).
+Complexity of the \emph{injected novel support} is measured by:
 
-\paragraph{Two layers.}
-\begin{align}
-\text{Layer 1:}\quad
-&v = \mathrm{RF\text{-}VIMP}(X,W),\quad
-W=\mathbf{1}\{\mathrm{LIVE}\},
-\quad \mathcal{S}=\mathrm{top}\text{-}K(v). \\
-\text{Localize:}\quad
-&m_i = \mathrm{clip}\!\left(\frac{\|z_i\|_{2}-q_{0.2}}{q_{0.8}-q_{0.2}}\right),
-\quad z_i=\frac{X_{i,\mathcal{S}}-\mu_{\mathrm{REF},\mathcal{S}}}{\sigma_{\mathrm{REF},\mathcal{S}}}. \\
-\text{Layer 2:}\quad
-&w^{\mathrm{sample}}_i=1+\lambda m_i,\quad
-w^{\mathrm{subset}}_i=1+(c-1)\mathbf{1}\{m_i\ge q\},
-\quad w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}.
-\end{align}
-Optional fuse: $m_i\leftarrow\max(m_i,\,\mathbf{1}\{y_i\in\mathrm{private\text{-}live}\})$.
+\begin{center}
+\small
+\begin{tabular}{@{}lp{0.62\textwidth}@{}}
+\toprule
+Axis & Meaning \\
+\midrule
+$n_{\mathrm{novel}}$ & how many new labels arrive together \\
+within-novel spread & $\mathrm{std}$ of novel rows in $\mathcal{S}$ (heterogeneity) \\
+between/within $b/w$ & centroid distance(novel, known) / within-novel spread \\
+$\mathrm{gap}$ & $\mathbb{E}[m\mid\mathrm{nov}]-\mathbb{E}[m\mid\mathrm{kn}]$ \\
+$\mathrm{corr}(m,\mathrm{novel})$ & how well membership ranks the new class \\
+hard-precision & $P(\mathrm{novel}\mid m\ge q_{0.6})$ --- purity of hard set \\
+ambient $p$ & feature dim (text/speech/sensors) \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-\paragraph{Why weights can help at all.}
-Uniform \texttt{partial\_fit} gives every LIVE row equal SGD mass.
-If novel rows are few, the update is dominated by known recirculation.
-Upweighting high-$m$ (or fused) rows reallocates gradient toward the new
-category --- \emph{if and only if} high-$m$ actually tags novel rows.
+\noindent\textit{Intuition.}
+Low complexity: one coherent novel blob, far from known, high gap
+$\Rightarrow$ sample weights have an easy target.
+High complexity: many novel labels, overlapping known, weak alignment, high $p$
+$\Rightarrow$ soft tilt or refuse; fused often over-claims.
 
-\paragraph{Diagnostic we use below.}
+%======================================================================
+\section{Lever 1 --- Sample-level weight power}
+%======================================================================
+
+Sample-level (observation) weights are Layer~2:
 \[
-\mathrm{gap}
-=
-\mathbb{E}[m_i\mid y_i\in\mathrm{novel}]
--
-\mathbb{E}[m_i\mid y_i\in\mathrm{known}].
+w^{\mathrm{sample}}_i=1+\lambda m_i,\qquad
+w^{\mathrm{subset}}_i=1+(c-1)\mathbf{1}\{m_i\ge q\},\qquad
+w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}.
 \]
-Also: VIMP-top mass $v(\mathcal{S})=\sum_{j\in\mathcal{S}}v_j$.
+\textbf{Power} $=$ max novel-acc lift of that family vs uniform
+(soft family $=\max(\texttt{sample\_w},\texttt{sample\_w\_fused})$, etc.).
+
+\subsection{Board map: complexity $\leftrightarrow$ power}
 
 \begin{center}
-\small
-\begin{tabular}{@{}lcccc@{}}
+\scriptsize
+\begin{tabular}{@{}lcccccc@{}}
 \toprule
-Board & VIMP-top & gap & $\mathbb{E}[m\mid\mathrm{nov}]$ & $\mathbb{E}[m\mid\mathrm{kn}]$ \\
+Board & $n_{\mathrm{nov}}$ & gap & $b/w$ & hard-prec
+  & soft power & hard / fused power \\
 \midrule
-wine    & 0.673 & $+0.713$ & 1.000 & 0.287 \\
-har     & 0.132 & $+0.789$ & 0.994 & 0.205 \\
-cancer  & 0.313 & $+0.635$ & 0.941 & 0.305 \\
-cnae9   & 0.407 & $+0.613$ & 0.854 & 0.241 \\
-mice    & 0.195 & $+0.360$ & 0.759 & 0.399 \\
-isolet  & 0.071 & $+0.289$ & 0.686 & 0.397 \\
-news20b & 0.309 & $+0.177$ & 0.466 & 0.289 \\
-covtype & 0.587 & $+0.148$ & 0.582 & 0.433 \\
-jvowel  & 0.505 & $-0.040$ & 0.439 & 0.478 \\
+wine    & 1 & $+0.71$ & 7.2 & 0.48 & $0.00$ & fused $\mathbf{+0.33}$ \\
+cancer  & 1 & $+0.64$ & 7.7 & 0.46 & $0.00$ & hard/fus $\mathbf{+0.20}$ \\
+har     & 3 & $+0.79$ & \textbf{54.5} & 0.50 & $+0.05$ & hard $\mathbf{+0.32}$ / fus $-0.05$ \\
+cnae9   & 4 & $+0.61$ & 1.4 & 0.47 & $\mathbf{+0.19}$ & $=+0.19$ all channels \\
+mice    & 4 & $+0.36$ & 1.5 & 0.40 & $+0.06$ & fused $\mathbf{+0.17}$ \\
+news20b & 2 & $+0.18$ & 0.5 & 0.26 & $\mathbf{+0.25}$ & hard $+0.12$ \\
+covtype & 2 & $+0.15$ & 1.7 & 0.22 & $\mathbf{+0.10}$ & fus $0$ \\
+jvowel  & 4 & $-0.04$ & 1.0 & 0.18 & $\mathbf{+0.11}$ & fus $+0.05$ \\
+isolet  & 13 & $+0.29$ & 1.3 & 0.33 & $-0.05$ & $0$ / $-0.05$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-%======================================================================
-\section{C1 --- Sharp VIMP is the precondition (justified)}
-%======================================================================
+\subsection{Justification A --- Soft power rises when alignment is imperfect}
 
-\paragraph{Mechanism.}
-Membership is distance \emph{inside} $\mathcal{S}$.
-If $v(\mathcal{S})$ is tiny, $\mathcal{S}$ is an almost-arbitrary $K$-set:
-$m_i$ ranks LIVE rows by noise directions, so upweighting high-$m$ does not
-target the new category.
-
-\paragraph{Evidence.}
-\begin{itemize}
-  \item \textbf{Works when sharp:} wine $v(\mathcal{S})=0.673$, gap $+0.713$,
-        fused $\Delta$novel $+0.333$ (known flat).
-        cnae9 $0.407$ / gap $+0.613$ $\Rightarrow$ $+0.188$ on every weight channel.
-  \item \textbf{Fails when diffuse:} ISOLET $v(\mathcal{S})=0.071$.
-        Gap is still $+0.289$ (novel a bit farther in a bad subspace), but
-        \emph{no} channel beats uniform on novel ($\Delta\le 0$).
-        Justification: gap on a wrong subspace is not actionable ---
-        Layer~2 faithfully amplifies a useless ranking.
-  \item \textbf{Cut:} $v(\mathcal{S})\gtrsim 0.30$ $\Rightarrow$ weighting in-play;
-        $\lesssim 0.10$ $\Rightarrow$ refuse (hold uniform).
-\end{itemize}
-
-\paragraph{Why HAR is the exception that proves the rule.}
-HAR has weak VIMP ($0.132$) but \emph{extreme} gap ($+0.789$):
-novel posture rows sit at $\mathbb{E}[m\mid\mathrm{nov}]=0.994$.
-A hard threshold therefore isolates almost-pure novel mass even though
-feature attribution is weak.
-Fused (soft$\times$hard) still fails here (below) --- C1 alone is necessary
-but not sufficient for \emph{fused}.
-
-%======================================================================
-\section{C2 --- Channel must match footprint shape (justified)}
-%======================================================================
-
-\subsection{Why soft, hard, and fused do different jobs}
+Soft weights redistribute mass \emph{continuously}.
+They do not need a pure hard set.
 
 \begin{itemize}
-  \item \textbf{Soft} $w=1+\lambda m$: continuous reweighting.
-        Tolerates imperfect ranking; rarely zeros known rows.
-        Safe when gap is modest or membership partially wrong.
-  \item \textbf{Hard} $w=c$ on $\{m\ge q\}$: spends almost all novel budget
-        on the top quantile.
-        Wins when novel is \emph{tightly} packed at high $m$ (large gap,
-        $\mathbb{E}[m\mid\mathrm{nov}]\approx 1$).
-  \item \textbf{Fused} product: soft ranking \emph{inside} the hard set.
-        Highest Gini (typically $\sim 0.42$--$0.47$).
-        Wins when both (i) the hard set is mostly novel and (ii) soft order
-        inside it is meaningful --- otherwise it over-concentrates and
-        starves useful known replay / boundary novel rows.
+  \item \textbf{When soft is the power source:}
+        news20b soft $+0.25$ (gap only $+0.18$, hard-prec $0.26$);
+        jvowel soft $+0.11$ (gap \emph{negative});
+        covtype soft $+0.10$ (gap $+0.15$, fused null).
+  \item \textbf{Why complexity drives this:}
+        high-$p$ text (news20b $p{=}64$), multi-speaker structure (jvowel
+        $n_{\mathrm{nov}}{=}4$ with gap$<0$), or modest separation (covtype)
+        means membership ranks novel only weakly.
+        A hard cut then mixes known into the boosted set (hard-prec $\sim 0.2$).
+        Soft still gives a usable tilt; hard/fused amplify ranking errors.
+  \item \textbf{Cross-board correlation:}
+        $\mathrm{corr}(\mathrm{gap},\mathrm{soft\ power})\approx -0.32$
+        --- soft wins precisely when gap is \emph{not} huge.
+        $\mathrm{corr}(p,\mathrm{soft\ power})\approx -0.41$ on raw dim is
+        mixed by ISOLET failure; conditional on VIMP usable, high-$d$ boards
+        still prefer soft among working channels.
 \end{itemize}
 
-\subsection{Regime A --- Ship fused (sharp $+$ large gap $+$ fuse OK)}
+\subsection{Justification B --- Hard power needs a saturated novel cluster}
 
-\begin{center}
-\small
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Board & VIMP & gap & $\Delta$novel fused & known $\Delta$ \\
-\midrule
-wine   & 0.673 & $+0.713$ & $+0.333$ & $0.000$ \\
-cancer & 0.313 & $+0.635$ & $+0.200$ & $-0.028$ \\
-cnae9  & 0.407 & $+0.613$ & $+0.188$ & $-0.167$ \\
-mice   & 0.195 & $+0.360$ & $+0.167$ & $-0.196$ \\
-\bottomrule
-\end{tabular}
-\end{center}
+Hard subset spends SGD budget on $\{m\ge q\}$.
+Power requires high recall of novel in that set and decent precision.
 
-\noindent\textit{Justification.}
-On wine, novel rows are at $m=1.0$ vs known $0.29$: soft$\times$hard puts
-SGD mass exactly on the new class; known unaffected.
-cnae9: every channel gives the same $+0.188$ --- the new doc categories are
-easy once any membership-aligned weight breaks uniform drowning; fused is
-safe default.
-mice needs fuse (C3) but once fused, product is best.
+\begin{itemize}
+  \item HAR: $\mathbb{E}[m\mid\mathrm{nov}]=0.99$, hard-rec $=1.0$,
+        hard-prec $=0.50$, $b/w=\mathbf{54.5}$ ---
+        three posture classes form one tight blob vs locomotion.
+        Hard power $+0.32$; fused $-0.05$ (Gini $0.47$ over-concentrates).
+  \item cancer: single novel class, $\mathbb{E}[m\mid\mathrm{nov}]=0.94$,
+        hard power $+0.20$.
+  \item \textbf{Complexity angle:}
+        $n_{\mathrm{nov}}=3$ looks ``complex'', but \emph{family-level}
+        complexity is low: postures are mutually close (silhouette $-0.10$)
+        yet far from known. Hard selection treats the family as one new
+        category --- sample-level power tracks \emph{cluster} complexity,
+        not label cardinality alone.
+  \item $\mathrm{corr}(\mathrm{hard\text{-}prec},\mathrm{hard\ power})\approx +0.41$:
+        purer hard sets $\Rightarrow$ more hard power.
+\end{itemize}
 
-\subsection{Regime B --- Ship soft (modest gap or high-d / stacking hurts)}
+\subsection{Justification C --- Fused power needs sharp VIMP $+$ aligned $m$;
+hurts as novel cardinality grows}
 
-\begin{center}
-\small
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Board & gap & fused $\Delta$ & soft-fused $\Delta$ & Why soft wins \\
-\midrule
-jvowel  & $-0.040$ & $+0.053$ & $\mathbf{+0.105}$
-  & membership anti-ranks speakers; only fuse$+$soft helps \\
-news20b & $+0.177$ & $+0.125$ & $\mathbf{+0.250}$
-  & high-d text; hard subset alone $-0.125$ \\
-covtype & $+0.148$ & $0.000$ & $\mathbf{+0.095}$
-  & modest gap; fused product null on novel \\
-\bottomrule
-\end{tabular}
-\end{center}
+Fused $=$ soft inside hard. Highest concentration.
 
-\noindent\textit{Justification.}
-When $\mathrm{gap}$ is small or negative, a hard cut includes many known rows
-(false hard-set) or excludes novel rows.
-Multiplying by soft then \emph{amplifies the mistake} (Gini$\uparrow$,
-novel mass diluted or misallocated).
-Soft alone (after fuse) gently tilts without a brittle threshold.
-jvowel is the clean mechanistic proof: $\mathrm{gap}<0$ means geometric
-membership prefers known speakers; without private-live fuse, product
-$\Delta$novel $=-0.105$; with fuse, soft reaches $+0.105$ and known also rises
-($+0.037$).
+\begin{itemize}
+  \item Wins: wine $+0.33$ ($n_{\mathrm{nov}}{=}1$, gap $+0.71$);
+        mice $+0.17$ after private-live fuse;
+        cnae9 $+0.19$ (all channels tie).
+  \item Fails/null: HAR $-0.05$ (hard already enough);
+        covtype $0$; ISOLET $-0.05$.
+  \item \textbf{Complexity link:}
+        $\mathrm{corr}(n_{\mathrm{nov}},\mathrm{fused\ power})\approx \mathbf{-0.54}$
+        --- more simultaneous new labels $\Rightarrow$ less fused lift.
+        ISOLET ($n_{\mathrm{nov}}{=}13$, within-spread $2.4$, VIMP $0.07$)
+        is the extreme: sample-level weights have no coherent target.
+        $\mathrm{corr}(v(\mathcal{S}),\mathrm{fused\ power})\approx +0.51$:
+        fused needs Layer~1 to actually localize.
+\end{itemize}
 
-\subsection{Regime C --- Ship hard subset (extreme gap; fused over-concentrates)}
+\paragraph{One-line power law.}
+\[
+\begin{aligned}
+&\text{simple novel blob (large gap, }n_{\mathrm{nov}}\small\text{)}
+  \Rightarrow \text{fused/hard power high};\\
+&\text{messy alignment / high-}d
+  \Rightarrow \text{soft power dominates};\\
+&\text{many heterogeneous novel labels + diffuse VIMP}
+  \Rightarrow \text{sample-level power }\approx 0.
+\end{aligned}
+\]
 
-HAR: gap $+0.789$, $\mathbb{E}[m\mid\mathrm{nov}]=0.994$.
+%======================================================================
+\section{Lever 2 --- Post-FSDS selection logic}
+%======================================================================
+
+FSDS does not ship weights by itself. After VIMP we \emph{select}:
+(i) subspace $\mathcal{S}=\mathrm{top}\text{-}K(v)$;
+(ii) membership $m$;
+(iii) channel $\in\{\mathrm{refuse},\mathrm{soft},\mathrm{hard},\mathrm{fused}\}$.
+Selection must track novel-category complexity.
+
+\subsection{Step S1 --- Subspace selection (complexity of the shift support)}
+
+RF-domain VIMP ranks features that separate LIVE from REF.
+\begin{itemize}
+  \item If the new category shift is low-dimensional and coherent,
+        mass concentrates: wine $v(\mathcal{S})=0.67$, cnae9 $0.41$.
+  \item If many novel letters/sensors dilute the domain signal,
+        mass spreads: ISOLET $0.07$, HAR $0.13$ (HAR still saved by S3).
+  \item \textbf{Justify:} subspace quality bounds every downstream
+        sample weight. Selecting a larger $K$ cannot invent signal when
+        VIMP is flat --- it only adds noise dims to $m_i$.
+\end{itemize}
+
+\subsection{Step S2 --- Membership as a complexity probe}
+
+After $\mathcal{S}$ is fixed, read gap, $\mathrm{corr}(m,\mathrm{novel})$,
+hard-prec/rec, $\mathbb{E}[m\mid\mathrm{nov}]$.
+These are \emph{observable proxies} for novel complexity
+(without needing the full generative model):
+
 \begin{center}
 \small
 \begin{tabular}{@{}lccc@{}}
 \toprule
-Channel & novel & $\Delta$novel & weight Gini \\
+Complexity regime & Typical gap / hard-prec & Post-FSDS read \\
 \midrule
-uniform     & 0.636 & $0$ & 0.000 \\
-\texttt{subset\_w} & \textbf{0.955} & $\mathbf{+0.318}$ & 0.309 \\
-\texttt{sample\_w} & 0.682 & $+0.045$ & 0.293 \\
-\texttt{both\_fused} & 0.591 & $-0.045$ & 0.465 \\
+Simple blob & gap $\gtrsim 0.6$, $E[m\mid\mathrm{nov}]\approx 1$
+  & hard set almost covers novel \\
+Family blob (multi-label, one cluster)
+  & gap large, sil$_{\mathrm{nov}}$ low, $b/w$ huge
+  & hard subset on the family \\
+Overlapping / speaker-like
+  & gap $\lesssim 0.2$ or negative, hard-prec $\lesssim 0.25$
+  & membership under-covers $\to$ fuse $+$ soft \\
+Fragmented many-class
+  & large $n_{\mathrm{nov}}$, high within, tiny VIMP
+  & refuse \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\noindent\textit{Justification.}
-Hard subset already selects an almost pure novel set
-(novel $m\approx 1$).
-Soft$\times$hard further reweights \emph{inside} that set and, after
-renormalization, relative to known --- Gini jumps to $0.465$ and novel acc
-\emph{falls below uniform}.
-So: when the hard set is already saturated with novel, stop; do not fuse.
-
-\paragraph{Auto policy.}
-Sharp concentration $\to$ fused; diffuse $\to$ soft.
-HAR adds: if subset alone $\gg$ fused on a validation slice, keep subset.
-
-%======================================================================
-\section{C3 --- Private-live fuse: when membership under-covers (justified)}
-%======================================================================
-
-\paragraph{Mechanism.}
-$m_i$ is unsupervised geometry in $\mathcal{S}$.
-True novel labels can sit mid-pack (mice) or even on the wrong side of $m$
-(jvowel $\mathrm{gap}<0$).
-Fuse forces discovered private-live ids into the weight support:
-\[
-m_i^{\mathrm{fuse}}=\max(m_i,\,\mathbf{1}\{y_i\in\mathrm{private\text{-}live}\}).
-\]
-
-\paragraph{Counterfactual evidence.}
-\begin{center}
-\small
-\begin{tabular}{@{}lccc@{}}
-\toprule
-Board & without fuse & with fuse & Fuse justification \\
-\midrule
-mice
-  & product $\Delta$novel $-0.389$
-  & fused $+0.167$
-  & swing $+0.556$: hard set without fuse grabs wrong high-$m$ known \\
-news20b
-  & sample alone $-0.125$
-  & soft-fused $+0.250$
-  & fuse turns a harmful soft tilt into a large novel lift \\
-jvowel
-  & product $-0.105$
-  & soft-fused $+0.105$
-  & geometric gap negative; fuse supplies the novel support \\
-wine / cnae9
-  & already $+0.333$ / $+0.188$
-  & same
-  & redundant: membership already covers novel \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent\textit{When to require fuse:}
-gap modest/negative, or product ablates badly relative to fused.
-\textit{When fuse is optional:}
-$\mathbb{E}[m\mid\mathrm{nov}]\approx 1$ (wine/HAR/cancer).
-
-%======================================================================
-\section{C4 --- Boundary refuse (justified)}
-%======================================================================
-
-\paragraph{Mechanism.}
-If label supports barely overlap, ``adapt toward LIVE'' has no shared task:
-directed \texttt{partial\_fit} can overwrite known decision boundaries for
-no transferable gain.
-
-\paragraph{Evidence.}
-PDA proxy: overlap $0.1$ ($J\approx 0.125$) $\Rightarrow$ incomparable rate $1.0$,
-adapt rate $0.0$.
-Overlap $0.4$/$0.8$ $\Rightarrow$ adapt rate $1.0$.
-Value $=$ risk avoided (not novel lift).
-Operational cut: Jaccard $<0.2$ $\Rightarrow$ \texttt{incomparable}.
-
-%======================================================================
-\section{Synthesis: decision rule with justifications}
-%======================================================================
+\subsection{Step S3 --- Channel selection rule (justified)}
 
 \begin{enumerate}
-  \item Compute $v(\mathcal{S})$ and gap on LIVE.
   \item If $v(\mathcal{S})\lesssim 0.10$: \textbf{refuse}
-        (C1; ISOLET --- gap on bad subspace is not enough).
-  \item If Jaccard $<0.2$: \textbf{refuse} (C4).
-  \item Fuse private-live into $m$ when gap $<\sim 0.4$ or product ablates
-        (C3; mice/jvowel/news20b).
-  \item Channel (C2):
-        \begin{itemize}
-          \item gap $\gtrsim 0.6$ and $v(\mathcal{S})\gtrsim 0.3$ $\to$ fused
-                (wine/cancer/cnae9);
-          \item $\mathbb{E}[m\mid\mathrm{nov}]\approx 1$ but fused Gini hurts
-                $\to$ hard subset (HAR $+0.318$);
-          \item gap modest/negative or high-d $\to$ soft fused
-                (jvowel/news20b/covtype).
-        \end{itemize}
-  \item Report novel acc first; known/forgetting as cost
-        (mice pays $-0.196$ known for $+0.167$ novel; jvowel soft raises both).
+        (ISOLET --- 13-way novel speech letters; sample weights powerless).
+  \item If $\mathbb{E}[m\mid\mathrm{nov}]\gtrsim 0.9$ and hard-prec $\gtrsim 0.35$
+        and hard power $\ge$ fused: \textbf{hard subset}
+        (HAR family; cancer single class).
+        \emph{Why:} complexity is low at the \emph{cluster} level; soft$\times$hard
+        only raises Gini and can cut novel acc (HAR fused $-0.05$).
+  \item If gap $\lesssim 0.25$ or $\mathrm{corr}(m,\mathrm{novel})\lesssim 0.3$:
+        \textbf{soft $+$ private-live fuse}
+        (jvowel, news20b, covtype).
+        \emph{Why:} complex / poorly aligned novel support; continuous weights
+        are the only sample-level power left.
+  \item Else: \textbf{fused}
+        (wine, mice after fuse, cnae9).
+        \emph{Why:} sharp subspace and aligned $m$; product uses full
+        sample-level power.
 \end{enumerate}
+
+\paragraph{Private-live fuse as a complexity patch.}
+When novel structure is too complex for geometry alone (jvowel gap$<0$;
+mice mid gap $+0.36$ but product $-0.39$), fuse injects label support into
+$m$. That is not ``cheating'': it is acknowledging that unsupervised
+membership under-resolves complex new categories, while sample weights
+still need a correct support to have power.
+
+%======================================================================
+\section{How the two levers couple to complexity}
+%======================================================================
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Novel-category complexity & Sample-level power & Post-FSDS selection \\
+\midrule
+1 coherent new class, large gap
+  & fused/hard high; soft often $0$ extras
+  & keep top-$K$; ship fused (or hard) \\
+Multi-label but one family vs known ($b/w\gg 1$)
+  & hard power peaks; fused can hurt
+  & select hard subset; do not multiply soft \\
+Weak alignment / high-$d$ / gap small
+  & soft power dominates
+  & fuse private-live; ship soft \\
+Many heterogeneous novel classes $+$ diffuse VIMP
+  & all sample-level powers $\approx 0$
+  & refuse weighting; hold uniform \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Empirical anchors.}
+$\mathrm{corr}(n_{\mathrm{nov}},\mathrm{fused\ power})\approx -0.54$;
+$\mathrm{corr}(v(\mathcal{S}),\mathrm{fused\ power})\approx +0.51$;
+$\mathrm{corr}(\mathrm{hard\text{-}prec},\mathrm{hard\ power})\approx +0.41$;
+$\mathrm{corr}(\mathrm{gap},\mathrm{soft\ power})\approx -0.32$.
+Together: fused likes simple+sharp; soft likes hard-to-align complexity;
+hard likes saturated clusters; refuse likes fragmented complexity.
 
 %======================================================================
 \section{PO bottom line}
 %======================================================================
 
 \begin{enumerate}
-  \item Justified core: weights help novel prediction iff high-$m$ (after
-        optional fuse) tags the new category --- measured by VIMP-top and gap.
-  \item C1--C4 are mechanistic, not post-hoc: subspace quality, weight geometry,
-        coverage of novel support, and task comparability.
-  \item Numbers: peak wine $+0.333$, HAR subset $+0.318$, cnae9 $+0.188$;
-        v6 fused mean $+0.090$; best-channel mean $+0.194$; ISOLET $0$.
+  \item \textbf{Sample-level weights} are powerful only when the new category
+        (or novel \emph{family}) is a recoverable target in the FSDS subspace.
+        Soft power handles complex/weak alignment; hard/fused need simple or
+        family-level simplicity.
+  \item \textbf{Post-FSDS selection} is the policy that maps complexity probes
+        (VIMP-top, gap, hard-prec, $E[m\mid\mathrm{nov}]$) to
+        \{refuse, soft+fuse, hard, fused\}.
+  \item More simultaneous novel labels without a shared blob
+        ($n_{\mathrm{nov}}\!\uparrow$, within$\uparrow$, VIMP$\downarrow$)
+        strictly reduces fused power --- ISOLET is the ceiling of that failure.
+  \item Numbers: soft peak news20b $+0.25$; hard peak HAR $+0.32$;
+        fused peak wine $+0.33$; refuse ISOLET $0$.
 \end{enumerate}
 
 \paragraph{Artifacts.}
-\texttt{results/fsds\_cfperm\_weight\_bench/};
+\texttt{results/fsds\_cfperm\_weight\_bench/complexity\_vs\_power.json};
 \texttt{Python/src/weighted\_cold\_start.py};
 \texttt{docs/method/Weighted\_cold\_start\_FSDS\_weights.tex}.
 
