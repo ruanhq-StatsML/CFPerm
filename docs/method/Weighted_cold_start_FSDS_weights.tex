@@ -1,6 +1,6 @@
-% Sample-level weight power + post-FSDS selection vs novel-category complexity
+% Weighted cold-start PO note (polished)
 % Compile: pdflatex Weighted_cold_start_FSDS_weights.tex
-% Numbers: results/fsds_cfperm_weight_bench/complexity_vs_power.json
+% Numbers: results/fsds_cfperm_weight_bench/, results/downsample_vs_weight/
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,booktabs,hyperref,array}
@@ -8,9 +8,8 @@
 \usepackage{lmodern}
 
 \title{Weighted Cold-Start under Category Shift\\
-\large Sample-level weight power \& post-FSDS selection\\
-\large --- justified by novel-category complexity}
-\author{AS-DTA / CFPerm \quad---\quad PO}
+\large PO note: sample weights, post-FSDS selection, and downsampling}
+\author{AS-DTA / CFPerm}
 \date{}
 
 \begin{document}
@@ -18,306 +17,121 @@
 
 \begin{abstract}
 \noindent
-Two levers decide novel-class lift:
-(1)~\textbf{sample-level weight power};
-(2)~\textbf{post-FSDS selection} --- both tied to novel-category complexity.
-We further ask whether \textbf{downsampling} known LIVE rows is required.
-On nine boards, label downsample (\texttt{ds\_known}) lifts mean novel
-$+0.127$ vs uniform, but FSDS best-weight lifts $+0.178$;
-\textbf{incremental value} best-weight $-$ \texttt{ds\_known} $=+0.052$
-(weights win on $5/9$).
-Random downsample does \emph{not} help ($-0.023$): the gain is selective
-mass, not smaller $n$.
-Downsample is necessary only when membership cannot tag novel
-(covtype); otherwise weights match or beat downsample while keeping known rows.
+\textbf{Claim.}
+Under category shift, FSDS-localized \emph{sample-level} weights cold-start
+new categories better than uniform \texttt{partial\_fit}, and usually better
+than blunt known-class downsampling.
+\textbf{How.}
+RF-domain VIMP $\to$ membership $m$ $\to$ soft / hard / fused observation
+weights, chosen by novel-category complexity.
+\textbf{Headline numbers (9 boards).}
+best weight mean $\Delta$novel $+0.178$ vs uniform;
+\texttt{ds\_known} $+0.127$;
+\textbf{incremental} best-weight $-$ \texttt{ds\_known} $\mathbf{+0.052}$
+(win $5/9$).
+Random downsample $-0.023$ --- gain is selective mass, not smaller $n$.
+Default: \textbf{do not} label-downsample; ship soft/hard/fused by probes;
+downsample only when $s(w)$ cannot approach $1/2$ (covtype-like).
 \end{abstract}
 
 %======================================================================
-\section{What ``new-category complexity'' means here}
+\section{Pipeline (locked)}
 %======================================================================
 
-After FSDS picks a top-$K$ subspace $\mathcal{S}$, LIVE rows get membership
-$m_i$ (z-score distance to REF in $\mathcal{S}$).
-Complexity of the \emph{injected novel support} is measured by:
+\begin{enumerate}
+  \item \textbf{Detect} LIVE/REF error rise.
+  \item \textbf{Layer 1 (FSDS):} RF on $W=\mathbf{1}\{\mathrm{LIVE}\}$
+        $\to$ VIMP $\to$ top-$K$ subspace $\mathcal{S}$.
+  \item \textbf{Localize:} $m_i=$ clipped z-distance to REF in $\mathcal{S}$.
+        Optional fuse $m\leftarrow\max(m,\,1\{y\in\mathrm{private\text{-}live}\})$.
+  \item \textbf{Layer 2 (sample weights):}
+        $w^{\mathrm{sample}}=1+\lambda m$,\
+        $w^{\mathrm{subset}}$ boosts $\{m\ge q\}$,\
+        $w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$.
+  \item \textbf{Select channel} by complexity probes
+        (VIMP-top, gap, hard-prec, $E[m\mid\mathrm{nov}]$)
+        $\in\{\mathrm{refuse},\mathrm{soft},\mathrm{hard},\mathrm{fused}\}$.
+  \item \textbf{Adapt} \texttt{partial\_fit}; KPI $=$ \textbf{novel acc}
+        (known/forgetting $=$ cost).
+\end{enumerate}
 
-\begin{center}
-\small
-\begin{tabular}{@{}lp{0.62\textwidth}@{}}
-\toprule
-Axis & Meaning \\
-\midrule
-$n_{\mathrm{novel}}$ & how many new labels arrive together \\
-within-novel spread & $\mathrm{std}$ of novel rows in $\mathcal{S}$ (heterogeneity) \\
-between/within $b/w$ & centroid distance(novel, known) / within-novel spread \\
-$\mathrm{gap}$ & $\mathbb{E}[m\mid\mathrm{nov}]-\mathbb{E}[m\mid\mathrm{kn}]$ \\
-$\mathrm{corr}(m,\mathrm{novel})$ & how well membership ranks the new class \\
-hard-precision & $P(\mathrm{novel}\mid m\ge q_{0.6})$ --- purity of hard set \\
-ambient $p$ & feature dim (text/speech/sensors) \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent\textit{Intuition.}
-Low complexity: one coherent novel blob, far from known, high gap
-$\Rightarrow$ sample weights have an easy target.
-High complexity: many novel labels, overlapping known, weak alignment, high $p$
-$\Rightarrow$ soft tilt or refuse; fused often over-claims.
+\paragraph{Diagnostic.}
+$\mathrm{gap}=\mathbb{E}[m\mid\mathrm{nov}]-\mathbb{E}[m\mid\mathrm{kn}]$;
+novel mass share $s(w)=\sum w_i N_i/\sum w_i$ ($N=$ novel indicator).
 
 %======================================================================
-\section{Lever 1 --- Sample-level weight power}
+\section{Novel-category complexity $\leftrightarrow$ weight power}
 %======================================================================
 
-Sample-level (observation) weights are Layer~2:
-\[
-w^{\mathrm{sample}}_i=1+\lambda m_i,\qquad
-w^{\mathrm{subset}}_i=1+(c-1)\mathbf{1}\{m_i\ge q\},\qquad
-w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}.
-\]
-\textbf{Power} $=$ max novel-acc lift of that family vs uniform
-(soft family $=\max(\texttt{sample\_w},\texttt{sample\_w\_fused})$, etc.).
-
-\subsection{Board map: complexity $\leftrightarrow$ power}
+Complexity is not ``how many new labels'' alone.
+It is whether the novel support is a \emph{recoverable target} in $\mathcal{S}$:
+$n_{\mathrm{nov}}$, within-spread, $b/w$, gap, hard-precision, ambient $p$.
 
 \begin{center}
 \scriptsize
 \begin{tabular}{@{}lcccccc@{}}
 \toprule
-Board & $n_{\mathrm{nov}}$ & gap & $b/w$ & hard-prec
-  & soft power & hard / fused power \\
+Board & $n_{\mathrm{nov}}$ & gap & $b/w$ & H-prec
+  & soft power & hard / fused \\
 \midrule
-wine    & 1 & $+0.71$ & 7.2 & 0.48 & $0.00$ & fused $\mathbf{+0.33}$ \\
-cancer  & 1 & $+0.64$ & 7.7 & 0.46 & $0.00$ & hard/fus $\mathbf{+0.20}$ \\
-har     & 3 & $+0.79$ & \textbf{54.5} & 0.50 & $+0.05$ & hard $\mathbf{+0.32}$ / fus $-0.05$ \\
-cnae9   & 4 & $+0.61$ & 1.4 & 0.47 & $\mathbf{+0.19}$ & $=+0.19$ all channels \\
-mice    & 4 & $+0.36$ & 1.5 & 0.40 & $+0.06$ & fused $\mathbf{+0.17}$ \\
-news20b & 2 & $+0.18$ & 0.5 & 0.26 & $\mathbf{+0.25}$ & hard $+0.12$ \\
-covtype & 2 & $+0.15$ & 1.7 & 0.22 & $\mathbf{+0.10}$ & fus $0$ \\
-jvowel  & 4 & $-0.04$ & 1.0 & 0.18 & $\mathbf{+0.11}$ & fus $+0.05$ \\
-isolet  & 13 & $+0.29$ & 1.3 & 0.33 & $-0.05$ & $0$ / $-0.05$ \\
+wine    & 1  & $+0.71$ & 7.2  & 0.48 & $0$ & fused $\mathbf{+0.33}$ \\
+cancer  & 1  & $+0.64$ & 7.7  & 0.46 & $0$ & hard/fus $\mathbf{+0.20}$ \\
+har     & 3  & $+0.79$ & 54.5 & 0.50 & $+0.05$ & hard $\mathbf{+0.32}$ / fus $-0.05$ \\
+cnae9   & 4  & $+0.61$ & 1.4  & 0.47 & $\mathbf{+0.19}$ & $=+0.19$ \\
+mice    & 4  & $+0.36$ & 1.5  & 0.40 & $+0.06$ & fused $\mathbf{+0.17}$ \\
+news20b & 2  & $+0.18$ & 0.5  & 0.26 & $\mathbf{+0.25}$ & $+0.12$ \\
+covtype & 2  & $+0.15$ & 1.7  & 0.22 & $\mathbf{+0.10}$ & fus $0$ \\
+jvowel  & 4  & $-0.04$ & 1.0  & 0.18 & $\mathbf{+0.11}$ & $+0.05$ \\
+isolet  & 13 & $+0.29$ & 1.3  & 0.33 & $-0.05$ & $0$/$-0.05$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\subsection{Justification A --- Soft power rises when alignment is imperfect}
+\paragraph{Soft.}
+Continuous tilt; wins when alignment is imperfect
+(news20b $+0.25$, jvowel $+0.11$, covtype $+0.10$).
+$\mathrm{corr}(\mathrm{gap},\mathrm{soft\ power})\approx -0.32$:
+soft is for hard-to-align complexity.
 
-Soft weights redistribute mass \emph{continuously}.
-They do not need a pure hard set.
+\paragraph{Hard.}
+Needs saturated novel cluster ($E[m\mid\mathrm{nov}]\approx 1$).
+HAR: three posture labels look complex, but $b/w=54.5$ makes one
+\emph{family} vs locomotion --- hard $+0.32$; fused over-concentrates ($-0.05$).
+Power tracks \emph{cluster} complexity, not label count
+($\mathrm{corr}(\mathrm{H\text{-}prec},\mathrm{hard\ power})\approx +0.41$).
 
-\begin{itemize}
-  \item \textbf{When soft is the power source:}
-        news20b soft $+0.25$ (gap only $+0.18$, hard-prec $0.26$);
-        jvowel soft $+0.11$ (gap \emph{negative});
-        covtype soft $+0.10$ (gap $+0.15$, fused null).
-  \item \textbf{Why complexity drives this:}
-        high-$p$ text (news20b $p{=}64$), multi-speaker structure (jvowel
-        $n_{\mathrm{nov}}{=}4$ with gap$<0$), or modest separation (covtype)
-        means membership ranks novel only weakly.
-        A hard cut then mixes known into the boosted set (hard-prec $\sim 0.2$).
-        Soft still gives a usable tilt; hard/fused amplify ranking errors.
-  \item \textbf{Cross-board correlation:}
-        $\mathrm{corr}(\mathrm{gap},\mathrm{soft\ power})\approx -0.32$
-        --- soft wins precisely when gap is \emph{not} huge.
-        $\mathrm{corr}(p,\mathrm{soft\ power})\approx -0.41$ on raw dim is
-        mixed by ISOLET failure; conditional on VIMP usable, high-$d$ boards
-        still prefer soft among working channels.
-\end{itemize}
+\paragraph{Fused.}
+Needs sharp VIMP $+$ aligned $m$.
+wine $+0.33$, mice $+0.17$, cnae9 $+0.19$.
+$\mathrm{corr}(n_{\mathrm{nov}},\mathrm{fused\ power})\approx -0.54$,
+$\mathrm{corr}(v(\mathcal{S}),\mathrm{fused})\approx +0.51$.
+Many heterogeneous novel labels $+$ diffuse VIMP (ISOLET) $\Rightarrow$ power $\approx 0$.
 
-\subsection{Justification B --- Hard power needs a saturated novel cluster}
-
-Hard subset spends SGD budget on $\{m\ge q\}$.
-Power requires high recall of novel in that set and decent precision.
-
-\begin{itemize}
-  \item HAR: $\mathbb{E}[m\mid\mathrm{nov}]=0.99$, hard-rec $=1.0$,
-        hard-prec $=0.50$, $b/w=\mathbf{54.5}$ ---
-        three posture classes form one tight blob vs locomotion.
-        Hard power $+0.32$; fused $-0.05$ (Gini $0.47$ over-concentrates).
-  \item cancer: single novel class, $\mathbb{E}[m\mid\mathrm{nov}]=0.94$,
-        hard power $+0.20$.
-  \item \textbf{Complexity angle:}
-        $n_{\mathrm{nov}}=3$ looks ``complex'', but \emph{family-level}
-        complexity is low: postures are mutually close (silhouette $-0.10$)
-        yet far from known. Hard selection treats the family as one new
-        category --- sample-level power tracks \emph{cluster} complexity,
-        not label cardinality alone.
-  \item $\mathrm{corr}(\mathrm{hard\text{-}prec},\mathrm{hard\ power})\approx +0.41$:
-        purer hard sets $\Rightarrow$ more hard power.
-\end{itemize}
-
-\subsection{Justification C --- Fused power needs sharp VIMP $+$ aligned $m$;
-hurts as novel cardinality grows}
-
-Fused $=$ soft inside hard. Highest concentration.
-
-\begin{itemize}
-  \item Wins: wine $+0.33$ ($n_{\mathrm{nov}}{=}1$, gap $+0.71$);
-        mice $+0.17$ after private-live fuse;
-        cnae9 $+0.19$ (all channels tie).
-  \item Fails/null: HAR $-0.05$ (hard already enough);
-        covtype $0$; ISOLET $-0.05$.
-  \item \textbf{Complexity link:}
-        $\mathrm{corr}(n_{\mathrm{nov}},\mathrm{fused\ power})\approx \mathbf{-0.54}$
-        --- more simultaneous new labels $\Rightarrow$ less fused lift.
-        ISOLET ($n_{\mathrm{nov}}{=}13$, within-spread $2.4$, VIMP $0.07$)
-        is the extreme: sample-level weights have no coherent target.
-        $\mathrm{corr}(v(\mathcal{S}),\mathrm{fused\ power})\approx +0.51$:
-        fused needs Layer~1 to actually localize.
-\end{itemize}
-
-\paragraph{One-line power law.}
-\[
-\begin{aligned}
-&\text{simple novel blob (large gap, }n_{\mathrm{nov}}\small\text{)}
-  \Rightarrow \text{fused/hard power high};\\
-&\text{messy alignment / high-}d
-  \Rightarrow \text{soft power dominates};\\
-&\text{many heterogeneous novel labels + diffuse VIMP}
-  \Rightarrow \text{sample-level power }\approx 0.
-\end{aligned}
-\]
+\paragraph{Power law.}
+Simple blob $\to$ fused/hard;\ 
+messy/high-$d$ $\to$ soft;\ 
+fragmented$+$diffuse VIMP $\to$ refuse.
 
 %======================================================================
-\section{Lever 2 --- Post-FSDS selection logic}
+\section{Post-FSDS selection (ops rule)}
 %======================================================================
-
-FSDS does not ship weights by itself. After VIMP we \emph{select}:
-(i) subspace $\mathcal{S}=\mathrm{top}\text{-}K(v)$;
-(ii) membership $m$;
-(iii) channel $\in\{\mathrm{refuse},\mathrm{soft},\mathrm{hard},\mathrm{fused}\}$.
-Selection must track novel-category complexity.
-
-\subsection{Step S1 --- Subspace selection (complexity of the shift support)}
-
-RF-domain VIMP ranks features that separate LIVE from REF.
-\begin{itemize}
-  \item If the new category shift is low-dimensional and coherent,
-        mass concentrates: wine $v(\mathcal{S})=0.67$, cnae9 $0.41$.
-  \item If many novel letters/sensors dilute the domain signal,
-        mass spreads: ISOLET $0.07$, HAR $0.13$ (HAR still saved by S3).
-  \item \textbf{Justify:} subspace quality bounds every downstream
-        sample weight. Selecting a larger $K$ cannot invent signal when
-        VIMP is flat --- it only adds noise dims to $m_i$.
-\end{itemize}
-
-\subsection{Step S2 --- Membership as a complexity probe}
-
-After $\mathcal{S}$ is fixed, read gap, $\mathrm{corr}(m,\mathrm{novel})$,
-hard-prec/rec, $\mathbb{E}[m\mid\mathrm{nov}]$.
-These are \emph{observable proxies} for novel complexity
-(without needing the full generative model):
-
-\begin{center}
-\small
-\begin{tabular}{@{}lccc@{}}
-\toprule
-Complexity regime & Typical gap / hard-prec & Post-FSDS read \\
-\midrule
-Simple blob & gap $\gtrsim 0.6$, $E[m\mid\mathrm{nov}]\approx 1$
-  & hard set almost covers novel \\
-Family blob (multi-label, one cluster)
-  & gap large, sil$_{\mathrm{nov}}$ low, $b/w$ huge
-  & hard subset on the family \\
-Overlapping / speaker-like
-  & gap $\lesssim 0.2$ or negative, hard-prec $\lesssim 0.25$
-  & membership under-covers $\to$ fuse $+$ soft \\
-Fragmented many-class
-  & large $n_{\mathrm{nov}}$, high within, tiny VIMP
-  & refuse \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\subsection{Step S3 --- Channel selection rule (justified)}
 
 \begin{enumerate}
-  \item If $v(\mathcal{S})\lesssim 0.10$: \textbf{refuse}
-        (ISOLET --- 13-way novel speech letters; sample weights powerless).
-  \item If $\mathbb{E}[m\mid\mathrm{nov}]\gtrsim 0.9$ and hard-prec $\gtrsim 0.35$
-        and hard power $\ge$ fused: \textbf{hard subset}
-        (HAR family; cancer single class).
-        \emph{Why:} complexity is low at the \emph{cluster} level; soft$\times$hard
-        only raises Gini and can cut novel acc (HAR fused $-0.05$).
-  \item If gap $\lesssim 0.25$ or $\mathrm{corr}(m,\mathrm{novel})\lesssim 0.3$:
-        \textbf{soft $+$ private-live fuse}
-        (jvowel, news20b, covtype).
-        \emph{Why:} complex / poorly aligned novel support; continuous weights
-        are the only sample-level power left.
-  \item Else: \textbf{fused}
-        (wine, mice after fuse, cnae9).
-        \emph{Why:} sharp subspace and aligned $m$; product uses full
-        sample-level power.
+  \item $v(\mathcal{S})\lesssim 0.10$ $\to$ \textbf{refuse} (ISOLET).
+  \item $E[m\mid\mathrm{nov}]\gtrsim 0.9$, H-prec $\gtrsim 0.35$, hard $\ge$ fused
+        $\to$ \textbf{hard subset} (HAR, cancer).
+  \item gap $\lesssim 0.25$ or weak $m$--novel corr
+        $\to$ \textbf{soft $+$ private-live fuse} (jvowel, news20b, covtype).
+  \item Else $\to$ \textbf{fused} (wine, mice, cnae9).
 \end{enumerate}
-
-\paragraph{Private-live fuse as a complexity patch.}
-When novel structure is too complex for geometry alone (jvowel gap$<0$;
-mice mid gap $+0.36$ but product $-0.39$), fuse injects label support into
-$m$. That is not ``cheating'': it is acknowledging that unsupervised
-membership under-resolves complex new categories, while sample weights
-still need a correct support to have power.
+Fuse is a complexity patch when geometry under-covers novel
+(jvowel gap$<0$; mice product $-0.39\to$fused $+0.17$).
 
 %======================================================================
-\section{How the two levers couple to complexity}
+\section{Downsampling: needed or not?}
 %======================================================================
 
-\begin{center}
-\small
-\begin{tabular}{@{}lll@{}}
-\toprule
-Novel-category complexity & Sample-level power & Post-FSDS selection \\
-\midrule
-1 coherent new class, large gap
-  & fused/hard high; soft often $0$ extras
-  & keep top-$K$; ship fused (or hard) \\
-Multi-label but one family vs known ($b/w\gg 1$)
-  & hard power peaks; fused can hurt
-  & select hard subset; do not multiply soft \\
-Weak alignment / high-$d$ / gap small
-  & soft power dominates
-  & fuse private-live; ship soft \\
-Many heterogeneous novel classes $+$ diffuse VIMP
-  & all sample-level powers $\approx 0$
-  & refuse weighting; hold uniform \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\paragraph{Empirical anchors.}
-$\mathrm{corr}(n_{\mathrm{nov}},\mathrm{fused\ power})\approx -0.54$;
-$\mathrm{corr}(v(\mathcal{S}),\mathrm{fused\ power})\approx +0.51$;
-$\mathrm{corr}(\mathrm{hard\text{-}prec},\mathrm{hard\ power})\approx +0.41$;
-$\mathrm{corr}(\mathrm{gap},\mathrm{soft\ power})\approx -0.32$.
-Together: fused likes simple+sharp; soft likes hard-to-align complexity;
-hard likes saturated clusters; refuse likes fragmented complexity.
-
-%======================================================================
-\section{Do we need downsampling? (justified re-run)}
-%======================================================================
-
-Sparse novel injection makes uniform \texttt{partial\_fit} look like a
-\emph{class-imbalance} problem. A natural baseline is to
-\textbf{downsample known} LIVE rows to $n_{\mathrm{known}}=n_{\mathrm{novel}}$
-(label 1:1). We re-ran nine boards with a controlled ablation
-(\texttt{results/downsample\_vs\_weight/}).
-
-\subsection{Schemes}
-
-\begin{center}
-\small
-\begin{tabular}{@{}lp{0.62\textwidth}@{}}
-\toprule
-Scheme & Definition \\
-\midrule
-\texttt{uniform} & full LIVE train, flat weights \\
-\texttt{ds\_known} & keep all novel; downsample known to 1:1 \\
-\texttt{ds\_random} & random downsample to same $n$ as \texttt{ds\_known} \\
-\texttt{ds\_mem} & keep top-$n$ by membership $m$ (no novel labels) \\
-\texttt{sample/subset/both\_fused} & FSDS weights on \emph{full} LIVE $n$ \\
-\texttt{ds\_known+sample\_f} & downsample known, then soft-fused on remainder \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\subsection{Aggregate incremental value}
+\subsection{Controlled ablation}
 
 \begin{center}
 \small
@@ -325,195 +139,124 @@ Scheme & Definition \\
 \toprule
 Contrast (mean $\Delta$novel) & Value \\
 \midrule
-\texttt{ds\_known} $-$ uniform & $+0.127$ \\
-\texttt{ds\_random} $-$ uniform & $-0.023$ \\
-\texttt{ds\_mem} $-$ uniform & $+0.041$ \\
-best FSDS weight $-$ uniform & $+0.178$ \\
-\textbf{best weight $-$ \texttt{ds\_known} (incremental)} & $\mathbf{+0.052}$ \\
-\texttt{ds\_known+sample\_f} $-$ \texttt{ds\_known} & $+0.021$ \\
+\texttt{ds\_known}$-$uniform & $+0.127$ \\
+\texttt{ds\_random}$-$uniform & $-0.023$ \\
+\texttt{ds\_mem}$-$uniform & $+0.041$ \\
+best weight$-$uniform & $+0.178$ \\
+\textbf{best weight$-$\texttt{ds\_known}} & $\mathbf{+0.052}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\noindent Weights beat \texttt{ds\_known} on \textbf{5/9} boards.
-
-\paragraph{Justification 1 --- It is not ``smaller $n$''.}
-\texttt{ds\_random} matches the training size of \texttt{ds\_known} but
-\emph{hurts} novel on average ($-0.023$).
-So any downsample gain must come from \emph{which} rows are kept
-(label balance or membership), not from fewer SGD steps.
-
-\paragraph{Justification 2 --- Label downsample is blunt rebalance;
-weights are selective reweighting.}
-\texttt{ds\_known} forces novel\_frac $=0.5$ by discarding known rows.
-FSDS weights keep all rows and rescale SGD mass.
-When membership (after fuse) tags novel, weights recover the same or
-better novel lift \emph{without} throwing away known data.
-
-\subsection{Per-board verdict}
+\noindent\textit{Not smaller $n$:}
+\texttt{ds\_random} matches \texttt{ds\_known}'s train size but hurts.
+\textit{Blunt vs selective:}
+\texttt{ds\_known} forces $s=1/2$ by discarding $\sim$75\% known;
+weights rescale full LIVE.
 
 \begin{center}
 \scriptsize
-\begin{tabular}{@{}lccccc@{}}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-Board & ds$\Delta$ & best\_w$\Delta$ & incr (w$-$ds)
-  & $\Delta$known@ds / @w & Verdict \\
+Board & ds$\Delta$ & best\_w$\Delta$ & incr & Verdict \\
 \midrule
-cancer  & $0$ & $+0.200$ & $\mathbf{+0.200}$ & $+0.08$ / $+0.11$
-  & \textbf{no ds}; weights required \\
-news20b & $0$ & $+0.250$ & $\mathbf{+0.250}$ & $-0.03$ / $-0.15$
-  & \textbf{no ds}; soft-fused required \\
-jvowel  & $0$ & $+0.105$ & $\mathbf{+0.105}$ & $-0.22$ / $\mathbf{+0.04}$
-  & \textbf{no ds}; ds destroys known \\
-har     & $+0.182$ & $+0.318$ & $\mathbf{+0.136}$ & $-0.05$ / $-0.05$
-  & ds helps; \textbf{hard weights add more} \\
-cnae9   & $+0.125$ & $+0.188$ & $\mathbf{+0.062}$ & $-0.12$ / $-0.07$
-  & weights beat ds; milder known cost \\
-wine    & $+0.333$ & $+0.333$ & $0$ & $0$ / $0$
-  & ds enough for novel; fused matches \\
-mice    & $+0.167$ & $+0.167$ & $0$ & $-0.14$ / $-0.20$
-  & ds enough for novel KPI \\
-covtype & $+0.333$ & $+0.095$ & $-0.238$ & $-0.14$ / $-0.01$
-  & \textbf{ds needed}; membership too weak \\
-isolet  & $0$ & $-0.050$ & $-0.050$ & $-0.02$ / $-0.10$
-  & neither works (C1 fail) \\
+cancer / news20b / jvowel
+  & $0$ & $+0.10$--$0.25$ & $\mathbf{+0.10}$--$\mathbf{0.25}$
+  & \textbf{no ds} \\
+har / cnae9
+  & $+0.13$--$0.18$ & $+0.19$--$0.32$ & $\mathbf{+0.06}$--$\mathbf{0.14}$
+  & weights add on top \\
+wine / mice
+  & $=+$best\_w & tie & $0$
+  & ds optional; prefer weights \\
+covtype
+  & $+0.333$ & $+0.095$ & $-0.24$
+  & \textbf{ds then soft} \\
+isolet
+  & $0$ & $-0.05$ & $-0.05$
+  & refuse \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\subsection{When downsampling \emph{is} needed (carefully)}
+\subsection{Gradient-mass account (why)}
 
-\begin{itemize}
-  \item \textbf{Only when FSDS membership cannot carry novel mass}
-        --- covtype: gap modest, hard-prec low; \texttt{ds\_known} $+0.333$
-        vs best weight $+0.095$.
-        Here label balance \emph{is} the bottleneck.
-        Combo \texttt{ds\_known+sample\_f} adds $+0.143$ novel over
-        \texttt{ds\_known} alone on covtype --- if you downsample, still
-        apply soft weights on the remainder.
-  \item \textbf{Not needed when weights already lift and ds is flat}
-        --- cancer / news20b / jvowel: \texttt{ds\_known} $\Delta{=}0$ but
-        weights $+0.10$--$0.25$.
-        Downsampling would discard known without buying novel.
-        jvowel is decisive: ds known $\Delta{=}-0.22$ while soft-fused
-        known $\Delta{=}+0.04$ with novel $+0.105$.
-  \item \textbf{Optional when ds ties fused on novel}
-        --- wine / mice: same novel lift; prefer weights if known retention
-        matters (avoid discarding REF-like LIVE known rows by default).
-  \item \textbf{Membership downsample} (\texttt{ds\_mem}) is a label-free
-        cousin of hard subset: mean $+0.041$, helps HAR/cancer-like boards,
-        but loses to label ds when alignment is weak and loses to full-$n$
-        hard \emph{weights} when $E[m\mid\mathrm{nov}]\approx 1$
-        (HAR weights $+0.318$ $>$ \texttt{ds\_mem} $+0.182$).
-\end{itemize}
-
-\paragraph{Policy.}
-Default: \textbf{do not} label-downsample; ship post-FSDS weights
-(soft/hard/fused by complexity).
-Exception: if weight channels stay near uniform on novel \emph{and}
-\texttt{ds\_known} validation lift is large (covtype-like) $\to$
-downsample known, then soft-weight the kept set.
-Never random-downsample.
-
-\subsection{One more justify step --- novel gradient-mass accounting}
-
-Let the LIVE batch have novel indicator $N_i\in\{0,1\}$ and weights $w_i$
-(mean-normalized). Define the \textbf{novel gradient-mass share}
 \[
-s(w)
-=
-\frac{\sum_i w_i N_i}{\sum_i w_i}.
+s(w)=\frac{\sum w_i N_i}{\sum w_i},\qquad
+\Delta\mathrm{novel}(w)
+\;\approx\;
+f\big(s(w),\,\mathrm{quality}(m)\big)
+\;-\;
+c(\mathrm{known\ discard}).
 \]
-Under uniform, $s\equiv \bar N\approx 0.17$--$0.23$ on our boards.
-Under \texttt{ds\_known} (1:1), $s=1/2$ by construction, but known-row keep
-rate is only $\approx 0.20$--$0.30$ (discard $70$--$80\%$ of known LIVE).
 
 \begin{center}
 \small
-\begin{tabular}{@{}lccccc@{}}
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-Board & $s$(uniform) & $s$(best $w$) & amp $=s/s_u$
-  & known keep (ds) & incr $w{-}$ds \\
+Board & $s_u$ & $s$(best $w$) & known keep (ds) & Read \\
 \midrule
-wine    & 0.19 & 0.46 (fused) & $2.4\times$ & 0.24 & $0$ \\
-mice    & 0.23 & 0.49 (fused) & $2.1\times$ & 0.30 & $0$ \\
-har     & 0.20 & 0.34 (subset) & $1.7\times$ & 0.25 & $+0.136$ \\
-cancer  & 0.19 & 0.33 (subset) & $1.7\times$ & 0.24 & $+0.200$ \\
-cnae9   & 0.21 & 0.37 (soft) & $1.8\times$ & 0.27 & $+0.062$ \\
-news20b & 0.18 & 0.31 (soft) & $1.7\times$ & 0.22 & $+0.250$ \\
-jvowel  & 0.20 & 0.29 (soft) & $1.5\times$ & 0.25 & $+0.105$ \\
-covtype & 0.17 & 0.25 (soft) & $1.5\times$ & 0.20 & $-0.238$ \\
-isolet  & 0.20 & 0.43 (fused) & $2.2\times$ & 0.25 & $-0.050$ \\
+wine / mice & $\sim$0.2 & $0.46$--$0.49\approx\tfrac12$ & $0.24$--$0.30$
+  & \textbf{J1} mass-match $\Rightarrow$ novel tie, no discard \\
+har / cancer / news / jvowel
+  & $\sim$0.2 & $0.29$--$0.37<\tfrac12$ & $\sim$0.25
+  & \textbf{J2} better row contrast beats random 1:1 \\
+covtype & 0.17 & $0.25\ll\tfrac12$ & 0.20
+  & \textbf{J3} cannot close mass gap $\Rightarrow$ ds \\
+isolet & 0.20 & $0.43\approx\tfrac12$ & 0.25
+  & \textbf{J4} mass$\neq$quality (VIMP $0.07$) \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\paragraph{Step J1 --- Mass-matching explains the ties.}
-wine / mice: best fused pushes $s(w)\to 0.46$--$0.49\approx 1/2$.
-So weights already buy the same novel mass share as 1:1 downsample
-\emph{without} discarding $\sim 70\%$ of known rows --- hence incr $=0$ on
-novel, and downsample is optional, not required.
-
-\paragraph{Step J2 --- Beating ds with $s(w)<1/2$ is about \emph{which} rows.}
-cancer / HAR / news20b / jvowel: best weights only reach $s\approx 0.29$--$0.37$
-$<0.5$, yet novel lift \emph{exceeds} \texttt{ds\_known}.
-Justification: \texttt{ds\_known} keeps a \emph{random} known half at full
-weight $1$; that retained known mass still competes with novel on the
-decision boundary.
-Weights instead keep \emph{all} known at down-scaled $w$ and upweight
-high-$m$ / fused novel --- same or less total novel mass, but better
-\emph{contrast} against non-novel-like known.
-jvowel is the clean witness: ds known $\Delta{=}-0.22$ (random known keep
-hurts) while soft-fused known $\Delta{=}+0.04$ with novel $+0.105$.
-
-\paragraph{Step J3 --- When ds is mandatory: weights cannot close the mass gap.}
-covtype: best soft only reaches $s=0.25$ (amp $1.5\times$) vs ds's forced
-$0.50$, under weak gap ($+0.15$).
-Membership cannot allocate enough novel mass $\Rightarrow$ label downsample
-is the only way to hit $s=1/2$.
-Then soft-on-remainder still adds $+0.143$ novel --- ds supplies mass,
-weights supply ranking inside the kept set.
-
-\paragraph{Step J4 --- Mass without a good subspace is worthless.}
-ISOLET: fused reaches $s=0.43\approx 1/2$ (amp $2.2\times$) but VIMP-top
-$0.07$ --- high novel mass on a wrong ranking; both ds and weights fail.
-Closes the loop with C1: gradient-mass accounting is necessary, not sufficient.
-
-\paragraph{Accounting identity (PO).}
-\[
-\underbrace{\Delta\mathrm{novel}(w)}_{\text{weight lift}}
-\;\approx\;
-\underbrace{f\!\big(s(w),\;\mathrm{quality}(m)\big)}_{\text{mass $\times$ ranking}}
-\;-\;
-\underbrace{c(\mathrm{known\ discard})}_{\text{only ds pays this}}.
-\]
-Weights win when quality$(m)$ is high enough that moderate $s(w)$ beats
-ds's $s=1/2$ with random known keep.
-Ds wins when quality$(m)$ is too weak to push $s(w)$ near $1/2$.
+jvowel witness for J2: ds known $\Delta{=}-0.22$; soft-fused known $+0.04$, novel $+0.105$.
+covtype for J3: after ds, soft-on-remainder still $+0.143$ novel.
 
 %======================================================================
-\section{PO bottom line}
+\section{Decision card}
+%======================================================================
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Check & If & Do \\
+\midrule
+VIMP-top $\lesssim 0.10$ & diffuse subspace & refuse weights \\
+Label Jaccard $<0.2$ & incomparable PDA & no directed adapt \\
+$E[m\mid\mathrm{nov}]\gtrsim 0.9$, hard $\ge$ fused & family/simple blob & hard subset \\
+gap $\lesssim 0.25$ / weak corr & messy alignment & soft $+$ fuse \\
+else, VIMP sharp & aligned & fused \\
+$s(w)$ cannot $\to\tfrac12$ on valid. & covtype-like & ds\_known, then soft \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Default.}
+No label-downsample. Ship post-FSDS channel by the card.
+Never random-downsample.
+
+%======================================================================
+\section{Takeaway}
 %======================================================================
 
 \begin{enumerate}
-  \item Sample-level weight power and post-FSDS selection track
-        novel-category complexity (soft vs hard vs fused vs refuse).
-  \item \textbf{Downsample is not the default.}
-        Mean incremental value of best FSDS weight over \texttt{ds\_known}
-        is $\mathbf{+0.052}$ (win on $5/9$); random ds is harmful.
-  \item Deeper account: compare novel mass share $s(w)$ to ds's $1/2$.
-        Ties $=$ mass-matched fused ($s\approx 0.5$) without discard;
-        $W>\mathrm{ds}$ with $s<1/2$ $=$ better row contrast;
-        ds mandatory when $s(w)$ cannot approach $1/2$ (covtype);
-        ISOLET shows mass$\neq$quality.
-  \item Need ds only when membership cannot allocate novel mass;
-        then combine ds $+$ soft weights.
+  \item Sample-level weights work when the new category (or novel \emph{family})
+        is recoverable in the FSDS subspace; channel follows complexity.
+  \item Soft handles weak alignment; hard handles saturated clusters;
+        fused needs sharp$+$aligned; refuse when fragmented$+$diffuse.
+  \item Downsample is not default: incremental best-weight over
+        \texttt{ds\_known} is $\mathbf{+0.052}$ ($5/9$).
+        Use ds only when mass share cannot approach $1/2$, then soft-weight.
+  \item Peaks: soft $+0.25$, hard $+0.32$, fused $+0.33$;
+        best-w mean $+0.178$; ds mean $+0.127$.
 \end{enumerate}
 
-\paragraph{Artifacts.}
-\texttt{results/downsample\_vs\_weight/} (incl.\ \texttt{gradient\_mass.json});
-\texttt{results/fsds\_cfperm\_weight\_bench/complexity\_vs\_power.json};
-\texttt{Python/src/downsample\_vs\_weight\_ablation.py};
-\texttt{docs/method/Weighted\_cold\_start\_FSDS\_weights.tex}.
+\paragraph{Code / results.}
+\texttt{Python/src/weighted\_cold\_start.py},
+\texttt{downsample\_vs\_weight\_ablation.py};
+\texttt{results/fsds\_cfperm\_weight\_bench/},
+\texttt{results/downsample\_vs\_weight/};
+\texttt{python3 scripts/run\_downsample\_vs\_weight\_ablation.py --quick}.
 
 \end{document}
