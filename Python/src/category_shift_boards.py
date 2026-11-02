@@ -189,10 +189,11 @@ def run_cgcd(
         else:
             out = adapt_batch(
                 clf, X_ref, y_ref, Xtr, ytr, seed=seed + st["stage"],
-                top_k=8, lam=3.5, min_jaccard=0.05,
+                top_k=8, lam=2.0, min_jaccard=0.05,
                 detect_thresh=1.05, force_adapt=True,
                 use_private_labels=(mode == "weighted"),
                 weight_mode="fused" if mode == "weighted" else "sample",
+                temper=True,
             )
             clf = out["clf"]
             meta = {
@@ -201,6 +202,8 @@ def run_cgcd(
                 "feat_hit": float(np.isin(out["feat_idx"], st["active_dims"]).mean()),
                 "boundary": out["boundary"]["decision"],
                 "mean_membership": out["mean_membership"],
+                "subset_frac": out.get("subset_frac"),
+                "temper_shrink": (out.get("weights") or {}).get("temper", {}).get("shrink"),
             }
 
         pred = clf.predict(Xev)
@@ -264,9 +267,10 @@ def cold_start_efficiency(
             else:
                 out = adapt_batch(
                     clf, X_ref, y_ref, Xtr, ytr, seed=seed + int(b),
-                    top_k=8, lam=3.5, min_jaccard=0.05, force_adapt=True,
+                    top_k=8, lam=2.0, min_jaccard=0.05, force_adapt=True,
                     use_private_labels=(mode == "weighted"),
                     weight_mode="fused" if mode == "weighted" else "sample",
+                    temper=True,
                 )
                 clf = out["clf"]
             acc = float(np.mean(clf.predict(Xl[hold]) == yl[hold]))

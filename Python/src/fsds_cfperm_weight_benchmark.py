@@ -31,12 +31,10 @@ from weighted_cold_start import (
     SEED,
     attribute_rf_domain,
     cold_start_partial_fit,
-    combine_weights,
     fit_initial,
     localize_subset,
     make_sgd,
-    sample_weights,
-    subset_weights,
+    weights_from_attribution,
 )
 
 
@@ -219,33 +217,35 @@ def run_board(
     if board.get("active_dims") is not None:
         feat_hit = float(np.isin(feat, board["active_dims"]).mean())
 
-    sw = sample_weights(mem, lam=lam)
-    sub_w, sub_mask = subset_weights(mem, q=subset_q, boost=subset_boost)
-    both = combine_weights(sw, sub_w)
-    # fused: membership ∪ private-live labels (discovered / oracle ids)
+    # membership-only channels (diagnostic)
+    wt_s = weights_from_attribution(mem, feat, X1s.shape[1], lam=lam, subset_q=subset_q, subset_boost=subset_boost, mode="sample", temper=False)
+    wt_u = weights_from_attribution(mem, feat, X1s.shape[1], lam=lam, subset_q=subset_q, subset_boost=subset_boost, mode="subset", temper=False)
+    wt_b = weights_from_attribution(mem, feat, X1s.shape[1], lam=lam, subset_q=subset_q, subset_boost=subset_boost, mode="fused", temper=True)
+    # private-live fused channels (cold-start default)
     mem_f = mem.copy()
     if novel is not None:
         mem_f = np.maximum(mem_f, np.isin(y1, novel).astype(float))
-    sw_f = sample_weights(mem_f, lam=lam)
-    sub_f, sub_mask_f = subset_weights(mem_f, q=subset_q, boost=subset_boost)
-    both_f = combine_weights(sw_f, sub_f)
+    wt_sf = weights_from_attribution(mem_f, feat, X1s.shape[1], lam=lam, subset_q=subset_q, subset_boost=subset_boost, mode="sample", temper=False)
+    wt_uf = weights_from_attribution(mem_f, feat, X1s.shape[1], lam=lam, subset_q=subset_q, subset_boost=subset_boost, mode="subset", temper=False)
+    wt_bf = weights_from_attribution(mem_f, feat, X1s.shape[1], lam=lam, subset_q=subset_q, subset_boost=subset_boost, mode="fused", temper=True)
 
     # train/eval split on LIVE
     rng = np.random.default_rng(seed + 11)
-    # stratify-ish: keep some novel in both sides when possible
     idx = rng.permutation(len(y1))
     n_ev = max(20, len(y1) // 3)
     ev, tr = idx[:n_ev], idx[n_ev:]
 
     schemes = {
         "uniform": np.ones(len(tr)),
-        "sample_w": sw[tr],
-        "subset_w": sub_w[tr],
-        "sample_x_subset": both[tr],
-        "sample_w_fused": sw_f[tr],
-        "subset_w_fused": sub_f[tr],
-        "both_fused": both_f[tr],
+        "sample_w": wt_s["sample_weight"][tr],
+        "subset_w": wt_u["sample_weight"][tr],
+        "sample_x_subset": wt_b["sample_weight"][tr],
+        "sample_w_fused": wt_sf["sample_weight"][tr],
+        "subset_w_fused": wt_uf["sample_weight"][tr],
+        "both_fused": wt_bf["sample_weight"][tr],
     }
+    sub_mask = wt_b["subset_mask"]
+    sub_mask_f = wt_bf["subset_mask"]
     rows = {}
     forget0 = None
     for name, w in schemes.items():
@@ -257,9 +257,9 @@ def run_board(
         w = w * (len(w) / max(w.sum(), 1e-12))
         # amplify CFPerm-rejected / top-VIMP coords mildly
         Xtr = X1s[tr].copy()
-        Xtr[:, feat] *= 1.2
+        Xtr[:, feat] *= 1.08
         clf = cold_start_partial_fit(
-            clf, Xtr, y1[tr], sample_weight=w, classes=classes, n_passes=4,
+            clf, Xtr, y1[tr], sample_weight=w, classes=classes, n_passes=3,
         )
         m_live = _metrics(clf, X1s[ev], y1[ev], known=known, novel=novel)
         m_ref = _metrics(clf, X0s, y0, known=known, novel=None)

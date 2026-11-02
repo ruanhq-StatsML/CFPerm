@@ -19,44 +19,50 @@
     "stages": [
       {
         "stage": 0,
-        "known_acc": 0.5,
+        "known_acc": 0.47619047619047616,
         "novel_acc": NaN,
-        "forgetting": 0.5083333333333333,
+        "forgetting": 0.44999999999999996,
         "n_novel_train": 12,
         "reason": "fused_cold_start",
         "vimp_top_mass": 0.42000134588361693,
         "feat_hit": 0.125,
         "boundary": "comparable",
-        "mean_membership": 0.5440591228110371
+        "mean_membership": 0.5440591228110371,
+        "subset_frac": 0.35119047619047616,
+        "temper_shrink": 0.0
       },
       {
         "stage": 1,
-        "known_acc": 0.5625,
+        "known_acc": 0.625,
         "novel_acc": 0.0,
-        "forgetting": 0.3291666666666667,
+        "forgetting": 0.32499999999999996,
         "n_novel_train": 8,
         "reason": "fused_cold_start",
         "vimp_top_mass": 0.4352605688300444,
         "feat_hit": 0.125,
         "boundary": "comparable",
-        "mean_membership": 0.5385304062334795
+        "mean_membership": 0.5385304062334795,
+        "subset_frac": 0.35119047619047616,
+        "temper_shrink": 0.0
       },
       {
         "stage": 2,
-        "known_acc": 0.6623376623376623,
-        "novel_acc": 0.14285714285714285,
-        "forgetting": 0.35416666666666663,
+        "known_acc": 0.6883116883116883,
+        "novel_acc": 0.2857142857142857,
+        "forgetting": 0.33333333333333337,
         "n_novel_train": 5,
         "reason": "fused_cold_start",
         "vimp_top_mass": 0.4114622729759748,
         "feat_hit": 0.125,
         "boundary": "comparable",
-        "mean_membership": 0.5271948930633211
+        "mean_membership": 0.5271948930633211,
+        "subset_frac": 0.35119047619047616,
+        "temper_shrink": 0.0
       }
     ],
-    "mean_known_acc": 0.5749458874458875,
-    "mean_novel_acc": 0.07142857142857142,
-    "mean_forgetting": 0.3972222222222222,
+    "mean_known_acc": 0.5965007215007215,
+    "mean_novel_acc": 0.14285714285714285,
+    "mean_forgetting": 0.36944444444444446,
     "mean_feat_hit": 0.125,
     "mean_vimp_top_mass": 0.4222413958965454
   },
@@ -68,42 +74,48 @@
         "stage": 0,
         "known_acc": 0.5714285714285714,
         "novel_acc": NaN,
-        "forgetting": 0.3291666666666667,
+        "forgetting": 0.4041666666666667,
         "n_novel_train": 12,
         "reason": "weighted_cold_start",
         "vimp_top_mass": 0.42000134588361693,
         "feat_hit": 0.125,
         "boundary": "comparable",
-        "mean_membership": 0.49132837825631065
+        "mean_membership": 0.49132837825631065,
+        "subset_frac": 0.35119047619047616,
+        "temper_shrink": 0.0
       },
       {
         "stage": 1,
-        "known_acc": 0.675,
+        "known_acc": 0.6375,
         "novel_acc": 0.0,
-        "forgetting": 0.275,
+        "forgetting": 0.30000000000000004,
         "n_novel_train": 8,
         "reason": "weighted_cold_start",
         "vimp_top_mass": 0.4352605688300444,
         "feat_hit": 0.125,
         "boundary": "comparable",
-        "mean_membership": 0.5158006186623264
+        "mean_membership": 0.5158006186623264,
+        "subset_frac": 0.35119047619047616,
+        "temper_shrink": 0.0
       },
       {
         "stage": 2,
-        "known_acc": 0.6103896103896104,
-        "novel_acc": 0.2857142857142857,
-        "forgetting": 0.36250000000000004,
+        "known_acc": 0.7142857142857143,
+        "novel_acc": 0.42857142857142855,
+        "forgetting": 0.3416666666666667,
         "n_novel_train": 5,
         "reason": "weighted_cold_start",
         "vimp_top_mass": 0.4114622729759748,
         "feat_hit": 0.125,
         "boundary": "comparable",
-        "mean_membership": 0.5078834744197601
+        "mean_membership": 0.5078834744197601,
+        "subset_frac": 0.35119047619047616,
+        "temper_shrink": 0.0
       }
     ],
-    "mean_known_acc": 0.618939393939394,
-    "mean_novel_acc": 0.14285714285714285,
-    "mean_forgetting": 0.32222222222222224,
+    "mean_known_acc": 0.6410714285714286,
+    "mean_novel_acc": 0.21428571428571427,
+    "mean_forgetting": 0.34861111111111115,
     "mean_feat_hit": 0.125,
     "mean_vimp_top_mass": 0.4222413958965454
   },
@@ -174,7 +186,7 @@
           },
           {
             "budget": 8,
-            "novel_acc": 0.5,
+            "novel_acc": 0.3333333333333333,
             "n_novel_train": 8
           },
           {
@@ -205,7 +217,7 @@
           },
           {
             "budget": 8,
-            "novel_acc": 0.25,
+            "novel_acc": 0.3333333333333333,
             "n_novel_train": 8
           },
           {
@@ -215,12 +227,12 @@
           },
           {
             "budget": 16,
-            "novel_acc": 0.8333333333333334,
+            "novel_acc": 0.75,
             "n_novel_train": 16
           },
           {
             "budget": 24,
-            "novel_acc": 0.6666666666666666,
+            "novel_acc": 0.5833333333333334,
             "n_novel_train": 24
           }
         ],
@@ -302,7 +314,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.9666666666666667,
+        "shared_acc": 0.9833333333333333,
         "vimp_top_mass": 0.8013490589115017
       },
       {
@@ -312,7 +324,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.8166666666666667,
+        "shared_acc": 0.95,
         "vimp_top_mass": 0.9490500281765472
       },
       {
@@ -322,7 +334,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.5916666666666667,
+        "shared_acc": 0.975,
         "vimp_top_mass": 0.9700820995699818
       },
       {
@@ -332,7 +344,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.8346153846153846,
+        "shared_acc": 0.8269230769230769,
         "vimp_top_mass": 0.8371630043024777
       },
       {
@@ -342,7 +354,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.7038461538461539,
+        "shared_acc": 0.5769230769230769,
         "vimp_top_mass": 0.957318779945699
       },
       {
@@ -352,7 +364,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.6576923076923077,
+        "shared_acc": 0.6384615384615384,
         "vimp_top_mass": 0.9784461690942702
       }
     ],
@@ -363,19 +375,19 @@
         "adapt_rate": 0.0
       },
       "0.4": {
-        "mean_shared_acc": 0.7916666666666666,
+        "mean_shared_acc": 0.9694444444444444,
         "incomparable_rate": 0.0,
         "adapt_rate": 1.0
       },
       "0.8": {
-        "mean_shared_acc": 0.7320512820512821,
+        "mean_shared_acc": 0.6807692307692307,
         "incomparable_rate": 0.0,
         "adapt_rate": 1.0
       }
     }
   },
-  "delta_novel_acc_vs_uniform": -0.125,
-  "delta_novel_acc_membership": -0.053571428571428575,
-  "delta_forgetting_vs_uniform": -0.05972222222222223,
+  "delta_novel_acc_vs_uniform": -0.053571428571428575,
+  "delta_novel_acc_membership": 0.01785714285714285,
+  "delta_forgetting_vs_uniform": -0.0319444444444445,
   "takeaway": "Directed adapt = gate + boundary + upweight localized/private samples. C-GCD reports novel/forget/feat_hit + n* efficiency; PDA reports incomparable rate rising as overlap falls."
 }

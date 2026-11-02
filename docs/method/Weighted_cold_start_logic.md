@@ -9,9 +9,10 @@ Pure **membership** diagnoses *where* the shift lives; cold-start **adapts** wit
 3. **Boundary** — Jaccard(label supports) low → `incomparable` → skip directed adapt.
 4. **Fuse** — membership ∪ private-live labels (discovered / pseudo ids).
 5. **Weights (default cold-start channel)**
-   - `sample_w = 1 + λ · membership_fused` (soft, mean-1)
-   - `subset_w` = boost on hard observation subset `{i : membership ≥ q}`
+   - `sample_w = 1 + λ_eff · membership_fused` (soft, mean-1)
+   - `subset_w` = boost_eff on hard observation subset `{i : membership ≥ q}`
    - **`fused_w = sample_w × subset_w`** ← what `partial_fit` uses
+   - **temper**: if membership is diffuse, shrink fused_w toward uniform and clip ratio
 6. **Adapt** — `partial_fit(..., sample_weight=fused_w)` + mild amplify of attributed features.
 
 ## Why this split

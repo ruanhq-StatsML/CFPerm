@@ -22,22 +22,22 @@ Directed adapt = gate + boundary + upweight localized/private samples. C-GCD rep
 
 | mode | known | novel | forgetting | feat_hit | vimp_top_mass |
 | --- | --- | --- | --- | --- | --- |
-| weighted | 0.575 | 0.071 | 0.397 | 0.125 | 0.422 |
-| membership | 0.619 | 0.143 | 0.322 | 0.125 | 0.422 |
+| weighted | 0.597 | 0.143 | 0.369 | 0.125 | 0.422 |
+| membership | 0.641 | 0.214 | 0.349 | 0.125 | 0.422 |
 | uniform | 0.610 | 0.196 | 0.337 | — | — |
 
-Δ novel (weighted − uniform): **-0.125**
+Δ novel (weighted − uniform): **-0.054**
 
-Δ novel (membership − uniform): **-0.054**
+Δ novel (membership − uniform): **0.018**
 
-Δ forgetting (uniform − weighted; &gt;0 ⇒ weighted forgets less): **-0.060**
+Δ forgetting (uniform − weighted; &gt;0 ⇒ weighted forgets less): **-0.032**
 
 ## Cold-start efficiency (n* novel samples → novel_acc ≥ 0.60)
 
 | mode | n* | curve (budget:acc) |
 | --- | --- | --- |
-| weighted | 16 | 4:0.25, 8:0.50, 12:0.50, 16:0.83, 24:0.83 |
-| membership | 16 | 4:0.25, 8:0.25, 12:0.25, 16:0.83, 24:0.67 |
+| weighted | 16 | 4:0.25, 8:0.33, 12:0.50, 16:0.83, 24:0.83 |
+| membership | 16 | 4:0.25, 8:0.33, 12:0.25, 16:0.75, 24:0.58 |
 | uniform | 16 | 4:0.25, 8:0.33, 12:0.42, 16:0.67, 24:0.92 |
 
 efficiency winner: **weighted**
@@ -47,8 +47,8 @@ efficiency winner: **weighted**
 | overlap | shared acc | incomparable rate | adapt rate |
 | --- | --- | --- | --- |
 | 0.1 | 0.767 | 1.000 | 0.000 |
-| 0.4 | 0.792 | 0.000 | 1.000 |
-| 0.8 | 0.732 | 0.000 | 1.000 |
+| 0.4 | 0.969 | 0.000 | 1.000 |
+| 0.8 | 0.681 | 0.000 | 1.000 |
 
 Directed adapt = detect gate + Jaccard boundary + `w=1+λ·membership` + `partial_fit`.
 

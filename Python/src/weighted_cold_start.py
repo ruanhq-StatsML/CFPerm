@@ -155,16 +155,42 @@ def combine_weights(sample_w: np.ndarray, subset_w: np.ndarray) -> np.ndarray:
     return w * (len(w) / max(w.sum(), 1e-12))
 
 
+def temper_weights(
+    w: np.ndarray,
+    membership: np.ndarray,
+    *,
+    max_ratio: float = 3.5,
+) -> Tuple[np.ndarray, Dict]:
+    """Safety temper: clip ratio + shrink toward 1 when membership is diffuse.
+
+    Digits/amazon taught us fused weights are not unconditionally good —
+    if the footprint is flat, pull weights back toward uniform.
+    """
+    w = np.asarray(w, float).ravel()
+    mem = np.asarray(membership, float).ravel()
+    w = w * (len(w) / max(w.sum(), 1e-12))
+    k = max(1, len(mem) // 5)
+    conc = float(np.sort(mem)[-k:].mean())  # top-20% mean membership
+    # conc~1 → shrink~0; conc~0.3 → shrink~0.35
+    shrink = float(np.clip(0.50 - 0.55 * conc, 0.0, 0.40))
+    w = (1.0 - shrink) * w + shrink * 1.0
+    lo, hi = 1.0 / float(max_ratio), float(max_ratio)
+    w = np.clip(w, lo, hi)
+    w = w * (len(w) / max(w.sum(), 1e-12))
+    return w, {"shrink": shrink, "conc": conc, "max_ratio": float(max_ratio)}
+
+
 def weights_from_attribution(
     membership: np.ndarray,
     feat_idx: np.ndarray,
     p: int,
     *,
-    lam: float = 2.5,
-    cap: float = 5.0,
-    subset_q: float = 0.6,
-    subset_boost: float = 3.0,
+    lam: float = 2.0,
+    cap: float = 4.0,
+    subset_q: float = 0.65,
+    subset_boost: float = 2.2,
     mode: str = "fused",
+    temper: bool = True,
 ) -> Dict:
     """Build cold-start weights from membership.
 
@@ -174,8 +200,13 @@ def weights_from_attribution(
       fused    — sample_w × subset_w  (default cold-start channel)
     """
     mem = np.asarray(membership, float).ravel()
-    sw = sample_weights(mem, lam=lam, cap=cap)
-    sub_w, sub_mask = subset_weights(mem, q=subset_q, boost=subset_boost)
+    # adaptive λ/boost from concentration (stronger only when footprint is sharp)
+    k = max(1, len(mem) // 5)
+    conc = float(np.sort(mem)[-k:].mean())
+    lam_eff = float(lam) * (0.7 + 0.6 * conc)
+    boost_eff = float(subset_boost) * (0.75 + 0.5 * conc)
+    sw = sample_weights(mem, lam=lam_eff, cap=cap)
+    sub_w, sub_mask = subset_weights(mem, q=subset_q, boost=boost_eff)
     mode = str(mode).lower()
     if mode == "sample":
         w = sw
@@ -184,6 +215,9 @@ def weights_from_attribution(
     else:
         w = combine_weights(sw, sub_w)
         mode = "fused"
+    temper_info = {"shrink": 0.0, "conc": conc, "max_ratio": None}
+    if temper and mode == "fused":
+        w, temper_info = temper_weights(w, mem)
     fmask = np.zeros(int(p), dtype=bool)
     fmask[np.asarray(feat_idx, int)] = True
     return {
@@ -195,6 +229,9 @@ def weights_from_attribution(
         "feat_idx": np.asarray(feat_idx, int),
         "weight_mode": mode,
         "subset_frac": float(sub_mask.mean()),
+        "lam_eff": lam_eff,
+        "boost_eff": boost_eff,
+        "temper": temper_info,
     }
 
 
@@ -222,7 +259,7 @@ def cold_start_partial_fit(
     # the cold-start signal. Optional mild amplify of attributed coords only.
     if feature_mask is not None:
         m = np.asarray(feature_mask, bool)
-        X[:, m] *= 1.15
+        X[:, m] *= 1.08  # mild; avoid over-amplifying attributed coords
     # sklearn requires the same `classes` vector on every partial_fit call
     if classes is None:
         classes = getattr(clf, "classes_", None)
@@ -244,14 +281,15 @@ def adapt_batch(
     *,
     seed: int = SEED,
     top_k: int = 8,
-    lam: float = 2.5,
+    lam: float = 2.0,
     min_jaccard: float = 0.20,
     detect_thresh: float = 1.15,
     force_adapt: bool = False,
     use_private_labels: bool = True,
     weight_mode: str = "fused",
-    subset_q: float = 0.6,
-    subset_boost: float = 3.0,
+    subset_q: float = 0.65,
+    subset_boost: float = 2.2,
+    temper: bool = True,
 ) -> Dict:
     """Detect → attribute → boundary → fused sample_w×subset_w cold-start.
 
@@ -269,6 +307,7 @@ def adapt_batch(
     wt = weights_from_attribution(
         mem, feat, X_live.shape[1], lam=lam,
         subset_q=subset_q, subset_boost=subset_boost, mode=weight_mode,
+        temper=temper,
     )
 
     adapted = False
