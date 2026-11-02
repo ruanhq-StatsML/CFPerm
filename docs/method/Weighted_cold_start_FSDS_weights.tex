@@ -1,5 +1,7 @@
-% Weighted cold-start under category shift — two weight layers for PO
+% Weighted cold-start under category shift — two weight layers + incremental value
 % Compile: pdflatex Weighted_cold_start_FSDS_weights.tex
+% Numbers: results/fsds_cfperm_weight_bench/fsds_cfperm_weight_bench.json
+%          results/weighted_cold_start/weighted_cold_start.json
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,booktabs,hyperref,array}
@@ -7,34 +9,33 @@
 \usepackage{lmodern}
 
 \title{Weighted Cold-Start under Category Shift\\
-\large Two weight layers: FSDS feature-level $\to$ post-localization sample weights}
-\author{AS-DTA / CFPerm \quad---\quad PO delivery}
+\large Two weight layers + incremental value (PO delivery)}
+\author{AS-DTA / CFPerm}
 \date{}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-\noindent\textbf{Objective:} cold-start the \emph{new class} when category shift
-arrives sparsely --- without drowning \texttt{partial\_fit} in known-class
-recirculation.
+\noindent\textbf{Objective:} cold-start the \emph{new class} under category
+shift --- without drowning \texttt{partial\_fit} in known-class recirculation.
 \textbf{How:} two weight layers.
-(1)~\emph{FSDS feature-level} --- RF-domain VIMP localizes which features
-moved LIVE vs REF.
-(2)~\emph{Post-localization} --- membership on that subspace becomes soft
-\texttt{sample\_w} and hard \texttt{subset\_w}; the product
-$w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$ is the
-default cold-start channel.
-\textbf{Headline:} mean $\Delta$ novel $\approx{+}0.165$ vs uniform on four
-boards; gains sit on the new class.
+(1)~\emph{FSDS feature-level} RF-domain VIMP localizes which features moved.
+(2)~\emph{Post-localization} membership $\to$ soft \texttt{sample\_w} $\times$
+hard \texttt{subset\_w}; default channel
+$w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$.
+\textbf{Incremental value (locked numbers):}
+mean $\Delta$novel(\texttt{both\_fused})$={+}0.165$ vs uniform on four boards;
+channel stack soft$\to$hard$\to$product$\to$fused adds
+${-}0.007\to{+}0.031\to{+}0.117\to{+}0.165$;
+C-GCD proxy $\Delta$novel$={+}0.196$; multiseed mean $\Delta$novel$={+}0.072$.
 \end{abstract}
 
-%----------------------------------------------------------------------
-\section{PO logic in one page}
-%----------------------------------------------------------------------
+%======================================================================
+\section{PO logic: two weight layers}
+%======================================================================
 
 \paragraph{Problem.}
-Standard UDA assumes a shared label set.
 Category shift (C-GCD / PDA) injects private-live labels.
 The product question is not only ``did shift fire?'' but
 \textbf{can we cold-start the new class?}
@@ -49,7 +50,7 @@ Layer & Object & What it does \\
 1. Feature-level
   & FSDS RF-domain VIMP
   & Attributes LIVE$\leftrightarrow$REF on $W\in\{0,1\}$;
-    top-$K$ features = subspace for localization;
+    top-$K$ features = localization subspace;
     mild amplify of those coords at adapt. \\
 2. After localization
   & Observation weights
@@ -61,138 +62,261 @@ Layer & Object & What it does \\
 \end{tabular}
 \end{center}
 
-\paragraph{Claim for PO.}
-Layer~1 diagnoses \emph{where} (which features / subspace).
-Layer~2 decides \emph{whom to upweight} (which rows look new-category-like).
-Membership alone is diagnostic; fused observation weights are the adaptation
-lever. Weights are gated by label-support Jaccard (PDA incomparable $\Rightarrow$
-no directed update) and tempered when $m$ is diffuse.
+\paragraph{Claim.}
+Layer~1 diagnoses \emph{where}; Layer~2 decides \emph{whom to upweight}.
+Membership is diagnostic; fused observation weights are the adaptation lever.
+Gated by label Jaccard (PDA incomparable $\Rightarrow$ no directed update)
+and tempered when $m$ is diffuse.
+
+\paragraph{Pipeline (short).}
+Detect $\to$ Layer~1 VIMP $\to$ localize $m_i$ $\to$ boundary
+$\to$ fuse private-live into $m_i$ $\to$ Layer~2 fused weights
+$\to$ \texttt{partial\_fit} (+ known REF replay).
+Auto: sharp footprint $\to$ fused; diffuse $\to$ sample-only.
+
+%======================================================================
+\section{Incremental value --- what exactly moves}
+%======================================================================
+
+Product metric $=$ \textbf{novel accuracy} on private-live / injected new
+labels. Global acc is secondary (often flat or down) because the win is
+concentrated on the sparse new class.
 
 %----------------------------------------------------------------------
-\section{Pipeline}
+\subsection{Headline: absolute and relative novel lift}
 %----------------------------------------------------------------------
 
-\begin{enumerate}
-  \item \textbf{Detect:} LIVE/REF error-rise gate (OnlineRFPerm-style).
-  \item \textbf{Layer 1 --- attribute:} RF-domain VIMP on batch $W\in\{0,1\}$;
-        top-$K$ feature subspace.
-  \item \textbf{Localize:} z-score distance in that subspace
-        $\to$ membership $m_i\in[0,1]$.
-  \item \textbf{Boundary:} Jaccard(label supports)${<}0.2$ $\Rightarrow$
-        \texttt{incomparable} (no directed adapt).
-  \item \textbf{Fuse labels:} $m_i\leftarrow\max(m_i,\,\mathbf{1}\{y_i\in\mathrm{private\text{-}live}\})$.
-  \item \textbf{Layer 2 --- weights:}
-        $w^{\mathrm{sample}}_i=1+\lambda_{\mathrm{eff}} m_i$ (soft);
-        $w^{\mathrm{subset}}_i$ boosts $\{i:m_i\ge q\}$ (hard);
-        default $w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$,
-        tempered when $m$ is diffuse.
-  \item \textbf{Adapt:} mix weighted LIVE with known REF replay ($w{=}1$);
-        \texttt{partial\_fit} with $w^{\mathrm{fused}}$
-        (+ mild amplify of Layer-1 features);
-        \texttt{auto} falls back to soft-only when concentration is low.
-\end{enumerate}
-
-\paragraph{Auto policy.}
-Sharp footprint $\to$ fused; diffuse footprint $\to$ sample-only.
-Guards covertype-style boards where stacking hard subset can hurt novel acc.
-
-%----------------------------------------------------------------------
-\section{What to evaluate (novel first)}
-%----------------------------------------------------------------------
+Baseline $=$ uniform \texttt{partial\_fit}.
+Treatment $=$ \texttt{both\_fused} (Layer~2 default).
 
 \begin{center}
 \small
-\begin{tabular}{@{}lp{0.62\textwidth}@{}}
+\begin{tabular}{@{}lcccccc@{}}
 \toprule
-Axis & Definition \\
+Board & uniform & both\_fused & $\Delta$ abs & $\Delta$ rel
+  & $\Delta$ known & $\Delta$ forget \\
 \midrule
-Novel acc & accuracy on private-live / injected new labels \\
-Known retention & accuracy on recirculated known labels; forgetting on pinned REF \\
-Attribution & top-$K$ VIMP mass; optional feat-hit on synthetic active dims \\
-Efficiency $n^*$ & min novel-sample budget to hit a novel-acc target \\
-Boundary & incomparable rate vs.\ label-overlap (PDA) \\
+wine     & 0.667 & \textbf{1.000} & \textbf{+0.333} & \textbf{+50\%}
+  & $0.000$ & $+0.033$ \\
+cancer   & 0.800 & \textbf{1.000} & \textbf{+0.200} & \textbf{+25\%}
+  & $-0.028$ & $+0.127$ \\
+news20b  & 0.125 & \textbf{0.250} & \textbf{+0.125} & \textbf{+100\%}
+  & $-0.185$ & $+0.120$ \\
+covtype  & 0.524 & 0.524 & $0.000$ & $0\%$
+  & $-0.071$ & $+0.144$ \\
+\midrule
+\textbf{mean} & & & \textbf{+0.165} & --- & $-0.071$ & $+0.106$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-The product story is carried by \textbf{novel acc}, not global acc.
+\noindent\textit{Reading.}
+Three of four boards lift novel; wine is free on known ($0$ cost);
+cancer pays $-0.028$ known for $+0.200$ novel (gain/cost $\approx 7.2\times$);
+news20b doubles novel but pays $-0.185$ known (expensive high-d text);
+covtype fused is a \emph{null} on novel --- soft channel wins there (below).
 
 %----------------------------------------------------------------------
-\section{Boards}
+\subsection{Channel stack: where the $+0.165$ comes from}
 %----------------------------------------------------------------------
+
+Mean $\Delta$novel vs uniform across the same four boards
+(\texttt{results/fsds\_cfperm\_weight\_bench}):
 
 \begin{center}
 \small
-\begin{tabular}{@{}lll@{}}
+\begin{tabular}{@{}lrc@{}}
 \toprule
-Board & Known $\to$ novel & Protocol \\
+Channel (Layer~2) & mean $\Delta$novel & Interpretation \\
 \midrule
-wine & $\{0,1\}\to\{2\}$ & UCI wine, sparse inject \\
-covtype & $\{1,2,3\}\to\{4,5\}$ & covertype subsample \\
-news20b & atheism/religion $\to$ med/hardware & TF--IDF, sparse inject \\
-cancer & benign $\to$ malignant & breast-cancer sparse inject \\
+\texttt{sample\_w} alone
+  & $-0.007$ & soft membership alone $\approx$ null \\
+\texttt{subset\_w} alone
+  & $+0.031$ & hard observation subset starts to help \\
+\texttt{sample}$\times$\texttt{subset}
+  & $+0.117$ & product without private-live fuse \\
+\texttt{both\_fused} (default)
+  & \textbf{+0.165} & product $+$ membership$\cup$private-live \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-%----------------------------------------------------------------------
-\section{Results (novel class)}
-%----------------------------------------------------------------------
+\noindent\textbf{Decomposition.}
+\begin{align*}
+\underbrace{+0.031}_{\text{hard subset}}
+\;+\;
+\underbrace{(0.117-0.031)=+0.086}_{\text{soft$\times$hard synergy}}
+\;+\;
+\underbrace{(0.165-0.117)=+0.048}_{\text{private-live fuse}}
+\;=\;
+\underbrace{+0.165}_{\text{locked cold-start channel}}.
+\end{align*}
+Soft alone does almost nothing ($-0.007$).
+Hard alone is weak ($+0.031$).
+The \emph{product} is the first real jump ($+0.117$);
+fusing discovered private-live into membership adds another $+0.048$.
+Layer~1 does not appear as a $\Delta$ row: it is the subspace that makes
+$m_i$ (hence Layer~2) identifiable --- without VIMP localization the
+observation weights have no footprint to follow.
 
-\paragraph{Absolute novel accuracy (uniform vs.\ both\_fused).}
+%----------------------------------------------------------------------
+\subsection{Per-board tradeoff: novel gain vs known cost}
+%----------------------------------------------------------------------
 
 \begin{center}
 \small
 \begin{tabular}{@{}lcccc@{}}
 \toprule
-Dataset & uniform & both\_fused & $\Delta$ novel & known (fused) \\
+Board & $\Delta$novel & $\Delta$known
+  & gain/$\lvert$cost$\rvert$ & Best novel channel \\
 \midrule
-wine     & 0.667 & \textbf{1.000} & \textbf{+0.333} & 0.941 \\
-cancer   & 0.800 & \textbf{1.000} & \textbf{+0.200} & 0.778 \\
-news20b  & 0.125 & \textbf{0.250} & \textbf{+0.125} & 0.508 \\
-covtype  & 0.524 & 0.524 & 0.000 & 0.535 \\
-\midrule
-mean $\Delta$ novel (fused) & & & \textbf{+0.165} & \\
+wine    & $+0.333$ & $0.000$  & $\infty$ (free)
+  & \texttt{both\_fused} / \texttt{sample}$\times$\texttt{subset} ($1.0$) \\
+cancer  & $+0.200$ & $-0.028$ & $7.2\times$
+  & \texttt{both\_fused} / \texttt{subset\_w} ($1.0$) \\
+news20b & $+0.125$ & $-0.185$ & $0.68\times$
+  & \texttt{sample\_w\_fused} ($0.375$) \\
+covtype & $0.000$  & $-0.071$ & $0$ (fused null)
+  & \texttt{sample\_w} / \texttt{sample\_w\_fused} ($0.619$, $+0.095$) \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\paragraph{Channel ablation (mean $\Delta$ novel vs.\ uniform).}
-\texttt{sample\_w} alone $\approx{-}0.007$;
-\texttt{subset\_w} alone $\approx{+}0.031$;
-\texttt{sample}$\times$\texttt{subset} $\approx{+}0.117$;
-\texttt{both\_fused} $\approx{+}0.165$.
-Layer~2 soft $\times$ hard is what moves the new class;
-Layer~1 supplies the subspace that makes membership meaningful.
-
-\paragraph{Reading by board.}
-\begin{itemize}
-  \item \textbf{wine:} novel $2/3\to 1$; known flat --- ideal cold-start.
-  \item \textbf{cancer:} novel to $1.0$; known dips slightly --- acceptable tradeoff.
-  \item \textbf{news20b:} novel doubles ($0.125\to0.25$;
-        \texttt{sample\_w\_fused} reaches $0.375$),
-        but known/forgetting pay --- high-d text is expensive.
-  \item \textbf{covtype:} fused does not lift novel; soft
-        \texttt{sample\_w\_fused} reaches $0.619$ ($+0.095$) ---
-        prefer auto/sample when concentration is moderate.
-\end{itemize}
+\noindent\textit{Policy implication.}
+Default ship \texttt{both\_fused} when VIMP mass is concentrated
+(wine VIMP-top$=0.673$).
+On high-d text (news20b VIMP-top$=0.309$), prefer soft fused
+(\texttt{sample\_w\_fused}: novel $0.375$, $\Delta={+}0.250$ vs uniform)
+over stacking hard subset.
+On covtype, fused pays known without novel gain --- auto$\to$sample
+recovers $\Delta$novel$={+}0.095$ at novel $0.619$.
 
 %----------------------------------------------------------------------
+\subsection{C-GCD proxy: closed-loop incremental value}
+%----------------------------------------------------------------------
+
+Separate board (\texttt{weighted\_cold\_start.json}, cifar100-style C-GCD proxy,
+3 stages). Modes: uniform / membership-diagnostic / weighted (auto fused).
+
+\begin{center}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Mode & mean novel & mean known & mean forgetting \\
+\midrule
+uniform     & 0.196 & 0.610 & 0.338 \\
+membership  & 0.196 & 0.673 & 0.279 \\
+\textbf{weighted (auto fused)}
+  & \textbf{0.393} & 0.649 & 0.332 \\
+\midrule
+$\Delta$ vs uniform
+  & \textbf{+0.196} & $+0.039$ & $-0.006$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Stage detail (novel evaluated when private-live present):
+stage~1 novel $0.25\to 0.50$ ($+0.25$);
+stage~2 novel $0.143\to 0.286$ ($+0.143$).
+Membership alone matches uniform on novel ($0.196$) --- confirms
+``diagnosis $\neq$ adaptation''.
+Weighted nearly \emph{doubles} novel ($0.196\to 0.393$) while known
+slightly \emph{improves} vs uniform ($+0.039$) and forgetting is flat
+($\Delta={-}0.006$).
+
+%----------------------------------------------------------------------
+\subsection{Multiseed robustness}
+%----------------------------------------------------------------------
+
+Three seeds $\{2026,2027,2028\}$ on the C-GCD proxy:
+mean $\Delta$novel(weighted$-$uniform)$={+}0.072$;
+mean $\Delta$novel(membership$-$uniform)$={-}0.165$;
+mean $\Delta$forgetting vs uniform $={+}0.036$.
+The fused/auto channel stays positive on novel under seed perturbation;
+membership-only stays non-positive --- again diagnosis vs adaptation.
+
+%----------------------------------------------------------------------
+\subsection{Efficiency $n^*$ (budget $\to$ novel$\ge 0.60$)}
+%----------------------------------------------------------------------
+
+Budgets $\{4,8,12,16,24\}$ novel samples; target novel acc $0.60$.
+All three modes hit $n^*{=}16$ on this board (tie on budget).
+At the crossing budget $n{=}16$:
+uniform novel $=0.667$;
+membership $=0.917$;
+weighted $=0.833$.
+Weighted dominates uniform on the mid-budget path
+($n{=}12$: $0.50$ vs $0.417$; $n{=}16$: $0.833$ vs $0.667$)
+--- same $n^*$, higher novel density once the budget is spent.
+(Uniform catches up only at $n{=}24$ with $0.917$ vs weighted $0.75$;
+large-budget regime is not the cold-start claim.)
+
+%----------------------------------------------------------------------
+\subsection{PDA boundary honesty (negative value of forced adapt)}
+%----------------------------------------------------------------------
+
+OfficeHome-style PDA proxy by label overlap:
+\begin{center}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Overlap & Jaccard regime & incomparable rate & adapt rate \\
+\midrule
+$0.1$ & low ($J{\approx}0.125$) & $1.0$ & $0.0$ \\
+$0.4$ & mid  & $0.0$ & $1.0$ \\
+$0.8$ & high & $0.0$ & $1.0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+At overlap $0.1$ the gate refuses directed update 100\% of the time.
+That is incremental value as \emph{risk avoided}: no poisoned
+\texttt{partial\_fit} when supports barely overlap.
+Shared-class acc under hold ($0.1$) stays usable ($\sim 0.77$ mean)
+without pretending the new support is transferable.
+
+%======================================================================
+\section{Boards (weight-bench setup)}
+%======================================================================
+
+\begin{center}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+Board & Known $\to$ novel & $n_{\mathrm{ref}}/n_{\mathrm{live}}$ & VIMP-top mass \\
+\midrule
+wine    & $\{0,1\}\to\{2\}$ & $90/62$ & $0.673$ \\
+covtype & $\{1,2,3\}\to\{4,5\}$ & $800/360$ & $0.587$ \\
+news20b & atheism/religion $\to$ med/hardware & $500/220$ & $0.309$ \\
+cancer  & benign $\to$ malignant & $212/124$ & $0.313$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%======================================================================
 \section{Takeaway for PO}
-%----------------------------------------------------------------------
+%======================================================================
 
 \begin{enumerate}
-  \item \textbf{Layer 1 (FSDS feature-level)} localizes the shift subspace.
-  \item \textbf{Layer 2 (post-localization)} upweights new-category-like rows
-        via $w^{\mathrm{sample}}\times w^{\mathrm{subset}}$.
-  \item Product metric $=$ novel acc (+ known retention / boundary honesty).
-  \item Fused is default when the footprint is sharp; otherwise soft sample\_w.
-  \item PDA: low label Jaccard $\Rightarrow$ incomparable, no directed update.
+  \item \textbf{Layer 1} (FSDS feature-level) localizes the shift subspace;
+        \textbf{Layer 2} (post-localization) upweights new-category-like rows.
+  \item Locked incremental value on four boards:
+        mean $\Delta$novel(\texttt{both\_fused})$=\mathbf{+0.165}$
+        vs uniform; stack
+        soft$/$$\text{hard}$$/$$\text{product}$$/$$\text{fused}
+        $={-}0.007/{+}0.031/{+}0.117/{+}0.165$.
+  \item C-GCD proxy: $\Delta$novel$=\mathbf{+0.196}$ (nearly $2\times$),
+        known $+0.039$, forgetting flat; multiseed mean $\Delta$novel$=+0.072$.
+  \item Tradeoff is board-dependent: wine free; cancer $7.2\times$ novel/known;
+        news20b costly (prefer soft fused); covtype fused null
+        (prefer auto/sample, $+0.095$).
+  \item PDA low Jaccard $\Rightarrow$ incomparable --- value $=$ refuse bad adapt.
 \end{enumerate}
 
-\paragraph{Code.}
+\paragraph{Code / artifacts.}
 \texttt{Python/src/weighted\_cold\_start.py},
 \texttt{fsds\_cfperm\_weight\_benchmark.py};
+\texttt{results/fsds\_cfperm\_weight\_bench/},
+\texttt{results/weighted\_cold\_start/};
 \texttt{python3 scripts/run\_fsds\_cfperm\_weight\_benchmark.py --quick}.
 
 \end{document}
