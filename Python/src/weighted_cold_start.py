@@ -1,15 +1,19 @@
 """Weighted cold-start under category shift (non-consistent classes).
 
-Pipeline
---------
-  detect (error-rise gate)
-  → FSDS/CFPerm-style attribution (RF-domain VIMP) + subset localization
-  → boundary check (label-support overlap → comparable | incomparable)
-  → upweight localized subsets + selected features
-  → sklearn partial_fit cold-start
+Cold-start logic (locked)
+-------------------------
+  1. Detect error rise (gate).
+  2. FSDS RF-domain VIMP → top-K subspace → membership (diagnostic).
+  3. Boundary: low label-support Jaccard → incomparable → *no* directed adapt.
+  4. Fuse membership with private-live labels (discovered / pseudo ids).
+  5. Build weights:
+       sample_w  = 1 + λ · membership_fused     (soft)
+       subset_w  = boost on hard observation subset (membership ≥ q)
+       fused_w   = sample_w × subset_w          ← default cold-start channel
+  6. partial_fit with fused_w (+ mild amplify of attributed features).
 
-Weights are *derived* from attribution (ranking / membership), not raw VIMP.
-Incomparable batches skip directed adaptation (honest boundary).
+Pure membership alone is for diagnosis / ablation. Digits/amazon show weights
+are not unconditionally helpful — boundary + sparsity still gate the update.
 """
 from __future__ import annotations
 
@@ -117,21 +121,81 @@ def boundary_check(
     }
 
 
+def sample_weights(membership: np.ndarray, *, lam: float = 2.5, cap: float = 5.0) -> np.ndarray:
+    """Soft per-observation weights from membership (mean-normalized)."""
+    mem = np.asarray(membership, float).ravel()
+    w = np.clip(1.0 + float(lam) * mem, 1.0, float(cap))
+    return w * (len(w) / max(w.sum(), 1e-12))
+
+
+def subset_weights(
+    membership: np.ndarray,
+    *,
+    q: float = 0.6,
+    boost: float = 3.0,
+    max_frac: float = 0.45,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Hard observation-subset weights: boost the localized high-membership set."""
+    mem = np.asarray(membership, float).ravel()
+    n = len(mem)
+    thr = float(np.quantile(mem, float(q)))
+    mask = mem >= thr
+    if not mask.any() or mask.mean() > float(max_frac):
+        k = max(1, int(round(n * min(1.0 - float(q), float(max_frac)))))
+        mask = np.zeros(n, dtype=bool)
+        mask[np.argsort(-mem)[:k]] = True
+    w = np.ones(n, dtype=float)
+    w[mask] = float(boost)
+    w = w * (n / max(w.sum(), 1e-12))
+    return w, mask
+
+
+def combine_weights(sample_w: np.ndarray, subset_w: np.ndarray) -> np.ndarray:
+    w = np.asarray(sample_w, float) * np.asarray(subset_w, float)
+    return w * (len(w) / max(w.sum(), 1e-12))
+
+
 def weights_from_attribution(
     membership: np.ndarray,
     feat_idx: np.ndarray,
     p: int,
     *,
-    lam: float = 2.0,
+    lam: float = 2.5,
     cap: float = 5.0,
+    subset_q: float = 0.6,
+    subset_boost: float = 3.0,
+    mode: str = "fused",
 ) -> Dict:
-    """Sample weights from localized membership; feature mask from top-K."""
+    """Build cold-start weights from membership.
+
+    mode
+      sample   — soft sample_w only
+      subset   — hard observation subset_w only
+      fused    — sample_w × subset_w  (default cold-start channel)
+    """
     mem = np.asarray(membership, float).ravel()
-    w = np.clip(1.0 + float(lam) * mem, 1.0, float(cap))
-    w = w * (len(w) / max(w.sum(), 1e-12))  # mean 1
-    mask = np.zeros(int(p), dtype=bool)
-    mask[np.asarray(feat_idx, int)] = True
-    return {"sample_weight": w, "feature_mask": mask, "feat_idx": np.asarray(feat_idx, int)}
+    sw = sample_weights(mem, lam=lam, cap=cap)
+    sub_w, sub_mask = subset_weights(mem, q=subset_q, boost=subset_boost)
+    mode = str(mode).lower()
+    if mode == "sample":
+        w = sw
+    elif mode == "subset":
+        w = sub_w
+    else:
+        w = combine_weights(sw, sub_w)
+        mode = "fused"
+    fmask = np.zeros(int(p), dtype=bool)
+    fmask[np.asarray(feat_idx, int)] = True
+    return {
+        "sample_weight": w,
+        "sample_w": sw,
+        "subset_w": sub_w,
+        "subset_mask": sub_mask,
+        "feature_mask": fmask,
+        "feat_idx": np.asarray(feat_idx, int),
+        "weight_mode": mode,
+        "subset_frac": float(sub_mask.mean()),
+    }
 
 
 def make_sgd(*, seed: int = SEED) -> SGDClassifier:
@@ -180,26 +244,32 @@ def adapt_batch(
     *,
     seed: int = SEED,
     top_k: int = 8,
-    lam: float = 2.0,
+    lam: float = 2.5,
     min_jaccard: float = 0.20,
     detect_thresh: float = 1.15,
     force_adapt: bool = False,
     use_private_labels: bool = True,
+    weight_mode: str = "fused",
+    subset_q: float = 0.6,
+    subset_boost: float = 3.0,
 ) -> Dict:
-    """One stream step: detect → attribute → boundary → (maybe) weighted cold-start.
+    """Detect → attribute → boundary → fused sample_w×subset_w cold-start.
 
-    use_private_labels
-      True  → fuse private-live labels into membership (oracle / discovered ids)
-      False → membership-only from attributed subspace (no label leakage)
+    Default weight_mode='fused' (locked cold-start channel).
+    Pure membership (use_private_labels=False, weight_mode='sample') is diagnostic.
     """
     y_ref, y_live = np.asarray(y_ref).ravel(), np.asarray(y_live).ravel()
     gate = detect_error_rise(clf, X_ref, y_ref, X_live, y_live, thresh=detect_thresh)
     bound = boundary_check(y_ref, y_live, min_jaccard=min_jaccard)
     vimp = attribute_rf_domain(X_ref, X_live, seed=seed)
-    mem, feat = localize_subset(X_ref, X_live, vimp, top_k=top_k)
+    mem_raw, feat = localize_subset(X_ref, X_live, vimp, top_k=top_k)
+    mem = mem_raw.copy()
     if use_private_labels and bound["private_live"]:
         mem = np.maximum(mem, np.isin(y_live, bound["private_live"]).astype(float))
-    wt = weights_from_attribution(mem, feat, X_live.shape[1], lam=lam)
+    wt = weights_from_attribution(
+        mem, feat, X_live.shape[1], lam=lam,
+        subset_q=subset_q, subset_boost=subset_boost, mode=weight_mode,
+    )
 
     adapted = False
     reason = "no_trigger"
@@ -217,19 +287,24 @@ def adapt_batch(
             n_passes=3,
         )
         adapted = True
-        reason = "weighted_cold_start" if gate["trigger"] else "forced"
+        reason = "fused_cold_start" if wt["weight_mode"] == "fused" else "weighted_cold_start"
+        if not gate["trigger"]:
+            reason = "forced_" + reason
     return {
         "clf": clf,
         "gate": gate,
         "boundary": bound,
         "vimp": vimp,
         "membership": mem,
+        "membership_raw": mem_raw,
         "feat_idx": feat,
         "weights": wt,
         "adapted": adapted,
         "reason": reason,
         "vimp_top_mass": float(vimp[feat].sum()),
         "use_private_labels": bool(use_private_labels),
+        "weight_mode": wt["weight_mode"],
+        "subset_frac": wt["subset_frac"],
         "mean_membership": float(np.mean(mem)),
     }
 

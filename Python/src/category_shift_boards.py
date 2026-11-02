@@ -192,6 +192,7 @@ def run_cgcd(
                 top_k=8, lam=3.5, min_jaccard=0.05,
                 detect_thresh=1.05, force_adapt=True,
                 use_private_labels=(mode == "weighted"),
+                weight_mode="fused" if mode == "weighted" else "sample",
             )
             clf = out["clf"]
             meta = {
@@ -265,6 +266,7 @@ def cold_start_efficiency(
                     clf, X_ref, y_ref, Xtr, ytr, seed=seed + int(b),
                     top_k=8, lam=3.5, min_jaccard=0.05, force_adapt=True,
                     use_private_labels=(mode == "weighted"),
+                    weight_mode="fused" if mode == "weighted" else "sample",
                 )
                 clf = out["clf"]
             acc = float(np.mean(clf.predict(Xl[hold]) == yl[hold]))
@@ -320,9 +322,9 @@ def run_officehome_pda(
             Xt, yt = sc.transform(tgt["X"]), tgt["y"]
             bound = boundary_check(ys, yt, min_jaccard=0.20)
             out = adapt_batch(
-                clf, Xs, ys, Xt, yt, seed=seed, top_k=6, lam=2.0,
+                clf, Xs, ys, Xt, yt, seed=seed, top_k=6, lam=2.5,
                 min_jaccard=0.20, detect_thresh=1.05, force_adapt=False,
-                use_private_labels=True,
+                use_private_labels=True, weight_mode="fused",
             )
             shared = board["shared"]
             m = np.isin(yt, shared)

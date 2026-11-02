@@ -31,48 +31,13 @@ from weighted_cold_start import (
     SEED,
     attribute_rf_domain,
     cold_start_partial_fit,
+    combine_weights,
     fit_initial,
     localize_subset,
     make_sgd,
+    sample_weights,
+    subset_weights,
 )
-
-# ---------------------------------------------------------------------------
-# Weight builders
-# ---------------------------------------------------------------------------
-
-
-def sample_weights(membership: np.ndarray, *, lam: float = 2.5, cap: float = 5.0) -> np.ndarray:
-    mem = np.asarray(membership, float).ravel()
-    w = np.clip(1.0 + float(lam) * mem, 1.0, float(cap))
-    return w * (len(w) / max(w.sum(), 1e-12))
-
-
-def subset_weights(
-    membership: np.ndarray,
-    *,
-    q: float = 0.6,
-    boost: float = 3.0,
-    max_frac: float = 0.45,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Hard observation-subset weights + boolean mask of the subset."""
-    mem = np.asarray(membership, float).ravel()
-    n = len(mem)
-    thr = float(np.quantile(mem, float(q)))
-    mask = mem >= thr
-    # if membership is flat / thr too low, fall back to top-k by rank
-    if not mask.any() or mask.mean() > float(max_frac):
-        k = max(1, int(round(n * min(1.0 - float(q), float(max_frac)))))
-        mask = np.zeros(n, dtype=bool)
-        mask[np.argsort(-mem)[:k]] = True
-    w = np.ones(n, dtype=float)
-    w[mask] = float(boost)
-    w = w * (n / max(w.sum(), 1e-12))
-    return w, mask
-
-
-def combine_weights(sample_w: np.ndarray, subset_w: np.ndarray) -> np.ndarray:
-    w = np.asarray(sample_w, float) * np.asarray(subset_w, float)
-    return w * (len(w) / max(w.sum(), 1e-12))
 
 
 def cfperm_feature_reject(
