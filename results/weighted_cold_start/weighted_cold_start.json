@@ -19,9 +19,9 @@
     "stages": [
       {
         "stage": 0,
-        "known_acc": 0.4880952380952381,
+        "known_acc": 0.5476190476190477,
         "novel_acc": NaN,
-        "forgetting": 0.41666666666666663,
+        "forgetting": 0.4125,
         "n_novel_train": 12,
         "reason": "fused_cold_start",
         "vimp_top_mass": 0.42000134588361693,
@@ -31,14 +31,14 @@
         "subset_frac": 0.35119047619047616,
         "membership_conc": 1.0,
         "weight_mode": "fused",
-        "n_replay": 59,
+        "n_replay": 42,
         "temper_shrink": 0.0
       },
       {
         "stage": 1,
-        "known_acc": 0.6375,
+        "known_acc": 0.725,
         "novel_acc": 0.5,
-        "forgetting": 0.25416666666666665,
+        "forgetting": 0.2833333333333333,
         "n_novel_train": 8,
         "reason": "fused_cold_start",
         "vimp_top_mass": 0.4352605688300444,
@@ -48,14 +48,14 @@
         "subset_frac": 0.35119047619047616,
         "membership_conc": 1.0,
         "weight_mode": "fused",
-        "n_replay": 59,
+        "n_replay": 42,
         "temper_shrink": 0.0
       },
       {
         "stage": 2,
-        "known_acc": 0.7142857142857143,
+        "known_acc": 0.6753246753246753,
         "novel_acc": 0.2857142857142857,
-        "forgetting": 0.3125,
+        "forgetting": 0.30000000000000004,
         "n_novel_train": 5,
         "reason": "fused_cold_start",
         "vimp_top_mass": 0.4114622729759748,
@@ -65,13 +65,13 @@
         "subset_frac": 0.35119047619047616,
         "membership_conc": 1.0,
         "weight_mode": "fused",
-        "n_replay": 59,
+        "n_replay": 42,
         "temper_shrink": 0.0
       }
     ],
-    "mean_known_acc": 0.6132936507936507,
+    "mean_known_acc": 0.6493145743145743,
     "mean_novel_acc": 0.39285714285714285,
-    "mean_forgetting": 0.3277777777777778,
+    "mean_forgetting": 0.33194444444444443,
     "mean_feat_hit": 0.125,
     "mean_vimp_top_mass": 0.4222413958965454
   },
@@ -81,9 +81,9 @@
     "stages": [
       {
         "stage": 0,
-        "known_acc": 0.5833333333333334,
+        "known_acc": 0.6309523809523809,
         "novel_acc": NaN,
-        "forgetting": 0.30833333333333335,
+        "forgetting": 0.3041666666666667,
         "n_novel_train": 12,
         "reason": "sample_cold_start",
         "vimp_top_mass": 0.42000134588361693,
@@ -93,14 +93,14 @@
         "subset_frac": 0.35119047619047616,
         "membership_conc": 1.0,
         "weight_mode": "sample",
-        "n_replay": 59,
+        "n_replay": 42,
         "temper_shrink": 0.0
       },
       {
         "stage": 1,
-        "known_acc": 0.5625,
-        "novel_acc": 0.0,
-        "forgetting": 0.2833333333333333,
+        "known_acc": 0.675,
+        "novel_acc": 0.25,
+        "forgetting": 0.25416666666666665,
         "n_novel_train": 8,
         "reason": "sample_cold_start",
         "vimp_top_mass": 0.4352605688300444,
@@ -110,14 +110,14 @@
         "subset_frac": 0.35119047619047616,
         "membership_conc": 1.0,
         "weight_mode": "sample",
-        "n_replay": 59,
+        "n_replay": 42,
         "temper_shrink": 0.0
       },
       {
         "stage": 2,
-        "known_acc": 0.7012987012987013,
+        "known_acc": 0.7142857142857143,
         "novel_acc": 0.14285714285714285,
-        "forgetting": 0.30000000000000004,
+        "forgetting": 0.2791666666666667,
         "n_novel_train": 5,
         "reason": "sample_cold_start",
         "vimp_top_mass": 0.4114622729759748,
@@ -127,13 +127,13 @@
         "subset_frac": 0.35119047619047616,
         "membership_conc": 1.0,
         "weight_mode": "sample",
-        "n_replay": 59,
+        "n_replay": 42,
         "temper_shrink": 0.0
       }
     ],
-    "mean_known_acc": 0.6157106782106783,
-    "mean_novel_acc": 0.07142857142857142,
-    "mean_forgetting": 0.2972222222222222,
+    "mean_known_acc": 0.6734126984126984,
+    "mean_novel_acc": 0.19642857142857142,
+    "mean_forgetting": 0.2791666666666667,
     "mean_feat_hit": 0.125,
     "mean_vimp_top_mass": 0.4222413958965454
   },
@@ -204,7 +204,7 @@
           },
           {
             "budget": 8,
-            "novel_acc": 0.5833333333333334,
+            "novel_acc": 0.3333333333333333,
             "n_novel_train": 8
           },
           {
@@ -214,12 +214,12 @@
           },
           {
             "budget": 16,
-            "novel_acc": 1.0,
+            "novel_acc": 0.8333333333333334,
             "n_novel_train": 16
           },
           {
             "budget": 24,
-            "novel_acc": 0.8333333333333334,
+            "novel_acc": 0.75,
             "n_novel_train": 24
           }
         ],
@@ -235,7 +235,7 @@
           },
           {
             "budget": 8,
-            "novel_acc": 0.3333333333333333,
+            "novel_acc": 0.16666666666666666,
             "n_novel_train": 8
           },
           {
@@ -245,16 +245,16 @@
           },
           {
             "budget": 16,
-            "novel_acc": 0.5833333333333334,
+            "novel_acc": 0.9166666666666666,
             "n_novel_train": 16
           },
           {
             "budget": 24,
-            "novel_acc": 0.75,
+            "novel_acc": 0.6666666666666666,
             "n_novel_train": 24
           }
         ],
-        "n_star": 24,
+        "n_star": 16,
         "target": 0.6
       },
       "uniform": {
@@ -289,7 +289,7 @@
         "target": 0.6
       }
     },
-    "winner": "weighted",
+    "winner": "membership",
     "tie_break": "min n*, then max novel_acc at n*"
   },
   "officehome": {
@@ -332,7 +332,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.9833333333333333,
+        "shared_acc": 0.9583333333333334,
         "vimp_top_mass": 0.8013490589115017
       },
       {
@@ -342,7 +342,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.9083333333333333,
+        "shared_acc": 0.8416666666666667,
         "vimp_top_mass": 0.9490500281765472
       },
       {
@@ -352,7 +352,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.8416666666666667,
+        "shared_acc": 0.85,
         "vimp_top_mass": 0.9700820995699818
       },
       {
@@ -362,7 +362,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.8038461538461539,
+        "shared_acc": 0.9153846153846154,
         "vimp_top_mass": 0.8371630043024777
       },
       {
@@ -372,7 +372,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.7192307692307692,
+        "shared_acc": 0.823076923076923,
         "vimp_top_mass": 0.957318779945699
       },
       {
@@ -382,7 +382,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "fused_cold_start",
-        "shared_acc": 0.6692307692307692,
+        "shared_acc": 0.6846153846153846,
         "vimp_top_mass": 0.9784461690942702
       }
     ],
@@ -393,20 +393,20 @@
         "adapt_rate": 0.0
       },
       "0.4": {
-        "mean_shared_acc": 0.9111111111111111,
+        "mean_shared_acc": 0.8833333333333333,
         "incomparable_rate": 0.0,
         "adapt_rate": 1.0
       },
       "0.8": {
-        "mean_shared_acc": 0.7307692307692307,
+        "mean_shared_acc": 0.8076923076923078,
         "incomparable_rate": 0.0,
         "adapt_rate": 1.0
       }
     }
   },
   "delta_novel_acc_vs_uniform": 0.19642857142857142,
-  "delta_novel_acc_membership": -0.125,
-  "delta_forgetting_vs_uniform": 0.009722222222222188,
+  "delta_novel_acc_membership": 0.0,
+  "delta_forgetting_vs_uniform": 0.005555555555555536,
   "takeaway": "Cold-start = gate + boundary + auto(fused|sample) weights + known replay. Membership diagnoses; fused sample_w\u00d7subset_w adapts when concentrated.",
   "multiseed": {
     "seeds": [
@@ -414,12 +414,12 @@
       2027,
       2028
     ],
-    "mean_delta_novel_vs_uniform": 0.13134920634920633,
-    "mean_delta_novel_membership": -0.22261904761904763,
-    "mean_delta_forgetting_vs_uniform": 0.015277777777777779,
+    "mean_delta_novel_vs_uniform": 0.0718253968253968,
+    "mean_delta_novel_membership": -0.16507936507936508,
+    "mean_delta_forgetting_vs_uniform": 0.03611111111111113,
     "efficiency_winners": [
+      "membership",
       "weighted",
-      null,
       "membership"
     ]
   }

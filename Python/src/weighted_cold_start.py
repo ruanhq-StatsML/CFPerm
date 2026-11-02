@@ -377,17 +377,23 @@ def adapt_batch(
         classes = getattr(clf, "classes_", None)
         if classes is None:
             classes = np.unique(np.concatenate([y_ref, y_live]))
+        # less replay when private-live (novel) is present — protect discovery budget
+        rf = float(replay_frac)
+        if bound.get("private_live"):
+            rf = min(rf, 0.25)
         X_fit, y_fit, w_fit = mix_known_replay(
             X_live, y_live, wt["sample_weight"], X_ref, y_ref,
-            replay_frac=replay_frac, seed=seed + 3,
+            replay_frac=rf, seed=seed + 3,
         )
         n_replay = int(len(y_fit) - len(y_live))
+        # stronger update when error-rise is large; milder otherwise
+        n_passes = 4 if float(gate.get("ratio", 1.0)) >= 1.25 else 3
         clf = cold_start_partial_fit(
             clf, X_fit, y_fit,
             sample_weight=w_fit,
             feature_mask=wt["feature_mask"],
             classes=classes,
-            n_passes=3,
+            n_passes=n_passes,
         )
         adapted = True
         reason = f"{wt['weight_mode']}_cold_start"
