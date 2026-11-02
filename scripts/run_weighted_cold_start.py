@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Weighted cold-start under category shift (CIFAR C-GCD + Office-Home PDA proxies).
+"""Weighted cold-start under category shift (C-GCD + Office-Home PDA proxies).
 
   python3 scripts/run_weighted_cold_start.py --quick
 """
@@ -21,40 +21,85 @@ DOCS = ROOT / "docs" / "method"
 ARTIFACTS = Path("/opt/cursor/artifacts")
 
 
+def _fmt(x):
+    try:
+        return "%.3f" % float(x)
+    except Exception:
+        return "—"
+
+
 def _readme(payload: dict) -> str:
-    cg_w, cg_u, oh = payload["cgcd_weighted"], payload["cgcd_uniform"], payload["officehome"]
+    w, m, u = payload["cgcd_weighted"], payload["cgcd_membership"], payload["cgcd_uniform"]
+    eff, oh = payload["efficiency"], payload["officehome"]
     lines = [
-        "# Weighted cold-start under category shift",
+        "# Weighted cold-start under category shift (v2)",
         "",
         payload["takeaway"],
         "",
-        "## CIFAR-100 C-GCD proxy (known → staged novel influx)",
+        "## Protocol (four axes)",
         "",
-        "| method | mean known acc | mean novel acc | mean forgetting | feat hit |",
-        "| --- | --- | --- | --- | --- |",
-        "| weighted | %.3f | %.3f | %.3f | %.3f |" % (
-            cg_w["mean_known_acc"], cg_w["mean_novel_acc"], cg_w["mean_forgetting"], cg_w["mean_feat_hit"],
+    ]
+    for a in payload["protocol"]["axes"]:
+        lines.append("- " + a)
+    lines.extend([
+        "",
+        "### Modes",
+        "",
+        "| mode | meaning |",
+        "| --- | --- |",
+    ])
+    for k, v in payload["protocol"]["modes"].items():
+        lines.append("| %s | %s |" % (k, v))
+    lines.extend([
+        "",
+        "## CIFAR-100 C-GCD proxy",
+        "",
+        "| mode | known | novel | forgetting | feat_hit | vimp_top_mass |",
+        "| --- | --- | --- | --- | --- | --- |",
+        "| weighted | %s | %s | %s | %s | %s |" % (
+            _fmt(w["mean_known_acc"]), _fmt(w["mean_novel_acc"]), _fmt(w["mean_forgetting"]),
+            _fmt(w["mean_feat_hit"]), _fmt(w["mean_vimp_top_mass"]),
         ),
-        "| uniform | %.3f | %.3f | %.3f | — |" % (
-            cg_u["mean_known_acc"], cg_u["mean_novel_acc"], cg_u["mean_forgetting"],
+        "| membership | %s | %s | %s | %s | %s |" % (
+            _fmt(m["mean_known_acc"]), _fmt(m["mean_novel_acc"]), _fmt(m["mean_forgetting"]),
+            _fmt(m["mean_feat_hit"]), _fmt(m["mean_vimp_top_mass"]),
+        ),
+        "| uniform | %s | %s | %s | — | — |" % (
+            _fmt(u["mean_known_acc"]), _fmt(u["mean_novel_acc"]), _fmt(u["mean_forgetting"]),
         ),
         "",
-        "Δ novel acc (weighted − uniform): **%.3f**" % payload["delta_novel_acc"],
+        "Δ novel (weighted − uniform): **%s**" % _fmt(payload["delta_novel_acc_vs_uniform"]),
         "",
-        "Δ forgetting (uniform − weighted; higher = weighted forgets less): **%.3f**" % payload["delta_forgetting"],
+        "Δ novel (membership − uniform): **%s**" % _fmt(payload["delta_novel_acc_membership"]),
         "",
-        "## Office-Home PDA proxy (partial label overlap)",
+        "Δ forgetting (uniform − weighted; &gt;0 ⇒ weighted forgets less): **%s**" % _fmt(
+            payload["delta_forgetting_vs_uniform"]
+        ),
+        "",
+        "## Cold-start efficiency (n* novel samples → novel_acc ≥ %.2f)" % eff["target"],
+        "",
+        "| mode | n* | curve (budget:acc) |",
+        "| --- | --- | --- |",
+    ])
+    for mode, cur in eff["curves"].items():
+        curve = ", ".join("%d:%.2f" % (p["budget"], p["novel_acc"]) for p in cur["points"])
+        lines.append("| %s | %s | %s |" % (mode, cur["n_star"] if cur["n_star"] is not None else "—", curve))
+    lines.extend([
+        "",
+        "efficiency winner: **%s**" % (eff.get("winner") or "—"),
+        "",
+        "## Office-Home PDA proxy",
         "",
         "| overlap | shared acc | incomparable rate | adapt rate |",
         "| --- | --- | --- | --- |",
-    ]
+    ])
     for ov, v in oh["by_overlap"].items():
-        lines.append("| %s | %.3f | %.3f | %.3f |" % (ov, v["mean_shared_acc"], v["incomparable_rate"], v["adapt_rate"]))
+        lines.append("| %s | %s | %s | %s |" % (
+            ov, _fmt(v["mean_shared_acc"]), _fmt(v["incomparable_rate"]), _fmt(v["adapt_rate"]),
+        ))
     lines.extend([
         "",
-        "Weights: sample `w=1+λ·membership` in top-K VIMP subspace; soft-freeze non-selected features in `partial_fit`.",
-        "",
-        "Boundary: Jaccard(label_ref, label_live) < 0.2 → **incomparable** (skip directed adapt).",
+        "Directed adapt = detect gate + Jaccard boundary + `w=1+λ·membership` + `partial_fit`.",
         "",
         "```bash",
         "python3 scripts/run_weighted_cold_start.py --quick",
@@ -79,9 +124,19 @@ def main():
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     shutil.copy(OUT / "README.md", ARTIFACTS / "weighted_cold_start_README.md")
     shutil.copy(OUT / "weighted_cold_start.json", ARTIFACTS / "weighted_cold_start.json")
-    print("[wcs] Δnovel=%.3f  Δforget=%.3f" % (payload["delta_novel_acc"], payload["delta_forgetting"]), flush=True)
+
+    print("[wcs] Δnovel(w-u)=%s  Δnovel(m-u)=%s  Δforget=%s  eff_winner=%s" % (
+        _fmt(payload["delta_novel_acc_vs_uniform"]),
+        _fmt(payload["delta_novel_acc_membership"]),
+        _fmt(payload["delta_forgetting_vs_uniform"]),
+        payload["efficiency"].get("winner"),
+    ), flush=True)
+    for mode, cur in payload["efficiency"]["curves"].items():
+        print("[wcs] n*(%s)=%s" % (mode, cur["n_star"]), flush=True)
     for ov, v in payload["officehome"]["by_overlap"].items():
-        print("[wcs] overlap=%s  shared=%.3f  incomparable=%.2f" % (ov, v["mean_shared_acc"], v["incomparable_rate"]), flush=True)
+        print("[wcs] overlap=%s  shared=%s  incomparable=%s  adapt=%s" % (
+            ov, _fmt(v["mean_shared_acc"]), _fmt(v["incomparable_rate"]), _fmt(v["adapt_rate"]),
+        ), flush=True)
     print("[wcs] wrote", OUT, flush=True)
 
 

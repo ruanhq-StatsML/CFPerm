@@ -184,16 +184,20 @@ def adapt_batch(
     min_jaccard: float = 0.20,
     detect_thresh: float = 1.15,
     force_adapt: bool = False,
+    use_private_labels: bool = True,
 ) -> Dict:
-    """One stream step: detect → attribute → boundary → (maybe) weighted cold-start."""
+    """One stream step: detect → attribute → boundary → (maybe) weighted cold-start.
+
+    use_private_labels
+      True  → fuse private-live labels into membership (oracle / discovered ids)
+      False → membership-only from attributed subspace (no label leakage)
+    """
     y_ref, y_live = np.asarray(y_ref).ravel(), np.asarray(y_live).ravel()
     gate = detect_error_rise(clf, X_ref, y_ref, X_live, y_live, thresh=detect_thresh)
     bound = boundary_check(y_ref, y_live, min_jaccard=min_jaccard)
     vimp = attribute_rf_domain(X_ref, X_live, seed=seed)
     mem, feat = localize_subset(X_ref, X_live, vimp, top_k=top_k)
-    # New-category cold-start: fuse subspace membership with private-live labels
-    # (pseudo-labels / discovered ids in the real pipeline).
-    if bound["private_live"]:
+    if use_private_labels and bound["private_live"]:
         mem = np.maximum(mem, np.isin(y_live, bound["private_live"]).astype(float))
     wt = weights_from_attribution(mem, feat, X_live.shape[1], lam=lam)
 
@@ -225,6 +229,8 @@ def adapt_batch(
         "adapted": adapted,
         "reason": reason,
         "vimp_top_mass": float(vimp[feat].sum()),
+        "use_private_labels": bool(use_private_labels),
+        "mean_membership": float(np.mean(mem)),
     }
 
 

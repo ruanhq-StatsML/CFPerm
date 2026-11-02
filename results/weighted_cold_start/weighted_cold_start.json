@@ -1,83 +1,265 @@
 {
+  "protocol": {
+    "axes": [
+      "novel_acc (sparse discovery)",
+      "known retention / forgetting on pinned REF",
+      "attribution: feat_hit + vimp_top_mass",
+      "cold-start efficiency n* (budget \u2192 target novel_acc)",
+      "boundary: incomparable rate vs label overlap"
+    ],
+    "modes": {
+      "weighted": "membership \u222a private-live labels",
+      "membership": "subspace membership only",
+      "uniform": "flat partial_fit"
+    }
+  },
   "cgcd_weighted": {
     "board": "cifar100_cgcd_proxy",
-    "weighted": true,
+    "mode": "weighted",
     "stages": [
       {
         "stage": 0,
-        "known_acc": 0.896551724137931,
-        "novel_acc": 0.9230769230769231,
-        "forgetting": 0.5208333333333333,
+        "known_acc": 0.5119047619047619,
+        "novel_acc": NaN,
+        "forgetting": 0.4125,
+        "n_novel_train": 12,
         "reason": "weighted_cold_start",
-        "vimp_top_mass": 0.4823081245488829,
-        "feat_hit": 0.5,
-        "boundary": "comparable"
+        "vimp_top_mass": 0.42000134588361693,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.5440591228110371
       },
       {
         "stage": 1,
-        "known_acc": 0.7916666666666666,
-        "novel_acc": 0.9444444444444444,
-        "forgetting": 0.48750000000000004,
+        "known_acc": 0.675,
+        "novel_acc": 0.25,
+        "forgetting": 0.33333333333333337,
+        "n_novel_train": 8,
         "reason": "weighted_cold_start",
-        "vimp_top_mass": 0.4837976863241071,
-        "feat_hit": 0.5,
-        "boundary": "comparable"
+        "vimp_top_mass": 0.4352605688300444,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.5385304062334795
       },
       {
         "stage": 2,
-        "known_acc": 0.76,
-        "novel_acc": 1.0,
-        "forgetting": 0.37916666666666665,
+        "known_acc": 0.7272727272727273,
+        "novel_acc": 0.2857142857142857,
+        "forgetting": 0.35416666666666663,
+        "n_novel_train": 5,
         "reason": "weighted_cold_start",
-        "vimp_top_mass": 0.5615778707838477,
-        "feat_hit": 0.625,
-        "boundary": "comparable"
+        "vimp_top_mass": 0.4114622729759748,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.5271948930633211
       }
     ],
-    "mean_known_acc": 0.8160727969348658,
-    "mean_novel_acc": 0.9558404558404558,
-    "mean_forgetting": 0.46249999999999997,
-    "mean_feat_hit": 0.5416666666666666
+    "mean_known_acc": 0.6380591630591631,
+    "mean_novel_acc": 0.26785714285714285,
+    "mean_forgetting": 0.3666666666666667,
+    "mean_feat_hit": 0.125,
+    "mean_vimp_top_mass": 0.4222413958965454
+  },
+  "cgcd_membership": {
+    "board": "cifar100_cgcd_proxy",
+    "mode": "membership",
+    "stages": [
+      {
+        "stage": 0,
+        "known_acc": 0.5714285714285714,
+        "novel_acc": NaN,
+        "forgetting": 0.3291666666666667,
+        "n_novel_train": 12,
+        "reason": "weighted_cold_start",
+        "vimp_top_mass": 0.42000134588361693,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.49132837825631065
+      },
+      {
+        "stage": 1,
+        "known_acc": 0.675,
+        "novel_acc": 0.0,
+        "forgetting": 0.275,
+        "n_novel_train": 8,
+        "reason": "weighted_cold_start",
+        "vimp_top_mass": 0.4352605688300444,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.5158006186623264
+      },
+      {
+        "stage": 2,
+        "known_acc": 0.6103896103896104,
+        "novel_acc": 0.2857142857142857,
+        "forgetting": 0.36250000000000004,
+        "n_novel_train": 5,
+        "reason": "weighted_cold_start",
+        "vimp_top_mass": 0.4114622729759748,
+        "feat_hit": 0.125,
+        "boundary": "comparable",
+        "mean_membership": 0.5078834744197601
+      }
+    ],
+    "mean_known_acc": 0.618939393939394,
+    "mean_novel_acc": 0.14285714285714285,
+    "mean_forgetting": 0.32222222222222224,
+    "mean_feat_hit": 0.125,
+    "mean_vimp_top_mass": 0.4222413958965454
   },
   "cgcd_uniform": {
     "board": "cifar100_cgcd_proxy",
-    "weighted": false,
+    "mode": "uniform",
     "stages": [
       {
         "stage": 0,
-        "known_acc": 0.7241379310344828,
-        "novel_acc": 1.0,
-        "forgetting": 0.4625,
+        "known_acc": 0.6190476190476191,
+        "novel_acc": NaN,
+        "forgetting": 0.3833333333333333,
+        "n_novel_train": 12,
         "reason": "uniform",
         "vimp_top_mass": null,
         "feat_hit": null,
-        "boundary": "n/a"
+        "boundary": "n/a",
+        "mean_membership": null
       },
       {
         "stage": 1,
-        "known_acc": 0.7916666666666666,
-        "novel_acc": 0.8888888888888888,
-        "forgetting": 0.43333333333333335,
+        "known_acc": 0.5625,
+        "novel_acc": 0.25,
+        "forgetting": 0.30833333333333335,
+        "n_novel_train": 8,
         "reason": "uniform",
         "vimp_top_mass": null,
         "feat_hit": null,
-        "boundary": "n/a"
+        "boundary": "n/a",
+        "mean_membership": null
       },
       {
         "stage": 2,
-        "known_acc": 0.88,
-        "novel_acc": 0.9411764705882353,
-        "forgetting": 0.4458333333333333,
+        "known_acc": 0.6493506493506493,
+        "novel_acc": 0.14285714285714285,
+        "forgetting": 0.3208333333333333,
+        "n_novel_train": 5,
         "reason": "uniform",
         "vimp_top_mass": null,
         "feat_hit": null,
-        "boundary": "n/a"
+        "boundary": "n/a",
+        "mean_membership": null
       }
     ],
-    "mean_known_acc": 0.7986015325670498,
-    "mean_novel_acc": 0.943355119825708,
-    "mean_forgetting": 0.44722222222222224,
-    "mean_feat_hit": NaN
+    "mean_known_acc": 0.6102994227994228,
+    "mean_novel_acc": 0.19642857142857142,
+    "mean_forgetting": 0.33749999999999997,
+    "mean_feat_hit": NaN,
+    "mean_vimp_top_mass": NaN
+  },
+  "efficiency": {
+    "board": "cold_start_efficiency",
+    "target": 0.6,
+    "budgets": [
+      4,
+      8,
+      12,
+      16,
+      24
+    ],
+    "curves": {
+      "weighted": {
+        "points": [
+          {
+            "budget": 4,
+            "novel_acc": 0.25,
+            "n_novel_train": 4
+          },
+          {
+            "budget": 8,
+            "novel_acc": 0.3333333333333333,
+            "n_novel_train": 8
+          },
+          {
+            "budget": 12,
+            "novel_acc": 0.5,
+            "n_novel_train": 12
+          },
+          {
+            "budget": 16,
+            "novel_acc": 0.9166666666666666,
+            "n_novel_train": 16
+          },
+          {
+            "budget": 24,
+            "novel_acc": 1.0,
+            "n_novel_train": 24
+          }
+        ],
+        "n_star": 16,
+        "target": 0.6
+      },
+      "membership": {
+        "points": [
+          {
+            "budget": 4,
+            "novel_acc": 0.25,
+            "n_novel_train": 4
+          },
+          {
+            "budget": 8,
+            "novel_acc": 0.25,
+            "n_novel_train": 8
+          },
+          {
+            "budget": 12,
+            "novel_acc": 0.25,
+            "n_novel_train": 12
+          },
+          {
+            "budget": 16,
+            "novel_acc": 0.8333333333333334,
+            "n_novel_train": 16
+          },
+          {
+            "budget": 24,
+            "novel_acc": 0.6666666666666666,
+            "n_novel_train": 24
+          }
+        ],
+        "n_star": 16,
+        "target": 0.6
+      },
+      "uniform": {
+        "points": [
+          {
+            "budget": 4,
+            "novel_acc": 0.25,
+            "n_novel_train": 4
+          },
+          {
+            "budget": 8,
+            "novel_acc": 0.3333333333333333,
+            "n_novel_train": 8
+          },
+          {
+            "budget": 12,
+            "novel_acc": 0.4166666666666667,
+            "n_novel_train": 12
+          },
+          {
+            "budget": 16,
+            "novel_acc": 0.6666666666666666,
+            "n_novel_train": 16
+          },
+          {
+            "budget": 24,
+            "novel_acc": 0.9166666666666666,
+            "n_novel_train": 24
+          }
+        ],
+        "n_star": 16,
+        "target": 0.6
+      }
+    },
+    "winner": "weighted"
   },
   "officehome": {
     "board": "officehome_pda_proxy",
@@ -127,9 +309,9 @@
         "target": "Product",
         "jaccard": 0.375,
         "boundary": "comparable",
-        "adapted": false,
-        "reason": "no_trigger",
-        "shared_acc": 0.9416666666666667,
+        "adapted": true,
+        "reason": "weighted_cold_start",
+        "shared_acc": 0.9333333333333333,
         "vimp_top_mass": 0.9490500281765472
       },
       {
@@ -137,9 +319,9 @@
         "target": "Real",
         "jaccard": 0.375,
         "boundary": "comparable",
-        "adapted": false,
-        "reason": "no_trigger",
-        "shared_acc": 0.8916666666666667,
+        "adapted": true,
+        "reason": "weighted_cold_start",
+        "shared_acc": 0.8166666666666667,
         "vimp_top_mass": 0.9700820995699818
       },
       {
@@ -157,9 +339,9 @@
         "target": "Product",
         "jaccard": 0.8125,
         "boundary": "comparable",
-        "adapted": false,
-        "reason": "no_trigger",
-        "shared_acc": 0.7346153846153847,
+        "adapted": true,
+        "reason": "weighted_cold_start",
+        "shared_acc": 0.7730769230769231,
         "vimp_top_mass": 0.957318779945699
       },
       {
@@ -169,7 +351,7 @@
         "boundary": "comparable",
         "adapted": true,
         "reason": "weighted_cold_start",
-        "shared_acc": 0.7730769230769231,
+        "shared_acc": 0.6461538461538462,
         "vimp_top_mass": 0.9784461690942702
       }
     ],
@@ -180,18 +362,19 @@
         "adapt_rate": 0.0
       },
       "0.4": {
-        "mean_shared_acc": 0.9388888888888888,
+        "mean_shared_acc": 0.9111111111111111,
         "incomparable_rate": 0.0,
-        "adapt_rate": 0.3333333333333333
+        "adapt_rate": 1.0
       },
       "0.8": {
-        "mean_shared_acc": 0.8038461538461538,
+        "mean_shared_acc": 0.7743589743589744,
         "incomparable_rate": 0.0,
-        "adapt_rate": 0.6666666666666666
+        "adapt_rate": 1.0
       }
     }
   },
-  "delta_novel_acc": 0.012485336014747883,
-  "delta_forgetting": -0.015277777777777724,
-  "takeaway": "Weighted cold-start (upweight localized subset + selected features) vs uniform partial_fit on C-GCD proxy; Office-Home PDA checks incomparable rate rises as label overlap falls."
+  "delta_novel_acc_vs_uniform": 0.07142857142857142,
+  "delta_novel_acc_membership": -0.053571428571428575,
+  "delta_forgetting_vs_uniform": -0.02916666666666673,
+  "takeaway": "Directed adapt = gate + boundary + upweight localized/private samples. C-GCD reports novel/forget/feat_hit + n* efficiency; PDA reports incomparable rate rising as overlap falls."
 }
