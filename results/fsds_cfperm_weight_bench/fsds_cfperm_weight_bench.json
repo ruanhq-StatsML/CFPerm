@@ -1,0 +1,358 @@
+{
+  "boards": [
+    {
+      "dataset": "digits",
+      "note": "known 0-4 REF; LIVE sparse inject 5-9 (~1:5)",
+      "n_ref": 400,
+      "n_live": 192,
+      "n_subset": 77,
+      "subset_frac": 0.4010416666666667,
+      "subset_frac_fused": 0.4010416666666667,
+      "vimp_top_mass": 0.22032408722844982,
+      "feat_hit": null,
+      "n_cfperm_reject": 16,
+      "mean_membership": 0.4963141130407591,
+      "schemes": {
+        "uniform": {
+          "acc": 0.9375,
+          "known_acc": 0.98,
+          "novel_acc": 0.7857142857142857,
+          "ref_acc": 0.9525,
+          "forgetting": 0.04749999999999999,
+          "mean_weight": 1.0,
+          "weight_gini": 0.0
+        },
+        "sample_w": {
+          "acc": 0.875,
+          "known_acc": 0.92,
+          "novel_acc": 0.7142857142857143,
+          "ref_acc": 0.9225,
+          "forgetting": 0.07750000000000001,
+          "mean_weight": 0.9999999999999998,
+          "weight_gini": 0.23453278443122705
+        },
+        "subset_w": {
+          "acc": 0.859375,
+          "known_acc": 0.94,
+          "novel_acc": 0.5714285714285714,
+          "ref_acc": 0.9225,
+          "forgetting": 0.07750000000000001,
+          "mean_weight": 1.0,
+          "weight_gini": 0.26785714285714257
+        },
+        "sample_x_subset": {
+          "acc": 0.859375,
+          "known_acc": 0.9,
+          "novel_acc": 0.7142857142857143,
+          "ref_acc": 0.905,
+          "forgetting": 0.09499999999999997,
+          "mean_weight": 1.0,
+          "weight_gini": 0.4480071611351375
+        },
+        "sample_w_fused": {
+          "acc": 0.890625,
+          "known_acc": 0.92,
+          "novel_acc": 0.7857142857142857,
+          "ref_acc": 0.925,
+          "forgetting": 0.07499999999999996,
+          "mean_weight": 1.0,
+          "weight_gini": 0.2277346091232888
+        },
+        "subset_w_fused": {
+          "acc": 0.875,
+          "known_acc": 0.92,
+          "novel_acc": 0.7142857142857143,
+          "ref_acc": 0.9275,
+          "forgetting": 0.07250000000000001,
+          "mean_weight": 1.0,
+          "weight_gini": 0.267857142857143
+        },
+        "both_fused": {
+          "acc": 0.828125,
+          "known_acc": 0.86,
+          "novel_acc": 0.7142857142857143,
+          "ref_acc": 0.8925,
+          "forgetting": 0.10750000000000004,
+          "mean_weight": 1.0,
+          "weight_gini": 0.43715258998392614
+        }
+      },
+      "delta_novel_sample": -0.0714285714285714,
+      "delta_novel_subset": -0.2142857142857143,
+      "delta_novel_both": -0.0714285714285714,
+      "delta_acc_both": -0.078125,
+      "delta_novel_both_fused": -0.0714285714285714,
+      "delta_acc_both_fused": -0.109375,
+      "delta_acc_sample_fused": -0.046875,
+      "delta_acc_subset_fused": -0.0625
+    },
+    {
+      "dataset": "news20",
+      "note": "TF-IDF; known sci/rec \u2192 sparse inject comp.graphics (~1:5)",
+      "n_ref": 500,
+      "n_live": 216,
+      "n_subset": 86,
+      "subset_frac": 0.39814814814814814,
+      "subset_frac_fused": 0.4027777777777778,
+      "vimp_top_mass": 0.27529279102652804,
+      "feat_hit": null,
+      "n_cfperm_reject": 24,
+      "mean_membership": 0.26970734284689246,
+      "schemes": {
+        "uniform": {
+          "acc": 0.7638888888888888,
+          "known_acc": 0.7580645161290323,
+          "novel_acc": 0.8,
+          "ref_acc": 0.796,
+          "forgetting": 0.20399999999999996,
+          "mean_weight": 1.0,
+          "weight_gini": 0.0
+        },
+        "sample_w": {
+          "acc": 0.7638888888888888,
+          "known_acc": 0.7741935483870968,
+          "novel_acc": 0.7,
+          "ref_acc": 0.78,
+          "forgetting": 0.21999999999999997,
+          "mean_weight": 1.0,
+          "weight_gini": 0.29229510440112616
+        },
+        "subset_w": {
+          "acc": 0.7777777777777778,
+          "known_acc": 0.7903225806451613,
+          "novel_acc": 0.7,
+          "ref_acc": 0.786,
+          "forgetting": 0.21399999999999997,
+          "mean_weight": 1.0000000000000002,
+          "weight_gini": 0.2669573643410854
+        },
+        "sample_x_subset": {
+          "acc": 0.7638888888888888,
+          "known_acc": 0.7741935483870968,
+          "novel_acc": 0.7,
+          "ref_acc": 0.744,
+          "forgetting": 0.256,
+          "mean_weight": 1.0,
+          "weight_gini": 0.5087965383383815
+        },
+        "sample_w_fused": {
+          "acc": 0.8472222222222222,
+          "known_acc": 0.8548387096774194,
+          "novel_acc": 0.8,
+          "ref_acc": 0.774,
+          "forgetting": 0.22599999999999998,
+          "mean_weight": 0.9999999999999996,
+          "weight_gini": 0.30129265033104713
+        },
+        "subset_w_fused": {
+          "acc": 0.8194444444444444,
+          "known_acc": 0.8225806451612904,
+          "novel_acc": 0.8,
+          "ref_acc": 0.818,
+          "forgetting": 0.18200000000000005,
+          "mean_weight": 1.0,
+          "weight_gini": 0.26515151515151514
+        },
+        "both_fused": {
+          "acc": 0.8472222222222222,
+          "known_acc": 0.8548387096774194,
+          "novel_acc": 0.8,
+          "ref_acc": 0.764,
+          "forgetting": 0.236,
+          "mean_weight": 0.9999999999999998,
+          "weight_gini": 0.4904687043430007
+        }
+      },
+      "delta_novel_sample": -0.10000000000000009,
+      "delta_novel_subset": -0.10000000000000009,
+      "delta_novel_both": -0.10000000000000009,
+      "delta_acc_both": 0.0,
+      "delta_novel_both_fused": 0.0,
+      "delta_acc_both_fused": 0.08333333333333337,
+      "delta_acc_sample_fused": 0.08333333333333337,
+      "delta_acc_subset_fused": 0.05555555555555558
+    },
+    {
+      "dataset": "synth_cgcd",
+      "note": "synthetic sparse novel C-GCD",
+      "n_ref": 240,
+      "n_live": 254,
+      "n_subset": 102,
+      "subset_frac": 0.4015748031496063,
+      "subset_frac_fused": 0.4015748031496063,
+      "vimp_top_mass": 0.38359349113712654,
+      "feat_hit": 0.16666666666666666,
+      "n_cfperm_reject": 5,
+      "mean_membership": 0.48126213958489134,
+      "schemes": {
+        "uniform": {
+          "acc": 0.7142857142857143,
+          "known_acc": 0.7108433734939759,
+          "novel_acc": 1.0,
+          "ref_acc": 0.725,
+          "forgetting": 0.275,
+          "mean_weight": 1.0,
+          "weight_gini": 0.0
+        },
+        "sample_w": {
+          "acc": 0.7857142857142857,
+          "known_acc": 0.7831325301204819,
+          "novel_acc": 1.0,
+          "ref_acc": 0.7541666666666667,
+          "forgetting": 0.24583333333333335,
+          "mean_weight": 1.0,
+          "weight_gini": 0.24729188444520678
+        },
+        "subset_w": {
+          "acc": 0.7976190476190477,
+          "known_acc": 0.7951807228915663,
+          "novel_acc": 1.0,
+          "ref_acc": 0.775,
+          "forgetting": 0.22499999999999998,
+          "mean_weight": 1.0,
+          "weight_gini": 0.26706656346749247
+        },
+        "sample_x_subset": {
+          "acc": 0.7261904761904762,
+          "known_acc": 0.7228915662650602,
+          "novel_acc": 1.0,
+          "ref_acc": 0.6958333333333333,
+          "forgetting": 0.3041666666666667,
+          "mean_weight": 1.0000000000000004,
+          "weight_gini": 0.451705671270044
+        },
+        "sample_w_fused": {
+          "acc": 0.7380952380952381,
+          "known_acc": 0.7349397590361446,
+          "novel_acc": 1.0,
+          "ref_acc": 0.7166666666666667,
+          "forgetting": 0.2833333333333333,
+          "mean_weight": 1.0,
+          "weight_gini": 0.2461717332615878
+        },
+        "subset_w_fused": {
+          "acc": 0.8095238095238095,
+          "known_acc": 0.8072289156626506,
+          "novel_acc": 1.0,
+          "ref_acc": 0.7291666666666666,
+          "forgetting": 0.27083333333333337,
+          "mean_weight": 1.0000000000000004,
+          "weight_gini": 0.26666666666666616
+        },
+        "both_fused": {
+          "acc": 0.7738095238095238,
+          "known_acc": 0.7710843373493976,
+          "novel_acc": 1.0,
+          "ref_acc": 0.6916666666666667,
+          "forgetting": 0.30833333333333335,
+          "mean_weight": 1.0000000000000002,
+          "weight_gini": 0.44731886198284054
+        }
+      },
+      "delta_novel_sample": 0.0,
+      "delta_novel_subset": 0.0,
+      "delta_novel_both": 0.0,
+      "delta_acc_both": 0.011904761904761862,
+      "delta_novel_both_fused": 0.0,
+      "delta_acc_both_fused": 0.059523809523809534,
+      "delta_acc_sample_fused": 0.023809523809523836,
+      "delta_acc_subset_fused": 0.09523809523809523
+    },
+    {
+      "dataset": "amazon",
+      "note": "category hop: REF cats{0,1}; LIVE recirculate + sparse cats{2,3}",
+      "n_ref": 120,
+      "n_live": 150,
+      "n_subset": 60,
+      "subset_frac": 0.4,
+      "subset_frac_fused": 0.4,
+      "vimp_top_mass": 0.42819512001089005,
+      "feat_hit": null,
+      "n_cfperm_reject": 12,
+      "mean_membership": 0.40403256111231517,
+      "schemes": {
+        "uniform": {
+          "acc": 0.68,
+          "known_acc": 0.8157894736842105,
+          "novel_acc": 0.25,
+          "ref_acc": 0.8916666666666667,
+          "forgetting": 0.10833333333333328,
+          "mean_weight": 1.0,
+          "weight_gini": 0.0
+        },
+        "sample_w": {
+          "acc": 0.64,
+          "known_acc": 0.7631578947368421,
+          "novel_acc": 0.25,
+          "ref_acc": 0.775,
+          "forgetting": 0.22499999999999998,
+          "mean_weight": 0.9999999999999999,
+          "weight_gini": 0.28021957004606945
+        },
+        "subset_w": {
+          "acc": 0.68,
+          "known_acc": 0.7631578947368421,
+          "novel_acc": 0.4166666666666667,
+          "ref_acc": 0.8416666666666667,
+          "forgetting": 0.15833333333333333,
+          "mean_weight": 1.0000000000000002,
+          "weight_gini": 0.2621276595744677
+        },
+        "sample_x_subset": {
+          "acc": 0.68,
+          "known_acc": 0.7368421052631579,
+          "novel_acc": 0.5,
+          "ref_acc": 0.7833333333333333,
+          "forgetting": 0.21666666666666667,
+          "mean_weight": 1.0,
+          "weight_gini": 0.4561280733921522
+        },
+        "sample_w_fused": {
+          "acc": 0.64,
+          "known_acc": 0.7894736842105263,
+          "novel_acc": 0.16666666666666666,
+          "ref_acc": 0.8416666666666667,
+          "forgetting": 0.15833333333333333,
+          "mean_weight": 1.0000000000000002,
+          "weight_gini": 0.25617949819551167
+        },
+        "subset_w_fused": {
+          "acc": 0.62,
+          "known_acc": 0.7894736842105263,
+          "novel_acc": 0.08333333333333333,
+          "ref_acc": 0.8083333333333333,
+          "forgetting": 0.19166666666666665,
+          "mean_weight": 1.0000000000000002,
+          "weight_gini": 0.2605263157894735
+        },
+        "both_fused": {
+          "acc": 0.6,
+          "known_acc": 0.7105263157894737,
+          "novel_acc": 0.25,
+          "ref_acc": 0.7,
+          "forgetting": 0.30000000000000004,
+          "mean_weight": 1.0,
+          "weight_gini": 0.4271815798641898
+        }
+      },
+      "delta_novel_sample": 0.0,
+      "delta_novel_subset": 0.16666666666666669,
+      "delta_novel_both": 0.25,
+      "delta_acc_both": 0.0,
+      "delta_novel_both_fused": 0.0,
+      "delta_acc_both_fused": -0.08000000000000007,
+      "delta_acc_sample_fused": -0.040000000000000036,
+      "delta_acc_subset_fused": -0.06000000000000005
+    }
+  ],
+  "n_boards": 4,
+  "mean_delta_novel_sample": -0.04285714285714287,
+  "mean_delta_novel_subset": -0.036904761904761926,
+  "mean_delta_novel_both": 0.01964285714285713,
+  "mean_delta_acc_both": -0.016555059523809534,
+  "mean_delta_novel_both_fused": -0.01785714285714285,
+  "mean_delta_acc_both_fused": -0.011629464285714292,
+  "mean_delta_acc_sample_fused": 0.005066964285714293,
+  "mean_delta_acc_subset_fused": 0.00707341269841269,
+  "takeaway": "FSDS RF-domain VIMP \u2192 membership \u2192 soft sample_w + hard observation subset_w on amazon/digits/news20/synth_cgcd. Pure membership is diagnostic; fused (membership \u222a private-live) is the cold-start weight channel."
+}
