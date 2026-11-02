@@ -14,7 +14,7 @@
           "novel_acc": NaN,
           "forgetting": 0.5041666666666667,
           "n_novel_train": 12,
-          "reason": "repr_sep+expand:buffer_ge_N",
+          "reason": "repr_sep+expand:buffer_ge_N|O=0.78",
           "phase": "expand",
           "vimp_top_mass": 0.42000134588361693,
           "feat_hit": 0.125,
@@ -28,7 +28,10 @@
           "buffer_size": 0,
           "gap_lift": 0.30921098621315757,
           "expand_fitted": true,
-          "tta_applied": false
+          "tta_applied": false,
+          "O_local": 0.7758047716896046,
+          "O_persist": 0.2715316700913616,
+          "opp_action": "sep+expand"
         },
         {
           "stage": 1,
@@ -36,7 +39,7 @@
           "novel_acc": 0.75,
           "forgetting": 0.36250000000000004,
           "n_novel_train": 8,
-          "reason": "repr_sep+expand:new_private_batch",
+          "reason": "repr_sep+expand:new_private_batch|O=0.73",
           "phase": "expand",
           "vimp_top_mass": 0.4352605688300444,
           "feat_hit": 0.125,
@@ -50,7 +53,10 @@
           "buffer_size": 0,
           "gap_lift": 0.3462821256869324,
           "expand_fitted": true,
-          "tta_applied": false
+          "tta_applied": false,
+          "O_local": 0.7267878831765353,
+          "O_persist": 0.472412124064748,
+          "opp_action": "sep+expand"
         },
         {
           "stage": 2,
@@ -58,7 +64,7 @@
           "novel_acc": 0.2857142857142857,
           "forgetting": 0.2875,
           "n_novel_train": 5,
-          "reason": "repr_sep+expand:new_private_batch",
+          "reason": "repr_sep+expand:new_private_batch|O=0.77",
           "phase": "expand",
           "vimp_top_mass": 0.4114622729759748,
           "feat_hit": 0.125,
@@ -72,7 +78,10 @@
           "buffer_size": 0,
           "gap_lift": 0.3176795965141004,
           "expand_fitted": true,
-          "tta_applied": false
+          "tta_applied": false,
+          "O_local": 0.7718311127840345,
+          "O_persist": 0.5640304285729484,
+          "opp_action": "sep+expand"
         }
       ],
       "mean_known_acc": 0.5789862914862915,

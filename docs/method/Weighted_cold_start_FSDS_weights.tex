@@ -214,12 +214,33 @@ $s(w)$ vs $\tfrac12$ & cannot approach $\tfrac12$ & ds\_known, then soft \\
 Never random-downsample.
 
 %======================================================================
+\section{Adaptation opportunity $O_t$
+(gate for attribute + separate)}
+%======================================================================
+
+Next batch is unknown. So we do not ask only ``did sep work on this
+batch?''; we ask whether there is \emph{opportunity to adapt to new
+categories now}:
+\[
+O^{\mathrm{local}}_t=(D_t L_t R_t M_t)^{1/4},\quad
+O^{\mathrm{persist}}_t=O^{\mathrm{local}}_t\cdot\mathrm{Stab}_t.
+\]
+$D$=error-rise detect, $L$=VIMP mass on $\mathcal{S}$,
+$R$=room to push off known prototypes, $M$=actable high-mem mass,
+$\mathrm{Stab}$=footprint overlap vs last batch (persist discount).
+Policy: $O^{\mathrm{local}}\ge\tau_{\mathrm{sep}}\Rightarrow$ separate;
+mass$+O$ high $\Rightarrow$ expand with sample weights;
+$O^{\mathrm{persist}}$ low $\Rightarrow$ drop/replace $\mathcal{S}$-offset.
+Track benches: C-GCD (CIFAR-100 / IN-100 / Tiny / CUB; Old/New/All);
+PDA/OSDA (Office-Home / VisDA / DomainNet; H-score).
+
+%======================================================================
 \section{Pipeline v3 --- representation before the head}
 %======================================================================
 
 Weights answer \emph{whom to emphasize at expand}.
 When novel is sparse, updating the head first overfits and pulls old
-boundaries. Order matters:
+boundaries. Order matters --- and each step is gated by $O_t$:
 
 \begin{enumerate}
   \item \textbf{Detect + attribute.}

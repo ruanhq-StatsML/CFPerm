@@ -1,58 +1,58 @@
-# Cold-start logic (v3): representation-first
+# Cold-start logic (v4): opportunity-gated attribution + separation
 
 ## One sentence
-**Attribute to find subspace \(S\) → separate representations on \(S\) before touching the head → expand the head only when novel mass / footprint is ready → optional TTA restricted to \(S\).**
+**每批重估适应新类的机会 \(O_t\)：机会够 → 归因聚焦 \(S\) → 分离 →（量够再）扩头加权；机会不够或足迹不稳 → hold / 作废几何。下一批未知，故 \(O^{\mathrm{persist}}\) 默认打折。**
 
-Weights (soft / hard / fused) still matter — they fire at **step 3** (expand). Step 2 is geometry, not importance weighting.
+Feature-level（RFPerm/FSDS）和 sample-level 权重都能赋能新类冷启动：一层管 where，一层管 whom；**\(O_t\) 决定这一批动不动。**
 
-## Four steps
+## Adaptation opportunity（核心）
 
-### 1. Detect + attribute (RFPerm → FSDS / CFPerm)
-- Gate: LIVE/REF error rise.
-- Attribute: RF-domain VIMP on batch \(W\in\{0,1\}\) → top-\(K\) subspace \(\mathcal{S}\) → membership \(m_i\).
-- Role: **focus**, not classify. On CIFAR-like boards this is a color/texture block; on Office-Home-like boards a domain-style block. Novel already separates in \(\mathcal{S}\); the model just has not used it.
-- Boundary: low label Jaccard → `incomparable` → skip directed adapt.
+\[
+O^{\mathrm{local}}_t=(D_t L_t R_t M_t)^{1/4},\quad
+O^{\mathrm{persist}}_t=O^{\mathrm{local}}_t\cdot\mathrm{Stab}_t.
+\]
 
-### 2. Representation separation (**key / "instant learn"**)
-- Sparse novel: **do not** rush the classification head — a few rows overfit and drag old boundaries.
-- On \(\mathcal{S}\), compute known-class prototypes from REF.
-- For high-membership LIVE rows whose distance to the nearest old prototype is \(<\) margin, apply a margin push:
-  \[
-  x_i^{\mathcal{S}} \leftarrow x_i^{\mathcal{S}} + \eta\, m_i\,(\mathrm{margin}-d_i)\,\widehat{(x_i^{\mathcal{S}}-\mu_{\mathrm{nn}})}.
-  \]
-- Persist a mean \(\mathcal{S}\)-offset for inference.
-- This step only needs a few samples: it does **not** teach “what the new class is”, only “stop collapsing into old centers”.
+| 因子 | 角色 |
+| --- | --- |
+| \(D\) | detect：error rise |
+| \(L\) | localize：VIMP mass on \(S\) |
+| \(R\) | separate：还能推离旧原型 |
+| \(M\) | mass：有行可花 |
+| \(\mathrm{Stab}\) | 下一批未知下的复用折扣 |
 
-### 3. Dynamic head expand ("learn" completion)
-- Buffer novel / high-mem rows across batches.
-- Expand when `buffer ≥ N*` **or** attributed footprint is stable (VIMP-top mass + membership concentration).
-- Then joint-fit new nodes with **novel buffer + known REF replay**, using the usual weight channel (`auto` → fused if sharp, else soft).
-- This is the completion of learning — it happens **after** separation.
+政策：`O_local≥τ_sep` → sep；再够 → expand（sample weights）；`O_persist<τ_keep` → 不盲留 offset。
 
-### 4. Optional TTA (cautious)
-- TENT / SHOT-style entropy min is allowed, but **only on parameters tied to \(\mathcal{S}\)** (here: `coef_[:, S]` + light intercept). Freeze the rest.
-- Revert if entropy rises.
+详见 `docs/method/Adaptation_opportunity_novel_cold_start.md`。
 
-## Why this order
-| step | answers | if you skip it |
+## Track benchmarks
+
+- **C-GCD**：CIFAR-100 / ImageNet-100 / Tiny-ImageNet / CUB — Old/New/All per session（MetaGCD, Happy）
+- **PDA/OSDA/UniDA**：Office-Home / VisDA / DomainNet — H-score
+- **我们**：synth C-GCD + PDA proxy + tabular；额外审计 **\(O_t\)**, novel_acc, forgetting, gap_lift, \(s(w)\)
+
+## Four steps（仍成立，但由 \(O_t\) 门控）
+
+1. **Detect + attribute** — 每批重算；role=focus  
+2. **Representation separation** — 仅当 \(O^{\mathrm{local}}\) 过线；只推 private-live/high-mem  
+3. **Dynamic head expand** — buffer / new-private / \(O\) 过 expand 线；sample_w×subset 在此点火  
+4. **Optional TTA on \(S\)** — 谨慎；offset 仅当 \(O^{\mathrm{persist}}\) 高才 EMA
+
+## 两层权重如何赋能
+
+| 层 | 赋能什么 | 何时 |
 | --- | --- | --- |
-| 1 attribute | *where* the shift lives | weights / sep aim at the wrong coords |
-| 2 sep | *stop collapsing* with few rows | head overfits or pulls old boundary |
-| 3 expand | *name* the new class with enough mass | novel_acc stays open-set / rejected |
-| 4 TTA | *fast* BN/head nudge on \(S\) | optional; can drift if global |
+| Feature-level VIMP | 找到 \(S\)，抬高 \(L\)（从而抬 \(O\)） | 每批归因 |
+| Sample-level \(w_i\) | 抬高 novel SGD 份额 | expand 时 |
 
-## Relation to sample-level weights
-- Feature-level FSDS = subspace picker (\(W\): LIVE vs REF).
-- Sample-level \(w_i\) = SGD share at **expand**.
-- Repr-sep = geometric preconditioner so expand does not fight collapsed features.
-- Downsample vs \(s(w)\) audit still applies at expand time.
+连续时间：归因链路连续重跑；不是一次 VIMP 吃到永远。
 
 ## Code
-- `Python/src/repr_sep_cold_start.py` — `adapt_batch_repr_sep`, `ColdStartState`
-- `category_shift_boards.run_cgcd(..., mode="repr_sep")`
-- Legacy weight-only path: `weighted_cold_start.adapt_batch` (still default ablation)
+
+- `adaptation_opportunity.py` — \(O_t\)
+- `repr_sep_cold_start.py` — opportunity-gated pipeline
+- `scripts/run_adaptation_opportunity_probe.py`
 
 ```bash
-python3 scripts/run_weighted_cold_start.py --quick
+python3 scripts/run_adaptation_opportunity_probe.py --quick
 python3 scripts/run_repr_sep_cold_start.py --quick
 ```

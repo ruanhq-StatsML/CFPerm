@@ -1,4 +1,4 @@
-"""Smoke tests for representation-first cold-start."""
+"""Smoke tests for representation-first cold-start + opportunity."""
 from __future__ import annotations
 
 import sys
@@ -9,6 +9,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "Python" / "src"))
 
+from adaptation_opportunity import adaptation_opportunity  # noqa: E402
 from category_shift_boards import run_cgcd  # noqa: E402
 from repr_sep_cold_start import (  # noqa: E402
     ColdStartState,
@@ -17,6 +18,30 @@ from repr_sep_cold_start import (  # noqa: E402
     margin_separate,
 )
 from weighted_cold_start import fit_initial  # noqa: E402
+
+
+def test_opportunity_structured_beats_flat():
+    rng = np.random.default_rng(0)
+    p = 10
+    vimp = np.zeros(p)
+    vimp[:3] = np.array([0.5, 0.3, 0.1])
+    vimp = vimp / vimp.sum()
+    feat = np.array([0, 1, 2])
+    mem = np.concatenate([np.ones(20), np.zeros(20)])
+    X = rng.normal(size=(40, p))
+    X[:20, :3] += 2.0
+    proto = np.zeros((2, 3))
+    hi = adaptation_opportunity(
+        error_ratio=1.4, vimp=vimp, feat_idx=feat, membership=mem,
+        n_private=20, expand_min=16, X_live=X, prototypes_S=proto, force=True,
+    )
+    lo = adaptation_opportunity(
+        error_ratio=1.0, vimp=np.ones(p) / p, feat_idx=feat,
+        membership=np.full(40, 0.5), n_private=0, expand_min=16, force=False,
+    )
+    assert hi["O_local"] > lo["O_local"]
+    assert hi["do_sep"] is True
+
 
 
 def test_margin_separate_increases_gap():

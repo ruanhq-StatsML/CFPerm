@@ -24,6 +24,10 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import numpy as np
 from sklearn.linear_model import SGDClassifier
 
+from adaptation_opportunity import (
+    adaptation_opportunity,
+    opportunity_from_bound_labels,
+)
 from weighted_cold_start import (
     SEED,
     _membership_conc,
@@ -51,6 +55,7 @@ class ColdStartState:
     novel_y: List[np.ndarray] = field(default_factory=list)
     novel_w: List[np.ndarray] = field(default_factory=list)
     feat_idx: Optional[np.ndarray] = None
+    last_feat_idx: Optional[np.ndarray] = None
     # persistent mean displacement on S for high-mem rows (applied at infer)
     sep_offset: Optional[np.ndarray] = None  # shape (p,)
     n_sep_batches: int = 0
@@ -58,6 +63,7 @@ class ColdStartState:
     footprint_stable: bool = False
     expanded_labels: set = field(default_factory=set)
     total_novel_seen: int = 0
+    last_opportunity: Optional[Dict] = None
 
     def buffer_size(self) -> int:
         return int(sum(len(y) for y in self.novel_y))
@@ -469,19 +475,46 @@ def adapt_batch_repr_sep(
     tta_info: Dict = {"applied": False}
     n_buffered = 0
     X_work = X_live
+    opp: Dict = {}
 
     incomparable = bound["decision"] == "incomparable" and not force_adapt
     trigger = bool(gate["trigger"] or force_adapt)
+    priv = list(bound.get("private_live") or [])
+    n_priv_batch = opportunity_from_bound_labels(y_live, priv)
+    protos, _labs = known_prototypes(X_ref, y_ref, feat)
+
+    # Opportunity: can we adapt to new categories *this* batch?
+    # O_persist discounts betting that S/offset still help next batch.
+    opp = adaptation_opportunity(
+        error_ratio=float(gate.get("ratio", 1.0)),
+        vimp=vimp,
+        feat_idx=feat,
+        membership=mem,
+        n_private=n_priv_batch,
+        expand_min=expand_min,
+        detect_thresh=detect_thresh,
+        mem_thr=mem_thr,
+        margin=margin,
+        X_live=X_live,
+        prototypes_S=protos,
+        prev_vimp_top_mass=(state.last_vimp_top_mass if state.n_sep_batches else None),
+        prev_feat=state.last_feat_idx,
+        force=bool(force_adapt),
+    )
+    state.last_opportunity = {
+        "O_local": opp["O_local"], "O_persist": opp["O_persist"],
+        "action": opp["action"], "read": opp["read"],
+    }
 
     if incomparable:
         reason = "incomparable"
         phase = "skip"
-    elif trigger:
-        # --- Step 2: representation separation ---
+        # unknown / non-overlapping support: drop persisted geometry
+        state.sep_offset = None
+    elif trigger and opp["do_sep"]:
+        # --- Step 2: representation separation (only if O_local says so) ---
         # Push only private-live / high-mem candidates — never move confirmed known
         # rows (that would fight retention).
-        protos, _labs = known_prototypes(X_ref, y_ref, feat)
-        priv = list(bound.get("private_live") or [])
         sep_mem = mem.copy()
         if priv:
             known_rows = ~np.isin(y_live, priv)
@@ -491,19 +524,23 @@ def adapt_batch_repr_sep(
             margin=margin, lr=sep_lr, mem_thr=mem_thr, n_steps=sep_steps,
         )
         X_work = sep_info["X"]
-        # update persistent offset (EMA) from pushed novel-like rows only
         off = np.zeros(X_live.shape[1], dtype=float)
         off[feat] = sep_info["offset_S"]
-        if state.sep_offset is None:
-            state.sep_offset = off
+        # Persist offset only when O_persist is high; else short memory / replace.
+        if opp["keep_offset"]:
+            if state.sep_offset is None:
+                state.sep_offset = off
+            else:
+                state.sep_offset = 0.7 * state.sep_offset + 0.3 * off
         else:
-            state.sep_offset = 0.7 * state.sep_offset + 0.3 * off
+            state.sep_offset = off  # batch-local; next batch re-attributes
+        state.last_feat_idx = np.asarray(state.feat_idx, int) if state.feat_idx is not None else None
         state.feat_idx = np.asarray(feat, int)
         state.footprint_stable = footprint_stability(state, vimp_top, mem)
         state.last_vimp_top_mass = vimp_top
         state.n_sep_batches += 1
         phase = "separate"
-        reason = "repr_sep"
+        reason = f"repr_sep:O={opp['O_local']:.2f}"
 
         # park novel / high-mem for later expand
         n_buffered = buffer_novel(
@@ -530,8 +567,6 @@ def adapt_batch_repr_sep(
             )
 
         # --- Step 3: dynamic head expand ---
-        priv = bound.get("private_live") or []
-        n_priv_batch = int(np.isin(y_live, priv).sum()) if priv else 0
         new_priv = [c for c in priv if int(c) not in state.expanded_labels]
         do_exp, exp_why = should_expand_head(
             state, priv, mem, vimp_top,
@@ -539,12 +574,14 @@ def adapt_batch_repr_sep(
             n_private_batch=n_priv_batch,
             new_private=new_priv,
         )
+        # opportunity must also clear expand bar (mass × O_local)
+        if do_exp and not opp["do_expand_ok"] and not force_adapt:
+            do_exp, exp_why = False, "O_local_below_exp"
         if do_exp:
             classes = getattr(clf, "classes_", None)
             if classes is None:
                 classes = np.unique(np.concatenate([y_ref, y_live]))
-            # less replay when discovering — keep novel mass
-            rf = min(float(replay_frac), 0.25) if bound.get("private_live") else float(replay_frac)
+            rf = min(float(replay_frac), 0.25) if priv else float(replay_frac)
             clf, expand_info = expand_and_fit(
                 clf, state, X_ref, y_ref,
                 classes=classes, feature_mask=wt["feature_mask"],
@@ -552,9 +589,9 @@ def adapt_batch_repr_sep(
             )
             expand_info["why"] = exp_why
             phase = "expand"
-            reason = f"repr_sep+expand:{exp_why}"
+            reason = f"repr_sep+expand:{exp_why}|O={opp['O_local']:.2f}"
         else:
-            reason = f"repr_sep+buffer(n={state.buffer_size()})"
+            reason = f"repr_sep+buffer(n={state.buffer_size()})|O={opp['O_local']:.2f}"
 
         # --- Step 4: optional TTA on S ---
         if do_tta:
@@ -563,6 +600,12 @@ def adapt_batch_repr_sep(
             )
             if tta_info.get("applied"):
                 reason = reason + "+tta_S"
+    elif trigger and not opp["do_sep"]:
+        reason = f"hold:O_local={opp['O_local']:.2f}<tau_sep"
+        phase = "hold"
+        # low opportunity: do not carry stale geometry into unknown next batch
+        if not opp["keep_offset"]:
+            state.sep_offset = None
 
     return {
         "clf": clf,
@@ -575,6 +618,7 @@ def adapt_batch_repr_sep(
         "membership_raw": mem_raw,
         "feat_idx": feat,
         "weights": wt,
+        "opportunity": opp,
         "adapted": phase in ("separate", "expand"),
         "reason": reason,
         "vimp_top_mass": vimp_top,

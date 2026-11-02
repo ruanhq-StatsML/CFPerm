@@ -222,6 +222,9 @@ def run_cgcd(
                 "gap_lift": (out.get("sep") or {}).get("gap_lift"),
                 "expand_fitted": bool((out.get("expand") or {}).get("fitted")),
                 "tta_applied": bool((out.get("tta") or {}).get("applied")),
+                "O_local": (out.get("opportunity") or {}).get("O_local"),
+                "O_persist": (out.get("opportunity") or {}).get("O_persist"),
+                "opp_action": (out.get("opportunity") or {}).get("action"),
             }
             # eval membership for S-offset routing
             vimp_e = attribute_rf_domain(X_ref, Xev, seed=seed + 99 + st["stage"])
