@@ -55,9 +55,25 @@ downsample only when $s(w)$ cannot approach $1/2$ (covtype-like).
         (known/forgetting $=$ cost).
 \end{enumerate}
 
-\paragraph{Diagnostic.}
+\paragraph{Two levels (do not confuse).}
+\begin{itemize}
+  \item \textbf{Feature-level (FSDS):} VIMP vector of length $p$ --- selects subspace
+        $\mathcal{S}$ only. \emph{Not} the $w$ in $s(w)$.
+  \item \textbf{Sample-level (Layer~2):} weight vector of length $n_{\mathrm{LIVE}}$,
+        passed as \texttt{partial\_fit(..., sample\_weight=$w$)}.
+        Soft / hard / fused are all \emph{sample-level}.
+\end{itemize}
+Diagnostics on sample-level $w$:
 $\mathrm{gap}=\mathbb{E}[m\mid\mathrm{nov}]-\mathbb{E}[m\mid\mathrm{kn}]$;
-novel mass share $s(w)=\sum w_i N_i/\sum w_i$ ($N=$ novel indicator).
+\[
+s(w)=\frac{\sum_{i=1}^{n} w_i N_i}{\sum_{i=1}^{n} w_i}
+=\frac{n_N\,\bar w_N}{n_N\,\bar w_N+n_K\,\bar w_K}
+\quad (N=\mathbf{1}\{\mathrm{novel}\}).
+\]
+Also report $\bar w_N/\bar w_K$ (mean weight ratio).
+$s(w)$ compares weights to 1:1 downsample ($s=\tfrac12$);
+it is \emph{not} the primary complexity$\to$channel score
+(that is gap / H-prec / VIMP-top).
 
 %======================================================================
 \section{Novel-category complexity $\leftrightarrow$ weight power}
@@ -179,41 +195,55 @@ isolet
 \end{tabular}
 \end{center}
 
-\subsection{Gradient-mass account (why)}
+\subsection{Sample-level mass share $s(w)$ --- what it measures}
+
+Re-verified on all nine boards: $w$ is the \textbf{sample-level} vector
+(length $n_{\mathrm{LIVE}}$); identity
+$s=n_N\bar w_N/(n_N\bar w_N+n_K\bar w_K)$ holds to numerical zero.
+Feature-level VIMP never enters $s(w)$.
+
+\begin{center}
+\scriptsize
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Board & best sample-$w$ & $s(w)$ & $\bar w_N/\bar w_K$ & vs ds \\
+\midrule
+wine    & fused  & 0.46 & 3.50 & tie (mass-match) \\
+mice    & fused  & 0.49 & 3.19 & tie (mass-match) \\
+har     & subset & 0.33 & 2.00 & $W>\mathrm{ds}$ \\
+cancer  & subset & 0.32 & 1.97 & $W>\mathrm{ds}$ \\
+cnae9   & soft   & 0.37 & 2.18 & $W>\mathrm{ds}$ \\
+news20b & soft   & 0.31 & 2.03 & $W>\mathrm{ds}$ \\
+jvowel  & soft   & 0.28 & 1.59 & $W>\mathrm{ds}$ \\
+covtype & soft   & 0.25 & 1.68 & ds needed \\
+isolet  & fused  & 0.43 & 3.02 & both fail \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Scope of the measure.}
+$s(w)$ answers: ``of the SGD mass on LIVE rows, what fraction sits on novel
+rows?'' --- the right contrast to \texttt{ds\_known} ($s=\tfrac12$).
+It does \emph{not} by itself predict $\Delta$novel
+($\mathrm{corr}(s^\star,\Delta\mathrm{novel}_w)\approx 0.05$):
+ISOLET can have $s\approx 0.43$ and still fail; HAR can have $s\approx 0.33$
+and still beat ds.
+Complexity$\to$channel power still runs on gap / H-prec / VIMP
+(Section~2); $s(w)$ is the downsample ledger.
 
 \[
-s(w)=\frac{\sum w_i N_i}{\sum w_i},\qquad
 \Delta\mathrm{novel}(w)
 \;\approx\;
 f\big(s(w),\,\mathrm{quality}(m)\big)
 \;-\;
 c(\mathrm{known\ discard}).
 \]
-
-\begin{center}
-\scriptsize
-\begin{tabular}{@{}lccp{0.38\textwidth}@{}}
-\toprule
-Board & $s$(best $w$) & ds keep & Read \\
-\midrule
-wine / mice
-  & $0.46$--$0.49\approx\tfrac12$ & $0.24$--$0.30$
-  & \textbf{J1} mass-match $\Rightarrow$ novel tie, no discard \\
-har / cancer / news / jvowel
-  & $0.29$--$0.37<\tfrac12$ & $\sim$0.25
-  & \textbf{J2} better row contrast beats random 1:1 \\
-covtype
-  & $0.25\ll\tfrac12$ & 0.20
-  & \textbf{J3} cannot close mass gap $\Rightarrow$ ds \\
-isolet
-  & $0.43\approx\tfrac12$ & 0.25
-  & \textbf{J4} mass$\neq$quality (VIMP $0.07$) \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-jvowel witness for J2: ds known $\Delta{=}-0.22$; soft-fused known $+0.04$, novel $+0.105$.
-covtype for J3: after ds, soft-on-remainder still $+0.143$ novel.
+\textbf{J1} $s\approx\tfrac12$ $\Rightarrow$ novel tie with ds, no discard
+(wine/mice).
+\textbf{J2} $s<\tfrac12$ but quality high $\Rightarrow$ $W>\mathrm{ds}$
+(har/cancer/news/jvowel).
+\textbf{J3} $s$ stuck $\sim 0.25$ $\Rightarrow$ ds then soft (covtype).
+\textbf{J4} high $s$, bad VIMP $\Rightarrow$ refuse (ISOLET).
 
 %======================================================================
 \section{Decision card}
