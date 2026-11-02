@@ -19,15 +19,17 @@
 \begin{abstract}
 \noindent
 Two levers decide novel-class lift:
-(1)~\textbf{sample-level weight power} --- how much soft / hard / fused
-observation weights can move novel acc;
-(2)~\textbf{post-FSDS selection logic} --- which subspace and which weight
-channel to ship after RF-domain VIMP.
-Both are governed by \emph{new-category complexity}
-(number of novel classes, within-novel spread, between/within separation,
-membership--novel alignment, ambient dimension).
-We justify the links with a nine-board diagnostic
-($n_{\mathrm{novel}}$, gap, $b/w$, hard-precision, $\Delta$novel by channel).
+(1)~\textbf{sample-level weight power};
+(2)~\textbf{post-FSDS selection} --- both tied to novel-category complexity.
+We further ask whether \textbf{downsampling} known LIVE rows is required.
+On nine boards, label downsample (\texttt{ds\_known}) lifts mean novel
+$+0.127$ vs uniform, but FSDS best-weight lifts $+0.178$;
+\textbf{incremental value} best-weight $-$ \texttt{ds\_known} $=+0.052$
+(weights win on $5/9$).
+Random downsample does \emph{not} help ($-0.023$): the gain is selective
+mass, not smaller $n$.
+Downsample is necessary only when membership cannot tag novel
+(covtype); otherwise weights match or beat downsample while keeping known rows.
 \end{abstract}
 
 %======================================================================
@@ -288,27 +290,151 @@ Together: fused likes simple+sharp; soft likes hard-to-align complexity;
 hard likes saturated clusters; refuse likes fragmented complexity.
 
 %======================================================================
+\section{Do we need downsampling? (justified re-run)}
+%======================================================================
+
+Sparse novel injection makes uniform \texttt{partial\_fit} look like a
+\emph{class-imbalance} problem. A natural baseline is to
+\textbf{downsample known} LIVE rows to $n_{\mathrm{known}}=n_{\mathrm{novel}}$
+(label 1:1). We re-ran nine boards with a controlled ablation
+(\texttt{results/downsample\_vs\_weight/}).
+
+\subsection{Schemes}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lp{0.62\textwidth}@{}}
+\toprule
+Scheme & Definition \\
+\midrule
+\texttt{uniform} & full LIVE train, flat weights \\
+\texttt{ds\_known} & keep all novel; downsample known to 1:1 \\
+\texttt{ds\_random} & random downsample to same $n$ as \texttt{ds\_known} \\
+\texttt{ds\_mem} & keep top-$n$ by membership $m$ (no novel labels) \\
+\texttt{sample/subset/both\_fused} & FSDS weights on \emph{full} LIVE $n$ \\
+\texttt{ds\_known+sample\_f} & downsample known, then soft-fused on remainder \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Aggregate incremental value}
+
+\begin{center}
+\small
+\begin{tabular}{@{}lc@{}}
+\toprule
+Contrast (mean $\Delta$novel) & Value \\
+\midrule
+\texttt{ds\_known} $-$ uniform & $+0.127$ \\
+\texttt{ds\_random} $-$ uniform & $-0.023$ \\
+\texttt{ds\_mem} $-$ uniform & $+0.041$ \\
+best FSDS weight $-$ uniform & $+0.178$ \\
+\textbf{best weight $-$ \texttt{ds\_known} (incremental)} & $\mathbf{+0.052}$ \\
+\texttt{ds\_known+sample\_f} $-$ \texttt{ds\_known} & $+0.021$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Weights beat \texttt{ds\_known} on \textbf{5/9} boards.
+
+\paragraph{Justification 1 --- It is not ``smaller $n$''.}
+\texttt{ds\_random} matches the training size of \texttt{ds\_known} but
+\emph{hurts} novel on average ($-0.023$).
+So any downsample gain must come from \emph{which} rows are kept
+(label balance or membership), not from fewer SGD steps.
+
+\paragraph{Justification 2 --- Label downsample is blunt rebalance;
+weights are selective reweighting.}
+\texttt{ds\_known} forces novel\_frac $=0.5$ by discarding known rows.
+FSDS weights keep all rows and rescale SGD mass.
+When membership (after fuse) tags novel, weights recover the same or
+better novel lift \emph{without} throwing away known data.
+
+\subsection{Per-board verdict}
+
+\begin{center}
+\scriptsize
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Board & ds$\Delta$ & best\_w$\Delta$ & incr (w$-$ds)
+  & $\Delta$known@ds / @w & Verdict \\
+\midrule
+cancer  & $0$ & $+0.200$ & $\mathbf{+0.200}$ & $+0.08$ / $+0.11$
+  & \textbf{no ds}; weights required \\
+news20b & $0$ & $+0.250$ & $\mathbf{+0.250}$ & $-0.03$ / $-0.15$
+  & \textbf{no ds}; soft-fused required \\
+jvowel  & $0$ & $+0.105$ & $\mathbf{+0.105}$ & $-0.22$ / $\mathbf{+0.04}$
+  & \textbf{no ds}; ds destroys known \\
+har     & $+0.182$ & $+0.318$ & $\mathbf{+0.136}$ & $-0.05$ / $-0.05$
+  & ds helps; \textbf{hard weights add more} \\
+cnae9   & $+0.125$ & $+0.188$ & $\mathbf{+0.062}$ & $-0.12$ / $-0.07$
+  & weights beat ds; milder known cost \\
+wine    & $+0.333$ & $+0.333$ & $0$ & $0$ / $0$
+  & ds enough for novel; fused matches \\
+mice    & $+0.167$ & $+0.167$ & $0$ & $-0.14$ / $-0.20$
+  & ds enough for novel KPI \\
+covtype & $+0.333$ & $+0.095$ & $-0.238$ & $-0.14$ / $-0.01$
+  & \textbf{ds needed}; membership too weak \\
+isolet  & $0$ & $-0.050$ & $-0.050$ & $-0.02$ / $-0.10$
+  & neither works (C1 fail) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{When downsampling \emph{is} needed (carefully)}
+
+\begin{itemize}
+  \item \textbf{Only when FSDS membership cannot carry novel mass}
+        --- covtype: gap modest, hard-prec low; \texttt{ds\_known} $+0.333$
+        vs best weight $+0.095$.
+        Here label balance \emph{is} the bottleneck.
+        Combo \texttt{ds\_known+sample\_f} adds $+0.143$ novel over
+        \texttt{ds\_known} alone on covtype --- if you downsample, still
+        apply soft weights on the remainder.
+  \item \textbf{Not needed when weights already lift and ds is flat}
+        --- cancer / news20b / jvowel: \texttt{ds\_known} $\Delta{=}0$ but
+        weights $+0.10$--$0.25$.
+        Downsampling would discard known without buying novel.
+        jvowel is decisive: ds known $\Delta{=}-0.22$ while soft-fused
+        known $\Delta{=}+0.04$ with novel $+0.105$.
+  \item \textbf{Optional when ds ties fused on novel}
+        --- wine / mice: same novel lift; prefer weights if known retention
+        matters (avoid discarding REF-like LIVE known rows by default).
+  \item \textbf{Membership downsample} (\texttt{ds\_mem}) is a label-free
+        cousin of hard subset: mean $+0.041$, helps HAR/cancer-like boards,
+        but loses to label ds when alignment is weak and loses to full-$n$
+        hard \emph{weights} when $E[m\mid\mathrm{nov}]\approx 1$
+        (HAR weights $+0.318$ $>$ \texttt{ds\_mem} $+0.182$).
+\end{itemize}
+
+\paragraph{Policy.}
+Default: \textbf{do not} label-downsample; ship post-FSDS weights
+(soft/hard/fused by complexity).
+Exception: if weight channels stay near uniform on novel \emph{and}
+\texttt{ds\_known} validation lift is large (covtype-like) $\to$
+downsample known, then soft-weight the kept set.
+Never random-downsample.
+
+%======================================================================
 \section{PO bottom line}
 %======================================================================
 
 \begin{enumerate}
-  \item \textbf{Sample-level weights} are powerful only when the new category
-        (or novel \emph{family}) is a recoverable target in the FSDS subspace.
-        Soft power handles complex/weak alignment; hard/fused need simple or
-        family-level simplicity.
-  \item \textbf{Post-FSDS selection} is the policy that maps complexity probes
-        (VIMP-top, gap, hard-prec, $E[m\mid\mathrm{nov}]$) to
-        \{refuse, soft+fuse, hard, fused\}.
-  \item More simultaneous novel labels without a shared blob
-        ($n_{\mathrm{nov}}\!\uparrow$, within$\uparrow$, VIMP$\downarrow$)
-        strictly reduces fused power --- ISOLET is the ceiling of that failure.
-  \item Numbers: soft peak news20b $+0.25$; hard peak HAR $+0.32$;
-        fused peak wine $+0.33$; refuse ISOLET $0$.
+  \item Sample-level weight power and post-FSDS selection track
+        novel-category complexity (soft vs hard vs fused vs refuse).
+  \item \textbf{Downsample is not the default.}
+        Mean incremental value of best FSDS weight over \texttt{ds\_known}
+        is $\mathbf{+0.052}$ (win on $5/9$); random ds is harmful.
+  \item Need ds only when membership cannot tag novel (covtype);
+        then combine ds $+$ soft weights.
+  \item Numbers: soft peak $+0.25$; hard peak $+0.32$; fused peak $+0.33$;
+        ds mean $+0.13$; best-w mean $+0.18$; ISOLET refuse.
 \end{enumerate}
 
 \paragraph{Artifacts.}
+\texttt{results/downsample\_vs\_weight/};
 \texttt{results/fsds\_cfperm\_weight\_bench/complexity\_vs\_power.json};
-\texttt{Python/src/weighted\_cold\_start.py};
+\texttt{Python/src/downsample\_vs\_weight\_ablation.py};
 \texttt{docs/method/Weighted\_cold\_start\_FSDS\_weights.tex}.
 
 \end{document}
