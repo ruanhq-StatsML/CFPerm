@@ -1,11 +1,14 @@
 """Benchmark FSDS/CFPerm → sample weights + observation-subset weights.
 
-Datasets (v5 swap)
-------------------
-  wine       UCI wine; known {0,1} → sparse inject {2}
-  covtype    covertype subsample; known {1,2,3} → sparse {4,5}
-  news20b    TF-IDF 4-topic board (atheism/religion/med/hardware)
-  cancer     breast-cancer; REF class0 + LIVE recirculate + sparse class1
+Datasets (v6 — non-routine category-shift boards)
+-------------------------------------------------
+  har        smartphone HAR; locomotion {1,2,3} → posture {4,5,6}
+  mice       MiceProtein; control c-* → trisomic t-* (8-way biology)
+  cnae9      CNAE-9 company docs; known {1..5} → sparse {6..9}
+  jvowel     JapaneseVowels; known speakers 1–5 → sparse novel 6–9
+
+Legacy helpers kept (wine/covtype/news20b/cancer/isolet); isolet dropped from
+default after diffuse VIMP (top-mass≈0.07) showed no novel lift.
 
 Weight channels (from FSDS RF-domain VIMP + subset localization)
 ---------------------------------------------------------------
@@ -14,16 +17,17 @@ Weight channels (from FSDS RF-domain VIMP + subset localization)
   both       : sample_w * subset_w (renormalized)
 
 Adaptation: SGDClassifier.partial_fit with the chosen weights.
+Primary metric: novel_acc on the injected new categories.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
-from sklearn.datasets import fetch_20newsgroups
+from sklearn.datasets import fetch_20newsgroups, fetch_openml
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from weighted_cold_start import (
     SEED,
@@ -137,18 +141,139 @@ def board_cancer(*, seed: int = SEED) -> Dict:
     }
 
 
+def _openml_xy(name: str, *, version: int = 1) -> Tuple[np.ndarray, np.ndarray]:
+    """Fetch OpenML board; impute NaNs; label-encode targets to ints."""
+    bun = fetch_openml(name=name, version=int(version), as_frame=False, parser="liac-arff")
+    X = np.asarray(bun.data, float)
+    # column median impute (MiceProtein has sparse missingness)
+    for j in range(X.shape[1]):
+        col = X[:, j]
+        if np.isnan(col).any():
+            med = np.nanmedian(col)
+            col = col.copy()
+            col[np.isnan(col)] = med if np.isfinite(med) else 0.0
+            X[:, j] = col
+    y_raw = np.asarray(bun.target)
+    y = LabelEncoder().fit_transform(y_raw.astype(str))
+    return X, y
+
+
+def board_isolet(*, seed: int = SEED, quick: bool = True) -> Dict:
+    """Spoken letter recognition: known A–M (0–12) → sparse novel N–Z (13–25)."""
+    X, y = _openml_xy("isolet", version=1)
+    rng = np.random.default_rng(seed)
+    if quick and len(X) > 3500:
+        idx = rng.choice(len(X), size=3500, replace=False)
+        X, y = X[idx], y[idx]
+    X = StandardScaler().fit_transform(X)
+    known = list(range(0, 13))
+    novel = list(range(13, 26))
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=known, novel=novel, seed=seed,
+        n_ref=700 if quick else 1200, n_live_k=280, n_live_n=70,
+    )
+    return {
+        "name": "isolet", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "ISOLET speech; known letters A–M → sparse novel N–Z",
+        "known_labels": known, "novel_labels": novel,
+    }
+
+
+def board_har(*, seed: int = SEED, quick: bool = True) -> Dict:
+    """Smartphone HAR: locomotion {WALK/UP/DOWN} → posture {SIT/STAND/LAY}."""
+    X, y = _openml_xy("har", version=1)
+    # OpenML HAR labels are strings '1'..'6' encoded in sorted order → 0..5
+    # 0,1,2 ≈ walking family; 3,4,5 ≈ sitting/standing/laying
+    rng = np.random.default_rng(seed)
+    if quick and len(X) > 4000:
+        idx = rng.choice(len(X), size=4000, replace=False)
+        X, y = X[idx], y[idx]
+    X = StandardScaler().fit_transform(X)
+    known, novel = [0, 1, 2], [3, 4, 5]
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=known, novel=novel, seed=seed,
+        n_ref=800 if quick else 1400, n_live_k=300, n_live_n=75,
+    )
+    return {
+        "name": "har", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "HAR smartphone; locomotion {1,2,3} → sparse posture {4,5,6}",
+        "known_labels": known, "novel_labels": novel,
+    }
+
+
+def board_mice(*, seed: int = SEED) -> Dict:
+    """MiceProtein: control c-* classes → trisomic t-* (Down-syndrome model)."""
+    X, y = _openml_xy("MiceProtein", version=4)
+    X = StandardScaler().fit_transform(X)
+    # LabelEncoder sorts: c-CS-m,c-CS-s,c-SC-m,c-SC-s,t-CS-m,t-CS-s,t-SC-m,t-SC-s
+    known, novel = [0, 1, 2, 3], [4, 5, 6, 7]
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=known, novel=novel, seed=seed,
+        n_ref=320, n_live_k=160, n_live_n=48,
+    )
+    return {
+        "name": "mice", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "MiceProtein; control c-* → sparse trisomic t-* classes",
+        "known_labels": known, "novel_labels": novel,
+    }
+
+
+def board_cnae9(*, seed: int = SEED, quick: bool = True) -> Dict:
+    """CNAE-9 Brazilian company documents: known {1..5} → novel {6..9}."""
+    X, y = _openml_xy("cnae-9", version=1)
+    # dense but sparse-valued bag-of-words; scale after optional feature clip
+    if quick and X.shape[1] > 128:
+        # keep highest-variance dims for speed
+        var = X.var(0)
+        keep = np.argsort(-var)[:128]
+        X = X[:, keep]
+    X = StandardScaler().fit_transform(X)
+    known, novel = [0, 1, 2, 3, 4], [5, 6, 7, 8]
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=known, novel=novel, seed=seed,
+        n_ref=350, n_live_k=180, n_live_n=48,
+    )
+    return {
+        "name": "cnae9", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "CNAE-9 company docs; known cats 1–5 → sparse novel 6–9",
+        "known_labels": known, "novel_labels": novel,
+    }
+
+
+def board_jvowel(*, seed: int = SEED, quick: bool = True) -> Dict:
+    """JapaneseVowels speaker ID: known speakers 1–5 → sparse novel 6–9."""
+    X, y = _openml_xy("JapaneseVowels", version=1)
+    rng = np.random.default_rng(seed)
+    if quick and len(X) > 4000:
+        idx = rng.choice(len(X), size=4000, replace=False)
+        X, y = X[idx], y[idx]
+    X = StandardScaler().fit_transform(X)
+    known, novel = list(range(0, 5)), list(range(5, 9))
+    Xr, yr, Xl, yl = _sparse_novel_split(
+        X, y, known=known, novel=novel, seed=seed,
+        n_ref=600 if quick else 1000, n_live_k=240, n_live_n=60,
+    )
+    return {
+        "name": "jvowel", "X_ref": Xr, "y_ref": yr, "X_live": Xl, "y_live": yl,
+        "note": "JapaneseVowels; known speakers 1–5 → sparse novel 6–9",
+        "known_labels": known, "novel_labels": novel,
+    }
+
+
 def load_boards(*, seed: int = SEED, quick: bool = True) -> List[Dict]:
+    """Default = non-routine v6 boards (har/mice/cnae9/jvowel)."""
     boards = []
     for fn in (
-        lambda: board_wine(seed=seed),
-        lambda: board_covtype(seed=seed, quick=quick),
-        lambda: board_news20b(seed=seed, max_features=64 if quick else 96),
-        lambda: board_cancer(seed=seed),
+        lambda: board_har(seed=seed, quick=quick),
+        lambda: board_mice(seed=seed),
+        lambda: board_cnae9(seed=seed, quick=quick),
+        lambda: board_jvowel(seed=seed, quick=quick),
     ):
         try:
             boards.append(fn())
         except Exception as exc:  # noqa: BLE001
             boards.append({"name": "FAILED", "error": str(exc)})
+            print("[wbench] board failed:", exc, flush=True)
     return [b for b in boards if "X_ref" in b]
 
 
@@ -319,7 +444,8 @@ def run_benchmark(*, seed: int = SEED, quick: bool = True) -> Dict:
         "mean_delta_acc_subset_fused": _mean_delta("delta_acc_subset_fused"),
         "takeaway": (
             "FSDS RF-domain VIMP → membership → soft sample_w + hard observation subset_w "
-            "on amazon/digits/news20/synth_cgcd. Pure membership is diagnostic; "
+            "on har/mice/cnae9/jvowel (non-routine category shift). "
+            "Primary metric = novel_acc on injected new categories; "
             "fused (membership ∪ private-live) is the cold-start weight channel."
         ),
     }

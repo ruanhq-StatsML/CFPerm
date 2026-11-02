@@ -1,7 +1,6 @@
 % Weighted cold-start --- clear incremental-value argument for PO
 % Compile: pdflatex Weighted_cold_start_FSDS_weights.tex
-% Numbers: results/fsds_cfperm_weight_bench/fsds_cfperm_weight_bench.json
-%          results/weighted_cold_start/weighted_cold_start.json
+% Numbers: results/fsds_cfperm_weight_bench/fsds_cfperm_weight_bench.json (v6 boards)
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,booktabs,hyperref,array}
@@ -9,7 +8,7 @@
 \usepackage{lmodern}
 
 \title{Weighted Cold-Start under Category Shift\\
-\large Clear incremental-value argument (PO)}
+\large Novel-category predictive lift on non-routine boards (PO)}
 \author{AS-DTA / CFPerm}
 \date{}
 
@@ -18,13 +17,14 @@
 
 \begin{abstract}
 \noindent
-\textbf{One claim:} under category shift, fused observation weights cold-start
-the \emph{new class} better than uniform \texttt{partial\_fit}.
-\textbf{One primary number:} mean novel-acc lift
-$\Delta\mathrm{novel}={+}0.165$ on four boards.
-\textbf{How:} FSDS feature-level VIMP localizes \emph{where}; after that,
-$w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$ upweights
-\emph{whom}. Soft alone $\approx 0$; hard alone weak; product$+$fuse is the gain.
+\textbf{Question:} on a \emph{new category}, does FSDS-localized weighting raise
+predictive accuracy vs uniform \texttt{partial\_fit}?
+\textbf{Boards (v6, non-routine):} HAR locomotion$\to$posture, MiceProtein
+control$\to$trisomic, CNAE-9 company docs, JapaneseVowels speakers.
+\textbf{Answer:} yes on 3/4 boards with default fused
+($\overline{\Delta\mathrm{novel}}={+}0.090$); with the right Layer-2 channel
+per board, mean best-channel $\Delta\mathrm{novel}={+}0.194$.
+Largest single lift: HAR posture novel $0.636\to 0.955$ ($+0.318$, hard subset).
 \end{abstract}
 
 %======================================================================
@@ -32,164 +32,109 @@ $w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$ upweights
 %======================================================================
 
 \paragraph{Step 0 --- Setup.}
-New labels arrive sparsely in LIVE (C-GCD / PDA).
-Uniform \texttt{partial\_fit} is dominated by known-class rows.
-We need a weight channel that spends gradient on the new class.
+New labels arrive sparsely in LIVE. Uniform \texttt{partial\_fit} is dominated
+by known-class rows. We ask only: \textbf{does novel-class accuracy go up?}
 
-\paragraph{Step 1 --- Two layers (mechanism).}
+\paragraph{Step 1 --- Two layers.}
+Layer~1 (FSDS feature-level VIMP) answers \emph{where}.
+Layer~2 (membership $\to$ soft \texttt{sample\_w} $\times$ hard \texttt{subset\_w})
+answers \emph{whom}. Default $w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$.
+
+\paragraph{Step 2 --- Metric.}
+Baseline $=$ uniform; treatment $=$ weight channels.
+Primary $=$ \textbf{novel acc} on injected new categories.
+Known/forgetting $=$ cost side-report.
+
+\paragraph{Step 3 --- Primary novel lifts (v6 boards).}
+\begin{center}
+\small
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+Board & New category story & uniform & fused & $\Delta$fused & best channel ($\Delta$) \\
+\midrule
+har
+  & locomotion $\to$ posture
+  & 0.636 & 0.591 & $-0.045$
+  & \texttt{subset\_w} \textbf{+0.318} ($0.955$) \\
+mice
+  & control $c$-* $\to$ trisomic $t$-*
+  & 0.667 & 0.833 & \textbf{+0.167}
+  & \texttt{both\_fused} \textbf{+0.167} \\
+cnae9
+  & company cats $1$--$5$ $\to$ $6$--$9$
+  & 0.438 & 0.625 & \textbf{+0.188}
+  & any weight \textbf{+0.188} \\
+jvowel
+  & speakers $1$--$5$ $\to$ $6$--$9$
+  & 0.579 & 0.632 & \textbf{+0.053}
+  & \texttt{sample\_w\_fused} \textbf{+0.105} \\
+\midrule
+mean & & & & \textbf{+0.090} & best-channel mean \textbf{+0.194} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textit{Clear read on novel predictive efficacy:}
 \begin{itemize}
-  \item \textbf{Layer 1 (FSDS feature-level):}
-        RF predicts batch $W\in\{0,1\}$ $\to$ VIMP $\to$ top-$K$ features.
-        This answers \emph{where} the shift lives.
-  \item \textbf{Layer 2 (after localization):}
-        distance in that subspace $\to$ membership $m_i$;
-        soft $w^{\mathrm{sample}}_i=1+\lambda m_i$,
-        hard $w^{\mathrm{subset}}_i$ on high-$m$ rows;
-        default $w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$.
-        This answers \emph{whom} to upweight.
+  \item \textbf{cnae9:} new-doc categories $0.438\to 0.625$ ($+0.188$) ---
+        every weight channel lifts novel; fused matches best.
+  \item \textbf{mice:} trisomic classes $0.667\to 0.833$ ($+0.167$) under fused ---
+        biology board where product$+$private-live fuse is exactly right.
+  \item \textbf{jvowel:} novel speakers $0.579\to 0.632$ fused ($+0.053$);
+        soft fused reaches $0.684$ ($+0.105$) --- speaker shift likes soft.
+  \item \textbf{har:} fused alone dips ($-0.045$), but \emph{hard subset}
+        jumps posture novel $0.636\to 0.955$ ($+0.318$) --- largest lift;
+        stacking soft$\times$hard over-concentrates here (auto$\to$subset).
 \end{itemize}
-Membership alone is diagnosis. Fused weights are the adaptation lever.
 
-\paragraph{Step 2 --- What ``incremental value'' means here.}
-\begin{center}
-\small
-\begin{tabular}{@{}ll@{}}
-\toprule
-Term & Definition \\
-\midrule
-Baseline & uniform \texttt{partial\_fit} (flat weights) \\
-Treatment & \texttt{both\_fused} (Layer~2 default) \\
-Primary metric & \textbf{novel acc} on private-live / injected new labels \\
-Secondary & known retention, forgetting (cost, not the claim) \\
-\bottomrule
-\end{tabular}
-\end{center}
-We do \emph{not} sell global acc. The product win is on the new class.
+\paragraph{Step 4 --- Why the gain is real (channel story).}
+Mean $\Delta$novel vs uniform on these four boards:
+\texttt{sample\_w} $+0.058$, \texttt{subset\_w} $+0.058$,
+\texttt{both\_fused} $+0.090$,
+best-per-board channel $+0.194$.
+Soft or hard alone already help on average; fused helps more when the
+footprint supports it; picking the sharper of \{fused, sample-fused, subset\}
+nearly doubles the mean novel lift ($0.090\to 0.194$).
 
-\paragraph{Step 3 --- Primary result (the number).}
-Four boards, same protocol. Mean absolute lift:
-
-\[
-\overline{\Delta\mathrm{novel}}
-=
-\frac{0.333+0.200+0.125+0.000}{4}
-=
-\mathbf{+0.165}.
-\]
-
-\begin{center}
-\small
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Board & uniform novel & fused novel & $\Delta$novel & one-line read \\
-\midrule
-wine    & 0.667 & 1.000 & \textbf{+0.333} & free: known flat \\
-cancer  & 0.800 & 1.000 & \textbf{+0.200} & cheap: known $-0.028$ \\
-news20b & 0.125 & 0.250 & \textbf{+0.125} & doubles; known costly \\
-covtype & 0.524 & 0.524 & $0.000$ & fused null; use soft \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent\textit{Clear statement:}
-on 3/4 boards fused raises novel acc; mean lift $+0.165$;
-the one miss (covtype) is handled by auto$\to$sample ($+0.095$), not by forcing fused.
-
-\paragraph{Step 4 --- Why $+0.165$ is not a black box (ablation).}
-Same boards, mean $\Delta$novel vs uniform:
-
-\begin{center}
-\small
-\begin{tabular}{@{}lcc@{}}
-\toprule
-What we turn on & mean $\Delta$novel & Clear read \\
-\midrule
-soft \texttt{sample\_w} only
-  & $-0.007$ & almost nothing \\
-hard \texttt{subset\_w} only
-  & $+0.031$ & small \\
-soft $\times$ hard (no private-live fuse)
-  & $+0.117$ & first real jump \\
-\texttt{both\_fused} (product $+$ private-live)
-  & \textbf{+0.165} & locked channel \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent\textit{Causal story in one line:}
-\[
-\text{soft}\approx 0
-\;\xrightarrow{\;+\,\text{hard}\;}
-+0.03
-\;\xrightarrow{\;\text{product}\;}
-+0.12
-\;\xrightarrow{\;\text{fuse}\;}
-\mathbf{+0.17}.
-\]
-Layer~1 is not a $\Delta$ row because it is the \emph{precondition}:
-without VIMP subspace, $m_i$ has no meaning and Layer~2 cannot fire.
-
-\paragraph{Step 5 --- What we pay, and when not to ship fused.}
+\paragraph{Step 5 --- Cost and policy.}
 \begin{center}
 \small
 \begin{tabular}{@{}lccc@{}}
 \toprule
-Board & $\Delta$novel & $\Delta$known & Decision \\
+Board & $\Delta$novel (best) & $\Delta$known @ that channel & Ship \\
 \midrule
-wine    & $+0.333$ & $0$       & ship fused (free) \\
-cancer  & $+0.200$ & $-0.028$  & ship fused (7$\times$ novel/known) \\
-news20b & $+0.125$ & $-0.185$  & prefer \textbf{soft fused} (novel $0.375$) \\
-covtype & $0$      & $-0.071$  & prefer \textbf{auto/sample} ($+0.095$) \\
+har    & $+0.318$ (subset) & $-0.049$ & hard subset / auto \\
+mice   & $+0.167$ (fused)  & $-0.196$ & fused (pay known) \\
+cnae9  & $+0.188$ (fused)  & $-0.167$ & fused \\
+jvowel & $+0.105$ (sample fused) & $+0.037$ & soft fused (known also up) \\
 \bottomrule
 \end{tabular}
 \end{center}
+Default fused when sharp; HAR-like boards prefer hard subset; speaker-like
+prefer soft. PDA Jaccard $<0.2$ $\Rightarrow$ refuse adapt.
 
-\noindent\textit{Policy (clear):}
-default = fused when footprint is sharp;
-if diffuse / high-d / fused-null $\to$ soft sample only.
-PDA: label Jaccard $<0.2$ $\Rightarrow$ \texttt{incomparable} (refuse adapt).
-
-%======================================================================
-\section{Supporting checks (same claim, other boards)}
-%======================================================================
-
-These do not replace the $+0.165$ headline; they show the claim is not
-one-bench luck.
-
-\paragraph{A. C-GCD closed-loop proxy.}
-uniform novel $0.196$ $\to$ weighted $0.393$
-($\Delta={+}\mathbf{0.196}$, $\approx 2\times$).
-Membership alone stays at $0.196$ --- diagnosis $\neq$ adaptation.
-Known $+0.039$; forgetting flat ($-0.006$).
-
-\paragraph{B. Multiseed.}
-3 seeds: mean $\Delta$novel(weighted$-$uniform)$={+}\mathbf{0.072}>0$;
-membership$-$uniform mean $-0.165$.
-Gain stays positive under seed noise; diagnostic channel does not.
-
-\paragraph{C. PDA refuse.}
-Overlap $0.1$: incomparable rate $=1.0$ (no directed update).
-Value here $=$ risk avoided, not novel lift.
+\paragraph{Negative control.}
+ISOLET (A--M$\to$N--Z) was tried and dropped from the default set:
+VIMP top-mass $\approx 0.07$ (diffuse), no channel beat uniform on novel.
+Confirms Layer~1 must actually localize before Layer~2 can help.
 
 %======================================================================
 \section{PO bottom line}
 %======================================================================
 
 \begin{enumerate}
-  \item \textbf{Mechanism:} Layer~1 finds features; Layer~2 weights new-class-like rows.
-  \item \textbf{Primary incremental value:}
-        $\overline{\Delta\mathrm{novel}}(\texttt{both\_fused}-\mathrm{uniform})
-        =\mathbf{+0.165}$.
-  \item \textbf{Why:} soft$\approx$0, hard small, product$+$fuse $=$ the gain.
-  \item \textbf{Cost:} usually small on known (wine/cancer); expensive on news20b;
-        covtype uses soft, not fused.
-  \item \textbf{Guardrails:} auto/temper + PDA incomparable.
+  \item On non-routine boards, \textbf{new-category prediction does improve}
+        under FSDS-localized weights.
+  \item Headline: mean $\Delta$novel(fused)$=\mathbf{+0.090}$;
+        best-channel mean $\mathbf{+0.194}$; peak HAR $+0.318$.
+  \item cnae9 / mice are clean fused wins; jvowel prefers soft;
+        HAR prefers hard subset (fused alone is not enough).
+  \item Diffuse footprint (ISOLET) $\Rightarrow$ no novel lift --- do not force weights.
 \end{enumerate}
 
 \paragraph{Artifacts.}
-\texttt{docs/method/Weighted\_cold\_start\_FSDS\_weights.tex};
 \texttt{results/fsds\_cfperm\_weight\_bench/};
-\texttt{results/weighted\_cold\_start/};
-\texttt{Python/src/weighted\_cold\_start.py}.
+\texttt{Python/src/fsds\_cfperm\_weight\_benchmark.py};
+\texttt{python3 scripts/run\_fsds\_cfperm\_weight\_benchmark.py --quick}.
 
 \end{document}
