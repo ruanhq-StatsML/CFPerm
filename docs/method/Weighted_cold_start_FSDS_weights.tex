@@ -45,12 +45,12 @@ downsample only when $s(w)$ cannot approach $1/2$ (covtype-like).
   \item \textbf{Localize:} $m_i=$ clipped z-distance to REF in $\mathcal{S}$.
         Optional fuse $m\leftarrow\max(m,\,1\{y\in\mathrm{private\text{-}live}\})$.
   \item \textbf{Layer 2 (sample weights):}
-        $w^{\mathrm{sample}}=1+\lambda m$,\
-        $w^{\mathrm{subset}}$ boosts $\{m\ge q\}$,\
+        $w^{\mathrm{sample}}=1+\lambda m$;
+        $w^{\mathrm{subset}}$ boosts $\{m\ge q\}$;
         $w^{\mathrm{fused}}=w^{\mathrm{sample}}\odot w^{\mathrm{subset}}$.
   \item \textbf{Select channel} by complexity probes
-        (VIMP-top, gap, hard-prec, $E[m\mid\mathrm{nov}]$)
-        $\in\{\mathrm{refuse},\mathrm{soft},\mathrm{hard},\mathrm{fused}\}$.
+        (VIMP-top, gap, hard-prec, $E[m\mid\mathrm{nov}]$):
+        refuse / soft / hard / fused.
   \item \textbf{Adapt} \texttt{partial\_fit}; KPI $=$ \textbf{novel acc}
         (known/forgetting $=$ cost).
 \end{enumerate}
@@ -191,19 +191,22 @@ c(\mathrm{known\ discard}).
 \]
 
 \begin{center}
-\small
-\begin{tabular}{@{}lcccc@{}}
+\scriptsize
+\begin{tabular}{@{}lccp{0.38\textwidth}@{}}
 \toprule
-Board & $s_u$ & $s$(best $w$) & known keep (ds) & Read \\
+Board & $s$(best $w$) & ds keep & Read \\
 \midrule
-wine / mice & $\sim$0.2 & $0.46$--$0.49\approx\tfrac12$ & $0.24$--$0.30$
+wine / mice
+  & $0.46$--$0.49\approx\tfrac12$ & $0.24$--$0.30$
   & \textbf{J1} mass-match $\Rightarrow$ novel tie, no discard \\
 har / cancer / news / jvowel
-  & $\sim$0.2 & $0.29$--$0.37<\tfrac12$ & $\sim$0.25
+  & $0.29$--$0.37<\tfrac12$ & $\sim$0.25
   & \textbf{J2} better row contrast beats random 1:1 \\
-covtype & 0.17 & $0.25\ll\tfrac12$ & 0.20
+covtype
+  & $0.25\ll\tfrac12$ & 0.20
   & \textbf{J3} cannot close mass gap $\Rightarrow$ ds \\
-isolet & 0.20 & $0.43\approx\tfrac12$ & 0.25
+isolet
+  & $0.43\approx\tfrac12$ & 0.25
   & \textbf{J4} mass$\neq$quality (VIMP $0.07$) \\
 \bottomrule
 \end{tabular}
@@ -253,10 +256,10 @@ Never random-downsample.
 \end{enumerate}
 
 \paragraph{Code / results.}
-\texttt{Python/src/weighted\_cold\_start.py},
+\texttt{weighted\_cold\_start.py},
 \texttt{downsample\_vs\_weight\_ablation.py};
-\texttt{results/fsds\_cfperm\_weight\_bench/},
-\texttt{results/downsample\_vs\_weight/};
-\texttt{python3 scripts/run\_downsample\_vs\_weight\_ablation.py --quick}.
+results under \texttt{fsds\_cfperm\_weight\_bench/},
+\texttt{downsample\_vs\_weight/}.
+Run: \texttt{scripts/run\_downsample\_vs\_weight\_ablation.py --quick}.
 
 \end{document}
