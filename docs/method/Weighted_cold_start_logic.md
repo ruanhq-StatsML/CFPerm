@@ -8,12 +8,13 @@ Pure **membership** diagnoses *where* the shift lives; cold-start **adapts** wit
 2. **Attribute** — FSDS RF-domain VIMP → top-K subspace → membership (diagnostic).
 3. **Boundary** — Jaccard(label supports) low → `incomparable` → skip directed adapt.
 4. **Fuse** — membership ∪ private-live labels (discovered / pseudo ids).
-5. **Weights (default cold-start channel)**
-   - `sample_w = 1 + λ_eff · membership_fused` (soft, mean-1)
-   - `subset_w` = boost_eff on hard observation subset `{i : membership ≥ q}`
-   - **`fused_w = sample_w × subset_w`** ← what `partial_fit` uses
-   - **temper**: if membership is diffuse, shrink fused_w toward uniform and clip ratio
-6. **Adapt** — `partial_fit(..., sample_weight=fused_w)` + mild amplify of attributed features.
+5. **Weights (`weight_mode=auto` default)**
+   - sharp footprint → **`fused_w = sample_w × subset_w`** (tempered)
+   - diffuse footprint → soft `sample_w` only (digits/amazon guard)
+   - `sample_w = 1 + λ_eff · membership_fused`
+   - `subset_w` boosts hard observation subset `{i : membership ≥ q}`
+6. **Adapt** — mix LIVE (weighted) + known REF replay (weight=1) → `partial_fit`
+   to protect against forgetting while still emphasizing the localized novel set.
 
 ## Why this split
 | channel | role |
@@ -27,10 +28,11 @@ Pure **membership** diagnoses *where* the shift lives; cold-start **adapts** wit
 Digits/amazon show weights are **not** unconditionally helpful: when uniform is already strong or the subset is wrong, fused can over-emphasize sparse novel and hurt known retention. Boundary + sparsity still gate the update.
 
 ## Code
-- `weighted_cold_start.adapt_batch(..., weight_mode="fused")` — default
+- `weighted_cold_start.adapt_batch(..., weight_mode="auto")` — default policy
+- known REF replay mixed into every cold-start step
 - `fsds_cfperm_weight_benchmark` — amazon / digits / news20 / synth_cgcd ablation
 
 ```bash
-python3 scripts/run_weighted_cold_start.py --quick
+python3 scripts/run_weighted_cold_start.py --quick --multiseed
 python3 scripts/run_fsds_cfperm_weight_benchmark.py --quick
 ```

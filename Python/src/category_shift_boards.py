@@ -192,8 +192,8 @@ def run_cgcd(
                 top_k=8, lam=2.0, min_jaccard=0.05,
                 detect_thresh=1.05, force_adapt=True,
                 use_private_labels=(mode == "weighted"),
-                weight_mode="fused" if mode == "weighted" else "sample",
-                temper=True,
+                weight_mode="auto" if mode == "weighted" else "sample",
+                temper=True, replay_frac=0.35,
             )
             clf = out["clf"]
             meta = {
@@ -203,6 +203,9 @@ def run_cgcd(
                 "boundary": out["boundary"]["decision"],
                 "mean_membership": out["mean_membership"],
                 "subset_frac": out.get("subset_frac"),
+                "membership_conc": out.get("membership_conc"),
+                "weight_mode": out.get("weight_mode"),
+                "n_replay": out.get("n_replay"),
                 "temper_shrink": (out.get("weights") or {}).get("temper", {}).get("shrink"),
             }
 
@@ -269,8 +272,8 @@ def cold_start_efficiency(
                     clf, X_ref, y_ref, Xtr, ytr, seed=seed + int(b),
                     top_k=8, lam=2.0, min_jaccard=0.05, force_adapt=True,
                     use_private_labels=(mode == "weighted"),
-                    weight_mode="fused" if mode == "weighted" else "sample",
-                    temper=True,
+                    weight_mode="auto" if mode == "weighted" else "sample",
+                    temper=True, replay_frac=0.35,
                 )
                 clf = out["clf"]
             acc = float(np.mean(clf.predict(Xl[hold]) == yl[hold]))
@@ -328,7 +331,7 @@ def run_officehome_pda(
             out = adapt_batch(
                 clf, Xs, ys, Xt, yt, seed=seed, top_k=6, lam=2.5,
                 min_jaccard=0.20, detect_thresh=1.05, force_adapt=False,
-                use_private_labels=True, weight_mode="fused",
+                use_private_labels=True, weight_mode="auto", temper=True, replay_frac=0.35,
             )
             shared = board["shared"]
             m = np.isin(yt, shared)
@@ -366,8 +369,8 @@ def run_suite(*, seed: int = SEED, quick: bool = True) -> Dict:
                 "boundary: incomparable rate vs label overlap",
             ],
             "modes": {
-                "weighted": "membership ∪ private-live labels",
-                "membership": "subspace membership only",
+                "weighted": "auto fused/sample + private-live + known replay",
+                "membership": "subspace membership only (diagnostic)",
                 "uniform": "flat partial_fit",
             },
         },
@@ -380,8 +383,25 @@ def run_suite(*, seed: int = SEED, quick: bool = True) -> Dict:
         "delta_novel_acc_membership": cg_m["mean_novel_acc"] - cg_u["mean_novel_acc"],
         "delta_forgetting_vs_uniform": cg_u["mean_forgetting"] - cg_w["mean_forgetting"],
         "takeaway": (
-            "Directed adapt = gate + boundary + upweight localized/private samples. "
-            "C-GCD reports novel/forget/feat_hit + n* efficiency; "
-            "PDA reports incomparable rate rising as overlap falls."
+            "Cold-start = gate + boundary + auto(fused|sample) weights + known replay. "
+            "Membership diagnoses; fused sample_w×subset_w adapts when concentrated."
         ),
+    }
+
+
+def run_suite_multiseed(*, seeds: Optional[List[int]] = None, quick: bool = True) -> Dict:
+    """Aggregate key deltas over seeds for a more stable snapshot."""
+    seeds = list(seeds or [2026, 2027, 2028])
+    runs = [run_suite(seed=int(s), quick=quick) for s in seeds]
+    def _mean(key):
+        return float(np.mean([r[key] for r in runs]))
+    winners = [r["efficiency"].get("winner") for r in runs]
+    return {
+        "seeds": seeds,
+        "mean_delta_novel_vs_uniform": _mean("delta_novel_acc_vs_uniform"),
+        "mean_delta_novel_membership": _mean("delta_novel_acc_membership"),
+        "mean_delta_forgetting_vs_uniform": _mean("delta_forgetting_vs_uniform"),
+        "efficiency_winners": winners,
+        "runs": runs,
+        "takeaway": runs[0]["takeaway"],
     }

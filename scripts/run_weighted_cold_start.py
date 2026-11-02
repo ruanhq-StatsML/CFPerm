@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "Python" / "src"))
 
-from category_shift_boards import run_suite  # noqa: E402
+from category_shift_boards import run_suite, run_suite_multiseed  # noqa: E402
 
 OUT = ROOT / "results" / "weighted_cold_start"
 DOCS = ROOT / "docs" / "method"
@@ -113,11 +113,29 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--seed", type=int, default=2026)
+    ap.add_argument("--multiseed", action="store_true", help="aggregate 3 seeds")
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
-    payload = run_suite(seed=int(args.seed), quick=bool(args.quick))
+    if args.multiseed:
+        multi = run_suite_multiseed(seeds=[args.seed, args.seed + 1, args.seed + 2], quick=bool(args.quick))
+        payload = multi["runs"][0]
+        payload["multiseed"] = {
+            "seeds": multi["seeds"],
+            "mean_delta_novel_vs_uniform": multi["mean_delta_novel_vs_uniform"],
+            "mean_delta_novel_membership": multi["mean_delta_novel_membership"],
+            "mean_delta_forgetting_vs_uniform": multi["mean_delta_forgetting_vs_uniform"],
+            "efficiency_winners": multi["efficiency_winners"],
+        }
+    else:
+        payload = run_suite(seed=int(args.seed), quick=bool(args.quick))
     (OUT / "weighted_cold_start.json").write_text(json.dumps(payload, indent=2, default=str))
     readme = _readme(payload)
+    if payload.get("multiseed"):
+        ms = payload["multiseed"]
+        readme += "\n## Multi-seed (%s)\n\n" % ",".join(str(s) for s in ms["seeds"])
+        readme += "- mean Δnovel (weighted−uniform): **%s**\n" % _fmt(ms["mean_delta_novel_vs_uniform"])
+        readme += "- mean Δforget (uniform−weighted): **%s**\n" % _fmt(ms["mean_delta_forgetting_vs_uniform"])
+        readme += "- efficiency winners: %s\n" % ", ".join(str(x) for x in ms["efficiency_winners"])
     (OUT / "README.md").write_text(readme)
     DOCS.mkdir(parents=True, exist_ok=True)
     shutil.copy(OUT / "README.md", DOCS / "Weighted_cold_start_category_shift.md")
@@ -131,6 +149,13 @@ def main():
         _fmt(payload["delta_forgetting_vs_uniform"]),
         payload["efficiency"].get("winner"),
     ), flush=True)
+    if payload.get("multiseed"):
+        ms = payload["multiseed"]
+        print("[wcs] multiseed Δnovel=%s  Δforget=%s  winners=%s" % (
+            _fmt(ms["mean_delta_novel_vs_uniform"]),
+            _fmt(ms["mean_delta_forgetting_vs_uniform"]),
+            ms["efficiency_winners"],
+        ), flush=True)
     for mode, cur in payload["efficiency"]["curves"].items():
         print("[wcs] n*(%s)=%s" % (mode, cur["n_star"]), flush=True)
     for ov, v in payload["officehome"]["by_overlap"].items():

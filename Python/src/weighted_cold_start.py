@@ -272,6 +272,54 @@ def cold_start_partial_fit(
     return clf
 
 
+def _membership_conc(membership: np.ndarray) -> float:
+    mem = np.asarray(membership, float).ravel()
+    k = max(1, len(mem) // 5)
+    return float(np.sort(mem)[-k:].mean())
+
+
+def choose_weight_mode(requested: str, membership: np.ndarray, *, gate_trigger: bool) -> str:
+    """auto: fused when footprint is sharp; else soft sample_w (digits/amazon guard)."""
+    req = str(requested).lower()
+    if req != "auto":
+        return req
+    conc = _membership_conc(membership)
+    if conc >= 0.55 and gate_trigger:
+        return "fused"
+    if conc >= 0.40:
+        return "fused"  # still fused but temper will shrink
+    return "sample"
+
+
+def mix_known_replay(
+    X_live: np.ndarray,
+    y_live: np.ndarray,
+    w_live: np.ndarray,
+    X_ref: np.ndarray,
+    y_ref: np.ndarray,
+    *,
+    replay_frac: float = 0.35,
+    seed: int = SEED,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Append known REF replay with weight 1 to protect against forgetting."""
+    X_live = np.asarray(X_live, float)
+    y_live = np.asarray(y_live).ravel()
+    w_live = np.asarray(w_live, float).ravel()
+    X_ref = np.asarray(X_ref, float)
+    y_ref = np.asarray(y_ref).ravel()
+    n_rep = int(round(len(y_live) * float(replay_frac)))
+    n_rep = int(np.clip(n_rep, 8 if len(y_ref) >= 8 else 0, len(y_ref)))
+    if n_rep <= 0:
+        return X_live, y_live, w_live
+    rng = np.random.default_rng(int(seed))
+    idx = rng.choice(len(y_ref), size=n_rep, replace=False)
+    X = np.vstack([X_live, X_ref[idx]])
+    y = np.concatenate([y_live, y_ref[idx]])
+    w = np.concatenate([w_live, np.ones(n_rep, dtype=float)])
+    w = w * (len(w) / max(w.sum(), 1e-12))
+    return X, y, w
+
+
 def adapt_batch(
     clf: SGDClassifier,
     X_ref: np.ndarray,
@@ -286,17 +334,22 @@ def adapt_batch(
     detect_thresh: float = 1.15,
     force_adapt: bool = False,
     use_private_labels: bool = True,
-    weight_mode: str = "fused",
+    weight_mode: str = "auto",
     subset_q: float = 0.65,
     subset_boost: float = 2.2,
     temper: bool = True,
+    replay_frac: float = 0.35,
 ) -> Dict:
-    """Detect → attribute → boundary → fused sample_w×subset_w cold-start.
+    """Detect → attribute → boundary → weighted cold-start.
 
-    Default weight_mode='fused' (locked cold-start channel).
-    Pure membership (use_private_labels=False, weight_mode='sample') is diagnostic.
+    weight_mode
+      auto   — default: fused if membership concentrated, else sample
+      fused  — sample_w × subset_w (tempered)
+      sample / subset — ablation channels
+    Always mixes known REF replay (weight=1) to limit forgetting.
     """
     y_ref, y_live = np.asarray(y_ref).ravel(), np.asarray(y_live).ravel()
+    X_ref, X_live = np.asarray(X_ref, float), np.asarray(X_live, float)
     gate = detect_error_rise(clf, X_ref, y_ref, X_live, y_live, thresh=detect_thresh)
     bound = boundary_check(y_ref, y_live, min_jaccard=min_jaccard)
     vimp = attribute_rf_domain(X_ref, X_live, seed=seed)
@@ -304,29 +357,42 @@ def adapt_batch(
     mem = mem_raw.copy()
     if use_private_labels and bound["private_live"]:
         mem = np.maximum(mem, np.isin(y_live, bound["private_live"]).astype(float))
+
+    mode_req = str(weight_mode).lower()
+    mode_eff = choose_weight_mode(
+        mode_req, mem, gate_trigger=bool(gate["trigger"] or force_adapt),
+    )
     wt = weights_from_attribution(
         mem, feat, X_live.shape[1], lam=lam,
-        subset_q=subset_q, subset_boost=subset_boost, mode=weight_mode,
+        subset_q=subset_q, subset_boost=subset_boost, mode=mode_eff,
         temper=temper,
     )
 
     adapted = False
     reason = "no_trigger"
+    n_replay = 0
     if bound["decision"] == "incomparable" and not force_adapt:
         reason = "incomparable"
     elif gate["trigger"] or force_adapt:
         classes = getattr(clf, "classes_", None)
         if classes is None:
             classes = np.unique(np.concatenate([y_ref, y_live]))
+        X_fit, y_fit, w_fit = mix_known_replay(
+            X_live, y_live, wt["sample_weight"], X_ref, y_ref,
+            replay_frac=replay_frac, seed=seed + 3,
+        )
+        n_replay = int(len(y_fit) - len(y_live))
         clf = cold_start_partial_fit(
-            clf, X_live, y_live,
-            sample_weight=wt["sample_weight"],
+            clf, X_fit, y_fit,
+            sample_weight=w_fit,
             feature_mask=wt["feature_mask"],
             classes=classes,
             n_passes=3,
         )
         adapted = True
-        reason = "fused_cold_start" if wt["weight_mode"] == "fused" else "weighted_cold_start"
+        reason = f"{wt['weight_mode']}_cold_start"
+        if mode_req == "auto" and mode_eff != "fused":
+            reason = "auto_sample_cold_start"
         if not gate["trigger"]:
             reason = "forced_" + reason
     return {
@@ -343,8 +409,11 @@ def adapt_batch(
         "vimp_top_mass": float(vimp[feat].sum()),
         "use_private_labels": bool(use_private_labels),
         "weight_mode": wt["weight_mode"],
+        "weight_mode_requested": mode_req,
         "subset_frac": wt["subset_frac"],
         "mean_membership": float(np.mean(mem)),
+        "membership_conc": _membership_conc(mem),
+        "n_replay": n_replay,
     }
 
 
