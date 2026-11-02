@@ -415,6 +415,82 @@ Exception: if weight channels stay near uniform on novel \emph{and}
 downsample known, then soft-weight the kept set.
 Never random-downsample.
 
+\subsection{One more justify step --- novel gradient-mass accounting}
+
+Let the LIVE batch have novel indicator $N_i\in\{0,1\}$ and weights $w_i$
+(mean-normalized). Define the \textbf{novel gradient-mass share}
+\[
+s(w)
+=
+\frac{\sum_i w_i N_i}{\sum_i w_i}.
+\]
+Under uniform, $s\equiv \bar N\approx 0.17$--$0.23$ on our boards.
+Under \texttt{ds\_known} (1:1), $s=1/2$ by construction, but known-row keep
+rate is only $\approx 0.20$--$0.30$ (discard $70$--$80\%$ of known LIVE).
+
+\begin{center}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Board & $s$(uniform) & $s$(best $w$) & amp $=s/s_u$
+  & known keep (ds) & incr $w{-}$ds \\
+\midrule
+wine    & 0.19 & 0.46 (fused) & $2.4\times$ & 0.24 & $0$ \\
+mice    & 0.23 & 0.49 (fused) & $2.1\times$ & 0.30 & $0$ \\
+har     & 0.20 & 0.34 (subset) & $1.7\times$ & 0.25 & $+0.136$ \\
+cancer  & 0.19 & 0.33 (subset) & $1.7\times$ & 0.24 & $+0.200$ \\
+cnae9   & 0.21 & 0.37 (soft) & $1.8\times$ & 0.27 & $+0.062$ \\
+news20b & 0.18 & 0.31 (soft) & $1.7\times$ & 0.22 & $+0.250$ \\
+jvowel  & 0.20 & 0.29 (soft) & $1.5\times$ & 0.25 & $+0.105$ \\
+covtype & 0.17 & 0.25 (soft) & $1.5\times$ & 0.20 & $-0.238$ \\
+isolet  & 0.20 & 0.43 (fused) & $2.2\times$ & 0.25 & $-0.050$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Step J1 --- Mass-matching explains the ties.}
+wine / mice: best fused pushes $s(w)\to 0.46$--$0.49\approx 1/2$.
+So weights already buy the same novel mass share as 1:1 downsample
+\emph{without} discarding $\sim 70\%$ of known rows --- hence incr $=0$ on
+novel, and downsample is optional, not required.
+
+\paragraph{Step J2 --- Beating ds with $s(w)<1/2$ is about \emph{which} rows.}
+cancer / HAR / news20b / jvowel: best weights only reach $s\approx 0.29$--$0.37$
+$<0.5$, yet novel lift \emph{exceeds} \texttt{ds\_known}.
+Justification: \texttt{ds\_known} keeps a \emph{random} known half at full
+weight $1$; that retained known mass still competes with novel on the
+decision boundary.
+Weights instead keep \emph{all} known at down-scaled $w$ and upweight
+high-$m$ / fused novel --- same or less total novel mass, but better
+\emph{contrast} against non-novel-like known.
+jvowel is the clean witness: ds known $\Delta{=}-0.22$ (random known keep
+hurts) while soft-fused known $\Delta{=}+0.04$ with novel $+0.105$.
+
+\paragraph{Step J3 --- When ds is mandatory: weights cannot close the mass gap.}
+covtype: best soft only reaches $s=0.25$ (amp $1.5\times$) vs ds's forced
+$0.50$, under weak gap ($+0.15$).
+Membership cannot allocate enough novel mass $\Rightarrow$ label downsample
+is the only way to hit $s=1/2$.
+Then soft-on-remainder still adds $+0.143$ novel --- ds supplies mass,
+weights supply ranking inside the kept set.
+
+\paragraph{Step J4 --- Mass without a good subspace is worthless.}
+ISOLET: fused reaches $s=0.43\approx 1/2$ (amp $2.2\times$) but VIMP-top
+$0.07$ --- high novel mass on a wrong ranking; both ds and weights fail.
+Closes the loop with C1: gradient-mass accounting is necessary, not sufficient.
+
+\paragraph{Accounting identity (PO).}
+\[
+\underbrace{\Delta\mathrm{novel}(w)}_{\text{weight lift}}
+\;\approx\;
+\underbrace{f\!\big(s(w),\;\mathrm{quality}(m)\big)}_{\text{mass $\times$ ranking}}
+\;-\;
+\underbrace{c(\mathrm{known\ discard})}_{\text{only ds pays this}}.
+\]
+Weights win when quality$(m)$ is high enough that moderate $s(w)$ beats
+ds's $s=1/2$ with random known keep.
+Ds wins when quality$(m)$ is too weak to push $s(w)$ near $1/2$.
+
 %======================================================================
 \section{PO bottom line}
 %======================================================================
@@ -425,14 +501,17 @@ Never random-downsample.
   \item \textbf{Downsample is not the default.}
         Mean incremental value of best FSDS weight over \texttt{ds\_known}
         is $\mathbf{+0.052}$ (win on $5/9$); random ds is harmful.
-  \item Need ds only when membership cannot tag novel (covtype);
+  \item Deeper account: compare novel mass share $s(w)$ to ds's $1/2$.
+        Ties $=$ mass-matched fused ($s\approx 0.5$) without discard;
+        $W>\mathrm{ds}$ with $s<1/2$ $=$ better row contrast;
+        ds mandatory when $s(w)$ cannot approach $1/2$ (covtype);
+        ISOLET shows mass$\neq$quality.
+  \item Need ds only when membership cannot allocate novel mass;
         then combine ds $+$ soft weights.
-  \item Numbers: soft peak $+0.25$; hard peak $+0.32$; fused peak $+0.33$;
-        ds mean $+0.13$; best-w mean $+0.18$; ISOLET refuse.
 \end{enumerate}
 
 \paragraph{Artifacts.}
-\texttt{results/downsample\_vs\_weight/};
+\texttt{results/downsample\_vs\_weight/} (incl.\ \texttt{gradient\_mass.json});
 \texttt{results/fsds\_cfperm\_weight\_bench/complexity\_vs\_power.json};
 \texttt{Python/src/downsample\_vs\_weight\_ablation.py};
 \texttt{docs/method/Weighted\_cold\_start\_FSDS\_weights.tex}.
