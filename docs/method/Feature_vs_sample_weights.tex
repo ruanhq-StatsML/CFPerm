@@ -1,4 +1,4 @@
-% OOD quantification → category-shift adapt (v3 soft^γ linger). Boss note.
+% OOD + alignment → category-shift adapt (v4). Boss note.
 % Compile from docs/method/: pdflatex Feature_vs_sample_weights.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
@@ -6,8 +6,8 @@
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
-\title{OOD Quantification $\to$ Category-Shift Adaptation\\
-\large Feature- \& sample-level weights with a soft$^\gamma$ cold-start gate}
+\title{OOD Quantification $+$ Alignment $\to$ Category-Shift Adapt\\
+\large Feature / sample / hop-prototype weights with soft$^\gamma$ gate}
 \author{AS-DTA / CFPerm}
 \date{}
 
@@ -17,133 +17,108 @@
 \begin{abstract}
 \noindent
 \textbf{Message.}
-Category shift is an OOD event on the live stream.
-We \emph{quantify} the footprint once (RF-domain VIMP $+$ membership),
-then \emph{adapt} a CE head with two cheap weights via
-\texttt{partial\_fit}---no new backbone, tiny compute.
-v3 uses a \textbf{soft$^\gamma$ cold-start gate}
-\[
-\mathrm{decay}=\bigl((1-n_{\mathrm{idx}}/N_{\mathrm{cap}})_+\bigr)^\gamma,
-\quad N_{\mathrm{cap}}=200,\ \gamma=0.5\ \mathrm{(linger)}.
-\]
-$\gamma{<}1$ keeps empowerment longer than linear taper; $\gamma{>}1$ cuts
-faster. On text multiclass (FULL LIVE holdout, mean$\pm$SEM over boards),
-early overall-acc lift is clear; soft$^{0.5}$ is the best gated default.
+Category shift is an OOD event.
+We quantify the footprint (RF-domain VIMP $+$ membership), then adapt a CE
+head via \texttt{partial\_fit}.
+v4 adds the project's \textbf{alignment $\to$ weight} logic
+(hop / prototype cosine, same family as heatmap IW):
+rows more aligned with the novel direction than with known prototypes
+get higher CE mass.
+Soft$^{\gamma=0.5}$ still tapers empowerment by $N_{\mathrm{cap}}{=}200$.
+On text boards, \texttt{both$+$align} leads the scarce window;
+plain \texttt{both} is the more stable endpoint among gated schemes.
 \end{abstract}
 
 %======================================================================
-\section{OOD quantification $\to$ category-shift adapt}
+\section{OOD $+$ alignment $\to$ weights}
 %======================================================================
 
-\paragraph{Problem.}
-$\mathrm{REF}$ covers known categories; $\mathrm{LIVE}$ mixes known
-support with novel labels.
-Question: \emph{where is the OOD mass, and how do we give it CE budget
-cheaply?}
+\paragraph{Quantify (OOD).}
+RF on $W{\in}\{0,1\}$ (REF vs LIVE) $\Rightarrow$ VIMP $v$.
+Top-$K$ subspace $S$: membership $m_i$ from $z$-distance to REF.
 
-\paragraph{Quantify.}
-Score $W{\in}\{0,1\}$ (REF vs LIVE) with a shallow RF.
-Importances $v\in\Delta^{p-1}$ are the OOD coordinates.
-On top-$K$ of $v$, $z$-distance to REF yields membership
-$m_i\in[0,1]$ (``new-category-like'').
-
-\paragraph{Adapt.}
-\begin{itemize}
-  \item \textbf{Feature-level:} stretch OOD axes
-        $x_{ij}\leftarrow x_{ij}(1+\alpha_{\mathrm{eff}}\tilde v_j)$.
-  \item \textbf{Sample-level:} membership excess
-        $\times\mathrm{decay}_i$ as \texttt{sample\_weight} in
-        \texttt{partial\_fit}.
-\end{itemize}
-One RF pass $+$ a few linear CE epochs. No EWMA, no architecture change.
-
-\paragraph{Soft$^\gamma$ gate (v3).}
+\paragraph{Align (prototype / hop cosine).}
+On $S$, let $\mu_c$ be known-class prototypes and $\mu_{\mathrm{nov}}$ the
+cold-start novel mean. For each live row
 \begin{equation}
-  \mathrm{decay}_i
+  \mathrm{align}_i
   =
-  \bigl((1-n_{\mathrm{idx}}(i)/200)_+\bigr)^\gamma
-  \quad\text{on novel rows}.
+  \sigma\!\bigl(
+    \beta\,
+    \bigl(
+      \cos(x_i,\mu_{\mathrm{nov}})
+      -
+      \max_c\cos(x_i,\mu_c)
+    \bigr)
+  \bigr).
 \end{equation}
-Default $\gamma{=}0.5$ \emph{lingers}: scarce regime stays empowered
-longer than the linear ($\gamma{=}1$) schedule from v2.
-Fast taper $\gamma{=}2$ and always-on are ablations.
+High $\mathrm{align}_i$ $=$ aligned with the new-category direction more
+than with old centers --- the same ``high alignment $\to$ upweight'' rule
+as hop-cosine IW on the batch heatmap.
+
+\paragraph{Adapt (three cheap channels).}
+\begin{itemize}
+  \item \textbf{Feature:} $x_{ij}\leftarrow x_{ij}(1+\alpha_{\mathrm{eff}}\tilde v_j)$
+        (optional blend with $|\mu_{\mathrm{nov}}-\mu_{\mathrm{ref}}|$).
+  \item \textbf{Sample:} membership fused excess.
+  \item \textbf{Alignment:} excess ${+}\,\lambda_a\,\mathrm{align}_i$.
+\end{itemize}
+All excesses are multiplied by the soft$^\gamma$ cold-start decay
+$((1-n_{\mathrm{idx}}/200)_+)^{0.5}$, then passed to
+\texttt{partial\_fit(..., sample\_weight=$w$)}.
+No new backbone, no EWMA.
 
 %======================================================================
-\section{Learning curves (FULL LIVE holdout)}
+\section{Curves (FULL LIVE holdout)}
 %======================================================================
-
-KPI $=$ overall accuracy / mean novel OVA-AUC on a fixed full LIVE
-holdout. Shaded bands $=$ SEM across datasets. Dashed line $=N_{\mathrm{cap}}$.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{text_full_weight_acc_auc_curves.png}
-\caption{Default soft$^{\gamma=0.5}$ schemes vs uniform (mean$\pm$SEM).
-Early: weighted schemes lead. Past $200$: soft$^{0.5}$ stays above
-uniform on overall acc.}
+\caption{Soft$^{\gamma=0.5}$ schemes including alignment (mean$\pm$SEM).
+Scarce regime: \texttt{both$+$align} leads. Past the cap: gated schemes
+stay near / above uniform.}
 \label{fig:curves}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{text_full_weight_gate_ablation.png}
-\caption{Taper ablation on \texttt{both}:
-$\gamma{=}0.5$ linger (default), $\gamma{=}1$ linear, $\gamma{=}2$ fast,
-always-on. Linger is the best gated choice; always-on can keep a small
-late edge but never stops boosting warm categories.}
+\caption{Alignment ablation: \texttt{both}, \texttt{align} only,
+\texttt{both$+$align}, always-on.
+Alignment helps when the new category is scarce; plain \texttt{both}
+is the stabler gated endpoint.}
 \label{fig:ablate}
 \end{figure}
 
-\paragraph{Reading the figures.}
-\begin{itemize}
-  \item \textbf{Empowerment.}
-        At $b{=}20$/cat, soft$^{0.5}$ \texttt{both}:
-        $0.456\to\mathbf{0.475}$ ($\Delta{+}0.019$).
-  \item \textbf{Linger wins among gates.}
-        Endpoint mean $\Delta$acc vs uniform:
-        soft$^{0.5}$ \texttt{both} $\mathbf{+0.011}$,
-        $\gamma{=}1$ $+0.007$, $\gamma{=}2$ $+0.008$.
-  \item \textbf{OVA-AUC flat.}
-        Operational gain is overall acc under CE.
-\end{itemize}
-
-%======================================================================
-\section{Endpoint $+$ ops rule}
-%======================================================================
-
+\paragraph{Numbers.}
 \begin{center}
 \small
 \begin{tabular}{@{}lcccc@{}}
 \toprule
- & uniform & feature $\gamma{=}0.5$ & sample $\gamma{=}0.5$ & both $\gamma{=}0.5$ \\
+ & uniform & both & align & both$+$align \\
 \midrule
-mean overall acc
-  & $0.636$ & $0.642$ & $0.643$ & $\mathbf{0.647}$ \\
-mean $\Delta$acc vs U
-  & --- & $+0.005$ & $+0.007$ & $\mathbf{+0.011}$ \\
+acc @ $b{=}20$/cat
+  & $0.456$ & $0.475$ & $0.468$ & $\mathbf{0.478}$ \\
+endpoint acc
+  & $0.636$ & $\mathbf{0.647}$ & $0.641$ & $0.641$ \\
+endpoint $\Delta$acc
+  & --- & $\mathbf{+0.011}$ & $+0.005$ & $+0.005$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\paragraph{Ops rule.}
-\begin{enumerate}
-  \item Scarce new category ($n_c\ll 200$): use \texttt{both} with
-        soft$^{\gamma=0.5}$.
-  \item Token-sparse boards (few dims carry the shift): feature-level
-        alone is enough.
-  \item Past $N_{\mathrm{cap}}$: decay has tapered---no EWMA, no manual
-        schedule; just stop over-weighting.
-\end{enumerate}
-
 %======================================================================
-\section{Takeaway}
+\section{Ops rule}
 %======================================================================
 
 \begin{enumerate}
-  \item \textbf{Quantify OOD, then adapt} with feature $+$ sample weights.
-  \item \textbf{Ship with \texttt{partial\_fit}} --- tiny compute.
-  \item \textbf{Empower with soft$^{\gamma=0.5}$} --- linger through the
-        scarce window, taper by $200$ samples/category.
+  \item \textbf{Very scarce} new category: prefer \texttt{both$+$align}
+        (early lift).
+  \item \textbf{Default gated online:} \texttt{both} with soft$^{\gamma=0.5}$
+        (best gated endpoint).
+  \item Alignment is the same hop-cosine family already used elsewhere ---
+        plug into \texttt{sample\_weight}, keep the head.
 \end{enumerate}
 
 \end{document}
