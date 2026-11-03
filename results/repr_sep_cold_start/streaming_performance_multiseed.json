@@ -1,14 +1,12 @@
 {
-  "protocol": "C-GCD streaming proxy FULL (not quick)",
+  "protocol": "C-GCD streaming proxy",
+  "quick": false,
   "seeds": [
     2026,
     2027,
     2028
   ],
-  "n_known": 12,
-  "n_novel_per_stage": 3,
-  "n_stages": 4,
-  "n_per": 40,
+  "kpi": "primary=novel_acc; secondary=known/forgetting; efficiency=n* to novel>=0.60",
   "summary": [
     {
       "mode": "repr_sep",
@@ -102,6 +100,5 @@
       "delta_novel_vs_uniform": 0.0,
       "delta_forget_vs_uniform": 0.0
     }
-  ],
-  "kpi": "primary=novel_acc; secondary=known retention / forgetting; efficiency=n* to novel>=0.60"
+  ]
 }

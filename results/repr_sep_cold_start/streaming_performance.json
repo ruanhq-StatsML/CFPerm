@@ -1,495 +1,70 @@
 {
   "seed": 2026,
-  "protocol": "C-GCD streaming proxy (full, not quick)",
-  "summary": [
-    {
-      "mode": "repr_sep",
+  "summary": {
+    "repr_sep": {
       "known": 0.7596816807747899,
       "novel": 0.4568903318903319,
-      "forget": 0.24635416666666665,
-      "feat_hit": 0.25,
-      "vimp": 0.3495129693686593
+      "forgetting": 0.24635416666666665
     },
-    {
-      "mode": "weighted",
+    "weighted": {
       "known": 0.7708177452845213,
       "novel": 0.4954906204906204,
-      "forget": 0.24427083333333335,
-      "feat_hit": 0.25,
-      "vimp": 0.3495129693686593
+      "forgetting": 0.24427083333333335
     },
-    {
-      "mode": "membership",
-      "known": 0.8134664590263442,
-      "novel": 0.3457792207792208,
-      "forget": 0.19687500000000002,
-      "feat_hit": 0.25,
-      "vimp": 0.3495129693686593
-    },
-    {
-      "mode": "uniform",
+    "uniform": {
       "known": 0.8040217917166236,
       "novel": 0.5155122655122655,
-      "forget": 0.24843749999999998,
-      "feat_hit": NaN,
-      "vimp": NaN
+      "forgetting": 0.24843749999999998
     }
-  ],
-  "stages": {
-    "repr_sep": [
-      {
-        "stage": 0,
-        "known_acc": 0.7577639751552795,
-        "novel_acc": 0.4444444444444444,
-        "forgetting": 0.26875000000000004,
-        "n_novel_train": 21,
-        "reason": "repr_sep+expand:buffer_ge_N|O=0.72",
-        "phase": "expand",
-        "vimp_top_mass": 0.31086827515469395,
-        "feat_hit": 0.375,
-        "boundary": "comparable",
-        "mean_membership": 0.5025974789126318,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "fused",
-        "n_replay": 8,
-        "n_buffered": 21,
-        "buffer_size": 0,
-        "gap_lift": 0.3945985404824497,
-        "expand_fitted": true,
-        "tta_applied": false,
-        "O_local": 0.7195879411274512,
-        "O_persist": 0.2518557793946079,
-        "opp_action": "sep+expand"
-      },
-      {
-        "stage": 1,
-        "known_acc": 0.7243589743589743,
-        "novel_acc": 0.5714285714285714,
-        "forgetting": 0.22916666666666663,
-        "n_novel_train": 16,
-        "reason": "repr_sep+expand:buffer_ge_N|O=0.74",
-        "phase": "expand",
-        "vimp_top_mass": 0.3569170502571981,
-        "feat_hit": 0.125,
-        "boundary": "comparable",
-        "mean_membership": 0.5086535116173246,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "fused",
-        "n_replay": 8,
-        "n_buffered": 16,
-        "buffer_size": 0,
-        "gap_lift": 0.31444623692360496,
-        "expand_fitted": true,
-        "tta_applied": false,
-        "O_local": 0.7448719149505553,
-        "O_persist": 0.4841667447178609,
-        "opp_action": "sep+expand"
-      },
-      {
-        "stage": 2,
-        "known_acc": 0.7232704402515723,
-        "novel_acc": 0.45454545454545453,
-        "forgetting": 0.2875,
-        "n_novel_train": 19,
-        "reason": "repr_sep+expand:buffer_ge_N|O=0.74",
-        "phase": "expand",
-        "vimp_top_mass": 0.3491858501890273,
-        "feat_hit": 0.375,
-        "boundary": "comparable",
-        "mean_membership": 0.5537470174047948,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "fused",
-        "n_replay": 8,
-        "n_buffered": 19,
-        "buffer_size": 0,
-        "gap_lift": 0.3128861187408485,
-        "expand_fitted": true,
-        "tta_applied": false,
-        "O_local": 0.7408050515391635,
-        "O_persist": 0.5185635360774145,
-        "opp_action": "sep+expand"
-      },
-      {
-        "stage": 3,
-        "known_acc": 0.8333333333333334,
-        "novel_acc": 0.35714285714285715,
-        "forgetting": 0.19999999999999996,
-        "n_novel_train": 16,
-        "reason": "repr_sep+expand:buffer_ge_N|O=0.76",
-        "phase": "expand",
-        "vimp_top_mass": 0.3810807018737176,
-        "feat_hit": 0.125,
-        "boundary": "comparable",
-        "mean_membership": 0.4986951760390721,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "fused",
-        "n_replay": 8,
-        "n_buffered": 16,
-        "buffer_size": 0,
-        "gap_lift": 0.3250313719965674,
-        "expand_fitted": true,
-        "tta_applied": false,
-        "O_local": 0.7571710751655832,
-        "O_persist": 0.5300197526159083,
-        "opp_action": "sep+expand"
-      }
-    ],
-    "weighted": [
-      {
-        "stage": 0,
-        "known_acc": 0.7453416149068323,
-        "novel_acc": 0.2222222222222222,
-        "forgetting": 0.30000000000000004,
-        "n_novel_train": 21,
-        "reason": "fused_cold_start",
-        "vimp_top_mass": 0.31086827515469395,
-        "feat_hit": 0.375,
-        "boundary": "comparable",
-        "mean_membership": 0.5025974789126318,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "fused",
-        "n_replay": 85,
-        "temper_shrink": 0.0
-      },
-      {
-        "stage": 1,
-        "known_acc": 0.7628205128205128,
-        "novel_acc": 0.5714285714285714,
-        "forgetting": 0.24583333333333335,
-        "n_novel_train": 16,
-        "reason": "fused_cold_start",
-        "vimp_top_mass": 0.3569170502571981,
-        "feat_hit": 0.125,
-        "boundary": "comparable",
-        "mean_membership": 0.5086535116173246,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "fused",
-        "n_replay": 85,
-        "temper_shrink": 0.0
-      },
-      {
-        "stage": 2,
-        "known_acc": 0.7610062893081762,
-        "novel_acc": 0.5454545454545454,
-        "forgetting": 0.23958333333333337,
-        "n_novel_train": 19,
-        "reason": "fused_cold_start",
-        "vimp_top_mass": 0.3491858501890273,
-        "feat_hit": 0.375,
-        "boundary": "comparable",
-        "mean_membership": 0.5537470174047948,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "fused",
-        "n_replay": 85,
-        "temper_shrink": 0.0
-      },
-      {
-        "stage": 3,
-        "known_acc": 0.8141025641025641,
-        "novel_acc": 0.6428571428571429,
-        "forgetting": 0.19166666666666665,
-        "n_novel_train": 16,
-        "reason": "fused_cold_start",
-        "vimp_top_mass": 0.3810807018737176,
-        "feat_hit": 0.125,
-        "boundary": "comparable",
-        "mean_membership": 0.4986951760390721,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "fused",
-        "n_replay": 85,
-        "temper_shrink": 0.0
-      }
-    ],
-    "membership": [
-      {
-        "stage": 0,
-        "known_acc": 0.7888198757763976,
-        "novel_acc": 0.0,
-        "forgetting": 0.21458333333333335,
-        "n_novel_train": 21,
-        "reason": "sample_cold_start",
-        "vimp_top_mass": 0.31086827515469395,
-        "feat_hit": 0.375,
-        "boundary": "comparable",
-        "mean_membership": 0.4933955507478375,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "sample",
-        "n_replay": 85,
-        "temper_shrink": 0.0
-      },
-      {
-        "stage": 1,
-        "known_acc": 0.7884615384615384,
-        "novel_acc": 0.5,
-        "forgetting": 0.18958333333333333,
-        "n_novel_train": 16,
-        "reason": "sample_cold_start",
-        "vimp_top_mass": 0.3569170502571981,
-        "feat_hit": 0.125,
-        "boundary": "comparable",
-        "mean_membership": 0.48995849072950354,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "sample",
-        "n_replay": 85,
-        "temper_shrink": 0.0
-      },
-      {
-        "stage": 2,
-        "known_acc": 0.8176100628930818,
-        "novel_acc": 0.45454545454545453,
-        "forgetting": 0.20833333333333337,
-        "n_novel_train": 19,
-        "reason": "sample_cold_start",
-        "vimp_top_mass": 0.3491858501890273,
-        "feat_hit": 0.375,
-        "boundary": "comparable",
-        "mean_membership": 0.5159080508265598,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "sample",
-        "n_replay": 85,
-        "temper_shrink": 0.0
-      },
-      {
-        "stage": 3,
-        "known_acc": 0.8589743589743589,
-        "novel_acc": 0.42857142857142855,
-        "forgetting": 0.17500000000000004,
-        "n_novel_train": 16,
-        "reason": "sample_cold_start",
-        "vimp_top_mass": 0.3810807018737176,
-        "feat_hit": 0.125,
-        "boundary": "comparable",
-        "mean_membership": 0.4793104967969135,
-        "subset_frac": 0.35,
-        "membership_conc": 1.0,
-        "weight_mode": "sample",
-        "n_replay": 85,
-        "temper_shrink": 0.0
-      }
-    ],
-    "uniform": [
-      {
-        "stage": 0,
-        "known_acc": 0.782608695652174,
-        "novel_acc": 0.5555555555555556,
-        "forgetting": 0.2895833333333333,
-        "n_novel_train": 21,
-        "reason": "uniform",
-        "vimp_top_mass": null,
-        "feat_hit": null,
-        "boundary": "n/a",
-        "mean_membership": null
-      },
-      {
-        "stage": 1,
-        "known_acc": 0.7756410256410257,
-        "novel_acc": 0.5,
-        "forgetting": 0.23124999999999996,
-        "n_novel_train": 16,
-        "reason": "uniform",
-        "vimp_top_mass": null,
-        "feat_hit": null,
-        "boundary": "n/a",
-        "mean_membership": null
-      },
-      {
-        "stage": 2,
-        "known_acc": 0.7924528301886793,
-        "novel_acc": 0.36363636363636365,
-        "forgetting": 0.2520833333333333,
-        "n_novel_train": 19,
-        "reason": "uniform",
-        "vimp_top_mass": null,
-        "feat_hit": null,
-        "boundary": "n/a",
-        "mean_membership": null
-      },
-      {
-        "stage": 3,
-        "known_acc": 0.8653846153846154,
-        "novel_acc": 0.6428571428571429,
-        "forgetting": 0.22083333333333333,
-        "n_novel_train": 16,
-        "reason": "uniform",
-        "vimp_top_mass": null,
-        "feat_hit": null,
-        "boundary": "n/a",
-        "mean_membership": null
-      }
-    ]
   },
-  "efficiency": {
-    "board": "cold_start_efficiency",
-    "target": 0.6,
-    "budgets": [
-      4,
-      8,
-      12,
-      16,
-      24,
-      32
-    ],
-    "curves": {
-      "weighted": {
-        "points": [
-          {
-            "budget": 4,
-            "novel_acc": 0.16666666666666666,
-            "n_novel_train": 4
-          },
-          {
-            "budget": 8,
-            "novel_acc": 0.3888888888888889,
-            "n_novel_train": 8
-          },
-          {
-            "budget": 12,
-            "novel_acc": 0.6111111111111112,
-            "n_novel_train": 12
-          },
-          {
-            "budget": 16,
-            "novel_acc": 0.6111111111111112,
-            "n_novel_train": 16
-          },
-          {
-            "budget": 24,
-            "novel_acc": 0.7777777777777778,
-            "n_novel_train": 24
-          },
-          {
-            "budget": 32,
-            "novel_acc": 0.6666666666666666,
-            "n_novel_train": 32
-          }
-        ],
-        "n_star": 12,
-        "target": 0.6
-      },
-      "membership": {
-        "points": [
-          {
-            "budget": 4,
-            "novel_acc": 0.05555555555555555,
-            "n_novel_train": 4
-          },
-          {
-            "budget": 8,
-            "novel_acc": 0.2222222222222222,
-            "n_novel_train": 8
-          },
-          {
-            "budget": 12,
-            "novel_acc": 0.3888888888888889,
-            "n_novel_train": 12
-          },
-          {
-            "budget": 16,
-            "novel_acc": 0.5555555555555556,
-            "n_novel_train": 16
-          },
-          {
-            "budget": 24,
-            "novel_acc": 0.7777777777777778,
-            "n_novel_train": 24
-          },
-          {
-            "budget": 32,
-            "novel_acc": 0.5555555555555556,
-            "n_novel_train": 32
-          }
-        ],
-        "n_star": 24,
-        "target": 0.6
-      },
-      "uniform": {
-        "points": [
-          {
-            "budget": 4,
-            "novel_acc": 0.0,
-            "n_novel_train": 4
-          },
-          {
-            "budget": 8,
-            "novel_acc": 0.2777777777777778,
-            "n_novel_train": 8
-          },
-          {
-            "budget": 12,
-            "novel_acc": 0.3888888888888889,
-            "n_novel_train": 12
-          },
-          {
-            "budget": 16,
-            "novel_acc": 0.3333333333333333,
-            "n_novel_train": 16
-          },
-          {
-            "budget": 24,
-            "novel_acc": 0.5555555555555556,
-            "n_novel_train": 24
-          },
-          {
-            "budget": 32,
-            "novel_acc": 0.6111111111111112,
-            "n_novel_train": 32
-          }
-        ],
-        "n_star": 32,
-        "target": 0.6
-      },
-      "repr_sep": {
-        "points": [
-          {
-            "budget": 4,
-            "novel_acc": 0.16666666666666666,
-            "n_novel_train": 4
-          },
-          {
-            "budget": 8,
-            "novel_acc": 0.2222222222222222,
-            "n_novel_train": 8
-          },
-          {
-            "budget": 12,
-            "novel_acc": 0.2222222222222222,
-            "n_novel_train": 12
-          },
-          {
-            "budget": 16,
-            "novel_acc": 0.2777777777777778,
-            "n_novel_train": 16
-          },
-          {
-            "budget": 24,
-            "novel_acc": 0.6666666666666666,
-            "n_novel_train": 24
-          },
-          {
-            "budget": 32,
-            "novel_acc": 0.6666666666666666,
-            "n_novel_train": 32
-          }
-        ],
-        "n_star": 24,
-        "target": 0.6
-      }
+  "repr_sep_stages": [
+    {
+      "stage": 0,
+      "novel_acc": 0.4444444444444444,
+      "known_acc": 0.7577639751552795,
+      "forgetting": 0.26875000000000004,
+      "phase": "expand",
+      "O_local": 0.7195879411274512,
+      "O_persist": 0.2518557793946079,
+      "gap_lift": 0.3945985404824497,
+      "expand_fitted": true,
+      "n_novel_train": 21
     },
-    "winner": "weighted",
-    "tie_break": "min n*, then max novel_acc at n*"
-  },
-  "delta_novel_repr_vs_uniform": -0.058621933621933575,
-  "delta_novel_weighted_vs_uniform": -0.02002164502164505,
-  "delta_novel_repr_vs_weighted": -0.038600288600288524
+    {
+      "stage": 1,
+      "novel_acc": 0.5714285714285714,
+      "known_acc": 0.7243589743589743,
+      "forgetting": 0.22916666666666663,
+      "phase": "expand",
+      "O_local": 0.7448719149505553,
+      "O_persist": 0.4841667447178609,
+      "gap_lift": 0.31444623692360496,
+      "expand_fitted": true,
+      "n_novel_train": 16
+    },
+    {
+      "stage": 2,
+      "novel_acc": 0.45454545454545453,
+      "known_acc": 0.7232704402515723,
+      "forgetting": 0.2875,
+      "phase": "expand",
+      "O_local": 0.7408050515391635,
+      "O_persist": 0.5185635360774145,
+      "gap_lift": 0.3128861187408485,
+      "expand_fitted": true,
+      "n_novel_train": 19
+    },
+    {
+      "stage": 3,
+      "novel_acc": 0.35714285714285715,
+      "known_acc": 0.8333333333333334,
+      "forgetting": 0.19999999999999996,
+      "phase": "expand",
+      "O_local": 0.7571710751655832,
+      "O_persist": 0.5300197526159083,
+      "gap_lift": 0.3250313719965674,
+      "expand_fitted": true,
+      "n_novel_train": 16
+    }
+  ]
 }

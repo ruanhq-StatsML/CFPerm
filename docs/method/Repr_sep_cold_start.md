@@ -1,24 +1,44 @@
-# Representation-first cold-start
+# Streaming C-GCD proxy — performance
 
-repr_sep = attribute → margin separation on S → expand head when buffer≥N* / footprint stable. Instant learn = sep; learn = expand.
+Protocol: C-GCD streaming proxy (quick=False). Seeds [2026, 2027, 2028].
+KPI: **novel_acc** primary; known retention / forgetting; efficiency n*.
+
+| mode | known | novel | forgetting | Δnovel vs uniform | n* (mean) |
+| --- | --- | --- | --- | --- | --- |
+| repr_sep | 0.743±0.014 | 0.518±0.055 | 0.243±0.009 | +0.114 | 22.7 |
+| weighted | 0.771±0.004 | 0.471±0.021 | 0.214±0.022 | +0.067 | 12.0 |
+| membership | 0.799±0.012 | 0.273±0.056 | 0.188±0.012 | -0.131 | 24.0 |
+| uniform | 0.783±0.028 | 0.404±0.098 | 0.224±0.019 | +0.000 | 25.3 |
+
+## Per-stage novel_acc (mean over seeds)
+
+| mode | s0 | s1 | s2 | s3 |
+| --- | --- | --- | --- | --- |
+| repr_sep | 0.700 | 0.532 | 0.477 | 0.363 |
+| weighted | 0.392 | 0.539 | 0.425 | 0.529 |
+| membership | 0.071 | 0.370 | 0.260 | 0.391 |
+| uniform | 0.467 | 0.390 | 0.338 | 0.422 |
+
+# Streaming cold-start performance
+
+Streaming KPI = novel_acc (+ known/forgetting). repr_sep = opportunity-gated attribute → sep on S → expand.
+
+## Summary (this seed)
 
 | mode | known | novel | forgetting | feat_hit |
 | --- | --- | --- | --- | --- |
-| repr_sep | 0.579 | 0.518 | 0.385 | 0.125 |
-| weighted | 0.649 | 0.393 | 0.332 | 0.125 |
-| uniform | 0.610 | 0.196 | 0.337 | — |
+| repr_sep | 0.760 | 0.457 | 0.246 | 0.250 |
+| weighted | 0.771 | 0.495 | 0.244 | 0.250 |
+| uniform | 0.804 | 0.516 | 0.248 | — |
 
-Δ novel (repr − uniform): **0.321**
-Δ novel (repr − weighted): **0.125**
+Δ novel (repr − uniform): **-0.059**
+Δ novel (repr − weighted): **-0.039**
 
-## repr_sep per-stage
+## Streaming per-stage (repr_sep)
 
-| stage | novel | known | phase | gap_lift | expanded |
-| --- | --- | --- | --- | --- | --- |
-| 0 | nan | 0.488 | expand | 0.309 | True |
-| 1 | 0.750 | 0.613 | expand | 0.346 | True |
-| 2 | 0.286 | 0.636 | expand | 0.318 | True |
-
-```bash
-python3 scripts/run_repr_sep_cold_start.py --quick
-```
+| stage | novel | known | forget | phase | O_local | gap_lift |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | 0.444 | 0.758 | 0.269 | expand | 0.720 | 0.395 |
+| 1 | 0.571 | 0.724 | 0.229 | expand | 0.745 | 0.314 |
+| 2 | 0.455 | 0.723 | 0.287 | expand | 0.741 | 0.313 |
+| 3 | 0.357 | 0.833 | 0.200 | expand | 0.757 | 0.325 |

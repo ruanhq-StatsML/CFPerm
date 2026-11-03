@@ -1,7 +1,7 @@
 # Streaming C-GCD proxy — performance
 
-Protocol: full stream (12 known, 3 novel/stage × 4 stages, n_per=40). Seeds 2026–2028.
-KPI: **novel_acc** primary; known retention / forgetting; efficiency n* (novel_acc≥0.60).
+Protocol: C-GCD streaming proxy (quick=False). Seeds [2026, 2027, 2028].
+KPI: **novel_acc** primary; known retention / forgetting; efficiency n*.
 
 | mode | known | novel | forgetting | Δnovel vs uniform | n* (mean) |
 | --- | --- | --- | --- | --- | --- |
@@ -18,8 +18,3 @@ KPI: **novel_acc** primary; known retention / forgetting; efficiency n* (novel_a
 | weighted | 0.392 | 0.539 | 0.425 | 0.529 |
 | membership | 0.071 | 0.370 | 0.260 | 0.391 |
 | uniform | 0.467 | 0.390 | 0.338 | 0.422 |
-
-## Notes
-- Streaming = staged known+novel influx (C-GCD-style); not i.i.d. holdout.
-- `repr_sep` reports O_local / gap_lift per stage in single-seed JSON.
-- Efficiency n*: min novel budget to hit target on holdout novel.
