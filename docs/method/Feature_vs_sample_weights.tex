@@ -24,9 +24,11 @@ Both weight channels share one FSDS RF-domain attribution
 ($x_{ij}\leftarrow x_{ij}\,w^{\mathrm{feat}}_j$);
 \textbf{sample-level} rescales CE mass
 (\texttt{partial\_fit(..., sample\_weight=$w_i$)}).
-On text boards, mean $\Delta$overall-acc vs uniform is
-$+0.009$ (feature), $+0.021$ (sample), $+0.023$ (both);
-mean novel OVA-AUC is essentially flat.
+\textbf{Cold-start gate:} once a novel category reaches
+$n_c=200$ samples, stop empowering it ($w_i\leftarrow 1$;
+feature scale off when no cold-start mass remains).
+Under the gate, early-$n$ lift is clear; past the cap schemes
+stay near uniform (no over-weighting).
 \end{abstract}
 
 %======================================================================
@@ -127,6 +129,31 @@ known-class rows. Orthogonal to~\eqref{eq:feat}: same geometry, different
 row masses.
 
 %======================================================================
+\section{Cold-start gate ($n_c < 200$)}
+%======================================================================
+
+Let $n_{\mathrm{idx}}(i)$ be the within-category arrival index of row $i$
+among novel labels. Define the cold-start mask
+\begin{equation}
+\label{eq:gate}
+  \mathcal{C}
+  =\{i:\; y_i\in\mathcal{C}_{\mathrm{novel}},\;
+     n_{\mathrm{idx}}(i)<N_{\mathrm{cap}}\},
+  \qquad N_{\mathrm{cap}}=200.
+\end{equation}
+\begin{itemize}
+  \item \textbf{Sample-level:} boost only on $\mathcal{C}$;
+        warm novel ($n_{\mathrm{idx}}\ge N_{\mathrm{cap}}$) and known
+        stay at $w_i=1$.
+  \item \textbf{Feature-level:} apply~\eqref{eq:feat} only while
+        $\mathcal{C}\neq\emptyset$; once every novel category is warm,
+        skip scaling (geometry $=$ uniform).
+\end{itemize}
+Budget on the learning curve $=$ novel samples \emph{per category}.
+Past $N_{\mathrm{cap}}$ the gate freezes empowerment: further data
+enter CE at uniform mass. No EWMA.
+
+%======================================================================
 \section{Four schemes}
 %======================================================================
 
@@ -154,12 +181,12 @@ Scheme & Feature axis & Sample axis \\
 \noindent
 Loss $=$ CE (\texttt{log\_loss}) SGD; no EWMA.
 KPI $=$ overall accuracy $+$ mean novel OVA-AUC on a
-\emph{fixed full LIVE holdout} (not the first-$n$ arrival window).
-Curves vary novel adapt budget $b\in\{20,40,\ldots,200\}$ with known
-context $\approx 2b$.
+\emph{fixed full LIVE holdout}.
+Budget $b=$ novel samples / category,
+$b\in\{20,40,\ldots,200,250,300,400\}$; known context $\approx 2\cdot|\mathrm{novel}|$.
 
 %======================================================================
-\section{Why two levers}
+\section{Why two levers $+$ the gate}
 %======================================================================
 
 \begin{itemize}
@@ -167,17 +194,24 @@ context $\approx 2b$.
         domain change? Stretch those axes.
   \item \textbf{Sample-level} answers: \emph{which observations} look like
         the new category? Give them more CE mass.
+  \item \textbf{Gate} answers: \emph{how long} to empower?
+        Only while $n_c < 200$.
 \end{itemize}
-Category-shift cold-start needs both questions. Feature-only helps when a
-few token dimensions dominate (\texttt{cnae9\_text}, \texttt{amazon\_cat}).
-Sample-only helps when novel support is spread but membership is
-informative (news20 boards). Product (\texttt{both}) is the default when
-unsure.
 
 %======================================================================
-\section{FULL-holdout endpoint (text; 3 seeds)}
+\section{FULL-holdout results (text; 3 seeds; gate@$200$)}
 %======================================================================
 
+\paragraph{Early cold-start ($b=20$/cat).}
+Mean overall acc: uniform $0.456$, feature $0.461$, sample $0.468$,
+\textbf{both $0.483$} ($\Delta{+}0.027$) --- empowerment is visible when
+the new category is scarce.
+
+\paragraph{At the cap ($b=200$/cat).}
+Mean $\Delta$acc vs U is near zero (gate about to freeze); \texttt{cnae9}
+still likes feature ($+0.027$).
+
+\paragraph{Past the cap (endpoint $b=400$/cat).}
 \begin{center}
 \small
 \begin{tabular}{@{}lcccc@{}}
@@ -189,29 +223,30 @@ Dataset
   & both \\
 \midrule
 news20\_comp
-  & $0.378$ & $0.386$ & $\mathbf{0.413}$ & $0.389$ \\
+  & $0.502$ & $0.499$ & $0.504$ & $\mathbf{0.510}$ \\
 news20\_rec
-  & $0.458$ & $0.457$ & $0.473$ & $\mathbf{0.483}$ \\
+  & $0.545$ & $0.550$ & $0.550$ & $\mathbf{0.570}$ \\
 news20\_mix
-  & $0.283$ & $0.281$ & $\mathbf{0.320}$ & $0.303$ \\
+  & $0.504$ & $0.507$ & $0.502$ & $\mathbf{0.510}$ \\
 cnae9\_text
-  & $0.863$ & $\mathbf{0.889}$ & $0.878$ & $0.888$ \\
+  & $0.894$ & $\mathbf{0.916}$ & $0.889$ & $0.892$ \\
 amazon\_cat
-  & $0.692$ & $0.705$ & $0.695$ & $\mathbf{0.724}$ \\
+  & $0.737$ & $\mathbf{0.751}$ & $0.747$ & $0.744$ \\
 \midrule
 mean overall acc
-  & $0.535$ & $0.544$ & $0.556$ & $\mathbf{0.557}$ \\
+  & $0.636$ & $\mathbf{0.645}$ & $0.638$ & $\mathbf{0.645}$ \\
 mean $\Delta$acc vs U
-  & --- & $+0.009$ & $+0.021$ & $\mathbf{+0.023}$ \\
+  & --- & $+0.009$ & $+0.002$ & $+0.009$ \\
 mean novel OVA-AUC
-  & $0.768$ & $0.764$ & $0.768$ & $0.762$ \\
+  & $0.840$ & $0.838$ & $0.836$ & $0.833$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
-Accuracy lift is stable; OVA-AUC stays roughly flat (ranking barely moves;
-decision-boundary / voting quality does).
+Past $200$, weighted schemes do \emph{not} keep over-boosting: they sit
+slightly above uniform on overall acc; OVA-AUC stays flat.
+The gate does its job --- empower the new category, then stop.
 
 \paragraph{Reproduce.}
 \begin{verbatim}

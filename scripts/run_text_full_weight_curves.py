@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "Python" / "src"))
 
 from text_full_weight_curves import (  # noqa: E402
+    COLD_START_CAP,
+    DEFAULT_BUDGETS,
     LOSS_NAME,
     SCHEMES,
     run_text_full_weight_curves,
@@ -151,15 +153,18 @@ def _plot(rows, payload, out_dir: Path):
                 [p[metric] for p in pts],
                 "-o", color=color, lw=2.2, ms=5, label=label,
             )
-        ax.set_xlabel("Novel adapt samples (budget)")
+        ax.axvline(payload.get("cold_start_cap", COLD_START_CAP),
+                   color="#9CA3AF", ls="--", lw=1.2, label="cold-start cap")
+        ax.set_xlabel("Novel samples / category (budget)")
         ax.set_ylabel(ylab)
         ax.set_title(title)
-        ax.legend(frameon=False, fontsize=9)
+        ax.legend(frameon=False, fontsize=8)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.grid(True, alpha=0.25, ls="--")
     fig.suptitle(
-        f"{LOSS_NAME} · feature vs sample vs both · NO EWMA · text only",
+        f"{LOSS_NAME} · cold-start gate@{payload.get('cold_start_cap', COLD_START_CAP)}"
+        f" · NO EWMA · text only",
         fontsize=12, fontweight="bold",
     )
     p_curves = out_dir / "text_full_weight_acc_auc_curves.png"
@@ -247,14 +252,20 @@ def _plot(rows, payload, out_dir: Path):
                     label=label if i == 0 else None,
                 )
             ax.set_title(f"{r['dataset']} · {ylab}", fontsize=10)
+            ax.axvline(payload.get("cold_start_cap", COLD_START_CAP),
+                       color="#9CA3AF", ls="--", lw=1.0)
             if i == n - 1:
-                ax.set_xlabel("novel budget")
+                ax.set_xlabel("novel / category")
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
             ax.grid(True, alpha=0.25, ls="--")
     handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False, fontsize=9)
-    fig.suptitle("Per-dataset FULL holdout curves · NO EWMA", fontsize=12, fontweight="bold", y=1.01)
+    fig.suptitle(
+        f"Per-dataset FULL holdout · cold-start gate@"
+        f"{payload.get('cold_start_cap', COLD_START_CAP)} · NO EWMA",
+        fontsize=12, fontweight="bold", y=1.01,
+    )
     p_per = out_dir / "text_full_weight_per_dataset_curves.png"
     fig.savefig(p_per, dpi=160, bbox_inches="tight")
     plt.close(fig)
@@ -270,8 +281,13 @@ def main():
                     help="max novel samples / class when building FULL LIVE boards")
     ap.add_argument("--feat-alpha", type=float, default=3.0)
     ap.add_argument(
+        "--cold-start-cap", type=int, default=COLD_START_CAP,
+        help="stop weighting a novel category after this many samples",
+    )
+    ap.add_argument(
         "--budgets", type=int, nargs="+",
-        default=[20, 40, 60, 80, 100, 150, 200],
+        default=list(DEFAULT_BUDGETS),
+        help="novel samples per category (budget unit)",
     )
     args = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -283,6 +299,7 @@ def main():
             "=== full-weight-curves seed", s,
             "budgets", args.budgets,
             "feat_alpha", args.feat_alpha,
+            "cold_start_cap", args.cold_start_cap,
             flush=True,
         )
         runs.append(
@@ -291,6 +308,7 @@ def main():
                 n_first_board=args.n_first_board,
                 budgets=args.budgets,
                 feat_alpha=args.feat_alpha,
+                cold_start_cap=args.cold_start_cap,
             )
         )
 
@@ -318,12 +336,18 @@ def main():
         "tabular_excluded": True,
         "loss": LOSS_NAME,
         "ewma": False,
+        "cold_start_cap": args.cold_start_cap,
+        "cold_start_rule": (
+            f"stop weighting a novel category after {args.cold_start_cap} samples; "
+            "joint CE fit with w=1 on warm (past-cap) novel mass"
+        ),
         "kpi": "FULL held-out LIVE overall accuracy + mean novel OVA-AUC (NOT first-n subset)",
+        "budget_unit": "novel_per_category",
         "schemes": {
             "uniform": "CE, flat sample weights, raw features",
-            "feature_w": "X *= (1 + α · vimp) from RF-domain VIMP",
-            "sample_w": "sample_weight from FSDS membership",
-            "both": "feature_w + sample_w",
+            "feature_w": "X *= (1 + α · vimp); only while cold-start mass remains",
+            "sample_w": "membership w_i only on novel rows with arrival_idx < cap",
+            "both": "feature_w + sample_w under the same cold-start gate",
         },
         "feat_alpha": args.feat_alpha,
         "budgets": list(args.budgets),
@@ -347,8 +371,10 @@ def main():
             for sch in SCHEMES
         },
         "takeaway": (
-            "Feature-level = X·(1+α·vimp); sample-level = membership w_i; both = product. "
-            "Curves on FULL LIVE holdout overall acc + novel OVA-AUC. No EWMA."
+            f"Cold-start empowerment only: after a novel category reaches "
+            f"{args.cold_start_cap} samples, stop weighting it. "
+            "Feature-level = X·(1+α·vimp); sample-level = membership w_i. "
+            "FULL LIVE holdout. No EWMA."
         ),
     }
     (OUT / "text_full_weight_curves.json").write_text(json.dumps(payload, indent=2))
@@ -360,15 +386,50 @@ def main():
         "",
         (
             f"KPI = **overall accuracy + mean novel OVA-AUC on full held-out LIVE** "
-            f"(not first-n). budgets={list(args.budgets)}, seeds={seeds}, "
-            f"loss=`{LOSS_NAME}`, α_feat={args.feat_alpha}, **EWMA=off**."
+            f"(not first-n). budget=novel/category {list(args.budgets)}, "
+            f"cold_start_cap=**{args.cold_start_cap}** (stop weighting past cap), "
+            f"seeds={seeds}, loss=`{LOSS_NAME}`, α_feat={args.feat_alpha}, **EWMA=off**."
         ),
         "",
-        "## Endpoint overall accuracy (full eval)",
+        f"## At cold-start cap (budget={args.cold_start_cap}/cat) — overall acc",
         "",
         "| dataset | uniform | feature_w | sample_w | both | Δfeat | Δsample | Δboth |",
         "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
+    # pull at-cap from first seed-aggregated curves
+    for r in rows:
+        # find budget==cap point in curves
+        def _at(sch, metric):
+            pts = [p for p in (r["curves"].get(sch) or []) if int(p["budget"]) == args.cold_start_cap]
+            return pts[0].get(metric) if pts else None
+        lines.append(
+            "| {ds} | {u} | {f} | {s} | {b} | {df} | {ds_} | {db} |".format(
+                ds=r["dataset"],
+                u=_fmt(_at("uniform", "acc")),
+                f=_fmt(_at("feature_w", "acc")),
+                s=_fmt(_at("sample_w", "acc")),
+                b=_fmt(_at("both", "acc")),
+                df=_fmt(
+                    None if _at("feature_w", "acc") is None or _at("uniform", "acc") is None
+                    else _at("feature_w", "acc") - _at("uniform", "acc")
+                ),
+                ds_=_fmt(
+                    None if _at("sample_w", "acc") is None or _at("uniform", "acc") is None
+                    else _at("sample_w", "acc") - _at("uniform", "acc")
+                ),
+                db=_fmt(
+                    None if _at("both", "acc") is None or _at("uniform", "acc") is None
+                    else _at("both", "acc") - _at("uniform", "acc")
+                ),
+            )
+        )
+    lines.extend([
+        "",
+        "## Endpoint overall accuracy (full eval, last budget)",
+        "",
+        "| dataset | uniform | feature_w | sample_w | both | Δfeat | Δsample | Δboth |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+    ])
     for r in rows:
         ep = r["endpoint"]
         d = r["deltas_vs_uniform"]
