@@ -1,12 +1,13 @@
 """Text multiclass: feature / sample / alignment weights on FULL eval.
 
 No EWMA. OOD quantification (RF-domain VIMP + membership) → CE adapt via
-partial_fit. v4 adds hop/prototype **alignment** into weights:
+partial_fit. Hop/prototype **alignment** fuses additively into weights:
 
-  align_i = σ(β · (cos(x_i, μ_novel) − cos(x_i, μ_known))) on subspace S
-  w_i ← 1 + excess · decay · (1 + λ_a · align_i)     ← 对齐高 → 加权
+  align_i = σ(β · (cos(x_i, μ_novel) − max cos(x_i, μ_known))) on S
+  w_i ← 1 + decay_i · (excess_mem_i + λ_a · align_i)   ← 对齐高 → 加权
 
-Soft^γ gate (default γ=0.5) still tapers cold-start empowerment.
+Soft^γ gate (default γ=0.5) tapers cold-start empowerment.
+recommended = both+align while cold-start frac ≥ 0.75, else both.
 
 KPI = overall accuracy + mean novel OVA-AUC on full held-out LIVE.
 """

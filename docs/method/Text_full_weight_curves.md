@@ -24,8 +24,9 @@ KPI = **overall accuracy + mean novel OVA-AUC on full held-out LIVE** (not first
 | cnae9_text | 0.894 | 0.906 | 0.904 | 0.901 | 0.012 | 0.010 | 0.007 |
 | amazon_cat | 0.737 | 0.753 | 0.748 | 0.757 | 0.016 | 0.011 | 0.020 |
 
-mean overall acc: uniform=0.636  feature_w=0.642  sample_w=0.643  both=0.647  align_w=0.644  both_align=0.650  recommended=0.650  both_always=0.652
-mean Δacc vs U: feature_w=0.005  sample_w=0.007  both=0.011  align_w=0.008  both_align=0.013  recommended=0.014  both_always=0.016
+mean overall acc: uniform=0.636  feature_w=0.642  sample_w=0.643  both=0.647  align_w=0.644  both_align=0.650  **recommended=0.650**  both_always=0.652
+mean Δacc vs U: feature_w=0.005  sample_w=0.007  both=0.011  align_w=0.008  both_align=0.013  **recommended=+0.014**  both_always=0.016
+early acc @20/cat: uniform=0.456  both=0.475  both_align=recommended=**0.481**
 
 ## Endpoint mean novel OVA-AUC (full eval)
 

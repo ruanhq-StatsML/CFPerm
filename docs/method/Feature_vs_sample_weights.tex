@@ -17,14 +17,14 @@
 \begin{abstract}
 \noindent
 \textbf{One-liner.}
-Quantify category shift as OOD, then adapt a CE head with three cheap
-weights via \texttt{partial\_fit}: feature (VIMP), sample (membership),
+Treat category shift as OOD, then adapt a CE head with three cheap
+signals via \texttt{partial\_fit}: feature (VIMP), sample (membership),
 alignment (hop/prototype cosine). Soft$^{\gamma=0.5}$ tapers empowerment
-by $200$ samples/category. The polished online recipe is
-\textbf{recommended}: \texttt{both$+$align} while the new category is
-scarce, then \texttt{both}.
-On text multiclass (FULL LIVE holdout), recommended lifts early acc
-($0.456\to\mathbf{0.481}$ at $20$/cat) and finishes at
+by $200$ samples/category. Ship \textbf{recommended}:
+\texttt{both$+$align} while the new category is scarce, then
+\texttt{both}.
+On text multiclass (FULL LIVE holdout): early acc
+$0.456\to\mathbf{0.481}$ at $20$/cat; endpoint
 $\mathbf{+0.014}$ overall vs uniform.
 \end{abstract}
 
@@ -34,7 +34,7 @@ $\mathbf{+0.014}$ overall vs uniform.
 
 \begin{center}
 \small
-\begin{tabular}{@{}llp{7.2cm}@{}}
+\begin{tabular}{@{}llp{7.0cm}@{}}
 \toprule
 Step & Object & Role \\
 \midrule
@@ -42,11 +42,11 @@ Step & Object & Role \\
   & RF-domain VIMP $v$, membership $m$
   & Where LIVE differs from REF \\
 2. Align
-  & $\mathrm{align}=\sigma(\beta(\cos_{\mathrm{nov}}-\cos_{\mathrm{known}}))$
-  & High alignment with novel direction $\to$ upweight \\
+  & $\mathrm{align}_i=\sigma\!\big(\beta(\cos_{\mathrm{nov}}-\cos_{\mathrm{known}})\big)$
+  & High novel-direction align $\to$ upweight \\
 3. Adapt
-  & feature / sample / align $\to$ \texttt{sample\_weight}
-  & CE \texttt{partial\_fit} only \\
+  & $w_i=1+\mathrm{decay}_i\cdot(\mathrm{excess}^{\mathrm{mem}}_i+\lambda\,\mathrm{align}_i)$
+  & Additive fuse into \texttt{sample\_weight}; CE only \\
 4. Gate
   & soft$^{\gamma=0.5}$, $N_{\mathrm{cap}}=200$
   & Empower, then taper --- no EWMA \\
@@ -65,8 +65,9 @@ Step & Object & Role \\
       & \text{otherwise.}
   \end{cases}
 \end{equation*}
-Use alignment when the new category is scarce; drop it once most novel
-mass is past the cap. Still one linear head.
+Alignment helps when the new category is scarce; drop it once most novel
+mass is past the cap (always-on is slightly higher late but never stops
+boosting). Still one linear head.
 
 %======================================================================
 \section{Evidence (FULL LIVE holdout)}
@@ -75,9 +76,8 @@ mass is past the cap. Still one linear head.
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{text_full_weight_acc_auc_curves.png}
-\caption{Polished comparison (mean$\pm$SEM): uniform, both,
-both$+$align, recommended.
-Dashed line: $N_{\mathrm{cap}}=200$.
+\caption{Mean$\pm$SEM over text boards $\times$ seeds.
+Dashed: $N_{\mathrm{cap}}=200$.
 Recommended tracks both$+$align early and stays on top late.}
 \label{fig:curves}
 \end{figure}
@@ -85,8 +85,8 @@ Recommended tracks both$+$align early and stays on top late.}
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{text_full_weight_gate_ablation.png}
-\caption{Channel ablation. Feature / sample / both / align / recommended.
-Recommended is the ship default.}
+\caption{Channel ablation: feature / sample / both / both$+$align /
+recommended. Recommended is the ship default.}
 \label{fig:ablate}
 \end{figure}
 
@@ -117,7 +117,7 @@ No new backbone, no EWMA schedule.
 \begin{enumerate}
   \item Category shift $=$ OOD; quantify once, adapt with weights.
   \item Alignment is the same ``high align $\to$ upweight'' family as
-        hop-cosine IW --- plug into \texttt{sample\_weight}.
+        hop-cosine IW --- additive into \texttt{sample\_weight}.
   \item Ship \textbf{recommended}: align while scarce, then both.
 \end{enumerate}
 
