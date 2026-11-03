@@ -32,12 +32,21 @@ OUT = ROOT / "results" / "text_full_weight_curves"
 DOCS = ROOT / "docs" / "method"
 ARTIFACTS = Path("/opt/cursor/artifacts")
 
+# Main panel: soft-gate schemes (v2 default)
 SCHEME_STYLE = [
     ("uniform", "#6B7280", "uniform"),
-    ("feature_w", "#DC2626", "feature_w"),
-    ("sample_w", "#2563EB", "sample_w"),
-    ("both", "#059669", "both"),
+    ("feature_w", "#DC2626", "feature_w (soft)"),
+    ("sample_w", "#2563EB", "sample_w (soft)"),
+    ("both", "#059669", "both (soft)"),
 ]
+# Gate ablation on the "both" channel
+ABLATION_STYLE = [
+    ("uniform", "#6B7280", "uniform"),
+    ("both", "#059669", "both · soft"),
+    ("both_hard", "#D97706", "both · hard"),
+    ("both_always", "#7C3AED", "both · always-on"),
+]
+PRIMARY_SCHEMES = [s for s, _, _ in SCHEME_STYLE]
 
 
 def _fmt(x):
@@ -51,13 +60,15 @@ def _fmt(x):
 
 def _aggregate(runs):
     """Mean curves / endpoint metrics across seeds × boards."""
-    # board -> scheme -> budget -> list of metric dicts
     by = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    endpoints = defaultdict(lambda: defaultdict(list))  # board -> scheme -> [endpoint]
+    endpoints = defaultdict(lambda: defaultdict(list))
+    all_schemes = []
     for run in runs:
         for board in run["boards"]:
             name = board["dataset"]
             for sch, pts in board["curves"].items():
+                if sch not in all_schemes:
+                    all_schemes.append(sch)
                 for p in pts:
                     by[name][sch][int(p["budget"])].append(p)
             for sch, ep in board["endpoint"].items():
@@ -67,7 +78,7 @@ def _aggregate(runs):
     for name, sch_map in by.items():
         budgets = sorted({b for sch in sch_map.values() for b in sch})
         curves = {}
-        for sch in SCHEMES:
+        for sch in all_schemes:
             curves[sch] = []
             for b in budgets:
                 pts = sch_map[sch].get(b) or []
@@ -83,7 +94,7 @@ def _aggregate(runs):
                     "known_acc": float(np.nanmean([p.get("known_acc", np.nan) for p in pts])),
                 })
         ep = {}
-        for sch in SCHEMES:
+        for sch in all_schemes:
             eps = endpoints[name][sch]
             if not eps:
                 continue
@@ -97,7 +108,7 @@ def _aggregate(runs):
             }
         u = ep.get("uniform", {})
         deltas = {}
-        for sch in SCHEMES:
+        for sch in all_schemes:
             if sch == "uniform" or sch not in ep:
                 continue
             deltas[sch] = {
@@ -163,12 +174,44 @@ def _plot(rows, payload, out_dir: Path):
         ax.spines["right"].set_visible(False)
         ax.grid(True, alpha=0.25, ls="--")
     fig.suptitle(
-        f"{LOSS_NAME} · cold-start gate@{payload.get('cold_start_cap', COLD_START_CAP)}"
+        f"{LOSS_NAME} · soft cold-start gate@{payload.get('cold_start_cap', COLD_START_CAP)}"
         f" · NO EWMA · text only",
         fontsize=12, fontweight="bold",
     )
     p_curves = out_dir / "text_full_weight_acc_auc_curves.png"
     fig.savefig(p_curves, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+
+    # --- 1b) Gate ablation: soft vs hard vs always-on (both channel) ---
+    fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.4), constrained_layout=True)
+    for ax, metric, ylab, title in (
+        (axes[0], "acc", "Overall accuracy (full LIVE holdout)", "Gate ablation · accuracy"),
+        (axes[1], "ova_auc_novel_mean", "Mean novel OVA-AUC", "Gate ablation · OVA-AUC"),
+    ):
+        for sch, color, label in ABLATION_STYLE:
+            pts = _mean_curve(rows, sch, metric)
+            if not pts:
+                continue
+            ax.plot(
+                [p["budget"] for p in pts],
+                [p[metric] for p in pts],
+                "-o", color=color, lw=2.2, ms=5, label=label,
+            )
+        ax.axvline(payload.get("cold_start_cap", COLD_START_CAP),
+                   color="#9CA3AF", ls="--", lw=1.2, label="N_cap=200")
+        ax.set_xlabel("Novel samples / category (budget)")
+        ax.set_ylabel(ylab)
+        ax.set_title(title)
+        ax.legend(frameon=False, fontsize=8)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.grid(True, alpha=0.25, ls="--")
+    fig.suptitle(
+        "OOD weights · soft vs hard vs always-on (both) · NO EWMA",
+        fontsize=12, fontweight="bold",
+    )
+    p_ablate = out_dir / "text_full_weight_gate_ablation.png"
+    fig.savefig(p_ablate, dpi=170, bbox_inches="tight")
     plt.close(fig)
 
     # --- 2) Per-dataset endpoint bars ---
@@ -270,7 +313,7 @@ def _plot(rows, payload, out_dir: Path):
     fig.savefig(p_per, dpi=160, bbox_inches="tight")
     plt.close(fig)
 
-    return [p_curves, p_bars, p_delta, p_per]
+    return [p_curves, p_ablate, p_bars, p_delta, p_per]
 
 
 def main():
@@ -338,16 +381,19 @@ def main():
         "ewma": False,
         "cold_start_cap": args.cold_start_cap,
         "cold_start_rule": (
-            f"stop weighting a novel category after {args.cold_start_cap} samples; "
-            "joint CE fit with w=1 on warm (past-cap) novel mass"
+            f"v2 soft gate: boost *= (1 - n_idx/{args.cold_start_cap})_+; "
+            "both_hard / both_always = gate ablations"
         ),
+        "default_gate": "soft",
         "kpi": "FULL held-out LIVE overall accuracy + mean novel OVA-AUC (NOT first-n subset)",
         "budget_unit": "novel_per_category",
         "schemes": {
             "uniform": "CE, flat sample weights, raw features",
-            "feature_w": "X *= (1 + α · vimp); only while cold-start mass remains",
-            "sample_w": "membership w_i only on novel rows with arrival_idx < cap",
-            "both": "feature_w + sample_w under the same cold-start gate",
+            "feature_w": "X·(1+αṽ) with α tapered by mean soft decay",
+            "sample_w": "membership excess × soft decay (1-n_idx/cap)_+",
+            "both": "feature_w + sample_w under soft gate (default)",
+            "both_hard": "ablation: hard cut at cap",
+            "both_always": "ablation: keep boosting past cap",
         },
         "feat_alpha": args.feat_alpha,
         "budgets": list(args.budgets),
@@ -371,10 +417,9 @@ def main():
             for sch in SCHEMES
         },
         "takeaway": (
-            f"Cold-start empowerment only: after a novel category reaches "
-            f"{args.cold_start_cap} samples, stop weighting it. "
-            "Feature-level = X·(1+α·vimp); sample-level = membership w_i. "
-            "FULL LIVE holdout. No EWMA."
+            f"v2 soft cold-start gate: boost *= (1 - n_idx/{args.cold_start_cap})_+. "
+            "OOD VIMP → feature/sample weights via partial_fit. "
+            "Ablations: both_hard / both_always. FULL LIVE holdout. No EWMA."
         ),
     }
     (OUT / "text_full_weight_curves.json").write_text(json.dumps(payload, indent=2))
