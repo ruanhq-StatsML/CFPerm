@@ -1,4 +1,4 @@
-% OOD + alignment → category-shift adapt (v4). Boss note.
+% Polished boss note: OOD + alignment → category-shift adapt.
 % Compile from docs/method/: pdflatex Feature_vs_sample_weights.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
@@ -6,8 +6,8 @@
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
-\title{OOD Quantification $+$ Alignment $\to$ Category-Shift Adapt\\
-\large Feature / sample / hop-prototype weights with soft$^\gamma$ gate}
+\title{OOD $+$ Alignment $\to$ Category-Shift Adaptation\\
+\large A cheap \texttt{partial\_fit} recipe for new-category cold-start}
 \author{AS-DTA / CFPerm}
 \date{}
 
@@ -16,109 +16,109 @@
 
 \begin{abstract}
 \noindent
-\textbf{Message.}
-Category shift is an OOD event.
-We quantify the footprint (RF-domain VIMP $+$ membership), then adapt a CE
-head via \texttt{partial\_fit}.
-v4 adds the project's \textbf{alignment $\to$ weight} logic
-(hop / prototype cosine, same family as heatmap IW):
-rows more aligned with the novel direction than with known prototypes
-get higher CE mass.
-Soft$^{\gamma=0.5}$ still tapers empowerment by $N_{\mathrm{cap}}{=}200$.
-On text boards, \texttt{both$+$align} leads the scarce window;
-plain \texttt{both} is the more stable endpoint among gated schemes.
+\textbf{One-liner.}
+Quantify category shift as OOD, then adapt a CE head with three cheap
+weights via \texttt{partial\_fit}: feature (VIMP), sample (membership),
+alignment (hop/prototype cosine). Soft$^{\gamma=0.5}$ tapers empowerment
+by $200$ samples/category. The polished online recipe is
+\textbf{recommended}: \texttt{both$+$align} while the new category is
+scarce, then \texttt{both}.
+On text multiclass (FULL LIVE holdout), recommended lifts early acc
+($0.456\to\mathbf{0.481}$ at $20$/cat) and finishes at
+$\mathbf{+0.014}$ overall vs uniform.
 \end{abstract}
 
 %======================================================================
-\section{OOD $+$ alignment $\to$ weights}
+\section{Recipe (what to ship)}
 %======================================================================
 
-\paragraph{Quantify (OOD).}
-RF on $W{\in}\{0,1\}$ (REF vs LIVE) $\Rightarrow$ VIMP $v$.
-Top-$K$ subspace $S$: membership $m_i$ from $z$-distance to REF.
+\begin{center}
+\small
+\begin{tabular}{@{}llp{7.2cm}@{}}
+\toprule
+Step & Object & Role \\
+\midrule
+1. Quantify
+  & RF-domain VIMP $v$, membership $m$
+  & Where LIVE differs from REF \\
+2. Align
+  & $\mathrm{align}=\sigma(\beta(\cos_{\mathrm{nov}}-\cos_{\mathrm{known}}))$
+  & High alignment with novel direction $\to$ upweight \\
+3. Adapt
+  & feature / sample / align $\to$ \texttt{sample\_weight}
+  & CE \texttt{partial\_fit} only \\
+4. Gate
+  & soft$^{\gamma=0.5}$, $N_{\mathrm{cap}}=200$
+  & Empower, then taper --- no EWMA \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-\paragraph{Align (prototype / hop cosine).}
-On $S$, let $\mu_c$ be known-class prototypes and $\mu_{\mathrm{nov}}$ the
-cold-start novel mean. For each live row
-\begin{equation}
-  \mathrm{align}_i
+\paragraph{Recommended online policy.}
+\begin{equation*}
+  \texttt{recommended}
   =
-  \sigma\!\bigl(
-    \beta\,
-    \bigl(
-      \cos(x_i,\mu_{\mathrm{nov}})
-      -
-      \max_c\cos(x_i,\mu_c)
-    \bigr)
-  \bigr).
-\end{equation}
-High $\mathrm{align}_i$ $=$ aligned with the new-category direction more
-than with old centers --- the same ``high alignment $\to$ upweight'' rule
-as hop-cosine IW on the batch heatmap.
-
-\paragraph{Adapt (three cheap channels).}
-\begin{itemize}
-  \item \textbf{Feature:} $x_{ij}\leftarrow x_{ij}(1+\alpha_{\mathrm{eff}}\tilde v_j)$
-        (optional blend with $|\mu_{\mathrm{nov}}-\mu_{\mathrm{ref}}|$).
-  \item \textbf{Sample:} membership fused excess.
-  \item \textbf{Alignment:} excess ${+}\,\lambda_a\,\mathrm{align}_i$.
-\end{itemize}
-All excesses are multiplied by the soft$^\gamma$ cold-start decay
-$((1-n_{\mathrm{idx}}/200)_+)^{0.5}$, then passed to
-\texttt{partial\_fit(..., sample\_weight=$w$)}.
-No new backbone, no EWMA.
+  \begin{cases}
+    \texttt{both$+$align}
+      & \text{if cold-start frac }\ge 0.75,\\
+    \texttt{both}
+      & \text{otherwise.}
+  \end{cases}
+\end{equation*}
+Use alignment when the new category is scarce; drop it once most novel
+mass is past the cap. Still one linear head.
 
 %======================================================================
-\section{Curves (FULL LIVE holdout)}
+\section{Evidence (FULL LIVE holdout)}
 %======================================================================
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{text_full_weight_acc_auc_curves.png}
-\caption{Soft$^{\gamma=0.5}$ schemes including alignment (mean$\pm$SEM).
-Scarce regime: \texttt{both$+$align} leads. Past the cap: gated schemes
-stay near / above uniform.}
+\caption{Polished comparison (mean$\pm$SEM): uniform, both,
+both$+$align, recommended.
+Dashed line: $N_{\mathrm{cap}}=200$.
+Recommended tracks both$+$align early and stays on top late.}
 \label{fig:curves}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{text_full_weight_gate_ablation.png}
-\caption{Alignment ablation: \texttt{both}, \texttt{align} only,
-\texttt{both$+$align}, always-on.
-Alignment helps when the new category is scarce; plain \texttt{both}
-is the stabler gated endpoint.}
+\caption{Channel ablation. Feature / sample / both / align / recommended.
+Recommended is the ship default.}
 \label{fig:ablate}
 \end{figure}
 
-\paragraph{Numbers.}
 \begin{center}
 \small
 \begin{tabular}{@{}lcccc@{}}
 \toprule
- & uniform & both & align & both$+$align \\
+ & uniform & both & both$+$align & \textbf{recommended} \\
 \midrule
 acc @ $b{=}20$/cat
-  & $0.456$ & $0.475$ & $0.468$ & $\mathbf{0.478}$ \\
+  & $0.456$ & $0.475$ & $\mathbf{0.481}$ & $\mathbf{0.481}$ \\
 endpoint acc
-  & $0.636$ & $\mathbf{0.647}$ & $0.641$ & $0.641$ \\
+  & $0.636$ & $0.647$ & $0.650$ & $\mathbf{0.650}$ \\
 endpoint $\Delta$acc
-  & --- & $\mathbf{+0.011}$ & $+0.005$ & $+0.005$ \\
+  & --- & $+0.011$ & $+0.013$ & $\mathbf{+0.014}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
+\paragraph{Cost.}
+One shallow RF $+$ a few CE \texttt{partial\_fit} epochs.
+No new backbone, no EWMA schedule.
+
 %======================================================================
-\section{Ops rule}
+\section{Takeaway}
 %======================================================================
 
 \begin{enumerate}
-  \item \textbf{Very scarce} new category: prefer \texttt{both$+$align}
-        (early lift).
-  \item \textbf{Default gated online:} \texttt{both} with soft$^{\gamma=0.5}$
-        (best gated endpoint).
-  \item Alignment is the same hop-cosine family already used elsewhere ---
-        plug into \texttt{sample\_weight}, keep the head.
+  \item Category shift $=$ OOD; quantify once, adapt with weights.
+  \item Alignment is the same ``high align $\to$ upweight'' family as
+        hop-cosine IW --- plug into \texttt{sample\_weight}.
+  \item Ship \textbf{recommended}: align while scarce, then both.
 \end{enumerate}
 
 \end{document}

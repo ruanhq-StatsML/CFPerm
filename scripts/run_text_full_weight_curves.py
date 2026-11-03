@@ -33,22 +33,21 @@ OUT = ROOT / "results" / "text_full_weight_curves"
 DOCS = ROOT / "docs" / "method"
 ARTIFACTS = Path("/opt/cursor/artifacts")
 
-# Main panel: soft^γ + alignment fusion (v4)
+# Boss panel: keep it readable — uniform / both / both+align / recommended
 SCHEME_STYLE = [
     ("uniform", "#6B7280", "uniform"),
-    ("feature_w", "#DC2626", "feature_w"),
-    ("sample_w", "#2563EB", "sample_w"),
     ("both", "#059669", "both"),
-    ("align_w", "#D97706", "align_w"),
     ("both_align", "#7C3AED", "both+align"),
+    ("recommended", "#DC2626", "recommended"),
 ]
-# Alignment ablation vs prior both / always-on
+# Full channel + recipe ablation
 ABLATION_STYLE = [
     ("uniform", "#6B7280", "uniform"),
-    ("both", "#059669", "both (no align)"),
-    ("align_w", "#D97706", "align only"),
+    ("feature_w", "#F59E0B", "feature"),
+    ("sample_w", "#2563EB", "sample"),
+    ("both", "#059669", "both"),
     ("both_align", "#7C3AED", "both+align"),
-    ("both_always", "#0891B2", "both always-on"),
+    ("recommended", "#DC2626", "recommended"),
 ]
 PRIMARY_SCHEMES = [s for s, _, _ in SCHEME_STYLE]
 
@@ -188,9 +187,8 @@ def _plot(rows, payload, out_dir: Path):
         ax.spines["right"].set_visible(False)
         ax.grid(True, alpha=0.25, ls="--")
     fig.suptitle(
-        f"{LOSS_NAME} · +alignment · soft^γ={payload.get('default_soft_gamma', DEFAULT_SOFT_GAMMA)}"
-        f" · N_cap={payload.get('cold_start_cap', COLD_START_CAP)}"
-        f" · NO EWMA · text only",
+        f"{LOSS_NAME} · OOD+align weights · soft^γ={payload.get('default_soft_gamma', DEFAULT_SOFT_GAMMA)}"
+        f" · N_cap={payload.get('cold_start_cap', COLD_START_CAP)} · text",
         fontsize=12, fontweight="bold",
     )
     p_curves = out_dir / "text_full_weight_acc_auc_curves.png"
@@ -227,7 +225,7 @@ def _plot(rows, payload, out_dir: Path):
         ax.spines["right"].set_visible(False)
         ax.grid(True, alpha=0.25, ls="--")
     fig.suptitle(
-        "OOD weights · alignment fusion vs both / always-on · NO EWMA",
+        "Channel ablation · align fuse · recommended recipe",
         fontsize=12, fontweight="bold",
     )
     p_ablate = out_dir / "text_full_weight_gate_ablation.png"
@@ -236,15 +234,15 @@ def _plot(rows, payload, out_dir: Path):
 
     # --- 2) Per-dataset endpoint bars ---
     x = np.arange(len(names))
-    w = 0.12
-    fig, axes = plt.subplots(1, 2, figsize=(13.0, 4.4), constrained_layout=True)
+    w = 0.18
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.4), constrained_layout=True)
     for ax, metric, ylab, title in (
         (axes[0], "acc", "Overall accuracy", "Endpoint overall accuracy"),
         (axes[1], "ova_auc_novel_mean", "Mean novel OVA-AUC", "Endpoint novel OVA-AUC"),
     ):
         for i, (sch, color, label) in enumerate(SCHEME_STYLE):
             vals = [r["endpoint"].get(sch, {}).get(metric, np.nan) for r in rows]
-            ax.bar(x + (i - 2.5) * w, vals, w, color=color, label=label)
+            ax.bar(x + (i - 1.5) * w, vals, w, color=color, label=label)
         ax.set_xticks(x)
         ax.set_xticklabels(names, rotation=25, ha="right")
         ax.set_ylabel(ylab)
@@ -265,13 +263,11 @@ def _plot(rows, payload, out_dir: Path):
     # --- 3) Δacc / ΔAUC vs uniform ---
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.2), constrained_layout=True)
     delta_style = [
-        ("feature_w", "#DC2626", "Δ feature"),
-        ("sample_w", "#2563EB", "Δ sample"),
         ("both", "#059669", "Δ both"),
-        ("align_w", "#D97706", "Δ align"),
         ("both_align", "#7C3AED", "Δ both+align"),
+        ("recommended", "#DC2626", "Δ recommended"),
     ]
-    wd = 0.15
+    wd = 0.22
     for ax, key, ylab, title in (
         (axes[0], "delta_acc", "Δ overall acc vs uniform", "Δ accuracy (endpoint)"),
         (axes[1], "delta_ova_auc", "Δ mean novel OVA-AUC vs uniform", "Δ OVA-AUC (endpoint)"),
@@ -280,7 +276,7 @@ def _plot(rows, payload, out_dir: Path):
             vals = [
                 (r["deltas_vs_uniform"].get(sch) or {}).get(key, 0.0) for r in rows
             ]
-            ax.bar(x + (i - 2) * wd, vals, wd, color=color, label=label)
+            ax.bar(x + (i - 1) * wd, vals, wd, color=color, label=label)
         ax.axhline(0, color="#374151", lw=1)
         ax.set_xticks(x)
         ax.set_xticklabels(names, rotation=25, ha="right")
@@ -403,22 +399,23 @@ def main():
         "ewma": False,
         "cold_start_cap": args.cold_start_cap,
         "cold_start_rule": (
-            f"v4: alignment σ(β(cos_novel−cos_known)) fused into weights; "
-            f"soft^γ={DEFAULT_SOFT_GAMMA} linger gate N_cap={args.cold_start_cap}"
+            f"polish: align fuse; recommended = both+align while "
+            f"cold-start frac≥0.75 else both; soft^γ={DEFAULT_SOFT_GAMMA}, "
+            f"N_cap={args.cold_start_cap}"
         ),
         "default_gate": "soft",
         "default_soft_gamma": DEFAULT_SOFT_GAMMA,
         "kpi": "FULL held-out LIVE overall accuracy + mean novel OVA-AUC (NOT first-n subset)",
         "budget_unit": "novel_per_category",
         "schemes": {
-            "uniform": "CE, flat sample weights, raw features",
-            "feature_w": "X·(1+αṽ) soft^γ tapered",
-            "sample_w": "membership excess × soft^γ",
-            "both": "feature+sample (no alignment)",
-            "align_w": "prototype/hop alignment only (对齐→权)",
-            "both_align": "feature+sample+alignment under soft^γ",
-            "both_g1": "ablation: both with γ=1",
-            "both_always": "ablation: both always-on",
+            "uniform": "CE, flat",
+            "feature_w": "VIMP feature scale",
+            "sample_w": "membership sample weights",
+            "both": "feature+sample",
+            "align_w": "hop/prototype alignment only",
+            "both_align": "feature+sample+align",
+            "recommended": "both+align while scarce (cs_frac≥0.75), else both",
+            "both_always": "ablation: always-on",
         },
         "feat_alpha": args.feat_alpha,
         "budgets": list(args.budgets),
@@ -442,8 +439,8 @@ def main():
             for sch in SCHEMES
         },
         "takeaway": (
-            "v4: hop/prototype alignment fused into OOD feature/sample weights "
-            f"(soft^γ={DEFAULT_SOFT_GAMMA}). 对齐高 → 加权. FULL holdout. No EWMA."
+            "polish: OOD+align weights; recommended switches align off after "
+            f"cold-start frac drops (soft^γ={DEFAULT_SOFT_GAMMA}). FULL holdout. No EWMA."
         ),
     }
     (OUT / "text_full_weight_curves.json").write_text(json.dumps(payload, indent=2))

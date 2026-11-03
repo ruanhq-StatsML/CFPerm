@@ -30,16 +30,18 @@ from weighted_cold_start import (
 )
 
 LOSS_NAME = "CE (log_loss)"
-# Primary soft^γ=0.5 + alignment fusion. Ablations keep γ / always-on.
+# Polished slate: core channels + recommended adaptive recipe + always-on.
 SCHEMES = (
     "uniform", "feature_w", "sample_w", "both",
-    "align_w", "both_align",
-    "both_g1", "both_always",
+    "align_w", "both_align", "recommended",
+    "both_always",
 )
 COLD_START_CAP = 200
 DEFAULT_SOFT_GAMMA = 0.5  # linger
 DEFAULT_ALIGN_BETA = 3.0  # sharpness of novel-vs-known cosine gap
-DEFAULT_ALIGN_LAM = 2.0   # strength of alignment boost
+DEFAULT_ALIGN_LAM = 1.5   # additive align strength (polished)
+# recommended: use alignment only while ≥ this fraction of novel mass is still cold-starting
+RECOMMENDED_CS_FRAC = 0.75
 DEFAULT_BUDGETS = (20, 40, 60, 80, 100, 150, 200, 250, 300, 400)
 GATE_MODES = ("soft", "hard", "always")
 ALIGN_BASES = ("align_w", "both_align", "sample_align", "feature_align")
@@ -224,15 +226,24 @@ def _parse_scheme(scheme: str) -> Tuple[str, str, float]:
 
 
 def _wants_feature(base: str) -> bool:
-    return base in ("feature_w", "both", "both_align", "feature_align")
+    return base in (
+        "feature_w", "both", "both_align", "feature_align", "recommended",
+    )
 
 
 def _wants_sample(base: str) -> bool:
-    return base in ("sample_w", "both", "both_align", "sample_align")
+    return base in (
+        "sample_w", "both", "both_align", "sample_align", "recommended",
+    )
 
 
-def _wants_align(base: str) -> bool:
-    return base in ALIGN_BASES or base.endswith("_align")
+def _wants_align(base: str, *, cs_frac: float = 1.0) -> bool:
+    """Alignment on for align_* / both_align; recommended only while scarce."""
+    if base == "recommended":
+        return float(cs_frac) >= float(RECOMMENDED_CS_FRAC)
+    return base in ("align_w", "both_align", "sample_align", "feature_align") or (
+        str(base).endswith("_align")
+    )
 
 
 def _ova_auc_mean(
@@ -325,6 +336,11 @@ def fit_full_scheme(
         mem_f = np.maximum(mem_f, decay)
 
         # --- alignment (prototype / hop cosine on S) ---
+        novel_m = arrival_idx >= 0
+        cs_frac = (
+            float((decay[novel_m] > 0).mean()) if np.any(novel_m) else 0.0
+        )
+        use_align = _wants_align(base, cs_frac=cs_frac)
         protos, mu_nov, mu_ref = novel_and_known_means(
             X0, y_ref, X1, y_tr, feat, novel=novel, decay=decay,
         )
@@ -333,7 +349,7 @@ def fit_full_scheme(
         )
         # full-space mean-shift for feature alignment blend
         align_dir = None
-        if _wants_align(base) and _wants_feature(base):
+        if use_align and _wants_feature(base):
             align_dir = np.zeros(X1.shape[1], dtype=float)
             align_dir[feat] = mu_nov - mu_ref
 
@@ -341,8 +357,8 @@ def fit_full_scheme(
             alpha_eff = float(feat_alpha) * max(mean_decay, 0.05)
             X1, scale = feature_level_scale(
                 X1, vimp, alpha=alpha_eff,
-                align_dir=align_dir if _wants_align(base) else None,
-                align_eta=1.0,
+                align_dir=align_dir if use_align else None,
+                align_eta=0.75,
             )
             X0s = X0 * scale.reshape(1, -1)
             clf = make_sgd(seed=seed)
@@ -359,14 +375,20 @@ def fit_full_scheme(
             excess = excess + np.maximum(w_raw - 1.0, 0.0)
             info["sample_w_active"] = True
 
-        if _wants_align(base):
-            # 对齐高 → 加权: excess += λ_a · align (then × decay)
+        if use_align:
+            # high alignment → upweight (additive fuse; then × soft^γ decay)
             excess = excess + float(DEFAULT_ALIGN_LAM) * align
             info["align_w_active"] = True
+            info["align_mode"] = "additive"
+            info["cs_frac"] = cs_frac
             info["mean_align"] = float(align.mean())
             info["mean_align_cs"] = (
                 float(align[decay > 0].mean()) if (decay > 0).any() else None
             )
+
+        if base == "recommended":
+            info["recommended_used_align"] = bool(use_align)
+            info["cs_frac"] = cs_frac
 
         # warm novel / known stay near 1 via decay gate
         w = 1.0 + excess * decay
@@ -604,15 +626,16 @@ def run_text_full_weight_curves(
         "mean_delta_acc_both": _mean_delta("delta_acc_vs_uniform", "both"),
         "mean_delta_acc_align_w": _mean_delta("delta_acc_vs_uniform", "align_w"),
         "mean_delta_acc_both_align": _mean_delta("delta_acc_vs_uniform", "both_align"),
-        "mean_delta_acc_both_g1": _mean_delta("delta_acc_vs_uniform", "both_g1"),
+        "mean_delta_acc_recommended": _mean_delta("delta_acc_vs_uniform", "recommended"),
         "mean_delta_acc_both_always": _mean_delta("delta_acc_vs_uniform", "both_always"),
         "mean_delta_ova_feature_w": _mean_delta("delta_ova_auc_vs_uniform", "feature_w"),
         "mean_delta_ova_sample_w": _mean_delta("delta_ova_auc_vs_uniform", "sample_w"),
         "mean_delta_ova_both": _mean_delta("delta_ova_auc_vs_uniform", "both"),
         "mean_delta_ova_both_align": _mean_delta("delta_ova_auc_vs_uniform", "both_align"),
+        "mean_delta_ova_recommended": _mean_delta("delta_ova_auc_vs_uniform", "recommended"),
         "takeaway": (
-            "v4: OOD VIMP + hop/prototype alignment → feature/sample weights "
-            f"via partial_fit; soft^γ={DEFAULT_SOFT_GAMMA} linger gate. "
-            "对齐高 → 加权. FULL holdout. No EWMA."
+            "polish: alignment fused into OOD weights; recommended = "
+            f"both+align while cold-start frac≥{RECOMMENDED_CS_FRAC}, else both. "
+            f"soft^γ={DEFAULT_SOFT_GAMMA}. FULL holdout. No EWMA."
         ),
     }
