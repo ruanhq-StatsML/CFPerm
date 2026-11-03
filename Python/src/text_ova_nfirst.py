@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import numpy as np
 from sklearn.datasets import fetch_20newsgroups
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
 from first_category_performance import (
     LOSS_NAME,
