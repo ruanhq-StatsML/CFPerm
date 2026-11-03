@@ -1,11 +1,12 @@
-"""Text multiclass: feature / sample weights on FULL eval (v3 soft^γ gate).
+"""Text multiclass: feature / sample / alignment weights on FULL eval.
 
 No EWMA. OOD quantification (RF-domain VIMP + membership) → CE adapt via
-partial_fit. Cold-start empowerment:
+partial_fit. v4 adds hop/prototype **alignment** into weights:
 
-  soft^γ (default γ=0.5): boost *= ((1 - n_idx/N_cap)_+)^γ   ← linger
-  soft^1 / soft^2        : linear / fast taper (ablations)
-  hard / always          : cut / no-gate ablations
+  align_i = σ(β · (cos(x_i, μ_novel) − cos(x_i, μ_known))) on subspace S
+  w_i ← 1 + excess · decay · (1 + λ_a · align_i)     ← 对齐高 → 加权
+
+Soft^γ gate (default γ=0.5) still tapers cold-start empowerment.
 
 KPI = overall accuracy + mean novel OVA-AUC on full held-out LIVE.
 """
@@ -29,15 +30,19 @@ from weighted_cold_start import (
 )
 
 LOSS_NAME = "CE (log_loss)"
-# Primary: soft with linger γ=0.5. Ablations: γ=1, γ=2, hard, always.
+# Primary soft^γ=0.5 + alignment fusion. Ablations keep γ / always-on.
 SCHEMES = (
     "uniform", "feature_w", "sample_w", "both",
-    "both_g1", "both_g2", "both_hard", "both_always",
+    "align_w", "both_align",
+    "both_g1", "both_always",
 )
 COLD_START_CAP = 200
-DEFAULT_SOFT_GAMMA = 0.5  # v3: linger — slower taper than linear
+DEFAULT_SOFT_GAMMA = 0.5  # linger
+DEFAULT_ALIGN_BETA = 3.0  # sharpness of novel-vs-known cosine gap
+DEFAULT_ALIGN_LAM = 2.0   # strength of alignment boost
 DEFAULT_BUDGETS = (20, 40, 60, 80, 100, 150, 200, 250, 300, 400)
 GATE_MODES = ("soft", "hard", "always")
+ALIGN_BASES = ("align_w", "both_align", "sample_align", "feature_align")
 
 
 def feature_level_scale(
@@ -45,13 +50,102 @@ def feature_level_scale(
     vimp: np.ndarray,
     *,
     alpha: float = 3.0,
+    align_dir: Optional[np.ndarray] = None,
+    align_eta: float = 1.0,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Feature-level weights: scale each column by (1 + α · vimp_j)."""
+    """Feature-level weights: scale columns by (1 + α · blend_j).
+
+    blend = VIMP; if ``align_dir`` given, blend with |μ_novel−μ_known| so
+    coordinates that both shift and attribute get more mass (alignment).
+    """
     v = np.asarray(vimp, float).ravel()
-    v = v / (v.sum() + 1e-12)
-    scale = 1.0 + float(alpha) * (v / (v.max() + 1e-12))
+    vn = v / (v.max() + 1e-12)
+    if align_dir is not None:
+        d = np.abs(np.asarray(align_dir, float).ravel())
+        if d.shape[0] == vn.shape[0]:
+            dn = d / (d.max() + 1e-12)
+            vn = (vn + float(align_eta) * dn) / (1.0 + float(align_eta))
+    scale = 1.0 + float(alpha) * vn
     X = np.asarray(X, float) * scale.reshape(1, -1)
     return X, scale
+
+
+def _l2_normalize(X: np.ndarray, axis: int = -1) -> np.ndarray:
+    X = np.asarray(X, float)
+    n = np.linalg.norm(X, axis=axis, keepdims=True) + 1e-12
+    return X / n
+
+
+def alignment_scores(
+    X: np.ndarray,
+    feat_idx: np.ndarray,
+    proto_known: np.ndarray,
+    mu_novel: np.ndarray,
+    *,
+    beta: float = DEFAULT_ALIGN_BETA,
+) -> np.ndarray:
+    """Hop/prototype alignment on subspace S ∈ [0, 1].
+
+    ``align_i = σ(β · (cos(x_i, μ_novel) − max_c cos(x_i, μ_c)))``.
+    High = aligned with the novel cold-start direction more than known
+    prototypes — same ``对齐 → 权`` family as hop-cosine IW.
+    """
+    X = np.asarray(X, float)
+    feat = np.asarray(feat_idx, int).ravel()
+    if feat.size == 0 or len(X) == 0:
+        return np.zeros(len(X), dtype=float)
+    Xs = _l2_normalize(X[:, feat], axis=1)
+    mu_n = _l2_normalize(np.asarray(mu_novel, float).ravel().reshape(1, -1), axis=1).ravel()
+    a_nov = Xs @ mu_n
+    proto = np.asarray(proto_known, float)
+    if proto.ndim == 1:
+        proto = proto.reshape(1, -1)
+    if proto.size == 0:
+        a_known = np.zeros(len(X), dtype=float)
+    else:
+        Pk = _l2_normalize(proto, axis=1)
+        a_known = (Xs @ Pk.T).max(axis=1)
+    gap = a_nov - a_known
+    # logistic → [0,1]
+    return 1.0 / (1.0 + np.exp(-float(beta) * gap))
+
+
+def novel_and_known_means(
+    X_ref: np.ndarray,
+    y_ref: np.ndarray,
+    X_live: np.ndarray,
+    y_live: np.ndarray,
+    feat_idx: np.ndarray,
+    *,
+    novel: Sequence[int],
+    decay: Optional[np.ndarray] = None,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Known class prototypes + novel (cold-start) mean on subspace S.
+
+    Returns (proto_known[C,|S|], mu_novel[|S|], mu_ref_all[|S|]).
+    """
+    feat = np.asarray(feat_idx, int).ravel()
+    X0 = np.asarray(X_ref, float)
+    X1 = np.asarray(X_live, float)
+    y0 = np.asarray(y_ref).ravel()
+    y1 = np.asarray(y_live).ravel()
+    labs = np.unique(y0)
+    protos = np.zeros((len(labs), len(feat)), dtype=float)
+    for i, c in enumerate(labs):
+        m = y0 == c
+        protos[i] = X0[m][:, feat].mean(0) if m.any() else 0.0
+    mu_ref = X0[:, feat].mean(0) if len(X0) else np.zeros(len(feat))
+    # novel mean: prefer cold-start mass / novel labels
+    if decay is not None and np.asarray(decay).sum() > 1e-8:
+        w = np.asarray(decay, float).ravel()
+        w = w / (w.sum() + 1e-12)
+        mu_nov = (X1[:, feat] * w.reshape(-1, 1)).sum(0)
+    elif novel:
+        m = np.isin(y1, list(novel))
+        mu_nov = X1[m][:, feat].mean(0) if m.any() else X1[:, feat].mean(0)
+    else:
+        mu_nov = X1[:, feat].mean(0) if len(X1) else np.zeros(len(feat))
+    return protos, mu_nov, mu_ref
 
 
 def per_category_arrival_index(y: np.ndarray, cats: Sequence[int]) -> np.ndarray:
@@ -111,16 +205,14 @@ def cold_start_decay(
 def _parse_scheme(scheme: str) -> Tuple[str, str, float]:
     """Return (base_scheme, gate_mode, soft_gamma).
 
-    base ∈ {uniform, feature_w, sample_w, both}
+    base ∈ {uniform, feature_w, sample_w, both, align_w, both_align, …}
     gate ∈ {soft, hard, always}
     gamma: power on soft taper; default DEFAULT_SOFT_GAMMA (0.5 linger).
-    Suffixes: _g05 / _g1 / _g2, _hard, _always, _soft.
     """
     s = str(scheme).lower().strip()
     gamma = float(DEFAULT_SOFT_GAMMA)
     if s == "uniform":
         return "uniform", "soft", gamma
-    # gamma suffixes first (both_g1, both_g05, feature_w_g2, …)
     for tag, g in (("_g05", 0.5), ("_g0.5", 0.5), ("_g1", 1.0), ("_g2", 2.0)):
         if s.endswith(tag):
             return s[: -len(tag)], "soft", float(g)
@@ -128,8 +220,19 @@ def _parse_scheme(scheme: str) -> Tuple[str, str, float]:
         suf = "_" + gate
         if s.endswith(suf):
             return s[: -len(suf)], gate, gamma
-    # bare feature_w / sample_w / both → soft with linger γ
     return s, "soft", gamma
+
+
+def _wants_feature(base: str) -> bool:
+    return base in ("feature_w", "both", "both_align", "feature_align")
+
+
+def _wants_sample(base: str) -> bool:
+    return base in ("sample_w", "both", "both_align", "sample_align")
+
+
+def _wants_align(base: str) -> bool:
+    return base in ALIGN_BASES or base.endswith("_align")
 
 
 def _ova_auc_mean(
@@ -205,6 +308,8 @@ def fit_full_scheme(
         "weights_active": False,
         "feature_w_active": False,
         "sample_w_active": False,
+        "align_w_active": False,
+        "mean_align": None,
     }
 
     if use_weights:
@@ -219,28 +324,52 @@ def fit_full_scheme(
         # fuse membership with cold-start intensity (not a hard 0/1 only)
         mem_f = np.maximum(mem_f, decay)
 
-        if base in ("feature_w", "both"):
-            # taper feature stretch with mean cold-start intensity
+        # --- alignment (prototype / hop cosine on S) ---
+        protos, mu_nov, mu_ref = novel_and_known_means(
+            X0, y_ref, X1, y_tr, feat, novel=novel, decay=decay,
+        )
+        align = alignment_scores(
+            X1, feat, protos, mu_nov, beta=DEFAULT_ALIGN_BETA,
+        )
+        # full-space mean-shift for feature alignment blend
+        align_dir = None
+        if _wants_align(base) and _wants_feature(base):
+            align_dir = np.zeros(X1.shape[1], dtype=float)
+            align_dir[feat] = mu_nov - mu_ref
+
+        if _wants_feature(base):
             alpha_eff = float(feat_alpha) * max(mean_decay, 0.05)
-            X1, scale = feature_level_scale(X1, vimp, alpha=alpha_eff)
+            X1, scale = feature_level_scale(
+                X1, vimp, alpha=alpha_eff,
+                align_dir=align_dir if _wants_align(base) else None,
+                align_eta=1.0,
+            )
             X0s = X0 * scale.reshape(1, -1)
             clf = make_sgd(seed=seed)
             clf.partial_fit(X0s, y_ref, classes=classes)
             info["feature_w_active"] = True
             info["feat_alpha_eff"] = alpha_eff
 
-        if base in ("sample_w", "both"):
+        excess = np.zeros(len(y_tr), dtype=float)
+        if _wants_sample(base):
             wt = weights_from_attribution(
                 mem_f, feat, X1.shape[1], lam=lam, mode="fused", temper=True,
             )
             w_raw = np.asarray(wt["sample_weight"], float).ravel()
-            # excess over 1, tapered by per-row decay (warm novel → 1)
-            excess = np.maximum(w_raw - 1.0, 0.0)
-            w = 1.0 + excess * decay
+            excess = excess + np.maximum(w_raw - 1.0, 0.0)
             info["sample_w_active"] = True
-        elif base == "feature_w":
-            w = np.ones(len(y_tr), dtype=float)
 
+        if _wants_align(base):
+            # 对齐高 → 加权: excess += λ_a · align (then × decay)
+            excess = excess + float(DEFAULT_ALIGN_LAM) * align
+            info["align_w_active"] = True
+            info["mean_align"] = float(align.mean())
+            info["mean_align_cs"] = (
+                float(align[decay > 0].mean()) if (decay > 0).any() else None
+            )
+
+        # warm novel / known stay near 1 via decay gate
+        w = 1.0 + excess * decay
         info["weights_active"] = True
 
     w = w * (len(w) / max(w.sum(), 1e-12))
@@ -473,16 +602,17 @@ def run_text_full_weight_curves(
         "mean_delta_acc_feature_w": _mean_delta("delta_acc_vs_uniform", "feature_w"),
         "mean_delta_acc_sample_w": _mean_delta("delta_acc_vs_uniform", "sample_w"),
         "mean_delta_acc_both": _mean_delta("delta_acc_vs_uniform", "both"),
+        "mean_delta_acc_align_w": _mean_delta("delta_acc_vs_uniform", "align_w"),
+        "mean_delta_acc_both_align": _mean_delta("delta_acc_vs_uniform", "both_align"),
         "mean_delta_acc_both_g1": _mean_delta("delta_acc_vs_uniform", "both_g1"),
-        "mean_delta_acc_both_g2": _mean_delta("delta_acc_vs_uniform", "both_g2"),
-        "mean_delta_acc_both_hard": _mean_delta("delta_acc_vs_uniform", "both_hard"),
         "mean_delta_acc_both_always": _mean_delta("delta_acc_vs_uniform", "both_always"),
         "mean_delta_ova_feature_w": _mean_delta("delta_ova_auc_vs_uniform", "feature_w"),
         "mean_delta_ova_sample_w": _mean_delta("delta_ova_auc_vs_uniform", "sample_w"),
         "mean_delta_ova_both": _mean_delta("delta_ova_auc_vs_uniform", "both"),
+        "mean_delta_ova_both_align": _mean_delta("delta_ova_auc_vs_uniform", "both_align"),
         "takeaway": (
-            f"v3 soft^γ gate: boost *= ((1-n_idx/{cold_start_cap})_+)^γ "
-            f"with default γ={DEFAULT_SOFT_GAMMA} (linger). "
-            "OOD VIMP → feature/sample weights via partial_fit. FULL holdout. No EWMA."
+            "v4: OOD VIMP + hop/prototype alignment → feature/sample weights "
+            f"via partial_fit; soft^γ={DEFAULT_SOFT_GAMMA} linger gate. "
+            "对齐高 → 加权. FULL holdout. No EWMA."
         ),
     }
