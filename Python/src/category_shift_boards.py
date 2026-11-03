@@ -16,12 +16,15 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from repr_sep_cold_start import ColdStartState, adapt_batch_repr_sep, predict_with_state
 from weighted_cold_start import (
     SEED,
     adapt_batch,
     adapt_uniform_partial_fit,
+    attribute_rf_domain,
     boundary_check,
     fit_initial,
+    localize_subset,
 )
 
 # ---------------------------------------------------------------------------
@@ -146,12 +149,15 @@ def run_cgcd(
     seed: int = SEED,
     mode: str = "weighted",
     quick: bool = False,
+    expand_min: int = 12,
+    do_tta: bool = False,
 ) -> Dict:
-    """mode: weighted | membership | uniform
+    """mode: weighted | membership | uniform | repr_sep
 
-    weighted    — subspace membership ∪ private-live labels
+    weighted    — subspace membership ∪ private-live labels → fused weights
     membership  — subspace membership only (no label fusion)
     uniform     — flat partial_fit
+    repr_sep    — 4-step: attribute → margin sep on S → expand head → optional TTA
     """
     stream = make_cgcd_stream(
         n_known=10 if quick else 12,
@@ -170,6 +176,7 @@ def run_cgcd(
     X_ref, y_ref = X_ref0.copy(), y_ref0.copy()
     known = stream["known"]
     classes = np.asarray(stream["all_classes"], dtype=int)
+    state = ColdStartState()
     rows = []
     for st in stream["stages"]:
         Xl, yl = sc.transform(st["X"]), np.asarray(st["y"]).ravel()
@@ -186,6 +193,43 @@ def run_cgcd(
                 "reason": "uniform", "vimp_top_mass": None, "feat_hit": None,
                 "boundary": "n/a", "mean_membership": None,
             }
+            pred = clf.predict(Xev)
+        elif mode == "repr_sep":
+            out = adapt_batch_repr_sep(
+                clf, X_ref, y_ref, Xtr, ytr, state,
+                seed=seed + st["stage"],
+                top_k=8, lam=2.0, min_jaccard=0.05,
+                detect_thresh=1.05, force_adapt=True,
+                use_private_labels=True, weight_mode="auto",
+                temper=True, replay_frac=0.35,
+                expand_min=int(expand_min),
+                do_tta=bool(do_tta),
+            )
+            clf, state = out["clf"], out["state"]
+            meta = {
+                "reason": out["reason"],
+                "phase": out["phase"],
+                "vimp_top_mass": out["vimp_top_mass"],
+                "feat_hit": float(np.isin(out["feat_idx"], st["active_dims"]).mean()),
+                "boundary": out["boundary"]["decision"],
+                "mean_membership": out["mean_membership"],
+                "subset_frac": out.get("subset_frac"),
+                "membership_conc": out.get("membership_conc"),
+                "weight_mode": out.get("weight_mode"),
+                "n_replay": out.get("n_replay"),
+                "n_buffered": out.get("n_buffered"),
+                "buffer_size": out.get("buffer_size"),
+                "gap_lift": (out.get("sep") or {}).get("gap_lift"),
+                "expand_fitted": bool((out.get("expand") or {}).get("fitted")),
+                "tta_applied": bool((out.get("tta") or {}).get("applied")),
+                "O_local": (out.get("opportunity") or {}).get("O_local"),
+                "O_persist": (out.get("opportunity") or {}).get("O_persist"),
+                "opp_action": (out.get("opportunity") or {}).get("action"),
+            }
+            # eval membership for S-offset routing
+            vimp_e = attribute_rf_domain(X_ref, Xev, seed=seed + 99 + st["stage"])
+            mem_e, _ = localize_subset(X_ref, Xev, vimp_e, top_k=8)
+            pred = predict_with_state(clf, Xev, state, membership=mem_e)
         else:
             out = adapt_batch(
                 clf, X_ref, y_ref, Xtr, ytr, seed=seed + st["stage"],
@@ -208,8 +252,8 @@ def run_cgcd(
                 "n_replay": out.get("n_replay"),
                 "temper_shrink": (out.get("weights") or {}).get("temper", {}).get("shrink"),
             }
+            pred = clf.predict(Xev)
 
-        pred = clf.predict(Xev)
         known_mask, novel_mask = np.isin(yev, known), np.isin(yev, st["novel"])
         known_acc = float(np.mean(pred[known_mask] == yev[known_mask])) if known_mask.any() else float("nan")
         novel_acc = float(np.mean(pred[novel_mask] == yev[novel_mask])) if novel_mask.any() else float("nan")
@@ -257,7 +301,7 @@ def cold_start_efficiency(
     hold, pool = novel_idx[:n_hold], novel_idx[n_hold:]
 
     curves = {}
-    for mode in ("weighted", "membership", "uniform"):
+    for mode in ("weighted", "membership", "uniform", "repr_sep"):
         pts, n_star = [], None
         for b in budgets:
             clf, _ = fit_initial(stream["X_ref"], stream["y_ref"], seed=seed, classes=classes)
@@ -267,6 +311,25 @@ def cold_start_efficiency(
             Xtr, ytr = Xl[tr], yl[tr]
             if mode == "uniform":
                 clf = adapt_uniform_partial_fit(clf, Xtr, ytr, classes)
+                acc = float(np.mean(clf.predict(Xl[hold]) == yl[hold]))
+            elif mode == "repr_sep":
+                st_cs = ColdStartState()
+                # force expand at this budget so n* is comparable
+                out = adapt_batch_repr_sep(
+                    clf, X_ref, y_ref, Xtr, ytr, st_cs,
+                    seed=seed + int(b),
+                    top_k=8, lam=2.0, min_jaccard=0.05, force_adapt=True,
+                    use_private_labels=True, weight_mode="auto",
+                    temper=True, replay_frac=0.35,
+                    expand_min=max(4, int(b)),  # expand once budget is in
+                    do_tta=False,
+                )
+                clf = out["clf"]
+                vimp_e = attribute_rf_domain(X_ref, Xl[hold], seed=seed + 50 + int(b))
+                mem_e, _ = localize_subset(X_ref, Xl[hold], vimp_e, top_k=8)
+                acc = float(np.mean(
+                    predict_with_state(clf, Xl[hold], out["state"], membership=mem_e) == yl[hold]
+                ))
             else:
                 out = adapt_batch(
                     clf, X_ref, y_ref, Xtr, ytr, seed=seed + int(b),
@@ -276,7 +339,7 @@ def cold_start_efficiency(
                     temper=True, replay_frac=0.35,
                 )
                 clf = out["clf"]
-            acc = float(np.mean(clf.predict(Xl[hold]) == yl[hold]))
+                acc = float(np.mean(clf.predict(Xl[hold]) == yl[hold]))
             pts.append({"budget": int(b), "novel_acc": acc, "n_novel_train": int(len(take_n))})
             if n_star is None and acc >= float(target):
                 n_star = int(b)
@@ -357,6 +420,7 @@ def run_suite(*, seed: int = SEED, quick: bool = True) -> Dict:
     cg_w = run_cgcd(seed=seed, mode="weighted", quick=quick)
     cg_m = run_cgcd(seed=seed, mode="membership", quick=quick)
     cg_u = run_cgcd(seed=seed, mode="uniform", quick=quick)
+    cg_r = run_cgcd(seed=seed, mode="repr_sep", quick=quick, expand_min=10)
     eff = cold_start_efficiency(seed=seed, quick=quick, target=0.60)
     oh = run_officehome_pda(seed=seed, quick=quick)
     return {
@@ -367,24 +431,30 @@ def run_suite(*, seed: int = SEED, quick: bool = True) -> Dict:
                 "attribution: feat_hit + vimp_top_mass",
                 "cold-start efficiency n* (budget → target novel_acc)",
                 "boundary: incomparable rate vs label overlap",
+                "repr-sep: gap_lift on S before head expand",
             ],
             "modes": {
                 "weighted": "auto fused/sample + private-live + known replay",
                 "membership": "subspace membership only (diagnostic)",
                 "uniform": "flat partial_fit",
+                "repr_sep": "attribute → margin sep on S → expand head (+ optional TTA)",
             },
         },
         "cgcd_weighted": cg_w,
         "cgcd_membership": cg_m,
         "cgcd_uniform": cg_u,
+        "cgcd_repr_sep": cg_r,
         "efficiency": eff,
         "officehome": oh,
         "delta_novel_acc_vs_uniform": cg_w["mean_novel_acc"] - cg_u["mean_novel_acc"],
         "delta_novel_acc_membership": cg_m["mean_novel_acc"] - cg_u["mean_novel_acc"],
+        "delta_novel_acc_repr_sep": cg_r["mean_novel_acc"] - cg_u["mean_novel_acc"],
         "delta_forgetting_vs_uniform": cg_u["mean_forgetting"] - cg_w["mean_forgetting"],
+        "delta_forgetting_repr_sep": cg_u["mean_forgetting"] - cg_r["mean_forgetting"],
         "takeaway": (
-            "Cold-start = gate + boundary + auto(fused|sample) weights + known replay. "
-            "Membership diagnoses; fused sample_w×subset_w adapts when concentrated."
+            "Cold-start v3 = detect/attribute → representation separation on S "
+            "→ dynamic head expand (buffer≥N* or footprint stable) → optional TTA on S. "
+            "Weights still fire at expand; sep is the instant-learn step."
         ),
     }
 

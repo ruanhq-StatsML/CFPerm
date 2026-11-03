@@ -1,0 +1,2030 @@
+{
+  "loss": "CE (log_loss)",
+  "n_first": 100,
+  "seeds": [
+    2026,
+    2027,
+    2028
+  ],
+  "runs": [
+    {
+      "seed": 2026,
+      "n_first": 100,
+      "loss": "CE (log_loss)",
+      "boards": [
+        {
+          "dataset": "har",
+          "note": "HAR; locomotion\u2192posture; n_first per novel",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "3": 100,
+            "4": 100,
+            "5": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2
+          ],
+          "novel_labels": [
+            3,
+            4,
+            5
+          ],
+          "n_adapt": 595,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9775714285714286,
+              "mean_acc_on_first": 0.8476190476190476,
+              "mean_ova_acc_thr05": 0.9815602836879433,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9964285714285714,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9787234042553191
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9362857142857142,
+                  "acc_on_first": 0.6,
+                  "ova_acc_thr05": 0.9744680851063829
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9914893617021276
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.8801904761904762,
+              "mean_acc_on_first": 0.6190476190476191,
+              "mean_ova_acc_thr05": 0.7872340425531915,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8782857142857143,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.7617021276595745
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.7622857142857143,
+                  "acc_on_first": 0.02857142857142857,
+                  "ova_acc_thr05": 0.6936170212765957
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9063829787234042
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.8801904761904762,
+              "mean_acc_on_first": 0.6190476190476191,
+              "mean_ova_acc_thr05": 0.7872340425531915,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8782857142857143,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.7617021276595745
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.7622857142857143,
+                  "acc_on_first": 0.02857142857142857,
+                  "ova_acc_thr05": 0.6936170212765957
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9063829787234042
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.09738095238095246,
+            "both_fused": -0.09738095238095246
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.22857142857142854,
+            "both_fused": -0.22857142857142854
+          }
+        },
+        {
+          "dataset": "mice",
+          "note": "MiceProtein; n_first per trisomic class",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "4": 100,
+            "5": 100,
+            "6": 100,
+            "7": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "novel_labels": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "n_adapt": 420,
+          "n_neg_ova": 160,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9861160714285714,
+              "mean_acc_on_first": 0.8285714285714285,
+              "mean_ova_acc_thr05": 0.9615384615384616,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9664285714285714,
+                  "acc_on_first": 0.5714285714285714,
+                  "ova_acc_thr05": 0.9076923076923077
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9959821428571429,
+                  "acc_on_first": 0.8857142857142857,
+                  "ova_acc_thr05": 0.9794871794871794
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9916071428571428,
+                  "acc_on_first": 0.8857142857142857,
+                  "ova_acc_thr05": 0.9794871794871794
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9904464285714285,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9794871794871794
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9844642857142857,
+              "mean_acc_on_first": 0.9142857142857143,
+              "mean_ova_acc_thr05": 0.9538461538461538,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9770535714285714,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9435897435897436
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9890178571428572,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9692307692307692
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9891071428571429,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9743589743589743
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9826785714285714,
+                  "acc_on_first": 0.9142857142857143,
+                  "ova_acc_thr05": 0.9282051282051282
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9844642857142857,
+              "mean_acc_on_first": 0.9142857142857143,
+              "mean_ova_acc_thr05": 0.9538461538461538,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9770535714285714,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9435897435897436
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9890178571428572,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9692307692307692
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9891071428571429,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9743589743589743
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9826785714285714,
+                  "acc_on_first": 0.9142857142857143,
+                  "ova_acc_thr05": 0.9282051282051282
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.0016517857142857029,
+            "both_fused": -0.0016517857142857029
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": 0.08571428571428574,
+            "both_fused": 0.08571428571428574
+          }
+        },
+        {
+          "dataset": "cnae9",
+          "note": "CNAE-9; n_first per novel doc class",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "5": 100,
+            "6": 100,
+            "7": 100,
+            "8": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "novel_labels": [
+            5,
+            6,
+            7,
+            8
+          ],
+          "n_adapt": 460,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9798035714285713,
+              "mean_acc_on_first": 0.85,
+              "mean_ova_acc_thr05": 0.975531914893617,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9702142857142857,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9744680851063829
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9877857142857143,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9702127659574468
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9732857142857143,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9914893617021276
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9879285714285715,
+                  "acc_on_first": 0.7714285714285715,
+                  "ova_acc_thr05": 0.9659574468085106
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9714821428571428,
+              "mean_acc_on_first": 0.8642857142857143,
+              "mean_ova_acc_thr05": 0.977659574468085,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9701428571428572,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9829787234042553
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9276428571428571,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9787234042553191
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9974285714285714,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9914893617021276
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9907142857142858,
+                  "acc_on_first": 0.8,
+                  "ova_acc_thr05": 0.9574468085106383
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9714821428571428,
+              "mean_acc_on_first": 0.8642857142857143,
+              "mean_ova_acc_thr05": 0.977659574468085,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9701428571428572,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9829787234042553
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9276428571428571,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9787234042553191
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9974285714285714,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9914893617021276
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9907142857142858,
+                  "acc_on_first": 0.8,
+                  "ova_acc_thr05": 0.9574468085106383
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.00832142857142848,
+            "both_fused": -0.00832142857142848
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": 0.014285714285714346,
+            "both_fused": 0.014285714285714346
+          }
+        },
+        {
+          "dataset": "jvowel",
+          "note": "JapaneseVowels; n_first per novel speaker",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "5": 100,
+            "6": 100,
+            "7": 100,
+            "8": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "novel_labels": [
+            5,
+            6,
+            7,
+            8
+          ],
+          "n_adapt": 560,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9522142857142857,
+              "mean_acc_on_first": 0.7714285714285714,
+              "mean_ova_acc_thr05": 0.9489361702127659,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 1.0
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.994,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9744680851063829
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8759999999999999,
+                  "acc_on_first": 0.5428571428571428,
+                  "ova_acc_thr05": 0.8851063829787233
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9388571428571428,
+                  "acc_on_first": 0.6857142857142857,
+                  "ova_acc_thr05": 0.9361702127659575
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9357678571428572,
+              "mean_acc_on_first": 0.7642857142857143,
+              "mean_ova_acc_thr05": 0.9478723404255318,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9968571428571429,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9872340425531915
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9958571428571428,
+                  "acc_on_first": 0.8,
+                  "ova_acc_thr05": 0.9702127659574468
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8001428571428572,
+                  "acc_on_first": 0.4,
+                  "ova_acc_thr05": 0.8595744680851064
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9502142857142858,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9744680851063829
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9357678571428572,
+              "mean_acc_on_first": 0.7642857142857143,
+              "mean_ova_acc_thr05": 0.9478723404255318,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9968571428571429,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9872340425531915
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9958571428571428,
+                  "acc_on_first": 0.8,
+                  "ova_acc_thr05": 0.9702127659574468
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8001428571428572,
+                  "acc_on_first": 0.4,
+                  "ova_acc_thr05": 0.8595744680851064
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9502142857142858,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9744680851063829
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.01644642857142853,
+            "both_fused": -0.01644642857142853
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.0071428571428570065,
+            "both_fused": -0.0071428571428570065
+          }
+        },
+        {
+          "dataset": "news20b",
+          "note": "20newsgroups; n_first per novel topic",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "2": 100,
+            "3": 100
+          },
+          "known_labels": [
+            0,
+            1
+          ],
+          "novel_labels": [
+            2,
+            3
+          ],
+          "n_adapt": 330,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.7648214285714285,
+              "mean_acc_on_first": 0.41428571428571426,
+              "mean_ova_acc_thr05": 0.827659574468085,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.7981428571428572,
+                  "acc_on_first": 0.45714285714285713,
+                  "ova_acc_thr05": 0.8297872340425532
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.7315,
+                  "acc_on_first": 0.37142857142857144,
+                  "ova_acc_thr05": 0.825531914893617
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.752357142857143,
+              "mean_acc_on_first": 0.44285714285714284,
+              "mean_ova_acc_thr05": 0.823404255319149,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8324285714285715,
+                  "acc_on_first": 0.5142857142857142,
+                  "ova_acc_thr05": 0.8382978723404255
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.6722857142857144,
+                  "acc_on_first": 0.37142857142857144,
+                  "ova_acc_thr05": 0.8085106382978723
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.752357142857143,
+              "mean_acc_on_first": 0.44285714285714284,
+              "mean_ova_acc_thr05": 0.823404255319149,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8324285714285715,
+                  "acc_on_first": 0.5142857142857142,
+                  "ova_acc_thr05": 0.8382978723404255
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.6722857142857144,
+                  "acc_on_first": 0.37142857142857144,
+                  "ova_acc_thr05": 0.8085106382978723
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.012464285714285595,
+            "both_fused": -0.012464285714285595
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": 0.02857142857142858,
+            "both_fused": 0.02857142857142858
+          }
+        }
+      ],
+      "n_boards": 5,
+      "mean_delta_ova_auc_weighted": -0.027252976190476154,
+      "mean_delta_ova_auc_fused": -0.027252976190476154,
+      "mean_delta_acc_first_weighted": -0.021428571428571373,
+      "mean_delta_acc_first_fused": -0.021428571428571373,
+      "takeaway": "Still CE (log_loss). Empowerment KPI = one-vs-all AUC / acc on the first n_first=100 indices of each new category; weights vs uniform."
+    },
+    {
+      "seed": 2027,
+      "n_first": 100,
+      "loss": "CE (log_loss)",
+      "boards": [
+        {
+          "dataset": "har",
+          "note": "HAR; locomotion\u2192posture; n_first per novel",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "3": 100,
+            "4": 100,
+            "5": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2
+          ],
+          "novel_labels": [
+            3,
+            4,
+            5
+          ],
+          "n_adapt": 595,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9366666666666666,
+              "mean_acc_on_first": 0.8190476190476191,
+              "mean_ova_acc_thr05": 0.9659574468085106,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9825,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9744680851063829
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8275000000000001,
+                  "acc_on_first": 0.4857142857142857,
+                  "ova_acc_thr05": 0.9234042553191489
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 1.0
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.8919285714285715,
+              "mean_acc_on_first": 0.7238095238095239,
+              "mean_ova_acc_thr05": 0.824113475177305,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.6886428571428571,
+                  "acc_on_first": 0.17142857142857143,
+                  "ova_acc_thr05": 0.723404255319149
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9871428571428571,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.7489361702127659
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 1.0
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.8919285714285715,
+              "mean_acc_on_first": 0.7238095238095239,
+              "mean_ova_acc_thr05": 0.824113475177305,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.6886428571428571,
+                  "acc_on_first": 0.17142857142857143,
+                  "ova_acc_thr05": 0.723404255319149
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9871428571428571,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.7489361702127659
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 1.0
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.04473809523809513,
+            "both_fused": -0.04473809523809513
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.09523809523809523,
+            "both_fused": -0.09523809523809523
+          }
+        },
+        {
+          "dataset": "mice",
+          "note": "MiceProtein; n_first per trisomic class",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "4": 100,
+            "5": 100,
+            "6": 100,
+            "7": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "novel_labels": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "n_adapt": 420,
+          "n_neg_ova": 160,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9929910714285715,
+              "mean_acc_on_first": 0.9428571428571428,
+              "mean_ova_acc_thr05": 0.9807692307692307,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9866071428571428,
+                  "acc_on_first": 0.8857142857142857,
+                  "ova_acc_thr05": 0.9794871794871794
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9892857142857143,
+                  "acc_on_first": 0.8857142857142857,
+                  "ova_acc_thr05": 0.9692307692307692
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9996428571428572,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9794871794871794
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9964285714285714,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9948717948717949
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9760491071428572,
+              "mean_acc_on_first": 0.9142857142857143,
+              "mean_ova_acc_thr05": 0.9487179487179488,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9650000000000001,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9179487179487179
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9669642857142857,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9333333333333333
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.979375,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9692307692307692
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9928571428571429,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9743589743589743
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9760491071428572,
+              "mean_acc_on_first": 0.9142857142857143,
+              "mean_ova_acc_thr05": 0.9487179487179488,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9650000000000001,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9179487179487179
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9669642857142857,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9333333333333333
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.979375,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9692307692307692
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9928571428571429,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9743589743589743
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.01694196428571426,
+            "both_fused": -0.01694196428571426
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.02857142857142858,
+            "both_fused": -0.02857142857142858
+          }
+        },
+        {
+          "dataset": "cnae9",
+          "note": "CNAE-9; n_first per novel doc class",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "5": 100,
+            "6": 100,
+            "7": 100,
+            "8": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "novel_labels": [
+            5,
+            6,
+            7,
+            8
+          ],
+          "n_adapt": 460,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9594464285714286,
+              "mean_acc_on_first": 0.8428571428571429,
+              "mean_ova_acc_thr05": 0.9648936170212766,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9658571428571427,
+                  "acc_on_first": 0.9142857142857143,
+                  "ova_acc_thr05": 0.9617021276595744
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9591428571428571,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9702127659574468
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.996857142857143,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9744680851063829
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9159285714285714,
+                  "acc_on_first": 0.7714285714285715,
+                  "ova_acc_thr05": 0.9531914893617022
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9672857142857143,
+              "mean_acc_on_first": 0.8285714285714285,
+              "mean_ova_acc_thr05": 0.9648936170212766,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9612857142857143,
+                  "acc_on_first": 0.8857142857142857,
+                  "ova_acc_thr05": 0.9702127659574468
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9773571428571428,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9659574468085106
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9944285714285714,
+                  "acc_on_first": 0.8857142857142857,
+                  "ova_acc_thr05": 0.9829787234042553
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9360714285714287,
+                  "acc_on_first": 0.6857142857142857,
+                  "ova_acc_thr05": 0.9404255319148936
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9672857142857143,
+              "mean_acc_on_first": 0.8285714285714285,
+              "mean_ova_acc_thr05": 0.9648936170212766,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9612857142857143,
+                  "acc_on_first": 0.8857142857142857,
+                  "ova_acc_thr05": 0.9702127659574468
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9773571428571428,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9659574468085106
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9944285714285714,
+                  "acc_on_first": 0.8857142857142857,
+                  "ova_acc_thr05": 0.9829787234042553
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9360714285714287,
+                  "acc_on_first": 0.6857142857142857,
+                  "ova_acc_thr05": 0.9404255319148936
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": 0.007839285714285715,
+            "both_fused": 0.007839285714285715
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.014285714285714346,
+            "both_fused": -0.014285714285714346
+          }
+        },
+        {
+          "dataset": "jvowel",
+          "note": "JapaneseVowels; n_first per novel speaker",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "5": 100,
+            "6": 100,
+            "7": 100,
+            "8": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "novel_labels": [
+            5,
+            6,
+            7,
+            8
+          ],
+          "n_adapt": 560,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9828928571428572,
+              "mean_acc_on_first": 0.9,
+              "mean_ova_acc_thr05": 0.9734042553191489,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9957446808510638
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9988571428571429,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9659574468085106
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9405714285714285,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9574468085106383
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9921428571428572,
+                  "acc_on_first": 0.9142857142857143,
+                  "ova_acc_thr05": 0.9744680851063829
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9472857142857143,
+              "mean_acc_on_first": 0.7142857142857142,
+              "mean_ova_acc_thr05": 0.948936170212766,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9992857142857143,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9872340425531915
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9824285714285714,
+                  "acc_on_first": 0.7714285714285715,
+                  "ova_acc_thr05": 0.9659574468085106
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.881142857142857,
+                  "acc_on_first": 0.5714285714285714,
+                  "ova_acc_thr05": 0.9191489361702128
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9262857142857144,
+                  "acc_on_first": 0.5428571428571428,
+                  "ova_acc_thr05": 0.9234042553191489
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9472857142857143,
+              "mean_acc_on_first": 0.7142857142857142,
+              "mean_ova_acc_thr05": 0.948936170212766,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9992857142857143,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9872340425531915
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9824285714285714,
+                  "acc_on_first": 0.7714285714285715,
+                  "ova_acc_thr05": 0.9659574468085106
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.881142857142857,
+                  "acc_on_first": 0.5714285714285714,
+                  "ova_acc_thr05": 0.9191489361702128
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9262857142857144,
+                  "acc_on_first": 0.5428571428571428,
+                  "ova_acc_thr05": 0.9234042553191489
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.03560714285714295,
+            "both_fused": -0.03560714285714295
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.18571428571428583,
+            "both_fused": -0.18571428571428583
+          }
+        },
+        {
+          "dataset": "news20b",
+          "note": "20newsgroups; n_first per novel topic",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "2": 100,
+            "3": 100
+          },
+          "known_labels": [
+            0,
+            1
+          ],
+          "novel_labels": [
+            2,
+            3
+          ],
+          "n_adapt": 330,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.7441785714285715,
+              "mean_acc_on_first": 0.3571428571428571,
+              "mean_ova_acc_thr05": 0.8127659574468085,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.7515000000000001,
+                  "acc_on_first": 0.2857142857142857,
+                  "ova_acc_thr05": 0.8468085106382979
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.7368571428571429,
+                  "acc_on_first": 0.42857142857142855,
+                  "ova_acc_thr05": 0.7787234042553192
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.6617142857142857,
+              "mean_acc_on_first": 0.37142857142857144,
+              "mean_ova_acc_thr05": 0.8021276595744681,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.675,
+                  "acc_on_first": 0.42857142857142855,
+                  "ova_acc_thr05": 0.7957446808510639
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.6484285714285714,
+                  "acc_on_first": 0.3142857142857143,
+                  "ova_acc_thr05": 0.8085106382978723
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.6617142857142857,
+              "mean_acc_on_first": 0.37142857142857144,
+              "mean_ova_acc_thr05": 0.8021276595744681,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.675,
+                  "acc_on_first": 0.42857142857142855,
+                  "ova_acc_thr05": 0.7957446808510639
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.6484285714285714,
+                  "acc_on_first": 0.3142857142857143,
+                  "ova_acc_thr05": 0.8085106382978723
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.08246428571428577,
+            "both_fused": -0.08246428571428577
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": 0.014285714285714346,
+            "both_fused": 0.014285714285714346
+          }
+        }
+      ],
+      "n_boards": 5,
+      "mean_delta_ova_auc_weighted": -0.034382440476190476,
+      "mean_delta_ova_auc_fused": -0.034382440476190476,
+      "mean_delta_acc_first_weighted": -0.06190476190476193,
+      "mean_delta_acc_first_fused": -0.06190476190476193,
+      "takeaway": "Still CE (log_loss). Empowerment KPI = one-vs-all AUC / acc on the first n_first=100 indices of each new category; weights vs uniform."
+    },
+    {
+      "seed": 2028,
+      "n_first": 100,
+      "loss": "CE (log_loss)",
+      "boards": [
+        {
+          "dataset": "har",
+          "note": "HAR; locomotion\u2192posture; n_first per novel",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "3": 100,
+            "4": 100,
+            "5": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2
+          ],
+          "novel_labels": [
+            3,
+            4,
+            5
+          ],
+          "n_adapt": 595,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9545714285714286,
+              "mean_acc_on_first": 0.7523809523809524,
+              "mean_ova_acc_thr05": 0.924822695035461,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8645714285714285,
+                  "acc_on_first": 0.2571428571428571,
+                  "ova_acc_thr05": 0.7957446808510639
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9991428571428571,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.9787234042553191
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 1.0
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.8497619047619048,
+              "mean_acc_on_first": 0.6761904761904761,
+              "mean_ova_acc_thr05": 0.8056737588652482,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.5643571428571428,
+                  "acc_on_first": 0.05714285714285714,
+                  "ova_acc_thr05": 0.6936170212765957
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.7276595744680852
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9849285714285714,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9957446808510638
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.8497619047619048,
+              "mean_acc_on_first": 0.6761904761904761,
+              "mean_ova_acc_thr05": 0.8056737588652482,
+              "per_category": {
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.5643571428571428,
+                  "acc_on_first": 0.05714285714285714,
+                  "ova_acc_thr05": 0.6936170212765957
+                },
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 0.7276595744680852
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9849285714285714,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9957446808510638
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.1048095238095238,
+            "both_fused": -0.1048095238095238
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.07619047619047625,
+            "both_fused": -0.07619047619047625
+          }
+        },
+        {
+          "dataset": "mice",
+          "note": "MiceProtein; n_first per trisomic class",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "4": 100,
+            "5": 100,
+            "6": 100,
+            "7": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "novel_labels": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "n_adapt": 420,
+          "n_neg_ova": 160,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9887276785714285,
+              "mean_acc_on_first": 0.9357142857142857,
+              "mean_ova_acc_thr05": 0.9692307692307693,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9841964285714285,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9692307692307692
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 1.0,
+                  "ova_acc_thr05": 1.0
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9791964285714285,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9333333333333333
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9915178571428571,
+                  "acc_on_first": 0.9142857142857143,
+                  "ova_acc_thr05": 0.9743589743589743
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9812053571428572,
+              "mean_acc_on_first": 0.9142857142857144,
+              "mean_ova_acc_thr05": 0.9551282051282051,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9830357142857143,
+                  "acc_on_first": 0.9142857142857143,
+                  "ova_acc_thr05": 0.9487179487179487
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9894642857142857,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9692307692307692
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9566071428571428,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9333333333333333
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9957142857142858,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9692307692307692
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9812053571428572,
+              "mean_acc_on_first": 0.9142857142857144,
+              "mean_ova_acc_thr05": 0.9551282051282051,
+              "per_category": {
+                "4": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9830357142857143,
+                  "acc_on_first": 0.9142857142857143,
+                  "ova_acc_thr05": 0.9487179487179487
+                },
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9894642857142857,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9692307692307692
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9566071428571428,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9333333333333333
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 160,
+                  "ova_auc": 0.9957142857142858,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9692307692307692
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.0075223214285713436,
+            "both_fused": -0.0075223214285713436
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.021428571428571352,
+            "both_fused": -0.021428571428571352
+          }
+        },
+        {
+          "dataset": "cnae9",
+          "note": "CNAE-9; n_first per novel doc class",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "5": 100,
+            "6": 100,
+            "7": 100,
+            "8": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "novel_labels": [
+            5,
+            6,
+            7,
+            8
+          ],
+          "n_adapt": 460,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9382678571428571,
+              "mean_acc_on_first": 0.7857142857142857,
+              "mean_ova_acc_thr05": 0.9691489361702128,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9728571428571429,
+                  "acc_on_first": 0.8571428571428571,
+                  "ova_acc_thr05": 0.9787234042553191
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.972,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9744680851063829
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.996642857142857,
+                  "acc_on_first": 0.8,
+                  "ova_acc_thr05": 0.9787234042553191
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8115714285714286,
+                  "acc_on_first": 0.6571428571428571,
+                  "ova_acc_thr05": 0.9446808510638298
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9595,
+              "mean_acc_on_first": 0.8071428571428572,
+              "mean_ova_acc_thr05": 0.9670212765957447,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9705714285714286,
+                  "acc_on_first": 0.8,
+                  "ova_acc_thr05": 0.9702127659574468
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9532857142857144,
+                  "acc_on_first": 0.7714285714285715,
+                  "ova_acc_thr05": 0.9617021276595744
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9957857142857143,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9872340425531915
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9183571428571429,
+                  "acc_on_first": 0.6857142857142857,
+                  "ova_acc_thr05": 0.948936170212766
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9595,
+              "mean_acc_on_first": 0.8071428571428572,
+              "mean_ova_acc_thr05": 0.9670212765957447,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9705714285714286,
+                  "acc_on_first": 0.8,
+                  "ova_acc_thr05": 0.9702127659574468
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9532857142857144,
+                  "acc_on_first": 0.7714285714285715,
+                  "ova_acc_thr05": 0.9617021276595744
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9957857142857143,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9872340425531915
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9183571428571429,
+                  "acc_on_first": 0.6857142857142857,
+                  "ova_acc_thr05": 0.948936170212766
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": 0.02123214285714292,
+            "both_fused": 0.02123214285714292
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": 0.021428571428571463,
+            "both_fused": 0.021428571428571463
+          }
+        },
+        {
+          "dataset": "jvowel",
+          "note": "JapaneseVowels; n_first per novel speaker",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "5": 100,
+            "6": 100,
+            "7": 100,
+            "8": 100
+          },
+          "known_labels": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "novel_labels": [
+            5,
+            6,
+            7,
+            8
+          ],
+          "n_adapt": 560,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.9576428571428572,
+              "mean_acc_on_first": 0.8571428571428572,
+              "mean_ova_acc_thr05": 0.9521276595744681,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 1.0,
+                  "acc_on_first": 0.9428571428571428,
+                  "ova_acc_thr05": 0.9914893617021276
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9912857142857143,
+                  "acc_on_first": 0.9142857142857143,
+                  "ova_acc_thr05": 0.9787234042553191
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9151428571428571,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9276595744680851
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9241428571428572,
+                  "acc_on_first": 0.7428571428571429,
+                  "ova_acc_thr05": 0.9106382978723404
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.9628928571428571,
+              "mean_acc_on_first": 0.75,
+              "mean_ova_acc_thr05": 0.9425531914893617,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9991428571428571,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9872340425531915
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9837142857142858,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9617021276595744
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8941428571428571,
+                  "acc_on_first": 0.7142857142857143,
+                  "ova_acc_thr05": 0.902127659574468
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9745714285714285,
+                  "acc_on_first": 0.4857142857142857,
+                  "ova_acc_thr05": 0.9191489361702128
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.9628928571428571,
+              "mean_acc_on_first": 0.75,
+              "mean_ova_acc_thr05": 0.9425531914893617,
+              "per_category": {
+                "5": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9991428571428571,
+                  "acc_on_first": 0.9714285714285714,
+                  "ova_acc_thr05": 0.9872340425531915
+                },
+                "6": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9837142857142858,
+                  "acc_on_first": 0.8285714285714286,
+                  "ova_acc_thr05": 0.9617021276595744
+                },
+                "7": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8941428571428571,
+                  "acc_on_first": 0.7142857142857143,
+                  "ova_acc_thr05": 0.902127659574468
+                },
+                "8": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.9745714285714285,
+                  "acc_on_first": 0.4857142857142857,
+                  "ova_acc_thr05": 0.9191489361702128
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": 0.005249999999999866,
+            "both_fused": 0.005249999999999866
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": -0.1071428571428572,
+            "both_fused": -0.1071428571428572
+          }
+        },
+        {
+          "dataset": "news20b",
+          "note": "20newsgroups; n_first per novel topic",
+          "loss": "CE (log_loss)",
+          "n_first": 100,
+          "actual_n_first": {
+            "2": 100,
+            "3": 100
+          },
+          "known_labels": [
+            0,
+            1
+          ],
+          "novel_labels": [
+            2,
+            3
+          ],
+          "n_adapt": 330,
+          "n_neg_ova": 200,
+          "schemes": {
+            "uniform": {
+              "mean_ova_auc": 0.7302500000000001,
+              "mean_acc_on_first": 0.2857142857142857,
+              "mean_ova_acc_thr05": 0.8340425531914893,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.8017142857142857,
+                  "acc_on_first": 0.42857142857142855,
+                  "ova_acc_thr05": 0.851063829787234
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.6587857142857143,
+                  "acc_on_first": 0.14285714285714285,
+                  "ova_acc_thr05": 0.8170212765957446
+                }
+              }
+            },
+            "weighted": {
+              "mean_ova_auc": 0.6562142857142856,
+              "mean_acc_on_first": 0.3714285714285714,
+              "mean_ova_acc_thr05": 0.8319148936170213,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.7435714285714285,
+                  "acc_on_first": 0.5142857142857142,
+                  "ova_acc_thr05": 0.851063829787234
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.5688571428571428,
+                  "acc_on_first": 0.22857142857142856,
+                  "ova_acc_thr05": 0.8127659574468085
+                }
+              }
+            },
+            "both_fused": {
+              "mean_ova_auc": 0.6562142857142856,
+              "mean_acc_on_first": 0.3714285714285714,
+              "mean_ova_acc_thr05": 0.8319148936170213,
+              "per_category": {
+                "2": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.7435714285714285,
+                  "acc_on_first": 0.5142857142857142,
+                  "ova_acc_thr05": 0.851063829787234
+                },
+                "3": {
+                  "n_pos": 35,
+                  "n_neg": 200,
+                  "ova_auc": 0.5688571428571428,
+                  "acc_on_first": 0.22857142857142856,
+                  "ova_acc_thr05": 0.8127659574468085
+                }
+              }
+            }
+          },
+          "delta_ova_auc_vs_uniform": {
+            "weighted": -0.07403571428571443,
+            "both_fused": -0.07403571428571443
+          },
+          "delta_acc_on_first_vs_uniform": {
+            "weighted": 0.08571428571428569,
+            "both_fused": 0.08571428571428569
+          }
+        }
+      ],
+      "n_boards": 5,
+      "mean_delta_ova_auc_weighted": -0.03197708333333336,
+      "mean_delta_ova_auc_fused": -0.03197708333333336,
+      "mean_delta_acc_first_weighted": -0.019523809523809534,
+      "mean_delta_acc_first_fused": -0.019523809523809534,
+      "takeaway": "Still CE (log_loss). Empowerment KPI = one-vs-all AUC / acc on the first n_first=100 indices of each new category; weights vs uniform."
+    }
+  ],
+  "by_dataset": [
+    {
+      "dataset": "har",
+      "ova_auc_uniform": 0.9562698412698413,
+      "ova_auc_weighted": 0.8739603174603175,
+      "ova_auc_fused": 0.8739603174603175,
+      "delta_auc_weighted": -0.08230952380952379,
+      "delta_auc_fused": -0.08230952380952379,
+      "acc_first_uniform": 0.8063492063492065,
+      "acc_first_weighted": 0.673015873015873,
+      "acc_first_fused": 0.673015873015873,
+      "delta_acc_weighted": -0.13333333333333333,
+      "delta_acc_fused": -0.13333333333333333,
+      "P_fused_auc_gt_uniform": 0.0
+    },
+    {
+      "dataset": "mice",
+      "ova_auc_uniform": 0.9892782738095237,
+      "ova_auc_weighted": 0.9805729166666667,
+      "ova_auc_fused": 0.9805729166666667,
+      "delta_auc_weighted": -0.008705357142857103,
+      "delta_auc_fused": -0.008705357142857103,
+      "acc_first_uniform": 0.9023809523809524,
+      "acc_first_weighted": 0.9142857142857143,
+      "acc_first_fused": 0.9142857142857143,
+      "delta_acc_weighted": 0.011904761904761937,
+      "delta_acc_fused": 0.011904761904761937,
+      "P_fused_auc_gt_uniform": 0.0
+    },
+    {
+      "dataset": "cnae9",
+      "ova_auc_uniform": 0.9591726190476191,
+      "ova_auc_weighted": 0.9660892857142857,
+      "ova_auc_fused": 0.9660892857142857,
+      "delta_auc_weighted": 0.006916666666666719,
+      "delta_auc_fused": 0.006916666666666719,
+      "acc_first_uniform": 0.8261904761904763,
+      "acc_first_weighted": 0.8333333333333334,
+      "acc_first_fused": 0.8333333333333334,
+      "delta_acc_weighted": 0.007142857142857155,
+      "delta_acc_fused": 0.007142857142857155,
+      "P_fused_auc_gt_uniform": 0.6666666666666666
+    },
+    {
+      "dataset": "jvowel",
+      "ova_auc_uniform": 0.9642500000000002,
+      "ova_auc_weighted": 0.9486488095238096,
+      "ova_auc_fused": 0.9486488095238096,
+      "delta_auc_weighted": -0.015601190476190538,
+      "delta_auc_fused": -0.015601190476190538,
+      "acc_first_uniform": 0.8428571428571429,
+      "acc_first_weighted": 0.7428571428571429,
+      "acc_first_fused": 0.7428571428571429,
+      "delta_acc_weighted": -0.10000000000000002,
+      "delta_acc_fused": -0.10000000000000002,
+      "P_fused_auc_gt_uniform": 0.3333333333333333
+    },
+    {
+      "dataset": "news20b",
+      "ova_auc_uniform": 0.7464166666666667,
+      "ova_auc_weighted": 0.6900952380952381,
+      "ova_auc_fused": 0.6900952380952381,
+      "delta_auc_weighted": -0.0563214285714286,
+      "delta_auc_fused": -0.0563214285714286,
+      "acc_first_uniform": 0.3523809523809523,
+      "acc_first_weighted": 0.3952380952380952,
+      "acc_first_fused": 0.3952380952380952,
+      "delta_acc_weighted": 0.04285714285714287,
+      "delta_acc_fused": 0.04285714285714287,
+      "P_fused_auc_gt_uniform": 0.0
+    }
+  ],
+  "mean_delta_auc_fused": -0.03120416666666666,
+  "mean_delta_acc_fused": -0.034285714285714274,
+  "takeaway": "Method still uses CE (log_loss). Empowerment locus = new category first-n=100 window; KPI = OVA AUC + acc_on_first; weights vs uniform."
+}

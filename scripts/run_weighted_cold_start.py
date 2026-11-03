@@ -30,9 +30,10 @@ def _fmt(x):
 
 def _readme(payload: dict) -> str:
     w, m, u = payload["cgcd_weighted"], payload["cgcd_membership"], payload["cgcd_uniform"]
+    r = payload.get("cgcd_repr_sep")
     eff, oh = payload["efficiency"], payload["officehome"]
     lines = [
-        "# Weighted cold-start under category shift (v2)",
+        "# Weighted cold-start under category shift (v3)",
         "",
         payload["takeaway"],
         "",
@@ -67,11 +68,27 @@ def _readme(payload: dict) -> str:
         "| uniform | %s | %s | %s | — | — |" % (
             _fmt(u["mean_known_acc"]), _fmt(u["mean_novel_acc"]), _fmt(u["mean_forgetting"]),
         ),
+    ])
+    if r:
+        lines.append(
+            "| repr_sep | %s | %s | %s | %s | %s |" % (
+                _fmt(r["mean_known_acc"]), _fmt(r["mean_novel_acc"]), _fmt(r["mean_forgetting"]),
+                _fmt(r["mean_feat_hit"]), _fmt(r["mean_vimp_top_mass"]),
+            )
+        )
+    lines.extend([
         "",
         "Δ novel (weighted − uniform): **%s**" % _fmt(payload["delta_novel_acc_vs_uniform"]),
         "",
         "Δ novel (membership − uniform): **%s**" % _fmt(payload["delta_novel_acc_membership"]),
         "",
+    ])
+    if "delta_novel_acc_repr_sep" in payload:
+        lines.extend([
+            "Δ novel (repr_sep − uniform): **%s**" % _fmt(payload["delta_novel_acc_repr_sep"]),
+            "",
+        ])
+    lines.extend([
         "Δ forgetting (uniform − weighted; &gt;0 ⇒ weighted forgets less): **%s**" % _fmt(
             payload["delta_forgetting_vs_uniform"]
         ),
@@ -99,10 +116,12 @@ def _readme(payload: dict) -> str:
         ))
     lines.extend([
         "",
-        "Directed adapt = detect gate + Jaccard boundary + `w=1+λ·membership` + `partial_fit`.",
+        "Pipeline v3: detect/attribute → repr-sep on S → expand head (weights) → optional TTA on S.",
+        "See `docs/method/Weighted_cold_start_logic.md` and `scripts/run_repr_sep_cold_start.py`.",
         "",
         "```bash",
         "python3 scripts/run_weighted_cold_start.py --quick",
+        "python3 scripts/run_repr_sep_cold_start.py --quick",
         "```",
         "",
     ])

@@ -1,0 +1,102 @@
+{
+  "seed": 2026,
+  "quick": true,
+  "stages": [
+    {
+      "stage": 0,
+      "novel": [
+        10,
+        11
+      ],
+      "phase": "expand",
+      "reason": "repr_sep+expand:buffer_ge_N|O=0.77",
+      "O_local": 0.7727712560415232,
+      "O_persist": 0.2704699396145331,
+      "D": 1.0,
+      "L": 0.4134706959790575,
+      "R": 0.8625,
+      "M": 1.0,
+      "Stab": 0.35,
+      "action": "sep+expand",
+      "gap_lift": 0.3563923855174811,
+      "expand_fitted": true,
+      "keep_offset": false,
+      "read": "O_local=0.77 (D=1.00 L=0.41 R=0.86 M=1.00) O_persist=0.27 \u2192 sep+expand"
+    },
+    {
+      "stage": 1,
+      "novel": [
+        12,
+        13
+      ],
+      "phase": "expand",
+      "reason": "repr_sep+expand:buffer_ge_N|O=0.67",
+      "O_local": 0.6679516774136018,
+      "O_persist": 0.4341685903188412,
+      "D": 0.55,
+      "L": 0.4196221320663772,
+      "R": 0.8625,
+      "M": 1.0,
+      "Stab": 0.65,
+      "action": "sep+expand",
+      "gap_lift": 0.4414296473767809,
+      "expand_fitted": true,
+      "keep_offset": false,
+      "read": "O_local=0.67 (D=0.55 L=0.42 R=0.86 M=1.00) O_persist=0.43 \u2192 sep+expand"
+    },
+    {
+      "stage": 2,
+      "novel": [
+        14,
+        15
+      ],
+      "phase": "expand",
+      "reason": "repr_sep+expand:buffer_ge_N|O=0.71",
+      "O_local": 0.7065937862371897,
+      "O_persist": 0.5417219027818455,
+      "D": 0.6891406290358539,
+      "L": 0.41825428506588935,
+      "R": 0.8648305084745763,
+      "M": 1.0,
+      "Stab": 0.7666666666666667,
+      "action": "sep+expand",
+      "gap_lift": 0.47708515605777757,
+      "expand_fitted": true,
+      "keep_offset": true,
+      "read": "O_local=0.71 (D=0.69 L=0.42 R=0.86 M=1.00) O_persist=0.54 \u2192 sep+expand"
+    }
+  ],
+  "mean_O_local": 0.7157722398974382,
+  "mean_O_persist": 0.41545347757173995,
+  "controls": {
+    "structured_O_local": 0.7727712560415232,
+    "flat_O_local": 0.0005653057671286231,
+    "lift": 0.7722059502743945
+  },
+  "benchmarks": {
+    "C-GCD": [
+      "CIFAR-100",
+      "ImageNet-100",
+      "Tiny-ImageNet",
+      "CUB"
+    ],
+    "metrics": [
+      "Old",
+      "New",
+      "All per session"
+    ],
+    "PDA_OSDA": [
+      "Office-Home",
+      "VisDA",
+      "DomainNet"
+    ],
+    "our_extra": [
+      "O_local",
+      "O_persist",
+      "novel_acc",
+      "forgetting",
+      "gap_lift"
+    ]
+  },
+  "takeaway": "O_local = (D L R M)^(1/4) gates sep/expand this batch; O_persist = O_local\u00b7Stab discounts carrying S/offset into unknown next batch."
+}

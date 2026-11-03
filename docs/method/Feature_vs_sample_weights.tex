@@ -1,0 +1,194 @@
+% Feature / sample weights for category-shift cold-start (boss note).
+% Compile: pdflatex Feature_vs_sample_weights.tex
+% Figure: text_full_weight_acc_auc_curves.png (same folder)
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,array,graphicx,caption}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\title{OOD Quantification $\to$ Category-Shift Adaptation\\
+\large Feature-level \& sample-level weights with a cold-start gate}
+\author{AS-DTA / CFPerm}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+\textbf{Message.}
+Category shift is an OOD event: new labels arrive in the live stream while
+the reference only knows the old support.
+We \emph{quantify} that OOD footprint once (RF-domain VIMP $+$ membership),
+then \emph{adapt} with two cheap weights on a CE head via
+\texttt{partial\_fit}---no architecture change, negligible compute.
+A cold-start gate ($N_{\mathrm{cap}}{=}200$ samples / new category)
+empowers the scarce regime and then stops, so we do not over-weight once
+the category is warm.
+On text multiclass boards, early overall-acc lift is clear
+(\texttt{both} ${+}0.027$ at $20$ samples/cat); past the gate the curves
+stay slightly above uniform.
+\end{abstract}
+
+%======================================================================
+\section{From OOD quantification to category-shift adapt}
+%======================================================================
+
+\paragraph{Problem.}
+Reference batch $\mathrm{REF}$ covers known categories.
+Live batch $\mathrm{LIVE}$ mixes known support with \emph{novel}
+categories (category shift / open-set arrival).
+The right question is not ``retrain everything'', but:
+\emph{where is the OOD mass, and how do we give it CE budget cheaply?}
+
+\paragraph{Quantify (OOD footprint).}
+Score batch membership $W{\in}\{0,1\}$ (REF vs LIVE) with a shallow RF.
+Feature importances $v\in\Delta^{p-1}$ are the OOD coordinates---the
+axes that best separate live from reference under category arrival.
+Restricting to the top-$K$ of $v$ and measuring each live point's
+$z$-distance to REF yields a membership $m_i\in[0,1]$:
+high $m_i$ $=$ ``new-category-like'' in the attributed subspace.
+That is the quantification step; labels of novel classes, when available
+at adapt time, only \emph{fuse} into $m_i$, they do not replace it.
+
+\paragraph{Adapt (two orthogonal weights).}
+\begin{itemize}
+  \item \textbf{Feature-level (geometry).}
+        $w^{\mathrm{feat}}_j=1+\alpha\,\tilde v_j$,
+        $x_{ij}\leftarrow x_{ij}\,w^{\mathrm{feat}}_j$.
+        Stretch the OOD axes so CE steps land where the shift lives.
+  \item \textbf{Sample-level (mass).}
+        $w_i=1+\lambda m_i$ (fused with a hard high-$m$ boost),
+        passed as \texttt{sample\_weight} into \texttt{partial\_fit}.
+        Raise the CE share of new-category-like rows without dropping
+        known-class data.
+\end{itemize}
+Both channels consume the \emph{same} OOD quantification; they just act
+on different axes of the SGD update. Implementation is intentionally
+thin: one RF attribution pass, then a few \texttt{partial\_fit} epochs
+on the live window.
+
+\paragraph{Cold-start gate.}
+Empowerment is for the scarce regime.
+With within-category arrival index $n_{\mathrm{idx}}(i)$,
+\[
+  \mathcal{C}
+  =\{i:\,y_i\text{ novel},\, n_{\mathrm{idx}}(i)<N_{\mathrm{cap}}\},
+  \qquad N_{\mathrm{cap}}=200.
+\]
+Boost only on $\mathcal{C}$; once every novel category is warm, stop
+feature scaling as well.
+Past the gate, further samples enter at uniform mass---adapt, then get
+out of the way.
+
+\paragraph{Cost.}
+No new backbone, no replay buffer redesign, no EWMA schedule.
+Compute ${\approx}$ one small RF $+$ linear CE \texttt{partial\_fit}.
+Suitable as an online plug-in on top of an existing head.
+
+%======================================================================
+\section{Learning curves (FULL LIVE holdout)}
+%======================================================================
+
+KPI $=$ overall accuracy and mean novel OVA-AUC on a fixed full LIVE
+holdout (not a first-$n$ subset).
+Budget $=$ novel samples \emph{per category}.
+Dashed line $=$ cold-start cap at $200$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{text_full_weight_acc_auc_curves.png}
+\caption{Accuracy (left) and novel OVA-AUC (right) vs novel samples per
+category. Schemes: uniform, feature-level, sample-level, both.
+Vertical dashed line: stop weighting after $N_{\mathrm{cap}}{=}200$.
+Early regime: \texttt{both} leads (empowerment). Past the cap: weighted
+curves stay near / slightly above uniform---no over-boosting.}
+\label{fig:curves}
+\end{figure}
+
+\paragraph{Reading Fig.~\ref{fig:curves}.}
+\begin{itemize}
+  \item \textbf{Empowerment works.}
+        At $b{=}20$/cat, mean overall acc rises
+        $0.456\to\mathbf{0.483}$ under \texttt{both}
+        ($\Delta{+}0.027$ vs uniform). Sample-only and feature-only
+        also beat uniform; the product is strongest when the new
+        category is scarcest.
+  \item \textbf{Gate does its job.}
+        After $200$/cat the weighted schemes do not keep pulling away
+        or collapsing: they track uniform and finish slightly higher
+        (endpoint mean acc $0.636\to 0.645$).
+  \item \textbf{OVA-AUC stays flat.}
+        Ranking quality barely moves; the gain is decision-boundary /
+        voting quality under CE (overall acc), which is the operational
+        KPI for cold-start deployment.
+\end{itemize}
+
+%======================================================================
+\section{Endpoint table (past the gate)}
+%======================================================================
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Dataset
+  & uniform
+  & feature
+  & sample
+  & both \\
+\midrule
+news20 (comp / rec / mix)
+  & $0.50$--$0.55$
+  & $\approx$\,U
+  & $\approx$\,U
+  & mild lift \\
+cnae9 text
+  & $0.894$
+  & $\mathbf{0.916}$
+  & $0.889$
+  & $0.892$ \\
+amazon category
+  & $0.737$
+  & $\mathbf{0.751}$
+  & $0.747$
+  & $0.744$ \\
+\midrule
+mean overall acc
+  & $0.636$
+  & $\mathbf{0.645}$
+  & $0.638$
+  & $\mathbf{0.645}$ \\
+mean $\Delta$acc vs U
+  & ---
+  & $+0.009$
+  & $+0.002$
+  & $+0.009$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Feature-level helps most when a few token dimensions carry the shift
+(\texttt{cnae9}, Amazon); sample-level / both help most in the early
+scarce window (Fig.~\ref{fig:curves}, left of the dashed line).
+
+%======================================================================
+\section{Takeaway for deployment}
+%======================================================================
+
+\begin{enumerate}
+  \item \textbf{Quantify OOD, then adapt.}
+        RF-domain VIMP $+$ membership is the category-shift sensor;
+        feature / sample weights are the actuator.
+  \item \textbf{Keep the head; use \texttt{partial\_fit}.}
+        One linear CE update with \texttt{sample\_weight} (and an
+        optional column scale) is enough---easy to ship beside an
+        existing online pipeline.
+  \item \textbf{Empower, then stop.}
+        Gate at $200$ samples per new category: clear early lift,
+        no late over-weighting, tiny compute.
+\end{enumerate}
+
+\end{document}

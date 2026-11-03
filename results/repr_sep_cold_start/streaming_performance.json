@@ -1,0 +1,70 @@
+{
+  "seed": 2026,
+  "summary": {
+    "repr_sep": {
+      "known": 0.7596816807747899,
+      "novel": 0.4568903318903319,
+      "forgetting": 0.24635416666666665
+    },
+    "weighted": {
+      "known": 0.7708177452845213,
+      "novel": 0.4954906204906204,
+      "forgetting": 0.24427083333333335
+    },
+    "uniform": {
+      "known": 0.8040217917166236,
+      "novel": 0.5155122655122655,
+      "forgetting": 0.24843749999999998
+    }
+  },
+  "repr_sep_stages": [
+    {
+      "stage": 0,
+      "novel_acc": 0.4444444444444444,
+      "known_acc": 0.7577639751552795,
+      "forgetting": 0.26875000000000004,
+      "phase": "expand",
+      "O_local": 0.7195879411274512,
+      "O_persist": 0.2518557793946079,
+      "gap_lift": 0.3945985404824497,
+      "expand_fitted": true,
+      "n_novel_train": 21
+    },
+    {
+      "stage": 1,
+      "novel_acc": 0.5714285714285714,
+      "known_acc": 0.7243589743589743,
+      "forgetting": 0.22916666666666663,
+      "phase": "expand",
+      "O_local": 0.7448719149505553,
+      "O_persist": 0.4841667447178609,
+      "gap_lift": 0.31444623692360496,
+      "expand_fitted": true,
+      "n_novel_train": 16
+    },
+    {
+      "stage": 2,
+      "novel_acc": 0.45454545454545453,
+      "known_acc": 0.7232704402515723,
+      "forgetting": 0.2875,
+      "phase": "expand",
+      "O_local": 0.7408050515391635,
+      "O_persist": 0.5185635360774145,
+      "gap_lift": 0.3128861187408485,
+      "expand_fitted": true,
+      "n_novel_train": 19
+    },
+    {
+      "stage": 3,
+      "novel_acc": 0.35714285714285715,
+      "known_acc": 0.8333333333333334,
+      "forgetting": 0.19999999999999996,
+      "phase": "expand",
+      "O_local": 0.7571710751655832,
+      "O_persist": 0.5300197526159083,
+      "gap_lift": 0.3250313719965674,
+      "expand_fitted": true,
+      "n_novel_train": 16
+    }
+  ]
+}
