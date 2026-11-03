@@ -1,0 +1,223 @@
+% Feature-level vs sample-level weights under category-shift cold-start.
+% Compile: pdflatex Feature_vs_sample_weights.tex
+% Numbers: results/text_full_weight_curves/ (no EWMA)
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,hyperref,array,graphicx}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\title{Feature-Level vs Sample-Level Weights\\
+\large Category-shift cold-start on text multiclass\\
+\large (FULL LIVE holdout; no EWMA)}
+\author{AS-DTA / CFPerm}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Both weight channels share one FSDS RF-domain attribution
+(LIVE vs REF $\Rightarrow$ VIMP), then act on \emph{orthogonal axes}:
+\textbf{feature-level} rescales coordinates
+($x_{ij}\leftarrow x_{ij}\,w^{\mathrm{feat}}_j$);
+\textbf{sample-level} rescales CE mass
+(\texttt{partial\_fit(..., sample\_weight=$w_i$)}).
+On text boards, mean $\Delta$overall-acc vs uniform is
+$+0.009$ (feature), $+0.021$ (sample), $+0.023$ (both);
+mean novel OVA-AUC is essentially flat.
+\end{abstract}
+
+%======================================================================
+\section{Shared upstream: RF-domain VIMP}
+%======================================================================
+
+Let $X^{\mathrm{ref}}\in\mathbb{R}^{n_0\times p}$ be the known-category
+reference and $X^{\mathrm{live}}\in\mathbb{R}^{n_1\times p}$ the live batch
+(known $+$ novel). Fit a RF on
+\[
+W_i =
+\begin{cases}
+0 & i\in\mathrm{REF},\\
+1 & i\in\mathrm{LIVE},
+\end{cases}
+\]
+and take feature importances
+\[
+v\in\Delta^{p-1},\qquad
+v_j=\frac{\mathrm{Imp}_j}{\sum_k\mathrm{Imp}_k}.
+\]
+Coordinates with large $v_j$ are those that best separate the live batch
+from the reference---the domain-shift footprint under category arrival.
+
+%======================================================================
+\section{Feature-level weights (geometry)}
+%======================================================================
+
+Normalize relative to the top attributed coordinate and stretch:
+\begin{equation}
+\label{eq:feat}
+  \tilde v_j = \frac{v_j}{\max_k v_k},\qquad
+  w^{\mathrm{feat}}_j
+  = 1 + \alpha\,\tilde v_j
+  \qquad(\alpha=3\ \mathrm{default}).
+\end{equation}
+Apply the same scale to REF and LIVE,
+\begin{equation}
+  x_{ij}\;\leftarrow\; x_{ij}\,w^{\mathrm{feat}}_j,
+\end{equation}
+then re-init the CE head on scaled REF so coefficients live in the new
+geometry. Top VIMP coords get $\approx 1+\alpha=4\times$; quiet coords stay
+near $1$.
+
+\paragraph{Role.}
+Puts CE gradient budget on the axes that carry the category shift.
+Especially natural for TF-IDF / BoW: a few token dimensions encode the
+new category; most coordinates are noise. Feature-level does \emph{not}
+drop samples---it reweights the representation.
+
+%======================================================================
+\section{Sample-level weights (mass)}
+%======================================================================
+
+\subsection{Membership in the attributed subspace}
+Take the top-$K$ VIMP indices $\mathcal{S}=\mathrm{arg\,top}_K(v)$.
+On $\mathcal{S}$, z-score LIVE against REF mean/std and set
+\begin{equation}
+\label{eq:mem}
+  d_i=\|z_i^{(\mathcal{S})}\|_2,\qquad
+  m_i
+  =\mathrm{clip}\!\left(
+    \frac{d_i-q_{0.2}(d)}{q_{0.8}(d)-q_{0.2}(d)},\,0,1
+  \right).
+\end{equation}
+High $m_i$ $=$ far from REF in the shift subspace $=$ ``new-category-like''.
+Optional private-live fuse (labels available at adapt time):
+\begin{equation}
+  m_i\;\leftarrow\;\max\bigl(m_i,\,\mathbf{1}[y_i\in\mathcal{C}_{\mathrm{novel}}]\bigr).
+\end{equation}
+
+\subsection{Soft $+$ hard $\to$ fused}
+\begin{align}
+  w^{\mathrm{soft}}_i
+  &= 1+\lambda_{\mathrm{eff}}\,m_i,
+  \label{eq:soft}\\
+  w^{\mathrm{subset}}_i
+  &=
+  \begin{cases}
+    \beta_{\mathrm{eff}} & m_i\ge q,\\
+    1 & \mathrm{else},
+  \end{cases}
+  \label{eq:hard}\\
+  w_i
+  &=
+  \frac{n\,(w^{\mathrm{soft}}\odot w^{\mathrm{subset}})_i}
+       {\sum_{i'}(w^{\mathrm{soft}}\odot w^{\mathrm{subset}})_{i'}}.
+  \label{eq:fused}
+\end{align}
+$\lambda_{\mathrm{eff}},\beta_{\mathrm{eff}}$ grow with membership
+concentration (sharp footprint $\Rightarrow$ stronger boost).
+Pass $w$ into
+\texttt{partial\_fit($X$, $y$, sample\_weight=$w$)}.
+
+\paragraph{Role.}
+Raises the CE share of novel / high-membership points without discarding
+known-class rows. Orthogonal to~\eqref{eq:feat}: same geometry, different
+row masses.
+
+%======================================================================
+\section{Four schemes}
+%======================================================================
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Scheme & Feature axis & Sample axis \\
+\midrule
+\texttt{uniform}
+  & raw $X$
+  & $w_i\equiv 1$ \\
+\texttt{feature\_w}
+  & $X\cdot w^{\mathrm{feat}}$ \eqref{eq:feat}
+  & $w_i\equiv 1$ \\
+\texttt{sample\_w}
+  & raw $X$
+  & fused $w$ \eqref{eq:fused} \\
+\texttt{both}
+  & $X\cdot w^{\mathrm{feat}}$
+  & fused $w$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Loss $=$ CE (\texttt{log\_loss}) SGD; no EWMA.
+KPI $=$ overall accuracy $+$ mean novel OVA-AUC on a
+\emph{fixed full LIVE holdout} (not the first-$n$ arrival window).
+Curves vary novel adapt budget $b\in\{20,40,\ldots,200\}$ with known
+context $\approx 2b$.
+
+%======================================================================
+\section{Why two levers}
+%======================================================================
+
+\begin{itemize}
+  \item \textbf{Feature-level} answers: \emph{which coordinates} carry the
+        domain change? Stretch those axes.
+  \item \textbf{Sample-level} answers: \emph{which observations} look like
+        the new category? Give them more CE mass.
+\end{itemize}
+Category-shift cold-start needs both questions. Feature-only helps when a
+few token dimensions dominate (\texttt{cnae9\_text}, \texttt{amazon\_cat}).
+Sample-only helps when novel support is spread but membership is
+informative (news20 boards). Product (\texttt{both}) is the default when
+unsure.
+
+%======================================================================
+\section{FULL-holdout endpoint (text; 3 seeds)}
+%======================================================================
+
+\begin{center}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Dataset
+  & uniform
+  & feature\_w
+  & sample\_w
+  & both \\
+\midrule
+news20\_comp
+  & $0.378$ & $0.386$ & $\mathbf{0.413}$ & $0.389$ \\
+news20\_rec
+  & $0.458$ & $0.457$ & $0.473$ & $\mathbf{0.483}$ \\
+news20\_mix
+  & $0.283$ & $0.281$ & $\mathbf{0.320}$ & $0.303$ \\
+cnae9\_text
+  & $0.863$ & $\mathbf{0.889}$ & $0.878$ & $0.888$ \\
+amazon\_cat
+  & $0.692$ & $0.705$ & $0.695$ & $\mathbf{0.724}$ \\
+\midrule
+mean overall acc
+  & $0.535$ & $0.544$ & $0.556$ & $\mathbf{0.557}$ \\
+mean $\Delta$acc vs U
+  & --- & $+0.009$ & $+0.021$ & $\mathbf{+0.023}$ \\
+mean novel OVA-AUC
+  & $0.768$ & $0.764$ & $0.768$ & $0.762$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Accuracy lift is stable; OVA-AUC stays roughly flat (ranking barely moves;
+decision-boundary / voting quality does).
+
+\paragraph{Reproduce.}
+\begin{verbatim}
+python3 scripts/run_text_full_weight_curves.py --multiseed
+\end{verbatim}
+Figures:
+\texttt{results/text\_full\_weight\_curves/figures/}.
+
+\end{document}
