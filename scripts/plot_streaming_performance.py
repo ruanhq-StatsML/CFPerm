@@ -66,9 +66,15 @@ def _collect(seeds, *, quick: bool, expand_min: int) -> dict:
 
     def stack(metric_lists):
         arr = np.asarray(metric_lists, float)  # (n_seeds, n_stages)
+        if arr.size == 0:
+            return {"mean": [], "std": [], "seeds": []}
+        # all-NaN columns (e.g. O_local on uniform) → nan mean without warn
+        with np.errstate(all="ignore"):
+            mu = np.nanmean(arr, axis=0)
+            sd = np.nanstd(arr, axis=0)
         return {
-            "mean": np.nanmean(arr, axis=0).tolist(),
-            "std": np.nanstd(arr, axis=0).tolist(),
+            "mean": np.where(np.isnan(mu), 0.0, mu).tolist() if False else mu.tolist(),
+            "std": sd.tolist(),
             "seeds": arr.tolist(),
         }
 
