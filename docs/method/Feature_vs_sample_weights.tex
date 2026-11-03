@@ -1,4 +1,4 @@
-% OOD quantification → category-shift adapt (v2 soft gate). Boss note.
+% OOD quantification → category-shift adapt (v3 soft^γ linger). Boss note.
 % Compile from docs/method/: pdflatex Feature_vs_sample_weights.tex
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
@@ -7,7 +7,7 @@
 \usepackage{lmodern}
 
 \title{OOD Quantification $\to$ Category-Shift Adaptation\\
-\large Feature- \& sample-level weights with a soft cold-start gate}
+\large Feature- \& sample-level weights with a soft$^\gamma$ cold-start gate}
 \author{AS-DTA / CFPerm}
 \date{}
 
@@ -18,16 +18,17 @@
 \noindent
 \textbf{Message.}
 Category shift is an OOD event on the live stream.
-We \emph{quantify} the OOD footprint once (RF-domain VIMP $+$ membership),
+We \emph{quantify} the footprint once (RF-domain VIMP $+$ membership),
 then \emph{adapt} a CE head with two cheap weights via
 \texttt{partial\_fit}---no new backbone, tiny compute.
-v2 uses a \textbf{soft cold-start gate}
-$\mathrm{decay}=(1-n_{\mathrm{idx}}/N_{\mathrm{cap}})_+$
-($N_{\mathrm{cap}}{=}200$): empower the scarce regime, taper to uniform as
-the new category warms up.
-On text multiclass boards (FULL LIVE holdout), early overall-acc lift is
-clear; past the cap, soft-gated weights stay above uniform without
-needing an EWMA schedule.
+v3 uses a \textbf{soft$^\gamma$ cold-start gate}
+\[
+\mathrm{decay}=\bigl((1-n_{\mathrm{idx}}/N_{\mathrm{cap}})_+\bigr)^\gamma,
+\quad N_{\mathrm{cap}}=200,\ \gamma=0.5\ \mathrm{(linger)}.
+\]
+$\gamma{<}1$ keeps empowerment longer than linear taper; $\gamma{>}1$ cuts
+faster. On text multiclass (FULL LIVE holdout, mean$\pm$SEM over boards),
+early overall-acc lift is clear; soft$^{0.5}$ is the best gated default.
 \end{abstract}
 
 %======================================================================
@@ -36,130 +37,113 @@ needing an EWMA schedule.
 
 \paragraph{Problem.}
 $\mathrm{REF}$ covers known categories; $\mathrm{LIVE}$ mixes known
-support with novel labels (category shift).
+support with novel labels.
 Question: \emph{where is the OOD mass, and how do we give it CE budget
 cheaply?}
 
 \paragraph{Quantify.}
-Score batch membership $W{\in}\{0,1\}$ (REF vs LIVE) with a shallow RF.
+Score $W{\in}\{0,1\}$ (REF vs LIVE) with a shallow RF.
 Importances $v\in\Delta^{p-1}$ are the OOD coordinates.
-On the top-$K$ of $v$, each live point's $z$-distance to REF yields
-membership $m_i\in[0,1]$ (``new-category-like'').
-That is the sensor; novel labels only fuse into $m_i$ at adapt time.
+On top-$K$ of $v$, $z$-distance to REF yields membership
+$m_i\in[0,1]$ (``new-category-like'').
 
-\paragraph{Adapt (two orthogonal weights).}
+\paragraph{Adapt.}
 \begin{itemize}
-  \item \textbf{Feature-level:}
-        $w^{\mathrm{feat}}_j=1+\alpha_{\mathrm{eff}}\,\tilde v_j$,
-        $x_{ij}\leftarrow x_{ij}\,w^{\mathrm{feat}}_j$
-        (stretch OOD axes; $\alpha_{\mathrm{eff}}$ tapered by mean decay).
-  \item \textbf{Sample-level:}
-        excess membership weight
-        $\times$ per-row decay, passed as
-        \texttt{sample\_weight} into \texttt{partial\_fit}.
+  \item \textbf{Feature-level:} stretch OOD axes
+        $x_{ij}\leftarrow x_{ij}(1+\alpha_{\mathrm{eff}}\tilde v_j)$.
+  \item \textbf{Sample-level:} membership excess
+        $\times\mathrm{decay}_i$ as \texttt{sample\_weight} in
+        \texttt{partial\_fit}.
 \end{itemize}
-Same OOD quantification; two actuators on the SGD update.
-Implementation: one RF pass $+$ a few linear CE \texttt{partial\_fit}
-epochs.
+One RF pass $+$ a few linear CE epochs. No EWMA, no architecture change.
 
-\paragraph{Soft cold-start gate (v2).}
-With within-category arrival index $n_{\mathrm{idx}}(i)$,
+\paragraph{Soft$^\gamma$ gate (v3).}
 \begin{equation}
   \mathrm{decay}_i
   =
-  \bigl(1 - n_{\mathrm{idx}}(i)/N_{\mathrm{cap}}\bigr)_+,
-  \qquad N_{\mathrm{cap}}=200,
+  \bigl((1-n_{\mathrm{idx}}(i)/200)_+\bigr)^\gamma
+  \quad\text{on novel rows}.
 \end{equation}
-on novel rows (known stay at decay $0$).
-Boost excess is multiplied by $\mathrm{decay}_i$; feature stretch uses
-mean decay.
-Hard cut and always-on are ablations: soft is the default---empower
-early, taper, get out of the way.
-
-\paragraph{Cost.}
-No architecture change, no replay redesign, no EWMA.
-Compute ${\approx}$ one small RF $+$ linear CE \texttt{partial\_fit}.
+Default $\gamma{=}0.5$ \emph{lingers}: scarce regime stays empowered
+longer than the linear ($\gamma{=}1$) schedule from v2.
+Fast taper $\gamma{=}2$ and always-on are ablations.
 
 %======================================================================
 \section{Learning curves (FULL LIVE holdout)}
 %======================================================================
 
-KPI $=$ overall accuracy and mean novel OVA-AUC on a fixed full LIVE
-holdout. Budget $=$ novel samples / category.
-Dashed line $=N_{\mathrm{cap}}$.
+KPI $=$ overall accuracy / mean novel OVA-AUC on a fixed full LIVE
+holdout. Shaded bands $=$ SEM across datasets. Dashed line $=N_{\mathrm{cap}}$.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{text_full_weight_acc_auc_curves.png}
-\caption{Soft-gate schemes vs uniform.
-Left: overall accuracy. Right: mean novel OVA-AUC.
-Early regime: weighted schemes lead (empowerment).
-Past $200$: soft curves stay near / above uniform.}
+\caption{Default soft$^{\gamma=0.5}$ schemes vs uniform (mean$\pm$SEM).
+Early: weighted schemes lead. Past $200$: soft$^{0.5}$ stays above
+uniform on overall acc.}
 \label{fig:curves}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\textwidth]{text_full_weight_gate_ablation.png}
-\caption{Gate ablation on the \texttt{both} channel:
-soft (default), hard cut, always-on.
-Soft matches hard early and avoids a brittle cliff; always-on can keep a
-small late edge but keeps boosting warm categories.}
+\caption{Taper ablation on \texttt{both}:
+$\gamma{=}0.5$ linger (default), $\gamma{=}1$ linear, $\gamma{=}2$ fast,
+always-on. Linger is the best gated choice; always-on can keep a small
+late edge but never stops boosting warm categories.}
 \label{fig:ablate}
 \end{figure}
 
 \paragraph{Reading the figures.}
 \begin{itemize}
-  \item \textbf{Empowerment works.}
-        At $b{=}20$/cat, mean overall acc
-        $0.456\to\mathbf{0.477}$ under soft \texttt{both}
-        ($\Delta{+}0.021$).
-  \item \textbf{Soft gate is enough.}
-        Endpoint mean acc: uniform $0.636$, soft \texttt{both} $0.644$
-        ($\Delta{+}0.007$), soft \texttt{feature} $\mathbf{0.648}$
-        ($\Delta{+}0.012$).
-  \item \textbf{OVA-AUC stays flat.}
-        Ranking barely moves; the operational gain is overall acc under
-        CE.
+  \item \textbf{Empowerment.}
+        At $b{=}20$/cat, soft$^{0.5}$ \texttt{both}:
+        $0.456\to\mathbf{0.475}$ ($\Delta{+}0.019$).
+  \item \textbf{Linger wins among gates.}
+        Endpoint mean $\Delta$acc vs uniform:
+        soft$^{0.5}$ \texttt{both} $\mathbf{+0.011}$,
+        $\gamma{=}1$ $+0.007$, $\gamma{=}2$ $+0.008$.
+  \item \textbf{OVA-AUC flat.}
+        Operational gain is overall acc under CE.
 \end{itemize}
 
 %======================================================================
-\section{Endpoint (past the gate)}
+\section{Endpoint $+$ ops rule}
 %======================================================================
 
 \begin{center}
 \small
 \begin{tabular}{@{}lcccc@{}}
 \toprule
- & uniform & feature (soft) & sample (soft) & both (soft) \\
+ & uniform & feature $\gamma{=}0.5$ & sample $\gamma{=}0.5$ & both $\gamma{=}0.5$ \\
 \midrule
 mean overall acc
-  & $0.636$ & $\mathbf{0.648}$ & $0.640$ & $0.644$ \\
+  & $0.636$ & $0.642$ & $0.643$ & $\mathbf{0.647}$ \\
 mean $\Delta$acc vs U
-  & --- & $+0.012$ & $+0.004$ & $+0.007$ \\
+  & --- & $+0.005$ & $+0.007$ & $\mathbf{+0.011}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\noindent
-Feature-level helps most when a few token dimensions carry the shift
-(\texttt{cnae9}, Amazon); soft \texttt{both} leads when the new category
-is scarcest (Fig.~\ref{fig:curves}, left of the dashed line).
+\paragraph{Ops rule.}
+\begin{enumerate}
+  \item Scarce new category ($n_c\ll 200$): use \texttt{both} with
+        soft$^{\gamma=0.5}$.
+  \item Token-sparse boards (few dims carry the shift): feature-level
+        alone is enough.
+  \item Past $N_{\mathrm{cap}}$: decay has tapered---no EWMA, no manual
+        schedule; just stop over-weighting.
+\end{enumerate}
 
 %======================================================================
 \section{Takeaway}
 %======================================================================
 
 \begin{enumerate}
-  \item \textbf{Quantify OOD, then adapt.}
-        RF-domain VIMP $+$ membership is the category-shift sensor;
-        feature / sample weights are the actuator.
-  \item \textbf{Keep the head; use \texttt{partial\_fit}.}
-        One linear CE update with \texttt{sample\_weight} (and an
-        optional column scale) ships beside an existing online pipeline.
-  \item \textbf{Empower with a soft gate.}
-        $\mathrm{decay}=(1-n_{\mathrm{idx}}/200)_+$:
-        clear early lift, taper when warm, tiny compute---no EWMA.
+  \item \textbf{Quantify OOD, then adapt} with feature $+$ sample weights.
+  \item \textbf{Ship with \texttt{partial\_fit}} --- tiny compute.
+  \item \textbf{Empower with soft$^{\gamma=0.5}$} --- linger through the
+        scarce window, taper by $200$ samples/category.
 \end{enumerate}
 
 \end{document}

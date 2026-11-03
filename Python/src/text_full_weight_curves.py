@@ -1,11 +1,11 @@
-"""Text multiclass: feature / sample weights on FULL eval (v2 soft gate).
+"""Text multiclass: feature / sample weights on FULL eval (v3 soft^γ gate).
 
 No EWMA. OOD quantification (RF-domain VIMP + membership) → CE adapt via
-partial_fit. Cold-start empowerment with gate modes:
+partial_fit. Cold-start empowerment:
 
-  soft   (default): boost excess *= (1 - n_idx / N_cap)_+
-  hard             : boost only while n_idx < N_cap
-  always           : keep boosting past the cap (ablation)
+  soft^γ (default γ=0.5): boost *= ((1 - n_idx/N_cap)_+)^γ   ← linger
+  soft^1 / soft^2        : linear / fast taper (ablations)
+  hard / always          : cut / no-gate ablations
 
 KPI = overall accuracy + mean novel OVA-AUC on full held-out LIVE.
 """
@@ -29,9 +29,13 @@ from weighted_cold_start import (
 )
 
 LOSS_NAME = "CE (log_loss)"
-# Primary schemes use soft gate; *_hard / *_always are ablations on "both".
-SCHEMES = ("uniform", "feature_w", "sample_w", "both", "both_hard", "both_always")
+# Primary: soft with linger γ=0.5. Ablations: γ=1, γ=2, hard, always.
+SCHEMES = (
+    "uniform", "feature_w", "sample_w", "both",
+    "both_g1", "both_g2", "both_hard", "both_always",
+)
 COLD_START_CAP = 200
+DEFAULT_SOFT_GAMMA = 0.5  # v3: linger — slower taper than linear
 DEFAULT_BUDGETS = (20, 40, 60, 80, 100, 150, 200, 250, 300, 400)
 GATE_MODES = ("soft", "hard", "always")
 
@@ -72,11 +76,12 @@ def cold_start_decay(
     *,
     cap: int = COLD_START_CAP,
     mode: str = "soft",
+    gamma: float = DEFAULT_SOFT_GAMMA,
     arrival_idx: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Per-row cold-start intensity in [0, 1].
 
-    soft   : (1 - n_idx/cap)_+ on novel rows (taper to 0 at cap)
+    soft   : ((1 - n_idx/cap)_+)^γ on novel rows (γ<1 lingers, γ>1 cuts faster)
     hard   : 1 if n_idx < cap else 0 on novel rows
     always : 1 on all novel rows (no gate; ablation)
     Known rows stay 0 (no novel empowerment).
@@ -94,29 +99,37 @@ def cold_start_decay(
         decay[novel_m] = 1.0
     elif mode == "hard":
         decay[novel_m] = (arrival_idx[novel_m] < int(cap)).astype(float)
-    else:  # soft
-        decay[novel_m] = np.clip(
+    else:  # soft^γ
+        t = np.clip(
             1.0 - arrival_idx[novel_m].astype(float) / float(max(cap, 1)),
             0.0, 1.0,
         )
+        decay[novel_m] = np.power(t, float(max(gamma, 1e-6)))
     return decay
 
 
-def _parse_scheme(scheme: str) -> Tuple[str, str]:
-    """Return (base_scheme, gate_mode).
+def _parse_scheme(scheme: str) -> Tuple[str, str, float]:
+    """Return (base_scheme, gate_mode, soft_gamma).
 
     base ∈ {uniform, feature_w, sample_w, both}
-    gate ∈ {soft, hard, always}; default soft for weighted schemes.
+    gate ∈ {soft, hard, always}
+    gamma: power on soft taper; default DEFAULT_SOFT_GAMMA (0.5 linger).
+    Suffixes: _g05 / _g1 / _g2, _hard, _always, _soft.
     """
     s = str(scheme).lower().strip()
+    gamma = float(DEFAULT_SOFT_GAMMA)
     if s == "uniform":
-        return "uniform", "soft"
+        return "uniform", "soft", gamma
+    # gamma suffixes first (both_g1, both_g05, feature_w_g2, …)
+    for tag, g in (("_g05", 0.5), ("_g0.5", 0.5), ("_g1", 1.0), ("_g2", 2.0)):
+        if s.endswith(tag):
+            return s[: -len(tag)], "soft", float(g)
     for gate in ("always", "hard", "soft"):
         suf = "_" + gate
         if s.endswith(suf):
-            return s[: -len(suf)], gate
-    # bare feature_w / sample_w / both → soft (v2 default)
-    return s, "soft"
+            return s[: -len(suf)], gate, gamma
+    # bare feature_w / sample_w / both → soft with linger γ
+    return s, "soft", gamma
 
 
 def _ova_auc_mean(
@@ -158,7 +171,7 @@ def fit_full_scheme(
     gate_mode: Optional[str] = None,
 ) -> Tuple[SGDClassifier, StandardScaler, Optional[np.ndarray], Dict]:
     """Fit CE head with OOD-driven weights under a cold-start gate."""
-    base, gate = _parse_scheme(scheme)
+    base, gate, soft_gamma = _parse_scheme(scheme)
     if gate_mode is not None:
         gate = str(gate_mode).lower()
     sc = StandardScaler().fit(X_ref)
@@ -172,7 +185,8 @@ def fit_full_scheme(
     if arrival_idx is None:
         arrival_idx = per_category_arrival_index(y_tr, novel)
     decay = cold_start_decay(
-        y_tr, novel, cap=cold_start_cap, mode=gate, arrival_idx=arrival_idx,
+        y_tr, novel, cap=cold_start_cap, mode=gate, gamma=soft_gamma,
+        arrival_idx=arrival_idx,
     )
     mean_decay = float(decay[decay > 0].mean()) if (decay > 0).any() else 0.0
     use_weights = base != "uniform" and mean_decay > 1e-8
@@ -182,6 +196,7 @@ def fit_full_scheme(
     info = {
         "scheme_base": base,
         "gate_mode": gate,
+        "soft_gamma": float(soft_gamma),
         "cold_start_cap": int(cold_start_cap),
         "mean_decay": mean_decay,
         "n_decay_pos": int((decay > 0).sum()),
@@ -353,6 +368,7 @@ def run_board_full_curves(
                 "n_novel_train": int(len(take_n)),
                 "n_known_train": int(len(take_k)),
                 "gate_mode": info.get("gate_mode"),
+                "soft_gamma": info.get("soft_gamma"),
                 "mean_decay": info.get("mean_decay"),
                 "n_cold_start": info["n_cold_start"],
                 "weights_active": info["weights_active"],
@@ -387,9 +403,11 @@ def run_board_full_curves(
         "ewma": False,
         "cold_start_cap": int(cold_start_cap),
         "default_gate": "soft",
+        "default_soft_gamma": float(DEFAULT_SOFT_GAMMA),
         "cold_start_rule": (
-            f"soft decay (1 - n_idx/{cold_start_cap})_+ on novel boost; "
-            "both_hard / both_always are gate ablations"
+            f"soft^γ decay ((1 - n_idx/{cold_start_cap})_+)^γ, "
+            f"default γ={DEFAULT_SOFT_GAMMA} (linger); "
+            "both_g1 / both_g2 / both_hard / both_always = ablations"
         ),
         "eval": "full_holdout_LIVE",
         "n_eval": int(len(y_ev)),
@@ -447,6 +465,7 @@ def run_text_full_weight_curves(
         "ewma": False,
         "cold_start_cap": int(cold_start_cap),
         "default_gate": "soft",
+        "default_soft_gamma": float(DEFAULT_SOFT_GAMMA),
         "primary_kpi": "full_holdout overall acc + mean novel OVA-AUC",
         "seed": int(seed),
         "schemes": list(schemes),
@@ -454,14 +473,16 @@ def run_text_full_weight_curves(
         "mean_delta_acc_feature_w": _mean_delta("delta_acc_vs_uniform", "feature_w"),
         "mean_delta_acc_sample_w": _mean_delta("delta_acc_vs_uniform", "sample_w"),
         "mean_delta_acc_both": _mean_delta("delta_acc_vs_uniform", "both"),
+        "mean_delta_acc_both_g1": _mean_delta("delta_acc_vs_uniform", "both_g1"),
+        "mean_delta_acc_both_g2": _mean_delta("delta_acc_vs_uniform", "both_g2"),
         "mean_delta_acc_both_hard": _mean_delta("delta_acc_vs_uniform", "both_hard"),
         "mean_delta_acc_both_always": _mean_delta("delta_acc_vs_uniform", "both_always"),
         "mean_delta_ova_feature_w": _mean_delta("delta_ova_auc_vs_uniform", "feature_w"),
         "mean_delta_ova_sample_w": _mean_delta("delta_ova_auc_vs_uniform", "sample_w"),
         "mean_delta_ova_both": _mean_delta("delta_ova_auc_vs_uniform", "both"),
         "takeaway": (
-            f"v2 soft cold-start gate: boost *= (1 - n_idx/{cold_start_cap})_+. "
-            "OOD VIMP → feature/sample weights via partial_fit. "
-            "both_hard / both_always = gate ablations. FULL holdout. No EWMA."
+            f"v3 soft^γ gate: boost *= ((1-n_idx/{cold_start_cap})_+)^γ "
+            f"with default γ={DEFAULT_SOFT_GAMMA} (linger). "
+            "OOD VIMP → feature/sample weights via partial_fit. FULL holdout. No EWMA."
         ),
     }
