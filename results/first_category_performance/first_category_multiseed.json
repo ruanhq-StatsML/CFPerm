@@ -1,0 +1,116 @@
+{
+  "seeds": [
+    2026,
+    2027,
+    2028
+  ],
+  "n_first": 8,
+  "boards": [
+    {
+      "dataset": "har",
+      "uniform_mean": 0.5555555555555556,
+      "uniform_std": 0.09072184232530289,
+      "weighted_mean": 0.7407407407407406,
+      "weighted_std": 0.10475656017578482,
+      "fused_mean": 0.7407407407407406,
+      "fused_std": 0.10475656017578482,
+      "delta_weighted": 0.18518518518518515,
+      "delta_fused": 0.18518518518518515,
+      "P_fused_gt_uniform": 0.6666666666666666,
+      "P_weighted_gt_uniform": 0.6666666666666666
+    },
+    {
+      "dataset": "mice",
+      "uniform_mean": 0.42373737373737375,
+      "uniform_std": 0.022822471773121203,
+      "weighted_mean": 0.26868686868686864,
+      "weighted_std": 0.05450803055851328,
+      "fused_mean": 0.26868686868686864,
+      "fused_std": 0.05450803055851328,
+      "delta_weighted": -0.15505050505050508,
+      "delta_fused": -0.15505050505050508,
+      "P_fused_gt_uniform": 0.0,
+      "P_weighted_gt_uniform": 0.0
+    },
+    {
+      "dataset": "cnae9",
+      "uniform_mean": 0.3555555555555556,
+      "uniform_std": 0.0749485420179558,
+      "weighted_mean": 0.35555555555555557,
+      "weighted_std": 0.1396645009997393,
+      "fused_mean": 0.35555555555555557,
+      "fused_std": 0.1396645009997393,
+      "delta_weighted": -9.25185853854297e-18,
+      "delta_fused": -9.25185853854297e-18,
+      "P_fused_gt_uniform": 0.3333333333333333,
+      "P_weighted_gt_uniform": 0.3333333333333333
+    },
+    {
+      "dataset": "jvowel",
+      "uniform_mean": 0.5277777777777778,
+      "uniform_std": 0.14163943093313291,
+      "weighted_mean": 0.4444444444444445,
+      "weighted_std": 0.10393492741038728,
+      "fused_mean": 0.4444444444444445,
+      "fused_std": 0.10393492741038728,
+      "delta_weighted": -0.08333333333333331,
+      "delta_fused": -0.08333333333333331,
+      "P_fused_gt_uniform": 0.0,
+      "P_weighted_gt_uniform": 0.0
+    },
+    {
+      "dataset": "wine",
+      "uniform_mean": 0.6666666666666666,
+      "uniform_std": 0.2721655269759087,
+      "weighted_mean": 0.8888888888888888,
+      "weighted_std": 0.15713484026367724,
+      "fused_mean": 0.8888888888888888,
+      "fused_std": 0.15713484026367724,
+      "delta_weighted": 0.22222222222222224,
+      "delta_fused": 0.22222222222222224,
+      "P_fused_gt_uniform": 0.3333333333333333,
+      "P_weighted_gt_uniform": 0.3333333333333333
+    },
+    {
+      "dataset": "cancer",
+      "uniform_mean": 1.0,
+      "uniform_std": 0.0,
+      "weighted_mean": 0.7777777777777778,
+      "weighted_std": 0.31426968052735443,
+      "fused_mean": 0.7777777777777778,
+      "fused_std": 0.31426968052735443,
+      "delta_weighted": -0.22222222222222224,
+      "delta_fused": -0.22222222222222224,
+      "P_fused_gt_uniform": 0.0,
+      "P_weighted_gt_uniform": 0.0
+    },
+    {
+      "dataset": "news20b",
+      "uniform_mean": 0.05555555555555555,
+      "uniform_std": 0.07856742013183861,
+      "weighted_mean": 0.05555555555555555,
+      "weighted_std": 0.07856742013183861,
+      "fused_mean": 0.05555555555555555,
+      "fused_std": 0.07856742013183861,
+      "delta_weighted": 0.0,
+      "delta_fused": 0.0,
+      "P_fused_gt_uniform": 0.3333333333333333,
+      "P_weighted_gt_uniform": 0.3333333333333333
+    },
+    {
+      "dataset": "covtype",
+      "uniform_mean": 0.1111111111111111,
+      "uniform_std": 0.15713484026367722,
+      "weighted_mean": 0.05555555555555555,
+      "weighted_std": 0.07856742013183861,
+      "fused_mean": 0.05555555555555555,
+      "fused_std": 0.07856742013183861,
+      "delta_weighted": -0.05555555555555555,
+      "delta_fused": -0.05555555555555555,
+      "P_fused_gt_uniform": 0.0,
+      "P_weighted_gt_uniform": 0.0
+    }
+  ],
+  "mean_delta_weighted": -0.013594276094276101,
+  "mean_delta_fused": -0.013594276094276101
+}
