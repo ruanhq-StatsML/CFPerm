@@ -1,15 +1,14 @@
-% Feature-level vs sample-level weights under category-shift cold-start.
+% Feature / sample weights for category-shift cold-start (boss note).
 % Compile: pdflatex Feature_vs_sample_weights.tex
-% Numbers: results/text_full_weight_curves/ (no EWMA)
+% Figure: text_full_weight_acc_auc_curves.png (same folder)
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amssymb,booktabs,hyperref,array,graphicx}
+\usepackage{amsmath,amssymb,booktabs,hyperref,array,graphicx,caption}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
 
-\title{Feature-Level vs Sample-Level Weights\\
-\large Category-shift cold-start on text multiclass\\
-\large (FULL LIVE holdout; no EWMA)}
+\title{OOD Quantification $\to$ Category-Shift Adaptation\\
+\large Feature-level \& sample-level weights with a cold-start gate}
 \author{AS-DTA / CFPerm}
 \date{}
 
@@ -18,241 +17,178 @@
 
 \begin{abstract}
 \noindent
-Both weight channels share one FSDS RF-domain attribution
-(LIVE vs REF $\Rightarrow$ VIMP), then act on \emph{orthogonal axes}:
-\textbf{feature-level} rescales coordinates
-($x_{ij}\leftarrow x_{ij}\,w^{\mathrm{feat}}_j$);
-\textbf{sample-level} rescales CE mass
-(\texttt{partial\_fit(..., sample\_weight=$w_i$)}).
-\textbf{Cold-start gate:} once a novel category reaches
-$n_c=200$ samples, stop empowering it ($w_i\leftarrow 1$;
-feature scale off when no cold-start mass remains).
-Under the gate, early-$n$ lift is clear; past the cap schemes
-stay near uniform (no over-weighting).
+\textbf{Message.}
+Category shift is an OOD event: new labels arrive in the live stream while
+the reference only knows the old support.
+We \emph{quantify} that OOD footprint once (RF-domain VIMP $+$ membership),
+then \emph{adapt} with two cheap weights on a CE head via
+\texttt{partial\_fit}---no architecture change, negligible compute.
+A cold-start gate ($N_{\mathrm{cap}}{=}200$ samples / new category)
+empowers the scarce regime and then stops, so we do not over-weight once
+the category is warm.
+On text multiclass boards, early overall-acc lift is clear
+(\texttt{both} ${+}0.027$ at $20$ samples/cat); past the gate the curves
+stay slightly above uniform.
 \end{abstract}
 
 %======================================================================
-\section{Shared upstream: RF-domain VIMP}
+\section{From OOD quantification to category-shift adapt}
 %======================================================================
 
-Let $X^{\mathrm{ref}}\in\mathbb{R}^{n_0\times p}$ be the known-category
-reference and $X^{\mathrm{live}}\in\mathbb{R}^{n_1\times p}$ the live batch
-(known $+$ novel). Fit a RF on
+\paragraph{Problem.}
+Reference batch $\mathrm{REF}$ covers known categories.
+Live batch $\mathrm{LIVE}$ mixes known support with \emph{novel}
+categories (category shift / open-set arrival).
+The right question is not ``retrain everything'', but:
+\emph{where is the OOD mass, and how do we give it CE budget cheaply?}
+
+\paragraph{Quantify (OOD footprint).}
+Score batch membership $W{\in}\{0,1\}$ (REF vs LIVE) with a shallow RF.
+Feature importances $v\in\Delta^{p-1}$ are the OOD coordinates---the
+axes that best separate live from reference under category arrival.
+Restricting to the top-$K$ of $v$ and measuring each live point's
+$z$-distance to REF yields a membership $m_i\in[0,1]$:
+high $m_i$ $=$ ``new-category-like'' in the attributed subspace.
+That is the quantification step; labels of novel classes, when available
+at adapt time, only \emph{fuse} into $m_i$, they do not replace it.
+
+\paragraph{Adapt (two orthogonal weights).}
+\begin{itemize}
+  \item \textbf{Feature-level (geometry).}
+        $w^{\mathrm{feat}}_j=1+\alpha\,\tilde v_j$,
+        $x_{ij}\leftarrow x_{ij}\,w^{\mathrm{feat}}_j$.
+        Stretch the OOD axes so CE steps land where the shift lives.
+  \item \textbf{Sample-level (mass).}
+        $w_i=1+\lambda m_i$ (fused with a hard high-$m$ boost),
+        passed as \texttt{sample\_weight} into \texttt{partial\_fit}.
+        Raise the CE share of new-category-like rows without dropping
+        known-class data.
+\end{itemize}
+Both channels consume the \emph{same} OOD quantification; they just act
+on different axes of the SGD update. Implementation is intentionally
+thin: one RF attribution pass, then a few \texttt{partial\_fit} epochs
+on the live window.
+
+\paragraph{Cold-start gate.}
+Empowerment is for the scarce regime.
+With within-category arrival index $n_{\mathrm{idx}}(i)$,
 \[
-W_i =
-\begin{cases}
-0 & i\in\mathrm{REF},\\
-1 & i\in\mathrm{LIVE},
-\end{cases}
-\]
-and take feature importances
-\[
-v\in\Delta^{p-1},\qquad
-v_j=\frac{\mathrm{Imp}_j}{\sum_k\mathrm{Imp}_k}.
-\]
-Coordinates with large $v_j$ are those that best separate the live batch
-from the reference---the domain-shift footprint under category arrival.
-
-%======================================================================
-\section{Feature-level weights (geometry)}
-%======================================================================
-
-Normalize relative to the top attributed coordinate and stretch:
-\begin{equation}
-\label{eq:feat}
-  \tilde v_j = \frac{v_j}{\max_k v_k},\qquad
-  w^{\mathrm{feat}}_j
-  = 1 + \alpha\,\tilde v_j
-  \qquad(\alpha=3\ \mathrm{default}).
-\end{equation}
-Apply the same scale to REF and LIVE,
-\begin{equation}
-  x_{ij}\;\leftarrow\; x_{ij}\,w^{\mathrm{feat}}_j,
-\end{equation}
-then re-init the CE head on scaled REF so coefficients live in the new
-geometry. Top VIMP coords get $\approx 1+\alpha=4\times$; quiet coords stay
-near $1$.
-
-\paragraph{Role.}
-Puts CE gradient budget on the axes that carry the category shift.
-Especially natural for TF-IDF / BoW: a few token dimensions encode the
-new category; most coordinates are noise. Feature-level does \emph{not}
-drop samples---it reweights the representation.
-
-%======================================================================
-\section{Sample-level weights (mass)}
-%======================================================================
-
-\subsection{Membership in the attributed subspace}
-Take the top-$K$ VIMP indices $\mathcal{S}=\mathrm{arg\,top}_K(v)$.
-On $\mathcal{S}$, z-score LIVE against REF mean/std and set
-\begin{equation}
-\label{eq:mem}
-  d_i=\|z_i^{(\mathcal{S})}\|_2,\qquad
-  m_i
-  =\mathrm{clip}\!\left(
-    \frac{d_i-q_{0.2}(d)}{q_{0.8}(d)-q_{0.2}(d)},\,0,1
-  \right).
-\end{equation}
-High $m_i$ $=$ far from REF in the shift subspace $=$ ``new-category-like''.
-Optional private-live fuse (labels available at adapt time):
-\begin{equation}
-  m_i\;\leftarrow\;\max\bigl(m_i,\,\mathbf{1}[y_i\in\mathcal{C}_{\mathrm{novel}}]\bigr).
-\end{equation}
-
-\subsection{Soft $+$ hard $\to$ fused}
-\begin{align}
-  w^{\mathrm{soft}}_i
-  &= 1+\lambda_{\mathrm{eff}}\,m_i,
-  \label{eq:soft}\\
-  w^{\mathrm{subset}}_i
-  &=
-  \begin{cases}
-    \beta_{\mathrm{eff}} & m_i\ge q,\\
-    1 & \mathrm{else},
-  \end{cases}
-  \label{eq:hard}\\
-  w_i
-  &=
-  \frac{n\,(w^{\mathrm{soft}}\odot w^{\mathrm{subset}})_i}
-       {\sum_{i'}(w^{\mathrm{soft}}\odot w^{\mathrm{subset}})_{i'}}.
-  \label{eq:fused}
-\end{align}
-$\lambda_{\mathrm{eff}},\beta_{\mathrm{eff}}$ grow with membership
-concentration (sharp footprint $\Rightarrow$ stronger boost).
-Pass $w$ into
-\texttt{partial\_fit($X$, $y$, sample\_weight=$w$)}.
-
-\paragraph{Role.}
-Raises the CE share of novel / high-membership points without discarding
-known-class rows. Orthogonal to~\eqref{eq:feat}: same geometry, different
-row masses.
-
-%======================================================================
-\section{Cold-start gate ($n_c < 200$)}
-%======================================================================
-
-Let $n_{\mathrm{idx}}(i)$ be the within-category arrival index of row $i$
-among novel labels. Define the cold-start mask
-\begin{equation}
-\label{eq:gate}
   \mathcal{C}
-  =\{i:\; y_i\in\mathcal{C}_{\mathrm{novel}},\;
-     n_{\mathrm{idx}}(i)<N_{\mathrm{cap}}\},
+  =\{i:\,y_i\text{ novel},\, n_{\mathrm{idx}}(i)<N_{\mathrm{cap}}\},
   \qquad N_{\mathrm{cap}}=200.
-\end{equation}
+\]
+Boost only on $\mathcal{C}$; once every novel category is warm, stop
+feature scaling as well.
+Past the gate, further samples enter at uniform mass---adapt, then get
+out of the way.
+
+\paragraph{Cost.}
+No new backbone, no replay buffer redesign, no EWMA schedule.
+Compute ${\approx}$ one small RF $+$ linear CE \texttt{partial\_fit}.
+Suitable as an online plug-in on top of an existing head.
+
+%======================================================================
+\section{Learning curves (FULL LIVE holdout)}
+%======================================================================
+
+KPI $=$ overall accuracy and mean novel OVA-AUC on a fixed full LIVE
+holdout (not a first-$n$ subset).
+Budget $=$ novel samples \emph{per category}.
+Dashed line $=$ cold-start cap at $200$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{text_full_weight_acc_auc_curves.png}
+\caption{Accuracy (left) and novel OVA-AUC (right) vs novel samples per
+category. Schemes: uniform, feature-level, sample-level, both.
+Vertical dashed line: stop weighting after $N_{\mathrm{cap}}{=}200$.
+Early regime: \texttt{both} leads (empowerment). Past the cap: weighted
+curves stay near / slightly above uniform---no over-boosting.}
+\label{fig:curves}
+\end{figure}
+
+\paragraph{Reading Fig.~\ref{fig:curves}.}
 \begin{itemize}
-  \item \textbf{Sample-level:} boost only on $\mathcal{C}$;
-        warm novel ($n_{\mathrm{idx}}\ge N_{\mathrm{cap}}$) and known
-        stay at $w_i=1$.
-  \item \textbf{Feature-level:} apply~\eqref{eq:feat} only while
-        $\mathcal{C}\neq\emptyset$; once every novel category is warm,
-        skip scaling (geometry $=$ uniform).
-\end{itemize}
-Budget on the learning curve $=$ novel samples \emph{per category}.
-Past $N_{\mathrm{cap}}$ the gate freezes empowerment: further data
-enter CE at uniform mass. No EWMA.
-
-%======================================================================
-\section{Four schemes}
-%======================================================================
-
-\begin{center}
-\begin{tabular}{@{}lll@{}}
-\toprule
-Scheme & Feature axis & Sample axis \\
-\midrule
-\texttt{uniform}
-  & raw $X$
-  & $w_i\equiv 1$ \\
-\texttt{feature\_w}
-  & $X\cdot w^{\mathrm{feat}}$ \eqref{eq:feat}
-  & $w_i\equiv 1$ \\
-\texttt{sample\_w}
-  & raw $X$
-  & fused $w$ \eqref{eq:fused} \\
-\texttt{both}
-  & $X\cdot w^{\mathrm{feat}}$
-  & fused $w$ \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent
-Loss $=$ CE (\texttt{log\_loss}) SGD; no EWMA.
-KPI $=$ overall accuracy $+$ mean novel OVA-AUC on a
-\emph{fixed full LIVE holdout}.
-Budget $b=$ novel samples / category,
-$b\in\{20,40,\ldots,200,250,300,400\}$; known context $\approx 2\cdot|\mathrm{novel}|$.
-
-%======================================================================
-\section{Why two levers $+$ the gate}
-%======================================================================
-
-\begin{itemize}
-  \item \textbf{Feature-level} answers: \emph{which coordinates} carry the
-        domain change? Stretch those axes.
-  \item \textbf{Sample-level} answers: \emph{which observations} look like
-        the new category? Give them more CE mass.
-  \item \textbf{Gate} answers: \emph{how long} to empower?
-        Only while $n_c < 200$.
+  \item \textbf{Empowerment works.}
+        At $b{=}20$/cat, mean overall acc rises
+        $0.456\to\mathbf{0.483}$ under \texttt{both}
+        ($\Delta{+}0.027$ vs uniform). Sample-only and feature-only
+        also beat uniform; the product is strongest when the new
+        category is scarcest.
+  \item \textbf{Gate does its job.}
+        After $200$/cat the weighted schemes do not keep pulling away
+        or collapsing: they track uniform and finish slightly higher
+        (endpoint mean acc $0.636\to 0.645$).
+  \item \textbf{OVA-AUC stays flat.}
+        Ranking quality barely moves; the gain is decision-boundary /
+        voting quality under CE (overall acc), which is the operational
+        KPI for cold-start deployment.
 \end{itemize}
 
 %======================================================================
-\section{FULL-holdout results (text; 3 seeds; gate@$200$)}
+\section{Endpoint table (past the gate)}
 %======================================================================
 
-\paragraph{Early cold-start ($b=20$/cat).}
-Mean overall acc: uniform $0.456$, feature $0.461$, sample $0.468$,
-\textbf{both $0.483$} ($\Delta{+}0.027$) --- empowerment is visible when
-the new category is scarce.
-
-\paragraph{At the cap ($b=200$/cat).}
-Mean $\Delta$acc vs U is near zero (gate about to freeze); \texttt{cnae9}
-still likes feature ($+0.027$).
-
-\paragraph{Past the cap (endpoint $b=400$/cat).}
 \begin{center}
 \small
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Dataset
   & uniform
-  & feature\_w
-  & sample\_w
+  & feature
+  & sample
   & both \\
 \midrule
-news20\_comp
-  & $0.502$ & $0.499$ & $0.504$ & $\mathbf{0.510}$ \\
-news20\_rec
-  & $0.545$ & $0.550$ & $0.550$ & $\mathbf{0.570}$ \\
-news20\_mix
-  & $0.504$ & $0.507$ & $0.502$ & $\mathbf{0.510}$ \\
-cnae9\_text
-  & $0.894$ & $\mathbf{0.916}$ & $0.889$ & $0.892$ \\
-amazon\_cat
-  & $0.737$ & $\mathbf{0.751}$ & $0.747$ & $0.744$ \\
+news20 (comp / rec / mix)
+  & $0.50$--$0.55$
+  & $\approx$\,U
+  & $\approx$\,U
+  & mild lift \\
+cnae9 text
+  & $0.894$
+  & $\mathbf{0.916}$
+  & $0.889$
+  & $0.892$ \\
+amazon category
+  & $0.737$
+  & $\mathbf{0.751}$
+  & $0.747$
+  & $0.744$ \\
 \midrule
 mean overall acc
-  & $0.636$ & $\mathbf{0.645}$ & $0.638$ & $\mathbf{0.645}$ \\
+  & $0.636$
+  & $\mathbf{0.645}$
+  & $0.638$
+  & $\mathbf{0.645}$ \\
 mean $\Delta$acc vs U
-  & --- & $+0.009$ & $+0.002$ & $+0.009$ \\
-mean novel OVA-AUC
-  & $0.840$ & $0.838$ & $0.836$ & $0.833$ \\
+  & ---
+  & $+0.009$
+  & $+0.002$
+  & $+0.009$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
-Past $200$, weighted schemes do \emph{not} keep over-boosting: they sit
-slightly above uniform on overall acc; OVA-AUC stays flat.
-The gate does its job --- empower the new category, then stop.
+Feature-level helps most when a few token dimensions carry the shift
+(\texttt{cnae9}, Amazon); sample-level / both help most in the early
+scarce window (Fig.~\ref{fig:curves}, left of the dashed line).
 
-\paragraph{Reproduce.}
-\begin{verbatim}
-python3 scripts/run_text_full_weight_curves.py --multiseed
-\end{verbatim}
-Figures:
-\texttt{results/text\_full\_weight\_curves/figures/}.
+%======================================================================
+\section{Takeaway for deployment}
+%======================================================================
+
+\begin{enumerate}
+  \item \textbf{Quantify OOD, then adapt.}
+        RF-domain VIMP $+$ membership is the category-shift sensor;
+        feature / sample weights are the actuator.
+  \item \textbf{Keep the head; use \texttt{partial\_fit}.}
+        One linear CE update with \texttt{sample\_weight} (and an
+        optional column scale) is enough---easy to ship beside an
+        existing online pipeline.
+  \item \textbf{Empower, then stop.}
+        Gate at $200$ samples per new category: clear early lift,
+        no late over-weighting, tiny compute.
+\end{enumerate}
 
 \end{document}
