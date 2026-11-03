@@ -1,6 +1,6 @@
 # Feature vs sample weights — FULL holdout acc / AUC curves
 
-v4: hop/prototype alignment fused into OOD feature/sample weights (soft^γ=0.5). 对齐高 → 加权. FULL holdout. No EWMA.
+polish: OOD+align weights; recommended switches align off after cold-start frac drops (soft^γ=0.5). FULL holdout. No EWMA.
 
 KPI = **overall accuracy + mean novel OVA-AUC on full held-out LIVE** (not first-n). budget=novel/category [20, 40, 60, 80, 100, 150, 200, 250, 300, 400], cold_start_cap=**200** (stop weighting past cap), seeds=[2026, 2027, 2028], loss=`CE (log_loss)`, α_feat=3.0, **EWMA=off**.
 
@@ -24,8 +24,9 @@ KPI = **overall accuracy + mean novel OVA-AUC on full held-out LIVE** (not first
 | cnae9_text | 0.894 | 0.906 | 0.904 | 0.901 | 0.012 | 0.010 | 0.007 |
 | amazon_cat | 0.737 | 0.753 | 0.748 | 0.757 | 0.016 | 0.011 | 0.020 |
 
-mean overall acc: uniform=0.636  feature_w=0.642  sample_w=0.643  both=0.647  align_w=0.641  both_align=0.641  both_g1=0.644  both_always=0.652
-mean Δacc vs U: feature_w=0.005  sample_w=0.007  both=0.011  align_w=0.005  both_align=0.005  both_g1=0.007  both_always=0.016
+mean overall acc: uniform=0.636  feature_w=0.642  sample_w=0.643  both=0.647  align_w=0.644  both_align=0.650  **recommended=0.650**  both_always=0.652
+mean Δacc vs U: feature_w=0.005  sample_w=0.007  both=0.011  align_w=0.008  both_align=0.013  **recommended=+0.014**  both_always=0.016
+early acc @20/cat: uniform=0.456  both=0.475  both_align=recommended=**0.481**
 
 ## Endpoint mean novel OVA-AUC (full eval)
 
@@ -37,8 +38,8 @@ mean Δacc vs U: feature_w=0.005  sample_w=0.007  both=0.011  align_w=0.005  bot
 | cnae9_text | 0.968 | 0.967 | 0.974 | 0.972 | -0.001 | 0.006 | 0.004 |
 | amazon_cat | 0.859 | 0.861 | 0.848 | 0.865 | 0.002 | -0.012 | 0.006 |
 
-mean OVA-AUC: uniform=0.840  feature_w=0.837  sample_w=0.837  both=0.836  align_w=0.836  both_align=0.835  both_g1=0.837  both_always=0.840
-mean ΔOVA-AUC vs U: feature_w=-0.003  sample_w=-0.003  both=-0.004  align_w=-0.004  both_align=-0.005  both_g1=-0.003  both_always=-0.000
+mean OVA-AUC: uniform=0.840  feature_w=0.837  sample_w=0.837  both=0.836  align_w=0.838  both_align=0.836  recommended=0.836  both_always=0.840
+mean ΔOVA-AUC vs U: feature_w=-0.003  sample_w=-0.003  both=-0.004  align_w=-0.002  both_align=-0.004  recommended=-0.004  both_always=-0.000
 
 ## Mean curves (acc / OVA-AUC vs novel budget)
 
