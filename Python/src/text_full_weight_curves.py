@@ -1,11 +1,13 @@
-"""Text multiclass: feature-level vs sample-level weights on FULL eval.
+"""Text multiclass: feature / sample weights on FULL eval (v2 soft gate).
 
-No EWMA. Cold-start gate: once a novel category has ``cold_start_cap``
-samples (default 200), stop empowering that category — sample boosts
-and (when all novel cats are warm) feature scaling turn off.
+No EWMA. OOD quantification (RF-domain VIMP + membership) → CE adapt via
+partial_fit. Cold-start empowerment with gate modes:
+
+  soft   (default): boost excess *= (1 - n_idx / N_cap)_+
+  hard             : boost only while n_idx < N_cap
+  always           : keep boosting past the cap (ablation)
 
 KPI = overall accuracy + mean novel OVA-AUC on full held-out LIVE.
-Curves vs per-category novel budget (past the cap, to show the gate).
 """
 from __future__ import annotations
 
@@ -27,10 +29,11 @@ from weighted_cold_start import (
 )
 
 LOSS_NAME = "CE (log_loss)"
-SCHEMES = ("uniform", "feature_w", "sample_w", "both")
-# Empower new categories only up to this many samples / category.
+# Primary schemes use soft gate; *_hard / *_always are ablations on "both".
+SCHEMES = ("uniform", "feature_w", "sample_w", "both", "both_hard", "both_always")
 COLD_START_CAP = 200
 DEFAULT_BUDGETS = (20, 40, 60, 80, 100, 150, 200, 250, 300, 400)
+GATE_MODES = ("soft", "hard", "always")
 
 
 def feature_level_scale(
@@ -63,19 +66,57 @@ def per_category_arrival_index(y: np.ndarray, cats: Sequence[int]) -> np.ndarray
     return idx
 
 
-def cold_start_mask(
+def cold_start_decay(
     y: np.ndarray,
     novel: Sequence[int],
     *,
     cap: int = COLD_START_CAP,
+    mode: str = "soft",
     arrival_idx: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    """True for novel samples still inside the cold-start window (< cap)."""
+    """Per-row cold-start intensity in [0, 1].
+
+    soft   : (1 - n_idx/cap)_+ on novel rows (taper to 0 at cap)
+    hard   : 1 if n_idx < cap else 0 on novel rows
+    always : 1 on all novel rows (no gate; ablation)
+    Known rows stay 0 (no novel empowerment).
+    """
     y = np.asarray(y).ravel()
     if arrival_idx is None:
         arrival_idx = per_category_arrival_index(y, novel)
     arrival_idx = np.asarray(arrival_idx, int).ravel()
-    return (arrival_idx >= 0) & (arrival_idx < int(cap))
+    decay = np.zeros(len(y), dtype=float)
+    novel_m = arrival_idx >= 0
+    if not novel_m.any():
+        return decay
+    mode = str(mode).lower()
+    if mode == "always":
+        decay[novel_m] = 1.0
+    elif mode == "hard":
+        decay[novel_m] = (arrival_idx[novel_m] < int(cap)).astype(float)
+    else:  # soft
+        decay[novel_m] = np.clip(
+            1.0 - arrival_idx[novel_m].astype(float) / float(max(cap, 1)),
+            0.0, 1.0,
+        )
+    return decay
+
+
+def _parse_scheme(scheme: str) -> Tuple[str, str]:
+    """Return (base_scheme, gate_mode).
+
+    base ∈ {uniform, feature_w, sample_w, both}
+    gate ∈ {soft, hard, always}; default soft for weighted schemes.
+    """
+    s = str(scheme).lower().strip()
+    if s == "uniform":
+        return "uniform", "soft"
+    for gate in ("always", "hard", "soft"):
+        suf = "_" + gate
+        if s.endswith(suf):
+            return s[: -len(suf)], gate
+    # bare feature_w / sample_w / both → soft (v2 default)
+    return s, "soft"
 
 
 def _ova_auc_mean(
@@ -114,9 +155,12 @@ def fit_full_scheme(
     feat_alpha: float = 3.0,
     cold_start_cap: int = COLD_START_CAP,
     arrival_idx: Optional[np.ndarray] = None,
+    gate_mode: Optional[str] = None,
 ) -> Tuple[SGDClassifier, StandardScaler, Optional[np.ndarray], Dict]:
-    """Fit CE head. Weights only empower novel cats with < cap samples."""
-    scheme = str(scheme).lower()
+    """Fit CE head with OOD-driven weights under a cold-start gate."""
+    base, gate = _parse_scheme(scheme)
+    if gate_mode is not None:
+        gate = str(gate_mode).lower()
     sc = StandardScaler().fit(X_ref)
     X0 = sc.transform(X_ref)
     X1 = sc.transform(X_tr)
@@ -127,60 +171,63 @@ def fit_full_scheme(
 
     if arrival_idx is None:
         arrival_idx = per_category_arrival_index(y_tr, novel)
-    cs_mask = cold_start_mask(
-        y_tr, novel, cap=cold_start_cap, arrival_idx=arrival_idx,
+    decay = cold_start_decay(
+        y_tr, novel, cap=cold_start_cap, mode=gate, arrival_idx=arrival_idx,
     )
-    n_cs = int(cs_mask.sum())
-    # any novel category still cold-starting?
-    use_cold_start = n_cs > 0
+    mean_decay = float(decay[decay > 0].mean()) if (decay > 0).any() else 0.0
+    use_weights = base != "uniform" and mean_decay > 1e-8
 
     scale = None
     w = np.ones(len(y_tr), dtype=float)
     info = {
+        "scheme_base": base,
+        "gate_mode": gate,
         "cold_start_cap": int(cold_start_cap),
-        "n_cold_start": n_cs,
+        "mean_decay": mean_decay,
+        "n_decay_pos": int((decay > 0).sum()),
         "n_train": int(len(y_tr)),
-        "cold_start_frac": float(n_cs / max(len(y_tr), 1)),
+        "n_cold_start": int((decay > 0).sum()),
         "weights_active": False,
         "feature_w_active": False,
         "sample_w_active": False,
     }
 
-    if scheme != "uniform" and use_cold_start:
-        # attribute on cold-start mass when available (empower new cats)
-        X_attr = X1[cs_mask] if n_cs >= 8 else X1
-        # REF vs cold-start LIVE for a sharper domain footprint
+    if use_weights:
+        # attribute on rows that still carry cold-start mass when possible
+        attr_m = decay > 0.05
+        X_attr = X1[attr_m] if int(attr_m.sum()) >= 8 else X1
         vimp = attribute_rf_domain(
             X0, X_attr if len(X_attr) >= 8 else X1, seed=seed, n_estimators=80,
         )
         mem, feat = localize_subset(X0, X1, vimp, top_k=top_k)
         mem_f = mem.copy()
-        # fuse: only cold-start novel rows get the private-live bump
-        mem_f = np.maximum(mem_f, cs_mask.astype(float))
+        # fuse membership with cold-start intensity (not a hard 0/1 only)
+        mem_f = np.maximum(mem_f, decay)
 
-        if scheme in ("feature_w", "both"):
-            X1, scale = feature_level_scale(X1, vimp, alpha=feat_alpha)
+        if base in ("feature_w", "both"):
+            # taper feature stretch with mean cold-start intensity
+            alpha_eff = float(feat_alpha) * max(mean_decay, 0.05)
+            X1, scale = feature_level_scale(X1, vimp, alpha=alpha_eff)
             X0s = X0 * scale.reshape(1, -1)
             clf = make_sgd(seed=seed)
             clf.partial_fit(X0s, y_ref, classes=classes)
             info["feature_w_active"] = True
+            info["feat_alpha_eff"] = alpha_eff
 
-        if scheme in ("sample_w", "both"):
+        if base in ("sample_w", "both"):
             wt = weights_from_attribution(
                 mem_f, feat, X1.shape[1], lam=lam, mode="fused", temper=True,
             )
             w_raw = np.asarray(wt["sample_weight"], float).ravel()
-            # gate: past-cap novel (and known) stay at uniform mass
-            w = np.ones(len(y_tr), dtype=float)
-            w[cs_mask] = w_raw[cs_mask]
+            # excess over 1, tapered by per-row decay (warm novel → 1)
+            excess = np.maximum(w_raw - 1.0, 0.0)
+            w = 1.0 + excess * decay
             info["sample_w_active"] = True
-        elif scheme == "feature_w":
+        elif base == "feature_w":
             w = np.ones(len(y_tr), dtype=float)
 
         info["weights_active"] = True
 
-    # Joint CE fit: cold-start novel rows carry the boost; warm novel + known
-    # stay at ~uniform mass. Past-cap → no boost (gate), not a separate phase.
     w = w * (len(w) / max(w.sum(), 1e-12))
     clf = cold_start_partial_fit(
         clf, X1, y_tr, sample_weight=w, classes=classes, n_passes=4,
@@ -278,18 +325,13 @@ def run_board_full_curves(
 
     for b in budgets:
         b = int(b)
-        # per-category novel budget (cold-start unit)
         take_n = _take_per_category(y_pool, novel_pool, novel, b, rng)
-        # known context ~ 2x total novel mass
         take_k = known_pool[: min(max(40, 2 * len(take_n)), len(known_pool))]
         tr = np.concatenate([take_k, take_n]) if len(take_n) else take_k
         if tr.size < 8:
             continue
         X_tr, y_tr = X_pool[tr], y_pool[tr]
-        # arrival index among the novel rows as taken (order = per-cat fill)
-        # rebuild so index 0..b-1 within each novel cat matches cold-start window
         arrival = np.full(len(y_tr), -1, dtype=int)
-        # known block first, then novel block with per-cat order
         n_k = len(take_k)
         if len(take_n):
             arrival[n_k:] = per_category_arrival_index(y_tr[n_k:], novel)
@@ -305,20 +347,17 @@ def run_board_full_curves(
             m = eval_full_metrics(
                 y_ev, pred, proba, classes, known=known, novel=novel,
             )
-            # per-cat novel counts actually used
-            nov_counts = {
-                str(c): int((y_tr == c).sum()) for c in novel
-            }
             curves[sch].append({
                 "budget": b,
                 "budget_unit": "novel_per_category",
                 "n_novel_train": int(len(take_n)),
                 "n_known_train": int(len(take_k)),
+                "gate_mode": info.get("gate_mode"),
+                "mean_decay": info.get("mean_decay"),
                 "n_cold_start": info["n_cold_start"],
                 "weights_active": info["weights_active"],
                 "feature_w_active": info["feature_w_active"],
                 "sample_w_active": info["sample_w_active"],
-                "novel_counts": nov_counts,
                 **m,
             })
 
@@ -326,7 +365,6 @@ def run_board_full_curves(
     for sch in schemes:
         endpoint[sch] = curves[sch][-1] if curves[sch] else {}
 
-    # also report metrics at the cold-start boundary (budget == cap)
     at_cap = {}
     for sch in schemes:
         pts = [p for p in curves[sch] if int(p["budget"]) == int(cold_start_cap)]
@@ -348,9 +386,10 @@ def run_board_full_curves(
         "loss": LOSS_NAME,
         "ewma": False,
         "cold_start_cap": int(cold_start_cap),
+        "default_gate": "soft",
         "cold_start_rule": (
-            f"weights only while per-novel-category arrival_idx < {cold_start_cap}; "
-            "past cap → w=1 on that category (joint CE fit)"
+            f"soft decay (1 - n_idx/{cold_start_cap})_+ on novel boost; "
+            "both_hard / both_always are gate ablations"
         ),
         "eval": "full_holdout_LIVE",
         "n_eval": int(len(y_ev)),
@@ -375,19 +414,21 @@ def run_text_full_weight_curves(
     budgets: Optional[Sequence[int]] = None,
     feat_alpha: float = 3.0,
     cold_start_cap: int = COLD_START_CAP,
+    schemes: Sequence[str] = SCHEMES,
 ) -> Dict:
-    """Text-only boards; full-eval curves with cold-start weight gate."""
+    """Text-only boards; full-eval curves with soft cold-start gate (v2)."""
     boards = load_text_boards_full(seed=seed, n_per_novel=n_first_board)
     rows = []
     for b in boards:
         print(
             "[full-curves]", b["name"], "n_live", len(b["y_live"]),
-            "cold_start_cap", cold_start_cap, flush=True,
+            "cold_start_cap", cold_start_cap, "schemes", list(schemes),
+            flush=True,
         )
         rows.append(
             run_board_full_curves(
                 b, seed=seed, budgets=budgets, feat_alpha=feat_alpha,
-                cold_start_cap=cold_start_cap,
+                cold_start_cap=cold_start_cap, schemes=schemes,
             )
         )
 
@@ -405,22 +446,22 @@ def run_text_full_weight_curves(
         "loss": LOSS_NAME,
         "ewma": False,
         "cold_start_cap": int(cold_start_cap),
+        "default_gate": "soft",
         "primary_kpi": "full_holdout overall acc + mean novel OVA-AUC",
         "seed": int(seed),
+        "schemes": list(schemes),
         "boards": rows,
         "mean_delta_acc_feature_w": _mean_delta("delta_acc_vs_uniform", "feature_w"),
         "mean_delta_acc_sample_w": _mean_delta("delta_acc_vs_uniform", "sample_w"),
         "mean_delta_acc_both": _mean_delta("delta_acc_vs_uniform", "both"),
+        "mean_delta_acc_both_hard": _mean_delta("delta_acc_vs_uniform", "both_hard"),
+        "mean_delta_acc_both_always": _mean_delta("delta_acc_vs_uniform", "both_always"),
         "mean_delta_ova_feature_w": _mean_delta("delta_ova_auc_vs_uniform", "feature_w"),
         "mean_delta_ova_sample_w": _mean_delta("delta_ova_auc_vs_uniform", "sample_w"),
         "mean_delta_ova_both": _mean_delta("delta_ova_auc_vs_uniform", "both"),
-        "mean_delta_acc_at_cap_feature_w": _mean_delta("delta_acc_at_cap_vs_uniform", "feature_w"),
-        "mean_delta_acc_at_cap_sample_w": _mean_delta("delta_acc_at_cap_vs_uniform", "sample_w"),
-        "mean_delta_acc_at_cap_both": _mean_delta("delta_acc_at_cap_vs_uniform", "both"),
         "takeaway": (
-            f"Cold-start gate: empower novel categories only while "
-            f"per-cat samples < {cold_start_cap}; then stop weighting. "
-            "Feature-level = X·(1+α·vimp); sample-level = membership w_i. "
-            "FULL LIVE holdout. No EWMA."
+            f"v2 soft cold-start gate: boost *= (1 - n_idx/{cold_start_cap})_+. "
+            "OOD VIMP → feature/sample weights via partial_fit. "
+            "both_hard / both_always = gate ablations. FULL holdout. No EWMA."
         ),
     }
