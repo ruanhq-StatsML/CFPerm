@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "Python" / "src"))
 from text_full_weight_curves import (  # noqa: E402
     COLD_START_CAP,
     DEFAULT_BUDGETS,
+    DEFAULT_SOFT_GAMMA,
     LOSS_NAME,
     SCHEMES,
     run_text_full_weight_curves,
@@ -32,18 +33,19 @@ OUT = ROOT / "results" / "text_full_weight_curves"
 DOCS = ROOT / "docs" / "method"
 ARTIFACTS = Path("/opt/cursor/artifacts")
 
-# Main panel: soft-gate schemes (v2 default)
+# Main panel: soft^γ schemes (v3 default γ=0.5 linger)
 SCHEME_STYLE = [
     ("uniform", "#6B7280", "uniform"),
-    ("feature_w", "#DC2626", "feature_w (soft)"),
-    ("sample_w", "#2563EB", "sample_w (soft)"),
-    ("both", "#059669", "both (soft)"),
+    ("feature_w", "#DC2626", "feature_w (γ=0.5)"),
+    ("sample_w", "#2563EB", "sample_w (γ=0.5)"),
+    ("both", "#059669", "both (γ=0.5)"),
 ]
-# Gate ablation on the "both" channel
+# Taper / gate ablation on the "both" channel
 ABLATION_STYLE = [
     ("uniform", "#6B7280", "uniform"),
-    ("both", "#059669", "both · soft"),
-    ("both_hard", "#D97706", "both · hard"),
+    ("both", "#059669", "both · γ=0.5 linger"),
+    ("both_g1", "#0891B2", "both · γ=1 linear"),
+    ("both_g2", "#D97706", "both · γ=2 fast"),
     ("both_always", "#7C3AED", "both · always-on"),
 ]
 PRIMARY_SCHEMES = [s for s, _, _ in SCHEME_STYLE]
@@ -130,15 +132,20 @@ def _aggregate(runs):
 
 
 def _mean_curve(rows, scheme, metric):
-    """Average metric over datasets at each budget."""
+    """Average metric over datasets at each budget (+ SEM)."""
     by_b = defaultdict(list)
     for r in rows:
         for p in r["curves"].get(scheme) or []:
             by_b[int(p["budget"])].append(p[metric])
-    return sorted(
-        ({"budget": b, metric: float(np.nanmean(vs))} for b, vs in by_b.items()),
-        key=lambda d: d["budget"],
-    )
+    out = []
+    for b, vs in sorted(by_b.items()):
+        a = np.asarray(vs, float)
+        a = a[np.isfinite(a)]
+        if a.size == 0:
+            continue
+        sem = float(a.std(ddof=1) / np.sqrt(a.size)) if a.size > 1 else 0.0
+        out.append({"budget": b, metric: float(a.mean()), "sem": sem})
+    return out
 
 
 def _plot(rows, payload, out_dir: Path):
@@ -159,10 +166,15 @@ def _plot(rows, payload, out_dir: Path):
             pts = _mean_curve(rows, sch, metric)
             if not pts:
                 continue
-            ax.plot(
-                [p["budget"] for p in pts],
-                [p[metric] for p in pts],
-                "-o", color=color, lw=2.2, ms=5, label=label,
+            xs = [p["budget"] for p in pts]
+            ys = [p[metric] for p in pts]
+            sem = [p.get("sem", 0.0) for p in pts]
+            ax.plot(xs, ys, "-o", color=color, lw=2.2, ms=5, label=label)
+            ax.fill_between(
+                xs,
+                [y - s for y, s in zip(ys, sem)],
+                [y + s for y, s in zip(ys, sem)],
+                color=color, alpha=0.15, linewidth=0,
             )
         ax.axvline(payload.get("cold_start_cap", COLD_START_CAP),
                    color="#9CA3AF", ls="--", lw=1.2, label="cold-start cap")
@@ -174,7 +186,8 @@ def _plot(rows, payload, out_dir: Path):
         ax.spines["right"].set_visible(False)
         ax.grid(True, alpha=0.25, ls="--")
     fig.suptitle(
-        f"{LOSS_NAME} · soft cold-start gate@{payload.get('cold_start_cap', COLD_START_CAP)}"
+        f"{LOSS_NAME} · soft^γ gate γ={payload.get('default_soft_gamma', DEFAULT_SOFT_GAMMA)}"
+        f" · N_cap={payload.get('cold_start_cap', COLD_START_CAP)}"
         f" · NO EWMA · text only",
         fontsize=12, fontweight="bold",
     )
@@ -182,20 +195,25 @@ def _plot(rows, payload, out_dir: Path):
     fig.savefig(p_curves, dpi=170, bbox_inches="tight")
     plt.close(fig)
 
-    # --- 1b) Gate ablation: soft vs hard vs always-on (both channel) ---
+    # --- 1b) γ / always-on ablation on "both" ---
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.4), constrained_layout=True)
     for ax, metric, ylab, title in (
-        (axes[0], "acc", "Overall accuracy (full LIVE holdout)", "Gate ablation · accuracy"),
-        (axes[1], "ova_auc_novel_mean", "Mean novel OVA-AUC", "Gate ablation · OVA-AUC"),
+        (axes[0], "acc", "Overall accuracy (full LIVE holdout)", "Taper ablation · accuracy"),
+        (axes[1], "ova_auc_novel_mean", "Mean novel OVA-AUC", "Taper ablation · OVA-AUC"),
     ):
         for sch, color, label in ABLATION_STYLE:
             pts = _mean_curve(rows, sch, metric)
             if not pts:
                 continue
-            ax.plot(
-                [p["budget"] for p in pts],
-                [p[metric] for p in pts],
-                "-o", color=color, lw=2.2, ms=5, label=label,
+            xs = [p["budget"] for p in pts]
+            ys = [p[metric] for p in pts]
+            sem = [p.get("sem", 0.0) for p in pts]
+            ax.plot(xs, ys, "-o", color=color, lw=2.2, ms=5, label=label)
+            ax.fill_between(
+                xs,
+                [y - s for y, s in zip(ys, sem)],
+                [y + s for y, s in zip(ys, sem)],
+                color=color, alpha=0.12, linewidth=0,
             )
         ax.axvline(payload.get("cold_start_cap", COLD_START_CAP),
                    color="#9CA3AF", ls="--", lw=1.2, label="N_cap=200")
@@ -207,7 +225,7 @@ def _plot(rows, payload, out_dir: Path):
         ax.spines["right"].set_visible(False)
         ax.grid(True, alpha=0.25, ls="--")
     fig.suptitle(
-        "OOD weights · soft vs hard vs always-on (both) · NO EWMA",
+        "OOD weights · soft^γ linger vs linear/fast/always-on · NO EWMA",
         fontsize=12, fontweight="bold",
     )
     p_ablate = out_dir / "text_full_weight_gate_ablation.png"
@@ -381,17 +399,21 @@ def main():
         "ewma": False,
         "cold_start_cap": args.cold_start_cap,
         "cold_start_rule": (
-            f"v2 soft gate: boost *= (1 - n_idx/{args.cold_start_cap})_+; "
-            "both_hard / both_always = gate ablations"
+            f"v3 soft^γ: boost *= ((1 - n_idx/{args.cold_start_cap})_+)^γ "
+            f"with default γ={DEFAULT_SOFT_GAMMA} (linger); "
+            "both_g1 / both_g2 / both_hard / both_always = ablations"
         ),
         "default_gate": "soft",
+        "default_soft_gamma": DEFAULT_SOFT_GAMMA,
         "kpi": "FULL held-out LIVE overall accuracy + mean novel OVA-AUC (NOT first-n subset)",
         "budget_unit": "novel_per_category",
         "schemes": {
             "uniform": "CE, flat sample weights, raw features",
-            "feature_w": "X·(1+αṽ) with α tapered by mean soft decay",
-            "sample_w": "membership excess × soft decay (1-n_idx/cap)_+",
-            "both": "feature_w + sample_w under soft gate (default)",
+            "feature_w": f"X·(1+αṽ) with soft^γ={DEFAULT_SOFT_GAMMA} taper",
+            "sample_w": f"membership excess × soft^γ={DEFAULT_SOFT_GAMMA}",
+            "both": f"feature+sample under soft^γ={DEFAULT_SOFT_GAMMA} (default)",
+            "both_g1": "ablation: linear soft γ=1",
+            "both_g2": "ablation: fast soft γ=2",
             "both_hard": "ablation: hard cut at cap",
             "both_always": "ablation: keep boosting past cap",
         },
@@ -417,9 +439,9 @@ def main():
             for sch in SCHEMES
         },
         "takeaway": (
-            f"v2 soft cold-start gate: boost *= (1 - n_idx/{args.cold_start_cap})_+. "
-            "OOD VIMP → feature/sample weights via partial_fit. "
-            "Ablations: both_hard / both_always. FULL LIVE holdout. No EWMA."
+            f"v3 soft^γ gate: boost *= ((1-n_idx/{args.cold_start_cap})_+)^γ "
+            f"with default γ={DEFAULT_SOFT_GAMMA} (linger). "
+            "OOD VIMP → feature/sample weights via partial_fit. FULL holdout. No EWMA."
         ),
     }
     (OUT / "text_full_weight_curves.json").write_text(json.dumps(payload, indent=2))
