@@ -1,0 +1,316 @@
+% =============================================================================
+% Infer-bench dataset bibliography (comprehensive)
+%
+% Local 300-example exports:
+%   HaluEval     data/hf_cache/infer_bench_export/halueval.jsonl
+%   SQuAD        data/hf_cache/infer_bench_export/squad.jsonl
+%   HotpotQA     data/hf_cache/infer_bench_export/hotpotqa.jsonl
+%   TruthfulQA   data/hf_cache/infer_bench_export/truthfulqa.jsonl
+%
+% Recommended venue cite keys (use these in papers):
+%   HaluEval     li-etal-2023-halueval
+%   SQuAD 1.1    rajpurkar-etal-2016-squad
+%   SQuAD 2.0    rajpurkar-etal-2018-know          (only if using v2)
+%   HotpotQA     yang-etal-2018-hotpotqa
+%   TruthfulQA   lin-etal-2022-truthfulqa
+%   HH-RLHF      bai2022hh-rlhf                    (alignment counterpart; not a 300-export)
+%
+% Per-dataset files in this folder also keep arXiv, GitHub, and Hub entries.
+% This combined file is self-contained: primary venue papers + closely related
+% follow-ups (SQuAD 2.0, HaluEval 2.0) + official resources.
+% =============================================================================
+
+% ---------------------------------------------------------------------------
+% HaluEval
+% ---------------------------------------------------------------------------
+@inproceedings{li-etal-2023-halueval,
+  title         = {{HaluEval}: A Large-Scale Hallucination Evaluation Benchmark for Large Language Models},
+  author        = {Li, Junyi and Cheng, Xiaoxue and Zhao, Xin and Nie, Jian-Yun and Wen, Ji-Rong},
+  editor        = {Bouamor, Houda and Pino, Juan and Bali, Kalika},
+  booktitle     = {Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing},
+  month         = dec,
+  year          = {2023},
+  address       = {Singapore},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {6449--6464},
+  isbn          = {979-8-89176-060-8},
+  doi           = {10.18653/v1/2023.emnlp-main.397},
+  url           = {https://aclanthology.org/2023.emnlp-main.397/},
+  eprint        = {2305.11747},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  pdf           = {https://aclanthology.org/2023.emnlp-main.397.pdf},
+  anthology     = {2023.emnlp-main.397},
+  dblp          = {https://dblp.org/rec/conf/emnlp/LiCZNW23},
+  keywords      = {hallucination, large language models, evaluation, benchmark, ChatGPT},
+  abstract      = {Large language models (LLMs), such as ChatGPT, are prone to generate hallucinations, i.e., content that conflicts with the source or cannot be verified by the factual knowledge. To understand what types of content and to which extent LLMs are apt to hallucinate, we introduce the Hallucination Evaluation benchmark for Large Language Models (HaluEval), a large collection of generated and human-annotated hallucinated samples for evaluating the performance of LLMs in recognizing hallucination. To generate these samples, we propose a ChatGPT-based two-step framework, i.e., sampling-then-filtering. Besides, we also hire some human labelers to annotate the hallucinations in ChatGPT responses. The empirical results suggest that ChatGPT is likely to generate hallucinated content in specific topics by fabricating unverifiable information (i.e., about 19.5\% responses). Moreover, existing LLMs face great challenges in recognizing the hallucinations in texts. However, our experiments also prove that providing external knowledge or adding reasoning steps can help LLMs recognize hallucinations.},
+  note          = {Code and data: https://github.com/RUCAIBox/HaluEval. arXiv:2305.11747.}
+}
+
+@misc{li2023halueval-arxiv,
+  title         = {{HaluEval}: A Large-Scale Hallucination Evaluation Benchmark for Large Language Models},
+  author        = {Junyi Li and Xiaoxue Cheng and Wayne Xin Zhao and Jian-Yun Nie and Ji-Rong Wen},
+  year          = {2023},
+  eprint        = {2305.11747},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2305.11747},
+  doi           = {10.48550/arXiv.2305.11747}
+}
+
+@misc{halueval-github,
+  title        = {{HaluEval}: A Hallucination Evaluation Benchmark for {LLMs}},
+  author       = {Li, Junyi and Cheng, Xiaoxue and Zhao, Wayne Xin and Nie, Jian-Yun and Wen, Ji-Rong},
+  year         = {2023},
+  howpublished = {https://github.com/RUCAIBox/HaluEval},
+  url          = {https://github.com/RUCAIBox/HaluEval}
+}
+
+@inproceedings{li-etal-2024-dawn,
+  title         = {The Dawn After the Dark: An Empirical Study on Factuality Hallucination in Large Language Models},
+  author        = {Li, Junyi and Chen, Jie and Ren, Ruiyang and Cheng, Xiaoxue and Zhao, Xin and Nie, Jian-Yun and Wen, Ji-Rong},
+  editor        = {Ku, Lun-Wei and Martins, Andre and Srikumar, Vivek},
+  booktitle     = {Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  month         = aug,
+  year          = {2024},
+  address       = {Bangkok, Thailand},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {10879--10899},
+  isbn          = {979-8-89176-094-3},
+  doi           = {10.18653/v1/2024.acl-long.586},
+  url           = {https://aclanthology.org/2024.acl-long.586/},
+  eprint        = {2401.03205},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  pdf           = {https://aclanthology.org/2024.acl-long.586.pdf},
+  anthology     = {2024.acl-long.586},
+  keywords      = {hallucination, factuality, HaluEval 2.0, large language models},
+  abstract      = {In the era of large language models (LLMs), hallucination (i.e., the tendency to generate factually incorrect content) poses great challenge to trustworthy and reliable deployment of LLMs in real-world applications. To tackle the LLM hallucination, three key questions should be well studied: how to detect hallucinations (detection), why do LLMs hallucinate (source), and what can be done to mitigate them (mitigation). To address these challenges, this work presents a systematic empirical study on LLM hallucination, focused on the three aspects of hallucination detection, source and mitigation. Specially, we construct a new hallucination benchmark HaluEval 2.0, and design a simple yet effective detection method for LLM hallucination. Furthermore, we zoom into the different training or utilization stages of LLMs and extensively analyze the potential factors that lead to the LLM hallucination. Finally, we implement and examine a series of widely used techniques to mitigate the hallucinations in LLMs.},
+  note          = {Introduces HaluEval 2.0. Code and data: https://github.com/RUCAIBox/HaluEval-2.0. arXiv:2401.03205.}
+}
+
+@misc{halueval2-github,
+  title        = {{HaluEval} 2.0},
+  author       = {Li, Junyi and Chen, Jie and Ren, Ruiyang and Cheng, Xiaoxue and Zhao, Wayne Xin and Nie, Jian-Yun and Wen, Ji-Rong},
+  year         = {2024},
+  howpublished = {https://github.com/RUCAIBox/HaluEval-2.0},
+  url          = {https://github.com/RUCAIBox/HaluEval-2.0}
+}
+
+% ---------------------------------------------------------------------------
+% SQuAD
+% ---------------------------------------------------------------------------
+@inproceedings{rajpurkar-etal-2016-squad,
+  title         = {{SQuAD}: 100,000+ Questions for Machine Comprehension of Text},
+  author        = {Rajpurkar, Pranav and Zhang, Jian and Lopyrev, Konstantin and Liang, Percy},
+  editor        = {Su, Jian and Duh, Kevin and Carreras, Xavier},
+  booktitle     = {Proceedings of the 2016 Conference on Empirical Methods in Natural Language Processing},
+  month         = nov,
+  year          = {2016},
+  address       = {Austin, Texas},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {2383--2392},
+  isbn          = {978-1-945626-25-8},
+  doi           = {10.18653/v1/D16-1264},
+  url           = {https://aclanthology.org/D16-1264/},
+  eprint        = {1606.05250},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  pdf           = {https://aclanthology.org/D16-1264.pdf},
+  anthology     = {D16-1264},
+  dblp          = {https://dblp.org/rec/conf/emnlp/RajpurkarZLL16},
+  keywords      = {question answering, reading comprehension, Wikipedia, extractive QA, SQuAD},
+  abstract      = {We present the Stanford Question Answering Dataset (SQuAD), a new reading comprehension dataset consisting of 100,000+ questions posed by crowdworkers on a set of Wikipedia articles, where the answer to each question is a segment of text from the corresponding reading passage. We analyze the dataset to understand the types of reasoning required to answer the questions, leaning heavily on dependency and constituency trees. We build a strong logistic regression model, which achieves an F1 score of 51.0\%, a significant improvement over a simple baseline (20\%). However, human performance (86.8\%) is much higher, indicating that the dataset presents a good challenge problem for future research.},
+  note          = {Homepage: https://rajpurkar.github.io/SQuAD-explorer/. Hugging Face: https://huggingface.co/datasets/rajpurkar/squad. License: CC BY-SA 4.0. arXiv:1606.05250.}
+}
+
+@misc{rajpurkar2016squad-arxiv,
+  title         = {{SQuAD}: 100,000+ Questions for Machine Comprehension of Text},
+  author        = {Pranav Rajpurkar and Jian Zhang and Konstantin Lopyrev and Percy Liang},
+  year          = {2016},
+  eprint        = {1606.05250},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/1606.05250},
+  doi           = {10.48550/arXiv.1606.05250}
+}
+
+@inproceedings{rajpurkar-etal-2018-know,
+  title         = {Know What You Don{'}t Know: Unanswerable Questions for {SQuAD}},
+  author        = {Rajpurkar, Pranav and Jia, Robin and Liang, Percy},
+  editor        = {Gurevych, Iryna and Miyao, Yusuke},
+  booktitle     = {Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers)},
+  month         = jul,
+  year          = {2018},
+  address       = {Melbourne, Australia},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {784--789},
+  isbn          = {978-1-948087-34-6},
+  doi           = {10.18653/v1/P18-2124},
+  url           = {https://aclanthology.org/P18-2124/},
+  eprint        = {1806.03822},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  pdf           = {https://aclanthology.org/P18-2124.pdf},
+  anthology     = {P18-2124},
+  dblp          = {https://dblp.org/rec/conf/acl/RajpurkarJL18},
+  keywords      = {question answering, unanswerable questions, SQuAD 2.0, reading comprehension},
+  abstract      = {Extractive reading comprehension systems can often locate the correct answer to a question in a context document, but they also tend to make unreliable guesses on questions for which the correct answer is not stated in the context. Existing datasets either focus exclusively on answerable questions, or use automatically generated unanswerable questions that are easy to identify. To address these weaknesses, we present SQuAD 2.0, the latest version of the Stanford Question Answering Dataset (SQuAD). SQuAD 2.0 combines existing SQuAD data with over 50,000 unanswerable questions written adversarially by crowdworkers to look similar to answerable ones. To do well on SQuAD 2.0, systems must not only answer questions when possible, but also determine when no answer is supported by the paragraph and abstain from answering. SQuAD 2.0 is a challenging natural language understanding task for existing models: a strong neural system that gets 86\% F1 on SQuAD 1.1 achieves only 66\% F1 on SQuAD 2.0.},
+  note          = {SQuAD 2.0. Hugging Face dataset \texttt{rajpurkar/squad\_v2}. License: CC BY-SA 4.0. arXiv:1806.03822.}
+}
+
+@misc{squad-explorer,
+  title        = {{SQuAD} Explorer},
+  author       = {Rajpurkar, Pranav and Zhang, Jian and Lopyrev, Konstantin and Liang, Percy},
+  year         = {2016},
+  howpublished = {https://rajpurkar.github.io/SQuAD-explorer/},
+  url          = {https://rajpurkar.github.io/SQuAD-explorer/}
+}
+
+@misc{squad-hf,
+  title        = {{SQuAD} ({Hugging Face} Datasets)},
+  author       = {Rajpurkar, Pranav and Zhang, Jian and Lopyrev, Konstantin and Liang, Percy},
+  year         = {2016},
+  howpublished = {https://huggingface.co/datasets/rajpurkar/squad},
+  url          = {https://huggingface.co/datasets/rajpurkar/squad},
+  note         = {SQuAD 1.1. Train 87599 / validation 10570. License: CC BY-SA 4.0.}
+}
+
+% ---------------------------------------------------------------------------
+% HotpotQA
+% ---------------------------------------------------------------------------
+@inproceedings{yang-etal-2018-hotpotqa,
+  title         = {{HotpotQA}: A Dataset for Diverse, Explainable Multi-hop Question Answering},
+  author        = {Yang, Zhilin and Qi, Peng and Zhang, Saizheng and Bengio, Yoshua and Cohen, William and Salakhutdinov, Ruslan and Manning, Christopher D.},
+  editor        = {Riloff, Ellen and Chiang, David and Hockenmaier, Julia and Tsujii, Jun{'}ichi},
+  booktitle     = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
+  month         = oct # {--} # nov,
+  year          = {2018},
+  address       = {Brussels, Belgium},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {2369--2380},
+  isbn          = {978-1-948087-84-1},
+  doi           = {10.18653/v1/D18-1259},
+  url           = {https://aclanthology.org/D18-1259/},
+  eprint        = {1809.09600},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  pdf           = {https://aclanthology.org/D18-1259.pdf},
+  anthology     = {D18-1259},
+  dblp          = {https://dblp.org/rec/conf/emnlp/YangQZBCSM18},
+  keywords      = {multi-hop question answering, explainable QA, Wikipedia, supporting facts, HotpotQA},
+  abstract      = {Existing question answering (QA) datasets fail to train QA systems to perform complex reasoning and provide explanations for answers. We introduce HotpotQA, a new dataset with 113k Wikipedia-based question-answer pairs with four key features: (1) the questions require finding and reasoning over multiple supporting documents to answer; (2) the questions are diverse and not constrained to any pre-existing knowledge bases or knowledge schemas; (3) we provide sentence-level supporting facts required for reasoning, allowing QA systems to reason with strong supervision and explain the predictions; (4) we offer a new type of factoid comparison questions to test QA systems' ability to extract relevant facts and perform necessary comparison. We show that HotpotQA is challenging for the latest QA systems, and the supporting facts enable models to improve performance and make explainable predictions.},
+  note          = {Homepage: https://hotpotqa.github.io/. Code: https://github.com/hotpotqa/hotpot. Hugging Face dataset \texttt{hotpotqa/hotpot\_qa}. License: CC BY-SA 4.0. arXiv:1809.09600.}
+}
+
+@inproceedings{yang2018hotpotqa,
+  title     = {{HotpotQA}: A Dataset for Diverse, Explainable Multi-hop Question Answering},
+  author    = {Yang, Zhilin and Qi, Peng and Zhang, Saizheng and Bengio, Yoshua and Cohen, William W. and Salakhutdinov, Ruslan and Manning, Christopher D.},
+  booktitle = {Conference on Empirical Methods in Natural Language Processing ({EMNLP})},
+  year      = {2018},
+  doi       = {10.18653/v1/D18-1259},
+  url       = {https://aclanthology.org/D18-1259/},
+  eprint    = {1809.09600},
+  note      = {Hugging Face dataset-card key. Prefer yang-etal-2018-hotpotqa in papers.}
+}
+
+@misc{yang2018hotpotqa-arxiv,
+  title         = {{HotpotQA}: A Dataset for Diverse, Explainable Multi-hop Question Answering},
+  author        = {Zhilin Yang and Peng Qi and Saizheng Zhang and Yoshua Bengio and William W. Cohen and Ruslan Salakhutdinov and Christopher D. Manning},
+  year          = {2018},
+  eprint        = {1809.09600},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/1809.09600},
+  doi           = {10.48550/arXiv.1809.09600}
+}
+
+@misc{hotpotqa-website,
+  title        = {{HotpotQA}},
+  author       = {Yang, Zhilin and Qi, Peng and Zhang, Saizheng and Bengio, Yoshua and Cohen, William W. and Salakhutdinov, Ruslan and Manning, Christopher D.},
+  year         = {2018},
+  howpublished = {https://hotpotqa.github.io/},
+  url          = {https://hotpotqa.github.io/}
+}
+
+@misc{hotpotqa-hf,
+  title        = {{HotpotQA} ({Hugging Face} Datasets)},
+  author       = {Yang, Zhilin and Qi, Peng and Zhang, Saizheng and Bengio, Yoshua and Cohen, William W. and Salakhutdinov, Ruslan and Manning, Christopher D.},
+  year         = {2018},
+  howpublished = {https://huggingface.co/datasets/hotpotqa/hotpot_qa},
+  url          = {https://huggingface.co/datasets/hotpotqa/hotpot_qa},
+  note         = {Configs: distractor (train 90447 / validation 7405) and fullwiki (adds test 7405). License: CC BY-SA 4.0.}
+}
+
+% ---------------------------------------------------------------------------
+% TruthfulQA
+% ---------------------------------------------------------------------------
+@inproceedings{lin-etal-2022-truthfulqa,
+  title         = {{TruthfulQA}: Measuring How Models Mimic Human Falsehoods},
+  author        = {Lin, Stephanie and Hilton, Jacob and Evans, Owain},
+  editor        = {Muresan, Smaranda and Nakov, Preslav and Villavicencio, Aline},
+  booktitle     = {Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  month         = may,
+  year          = {2022},
+  address       = {Dublin, Ireland},
+  publisher     = {Association for Computational Linguistics},
+  pages         = {3214--3252},
+  isbn          = {978-1-955917-21-6},
+  doi           = {10.18653/v1/2022.acl-long.229},
+  url           = {https://aclanthology.org/2022.acl-long.229/},
+  eprint        = {2109.07958},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  pdf           = {https://aclanthology.org/2022.acl-long.229.pdf},
+  anthology     = {2022.acl-long.229},
+  dblp          = {https://dblp.org/rec/conf/acl/LinHE22},
+  keywords      = {truthfulness, large language models, misconceptions, evaluation, TruthfulQA},
+  abstract      = {We propose a benchmark to measure whether a language model is truthful in generating answers to questions. The benchmark comprises 817 questions that span 38 categories, including health, law, finance and politics. We crafted questions that some humans would answer falsely due to a false belief or misconception. To perform well, models must avoid generating false answers learned from imitating human texts. We tested GPT-3, GPT-Neo/J, GPT-2 and a T5-based model. The best model was truthful on 58\% of questions, while human performance was 94\%. Models generated many false answers that mimic popular misconceptions and have the potential to deceive humans. The largest models were generally the least truthful. This contrasts with other NLP tasks, where performance improves with model size. However, this result is expected if false answers are learned from the training distribution. We suggest that scaling up models alone is less promising for improving truthfulness than fine-tuning using training objectives other than imitation of text from the web.},
+  note          = {Code: https://github.com/sylinrl/TruthfulQA. Hugging Face dataset \texttt{truthfulqa/truthful\_qa}. License: Apache-2.0. arXiv:2109.07958.}
+}
+
+@misc{lin2021truthfulqa,
+  title         = {{TruthfulQA}: Measuring How Models Mimic Human Falsehoods},
+  author        = {Stephanie Lin and Jacob Hilton and Owain Evans},
+  year          = {2021},
+  eprint        = {2109.07958},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2109.07958},
+  doi           = {10.48550/arXiv.2109.07958},
+  note          = {Hugging Face dataset-card key. Prefer lin-etal-2022-truthfulqa in papers.}
+}
+
+@misc{truthfulqa-github,
+  title        = {{TruthfulQA}},
+  author       = {Lin, Stephanie and Hilton, Jacob and Evans, Owain},
+  year         = {2021},
+  howpublished = {https://github.com/sylinrl/TruthfulQA},
+  url          = {https://github.com/sylinrl/TruthfulQA},
+  note         = {Generation and multiple-choice (MC1/MC2) tracks. 817 questions, 38 categories.}
+}
+
+@misc{truthfulqa-hf,
+  title        = {{TruthfulQA} ({Hugging Face} Datasets)},
+  author       = {Lin, Stephanie and Hilton, Jacob and Evans, Owain},
+  year         = {2022},
+  howpublished = {https://huggingface.co/datasets/truthfulqa/truthful_qa},
+  url          = {https://huggingface.co/datasets/truthfulqa/truthful_qa},
+  note         = {Configs: generation and multiple_choice, 817 validation questions. License: Apache-2.0.}
+}
+
+% ---------------------------------------------------------------------------
+% Related (not one of the four 300-exports): HH-RLHF
+% ---------------------------------------------------------------------------
+@misc{bai2022hh-rlhf,
+  title         = {Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback},
+  author        = {Yuntao Bai and Andy Jones and Kamal Ndousse and Amanda Askell and Anna Chen and Nova DasSarma and Dawn Drain and Stanislav Fort and Deep Ganguli and Tom Henighan and Nicholas Joseph and Saurav Kadavath and Jackson Kernion and Tom Conerly and Sheer El-Showk and Nelson Elhage and Zac Hatfield-Dodds and Danny Hernandez and Tristan Hume and Scott Johnston and Shauna Kravec and Liane Lovitt and Neel Nanda and Catherine Olsson and Dario Amodei and Tom Brown and Jack Clark and Sam McCandlish and Chris Olah and Ben Mann and Jared Kaplan},
+  year          = {2022},
+  eprint        = {2204.05862},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2204.05862},
+  doi           = {10.48550/arXiv.2204.05862},
+  keywords      = {RLHF, preference modeling, helpful and harmless, alignment},
+  note          = {Alignment counterpart already run in the HF landing prototype. Dataset: Anthropic/hh-rlhf.}
+}
