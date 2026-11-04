@@ -1,0 +1,650 @@
+{
+  "rounds": [
+    {
+      "round": 1,
+      "scenes": {
+        "incentive": {
+          "scene": "incentive",
+          "round": 1,
+          "Y": "1 if the selected offer produces the scene outcome on that user, else 0.",
+          "X": [
+            "judge",
+            "stable",
+            "spurious",
+            "progress"
+          ],
+          "pre_Y": 0.5,
+          "judge_post_Y": 0.16666666666666666,
+          "acted_post_Y": 0.20833333333333334,
+          "kind": "shortfall",
+          "extra_outcomes": 1.0,
+          "post_cost": 0.2,
+          "judge_post_cost": 0.0,
+          "fraud_cost_avoided": 0.0,
+          "revenue_at_stated_price": 1.0,
+          "roi_at_stated_price": 5.0,
+          "prices_are_assumptions": {
+            "value": 1.0,
+            "unit_cost": 0.2,
+            "value_name": "V_user",
+            "cost_name": "incentive"
+          },
+          "children_per_user": 3,
+          "switched_at": 19,
+          "top_concept_on_judge_stream": {
+            "feature": "judge",
+            "sse_drop": 0.38095238095238493,
+            "p": 0.4074074074074074
+          },
+          "concept_on_judge_stream": [
+            {
+              "feature": "judge",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "stable",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "spurious",
+              "sse_drop": 0.38095238095238404,
+              "p": 0.345679012345679
+            },
+            {
+              "feature": "progress",
+              "sse_drop": 0.38095238095238315,
+              "p": 0.4444444444444444
+            }
+          ],
+          "covariate_on_judge_stream": [
+            {
+              "feature": "judge",
+              "abs_mean_shift": 0.010285714285714453,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "stable",
+              "abs_mean_shift": 0.2571428571428571,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "spurious",
+              "abs_mean_shift": 0.7114285714285715,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "progress",
+              "abs_mean_shift": 0.6857142857142857,
+              "p": 0.012345679012345678
+            }
+          ],
+          "x_movement_on_judge_stream": [
+            {
+              "feature": "judge",
+              "pre": 0.8200000000000001,
+              "post": 0.8080000000000002,
+              "delta": -0.0119999999999999
+            },
+            {
+              "feature": "stable",
+              "pre": 0.5,
+              "post": 0.20000000000000004,
+              "delta": -0.29999999999999993
+            },
+            {
+              "feature": "spurious",
+              "pre": 0.15,
+              "post": 0.98,
+              "delta": 0.83
+            },
+            {
+              "feature": "progress",
+              "pre": 0.9,
+              "post": 0.10000000000000002,
+              "delta": -0.8
+            }
+          ],
+          "action": "The concept-drift column is not spurious. Do not spend the scenario budget.",
+          "n_alt": 1
+        },
+        "churn": {
+          "scene": "churn",
+          "round": 1,
+          "Y": "1 if the selected offer produces the scene outcome on that user, else 0.",
+          "X": [
+            "judge",
+            "stable",
+            "spurious",
+            "progress"
+          ],
+          "pre_Y": 0.5,
+          "judge_post_Y": 0.16666666666666666,
+          "acted_post_Y": 0.16666666666666666,
+          "kind": "shortfall",
+          "extra_outcomes": 0.0,
+          "post_cost": 1.0,
+          "judge_post_cost": 0.0,
+          "fraud_cost_avoided": 0.0,
+          "revenue_at_stated_price": 0.0,
+          "roi_at_stated_price": 0.0,
+          "prices_are_assumptions": {
+            "value": 1.0,
+            "unit_cost": 0.5,
+            "value_name": "LTV",
+            "cost_name": "retention"
+          },
+          "children_per_user": 3,
+          "switched_at": 19,
+          "top_concept_on_judge_stream": {
+            "feature": "judge",
+            "sse_drop": 0.38095238095238493,
+            "p": 0.4074074074074074
+          },
+          "concept_on_judge_stream": [
+            {
+              "feature": "judge",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "stable",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "spurious",
+              "sse_drop": 0.38095238095238404,
+              "p": 0.345679012345679
+            },
+            {
+              "feature": "progress",
+              "sse_drop": 0.38095238095238315,
+              "p": 0.4444444444444444
+            }
+          ],
+          "covariate_on_judge_stream": [
+            {
+              "feature": "judge",
+              "abs_mean_shift": 0.010285714285714453,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "stable",
+              "abs_mean_shift": 0.2571428571428571,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "spurious",
+              "abs_mean_shift": 0.7114285714285715,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "progress",
+              "abs_mean_shift": 0.6857142857142857,
+              "p": 0.012345679012345678
+            }
+          ],
+          "x_movement_on_judge_stream": [
+            {
+              "feature": "judge",
+              "pre": 0.8200000000000001,
+              "post": 0.8080000000000002,
+              "delta": -0.0119999999999999
+            },
+            {
+              "feature": "stable",
+              "pre": 0.5,
+              "post": 0.20000000000000004,
+              "delta": -0.29999999999999993
+            },
+            {
+              "feature": "spurious",
+              "pre": 0.15,
+              "post": 0.98,
+              "delta": 0.83
+            },
+            {
+              "feature": "progress",
+              "pre": 0.9,
+              "post": 0.10000000000000002,
+              "delta": -0.8
+            }
+          ],
+          "action": "The concept-drift column is not spurious. Do not spend the scenario budget.",
+          "n_alt": 2
+        },
+        "payment": {
+          "scene": "payment",
+          "round": 1,
+          "Y": "1 if the selected offer produces the scene outcome on that user, else 0.",
+          "X": [
+            "judge",
+            "stable",
+            "spurious",
+            "progress"
+          ],
+          "pre_Y": 0.5,
+          "judge_post_Y": 0.16666666666666666,
+          "acted_post_Y": 0.20833333333333334,
+          "kind": "shortfall",
+          "extra_outcomes": 1.0,
+          "post_cost": 9.600000000000001,
+          "judge_post_cost": 9.600000000000001,
+          "fraud_cost_avoided": 0.40000000000000036,
+          "revenue_at_stated_price": 1.0,
+          "roi_at_stated_price": 0.14583333333333334,
+          "prices_are_assumptions": {
+            "value": 1.0,
+            "unit_cost": 0.4,
+            "value_name": "AOV",
+            "cost_name": "subsidy"
+          },
+          "children_per_user": 3,
+          "switched_at": 19,
+          "top_concept_on_judge_stream": {
+            "feature": "judge",
+            "sse_drop": 0.38095238095238493,
+            "p": 0.4074074074074074
+          },
+          "concept_on_judge_stream": [
+            {
+              "feature": "judge",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "stable",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "spurious",
+              "sse_drop": 0.38095238095238404,
+              "p": 0.345679012345679
+            },
+            {
+              "feature": "progress",
+              "sse_drop": 0.38095238095238315,
+              "p": 0.4444444444444444
+            }
+          ],
+          "covariate_on_judge_stream": [
+            {
+              "feature": "judge",
+              "abs_mean_shift": 0.010285714285714453,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "stable",
+              "abs_mean_shift": 0.2571428571428571,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "spurious",
+              "abs_mean_shift": 0.7114285714285715,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "progress",
+              "abs_mean_shift": 0.6857142857142857,
+              "p": 0.012345679012345678
+            }
+          ],
+          "x_movement_on_judge_stream": [
+            {
+              "feature": "judge",
+              "pre": 0.8200000000000001,
+              "post": 0.8080000000000002,
+              "delta": -0.0119999999999999
+            },
+            {
+              "feature": "stable",
+              "pre": 0.5,
+              "post": 0.20000000000000004,
+              "delta": -0.29999999999999993
+            },
+            {
+              "feature": "spurious",
+              "pre": 0.15,
+              "post": 0.98,
+              "delta": 0.83
+            },
+            {
+              "feature": "progress",
+              "pre": 0.9,
+              "post": 0.10000000000000002,
+              "delta": -0.8
+            }
+          ],
+          "action": "The concept-drift column is not spurious. Do not spend the scenario budget.",
+          "n_alt": 1
+        }
+      }
+    },
+    {
+      "round": 2,
+      "scenes": {
+        "incentive": {
+          "scene": "incentive",
+          "round": 2,
+          "Y": "1 if the selected offer produces the scene outcome on that user, else 0.",
+          "X": [
+            "judge",
+            "stable",
+            "spurious",
+            "progress"
+          ],
+          "pre_Y": 0.5,
+          "judge_post_Y": 0.16666666666666666,
+          "acted_post_Y": 0.16666666666666666,
+          "kind": "shortfall",
+          "extra_outcomes": 0.0,
+          "post_cost": 0.0,
+          "judge_post_cost": 0.0,
+          "fraud_cost_avoided": 0.0,
+          "revenue_at_stated_price": 0.0,
+          "roi_at_stated_price": null,
+          "prices_are_assumptions": {
+            "value": 1.0,
+            "unit_cost": 0.2,
+            "value_name": "V_user",
+            "cost_name": "incentive"
+          },
+          "children_per_user": 3,
+          "switched_at": null,
+          "top_concept_on_judge_stream": {
+            "feature": "judge",
+            "sse_drop": 0.38095238095238493,
+            "p": 0.4074074074074074
+          },
+          "concept_on_judge_stream": [
+            {
+              "feature": "judge",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "stable",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "spurious",
+              "sse_drop": 0.38095238095238404,
+              "p": 0.345679012345679
+            },
+            {
+              "feature": "progress",
+              "sse_drop": 0.38095238095238315,
+              "p": 0.4444444444444444
+            }
+          ],
+          "covariate_on_judge_stream": [
+            {
+              "feature": "judge",
+              "abs_mean_shift": 0.010285714285714453,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "stable",
+              "abs_mean_shift": 0.2571428571428571,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "spurious",
+              "abs_mean_shift": 0.7114285714285715,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "progress",
+              "abs_mean_shift": 0.6857142857142857,
+              "p": 0.012345679012345678
+            }
+          ],
+          "x_movement_on_judge_stream": [
+            {
+              "feature": "judge",
+              "pre": 0.8200000000000001,
+              "post": 0.8080000000000002,
+              "delta": -0.0119999999999999
+            },
+            {
+              "feature": "stable",
+              "pre": 0.5,
+              "post": 0.20000000000000004,
+              "delta": -0.29999999999999993
+            },
+            {
+              "feature": "spurious",
+              "pre": 0.15,
+              "post": 0.98,
+              "delta": 0.83
+            },
+            {
+              "feature": "progress",
+              "pre": 0.9,
+              "post": 0.10000000000000002,
+              "delta": -0.8
+            }
+          ],
+          "action": "The concept-drift column is not spurious. Do not spend the scenario budget.",
+          "n_alt": 0
+        },
+        "churn": {
+          "scene": "churn",
+          "round": 2,
+          "Y": "1 if the selected offer produces the scene outcome on that user, else 0.",
+          "X": [
+            "judge",
+            "stable",
+            "spurious",
+            "progress"
+          ],
+          "pre_Y": 0.5,
+          "judge_post_Y": 0.16666666666666666,
+          "acted_post_Y": 0.16666666666666666,
+          "kind": "shortfall",
+          "extra_outcomes": 0.0,
+          "post_cost": 0.0,
+          "judge_post_cost": 0.0,
+          "fraud_cost_avoided": 0.0,
+          "revenue_at_stated_price": 0.0,
+          "roi_at_stated_price": null,
+          "prices_are_assumptions": {
+            "value": 1.0,
+            "unit_cost": 0.5,
+            "value_name": "LTV",
+            "cost_name": "retention"
+          },
+          "children_per_user": 3,
+          "switched_at": null,
+          "top_concept_on_judge_stream": {
+            "feature": "judge",
+            "sse_drop": 0.38095238095238493,
+            "p": 0.4074074074074074
+          },
+          "concept_on_judge_stream": [
+            {
+              "feature": "judge",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "stable",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "spurious",
+              "sse_drop": 0.38095238095238404,
+              "p": 0.345679012345679
+            },
+            {
+              "feature": "progress",
+              "sse_drop": 0.38095238095238315,
+              "p": 0.4444444444444444
+            }
+          ],
+          "covariate_on_judge_stream": [
+            {
+              "feature": "judge",
+              "abs_mean_shift": 0.010285714285714453,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "stable",
+              "abs_mean_shift": 0.2571428571428571,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "spurious",
+              "abs_mean_shift": 0.7114285714285715,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "progress",
+              "abs_mean_shift": 0.6857142857142857,
+              "p": 0.012345679012345678
+            }
+          ],
+          "x_movement_on_judge_stream": [
+            {
+              "feature": "judge",
+              "pre": 0.8200000000000001,
+              "post": 0.8080000000000002,
+              "delta": -0.0119999999999999
+            },
+            {
+              "feature": "stable",
+              "pre": 0.5,
+              "post": 0.20000000000000004,
+              "delta": -0.29999999999999993
+            },
+            {
+              "feature": "spurious",
+              "pre": 0.15,
+              "post": 0.98,
+              "delta": 0.83
+            },
+            {
+              "feature": "progress",
+              "pre": 0.9,
+              "post": 0.10000000000000002,
+              "delta": -0.8
+            }
+          ],
+          "action": "The concept-drift column is not spurious. Do not spend the scenario budget.",
+          "n_alt": 0
+        },
+        "payment": {
+          "scene": "payment",
+          "round": 2,
+          "Y": "1 if the selected offer produces the scene outcome on that user, else 0.",
+          "X": [
+            "judge",
+            "stable",
+            "spurious",
+            "progress"
+          ],
+          "pre_Y": 0.5,
+          "judge_post_Y": 0.16666666666666666,
+          "acted_post_Y": 0.16666666666666666,
+          "kind": "shortfall",
+          "extra_outcomes": 0.0,
+          "post_cost": 9.600000000000001,
+          "judge_post_cost": 9.600000000000001,
+          "fraud_cost_avoided": 0.0,
+          "revenue_at_stated_price": 0.0,
+          "roi_at_stated_price": 0.0,
+          "prices_are_assumptions": {
+            "value": 1.0,
+            "unit_cost": 0.4,
+            "value_name": "AOV",
+            "cost_name": "subsidy"
+          },
+          "children_per_user": 3,
+          "switched_at": null,
+          "top_concept_on_judge_stream": {
+            "feature": "judge",
+            "sse_drop": 0.38095238095238493,
+            "p": 0.4074074074074074
+          },
+          "concept_on_judge_stream": [
+            {
+              "feature": "judge",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "stable",
+              "sse_drop": 0.38095238095238493,
+              "p": 0.4074074074074074
+            },
+            {
+              "feature": "spurious",
+              "sse_drop": 0.38095238095238404,
+              "p": 0.345679012345679
+            },
+            {
+              "feature": "progress",
+              "sse_drop": 0.38095238095238315,
+              "p": 0.4444444444444444
+            }
+          ],
+          "covariate_on_judge_stream": [
+            {
+              "feature": "judge",
+              "abs_mean_shift": 0.010285714285714453,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "stable",
+              "abs_mean_shift": 0.2571428571428571,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "spurious",
+              "abs_mean_shift": 0.7114285714285715,
+              "p": 0.012345679012345678
+            },
+            {
+              "feature": "progress",
+              "abs_mean_shift": 0.6857142857142857,
+              "p": 0.012345679012345678
+            }
+          ],
+          "x_movement_on_judge_stream": [
+            {
+              "feature": "judge",
+              "pre": 0.8200000000000001,
+              "post": 0.8080000000000002,
+              "delta": -0.0119999999999999
+            },
+            {
+              "feature": "stable",
+              "pre": 0.5,
+              "post": 0.20000000000000004,
+              "delta": -0.29999999999999993
+            },
+            {
+              "feature": "spurious",
+              "pre": 0.15,
+              "post": 0.98,
+              "delta": 0.83
+            },
+            {
+              "feature": "progress",
+              "pre": 0.9,
+              "post": 0.10000000000000002,
+              "delta": -0.8
+            }
+          ],
+          "action": "The concept-drift column is not spurious. Do not spend the scenario budget.",
+          "n_alt": 0
+        }
+      }
+    }
+  ]
+}

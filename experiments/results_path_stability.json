@@ -1,0 +1,263 @@
+{
+  "rule": "unstable when the mean path-agreement of the last 8 walks is at most 0.5. The reference path is the first walk of that same item.",
+  "hotpot": {
+    "task": "hotpot",
+    "walks": 100,
+    "items": 8,
+    "unstable_at": 19,
+    "agree_before_break": 0.8421052631578947,
+    "agree_from_break": 0.12345679012345678,
+    "success_before_16": 1.0,
+    "success_from_16": 0.25,
+    "concept_at_break": [
+      {
+        "feature": "spurious",
+        "sse_drop": 15.579111090645837,
+        "p": 0.01639344262295082
+      },
+      {
+        "feature": "progress",
+        "sse_drop": 14.52409133498911,
+        "p": 0.01639344262295082
+      },
+      {
+        "feature": "judge",
+        "sse_drop": 10.821525726646833,
+        "p": 0.01639344262295082
+      },
+      {
+        "feature": "stable",
+        "sse_drop": 2.4389102468631183,
+        "p": 0.01639344262295082
+      }
+    ],
+    "rolling_agree": [
+      {
+        "t": 7,
+        "agree": 1.0
+      },
+      {
+        "t": 11,
+        "agree": 1.0
+      },
+      {
+        "t": 15,
+        "agree": 1.0
+      },
+      {
+        "t": 19,
+        "agree": 0.5
+      },
+      {
+        "t": 23,
+        "agree": 0.125
+      },
+      {
+        "t": 27,
+        "agree": 0.125
+      },
+      {
+        "t": 31,
+        "agree": 0.125
+      },
+      {
+        "t": 35,
+        "agree": 0.125
+      },
+      {
+        "t": 39,
+        "agree": 0.125
+      },
+      {
+        "t": 43,
+        "agree": 0.125
+      },
+      {
+        "t": 47,
+        "agree": 0.125
+      },
+      {
+        "t": 51,
+        "agree": 0.125
+      },
+      {
+        "t": 55,
+        "agree": 0.125
+      },
+      {
+        "t": 59,
+        "agree": 0.125
+      },
+      {
+        "t": 63,
+        "agree": 0.125
+      },
+      {
+        "t": 67,
+        "agree": 0.125
+      },
+      {
+        "t": 71,
+        "agree": 0.125
+      },
+      {
+        "t": 75,
+        "agree": 0.125
+      },
+      {
+        "t": 79,
+        "agree": 0.125
+      },
+      {
+        "t": 83,
+        "agree": 0.125
+      },
+      {
+        "t": 87,
+        "agree": 0.125
+      },
+      {
+        "t": 91,
+        "agree": 0.125
+      },
+      {
+        "t": 95,
+        "agree": 0.125
+      },
+      {
+        "t": 99,
+        "agree": 0.125
+      }
+    ]
+  },
+  "game24": {
+    "task": "game24",
+    "walks": 100,
+    "items": 8,
+    "unstable_at": 20,
+    "agree_before_break": 0.85,
+    "agree_from_break": 0.125,
+    "success_before_16": 1.0,
+    "success_from_16": 0.13095238095238096,
+    "concept_at_break": [
+      {
+        "feature": "progress",
+        "sse_drop": 11.299999999999999,
+        "p": 0.01639344262295082
+      },
+      {
+        "feature": "stable",
+        "sse_drop": 11.29999999955777,
+        "p": 0.01639344262295082
+      },
+      {
+        "feature": "spurious",
+        "sse_drop": 2.724413276666459,
+        "p": 0.01639344262295082
+      },
+      {
+        "feature": "judge",
+        "sse_drop": 2.416733046937411,
+        "p": 0.01639344262295082
+      }
+    ],
+    "rolling_agree": [
+      {
+        "t": 7,
+        "agree": 1.0
+      },
+      {
+        "t": 11,
+        "agree": 1.0
+      },
+      {
+        "t": 15,
+        "agree": 1.0
+      },
+      {
+        "t": 19,
+        "agree": 0.625
+      },
+      {
+        "t": 23,
+        "agree": 0.125
+      },
+      {
+        "t": 27,
+        "agree": 0.125
+      },
+      {
+        "t": 31,
+        "agree": 0.125
+      },
+      {
+        "t": 35,
+        "agree": 0.125
+      },
+      {
+        "t": 39,
+        "agree": 0.125
+      },
+      {
+        "t": 43,
+        "agree": 0.125
+      },
+      {
+        "t": 47,
+        "agree": 0.125
+      },
+      {
+        "t": 51,
+        "agree": 0.125
+      },
+      {
+        "t": 55,
+        "agree": 0.125
+      },
+      {
+        "t": 59,
+        "agree": 0.125
+      },
+      {
+        "t": 63,
+        "agree": 0.125
+      },
+      {
+        "t": 67,
+        "agree": 0.125
+      },
+      {
+        "t": 71,
+        "agree": 0.125
+      },
+      {
+        "t": 75,
+        "agree": 0.125
+      },
+      {
+        "t": 79,
+        "agree": 0.125
+      },
+      {
+        "t": 83,
+        "agree": 0.125
+      },
+      {
+        "t": 87,
+        "agree": 0.125
+      },
+      {
+        "t": 91,
+        "agree": 0.125
+      },
+      {
+        "t": 95,
+        "agree": 0.125
+      },
+      {
+        "t": 99,
+        "agree": 0.125
+      }
+    ]
+  }
+}

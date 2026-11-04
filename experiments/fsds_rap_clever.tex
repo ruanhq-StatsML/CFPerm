@@ -1,0 +1,91 @@
+\documentclass[UTF8,a4paper]{ctexart}
+\usepackage{amsmath,amssymb,booktabs,geometry}
+\geometry{margin=2.4cm}
+\title{FSDS $\times$ RAP：Clever Covariate 的效率与经济口径}
+\author{}
+\date{2026}
+
+\begin{document}
+\maketitle
+
+\section{注入位置}
+RAP 的选择步使用
+\[
+H(A,W)=\frac{A-e(W)}{e(W)\,(1-e(W))}.
+\]
+这里 \(W\) 是当前节点的子节点集合，\(e(W)\) 是稳定分的 softmax。评价器选中的那个动作记 \(A=1\)，于是 \(H=1/e\)。前 12 局只记录 \(H\)，取其 95\% 分位并冻住。其后某一步的 \(H\) 超过该分位，这一步改用稳定分选子节点。节点仍然全部打分，步数不变。
+
+两跳问答的分位是 18.98，Game of 24 的分位是 26.38。漂移后，两跳有 37.5\% 的局至少改了一步，Game of 24 有 45.8\%。
+
+\section{效率}
+每局展开的节点数和步数如下。Clever covariate 不减少展开。
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+策略 & 漂移前成功率 & 漂移后成功率 & 节点/局 & 步/局 \\
+\midrule
+两跳，评价器 & 1.00 & 0.25 & 39.0 & 2 \\
+两跳，稳定分 & 0.12 & 0.12 & 39.0 & 2 \\
+两跳，clever & 0.88 & 0.25 & 39.0 & 2 \\
+Game of 24，评价器 & 1.00 & 0.25 & 50.6 & 3 \\
+Game of 24，稳定分 & 0.19 & 0.04 & 50.0 & 3 \\
+Game of 24，clever & 0.75 & 0.17 & 50.5 & 3 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+漂移后每节点成功率：两跳评价器与 clever 同为 \(0.0064\)；Game of 24 从 \(0.0049\) 降到 \(0.0033\)。参考期里 clever 已经把两跳从 1.00 打到 0.88，把 Game of 24 从 1.00 打到 0.75，因为第 12 局之后、漂移之前就有步超过了分位。
+
+\section{经济口径}
+\[
+\mathrm{NetValue}=\Delta\mathrm{Revenue}-\Delta\mathrm{Cost},
+\quad
+\Delta\mathrm{Revenue}=\Delta\mathrm{Success}\times V\times N,
+\quad
+\Delta\mathrm{Cost}=0.
+\]
+\(N=24\) 是漂移后的局数。节点数没有增加，故 \(\Delta\mathrm{Cost}=0\)。\(V\) 只作标价：两跳每局 \(0.001\)，Game of 24 每局 \(0.10\)。没有把 AUC 换成另一笔收入。
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+任务 & \(\Delta\)Success & \(\Delta\)Revenue & 未收回的成功率 & 口径 \\
+\midrule
+两跳 & 0 & 0 & 0.75 & 挽损，未补上 \\
+Game of 24 & \(-0.083\) & \(-0.20\) & 0.83 & 挽损，缺口更大 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+判定规则：clever 的漂移后成功率不超过该任务漂移前评价器的成功率，就记为挽损；超过才记为用增。两题都没有超过漂移前的 1.00。两跳的漂移后成功率与评价器相同，掉下去的 0.75 没有回来。Game of 24 的漂移后成功率比评价器还低 0.083，缺口从 0.75 扩到 0.83。因此这次注入不是用增。
+
+稳定分本身在漂移后更弱（两跳 0.12，Game of 24 0.04）。\(H\) 大时改走稳定分，相对评价器没有把漂移后的成功率抬上去。
+
+\section{机会}
+提升出现在和「每一步都改走稳定分」比，不出现在和「始终用评价器」比。
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+对照 & 两跳漂移后 & Game of 24 漂移后 \\
+\midrule
+clever 减稳定分 & \(+0.12\) & \(+0.13\) \\
+clever 减评价器 & \(0\) & \(-0.08\) \\
+漂移前，clever 减稳定分 & \(+0.75\) & \(+0.56\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+只在 \(H\) 超过冻住分位的那一步换规则。漂移后两跳有 62.5\% 的局一步都没换，Game of 24 有 54.2\% 没换。这些局里评价器还在用。因此漂移前成功率留在 0.88 和 0.75，而全程稳定分只有 0.12 和 0.19。漂移后两跳留在 0.25，而不是掉到稳定分的 0.12。
+
+按同样的标价，相对全程稳定分，漂移后 24 局的收入差是：两跳 \(0.12\times 0.001\times 24=0.0029\)，Game of 24 \(0.13\times 0.10\times 24=0.30\)。节点数相同，所以这是少换来的成功率，不是少算出来的节点。相对评价器，这笔账不是用增。
+
+\section{特征选择接到换不换}
+概念漂移的残差平方和下降，对上「这一列是不是被注入的 spurious」。这个二分类的 AUC，两跳约 0.33，Game of 24 约 0.36，都低于 0.5。23 次拟合里，两跳的第一名全是 progress；Game of 24 是 progress 18 次、stable 5 次。spurious 没有一次排第一。
+
+门控规则：\(H\) 超过分位，并且 judge 与 spurious 的份额至少一半，才换稳定分。Game of 24 上这个份额到不了一半，漂移后的切换从 14 次变成 0 次，成功率回到评价器的 0.25（不加门是 0.17），漂移前从 0.75 回到 1.00。两跳的份额有时过半，漂移后仍换了 9 次，成功率维持 0.25，漂移前从 0.88 回到 1.00。
+
+相对不加门的 clever，Game of 24 在漂移后的 24 局里多留住约 2 局。按每局 \(0.10\)，这是 \(0.20\)，除以 14 次被拦下的切换，每次少亏 \(0.014\) 局。相对评价器，多解出来的局数是 0，所以 ROI 的分子是 0。选择器没有把注入列排到前面，门就关着；关着避免了把弱稳定分换上去。
+
+\end{document}

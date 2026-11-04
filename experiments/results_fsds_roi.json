@@ -1,0 +1,98 @@
+{
+  "tasks": {
+    "hotpot": {
+      "judge": {
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "post_switches": 0,
+        "post_episodes": 24,
+        "selection_auc": 0.326086956521739,
+        "concept_top_counts": {
+          "progress": 23
+        }
+      },
+      "clever": {
+        "pre_success": 0.875,
+        "post_success": 0.25,
+        "post_switches": 12,
+        "post_episodes": 24,
+        "selection_auc": 0.31884057971014484,
+        "concept_top_counts": {
+          "progress": 23
+        }
+      },
+      "gated": {
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "post_switches": 9,
+        "post_episodes": 24,
+        "selection_auc": 0.326086956521739,
+        "concept_top_counts": {
+          "progress": 23
+        }
+      },
+      "roi_vs_judge": {
+        "extra_solved": 0.0,
+        "post_switches": 9,
+        "revenue": 0.0,
+        "roi_per_switch": 0.0,
+        "selection_auc": 0.326086956521739
+      },
+      "roi_clever_vs_judge": {
+        "extra_solved": 0.0,
+        "post_switches": 12,
+        "revenue": 0.0,
+        "roi_per_switch": 0.0,
+        "selection_auc": 0.31884057971014484
+      }
+    },
+    "game24": {
+      "judge": {
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "post_switches": 0,
+        "post_episodes": 24,
+        "selection_auc": 0.35507246376811585,
+        "concept_top_counts": {
+          "stable": 5,
+          "progress": 18
+        }
+      },
+      "clever": {
+        "pre_success": 0.75,
+        "post_success": 0.16666666666666666,
+        "post_switches": 14,
+        "post_episodes": 24,
+        "selection_auc": 0.0,
+        "concept_top_counts": {
+          "progress": 23
+        }
+      },
+      "gated": {
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "post_switches": 0,
+        "post_episodes": 24,
+        "selection_auc": 0.35507246376811585,
+        "concept_top_counts": {
+          "stable": 5,
+          "progress": 18
+        }
+      },
+      "roi_vs_judge": {
+        "extra_solved": 0.0,
+        "post_switches": 0,
+        "revenue": 0.0,
+        "roi_per_switch": null,
+        "selection_auc": 0.35507246376811585
+      },
+      "roi_clever_vs_judge": {
+        "extra_solved": -2.0,
+        "post_switches": 14,
+        "revenue": -0.2,
+        "roi_per_switch": -0.14285714285714285,
+        "selection_auc": 0.0
+      }
+    }
+  }
+}
