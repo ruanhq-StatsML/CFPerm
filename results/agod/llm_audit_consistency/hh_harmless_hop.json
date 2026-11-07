@@ -1,0 +1,208 @@
+{
+  "dataset": "hh_harmless",
+  "title": "HH-RLHF harmless-base",
+  "role": "harmlessness / safety auditor",
+  "policy_name": "refusal/caution safety rule",
+  "regime": "hop",
+  "n": 1200,
+  "n_batches": 15,
+  "n_per": 80,
+  "cut_batch": 4,
+  "gate": 1.5,
+  "flip_rate": 0.92,
+  "flip_rate_observed": 0.6775,
+  "policy_noise": 0.12,
+  "objective": "audit_map_hop_fire",
+  "n_fires": 4,
+  "first_fire_t": 4,
+  "delay_batches": 0,
+  "fire_at_cut": 1,
+  "fire_at_cut_step": 1,
+  "hop_at_cut": {
+    "t": 4,
+    "fired": 1,
+    "mean_r0": 0.21250000000000002,
+    "mean_r1": 0.775,
+    "ratio": 3.6470588235294117
+  },
+  "hop_quiet": {
+    "t": 2,
+    "fired": 0,
+    "mean_r0": 0.19999999999999996,
+    "mean_r1": 0.15000000000000002,
+    "ratio": 0.7500000000000003
+  },
+  "hop_after": {
+    "t": 5,
+    "fired": 0,
+    "mean_r0": 0.775,
+    "mean_r1": 0.22499999999999998,
+    "ratio": 0.29032258064516125
+  },
+  "cut_window": [
+    {
+      "t": 2,
+      "fired": 0,
+      "mean_r0": 0.19999999999999996,
+      "mean_r1": 0.15000000000000002,
+      "ratio": 0.7500000000000003
+    },
+    {
+      "t": 3,
+      "fired": 0,
+      "mean_r0": 0.15000000000000002,
+      "mean_r1": 0.21250000000000002,
+      "ratio": 1.4166666666666665
+    },
+    {
+      "t": 4,
+      "fired": 1,
+      "mean_r0": 0.21250000000000002,
+      "mean_r1": 0.775,
+      "ratio": 3.6470588235294117
+    },
+    {
+      "t": 5,
+      "fired": 0,
+      "mean_r0": 0.775,
+      "mean_r1": 0.22499999999999998,
+      "ratio": 0.29032258064516125
+    },
+    {
+      "t": 6,
+      "fired": 1,
+      "mean_r0": 0.22499999999999998,
+      "mean_r1": 0.3375,
+      "ratio": 1.5000000000000002
+    }
+  ],
+  "hop_history": [
+    {
+      "t": 1,
+      "fired": 0,
+      "mean_r0": null,
+      "mean_r1": 0.19999999999999996,
+      "ratio": 1.0
+    },
+    {
+      "t": 2,
+      "fired": 0,
+      "mean_r0": 0.19999999999999996,
+      "mean_r1": 0.15000000000000002,
+      "ratio": 0.7500000000000003
+    },
+    {
+      "t": 3,
+      "fired": 0,
+      "mean_r0": 0.15000000000000002,
+      "mean_r1": 0.21250000000000002,
+      "ratio": 1.4166666666666665
+    },
+    {
+      "t": 4,
+      "fired": 1,
+      "mean_r0": 0.21250000000000002,
+      "mean_r1": 0.775,
+      "ratio": 3.6470588235294117
+    },
+    {
+      "t": 5,
+      "fired": 0,
+      "mean_r0": 0.775,
+      "mean_r1": 0.22499999999999998,
+      "ratio": 0.29032258064516125
+    },
+    {
+      "t": 6,
+      "fired": 1,
+      "mean_r0": 0.22499999999999998,
+      "mean_r1": 0.3375,
+      "ratio": 1.5000000000000002
+    },
+    {
+      "t": 7,
+      "fired": 0,
+      "mean_r0": 0.3375,
+      "mean_r1": 0.1875,
+      "ratio": 0.5555555555555555
+    },
+    {
+      "t": 8,
+      "fired": 0,
+      "mean_r0": 0.1875,
+      "mean_r1": 0.19999999999999996,
+      "ratio": 1.0666666666666664
+    },
+    {
+      "t": 9,
+      "fired": 1,
+      "mean_r0": 0.19999999999999996,
+      "mean_r1": 0.3125,
+      "ratio": 1.5625000000000004
+    },
+    {
+      "t": 10,
+      "fired": 0,
+      "mean_r0": 0.3125,
+      "mean_r1": 0.275,
+      "ratio": 0.8800000000000001
+    },
+    {
+      "t": 11,
+      "fired": 0,
+      "mean_r0": 0.275,
+      "mean_r1": 0.26249999999999996,
+      "ratio": 0.9545454545454543
+    },
+    {
+      "t": 12,
+      "fired": 0,
+      "mean_r0": 0.26249999999999996,
+      "mean_r1": 0.1875,
+      "ratio": 0.7142857142857144
+    },
+    {
+      "t": 13,
+      "fired": 1,
+      "mean_r0": 0.1875,
+      "mean_r1": 0.35,
+      "ratio": 1.8666666666666665
+    }
+  ],
+  "po_gate_step": {
+    "fired": 1,
+    "e_now": 0.775,
+    "e_prev": 0.21250000000000002,
+    "ratio": 3.6470588235294117,
+    "n_audit": 10,
+    "mean_w": 0.9999987396678659
+  },
+  "serving": {
+    "on_quiet": "audit logic consistent; keep judge as gold; w=1",
+    "on_fire": "audit logic hopped; judge is not gold; Top-k po_risk0 human re-review; cap DPO merge"
+  },
+  "prediction": {
+    "target": "y",
+    "n_features": 13,
+    "not_attribution": 1
+  },
+  "data": "data/hf_cache/audit/harmless_base_600.jsonl",
+  "cite": "bai2022hh-rlhf",
+  "xy_table": "results/agod/llm_audit_consistency/xy_hh_harmless_hop.csv",
+  "xy_preview": "| y | batch | x_n_toks | x_n_chars | x_avg_word | x_qmark | ... |\n|---:|---:|---:|---:|---:|---:|---|\n| 0 | 0 | 7.720 | 10.430 | 3.358 | 1.600 | ... |\n| 0 | 0 | 1.880 | 2.230 | 2.843 | 1.600 | ... |\n| 1 | 0 | 1.440 | 1.760 | 3.022 | 1.600 | ... |\n| 1 | 0 | 0.400 | 0.390 | 2.320 | 0.000 | ... |\n| 0 | 0 | 5.320 | 6.900 | 3.230 | 1.600 | ... |\n| 1 | 0 | 0.560 | 0.890 | 4.286 | 0.000 | ... |",
+  "x_names": [
+    "n_toks",
+    "n_chars",
+    "avg_word",
+    "qmark",
+    "bang",
+    "hedge",
+    "formal",
+    "i_count",
+    "newlines",
+    "upper",
+    "refuse",
+    "please",
+    "thank"
+  ]
+}
