@@ -1,0 +1,219 @@
+{
+  "game24": {
+    "pre_Y": 1.0,
+    "post_Y": 0.25,
+    "layers": [
+      {
+        "layer": "L3_stat",
+        "sse_sum": 7.840381540283776,
+        "sse_best": 4.256914145543387,
+        "best_feature": "score_entropy",
+        "best_p": 0.012345679012345678,
+        "mean_shift_max": 6.1907077573332225,
+        "shift_feature": "score_std",
+        "sse_share": 0.3537386451812007
+      },
+      {
+        "layer": "L2_history",
+        "sse_sum": 6.506827035713332,
+        "sse_best": 2.086623111533327,
+        "best_feature": "roll_mean",
+        "best_p": 0.012345679012345678,
+        "mean_shift_max": 13.725979394050844,
+        "shift_feature": "score_diff",
+        "sse_share": 0.2935719605245555
+      },
+      {
+        "layer": "L5_interact",
+        "sse_sum": 3.6446321684609604,
+        "sse_best": 2.086623111533328,
+        "best_feature": "score_x_len",
+        "best_p": 0.012345679012345678,
+        "mean_shift_max": 15.031371300316987,
+        "shift_feature": "score_x_len",
+        "sse_share": 0.1644367992592027
+      },
+      {
+        "layer": "L4_embed",
+        "sse_sum": 2.0997353873121316,
+        "sse_best": 2.0997353873121316,
+        "best_feature": "e0",
+        "best_p": 0.012345679012345678,
+        "mean_shift_max": 27.133680597222224,
+        "shift_feature": "e0",
+        "sse_share": 0.0947348732112766
+      },
+      {
+        "layer": "L1_graph",
+        "sse_sum": 2.072758037225052,
+        "sse_best": 0.6909193457416833,
+        "best_feature": "n_siblings",
+        "best_p": 0.07407407407407407,
+        "mean_shift_max": 0.8819444444444429,
+        "shift_feature": "n_siblings",
+        "sse_share": 0.09351772182376426
+      },
+      {
+        "layer": "L6_context",
+        "sse_sum": 5.329070518200751e-15,
+        "sse_best": 2.6645352591003757e-15,
+        "best_feature": "beam",
+        "best_p": 1.0,
+        "mean_shift_max": 0.0,
+        "shift_feature": "beam",
+        "sse_share": 2.4043449613999056e-16
+      }
+    ],
+    "top_features": [
+      {
+        "feature": "score_entropy",
+        "sse_drop": 4.256914145543387,
+        "p": 0.012345679012345678
+      },
+      {
+        "feature": "e0",
+        "sse_drop": 2.0997353873121316,
+        "p": 0.012345679012345678
+      },
+      {
+        "feature": "score_x_len",
+        "sse_drop": 2.086623111533328,
+        "p": 0.012345679012345678
+      },
+      {
+        "feature": "roll_mean",
+        "sse_drop": 2.086623111533327,
+        "p": 0.012345679012345678
+      },
+      {
+        "feature": "score_diff",
+        "sse_drop": 1.994084661570116,
+        "p": 0.012345679012345678
+      },
+      {
+        "feature": "roll_std",
+        "sse_drop": 1.962643774857769,
+        "p": 0.012345679012345678
+      },
+      {
+        "feature": "score_std",
+        "sse_drop": 1.962643774857769,
+        "p": 0.012345679012345678
+      },
+      {
+        "feature": "score_z",
+        "sse_drop": 1.6208236198826196,
+        "p": 0.012345679012345678
+      }
+    ]
+  },
+  "offer": {
+    "pre_Y": 0.5,
+    "post_Y": 0.16666666666666666,
+    "layers": [
+      {
+        "layer": "L2_history",
+        "sse_sum": 4.21426689252777,
+        "sse_best": 3.350649350649353,
+        "best_feature": "prev_y",
+        "best_p": 0.012345679012345678,
+        "mean_shift_max": 0.33333333333333337,
+        "shift_feature": "prev_y",
+        "sse_share": 0.7317558137003677
+      },
+      {
+        "layer": "L5_interact",
+        "sse_sum": 0.7829447251380044,
+        "sse_best": 0.4019923441856177,
+        "best_feature": "depth_x_gap",
+        "best_p": 0.37037037037037035,
+        "mean_shift_max": 0.27799999999066494,
+        "shift_feature": "depth_x_gap",
+        "sse_share": 0.13594875906924914
+      },
+      {
+        "layer": "L4_embed",
+        "sse_sum": 0.761904761904769,
+        "sse_best": 0.38095238095238493,
+        "best_feature": "e2",
+        "best_p": 0.41975308641975306,
+        "mean_shift_max": 1.0,
+        "shift_feature": "e0",
+        "sse_share": 0.13229542723038043
+      },
+      {
+        "layer": "L1_graph",
+        "sse_sum": 1.0658141036401503e-14,
+        "sse_best": 2.6645352591003757e-15,
+        "best_feature": "depth",
+        "best_p": 1.0,
+        "mean_shift_max": 0.0,
+        "shift_feature": "depth",
+        "sse_share": 1.85065560998374e-15
+      },
+      {
+        "layer": "L6_context",
+        "sse_sum": 5.329070518200751e-15,
+        "sse_best": 2.6645352591003757e-15,
+        "best_feature": "beam",
+        "best_p": 1.0,
+        "mean_shift_max": 0.0,
+        "shift_feature": "beam",
+        "sse_share": 9.2532780499187e-16
+      },
+      {
+        "layer": "L3_stat",
+        "sse_sum": 0.0,
+        "sse_best": 0.0,
+        "best_feature": "score_std",
+        "best_p": 1.0,
+        "mean_shift_max": 0.0,
+        "shift_feature": "score_std",
+        "sse_share": 0.0
+      }
+    ],
+    "top_features": [
+      {
+        "feature": "prev_y",
+        "sse_drop": 3.350649350649353,
+        "p": 0.012345679012345678
+      },
+      {
+        "feature": "prev_score",
+        "sse_drop": 0.4826651609260324,
+        "p": 0.2716049382716049
+      },
+      {
+        "feature": "depth_x_gap",
+        "sse_drop": 0.4019923441856177,
+        "p": 0.37037037037037035
+      },
+      {
+        "feature": "score_x_len",
+        "sse_drop": 0.38095238095238493,
+        "p": 0.3950617283950617
+      },
+      {
+        "feature": "e2",
+        "sse_drop": 0.38095238095238493,
+        "p": 0.41975308641975306
+      },
+      {
+        "feature": "roll_mean",
+        "sse_drop": 0.38095238095238493,
+        "p": 0.43209876543209874
+      },
+      {
+        "feature": "e0",
+        "sse_drop": 0.38095238095238404,
+        "p": 0.5555555555555556
+      },
+      {
+        "feature": "depth",
+        "sse_drop": 2.6645352591003757e-15,
+        "p": 1.0
+      }
+    ]
+  },
+  "note": "L4 encodes the committed state in four numbers. It is not a 768-d text embedding. Current-episode residual is excluded."
+}

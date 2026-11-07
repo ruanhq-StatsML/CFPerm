@@ -1,0 +1,57 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{booktabs,geometry}
+\geometry{margin=2.3cm}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0em}
+\title{Production value of the next-step \(H\) prompt}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+The skill \texttt{rap\_clever\_covariate\_guide} does one thing.
+After an episode returns \(Y\in\{0,1\}\) and the committed prior \(e\), it writes
+\[
+H=\frac{Y-e}{e(1-e)}
+\]
+into the planning prompt of the next episode, together with \(|H|\) and a hint.
+The hint is aggressive if \(H>0.5\), conservative if \(H<-0.5\), and keep otherwise.
+The current episode does not read its own \(Y\).
+No UCB term is attached, and no language model was called in this measurement.
+Token spend and fine-tuning cost were not metered.
+The production numbers below are the search outcomes.
+
+On the three-offer search each user scores three children, before and after the prompt exists.
+Forty users, drift at user 16.
+The unread judge falls from activation \(0.500\) to \(0.167\), eight users below the pre-drift rate.
+A check call with prior \(0.3\) and outcome \(1\) returns \(H=3.333\) and hint aggressive.
+On the unread post-drift stream the next-user prompts are 4 aggressive and 19 conservative, and none are keep.
+The first failure, prior \(0.20\) and \(Y=0\), returns \(H=-1.250\) and hint conservative.
+Successes on that stream have mean \(|H|=5.00\) and failures have mean \(|H|=1.25\), so the magnitude is not the failure signal.
+The sign is.
+
+The production increment is the next ranking reading that sign.
+Switching at user 17, when finished losses have run conservative, raises post-drift activation from \(0.167\) to \(0.625\).
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Policy & Post-drift \(Y\) & vs pre-drift & vs unread judge & Extra children \\
+\midrule
+Prompt not read & 0.167 & \(-8\) & 0 & 0 \\
+Hint read at user 17 & 0.625 & \(+3\) & \(+11\) & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Eleven extra activations against the drifted judge, and three above the pre-drift rate, at the same three children per user.
+\(|H|\) stays near \(2.00\) (\(1.995\)).
+The prior of the chosen offer moves from \(0.50\) to \(0.650\), and the conservative share moves from \(0.50\) to \(0.375\).
+The value sits on the hint changing the next offer, not on a larger anomaly score.
+
+The control is Game of 24, where the same \(H\) was written and the next argmax ignored it.
+Activation fell from \(1.00\) to \(0.25\), and scored children stayed near \(115\).
+Printing the prompt is not the product.
+The product is the next step treating conservative as a change of branch, which on this offer search is eleven recovered activations and no extra expansion.
+
+\end{document}

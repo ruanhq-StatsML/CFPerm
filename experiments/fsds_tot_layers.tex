@@ -1,0 +1,103 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,booktabs,geometry}
+\geometry{margin=2.3cm}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0em}
+\title{Which feature layer carries a drifted Tree-of-Thoughts}
+\author{}
+\date{2026}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+FSDS is applied to two searches after the features are grouped into six layers.
+On Game of 24 the outcome rate falls from \(1.00\) to \(0.25\), and the score-shape layers take \(65\%\) of the concept-drift SSE.
+The graph layer takes \(9\%\).
+On the one-step offer search the tree never changes shape, the graph layer takes nothing, and the previous outcome takes \(73\%\).
+The four-number state encoding moves sharply and still fails the concept test, because it is the same step as the offer change.
+\end{abstract}
+
+\section{What is extracted}
+Each finished episode supplies one row.
+\(Y\) is \(1\) when the search returns a solved state, and \(0\) otherwise.
+The current episode's residual is not a column.
+The layers used here are a small subset of a six-layer scheme, with sizes fixed by the search rather than by a 768-dimensional text encoder.
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Layer & Columns on the committed path \\
+\midrule
+L1 graph & depth, children, siblings, path length, branch count \\
+L2 history & previous score, score change, rolling mean and std, previous \(Y\) \\
+L3 statistics & score std, score \(z\), score entropy \\
+L4 embedding & four numbers: sorted state entries divided by 24, or a 4-bin identity \\
+L5 interaction & children per depth, depth times score gap, score times path length \\
+L6 context & beam, maximum depth, last-step fraction \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Concept drift for a column \(x\) is the SSE drop from \(Y\sim 1+\mathrm{batch}\) to \(Y\sim 1+\mathrm{batch}+x+\mathrm{batch}\cdot x\), split after 12 episodes, with an 80-shuffle \(p\)-value.
+A second test records the absolute mean shift across the drift at episode 16.
+Layer share is the sum of positive SSE drops inside the layer, divided by the sum over layers.
+
+\section{Game of 24}
+Beam 4, depth 3, drift at episode 16, judge mix \(0.28\).
+Forty episodes.
+\(Y\) moves from \(1.00\) to \(0.25\).
+
+\begin{center}
+\begin{tabular}{lrrrl}
+\toprule
+Layer & SSE share & Best column & Best \(p\) & Largest mean shift \\
+\midrule
+L3 statistics & 0.354 & score entropy & 0.012 & 6.19 \\
+L2 history & 0.294 & rolling mean & 0.012 & 13.73 \\
+L5 interaction & 0.164 & score \(\times\) length & 0.012 & 15.03 \\
+L4 embedding & 0.095 & \(e_0\) & 0.012 & 27.13 \\
+L1 graph & 0.094 & sibling count & 0.074 & 0.88 \\
+L6 context & 0.000 & beam & 1.000 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The path still has three committed steps, so beam, maximum depth, and the last-step fraction do not move.
+Sibling count does move, by \(0.88\), and its concept \(p\)-value is \(0.074\).
+That is the graph signal: the drifted judge expands a different frontier.
+It is smaller than the change in the score profile along the path.
+Score entropy, the rolling mean, and the state encoding all clear \(p=0.012\).
+The large embedding shift is the committed partial expression, scaled by 24, landing on different magnitudes after the drift.
+
+\section{One-step offer search}
+Beam 1, depth 1, three offers, drift at user 16, judge mix \(0.80\).
+\(Y\) moves from \(0.50\) to \(0.167\).
+Every user scores exactly three children and commits one step, so the graph columns and the context columns are constant.
+
+\begin{center}
+\begin{tabular}{lrrrl}
+\toprule
+Layer & SSE share & Best column & Best \(p\) & Largest mean shift \\
+\midrule
+L2 history & 0.732 & previous \(Y\) & 0.012 & 0.333 \\
+L5 interaction & 0.136 & depth \(\times\) gap & 0.370 & 0.278 \\
+L4 embedding & 0.132 & \(e_2\) & 0.420 & 1.000 \\
+L1 graph & 0.000 & depth & 1.000 & 0.000 \\
+L3 statistics & 0.000 & score std & 1.000 & 0.000 \\
+L6 context & 0.000 & beam & 1.000 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Previous \(Y\) is the column that carries the level shift: once failures cluster, the last outcome predicts the next one, with concept \(p=0.012\) and a mean shift of \(0.333\).
+The offer identity is a four-bin encoding. Its mean shifts by \(1\), which is the habit-to-click change, and its concept \(p\)-value stays \(0.42\).
+The encoding is a relabeling of the batch bit, so the interaction adds almost no SSE beyond \(Y\sim 1+\mathrm{batch}\).
+A single score per episode has standard deviation zero, and the statistics layer is empty for the same reason.
+
+\section{What the attribution supports}
+On a search whose frontier changes, FSDS assigns the outcome drop first to the score profile, then to the state encoding, and only then to sibling count.
+On a search whose tree shape is fixed, the graph layer is silent, the identity encoding is visible as a mean shift and not as a concept column, and the usable concept column is the previous outcome.
+Context columns that are constant by design contribute share zero in both tasks.
+No budget weight was imposed on the layers. The shares above are the SSE sums.
+
+\end{document}

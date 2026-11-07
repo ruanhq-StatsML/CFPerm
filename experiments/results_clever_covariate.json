@@ -1,0 +1,93 @@
+{
+  "policies": {
+    "hotpot": {
+      "judge": {
+        "task": "hotpot_twohop",
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "nodes_per_task": 39.0,
+        "steps_per_task": 2.0,
+        "post_switch_rate": 0.0,
+        "h_ref_q95": 18.978928423224268,
+        "success_per_node": 0.00641025641025641
+      },
+      "stable": {
+        "task": "hotpot_twohop",
+        "pre_success": 0.125,
+        "post_success": 0.125,
+        "nodes_per_task": 39.0,
+        "steps_per_task": 2.0,
+        "post_switch_rate": 1.0,
+        "h_ref_q95": 18.978928423224268,
+        "success_per_node": 0.003205128205128205
+      },
+      "clever": {
+        "task": "hotpot_twohop",
+        "pre_success": 0.875,
+        "post_success": 0.25,
+        "nodes_per_task": 39.0,
+        "steps_per_task": 2.0,
+        "post_switch_rate": 0.375,
+        "h_ref_q95": 18.978928423224268,
+        "success_per_node": 0.00641025641025641
+      }
+    },
+    "game24": {
+      "judge": {
+        "task": "game24",
+        "pre_success": 1.0,
+        "post_success": 0.25,
+        "nodes_per_task": 50.6,
+        "steps_per_task": 3.0,
+        "post_switch_rate": 0.0,
+        "h_ref_q95": 26.37748103289384,
+        "success_per_node": 0.004940711462450593
+      },
+      "stable": {
+        "task": "game24",
+        "pre_success": 0.1875,
+        "post_success": 0.041666666666666664,
+        "nodes_per_task": 50.05,
+        "steps_per_task": 3.0,
+        "post_switch_rate": 1.0,
+        "h_ref_q95": 26.37748103289384,
+        "success_per_node": 0.0008325008325008325
+      },
+      "clever": {
+        "task": "game24",
+        "pre_success": 0.75,
+        "post_success": 0.16666666666666666,
+        "nodes_per_task": 50.5,
+        "steps_per_task": 3.0,
+        "post_switch_rate": 0.4583333333333333,
+        "h_ref_q95": 26.37748103289384,
+        "success_per_node": 0.0033003300330033
+      }
+    }
+  },
+  "value": {
+    "hotpot": {
+      "delta_success": 0.0,
+      "n_post": 24,
+      "v_task": 0.001,
+      "delta_revenue": 0.0,
+      "delta_nodes": 0.0,
+      "delta_cost": 0.0,
+      "net_value": 0.0,
+      "kind": "\u633d\u635f",
+      "unrecovered_success": 0.75
+    },
+    "game24": {
+      "delta_success": -0.08333333333333334,
+      "n_post": 24,
+      "v_task": 0.1,
+      "delta_revenue": -0.20000000000000004,
+      "delta_nodes": -0.10000000000000142,
+      "delta_cost": 0.0,
+      "net_value": -0.20000000000000004,
+      "kind": "\u633d\u635f",
+      "unrecovered_success": 0.8333333333333334
+    }
+  },
+  "kind_rule": "post_success at or below the pre-drift judge rate is \u633d\u635f. Above that rate is \u7528\u589e."
+}

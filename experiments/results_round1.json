@@ -1,0 +1,240 @@
+{
+  "null_monitor": {
+    "mean_reject_rate": 0.0,
+    "alpha": 0.05,
+    "reps": 20,
+    "n": 300
+  },
+  "tasks": {
+    "game24": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.041666666666666664
+      },
+      "stable": {
+        "pre_success": 0.3125,
+        "post_success": 0.2916666666666667
+      },
+      "gated": {
+        "task": "game24",
+        "pre_success": 1.0,
+        "post_success": 0.2916666666666667,
+        "switch_at": 18,
+        "false_alarm_before_drift": false,
+        "detection_delay": 2,
+        "lord_at": null,
+        "top_shifted_feature": "progress",
+        "localization": [
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.75,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.16720085470085466,
+            "p": 0.029925187032418952
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.06803314344498218,
+            "p": 0.09725685785536159
+          },
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.056757769858888696,
+            "p": 0.2892768079800499
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "blocksworld": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.0
+      },
+      "stable": {
+        "pre_success": 0.9375,
+        "post_success": 1.0
+      },
+      "gated": {
+        "task": "blocksworld",
+        "pre_success": 1.0,
+        "post_success": 0.9166666666666666,
+        "switch_at": 18,
+        "false_alarm_before_drift": false,
+        "detection_delay": 2,
+        "lord_at": null,
+        "top_shifted_feature": "spurious",
+        "localization": [
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.27083333333333337,
+            "p": 0.06733167082294264
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.05729166666666663,
+            "p": 0.13216957605985039
+          },
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.038541666666666585,
+            "p": 0.7556109725685786
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.015625,
+            "p": 0.8453865336658354
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "minigrid_doorkey": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.0
+      },
+      "stable": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      },
+      "gated": {
+        "task": "minigrid_doorkey",
+        "pre_success": 1.0,
+        "post_success": 0.9166666666666666,
+        "switch_at": 18,
+        "false_alarm_before_drift": false,
+        "detection_delay": 2,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.59,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.0625,
+            "p": 0.004987531172069825
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.0017361111111111327,
+            "p": 1.0
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.0,
+            "p": 1.0
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "hotpot_twohop": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.125
+      },
+      "stable": {
+        "pre_success": 0.0625,
+        "post_success": 0.16666666666666666
+      },
+      "gated": {
+        "task": "hotpot_twohop",
+        "pre_success": 1.0,
+        "post_success": 0.16666666666666666,
+        "switch_at": 19,
+        "false_alarm_before_drift": false,
+        "detection_delay": 3,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.10188492063492066,
+            "p": 0.0199501246882793
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.10416666666666669,
+            "p": 0.11970074812967581
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.03199404761904756,
+            "p": 0.5336658354114713
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.01736111111111105,
+            "p": 0.8029925187032418
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    },
+    "webshop_attr": {
+      "noisy": {
+        "pre_success": 1.0,
+        "post_success": 0.16666666666666666
+      },
+      "stable": {
+        "pre_success": 0.3125,
+        "post_success": 0.4583333333333333
+      },
+      "gated": {
+        "task": "webshop_attr",
+        "pre_success": 1.0,
+        "post_success": 0.4166666666666667,
+        "switch_at": 18,
+        "false_alarm_before_drift": false,
+        "detection_delay": 2,
+        "lord_at": null,
+        "top_shifted_feature": "judge",
+        "localization": [
+          {
+            "feature": "judge",
+            "abs_mean_shift": 0.3620833333333333,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "progress",
+            "abs_mean_shift": 0.41666666666666674,
+            "p": 0.0024937655860349127
+          },
+          {
+            "feature": "spurious",
+            "abs_mean_shift": 0.06791666666666663,
+            "p": 0.5037406483790524
+          },
+          {
+            "feature": "stable",
+            "abs_mean_shift": 0.04166666666666663,
+            "p": 1.0
+          }
+        ]
+      },
+      "oracle": {
+        "pre_success": 1.0,
+        "post_success": 1.0
+      }
+    }
+  }
+}
