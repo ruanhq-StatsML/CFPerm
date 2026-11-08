@@ -1,0 +1,107 @@
+{
+  "median_summary": [
+    {
+      "split_feature": "NumInqLast6M",
+      "driver": "PercentInstallTrades",
+      "top_degree": 0.010706675583589542,
+      "energy": 0.010706675583589542,
+      "hit_at_k": 0.2,
+      "auc_abs": 0.9545454545454546,
+      "contrast": -0.00011278133921826584,
+      "concentrated": "low",
+      "dmse_low": 0.02798950942036707,
+      "dmse_high": 0.01817727614657519
+    },
+    {
+      "split_feature": "NumInqLast6Mexcl7days",
+      "driver": "NumInqLast6M",
+      "top_degree": 0.05660924968798936,
+      "energy": 0.05660924968798936,
+      "hit_at_k": 0.2,
+      "auc_abs": 0.9545454545454546,
+      "contrast": NaN,
+      "concentrated": "",
+      "dmse_low": NaN,
+      "dmse_high": 0.4259050735748852
+    },
+    {
+      "split_feature": "ExternalRiskEstimate",
+      "driver": "NumInqLast6M",
+      "top_degree": 0.061086179714876426,
+      "energy": 0.061086179714876426,
+      "hit_at_k": 0.2,
+      "auc_abs": 0.8636363636363636,
+      "contrast": 0.027656141696698354,
+      "concentrated": "high",
+      "dmse_low": 0.01944102666202055,
+      "dmse_high": 0.05792034207238722
+    }
+  ],
+  "weakcd_summary": [
+    {
+      "draw": 0,
+      "design": "weak5_nonlinear_cd",
+      "drivers": "MSinceMostRecentInqexcl7days,MSinceMostRecentDelq,AverageMInFile,NumInqLast6Mexcl7days,ExternalRiskEstimate",
+      "pfi_top": "ExternalRiskEstimate",
+      "hit_at_k": 0.6,
+      "auc_abs": 0.8333333333333334,
+      "contrast": 0.0035613931128419905,
+      "concentrated": "high",
+      "delta_y": 0.02266666666666667,
+      "dmse_low": 0.10791978765337301,
+      "dmse_high": 0.07230697506905082
+    },
+    {
+      "draw": 1,
+      "design": "weak5_nonlinear_cd",
+      "drivers": "MaxDelq2PublicRecLast12M,PercentTradesWBalance,NumRevolvingTradesWBalance,NetFractionInstallBurden,MSinceMostRecentInqexcl7days",
+      "pfi_top": "NumInqLast6M",
+      "hit_at_k": 0.4,
+      "auc_abs": 0.6000000000000001,
+      "contrast": 0.029979366460797616,
+      "concentrated": "high",
+      "delta_y": -0.04733333333333334,
+      "dmse_low": 0.16654329773983612,
+      "dmse_high": 0.13773710963106023
+    },
+    {
+      "draw": 2,
+      "design": "weak5_nonlinear_cd",
+      "drivers": "MSinceMostRecentInqexcl7days,NetFractionRevolvingBurden,PercentTradesNeverDelq,NumRevolvingTradesWBalance,NumInqLast6M",
+      "pfi_top": "NumInqLast6M",
+      "hit_at_k": 0.2,
+      "auc_abs": 0.5444444444444445,
+      "contrast": 0.009640875561321677,
+      "concentrated": "high",
+      "delta_y": -0.03666666666666668,
+      "dmse_low": 0.15683812959236532,
+      "dmse_high": 0.17312022376322223
+    },
+    {
+      "draw": 3,
+      "design": "weak5_nonlinear_cd",
+      "drivers": "PercentTradesNeverDelq,MaxDelqEver,MSinceMostRecentTradeOpen,NumTrades90Ever2DerogPubRec,NumSatisfactoryTrades",
+      "pfi_top": "NumInqLast6M",
+      "hit_at_k": 0.4,
+      "auc_abs": 0.7,
+      "contrast": 0.0158853856351794,
+      "concentrated": "high",
+      "delta_y": -0.020000000000000018,
+      "dmse_low": 0.1420033186970905,
+      "dmse_high": 0.11283261150162552
+    },
+    {
+      "draw": 4,
+      "design": "weak5_nonlinear_cd",
+      "drivers": "NumBank2NatlTradesWHighUtilization,MaxDelq2PublicRecLast12M,PercentTradesNeverDelq,NetFractionRevolvingBurden,NumTrades90Ever2DerogPubRec",
+      "pfi_top": "ExternalRiskEstimate",
+      "hit_at_k": 0.2,
+      "auc_abs": 0.4666666666666667,
+      "contrast": 0.01591656095910244,
+      "concentrated": "high",
+      "delta_y": -0.014666666666666717,
+      "dmse_low": 0.15782990983588396,
+      "dmse_high": 0.18397824697444715
+    }
+  ]
+}

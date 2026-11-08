@@ -1,0 +1,9 @@
+design,scope,reject_rate,recover_rate,top1_hit_rate,top3_hit_rate,mean_recall_top5,any_driver_top5_rate
+median_split_covshift,overall,0.2222222222222222,0.1111111111111111,,,,
+median_split_covshift,loco,0.0,0.0,0.0,0.3333333333333333,,
+median_split_covshift,permucate,0.3333333333333333,0.0,0.0,0.0,,
+median_split_covshift,grf,0.3333333333333333,0.3333333333333333,0.3333333333333333,0.3333333333333333,,
+weak5_nonlinear_cd,overall,0.8666666666666667,,,,0.4933333333333334,1.0
+weak5_nonlinear_cd,loco,0.6,0.6,,,0.52,1.0
+weak5_nonlinear_cd,permucate,1.0,0.8,,,0.48,1.0
+weak5_nonlinear_cd,grf,1.0,0.2,,,0.48,1.0

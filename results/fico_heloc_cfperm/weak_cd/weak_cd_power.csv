@@ -1,0 +1,5 @@
+scope,n_cells,reject_rate,any_driver_top5_rate,mean_recall_top5,any_driver_rejected_rate,mean_n_drivers_in_top5
+overall,15.0,0.8666666666666667,1.0,0.4933333333333334,,
+loco,5.0,0.6,1.0,0.52,0.6,2.6
+permucate,5.0,1.0,1.0,0.48,0.8,2.4
+grf,5.0,1.0,1.0,0.48,0.2,2.4

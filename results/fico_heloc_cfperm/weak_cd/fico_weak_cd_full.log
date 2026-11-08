@@ -1,0 +1,23 @@
+weak-cd draws=5 k=5 intensity=2.5 vimps=('loco', 'permucate', 'grf') B=150 n_perm=200
+[weak-cd] draw=0 drivers=['MSinceMostRecentInqexcl7days', 'MSinceMostRecentDelq', 'AverageMInFile', 'NumInqLast6Mexcl7days', 'ExternalRiskEstimate'] ΔȲ=0.023 n0=1500 n1=1500
+  vimp=loco B=150 n_perm=200
+  vimp=permucate B=150 n_perm=200
+  vimp=grf B=150 n_perm=200
+[weak-cd] draw=1 drivers=['MaxDelq2PublicRecLast12M', 'PercentTradesWBalance', 'NumRevolvingTradesWBalance', 'NetFractionInstallBurden', 'MSinceMostRecentInqexcl7days'] ΔȲ=-0.047 n0=1500 n1=1500
+  vimp=loco B=150 n_perm=200
+  vimp=permucate B=150 n_perm=200
+  vimp=grf B=150 n_perm=200
+[weak-cd] draw=2 drivers=['MSinceMostRecentInqexcl7days', 'NetFractionRevolvingBurden', 'PercentTradesNeverDelq', 'NumRevolvingTradesWBalance', 'NumInqLast6M'] ΔȲ=-0.037 n0=1500 n1=1500
+  vimp=loco B=150 n_perm=200
+  vimp=permucate B=150 n_perm=200
+  vimp=grf B=150 n_perm=200
+[weak-cd] draw=3 drivers=['PercentTradesNeverDelq', 'MaxDelqEver', 'MSinceMostRecentTradeOpen', 'NumTrades90Ever2DerogPubRec', 'NumSatisfactoryTrades'] ΔȲ=-0.020 n0=1500 n1=1500
+  vimp=loco B=150 n_perm=200
+  vimp=permucate B=150 n_perm=200
+  vimp=grf B=150 n_perm=200
+[weak-cd] draw=4 drivers=['NumBank2NatlTradesWHighUtilization', 'MaxDelq2PublicRecLast12M', 'PercentTradesNeverDelq', 'NetFractionRevolvingBurden', 'NumTrades90Ever2DerogPubRec'] ΔȲ=-0.015 n0=1500 n1=1500
+  vimp=loco B=150 n_perm=200
+  vimp=permucate B=150 n_perm=200
+  vimp=grf B=150 n_perm=200
+power: {'overall': {'n_cells': 15.0, 'reject_rate': 0.8666666666666667, 'any_driver_top5_rate': 1.0, 'mean_recall_top5': 0.4933333333333334}, 'by_vimp': {'loco': {'n_cells': 5.0, 'reject_rate': 0.6, 'any_driver_rejected_rate': 0.6, 'any_driver_top5_rate': 1.0, 'mean_recall_top5': 0.52, 'mean_n_drivers_in_top5': 2.6}, 'permucate': {'n_cells': 5.0, 'reject_rate': 1.0, 'any_driver_rejected_rate': 0.8, 'any_driver_top5_rate': 1.0, 'mean_recall_top5': 0.48, 'mean_n_drivers_in_top5': 2.4}, 'grf': {'n_cells': 5.0, 'reject_rate': 1.0, 'any_driver_rejected_rate': 0.2, 'any_driver_top5_rate': 1.0, 'mean_recall_top5': 0.48, 'mean_n_drivers_in_top5': 2.4}}}
+wrote /workspace/results/fico_heloc_cfperm/weak_cd
