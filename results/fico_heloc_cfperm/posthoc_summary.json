@@ -1,0 +1,38 @@
+[
+  {
+    "split_feature": "NumInqLast6M",
+    "driver": "PercentInstallTrades",
+    "top_degree": 0.010706675583589542,
+    "energy": 0.010706675583589542,
+    "hit_at_k": 0.2,
+    "auc_abs": 0.9545454545454546,
+    "contrast": -0.00011278133921826584,
+    "concentrated": "low",
+    "dmse_low": 0.02798950942036707,
+    "dmse_high": 0.01817727614657519
+  },
+  {
+    "split_feature": "NumInqLast6Mexcl7days",
+    "driver": "NumInqLast6M",
+    "top_degree": 0.05660924968798936,
+    "energy": 0.05660924968798936,
+    "hit_at_k": 0.2,
+    "auc_abs": 0.9545454545454546,
+    "contrast": NaN,
+    "concentrated": "",
+    "dmse_low": NaN,
+    "dmse_high": 0.4259050735748852
+  },
+  {
+    "split_feature": "ExternalRiskEstimate",
+    "driver": "NumInqLast6M",
+    "top_degree": 0.061086179714876426,
+    "energy": 0.061086179714876426,
+    "hit_at_k": 0.2,
+    "auc_abs": 0.8636363636363636,
+    "contrast": 0.027656141696698354,
+    "concentrated": "high",
+    "dmse_low": 0.01944102666202055,
+    "dmse_high": 0.05792034207238722
+  }
+]
