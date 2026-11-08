@@ -47,3 +47,14 @@ Tables: `posthoc_feature_rank.csv`, `posthoc_subset_driver.csv`, `posthoc_zcut_d
 
 Under B=150 / n_perm=200, **GRF** is the only VIMP that both rejects and recovers the continuous split `ExternalRiskEstimate`. Inquiry median-splits are weak / discrete alternatives (often no reject). Post-hoc localization still surfaces where ΔMSE / ΔVIMP concentrates (high arm on `ExternalRiskEstimate` split).
 
+## Weak-5 + highly nonlinear concept drift
+
+See [`weak_cd/`](weak_cd/) and [`subset_insights/`](subset_insights/). Full settings: 5 draws, `B=150`, `n_perm=200`.
+
+| design | reject (overall) | driver hit |
+|---|---:|---:|
+| median-split covshift | 0.222 | 0.111 recover |
+| weak-5 nonlinear CD | 0.867 | 1.000 any@top5 / recall@5≈0.49 |
+
+Justifies the multi-weak-feature regime vs a single strong median axis.
+
