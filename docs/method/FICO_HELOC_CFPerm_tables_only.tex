@@ -1,0 +1,38 @@
+% Standalone tables for the FICO HELOC CFPerm supplement (copy into a paper draft).
+% Requires booktabs.
+
+\begin{table}[t]
+\centering
+\caption{CFPerm power on FICO HELOC ($B=150$, $n_{\mathrm{perm}}=200$).
+Median-split: $9$ cells. Weak-$5$ nonlinear CD: $15$ cells ($5$ draws).}
+\label{tab:fico-cfperm-power}
+\begin{tabular}{llccc}
+\toprule
+Design & VIMP & Reject & Driver hit & Recall@$5$ \\
+\midrule
+Median-split CS & overall & $0.222$ & $0.111$ & --- \\
+ & LOCO & $0.000$ & $0.000$ & --- \\
+ & PermuCATE & $0.333$ & $0.000$ & --- \\
+ & GRF & $0.333$ & $0.333$ & --- \\
+\midrule
+Weak-$5$ nonlinear CD & overall & $0.867$ & $1.000$ & $0.493$ \\
+ & LOCO & $0.600$ & $1.000$ & $0.520$ \\
+ & PermuCATE & $1.000$ & $1.000$ & $0.480$ \\
+ & GRF & $1.000$ & $1.000$ & $0.480$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Post-hoc subset localization snapshot on the same FICO designs.}
+\label{tab:fico-subset}
+\begin{tabular}{lcccc}
+\toprule
+Design & $|\mathrm{contrast}|$ & $\Delta\mathrm{MSE}_{\mathrm{low}}$ & $\Delta\mathrm{MSE}_{\mathrm{high}}$ & PFI hit@$k$ \\
+\midrule
+Median-split CS & $0.014$ & $0.024$ & $0.167$ & $0.20$ \\
+Weak-$5$ nonlinear CD & $0.015$ & $0.146$ & $0.136$ & $0.36$ \\
+\bottomrule
+\end{tabular}
+\end{table}

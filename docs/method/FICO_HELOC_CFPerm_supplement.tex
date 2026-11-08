@@ -1,0 +1,154 @@
+% FICO HELOC CFPerm supplement: median-split covshift vs weak-5 nonlinear concept drift.
+% Requires amsmath, booktabs, graphicx (optional). Numbers from results/fico_heloc_cfperm/.
+
+\section{FICO HELOC CFPerm supplement}
+\label{sec:fico-heloc-cfperm}
+
+\paragraph{Motivation.}
+The HELOC credit book is not driven by a single strong axis.
+Risk performance typically reflects \emph{several weak} covariates acting jointly.
+A median cut on one logistic coefficient therefore understates the regime that
+CFPerm is meant to handle, while a multi-weak nonlinear concept drift matches
+the intended justification.
+We report both designs on the cleaned FICO HELOC extract
+($n_{\mathrm{raw}}=10459$, $n_{\mathrm{clean}}=9861$ after dropping code $-9$),
+with CFPerm settings $B=150$ trees and $n_{\mathrm{perm}}=200$ batch permutations,
+subsampling at most $1500$ units per arm.
+
+\paragraph{Design A: median-split covariate shift.}
+Fit $\mathrm{RiskPerformance}\sim X$ by $\ell_2$-logistic regression and take the
+top-$3$ features by absolute coefficient
+($\mathtt{NumInqLast6M}$, $\mathtt{NumInqLast6Mexcl7days}$, $\mathtt{ExternalRiskEstimate}$).
+For each feature $j^\star$, partition on the sample median into exist ($W=0$) and
+new ($W=1$). This induces a strong one-dimensional covariate shift along $j^\star$
+(and near-nonoverlap of that coordinate across batches).
+CFPerm is run with VIMP notions
+$\{\mathrm{LOCO},\,\mathrm{PermuCATE},\,\mathrm{GRF}\}$
+(PermuCATE uses random-forest outcome / tau / conditional models).
+Rejection uses the two-level quantile rule on permutation VIMPs;
+recovery is whether $j^\star$ enters the rejected set (or top ranks).
+
+\paragraph{Design B: weak-5 + highly nonlinear concept drift.}
+Independently for each of $R=5$ draws, sample a set $S$ of $K=5$ features uniformly,
+random-split the book into exist/new (shared $P(X)$), keep observational labels on
+exist, and on the new arm redraw
+\begin{equation}
+  Y\mid X
+  \;\sim\;
+  \mathrm{Bernoulli}\!\bigl(
+    \sigma\bigl(\lambda\, g(Z_S)\bigr)
+  \bigr),
+  \qquad
+  \lambda=2.5,
+\end{equation}
+where $Z_S$ are standardized coordinates in $S$ and
+\begin{equation}
+\begin{aligned}
+  g(z)
+  &=
+  \sin(\pi z_0 z_1)
+  + \tanh(z_2^2 z_3)
+  - \cos(z_4)\,z_0
+  \\
+  &\quad
+  + \tfrac12 z_1 z_2 z_3
+  + 0.35\, z_4^3
+  + 0.25\, \sin(z_0+z_2-z_4)\, z_1.
+\end{aligned}
+\end{equation}
+Each coordinate alone is weak; the joint nonlinear map drives the change in
+$P(Y\mid X)$.
+Power metrics: rejection rate across draws$\times$VIMPs; any true driver in the
+top-$5$ VIMP list; mean recall@$5$ of the five drivers.
+
+\paragraph{Post-hoc subset localization.}
+After ranking by $\Delta\mathrm{PFI}=\mathrm{PFI}_{\mathrm{new}}-\mathrm{PFI}_{\mathrm{exist}}$
+(Ridge permutation importance), cut on the top driver $j^\star$ at its pooled median
+and report bootstrap $\Delta\mathrm{VIMP}$ intervals and $\Delta\mathrm{MSE}$ on the
+low/high arms (\texttt{subset\_on\_driver}).
+Z-cuts further report SMD together with PSI / TVD / Hellinger on selected features
+(\texttt{subset\_localize}).
+This names the actionable subset; it does not claim an identifiable CS/CD decomposition.
+
+\begin{table}[t]
+\centering
+\caption{CFPerm power on FICO HELOC ($B=150$, $n_{\mathrm{perm}}=200$).
+Design~A: $3$ median splits $\times$ $3$ VIMPs ($9$ cells).
+Design~B: $5$ weak-driver draws $\times$ $3$ VIMPs ($15$ cells).
+``Driver hit'' is recover of the median axis (A) or any true driver in top-$5$ (B).}
+\label{tab:fico-cfperm-power}
+\begin{tabular}{llccc}
+\toprule
+Design & VIMP & Reject & Driver hit & Recall@$5$ \\
+\midrule
+Median-split CS & overall & $0.222$ & $0.111$ & --- \\
+ & LOCO & $0.000$ & $0.000$ & --- \\
+ & PermuCATE & $0.333$ & $0.000$ & --- \\
+ & GRF & $0.333$ & $0.333$ & --- \\
+\midrule
+Weak-$5$ nonlinear CD & overall & $0.867$ & $1.000$ & $0.493$ \\
+ & LOCO & $0.600$ & $1.000$ & $0.520$ \\
+ & PermuCATE & $1.000$ & $1.000$ & $0.480$ \\
+ & GRF & $1.000$ & $1.000$ & $0.480$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Median-split cells (Design~A). Only the continuous
+$\mathtt{ExternalRiskEstimate}$ split yields rejection; GRF alone recovers the axis.}
+\label{tab:fico-median-cells}
+\begin{tabular}{llcc}
+\toprule
+Split feature & VIMP & Reject & Recovered \\
+\midrule
+$\mathtt{NumInqLast6M}$ & LOCO / PermuCATE / GRF & $0/0/0$ & $0/0/0$ \\
+$\mathtt{NumInqLast6Mexcl7days}$ & LOCO / PermuCATE / GRF & $0/0/0$ & $0/0/0$ \\
+$\mathtt{ExternalRiskEstimate}$ & LOCO / PermuCATE / GRF & $0/1/1$ & $0/0/1$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Post-hoc subset localization snapshot
+(\texttt{feature\_localize}$\to$\texttt{subset\_on\_driver}$\to$z-cuts).}
+\label{tab:fico-subset}
+\begin{tabular}{lcccc}
+\toprule
+Design & mean $|\mathrm{contrast}|$ & mean $\Delta\mathrm{MSE}_{\mathrm{low}}$ & mean $\Delta\mathrm{MSE}_{\mathrm{high}}$ & PFI hit@$k$ \\
+\midrule
+Median-split CS & $0.014$ & $0.024$ & $0.167$ & $0.20$ \\
+Weak-$5$ nonlinear CD & $0.015$ & $0.146$ & $0.136$ & $0.36$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results.}
+Table~\ref{tab:fico-cfperm-power} is the headline comparison.
+Under Design~A the overall reject rate is only $0.222$; inquiry median cuts never
+reject, and only GRF recovers the continuous $\mathtt{ExternalRiskEstimate}$ axis
+(Table~\ref{tab:fico-median-cells}).
+Under Design~B the reject rate rises to $0.867$, every VIMP places at least one
+true driver in its top-$5$ on every draw, and mean recall@$5$ is about $0.49$
+(roughly $2.4$--$2.6$ of the five weak drivers).
+PermuCATE and GRF reject on all five draws; LOCO rejects on $3/5$.
+
+\paragraph{Subset insights.}
+Table~\ref{tab:fico-subset} summarizes the localization package.
+On median splits, Hellinger/PSI on the split-axis bins approach the maximum
+(near-disjoint supports), and $\Delta\mathrm{MSE}$ is heavily one-sided
+(high/low ratio $\approx 7$).
+On weak-$5$ CD, $P(X)$ is shared, so Hellinger stays moderate ($\sim 0.3$--$0.6$);
+all five draws concentrate $\Delta\mathrm{VIMP}$ on the \emph{high} arm of the
+PFI-top cut, and more true drivers enter the PFI top-$5$ ($9$ vs $3$ row-hits).
+The actionable object is therefore the named subset (low/high of $j^\star$), not a
+unique CS/CD decomposition.
+
+\paragraph{Takeaway.}
+A single strong median axis is a harsh, low-power foil on HELOC.
+The multi-weak nonlinear concept-drift design matches the data-generating intuition
+and yields clear CFPerm power plus coherent post-hoc subset localization.
+Artifacts live under \texttt{results/fico\_heloc\_cfperm/}
+(including \texttt{weak\_cd/} and \texttt{subset\_insights/}).
