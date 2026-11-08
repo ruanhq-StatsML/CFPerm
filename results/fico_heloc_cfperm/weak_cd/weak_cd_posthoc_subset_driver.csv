@@ -1,0 +1,5 @@
+subset,n0,n1,thr,dvimp,dvimp_lo,dvimp_hi,dmse,skipped,draw,drivers,pfi_top
+low,103,95,1.0,0.0797909676384312,0.07913687553997364,0.08044505973688876,0.10685157535871145,,0,"MSinceMostRecentInqexcl7days,MSinceMostRecentDelq,AverageMInFile,NumInqLast6Mexcl7days,ExternalRiskEstimate",NumInqLast6M
+high,147,155,1.0,-0.12888200202404973,-0.12976630226960886,-0.1279977017784906,0.11274064454108551,,0,"MSinceMostRecentInqexcl7days,MSinceMostRecentDelq,AverageMInFile,NumInqLast6Mexcl7days,ExternalRiskEstimate",NumInqLast6M
+low,132,115,72.0,-0.030779476157839172,-0.03129464264203097,-0.030264309673647377,0.22497779501463666,,1,"MaxDelq2PublicRecLast12M,PercentTradesWBalance,NumRevolvingTradesWBalance,NetFractionInstallBurden,MSinceMostRecentInqexcl7days",ExternalRiskEstimate
+high,118,135,72.0,-0.0069986795933723225,-0.0074716278194537885,-0.0065257313672908565,0.4116409091630132,,1,"MaxDelq2PublicRecLast12M,PercentTradesWBalance,NumRevolvingTradesWBalance,NetFractionInstallBurden,MSinceMostRecentInqexcl7days",ExternalRiskEstimate
