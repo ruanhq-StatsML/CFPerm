@@ -1,0 +1,15 @@
+fico-cfperm vimps=('loco', 'permucate', 'grf') B=150 n_perm=200 n_perm_cate=50 max_n_per_arm=1500
+[fico] split=NumInqLast6M vimp=loco n=3000 n_perm=200 B=150
+[fico] split=NumInqLast6M vimp=permucate n=3000 n_perm=200 B=150
+[fico] split=NumInqLast6M vimp=grf n=3000 n_perm=200 B=150
+[fico] split=NumInqLast6Mexcl7days vimp=loco n=3000 n_perm=200 B=150
+[fico] split=NumInqLast6Mexcl7days vimp=permucate n=3000 n_perm=200 B=150
+[fico] split=NumInqLast6Mexcl7days vimp=grf n=3000 n_perm=200 B=150
+[fico] split=ExternalRiskEstimate vimp=loco n=3000 n_perm=200 B=150
+[fico] split=ExternalRiskEstimate vimp=permucate n=3000 n_perm=200 B=150
+[fico] split=ExternalRiskEstimate vimp=grf n=3000 n_perm=200 B=150
+power overall: {'n_cells': 9.0, 'reject_rate': 0.2222222222222222, 'recover_rate': 0.1111111111111111}
+  loco: {'n_cells': 3.0, 'reject_rate': 0.0, 'recover_rate': 0.0, 'top1_hit_rate': 0.0, 'top3_hit_rate': 0.3333333333333333}
+  permucate: {'n_cells': 3.0, 'reject_rate': 0.3333333333333333, 'recover_rate': 0.0, 'top1_hit_rate': 0.0, 'top3_hit_rate': 0.0}
+  grf: {'n_cells': 3.0, 'reject_rate': 0.3333333333333333, 'recover_rate': 0.3333333333333333, 'top1_hit_rate': 0.3333333333333333, 'top3_hit_rate': 0.3333333333333333}
+wrote /workspace/results/fico_heloc_cfperm
