@@ -5,16 +5,16 @@ strong median axis. We randomly sample `K=5` features, keep `P(X)` identical
 across batches, and redraw `Y` on the new batch from a highly nonlinear map
 of those five (sin/tanh/interactions/cubic) → pure concept drift.
 
-- Clean n=`9861`, draws=`2`, intensity=`2.5`, `B=40`, `n_perm=8`, `max_n_per_arm=250`.
+- Clean n=`9861`, draws=`5`, intensity=`2.5`, `B=150`, `n_perm=200`, `max_n_per_arm=1500`.
 
 ## Power (this design)
 
 | scope | reject | any_driver@top5 | mean recall@5 | n |
 |---|---:|---:|---:|---:|
-| overall | 0.833 | 1.000 | 0.400 | 6 |
-| loco | 0.500 | 1.000 | 0.300 | 2 |
-| permucate | 1.000 | 1.000 | 0.300 | 2 |
-| grf | 1.000 | 1.000 | 0.600 | 2 |
+| overall | 0.867 | 1.000 | 0.493 | 15 |
+| loco | 0.600 | 1.000 | 0.520 | 5 |
+| permucate | 1.000 | 1.000 | 0.480 | 5 |
+| grf | 1.000 | 1.000 | 0.480 | 5 |
 
 ## vs median-split covariate shift (supplement)
 
@@ -24,8 +24,8 @@ of those five (sin/tanh/interactions/cubic) → pure concept drift.
 | median_split_covshift | loco | 0.000 | 0.000 |
 | median_split_covshift | permucate | 0.333 | 0.000 |
 | median_split_covshift | grf | 0.333 | 0.333 |
-| weak5_nonlinear_cd | overall | 0.833 | 1.000 |
-| weak5_nonlinear_cd | loco | 0.500 | 1.000 |
+| weak5_nonlinear_cd | overall | 0.867 | 1.000 |
+| weak5_nonlinear_cd | loco | 0.600 | 1.000 |
 | weak5_nonlinear_cd | permucate | 1.000 | 1.000 |
 | weak5_nonlinear_cd | grf | 1.000 | 1.000 |
 

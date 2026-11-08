@@ -1,3 +1,6 @@
 draw,drivers,pfi_top,hit_at_k,auc_abs,contrast,concentrated,delta_y
-0,"['MSinceMostRecentInqexcl7days', 'MSinceMostRecentDelq', 'AverageMInFile', 'NumInqLast6Mexcl7days', 'ExternalRiskEstimate']",NumInqLast6M,0.6,0.8,0.04909103438561853,high,-0.0040000000000000036
-1,"['MaxDelq2PublicRecLast12M', 'PercentTradesWBalance', 'NumRevolvingTradesWBalance', 'NetFractionInstallBurden', 'MSinceMostRecentInqexcl7days']",ExternalRiskEstimate,0.2,0.41111111111111115,-0.023780796564466848,low,-0.04799999999999999
+0,"['MSinceMostRecentInqexcl7days', 'MSinceMostRecentDelq', 'AverageMInFile', 'NumInqLast6Mexcl7days', 'ExternalRiskEstimate']",ExternalRiskEstimate,0.6,0.8333333333333334,0.0035613931128419905,high,0.02266666666666667
+1,"['MaxDelq2PublicRecLast12M', 'PercentTradesWBalance', 'NumRevolvingTradesWBalance', 'NetFractionInstallBurden', 'MSinceMostRecentInqexcl7days']",NumInqLast6M,0.4,0.6000000000000001,0.029979366460797616,high,-0.04733333333333334
+2,"['MSinceMostRecentInqexcl7days', 'NetFractionRevolvingBurden', 'PercentTradesNeverDelq', 'NumRevolvingTradesWBalance', 'NumInqLast6M']",NumInqLast6M,0.2,0.5444444444444445,0.009640875561321677,high,-0.03666666666666668
+3,"['PercentTradesNeverDelq', 'MaxDelqEver', 'MSinceMostRecentTradeOpen', 'NumTrades90Ever2DerogPubRec', 'NumSatisfactoryTrades']",NumInqLast6M,0.4,0.7,0.0158853856351794,high,-0.020000000000000018
+4,"['NumBank2NatlTradesWHighUtilization', 'MaxDelq2PublicRecLast12M', 'PercentTradesNeverDelq', 'NetFractionRevolvingBurden', 'NumTrades90Ever2DerogPubRec']",ExternalRiskEstimate,0.2,0.4666666666666667,0.01591656095910244,high,-0.014666666666666717

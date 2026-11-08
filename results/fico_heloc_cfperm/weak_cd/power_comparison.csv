@@ -3,7 +3,7 @@ median_split_covshift,overall,0.2222222222222222,0.1111111111111111,,,,
 median_split_covshift,loco,0.0,0.0,0.0,0.3333333333333333,,
 median_split_covshift,permucate,0.3333333333333333,0.0,0.0,0.0,,
 median_split_covshift,grf,0.3333333333333333,0.3333333333333333,0.3333333333333333,0.3333333333333333,,
-weak5_nonlinear_cd,overall,0.8333333333333334,,,,0.39999999999999997,1.0
-weak5_nonlinear_cd,loco,0.5,0.5,,,0.30000000000000004,1.0
-weak5_nonlinear_cd,permucate,1.0,0.0,,,0.30000000000000004,1.0
-weak5_nonlinear_cd,grf,1.0,0.5,,,0.6,1.0
+weak5_nonlinear_cd,overall,0.8666666666666667,,,,0.4933333333333334,1.0
+weak5_nonlinear_cd,loco,0.6,0.6,,,0.52,1.0
+weak5_nonlinear_cd,permucate,1.0,0.8,,,0.48,1.0
+weak5_nonlinear_cd,grf,1.0,0.2,,,0.48,1.0

@@ -1,3 +1,6 @@
 seed,driver_features,driver_idx,intensity,n0,n1,mean_y0,mean_y1,delta_y
-2026,"['MSinceMostRecentInqexcl7days', 'MSinceMostRecentDelq', 'AverageMInFile', 'NumInqLast6Mexcl7days', 'ExternalRiskEstimate']","[14, 8, 3, 16, 0]",2.5,250,250,0.496,0.492,-0.0040000000000000036
-2127,"['MaxDelq2PublicRecLast12M', 'PercentTradesWBalance', 'NumRevolvingTradesWBalance', 'NetFractionInstallBurden', 'MSinceMostRecentInqexcl7days']","[9, 22, 19, 18, 14]",2.5,250,250,0.436,0.388,-0.04799999999999999
+2026,"['MSinceMostRecentInqexcl7days', 'MSinceMostRecentDelq', 'AverageMInFile', 'NumInqLast6Mexcl7days', 'ExternalRiskEstimate']","[14, 8, 3, 16, 0]",2.5,1500,1500,0.47533333333333333,0.498,0.02266666666666667
+2127,"['MaxDelq2PublicRecLast12M', 'PercentTradesWBalance', 'NumRevolvingTradesWBalance', 'NetFractionInstallBurden', 'MSinceMostRecentInqexcl7days']","[9, 22, 19, 18, 14]",2.5,1500,1500,0.496,0.44866666666666666,-0.04733333333333334
+2228,"['MSinceMostRecentInqexcl7days', 'NetFractionRevolvingBurden', 'PercentTradesNeverDelq', 'NumRevolvingTradesWBalance', 'NumInqLast6M']","[14, 17, 7, 19, 15]",2.5,1500,1500,0.48533333333333334,0.44866666666666666,-0.03666666666666668
+2329,"['PercentTradesNeverDelq', 'MaxDelqEver', 'MSinceMostRecentTradeOpen', 'NumTrades90Ever2DerogPubRec', 'NumSatisfactoryTrades']","[7, 10, 2, 6, 4]",2.5,1500,1500,0.4726666666666667,0.45266666666666666,-0.020000000000000018
+2430,"['NumBank2NatlTradesWHighUtilization', 'MaxDelq2PublicRecLast12M', 'PercentTradesNeverDelq', 'NetFractionRevolvingBurden', 'NumTrades90Ever2DerogPubRec']","[21, 9, 7, 17, 6]",2.5,1500,1500,0.4846666666666667,0.47,-0.014666666666666717
