@@ -82,6 +82,7 @@ def main():
     payload = {
         "summary": suite["summary"],
         "lifts": suite["lifts"],
+        "interpret_board": suite.get("interpret_board", {}),
         "scenarios": suite["scenarios"],
         "methods": suite["methods"],
         "seeds": suite["seeds"],
@@ -90,7 +91,12 @@ def main():
         "msrvtt_probe": probe,
         # histories are large; keep aggregate rows without nested history for json
         "rows": [
-            {k: v for k, v in r.items() if k != "history"} for r in suite["rows"]
+            {
+                k: v
+                for k, v in r.items()
+                if k not in ("history",)
+            }
+            for r in suite["rows"]
         ],
     }
     write_json(OUT / "fsds_interaction_online_adapt.json", payload)
@@ -114,14 +120,33 @@ def main():
                 ),
                 flush=True,
             )
+    board = suite.get("interpret_board") or {}
+    for sc, hops in board.items():
+        if not hops:
+            continue
+        last = hops[-1]
+        print(
+            "interpret[%s] last_hop r_po=%.4f dom_po=%s tri=%.3f read=%s"
+            % (
+                sc,
+                last.get("r_po", float("nan")),
+                last.get("dominant_po", "?"),
+                last.get("mean_triangle", float("nan")),
+                last.get("read", ""),
+            ),
+            flush=True,
+        )
     if probe:
         print(
             "msrvtt",
             probe["source"],
+            "r_po=%.4f" % probe.get("r_po", float("nan")),
             "phi_TI=%.4f" % probe["mean_phi_TI"],
             "tri=%.3f" % probe["mean_triangle"],
             "pi=",
             json.dumps(probe["pi"]),
+            "read=",
+            probe.get("interpret", {}).get("read", ""),
             flush=True,
         )
 

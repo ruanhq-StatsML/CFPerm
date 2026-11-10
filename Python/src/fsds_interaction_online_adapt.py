@@ -22,12 +22,14 @@ from pathlib import Path
 
 import numpy as np
 from scipy.stats import ks_2samp
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
 
 from amazon_continuous_batches import concept_intensity_mse, heatmap_hop_c
 from attribution_adapter import attribution_ewma_rate
 from msrvtt_multimodal_attribution import (
     SEED,
+    crossfit_po,
     rf_domain,
     standardize_columns,
 )
@@ -322,7 +324,26 @@ def make_trimodal_stream(
     )
 
 
-def _fit_predict(Xtr, ytr, Xte, alpha=1.0):
+def _rf_reg(p, n, seed, n_estimators=40):
+    """Outcome model for PO-risk / joint scores — RF, matching FSDS crossfit_po."""
+    return RandomForestRegressor(
+        n_estimators=int(n_estimators),
+        max_depth=max(2, int(round(np.sqrt(max(p, 1))))),
+        min_samples_leaf=max(1, int(round(np.sqrt(max(n, 2)) // 2))),
+        max_features="sqrt",
+        n_jobs=1,
+        random_state=int(seed),
+    )
+
+
+def _fit_predict(Xtr, ytr, Xte, alpha=1.0, model="ridge", seed=SEED, n_estimators=40):
+    Xtr = np.asarray(Xtr, dtype=float)
+    ytr = np.asarray(ytr, dtype=float)
+    Xte = np.asarray(Xte, dtype=float)
+    if model == "rf":
+        clf = _rf_reg(Xtr.shape[1], len(ytr), seed, n_estimators=n_estimators)
+        clf.fit(Xtr, ytr)
+        return clf.predict(Xte), clf
     clf = Ridge(alpha=float(alpha))
     clf.fit(Xtr, ytr)
     return clf.predict(Xte), clf
@@ -334,6 +355,102 @@ def _abs_err(pred, y):
 
 def _mse(pred, y):
     return float(np.mean((np.asarray(pred) - np.asarray(y)) ** 2))
+
+
+def rf_hop_po_risk(X0, y0, X1, y1, seed=SEED, n_estimators=40, n_splits=3):
+    """Pseudo-outcome risk on hop t−1→t with RF outcome + RF propensity.
+
+    Same geometry as ``msrvtt_multimodal_attribution.crossfit_po``:
+      po = (Y − m̂_RF(X)) · (W − ê_RF(X)),   W∈{0,1} for the hop.
+    Returns per-row |po| on the *current* batch (clever covariate), batch
+    PO-risk mean(po²), and RF-τ modality shares for interpretation.
+    """
+    X0 = np.asarray(X0, dtype=float)
+    X1 = np.asarray(X1, dtype=float)
+    y0 = np.asarray(y0, dtype=float).reshape(-1)
+    y1 = np.asarray(y1, dtype=float).reshape(-1)
+    X = np.vstack([X0, X1])
+    y = np.concatenate([y0, y1])
+    W = np.concatenate([np.zeros(len(X0), dtype=int), np.ones(len(X1), dtype=int)])
+    n_splits = max(2, min(int(n_splits), int(np.min(np.bincount(W)))))
+    po, m_hat, e_hat = crossfit_po(
+        X, y, W, seed=seed, n_splits=n_splits, n_estimators=n_estimators
+    )
+    po_cur = po[len(X0) :]
+    r_po = float(np.mean(po ** 2))
+    # RF τ̂ on PO scores → which shared-block dims drive concept/hop risk
+    tau = _rf_reg(X.shape[1], len(po), seed + 7, n_estimators=n_estimators)
+    tau.fit(X, po)
+    _, pi_po = _modality_mass(tau.feature_importances_.astype(float))
+    return {
+        "po_abs": np.abs(po_cur),
+        "po_sq": po_cur ** 2,
+        "r_po": r_po,
+        "m_hat_cur": m_hat[len(X0) :],
+        "e_hat_cur": e_hat[len(X0) :],
+        "pi_po": {g: float(pi_po.get(g, 0.0)) for g in GROUP_NAMES},
+        "mean_abs_po": float(np.mean(np.abs(po_cur))),
+    }
+
+
+def interpret_hop(
+    phi_maps,
+    pi_domain,
+    pi_po,
+    tri,
+    po_pack,
+    hop,
+    phi_drop,
+    top_k=3,
+    r_po_ratio=1.0,
+    tri_base=None,
+):
+    """Read one hop: top Φ tokens, PO modality mass, triangle, typed (c,δ)."""
+    top = {}
+    for pair, amap in phi_maps.items():
+        mean_abs = np.mean(np.abs(amap), axis=0)
+        order = np.argsort(mean_abs)[::-1][: int(top_k)]
+        top[pair] = [
+            {
+                "token": int(k),
+                "phi_mean": float(amap[:, k].mean()),
+                "phi_abs_mean": float(mean_abs[k]),
+            }
+            for k in order
+        ]
+    tri_m = float(np.mean(tri))
+    tri_lift = tri_m - float(tri_base) if tri_base is not None else 0.0
+    c = float(np.clip(hop.get("c", 0.0), 0.0, 1.0))
+    delta = float(hop.get("delta", 0.0))
+    dominant_po = max(pi_po, key=pi_po.get) if pi_po else "na"
+    dominant_dom = max(pi_domain, key=pi_domain.get) if pi_domain else "na"
+    # ordered reads: PO jump / concept → alignment → Φ break → cov
+    if float(r_po_ratio) >= 1.25 or delta > 0.15:
+        read = "concept/PO spike — RF PO-risk up; raise λ and review"
+    elif tri_lift > 0.04 or (tri_m > 0.42 and dominant_po == "audio"):
+        read = "alignment shift — triangle↑ / PO mass on %s" % dominant_po
+    elif float(phi_drop) > 0.01:
+        read = "interaction break — aligned Φ dropped vs reference"
+    elif c > delta + 0.15 and delta < 0.05:
+        read = "covariate-leaning hop — shrink chase; bank/π not full relearn"
+    else:
+        read = "mixed / mild hop — monitor Φ and PO (dom_po=%s)" % dominant_po
+    return {
+        "top_tokens": top,
+        "pi_domain": {g: float(pi_domain.get(g, 0.0)) for g in GROUP_NAMES},
+        "pi_po": {g: float(pi_po.get(g, 0.0)) for g in GROUP_NAMES},
+        "dominant_po": dominant_po,
+        "dominant_domain": dominant_dom,
+        "mean_triangle": tri_m,
+        "tri_lift": float(tri_lift),
+        "r_po": float(po_pack["r_po"]),
+        "r_po_ratio": float(r_po_ratio),
+        "mean_abs_po": float(po_pack["mean_abs_po"]),
+        "c": c,
+        "delta": delta,
+        "phi_drop": float(phi_drop),
+        "read": read,
+    }
 
 
 def _batch_means(X, batch):
@@ -366,8 +483,12 @@ def hop_fsds_stats(stream, seed=SEED, n_estimators=40):
     for t in range(1, k):
         ip = np.flatnonzero(batch == t - 1)
         ic = np.flatnonzero(batch == t)
-        c = float(heatmap_hop_c(R, t))
-        delta, _ = concept_intensity_mse(X[ip], y[ip], X[ic], y[ic])
+        # covariate hop still consecutive (heatmap)
+        c_raw = float(heatmap_hop_c(R, t))
+        c = float(np.clip(c_raw, 0.0, 1.0))
+        # concept vs *all past* (not only t-1): sticky after a concept flip
+        ipast = np.flatnonzero(batch < t)
+        delta, _ = concept_intensity_mse(X[ipast], y[ipast], X[ic], y[ic])
         vimp, auc = rf_domain(X[ip], X[ic], seed=seed + t, n_estimators=n_estimators)
         _, pi = _modality_mass(vimp)
         pi_change = 0.0
@@ -380,6 +501,7 @@ def hop_fsds_stats(stream, seed=SEED, n_estimators=40):
             {
                 "round": int(t),
                 "c": c,
+                "c_raw": c_raw,
                 "delta": float(delta),
                 "rf_auc": float(auc) if auc == auc else float("nan"),
                 "pi": {g: float(pi.get(g, 0.0)) for g in GROUP_NAMES},
@@ -403,27 +525,50 @@ def _augment_shared(Z, shared_dim=SHARED_DIM):
     return np.concatenate([Z, Zt * Zv, Zt * Za, Zv * Za], axis=1)
 
 
-def compute_batch_interaction(X, y, Xtr, ytr, alpha=1.0, projections=None):
-    """Fit on shared embedding; return preds + position-wise Φ maps.
+def compute_batch_interaction(
+    X,
+    y,
+    Xtr,
+    ytr,
+    alpha=1.0,
+    projections=None,
+    seed=SEED,
+    n_estimators=40,
+):
+    """Shared-embedding RF scores + position Φ maps.
 
-    All modalities live in the same Z-space. Pairwise Φ for TI/TA/IA is the
-    row-mean of ``interaction_map`` over aligned token positions.
-    ``predict_fn`` zeros dims in Z then re-augments — so ``interaction_at(i,j)``
-    sees the product terms move with those tokens.
+    - Joint / unimodal **scores**: RandomForest outcome model (same family as
+      FSDS ``crossfit_po`` m̂).
+    - Φ_{i,j} at dim/token: Ridge on Z⊕Hadamard in the *same* shared space so
+      ``interaction_at(i,j)`` stays cheap and identifiable (linear Z alone ⇒ Φ≡0).
+    PO-risk itself is computed separately via ``rf_hop_po_risk``.
     """
     Ztr, projections = to_shared_embedding(Xtr, projections=projections)
     Zte, _ = to_shared_embedding(X, projections=projections)
-    pred_j, clf = _fit_predict(_augment_shared(Ztr), ytr, _augment_shared(Zte), alpha=alpha)
+    # RF outcome for online scores
+    pred_j, _ = _fit_predict(
+        Ztr, ytr, Zte, model="rf", seed=seed, n_estimators=n_estimators
+    )
+    # bilinear probe for position-wise Φ (shared space)
+    pred_phi, clf_phi = _fit_predict(
+        _augment_shared(Ztr), ytr, _augment_shared(Zte), alpha=alpha, model="ridge"
+    )
 
     def predict_fn(Z):
-        return clf.predict(_augment_shared(Z))
+        return clf_phi.predict(_augment_shared(Z))
 
-    preds = {"joint": pred_j}
+    preds = {"joint": pred_j, "joint_phi_probe": pred_phi}
     errs = {"joint": _abs_err(pred_j, y)}
     for name in GROUP_NAMES:
         sl = SHARED_SLICES[name]
-        # unimodal probe in the *same* embedding coords
-        pred_m, _ = _fit_predict(Ztr[:, sl], ytr, Zte[:, sl], alpha=alpha)
+        pred_m, _ = _fit_predict(
+            Ztr[:, sl],
+            ytr,
+            Zte[:, sl],
+            model="rf",
+            seed=seed + 3 + GROUP_NAMES.index(name),
+            n_estimators=max(20, n_estimators // 2),
+        )
         preds[name] = pred_m
         errs[name] = _abs_err(pred_m, y)
 
@@ -432,7 +577,6 @@ def compute_batch_interaction(X, y, Xtr, ytr, alpha=1.0, projections=None):
         "TA": interaction_map(predict_fn, Zte, "text", "audio"),
         "IA": interaction_map(predict_fn, Zte, "video", "audio"),
     }
-    # per-sample scalar: mean signed interaction over aligned tokens
     phi = {k: phi_maps[k].mean(axis=1) for k in phi_maps}
     decouple = bias_decouple(errs["text"], errs["video"], errs["audio"], errs["joint"])
     return preds, errs, phi, decouple, phi_maps, projections
@@ -473,15 +617,19 @@ def fsds_lambda(c, delta, pi_change, triangle_mean, phi_drop, base_lambda=1.0):
     return float(np.clip(lam, 0.05, 4.0))
 
 
-def detect_shift(ref_po, cur_po, ref_align, cur_align, alpha=0.05):
-    """KS tests on PO-risk and alignment — Interaction / Alignment Shift."""
-    if len(ref_po) < 8 or len(cur_po) < 8:
-        return False, 1.0, 1.0
-    _, p_po = ks_2samp(np.asarray(ref_po, dtype=float), np.asarray(cur_po, dtype=float))
-    _, p_al = ks_2samp(
-        np.asarray(ref_align, dtype=float), np.asarray(cur_align, dtype=float)
-    )
-    return bool(p_po < alpha or p_al < alpha), float(p_po), float(p_al)
+def detect_shift(ref_po, cur_po, ref_align, cur_align, alpha=0.05, r_po=None, ref_r_po=None):
+    """KS on |po| / alignment, plus RF PO-risk mean jump."""
+    p_po = p_al = 1.0
+    if len(ref_po) >= 8 and len(cur_po) >= 8:
+        _, p_po = ks_2samp(np.asarray(ref_po, dtype=float), np.asarray(cur_po, dtype=float))
+        _, p_al = ks_2samp(
+            np.asarray(ref_align, dtype=float), np.asarray(cur_align, dtype=float)
+        )
+    ratio = 1.0
+    if ref_r_po is not None and r_po is not None and float(ref_r_po) > 1e-12:
+        ratio = float(r_po) / float(ref_r_po)
+    fired = bool(p_po < alpha or p_al < alpha or ratio >= 1.25)
+    return fired, float(p_po), float(p_al), float(ratio)
 
 
 def adapt_scores(raw_pred, W, lam, is_shift, y_scale=None):
@@ -500,8 +648,15 @@ def adapt_scores(raw_pred, W, lam, is_shift, y_scale=None):
     return adapted, penalty
 
 
-def run_method(stream, method="fsds_clever_cov", seed=SEED, alpha=0.05, lambda_penalty=1.0):
-    """Online hop: fit on past → diagnose → optional clever-covariate adapt."""
+def run_method(
+    stream,
+    method="fsds_clever_cov",
+    seed=SEED,
+    alpha=0.05,
+    lambda_penalty=1.0,
+    n_estimators=40,
+):
+    """Online hop: RF PO-risk → Φ tokens → interpret → clever-covariate adapt."""
     if method not in METHODS:
         raise ValueError("unknown method %s" % method)
     X = standardize_columns(stream.X)
@@ -509,22 +664,46 @@ def run_method(stream, method="fsds_clever_cov", seed=SEED, alpha=0.05, lambda_p
     batch = np.asarray(stream.batch, dtype=int)
     align = {k: np.asarray(stream.align[k], dtype=float) for k in PAIR_NAMES}
     k = int(batch.max()) + 1
-    hop_stats = {h["round"]: h for h in hop_fsds_stats(stream, seed=seed)}
+    hop_stats = {h["round"]: h for h in hop_fsds_stats(stream, seed=seed, n_estimators=n_estimators)}
 
     ref_po, ref_tri, ref_phi, ref_align = [], [], [], []
+    ref_r_po_vals = []
+    tri_base = None
+    sticky_shift = False
     projections = None  # freeze shared-space maps so token indices stay fixed
     history = []
     for t in range(1, k):
         tr = batch < t
         ic = np.flatnonzero(batch == t)
+        # causal past = previous batch only for PO hop geometry (t-1 → t)
+        ip = np.flatnonzero(batch == t - 1)
         Xtr, ytr = X[tr], y[tr]
         Xt, yt = X[ic], y[ic]
 
         preds, errs, phi, decouple, phi_maps, projections = compute_batch_interaction(
-            Xt, yt, Xtr, ytr, projections=projections
+            Xt,
+            yt,
+            Xtr,
+            ytr,
+            projections=projections,
+            seed=seed + 17 * t,
+            n_estimators=n_estimators,
         )
         raw = preds["joint"]
-        po_risks = errs["joint"]
+
+        # PO-risk with RF outcome model m̂ (and RF propensity ê) on the hop
+        Z_prev, _ = to_shared_embedding(X[ip], projections=projections)
+        Z_cur, _ = to_shared_embedding(Xt, projections=projections)
+        po_pack = rf_hop_po_risk(
+            Z_prev,
+            y[ip],
+            Z_cur,
+            yt,
+            seed=seed + 31 * t,
+            n_estimators=n_estimators,
+        )
+        po_risks = po_pack["po_abs"]  # clever covariate: |pseudo-outcome|
+
         tri = np.array(
             [
                 triangle_inconsistency({p: align[p][ic][i] for p in PAIR_NAMES})
@@ -532,16 +711,38 @@ def run_method(stream, method="fsds_clever_cov", seed=SEED, alpha=0.05, lambda_p
             ],
             dtype=float,
         )
+        if tri_base is None:
+            tri_base = float(np.mean(tri))
         # mean pairwise Φ per sample over aligned shared tokens (TI+TA)
         phi_mean = 0.5 * (phi["TI"] + phi["TA"])
         align_batch = align["TI"][ic]  # primary align channel for KS
 
-        is_shift, p_po, p_al = detect_shift(ref_po, po_risks, ref_align, align_batch, alpha=alpha)
+        ref_r_mean = float(np.mean(ref_r_po_vals)) if ref_r_po_vals else float(po_pack["r_po"])
+        is_shift, p_po, p_al, r_po_ratio = detect_shift(
+            ref_po,
+            po_risks,
+            ref_align,
+            align_batch,
+            alpha=alpha,
+            r_po=po_pack["r_po"],
+            ref_r_po=ref_r_mean,
+        )
         hop = hop_stats.get(t, {"c": 0.0, "delta": 0.0, "pi_change": 0.0, "pi": {}})
         phi_drop = 0.0
         if ref_phi:
             phi_drop = max(0.0, float(np.mean(ref_phi)) - float(np.mean(phi_mean)))
 
+        interp = interpret_hop(
+            phi_maps,
+            hop.get("pi", {}),
+            po_pack["pi_po"],
+            tri,
+            po_pack,
+            hop,
+            phi_drop,
+            r_po_ratio=r_po_ratio,
+            tri_base=tri_base,
+        )
         W = clever_covariate_W(po_risks, tri, phi_mean, ref_po, ref_tri, ref_phi)
 
         if method == "static":
@@ -553,17 +754,25 @@ def run_method(stream, method="fsds_clever_cov", seed=SEED, alpha=0.05, lambda_p
             used_shift = bool(is_shift)
             lam = 0.0
         elif method == "clever_cov":
-            lam = float(lambda_penalty) if is_shift else 0.0
-            adapted, penalty = adapt_scores(raw, W, lam, is_shift)
-            used_shift = bool(is_shift)
+            hard = bool(r_po_ratio >= 1.25 or float(hop.get("delta", 0.0)) > 0.1)
+            used_shift = bool(is_shift or (sticky_shift and hard) or hard)
+            sticky_shift = sticky_shift or hard
+            lam = float(lambda_penalty) if used_shift else 0.0
+            adapted, penalty = adapt_scores(raw, W, lam, used_shift)
         elif method == "fsds_clever_cov":
-            # FSDS gate: also fire on large δ or triangle/Φ collapse even if KS quiet
-            fsds_fire = (
-                float(hop["delta"]) > 0.08
-                or float(np.mean(tri)) > 0.55
-                or phi_drop > 0.05
+            # FSDS gate: δ / strong triangle lift / Φ drop / RF PO jump
+            hard = bool(
+                float(hop["delta"]) > 0.1
+                or r_po_ratio >= 1.25
             )
-            used_shift = bool(is_shift or fsds_fire)
+            soft = bool(
+                float(np.mean(tri)) > tri_base + 0.08
+                or phi_drop > 0.02
+                or is_shift
+            )
+            used_shift = bool(hard or soft or sticky_shift)
+            # sticky only after a hard concept/PO event (avoid healthy false alarms)
+            sticky_shift = sticky_shift or hard
             lam = (
                 fsds_lambda(
                     hop["c"],
@@ -620,19 +829,27 @@ def run_method(stream, method="fsds_clever_cov", seed=SEED, alpha=0.05, lambda_p
                 "c": float(hop.get("c", 0.0)),
                 "delta": float(hop.get("delta", 0.0)),
                 "pi": hop.get("pi", {}),
+                "pi_po": po_pack["pi_po"],
+                "r_po": float(po_pack["r_po"]),
+                "r_po_ratio": float(r_po_ratio),
+                "mean_abs_po": float(po_pack["mean_abs_po"]),
                 "var_interaction": float(decouple["var_interaction"]),
+                "var_text": float(decouple["var_text"]),
+                "var_video": float(decouple["var_video"]),
+                "var_audio": float(decouple["var_audio"]),
+                "interpret": interp,
                 "n": int(len(ic)),
             }
         )
 
-        # rolling reference: only grow on non-shift early, else always extend lightly
+        # rolling reference: freeze growth under shift so PO baseline stays early-stream
         if t == 1 or not used_shift:
             ref_po.extend(po_risks.tolist())
             ref_tri.extend(tri.tolist())
             ref_phi.extend(phi_mean.tolist())
             ref_align.extend(align_batch.tolist())
+            ref_r_po_vals.append(float(po_pack["r_po"]))
         else:
-            # slow leak so reference doesn't freeze forever
             ref_po.extend(po_risks[::4].tolist())
             ref_tri.extend(tri[::4].tolist())
             ref_phi.extend(phi_mean[::4].tolist())
@@ -645,6 +862,7 @@ def run_method(stream, method="fsds_clever_cov", seed=SEED, alpha=0.05, lambda_p
             ref_phi[-cap:],
             ref_align[-cap:],
         )
+        ref_r_po_vals = ref_r_po_vals[-32:]
 
     online = np.array([h["online_mse"] for h in history], dtype=float)
     return {
@@ -656,7 +874,9 @@ def run_method(stream, method="fsds_clever_cov", seed=SEED, alpha=0.05, lambda_p
         "mean_phi_TI": float(np.mean([h["mean_phi_TI"] for h in history])),
         "mean_triangle": float(np.mean([h["mean_triangle"] for h in history])),
         "mean_W": float(np.mean([h["mean_W"] for h in history])),
+        "mean_r_po": float(np.mean([h["r_po"] for h in history])),
         "history": history,
+        "interpretations": [h["interpret"] for h in history],
         "scenario": stream.meta.get("scenario"),
     }
 
@@ -686,8 +906,11 @@ def run_suite(
             stream = make_trimodal_stream(
                 scenario=sc, n_batches=n_batches, n_per=n_per, seed=seed
             )
+            n_est = 25 if quick else 40
             for method in methods:
-                rec = run_method(stream, method=method, seed=seed)
+                rec = run_method(
+                    stream, method=method, seed=seed, n_estimators=n_est
+                )
                 rows.append(
                     {
                         "seed": int(seed),
@@ -699,13 +922,17 @@ def run_suite(
                         "mean_phi_TI": rec["mean_phi_TI"],
                         "mean_triangle": rec["mean_triangle"],
                         "mean_W": rec["mean_W"],
+                        "mean_r_po": rec.get("mean_r_po"),
                         "history": rec["history"],
+                        "interpretations": rec.get("interpretations", []),
                     }
                 )
                 table[sc][method].append(rec["online_mse"])
 
     summary = {}
     lifts = {}
+    # one interpretation trail per scenario from fsds_clever_cov / seed0
+    interpret_board = {}
     for sc in scenarios:
         summary[sc] = {}
         lifts[sc] = {}
@@ -720,10 +947,15 @@ def run_suite(
                 "vs_static": float(np.mean(base) - np.mean(arr)),
                 "vs_localize": float(np.mean(loc) - np.mean(arr)),
             }
+        for row in rows:
+            if row["scenario"] == sc and row["method"] == "fsds_clever_cov":
+                interpret_board[sc] = row.get("interpretations", [])
+                break
     return {
         "summary": summary,
         "lifts": lifts,
         "rows": rows,
+        "interpret_board": interpret_board,
         "scenarios": scenarios,
         "methods": methods,
         "seeds": seeds,
@@ -780,7 +1012,12 @@ def run_msrvtt_hop_probe(n_videos=24, n_windows=20, seed=SEED, n_estimators=30):
 
     X0, y0 = X[W == 0], y[W == 0]
     X1, y1 = X[W == 1], y[W == 1]
-    preds, errs, phi, decouple, phi_maps, _ = compute_batch_interaction(X1, y1, X0, y0)
+    preds, errs, phi, decouple, phi_maps, projections = compute_batch_interaction(
+        X1, y1, X0, y0, seed=seed, n_estimators=n_estimators
+    )
+    Z0, _ = to_shared_embedding(X0, projections=projections)
+    Z1, _ = to_shared_embedding(X1, projections=projections)
+    po_pack = rf_hop_po_risk(Z0, y0, Z1, y1, seed=seed + 9, n_estimators=n_estimators)
     tri = np.array(
         [
             triangle_inconsistency({p: align[p][W == 1][i] for p in PAIR_NAMES})
@@ -789,7 +1026,10 @@ def run_msrvtt_hop_probe(n_videos=24, n_windows=20, seed=SEED, n_estimators=30):
     )
     vimp, auc = rf_domain(X0, X1, seed=seed, n_estimators=n_estimators)
     _, pi = _modality_mass(vimp)
-    # top shared token by |Φ_TI|
+    hop_fake = {"c": 0.0, "delta": 0.0}
+    interp = interpret_hop(
+        phi_maps, pi, po_pack["pi_po"], tri, po_pack, hop_fake, phi_drop=0.0
+    )
     top_k = int(np.argmax(np.abs(phi_maps["TI"]).mean(axis=0)))
     return {
         "source": source,
@@ -797,6 +1037,9 @@ def run_msrvtt_hop_probe(n_videos=24, n_windows=20, seed=SEED, n_estimators=30):
         "n1": int(X1.shape[0]),
         "rf_auc": float(auc) if auc == auc else float("nan"),
         "pi": {g: float(pi.get(g, 0.0)) for g in GROUP_NAMES},
+        "pi_po": po_pack["pi_po"],
+        "r_po": float(po_pack["r_po"]),
+        "mean_abs_po": float(po_pack["mean_abs_po"]),
         "mean_phi_TI": float(np.mean(phi["TI"])),
         "mean_phi_TA": float(np.mean(phi["TA"])),
         "mean_phi_IA": float(np.mean(phi["IA"])),
@@ -809,6 +1052,7 @@ def run_msrvtt_hop_probe(n_videos=24, n_windows=20, seed=SEED, n_estimators=30):
         "mse_audio": _mse(preds["audio"], y1),
         "var_interaction": float(decouple["var_interaction"]),
         "align_mean": {k: float(np.mean(align[k][W == 1])) for k in PAIR_NAMES},
+        "interpret": interp,
     }
 
 
@@ -878,7 +1122,8 @@ def write_readme(suite, msrvtt_probe, out_path: Path):
         "score_adapted = score_raw / (1 + λ · W_shift)",
         "```",
         "",
-        "W_shift mixes PO-risk, triangle inconsistency, and Interaction-Value drop.",
+        "PO-risk uses the FSDS crossfit with **RF outcome** m̂ and RF propensity ê:",
+        "`po=(Y−m̂)·(W−ê)`. W_shift mixes |po|, triangle inconsistency, and Φ drop.",
         "`fsds_clever_cov` gates λ with typed hop `(ĉ, δ̂)` (locked TSS signs).",
         "",
         "## Live numbers",
@@ -904,36 +1149,76 @@ def write_readme(suite, msrvtt_probe, out_path: Path):
         "",
         "## What each method does",
         "",
-        "- `static` — joint Ridge, no gate.",
-        "- `localize_only` — still computes π / Φ / triangle (diagnosis) but leaves preds alone.",
-        "- `clever_cov` — KS on PO-risk & alignment → inject W into scores.",
+        "- `static` — RF joint scores, no gate.",
+        "- `localize_only` — π / Φ / triangle / RF-PO (diagnosis) but leaves preds alone.",
+        "- `clever_cov` — KS on RF |po| & alignment → inject W into scores.",
         "- `fsds_clever_cov` — same W, λ from `(ĉ,δ̂,Δπ)` + triangle/Φ collapse.",
         "- `oracle_penalty` — upper bound using true |error| as W.",
         "",
+        "## Hop interpretations (`fsds_clever_cov`)",
+        "",
+        "After each hop: RF-PO modality π, top Φ tokens, triangle, typed (c,δ), read.",
+        "",
+    ]
+    board = suite.get("interpret_board") or {}
+    for sc in suite["scenarios"]:
+        hops = board.get(sc) or []
+        if not hops:
+            continue
+        lines.append("### `%s`" % sc)
+        lines.append("")
+        lines.append(
+            "| hop | r_po | π_po dom | tri | top Φ_TI token | c | δ | read |"
+        )
+        lines.append("| ---: | ---: | --- | ---: | --- | ---: | ---: | --- |")
+        for h in hops:
+            tops = (h.get("top_tokens") or {}).get("TI") or [{"token": -1, "phi_mean": 0.0}]
+            tok = tops[0]
+            lines.append(
+                "| %s | %.4f | %s | %.3f | k=%d (Φ=%.4f) | %.3f | %.3f | %s |"
+                % (
+                    # round is not in interpret; enumerate
+                    hops.index(h) + 1,
+                    h.get("r_po", float("nan")),
+                    h.get("dominant_po", "?"),
+                    h.get("mean_triangle", float("nan")),
+                    int(tok.get("token", -1)),
+                    float(tok.get("phi_mean", 0.0)),
+                    h.get("c", 0.0),
+                    h.get("delta", 0.0),
+                    h.get("read", ""),
+                )
+            )
+        lines.append("")
+    lines += [
         "## MSR-VTT hop probe",
         "",
     ]
     if msrvtt_probe:
         lines += [
-            "Source: `%s` · n0=%d n1=%d · RF AUC=%.3f"
+            "Source: `%s` · n0=%d n1=%d · RF AUC=%.3f · r_po=%.4f"
             % (
                 msrvtt_probe["source"],
                 msrvtt_probe["n0"],
                 msrvtt_probe["n1"],
                 msrvtt_probe["rf_auc"],
+                msrvtt_probe.get("r_po", float("nan")),
             ),
             "",
-            "| π_text | π_video | π_audio | mean Φ_TI | triangle | mse_joint |",
-            "| ---: | ---: | ---: | ---: | ---: | ---: |",
-            "| %.3f | %.3f | %.3f | %.4f | %.3f | %.4f |"
+            "| π_text | π_video | π_audio | π_po | mean Φ_TI | triangle | mse_joint |",
+            "| ---: | ---: | ---: | --- | ---: | ---: | ---: |",
+            "| %.3f | %.3f | %.3f | %s | %.4f | %.3f | %.4f |"
             % (
                 msrvtt_probe["pi"]["text"],
                 msrvtt_probe["pi"]["video"],
                 msrvtt_probe["pi"]["audio"],
+                msrvtt_probe.get("interpret", {}).get("dominant_po", "?"),
                 msrvtt_probe["mean_phi_TI"],
                 msrvtt_probe["mean_triangle"],
                 msrvtt_probe["mse_joint"],
             ),
+            "",
+            "Read: %s" % msrvtt_probe.get("interpret", {}).get("read", ""),
             "",
         ]
     lines += [
@@ -946,7 +1231,7 @@ def write_readme(suite, msrvtt_probe, out_path: Path):
         "",
         "Code: `Python/src/fsds_interaction_online_adapt.py`",
         "",
-        "Product line: Pseudo-Outcome Risk / Interaction Shift as **clever covariates**",
+        "Product line: RF Pseudo-Outcome Risk / Interaction Shift as **clever covariates**",
         "closes the multimodal loop — diagnose with FSDS, treat in milliseconds.",
         "",
     ]

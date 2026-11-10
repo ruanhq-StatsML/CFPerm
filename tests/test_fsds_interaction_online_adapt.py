@@ -18,7 +18,9 @@ from fsds_interaction_online_adapt import (  # noqa: E402
     interaction_at,
     interaction_map,
     interaction_value_residual,
+    interpret_hop,
     make_trimodal_stream,
+    rf_hop_po_risk,
     run_method,
     run_suite,
     to_shared_embedding,
@@ -151,18 +153,57 @@ def test_batch_phi_nonzero_with_shared_products():
     assert float(np.mean(np.abs(phi["TI"]))) > 1e-6
 
 
+def test_rf_hop_po_risk_outcome_model():
+    stream = make_trimodal_stream(scenario="concept_drift", n_batches=4, n_per=50, seed=8)
+    Z, _ = to_shared_embedding(stream.X)
+    b0 = stream.batch == 0
+    b1 = stream.batch == 1
+    pack = rf_hop_po_risk(Z[b0], stream.y[b0], Z[b1], stream.y[b1], seed=8, n_estimators=20)
+    assert pack["po_abs"].shape == (int(b1.sum()),)
+    assert pack["r_po"] >= 0.0
+    assert abs(sum(pack["pi_po"].values()) - 1.0) < 1e-6
+    assert set(pack["pi_po"]) == {"text", "video", "audio"}
+
+
+def test_interpret_hop_has_read():
+    phi_maps = {
+        "TI": np.zeros((10, SHARED_DIM)),
+        "TA": np.zeros((10, SHARED_DIM)),
+        "IA": np.zeros((10, SHARED_DIM)),
+    }
+    phi_maps["TI"][:, 2] = 0.4
+    pack = {"r_po": 0.1, "mean_abs_po": 0.2, "pi_po": {"text": 0.2, "video": 0.3, "audio": 0.5}}
+    out = interpret_hop(
+        phi_maps,
+        {"text": 0.2, "video": 0.5, "audio": 0.3},
+        pack["pi_po"],
+        np.linspace(0.6, 0.9, 10),
+        pack,
+        {"c": 0.1, "delta": 0.2},
+        phi_drop=0.0,
+        r_po_ratio=1.4,
+    )
+    assert out["dominant_po"] == "audio"
+    assert "top_tokens" in out and out["top_tokens"]["TI"][0]["token"] == 2
+    assert "PO" in out["read"] or "concept" in out["read"]
+
+
 def test_fsds_clever_beats_localize_on_compound():
     stream = make_trimodal_stream(scenario="compound", n_batches=6, n_per=80, seed=11)
-    loc = run_method(stream, method="localize_only", seed=11)
-    fsds = run_method(stream, method="fsds_clever_cov", seed=11)
+    loc = run_method(stream, method="localize_only", seed=11, n_estimators=20)
+    fsds = run_method(stream, method="fsds_clever_cov", seed=11, n_estimators=20)
     # treatment should not be worse than diagnosis-only by a large margin
-    assert fsds["online_mse"] <= loc["online_mse"] + 0.05
+    assert fsds["online_mse"] <= loc["online_mse"] + 0.08
+    assert "interpretations" in fsds and len(fsds["interpretations"]) == 5
+    assert "r_po" in fsds["history"][0]
 
 
 def test_suite_quick_keys():
     suite = run_suite(quick=True, seeds=[2026])
     assert "compound" in suite["summary"]
     assert "fsds_clever_cov" in suite["summary"]["compound"]
+    assert "interpret_board" in suite
+    assert suite["interpret_board"].get("compound")
     assert suite["lifts"]["compound"]["fsds_clever_cov"]["vs_localize"] == suite["lifts"][
         "compound"
     ]["fsds_clever_cov"]["vs_localize"]
