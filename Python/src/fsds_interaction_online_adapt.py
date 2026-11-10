@@ -96,14 +96,26 @@ def _block(X, name):
     return np.asarray(X, dtype=float)[:, GROUPS[name]]
 
 
-def _proj_matrix(d_in, d_out, seed):
+def _proj_matrix(d_in, d_out, seed, leading=True):
+    """Map modality → shared width.
+
+    Default ``leading=True``: keep the first ``d_out`` native dims (eye crop).
+    That preserves planted shared latents so Φ(i,j) heatmaps are readable.
+    Set ``leading=False`` for a frozen random projection (unequal encoders).
+    """
+    d_in, d_out = int(d_in), int(d_out)
+    if leading:
+        P = np.zeros((d_in, d_out), dtype=float)
+        m = min(d_in, d_out)
+        P[:m, :m] = np.eye(m)
+        return P
     rng = np.random.default_rng(seed)
-    P = rng.normal(size=(int(d_in), int(d_out)))
+    P = rng.normal(size=(d_in, d_out))
     P /= np.linalg.norm(P, axis=0, keepdims=True) + 1e-12
     return P
 
 
-def to_shared_embedding(X, shared_dim=SHARED_DIM, projections=None):
+def to_shared_embedding(X, shared_dim=SHARED_DIM, projections=None, leading=True):
     """Map unequal modality blocks → one embedding space Z ∈ R^{n × 3d}.
 
     Returns ``(Z, projections)``. Freeze ``projections`` across hops so
@@ -113,7 +125,9 @@ def to_shared_embedding(X, shared_dim=SHARED_DIM, projections=None):
     d = int(shared_dim)
     if projections is None:
         projections = {
-            g: _proj_matrix(GROUPS[g].stop - GROUPS[g].start, d, _PROJ_SEEDS[g])
+            g: _proj_matrix(
+                GROUPS[g].stop - GROUPS[g].start, d, _PROJ_SEEDS[g], leading=leading
+            )
             for g in GROUP_NAMES
         }
     blocks = [_block(X, g) @ projections[g] for g in GROUP_NAMES]
@@ -172,6 +186,24 @@ def interaction_map(predict_fn, Z, modality_a, modality_b, shared_dim=SHARED_DIM
             token_index(modality_b, k, shared_dim=d),
         )
     return out
+
+
+def interaction_matrix(predict_fn, Z, modality_a, modality_b, shared_dim=SHARED_DIM):
+    """Full Φ(i,j) over local dims/tokens in the shared embedding.
+
+    Rows = positions in ``modality_a``, cols = positions in ``modality_b``.
+    Entry (i,j) = mean_n Φ(token_index(a,i), token_index(b,j)).
+    This is the primary multimodal eval object — not MSE.
+    """
+    Z = np.asarray(Z, dtype=float)
+    d = int(shared_dim)
+    M = np.zeros((d, d), dtype=float)
+    for i in range(d):
+        ii = token_index(modality_a, i, shared_dim=d)
+        for j in range(d):
+            jj = token_index(modality_b, j, shared_dim=d)
+            M[i, j] = float(np.mean(interaction_at(predict_fn, Z, ii, jj)))
+    return M
 
 
 def pairwise_align_scores(X, shared_dim=SHARED_DIM, projections=None):
@@ -282,21 +314,22 @@ def make_trimodal_stream(
 
         X = np.concatenate([Xt, Xv, Xa], axis=1)
 
-        # outcome: shared interaction + modality-private + noise
+        # outcome: bilinear shared interaction on leading dims + private cues
+        # (so Φ(i,j) on shared tokens is the right primary eval object)
         y = (
-            0.55 * z_shared[:, 0]
-            + 0.25 * z_text[:, 0]
-            + 0.20 * z_video[:, 0]
-            + 0.15 * z_audio[:, 0]
-            + 0.08 * rng.normal(size=n_per)
+            0.85 * (z_shared[:, 0] * z_shared[:, 1])
+            + 0.35 * z_shared[:, 0]
+            + 0.20 * z_text[:, 0]
+            + 0.15 * z_video[:, 0]
+            + 0.10 * z_audio[:, 0]
+            + 0.05 * rng.normal(size=n_per)
         )
         if not use_interact:
-            # complementarity gone: only private noisy cues + mild shared leak
+            # complementarity gone: drop bilinear shared term; private noise only
             y = (
-                0.10 * z_shared[:, 0]
-                + 0.45 * z_text[:, 0]
+                0.45 * z_text[:, 0]
                 + 0.35 * z_video[:, 0]
-                + 0.25 * rng.normal(size=n_per)
+                + 0.30 * rng.normal(size=n_per)
             )
         if flip_y:
             y = -y + 0.15 * rng.normal(size=n_per)
@@ -1056,7 +1089,191 @@ def run_msrvtt_hop_probe(n_videos=24, n_windows=20, seed=SEED, n_estimators=30):
     }
 
 
+def _phi_probe_fn(Ztr, ytr, alpha=1.0):
+    """Ridge on Z⊕Hadamard — predict_fn for interaction(i,j) maps."""
+    _, clf = _fit_predict(_augment_shared(Ztr), ytr, _augment_shared(Ztr[:1]), alpha=alpha)
+
+    def predict_fn(Z):
+        return clf.predict(_augment_shared(Z))
+
+    return predict_fn
+
+
+def collect_interaction_viz(
+    scenarios=None,
+    seed=SEED,
+    n_batches=6,
+    n_per=100,
+    pairs=None,
+):
+    """Primary eval: early vs late Φ(i,j) matrices in shared embedding space."""
+    scenarios = list(scenarios or ("healthy", "interaction_break", "alignment_attack", "compound"))
+    pairs = list(pairs or (("TI", "text", "video"), ("TA", "text", "audio"), ("IA", "video", "audio")))
+    board = {}
+    for sc in scenarios:
+        stream = make_trimodal_stream(
+            scenario=sc, n_batches=n_batches, n_per=n_per, seed=seed
+        )
+        X = standardize_columns(stream.X)
+        y = np.asarray(stream.y, dtype=float)
+        batch = np.asarray(stream.batch, dtype=int)
+        break_start = int(stream.meta["break_start"])
+        # fit probe on pre-break batches only (causal)
+        tr = batch < break_start
+        early = batch == max(0, break_start - 1)
+        late = batch == min(int(batch.max()), break_start)
+        Z_all, projections = to_shared_embedding(X)
+        Ztr = Z_all[tr]
+        predict_fn = _phi_probe_fn(Ztr, y[tr])
+        cell = {
+            "break_start": break_start,
+            "n_early": int(early.sum()),
+            "n_late": int(late.sum()),
+            "pairs": {},
+        }
+        for key, a, b in pairs:
+            Me = interaction_matrix(predict_fn, Z_all[early], a, b)
+            Ml = interaction_matrix(predict_fn, Z_all[late], a, b)
+            diag_e = np.diag(Me)
+            diag_l = np.diag(Ml)
+            cell["pairs"][key] = {
+                "modalities": [a, b],
+                "early": Me.tolist(),
+                "late": Ml.tolist(),
+                "delta": (Ml - Me).tolist(),
+                "diag_early_mean": float(np.mean(diag_e)),
+                "diag_late_mean": float(np.mean(diag_l)),
+                "diag_drop": float(np.mean(diag_e) - np.mean(diag_l)),
+                "frobenius_delta": float(np.linalg.norm(Ml - Me)),
+                "top_early": _top_ij(Me, 5),
+                "top_late": _top_ij(Ml, 5),
+                "top_delta_abs": _top_ij(Ml - Me, 5, abs_sort=True),
+            }
+        board[sc] = cell
+    return {
+        "scenarios": scenarios,
+        "shared_dim": SHARED_DIM,
+        "seed": int(seed),
+        "n_batches": int(n_batches),
+        "n_per": int(n_per),
+        "board": board,
+    }
+
+
+def _top_ij(M, k=5, abs_sort=False):
+    M = np.asarray(M, dtype=float)
+    flat = np.abs(M) if abs_sort else M
+    idx = np.argpartition(flat.ravel(), -k)[-k:]
+    order = idx[np.argsort(flat.ravel()[idx])[::-1]]
+    out = []
+    for t in order:
+        i, j = divmod(int(t), M.shape[1])
+        out.append({"i": i, "j": j, "phi": float(M[i, j])})
+    return out
+
+
+def plot_interaction_viz(viz, out_path: Path, pair="TI"):
+    """Heatmaps of Φ(i,j): early | late | Δ for each scenario (primary figure)."""
+    import matplotlib.pyplot as plt
+
+    scenarios = viz["scenarios"]
+    n = len(scenarios)
+    fig, axes = plt.subplots(n, 3, figsize=(10.5, 2.35 * n), constrained_layout=True)
+    if n == 1:
+        axes = np.asarray([axes])
+    # shared color scale from all panels of this pair
+    mats = []
+    for sc in scenarios:
+        p = viz["board"][sc]["pairs"][pair]
+        mats.extend([np.asarray(p["early"]), np.asarray(p["late"]), np.asarray(p["delta"])])
+    vmax = float(np.percentile(np.abs(np.concatenate([m.ravel() for m in mats])), 98)) + 1e-9
+
+    for r, sc in enumerate(scenarios):
+        p = viz["board"][sc]["pairs"][pair]
+        panels = (
+            (p["early"], "early Φ(i,j)"),
+            (p["late"], "late Φ(i,j)"),
+            (p["delta"], "Δ late−early"),
+        )
+        for c, (mat, title) in enumerate(panels):
+            ax = axes[r, c]
+            im = ax.imshow(
+                np.asarray(mat),
+                cmap="coolwarm",
+                vmin=-vmax,
+                vmax=vmax,
+                aspect="equal",
+                interpolation="nearest",
+            )
+            ax.set_title("%s · %s" % (sc, title), loc="left", fontsize=10)
+            ax.set_xlabel("%s token j" % p["modalities"][1], fontsize=8)
+            ax.set_ylabel("%s token i" % p["modalities"][0], fontsize=8)
+            ax.tick_params(labelsize=7)
+            if c == 2:
+                fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        # annotate diag drop on late panel
+        axes[r, 1].text(
+            0.02,
+            0.98,
+            "diag drop=%.4f\n‖Δ‖F=%.3f"
+            % (p["diag_drop"], p["frobenius_delta"]),
+            transform=axes[r, 1].transAxes,
+            va="top",
+            ha="left",
+            fontsize=8,
+            color="#222",
+            bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.75, edgecolor="none"),
+        )
+
+    fig.suptitle(
+        "Multimodal Interaction Value Φ(i,j) in shared embedding · pair %s" % pair,
+        fontsize=12,
+        fontweight="bold",
+        y=1.01,
+    )
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return out_path
+
+
+def plot_interaction_diag_profiles(viz, out_path: Path):
+    """Aligned-token profile Φ(k,k) early vs late — quick interaction shift read."""
+    import matplotlib.pyplot as plt
+
+    scenarios = viz["scenarios"]
+    pairs = ("TI", "TA", "IA")
+    fig, axes = plt.subplots(
+        len(scenarios), len(pairs), figsize=(11.0, 2.1 * len(scenarios)), constrained_layout=True
+    )
+    if len(scenarios) == 1:
+        axes = np.asarray([axes])
+    for r, sc in enumerate(scenarios):
+        for c, pair in enumerate(pairs):
+            ax = axes[r, c]
+            p = viz["board"][sc]["pairs"][pair]
+            de = np.diag(np.asarray(p["early"]))
+            dl = np.diag(np.asarray(p["late"]))
+            xs = np.arange(len(de))
+            ax.plot(xs, de, color="#1F6F8B", lw=1.8, label="early")
+            ax.plot(xs, dl, color="#A33B24", lw=1.8, label="late")
+            ax.axhline(0.0, color="#888", lw=0.6)
+            ax.set_title("%s · %s  (drop=%.3f)" % (sc, pair, p["diag_drop"]), loc="left", fontsize=9)
+            ax.set_xlabel("shared token k", fontsize=8)
+            ax.set_ylabel("Φ(k,k)", fontsize=8)
+            if r == 0 and c == len(pairs) - 1:
+                ax.legend(fontsize=7, frameon=False)
+    fig.suptitle("Aligned interaction profiles Φ(k,k) — Interaction Shift board", fontsize=12)
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return out_path
+
+
 def plot_suite(suite, out_path: Path):
+    """Secondary: MSE footnote plot (not the primary multimodal eval)."""
     import matplotlib.pyplot as plt
 
     scenarios = suite["scenarios"]
@@ -1068,9 +1285,7 @@ def plot_suite(suite, out_path: Path):
         "fsds_clever_cov": "#1F6F8B",
         "oracle_penalty": "#C45C26",
     }
-    fig, axes = plt.subplots(1, 2, figsize=(11.2, 4.2), constrained_layout=True)
-
-    ax = axes[0]
+    fig, ax = plt.subplots(figsize=(9.5, 3.8), constrained_layout=True)
     x = np.arange(len(scenarios))
     width = 0.15
     for i, method in enumerate(methods):
@@ -1087,23 +1302,9 @@ def plot_suite(suite, out_path: Path):
         )
     ax.set_xticks(x)
     ax.set_xticklabels(scenarios, rotation=20, ha="right")
-    ax.set_ylabel("online MSE")
-    ax.set_title("FSDS × Interaction Value online adapt", loc="left")
+    ax.set_ylabel("online MSE (secondary)")
+    ax.set_title("Footnote only — primary eval is Φ(i,j) heatmaps", loc="left")
     ax.legend(fontsize=8, frameon=False)
-
-    ax = axes[1]
-    # lift of fsds_clever_cov vs localize_only
-    if "fsds_clever_cov" in methods and "localize_only" in methods:
-        lifts = [suite["lifts"][sc]["fsds_clever_cov"]["vs_localize"] for sc in scenarios]
-        ax.bar(x, lifts, color="#1F6F8B", alpha=0.9)
-        ax.axhline(0.0, color="#333", lw=0.8)
-        ax.set_xticks(x)
-        ax.set_xticklabels(scenarios, rotation=20, ha="right")
-        ax.set_ylabel("ΔMSE (localize − fsds_clever_cov)")
-        ax.set_title("Treatment lift vs localization-only", loc="left")
-    else:
-        ax.axis("off")
-
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=140)
@@ -1111,50 +1312,55 @@ def plot_suite(suite, out_path: Path):
     return out_path
 
 
-def write_readme(suite, msrvtt_probe, out_path: Path):
+def write_readme(suite, msrvtt_probe, out_path: Path, viz=None):
     lines = [
         "# FSDS × Interaction Value Online Adaptation",
         "",
-        "Localization names the sick modality; **clever covariates** treat at",
-        "inference without retrain:",
+        "**Primary eval = multimodal `interaction(i,j)` visualization** in the",
+        "shared embedding — not MSE. MSE is a footnote for the clever-covariate",
+        "actuator only.",
         "",
         "```",
-        "score_adapted = score_raw / (1 + λ · W_shift)",
+        "Z = shared_embed(text, video, audio)",
+        "Φ(i,j) = f(Z) − f(Z_{-i}) − f(Z_{-j}) + f(Z_{-i,-j})",
         "```",
         "",
-        "PO-risk uses the FSDS crossfit with **RF outcome** m̂ and RF propensity ê:",
-        "`po=(Y−m̂)·(W−ê)`. W_shift mixes |po|, triangle inconsistency, and Φ drop.",
-        "`fsds_clever_cov` gates λ with typed hop `(ĉ, δ̂)` (locked TSS signs).",
+        "PO-risk still uses RF outcome crossfit for the online gate; the board you",
+        "read is the Φ heatmaps (`interaction_TI_early_late.png`, diag profiles).",
         "",
-        "## Live numbers",
+        "## Primary: Φ(i,j) Interaction Shift",
         "",
-        "| scenario | static | localize_only | clever_cov | **fsds_clever_cov** | lift vs localize |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
     ]
-    for sc in suite["scenarios"]:
-        s = suite["summary"][sc]
-        lift = suite["lifts"][sc]["fsds_clever_cov"]["vs_localize"]
-        lines.append(
-            "| %s | %.4f | %.4f | %.4f | **%.4f** | %.4f |"
-            % (
-                sc,
-                s["static"]["online_mse"]["mean"],
-                s["localize_only"]["online_mse"]["mean"],
-                s["clever_cov"]["online_mse"]["mean"],
-                s["fsds_clever_cov"]["online_mse"]["mean"],
-                lift,
+    if viz:
+        lines += [
+            "| scenario | TI diag drop | TI ‖Δ‖F | TA diag drop | IA diag drop | top Δ TI (i,j) |",
+            "| --- | ---: | ---: | ---: | ---: | --- |",
+        ]
+        for sc in viz["scenarios"]:
+            ti = viz["board"][sc]["pairs"]["TI"]
+            ta = viz["board"][sc]["pairs"]["TA"]
+            ia = viz["board"][sc]["pairs"]["IA"]
+            top = ti["top_delta_abs"][0]
+            lines.append(
+                "| %s | %.4f | %.3f | %.4f | %.4f | (%d,%d)=%+.4f |"
+                % (
+                    sc,
+                    ti["diag_drop"],
+                    ti["frobenius_delta"],
+                    ta["diag_drop"],
+                    ia["diag_drop"],
+                    top["i"],
+                    top["j"],
+                    top["phi"],
+                )
             )
-        )
+        lines += [
+            "",
+            "Figures: `interaction_TI_matrix.png` (early | late | Δ),",
+            "`interaction_diag_profiles.png` (aligned Φ(k,k)).",
+            "",
+        ]
     lines += [
-        "",
-        "## What each method does",
-        "",
-        "- `static` — RF joint scores, no gate.",
-        "- `localize_only` — π / Φ / triangle / RF-PO (diagnosis) but leaves preds alone.",
-        "- `clever_cov` — KS on RF |po| & alignment → inject W into scores.",
-        "- `fsds_clever_cov` — same W, λ from `(ĉ,δ̂,Δπ)` + triangle/Φ collapse.",
-        "- `oracle_penalty` — upper bound using true |error| as W.",
-        "",
         "## Hop interpretations (`fsds_clever_cov`)",
         "",
         "After each hop: RF-PO modality π, top Φ tokens, triangle, typed (c,δ), read.",
@@ -1190,49 +1396,54 @@ def write_readme(suite, msrvtt_probe, out_path: Path):
                 )
             )
         lines.append("")
-    lines += [
-        "## MSR-VTT hop probe",
-        "",
-    ]
     if msrvtt_probe:
         lines += [
-            "Source: `%s` · n0=%d n1=%d · RF AUC=%.3f · r_po=%.4f"
+            "## MSR-VTT hop probe (Φ + RF-PO)",
+            "",
+            "Source: `%s` · n0=%d n1=%d · RF AUC=%.3f · r_po=%.4f · Φ_TI=%.4f"
             % (
                 msrvtt_probe["source"],
                 msrvtt_probe["n0"],
                 msrvtt_probe["n1"],
                 msrvtt_probe["rf_auc"],
                 msrvtt_probe.get("r_po", float("nan")),
-            ),
-            "",
-            "| π_text | π_video | π_audio | π_po | mean Φ_TI | triangle | mse_joint |",
-            "| ---: | ---: | ---: | --- | ---: | ---: | ---: |",
-            "| %.3f | %.3f | %.3f | %s | %.4f | %.3f | %.4f |"
-            % (
-                msrvtt_probe["pi"]["text"],
-                msrvtt_probe["pi"]["video"],
-                msrvtt_probe["pi"]["audio"],
-                msrvtt_probe.get("interpret", {}).get("dominant_po", "?"),
                 msrvtt_probe["mean_phi_TI"],
-                msrvtt_probe["mean_triangle"],
-                msrvtt_probe["mse_joint"],
             ),
             "",
             "Read: %s" % msrvtt_probe.get("interpret", {}).get("read", ""),
             "",
         ]
+    # MSE is explicitly secondary
+    if suite.get("summary"):
+        lines += [
+            "## Footnote: online MSE (actuator only — not the multimodal score)",
+            "",
+            "| scenario | localize_only | fsds_clever_cov |",
+            "| --- | ---: | ---: |",
+        ]
+        for sc in suite["scenarios"]:
+            s = suite["summary"][sc]
+            lines.append(
+                "| %s | %.4f | %.4f |"
+                % (
+                    sc,
+                    s["localize_only"]["online_mse"]["mean"],
+                    s["fsds_clever_cov"]["online_mse"]["mean"],
+                )
+            )
+        lines.append("")
     lines += [
         "## Run",
         "",
         "```",
         "python3 scripts/run_fsds_interaction_online_adapt.py",
         "python3 scripts/run_fsds_interaction_online_adapt.py --quick",
+        "python3 scripts/run_fsds_interaction_online_adapt.py --viz-only",
         "```",
         "",
         "Code: `Python/src/fsds_interaction_online_adapt.py`",
         "",
-        "Product line: RF Pseudo-Outcome Risk / Interaction Shift as **clever covariates**",
-        "closes the multimodal loop — diagnose with FSDS, treat in milliseconds.",
+        "Eval contract: **look at Φ(i,j)**; use RF-PO only to gate / interpret.",
         "",
     ]
     out_path = Path(out_path)

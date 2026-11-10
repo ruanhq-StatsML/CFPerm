@@ -14,9 +14,11 @@ from fsds_interaction_online_adapt import (  # noqa: E402
     SHARED_DIM,
     adapt_scores,
     clever_covariate_W,
+    collect_interaction_viz,
     fsds_lambda,
     interaction_at,
     interaction_map,
+    interaction_matrix,
     interaction_value_residual,
     interpret_hop,
     make_trimodal_stream,
@@ -80,6 +82,32 @@ def test_interaction_at_position_api():
     amap = interaction_map(predict_fn, Z, "text", "video")
     assert amap.shape == (n, d)
     assert np.allclose(amap[:, 0], phi)
+    M = interaction_matrix(predict_fn, Z, "text", "video")
+    assert M.shape == (d, d)
+    assert abs(M[0, 0] - float(np.mean(phi))) < 1e-8
+    assert abs(M[3, 3]) < 1e-8
+
+
+def test_interaction_viz_board_detects_break():
+    viz = collect_interaction_viz(
+        scenarios=["healthy", "alignment_attack", "interaction_break"],
+        seed=7,
+        n_batches=6,
+        n_per=80,
+    )
+    assert "TI" in viz["board"]["healthy"]["pairs"]
+    M = np.asarray(viz["board"]["healthy"]["pairs"]["TI"]["early"])
+    assert M.shape == (SHARED_DIM, SHARED_DIM)
+    assert np.isfinite(M).all()
+    # fake/mismatched audio should move TA / IA Φ(i,j) vs healthy
+    assert (
+        viz["board"]["alignment_attack"]["pairs"]["TA"]["frobenius_delta"]
+        > viz["board"]["healthy"]["pairs"]["TA"]["frobenius_delta"]
+    )
+    assert (
+        viz["board"]["alignment_attack"]["pairs"]["IA"]["frobenius_delta"]
+        > viz["board"]["healthy"]["pairs"]["IA"]["frobenius_delta"]
+    )
 
 
 def test_triangle_flags_mismatched_audio():
