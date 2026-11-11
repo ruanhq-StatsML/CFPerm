@@ -1,8 +1,11 @@
 # smart_bandit_router_v1 — when is it good enough to go online?
 
 Router actions: `Keep` / `Route_to_Human` / `Rollback`.
-Learning unit: **Bayesian Normal-mean posterior inside each granularity leaf**
+Subset granularity = **FSDS / CFPerm** localization (min_support + typed/CFPerm axes).
+Learning unit: **Bayesian Normal-mean posterior inside each FSDS subset**
 (Thompson sample per subgroup). Global LinTS is not the go-live unit.
+
+Evaluator method note: `docs/method/Smart_Bandit_FSDS_GoLive.md`
 
 ## Evaluator verdict ladder
 
@@ -32,7 +35,7 @@ Learning unit: **Bayesian Normal-mean posterior inside each granularity leaf**
 
 | dataset | verdict | bandit | Keep | lift | bayes conf mass | fairness |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
-| synthetic_credit | **READY** | -96242 | -1136050 | +1039808 | 99% | Y |
+| synthetic_credit | **READY** | -19322 | -1136050 | +1116728 | 100% | Y |
 | breast_cancer | **CONDITIONAL** | 13670 | 13880 | -210 | 100% | Y |
 | credit_g | **READY** | 2998 | -2310 | +5308 | 100% | Y |
 | adult | **READY** | 122555 | 86055 | +36500 | 100% | Y |

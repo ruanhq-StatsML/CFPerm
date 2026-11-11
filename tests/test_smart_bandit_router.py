@@ -19,6 +19,7 @@ from smart_bandit_router import (  # noqa: E402
     leaf_support_ok,
     make_openml_stream,
     make_synthetic_credit_stream,
+    partition_fsds_cfperm_subsets,
     run_dataset_eval,
     run_policy,
     shaped_reward,
@@ -31,6 +32,23 @@ def test_granularity_respects_min_support():
     y = (X[:, 0] + 0.5 * X[:, 1] > 0).astype(int)
     gran = grow_context_leaves(X, y, min_support=100, max_leaf_nodes=16, seed=0)
     assert gran["n_leaves"] >= 2
+    assert leaf_support_ok(gran["leaf_ids"], gran["min_support_used"])
+    assert gran.get("method") == "fsds_cfperm_min_support"
+
+
+def test_fsds_cfperm_partition():
+    rng = np.random.default_rng(1)
+    n = 1500
+    scores = rng.uniform(0, 1, n)
+    ood = rng.uniform(0, 1, n)
+    cf = np.abs(scores - 0.5) + 0.1 * rng.normal(size=n)
+    y = (scores + 0.2 * ood > 0.55).astype(int)
+    gran, feats = partition_fsds_cfperm_subsets(
+        scores, ood, cf, y, min_support=80, typed_c=ood, typed_delta=cf, seed=1
+    )
+    assert feats.shape[1] >= 4
+    assert gran["n_leaves"] >= 2
+    assert "cfperm_shift" in gran["feature_axes"]
     assert leaf_support_ok(gran["leaf_ids"], gran["min_support_used"])
 
 

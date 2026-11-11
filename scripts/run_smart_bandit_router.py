@@ -63,7 +63,8 @@ def main():
     (OUT / "smart_bandit_router.json").write_text(json.dumps(payload, indent=2))
     plot_go_live(suite, OUT / "smart_bandit_router.png")
     write_readme(suite, OUT / "README.md")
-    write_readme(suite, DOCS / "Smart_Bandit_Router.md")
+    # Method note for evaluators is hand-authored (FSDS/CFPerm granularity):
+    # docs/method/Smart_Bandit_FSDS_GoLive.md — do not overwrite from the runner.
 
     for name, rec in suite.items():
         if "error" in rec:

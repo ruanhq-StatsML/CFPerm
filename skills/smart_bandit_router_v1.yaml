@@ -1,11 +1,11 @@
 name: smart_bandit_router_v1
 description: >
   Contextual Bandit dynamic model monitoring & policy routing.
-  Maximizes business net reward under fairness floor and min-support
-  context granularity. Learning is Bayesian *inside each subgroup leaf*
-  (Normal-mean posterior + Thompson sampling). Actions: Keep /
+  Subset granularity reuses FSDS/CFPerm localization (score, domain/OOD,
+  CFPerm shift, typed ĉ/δ̂, min_support). Learning is Bayesian inside each
+  FSDS subset (Normal-mean posterior + Thompson sampling). Actions: Keep /
   Route_to_Human / Rollback. Go-live verdict: READY / CONDITIONAL / HOLD.
-version: "1.1.0"
+version: "1.2.0"
 action_space:
   - Keep
   - Route_to_Human
@@ -14,9 +14,23 @@ context_features:
   - model_score
   - ood_risk
   - cfperm_shift_score
+  - typed_c
+  - typed_delta
   - group_leaf_id
 granularity:
-  method: decision_tree_leaves
+  method: fsds_cfperm_min_support
+  axes:
+    - model_score
+    - domain_ood
+    - cfperm_shift
+    - typed_c
+    - typed_delta
+  production_plug_in:
+    - loco_groups
+    - live_domain_quintiles
+    - typed_c_delta_bins
+    - cfperm_residual_bands
+    - iv_subset_tiers
   min_support: 150
   max_leaf_nodes: 32
   min_mi_gain: 1.0e-4
@@ -39,12 +53,12 @@ rewards:
 bandit:
   algorithm: bayesian_subgroup_thompson_sampling
   posterior: normal_mean_known_variance
-  unit: granularity_leaf
+  unit: fsds_cfperm_subset_leaf
   hierarchical_warm_start: true
   min_leaf_n_before_local: 5
 go_live_verdict:
   READY: all hard + soft gates pass (incl. Bayesian subgroup mass ≥55% confident)
-  CONDITIONAL: hard gates pass; Bayesian/stability soft gates incomplete → shadow/canary
+  CONDITIONAL: hard gates pass; soft gates incomplete → shadow/canary
   HOLD: any hard gate fails
 go_live_gates:
   hard:
@@ -60,6 +74,8 @@ go_live_gates:
 entrypoints:
   module: Python/src/smart_bandit_router.py
   run: scripts/run_smart_bandit_router.py
+  docs:
+    - docs/method/Smart_Bandit_FSDS_GoLive.md
 datasets:
   synthetic:
     - synthetic_credit

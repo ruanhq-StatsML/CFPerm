@@ -1,14 +1,14 @@
-"""smart_bandit_router_v1 — Contextual Bandit routing with granularity + fairness.
+"""smart_bandit_router_v1 — Contextual Bandit routing with FSDS/CFPerm subsets.
 
 Action space: Keep | Route_to_Human | Rollback
-Context: model score, OOD/risk, CFPerm-style shift scores, group leaf id.
 
-Primary eval (go-live): cumulative business reward, fairness floor, action mix,
-regret vs oracle — **not** MSE alone.
+Subset granularity = **FSDS / CFPerm localization** (not a separate partitioner):
+  typed shift proxies (score, domain/OOD, CFPerm residual / ĉ–δ̂ style coords)
+  → leaves under min_support + MI. Bayesian Thompson Sampling then runs
+  *inside* each FSDS/CFPerm subset.
 
-Granularity grows under constraints:
-  - min_support: leaf n ≥ N_min
-  - mutual-information / reward-variance drop must justify a split
+Primary eval (go-live): READY / CONDITIONAL / HOLD on business reward,
+fairness, Bayesian subgroup confidence — **not** MSE alone.
 """
 from __future__ import annotations
 
@@ -50,8 +50,26 @@ class BanditStream:
 
 
 # ---------------------------------------------------------------------------
-# Granularity: grow context leaves with support + MI constraints
+# Granularity = FSDS / CFPerm subset localization (+ min_support / MI)
 # ---------------------------------------------------------------------------
+
+
+def fsds_cfperm_subset_features(scores, ood, cfperm_shift, typed_c=None, typed_delta=None):
+    """Coordinates that FSDS/CFPerm already use to name subsets.
+
+    Production plugs named FSDS products directly (LOCO groups, LIVE domain
+    quintiles, typed (ĉ, δ̂) bins, CFPerm residual bands). The software board
+    stacks the same axes so the Bandit leaf == an FSDS/CFPerm subset.
+    """
+    scores = np.asarray(scores, dtype=float).reshape(-1)
+    ood = np.asarray(ood, dtype=float).reshape(-1)
+    cf = np.asarray(cfperm_shift, dtype=float).reshape(-1)
+    cols = [scores, ood, np.clip(cf, 0.0, 2.0) / 2.0]
+    if typed_c is not None:
+        cols.append(np.asarray(typed_c, dtype=float).reshape(-1))
+    if typed_delta is not None:
+        cols.append(np.asarray(typed_delta, dtype=float).reshape(-1))
+    return np.column_stack(cols)
 
 
 def grow_context_leaves(
@@ -62,10 +80,12 @@ def grow_context_leaves(
     min_mi_gain=1e-4,
     seed=SEED,
 ):
-    """Decision-tree leaves as Bandit context buckets.
+    """Grow FSDS/CFPerm subset leaves under support + MI constraints.
 
     Hard constraint: every leaf has ≥ min_support samples (via min_samples_leaf).
     Soft constraint: reject a candidate depth if MI(y; leaf) gain is tiny.
+    This is the same min_support discipline as FSDS post-hoc localization /
+    IV-subset tiers — not a separate ad-hoc bandit partitioner.
     """
     X = np.asarray(X, dtype=float)
     y = np.asarray(y).astype(int)
@@ -101,6 +121,7 @@ def grow_context_leaves(
                 "min_support_used": min_leaf,
                 "mi": mi,
                 "mean_label_var": mean_var,
+                "method": "fsds_cfperm_min_support",
             }
         prev_mi = mi
     if best is None:
@@ -112,8 +133,39 @@ def grow_context_leaves(
             "min_support_used": n,
             "mi": 0.0,
             "mean_label_var": float(np.var(y)),
+            "method": "fsds_cfperm_min_support",
         }
     return best
+
+
+def partition_fsds_cfperm_subsets(
+    scores,
+    ood,
+    cfperm_shift,
+    y,
+    min_support=150,
+    max_leaf_nodes=32,
+    typed_c=None,
+    typed_delta=None,
+    seed=SEED,
+):
+    """One call: FSDS/CFPerm feature stack → min_support subsets for the Bandit."""
+    feats = fsds_cfperm_subset_features(
+        scores, ood, cfperm_shift, typed_c=typed_c, typed_delta=typed_delta
+    )
+    gran = grow_context_leaves(
+        feats,
+        y,
+        min_support=min_support,
+        max_leaf_nodes=max_leaf_nodes,
+        seed=seed,
+    )
+    gran["feature_axes"] = ["model_score", "domain_ood", "cfperm_shift"]
+    if typed_c is not None:
+        gran["feature_axes"].append("typed_c")
+    if typed_delta is not None:
+        gran["feature_axes"].append("typed_delta")
+    return gran, feats
 
 
 def leaf_support_ok(leaf_ids, min_support):
@@ -465,13 +517,22 @@ def make_synthetic_credit_stream(
     ood[np.isin(group_ids, list(protected_groups))] += 0.25
     ood = np.clip(ood, 0, 1)
 
-    # CFPerm-style shift scores (synthetic)
+    # CFPerm-style shift scores (synthetic) + typed ĉ/δ̂ proxies
     cf1 = np.abs(scores - true_risk[group_ids]) + 0.1 * rng.normal(size=n_samples)
-    cf2 = ood * (1.0 + 0.3 * labels) + 0.05 * rng.normal(size=n_samples)
+    typed_c = np.clip(ood, 0, 1)  # covariate-loud proxy
+    typed_delta = np.clip(np.abs(scores - labels), 0, 1)  # concept-loud proxy
 
-    # grow leaves on (score, ood, cf1)
-    feats = np.column_stack([scores, ood, cf1])
-    gran = grow_context_leaves(feats, labels, min_support=min_support, seed=seed)
+    # FSDS/CFPerm subset partition (min_support)
+    gran, feats = partition_fsds_cfperm_subsets(
+        scores,
+        ood,
+        cf1,
+        labels,
+        min_support=min_support,
+        typed_c=typed_c,
+        typed_delta=typed_delta,
+        seed=seed,
+    )
     leaf = gran["leaf_ids"]
     protected = np.isin(group_ids, list(protected_groups)).astype(int)
 
@@ -583,13 +644,19 @@ def make_openml_stream(name, n_batches=16, min_support=80, seed=SEED, max_n=1200
     mu = Xtr.mean(0)
     ood = np.linalg.norm(Xte - mu, axis=1)
     ood = (ood - ood.min()) / (ood.max() - ood.min() + 1e-12)
-    # CFPerm-ish residuals
+    # CFPerm residual + typed ĉ/δ̂ proxies on the held-out stream
     cf1 = np.abs(scores - yte)
-    gran = grow_context_leaves(
-        np.column_stack([scores, ood, cf1]),
+    typed_c = np.clip(ood, 0, 1)
+    typed_delta = np.clip(cf1, 0, 1)
+    gran, _feats = partition_fsds_cfperm_subsets(
+        scores,
+        ood,
+        cf1,
         yte,
         min_support=min(min_support, max(30, len(yte) // 40)),
         max_leaf_nodes=24,
+        typed_c=typed_c,
+        typed_delta=typed_delta,
         seed=seed,
     )
     leaf = gran["leaf_ids"]
@@ -602,7 +669,9 @@ def make_openml_stream(name, n_batches=16, min_support=80, seed=SEED, max_n=1200
     if not prot_leaf:
         prot_leaf = {int(np.argmin(leaf_mass + (leaf_mass == 0) * 1e12))}
     protected = np.isin(leaf, list(prot_leaf)).astype(int)
-    contexts = np.column_stack([scores, ood, cf1, leaf / max(gran["n_leaves"], 1)])
+    contexts = np.column_stack(
+        [scores, ood, np.clip(cf1, 0, 2) / 2.0, leaf / max(gran["n_leaves"], 1)]
+    )
     batch = _batchify(len(yte), n_batches)
     return BanditStream(
         contexts=contexts,
@@ -1063,8 +1132,11 @@ def write_readme(suite, out_path: Path):
         "# smart_bandit_router_v1 — when is it good enough to go online?",
         "",
         "Router actions: `Keep` / `Route_to_Human` / `Rollback`.",
-        "Learning unit: **Bayesian Normal-mean posterior inside each granularity leaf**",
+        "Subset granularity = **FSDS / CFPerm** localization (min_support + typed/CFPerm axes).",
+        "Learning unit: **Bayesian Normal-mean posterior inside each FSDS subset**",
         "(Thompson sample per subgroup). Global LinTS is not the go-live unit.",
+        "",
+        "Evaluator method note: `docs/method/Smart_Bandit_FSDS_GoLive.md`",
         "",
         "## Evaluator verdict ladder",
         "",
