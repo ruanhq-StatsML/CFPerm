@@ -1,0 +1,70 @@
+name: smart_bandit_router_v1
+description: >
+  Contextual Bandit dynamic model monitoring & policy routing.
+  Maximizes business net reward under fairness floor and min-support
+  context granularity. Learning is Bayesian *inside each subgroup leaf*
+  (Normal-mean posterior + Thompson sampling). Actions: Keep /
+  Route_to_Human / Rollback. Go-live verdict: READY / CONDITIONAL / HOLD.
+version: "1.1.0"
+action_space:
+  - Keep
+  - Route_to_Human
+  - Rollback
+context_features:
+  - model_score
+  - ood_risk
+  - cfperm_shift_score
+  - group_leaf_id
+granularity:
+  method: decision_tree_leaves
+  min_support: 150
+  max_leaf_nodes: 32
+  min_mi_gain: 1.0e-4
+fairness:
+  protected_keep_floor_vs_global: 0.80
+  penalty_on_keep_violation: 25.0
+rewards:
+  business:
+    TP: 120
+    FP: -180
+    FN: -90
+    TN: 25
+    human_cost: -45
+    rollback_cost: -70
+  shaping:
+    - proxy_metrics
+    - label_acquisition
+    - survival_expected
+  mix: [0.70, 0.10, 0.10, 0.10]
+bandit:
+  algorithm: bayesian_subgroup_thompson_sampling
+  posterior: normal_mean_known_variance
+  unit: granularity_leaf
+  hierarchical_warm_start: true
+  min_leaf_n_before_local: 5
+go_live_verdict:
+  READY: all hard + soft gates pass (incl. Bayesian subgroup mass ≥55% confident)
+  CONDITIONAL: hard gates pass; Bayesian/stability soft gates incomplete → shadow/canary
+  HOLD: any hard gate fails
+go_live_gates:
+  hard:
+    - lift_vs_keep
+    - fairness_floor
+    - granularity_support
+    - human_share_sane
+  soft:
+    - lift_nonnegative
+    - learning_stability
+    - oracle_gap_bounded
+    - bayesian_subgroup_confidence
+entrypoints:
+  module: Python/src/smart_bandit_router.py
+  run: scripts/run_smart_bandit_router.py
+datasets:
+  synthetic:
+    - synthetic_credit
+  open_source:
+    - breast_cancer
+    - credit_g
+    - adult
+    - phoneme
